@@ -1,0 +1,230 @@
+
+[INFO]    Initializing Lemon...
+
+[INFO]    Video Resolution:
+[INFO]    1024x768x32
+[WARN]    Small Resolution, it is recommended to use a higher resoulution if possible.
+[INFO]    RAM: 63MB
+[INFO]    Initializing System Timer...OK
+[INFO]    Multiboot Module Count: 
+[INFO]    1
+[INFO]    Initializing Ramdisk...OK
+[INFO]    Ramdisk Contents:
+    dev
+    progressbar.bmp
+    splash.bmp
+    init.lef
+    fm.lef
+    snake.lef
+    file.bmp
+    binaryfile.bmp
+    folder.bmp
+    shell.lef
+
+[INFO]    Initializing HID...
+[INFO]    OK
+[INFO]    Registering Syscall Handler...OK
+[INFO]    Initializing Task Scheduler...OK
+[INFO]    Loading init Process...
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x27d4
+[INFO]    Elf section address 0x
+[INFO]    0x804b000
+[INFO]    Elf section size 
+[INFO]    0xa04OK
+[INFO]    1024
+[INFO]    768
+[INFO]    0x41000 - allocated address
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x1968
+[INFO]    Elf section address 0x
+[INFO]    0x804a968
+[INFO]    Elf section size 
+[INFO]    0x84
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x2508
+[INFO]    Elf section address 0x
+[INFO]    0x804b508
+[INFO]    Elf section size 
+[INFO]    0x594
+[INFO]    0x41000 - allocated address
+[INFO]    0x41000 - allocated address
+[INFO]    0x41000 - allocated address
+[INFO]    Initializing Lemon...
+
+[INFO]    Video Resolution:
+[INFO]    1024x768x32
+[WARN]    Small Resolution, it is recommended to use a higher resoulution if possible.
+[INFO]    RAM: 63MB
+[INFO]    Initializing System Timer...OK
+[INFO]    Multiboot Module Count: 
+[INFO]    1
+[INFO]    Initializing Ramdisk...OK
+[INFO]    Ramdisk Contents:
+    dev
+    progressbar.bmp
+    splash.bmp
+    init.lef
+    fm.lef
+    snake.lef
+    file.bmp
+    binaryfile.bmp
+    folder.bmp
+    shell.lef
+
+[INFO]    Initializing HID...
+[INFO]    OK
+[INFO]    Registering Syscall Handler...OK
+[INFO]    Initializing Task Scheduler...OK
+[INFO]    Loading init Process...
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x27d4
+[INFO]    Elf section address 0x
+[INFO]    0x804b000
+[INFO]    Elf section size 
+[INFO]    0xa04OK
+[INFO]    1024
+[INFO]    768
+[INFO]    0x41000 - allocated address
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x1968
+[INFO]    Elf section address 0x
+[INFO]    0x804a968
+[INFO]    Elf section size 
+[INFO]    0x84
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x2508
+[INFO]    Elf section address 0x
+[INFO]    0x804b508
+[INFO]    Elf section size 
+[INFO]    0x594
+[INFO]    0x41000 - allocated address
+[INFO]    0x41000 - allocated address
+[INFO]    0x41000 - allocated address
+[INFO]    Initializing Lemon...
+
+[INFO]    Video Resolution:
+[INFO]    1024x768x32
+[WARN]    Small Resolution, it is recommended to use a higher resoulution if possible.
+[INFO]    RAM: 63MB
+[INFO]    Initializing System Timer...OK
+[INFO]    Multiboot Module Count: 
+[INFO]    1
+[INFO]    Initializing Ramdisk...OK
+[INFO]    Ramdisk Contents:
+    dev
+    progressbar.bmp
+    splash.bmp
+    init.lef
+    fm.lef
+    snake.lef
+    file.bmp
+    binaryfile.bmp
+    folder.bmp
+    shell.lef
+
+[INFO]    Initializing HID...
+[INFO]    OK
+[INFO]    Registering Syscall Handler...OK
+[INFO]    Initializing Task Scheduler...OK
+[INFO]    Loading init Process...
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x27d4
+[INFO]    Elf section address 0x
+[INFO]    0x804b000
+[INFO]    Elf section size 
+[INFO]    0xa04O
+[INFO]    1024
+[INFO]    768
+[INFO]    0x41000 - allocated address
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x1968
+[INFO]    Elf section address 0x
+[INFO]    0x804a968
+[INFO]    Elf section size 
+[INFO]    0x84
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x2508
+[INFO]    Elf section address 0x
+[INFO]    0x804b508
+[INFO]    Elf section size 
+[INFO]    0x594K
+[INFO]    0x41000 - allocated address
+[INFO]    0x41000 - allocated address
+[INFO]    0x41000 - allocated address
+[INFO]    Key: 
+
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 
+[INFO]    Key: 

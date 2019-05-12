@@ -1,0 +1,1 @@
+./a.out initrd.img Contents/progressbar.bmp progressbar.bmp Contents/splash.bmp splash.bmp Contents/init.lef init.lef Contents/fm.lef fm.lef Contents/snake.lef snake.lef Contents/file.bmp file.bmp Contents/binaryfile.bmp binaryfile.bmp Contents/folder.bmp folder.bmp Contents/shell.lef shell.lef Contents/menu.txt menu.txt
