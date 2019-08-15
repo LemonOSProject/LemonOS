@@ -1,3 +1,5 @@
+#pragma once
+
 #define ET_NONE 0
 #define ET_REL 1
 #define ET_EXEC 2

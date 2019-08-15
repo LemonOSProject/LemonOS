@@ -1,5 +1,7 @@
 #include <video.h>
 
+#include <math.h>
+
 uint8_t defaultFont[128][8] = {
 	{ 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },   // U+0000 (nul)
 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },   // U+0001
@@ -131,6 +133,13 @@ uint8_t defaultFont[128][8] = {
 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }    // U+007F
 };
 
+typedef struct {
+	char magic[2]; // Magic number = should be equivalent to "BM"
+	uint32_t size; // Size of file
+	uint32_t reserved; // Reserved bytes
+	uint32_t offset; // Offset of pixel data
+} __attribute__((packed)) bitmap_file_header_t;
+
 namespace Video{
     video_mode_t videoMode;
 
@@ -186,4 +195,36 @@ namespace Video{
 			}
 		}
 	}
+
+    void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data) {
+        bitmap_file_header_t bmpHeader = *(bitmap_file_header_t*)data;
+        data += bmpHeader.offset;
+
+        uint8_t bmpBpp = 24;
+        uint32_t rowSize = floor((bmpBpp*w + 31) / 32) * 4;
+        uint32_t bmp_offset = rowSize * (h - 1);
+        uint32_t bmp_buffer_offset = 0;
+
+        uint32_t pixelSize = 4;
+        for (int i = 0; i < h && i + y < videoMode.height; i++) {
+            for (int j = 0; j < w && j + x < videoMode.width; j++) {
+                if(data[bmp_offset + j * (bmpBpp / 8)] == 1 && data[bmp_offset + j * (bmpBpp / 8) + 1] == 1 && data[bmp_offset + j * (bmpBpp / 8) + 2] == 1) continue;
+                uint32_t offset = (y + i)*(videoMode.width*pixelSize) + (x + j) * pixelSize;
+                videoMemory[offset] = data[bmp_offset + j * (bmpBpp / 8)];
+                videoMemory[offset + 1] = data[bmp_offset + j * (bmpBpp / 8) + 1];
+                videoMemory[offset + 2] = data[bmp_offset + j * (bmpBpp / 8) + 2];
+            }
+            bmp_offset -= rowSize;
+            bmp_buffer_offset += w * pixelSize;
+        }
+    }
+    
+    void DrawString(char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b) {
+        int xOffset = 0;
+        while (*str != 0) {
+            Video::DrawChar(*str, x + xOffset, y, r, g, b);
+            xOffset += 8;
+            str++;
+        }
+    }
 }

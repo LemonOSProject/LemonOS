@@ -5,6 +5,7 @@
 #include <system.h>
 #include <list.h>
 #include <filesystem.h>
+#include <elf.h>
 
 #define PROCESS_STATE_SUSPENDED 0
 #define PROCESS_STATE_ACTIVE 1
@@ -32,6 +33,7 @@ typedef struct {
 	uint32_t recieverPID; // PID of Reciever
 	uint32_t id; // ID of message
 	uint32_t data; // Message Data
+	uint32_t data2;
 } __attribute__((packed)) message_t;
 
 typedef struct process {
@@ -42,22 +44,16 @@ typedef struct process {
 	//thread_t* threads; // Array of threads
 	thread_t threads[1];
 	uint32_t thread_count; // Amount of threads
+	uint32_t timeSlice;
+	uint32_t timeSliceDefault;
 	process* next;
+
+	List<elf32_program_header_t> programHeaders;
 
 	List<fs_node_t*> fileDescriptors;
 	List<message_t> messageQueue;
 } process_t;
-/*
-void register_handle(handle_t handle);
-uint32_t create_process(void* entry);
-uint32_t create_process_elf(void* elf);
-void add_thread(uint32_t pid, void * entry);
-//void scheduler_tick(regs32_t *r);
-void multitasking_init();
-process_t* find_by_pid(uint32_t pid);
-process_t* get_current_proc();
-handle_index_t find_handle(handle_t handle);
-*/
+
 namespace Scheduler{
     uint64_t CreateProcess(void* entry);
     uint64_t LoadELF(void* entry);
@@ -72,6 +68,10 @@ namespace Scheduler{
 	
 	message_t RecieveMessage(process_t* proc);
 
+	process_t* FindProcessByPID(uint64_t pid);
+
     void Initialize();
     void Tick();
+
+	void EndProcess(process_t* process);
 }

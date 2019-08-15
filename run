@@ -1,0 +1,1 @@
+qemu-system-i386 --enable-kvm -drive file=Disks/Lemon.vhd,id=ahci

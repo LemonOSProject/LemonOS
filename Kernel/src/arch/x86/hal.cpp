@@ -8,6 +8,8 @@
 #include <video.h>
 #include <paging.h>
 #include <physicalallocator.h>
+#include <pci.h>
+#include <ahci.h>
 
 namespace HAL{
     memory_info_t mem_info;
@@ -47,6 +49,20 @@ namespace HAL{
 
         // Initialize Physical Memory Allocator
         Memory::InitializePhysicalAllocator(&mem_info);
+
+
+        Log::Info("Initializing PCI Driver...");
+
+        PCI::Init();
+
+        Log::Info("OK");
+
+        Log::Info("Initializing AHCI Driver...");
+
+        if(AHCI::Init())
+            Log::Warning("ERROR: No AHCI Controller Found");
+        else
+            Log::Info("OK");
     } 
 
     void InitVideo(){

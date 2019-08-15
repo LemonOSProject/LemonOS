@@ -1,25 +1,59 @@
 #include <stddef.h>
 
-int strlen(char* str)
+int strlen(const char* str)
 {
 	int i = 0;
 	while(str[i] != '\0') i++;
 	return i;
 }
 
-void strcpy(char* dest, const char* src)
+char* strcpy(char* dest, const char* src)
 {
-	for(int i = 0; i < strlen(src); i++)
+	int i = 0;
+	for(i = 0; i < strlen(src); i++)
 	{
 		dest[i] = src[i];
 	}
+	dest[i] = '\0';
+	return dest;
+}
+
+void strncpy(char* dest, const char* src, size_t n)
+{
+	int i;
+	for(i = 0; i < n; i++)
+	{
+		dest[i] = src[i];
+	}
+	dest[i] = '\0';
 }
 
 char* strcat(char* dest, const char* src){
     strcpy(dest + strlen(dest), src);
 	return dest;
 }
-/*
+
+char *strchr(const char *s, int c)
+{
+	while (*s != (char)c)
+		if (!*s++)
+			return 0;
+	return (char *)s;
+}
+
+char *strrchr(const char *s, int c)
+{
+	char* str = 0;
+	while(*s){
+		if(*s == (char)c)
+			str = (char*)s;
+		if (!*s++)
+			return str;
+	}
+
+	return (char *)s;
+}
+
 size_t strspn(const char *s1, const char *s2)
 {
 	size_t ret = 0;
@@ -54,8 +88,32 @@ char *strtok(char * str, const char * delim)
 	return str;
 }
 
-void strcpy(char* dest, const char* src)
+int strcmp(const char *str1, const char *str2)
 {
-	for(int i = 0; src[i] != '\0'; i++)
-		dest[i] = src[i];
-}*/
+	for (; *str1==*str2 && *str1 != '\0'; str1++, str2++);
+	return *(unsigned char *)str1 - *(unsigned char *)str2;
+}
+
+int strncmp(const char *str1, const char *str2, size_t n)
+{
+	for (int i = 0; *str1==*str2 && *str1 != '\0' && i < n; i++, str1++, str2++);
+	return *(unsigned char *)str1 - *(unsigned char *)str2;
+}
+
+int strcasecmp(const char *str1, const char *str2)
+{
+	for (; tolower(*str1)==tolower(*str2) && *str1 != '\0'; str1++, str2++);
+	return *(unsigned char *)str1 - *(unsigned char *)str2;
+} 
+
+int strncasecmp(const char *str1, const char *str2, size_t n)
+{
+	for (int i = 0; tolower(*str1)==tolower(*str2) && *str1 != '\0' && i < n; i++, str1++, str2++);
+	return *(unsigned char *)str1 - *(unsigned char *)str2;
+}
+
+char* strdup(char* str){
+	char* ret = (char*)malloc(strlen(str)+1);
+	memset(ret, 0, strlen(str) + 1);
+	strcpy(ret, str);
+}

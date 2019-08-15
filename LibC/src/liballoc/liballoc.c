@@ -100,6 +100,22 @@ static long long l_possibleOverruns = 0;	///< Number of possible overruns
 
 
 
+void liballoc_init(){
+	l_memRoot = NULL;	///< The root memory block acquired from the system.
+	l_bestBet = NULL; ///< The major with the most free memory.
+
+	l_pageSize = 4096;			///< The size of an individual page. Set up in liballoc_init.
+	l_pageCount = 32;			///< The number of pages to request per chunk. Set up in liballoc_init.
+	l_allocated = 0;		///< Running total of allocated memory.
+	l_inuse = 0;		///< Running total of used memory.
+	l_max_inuse = 0;		///< Running total of used memory.
+
+
+	l_warningCount = 0;		///< Number of warnings encountered
+	l_errorCount = 0;			///< Number of actual errors
+	l_possibleOverruns = 0;	///< Number of possible overruns
+}
+
 
 											// ***********   HELPER FUNCTIONS  *******************************
 
@@ -160,6 +176,7 @@ static struct liballoc_major *allocate_new_page(unsigned int size)
 	if (st < l_pageCount) st = l_pageCount;
 
 	maj = (struct liballoc_major*)liballoc_alloc(st);
+	liballoc_memset(maj, 0, sizeof(struct liballoc_major));
 
 	if (maj == NULL)
 	{

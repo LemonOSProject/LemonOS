@@ -26,12 +26,22 @@ Window* CreateWindow(win_info_t* info){
 
 	Window* win = new Window();
 	win->handle = handle;
-	win->info = *info;
+	memcpy(&win->info,info,sizeof(win_info_t));
 
 	surface_t surface;
 	surface.width = info->width;
 	surface.height = info->height;
-	surface.buffer = (uint8_t*)malloc(surface.width * surface.height * 4);
+	bool needsPadding = (info->width * 4) % 0x10;
+	int horizontalSizePadded = info->width * 4 + (0x10 - ((info->width * 4) % 0x10));
+	if(info->width < 180 || info->height < 180){
+		surface.buffer = (uint8_t*)malloc((horizontalSizePadded) * (info->height + 180) * 4);
+		//surface.linePadding = (0x10 - ((info->width * 4) % 0x10));
+	}
+	else{
+		surface.buffer = (uint8_t*)malloc(horizontalSizePadded * info->height);
+		//surface.linePadding = (0x10 - ((info->width * 4) % 0x10));
+	}
+	surface.linePadding = 0;
 
 	win->surface = surface;
 
@@ -40,14 +50,19 @@ Window* CreateWindow(win_info_t* info){
 
 void DestroyWindow(Window* win){
 	_DestroyWindow(win->handle);
-
-	delete win;
+	//delete win;
 }
 
 void PaintWindow(Window* win){
+	if(win->info.flags & WINDOW_FLAGS_NOBACKGROUND) goto nobg;
 	DrawRect(0,0,win->info.width, win->info.height, win->background, &win->surface);
+	nobg:
 	for(int i = 0; i < win->widgets.get_length(); i++){
 		win->widgets[i]->Paint(&win->surface);
+	}
+
+	if(win->OnPaint){
+		win->OnPaint(&win->surface);
 	}
 
 	_PaintWindow(win->handle, &win->surface);
@@ -64,6 +79,15 @@ void HandleMouseDown(Window* win, vector2i_t mousePos){
 	}
 }
 
-void HandleMouseUp(Window* win){
-	win->widgets[win->lastPressedWidget]->OnMouseUp();
+Widget* HandleMouseUp(Window* win){
+	if(win->lastPressedWidget >= 0){
+		win->widgets[win->lastPressedWidget]->OnMouseUp();
+		return win->widgets[win->lastPressedWidget];
+	}
+	win->lastPressedWidget = -1;
+	return NULL;
+}
+
+void AddWidget(Widget* widget, Window* win){
+	win->widgets.add_back(widget);
 }

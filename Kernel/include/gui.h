@@ -23,7 +23,7 @@ typedef struct Surface{
 	int x, y, width, height; // Self-explanatory
 	uint8_t depth; // Pixel depth
 	uint8_t* buffer; // Start of the buffer
-	void* bufferPtr; // Pointer to the allocated memory for the buffer (For when SSE aligned)
+	uint8_t linePadding;
 } surface_t;
 
 typedef struct GUIContext{
@@ -45,7 +45,7 @@ typedef struct {
 
 	char title[96]; // Title of window
 
-	uint64_t ownerPID;
+	uint32_t ownerPID;
 
 	handle_t handle;
 } __attribute__((packed)) win_info_t;
@@ -55,7 +55,7 @@ struct Desktop;
 typedef struct Window{
 	win_info_t info;
 
-	uint8_t* buffer;
+	surface_t surface;
 
 	Desktop* desktop;
 } window_t;

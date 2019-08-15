@@ -1,25 +1,52 @@
 
 [INFO]    Initializing Lemon...
 
+[INFO]    Initializing PCI Driver...
+[INFO]    OK
+[INFO]    Initializing AHCI Driver...
+[INFO]    No device found with class
+[INFO]    0x1
+[INFO]    0x6
+[WARN]    ERROR: No AHCI Controller Found
 [INFO]    Video Resolution:
 [INFO]    1024x768x32
-[WARN]    Small Resolution, it is recommended to use a higher resoulution if possible.
-[INFO]    RAM: 63MB
+[INFO]    RAM: 127MB
 [INFO]    Initializing System Timer...OK
 [INFO]    Multiboot Module Count: 
 [INFO]    1
 [INFO]    Initializing Ramdisk...OK
 [INFO]    Ramdisk Contents:
     dev
-    progressbar.bmp
-    splash.bmp
-    init.lef
     fm.lef
     snake.lef
     file.bmp
-    binaryfile.bmp
+    binfile.bmp
     folder.bmp
     shell.lef
+    menu.txt
+    texteditor.lef
+    terminal.lef
+    draw.lef
+    sysinfo.lef
+    banner.bmp
+    taskbar.lef
+    c8emu.lef
+    tetris.c8
+    spinvade.c8
+    missile.c8
+    pong.c8
+    pong2.c8
+    tictac.c8
+    ufo.c8
+    close.bmp
+    lemongnuboy.lef
+    bg1.bmp
+    imgview.lef
+    solitaire.lef
+    mario.gbc
+    guitest.lef
+    splash.bmp
+    init.lef
 
 [INFO]    Initializing HID...
 [INFO]    OK
@@ -29,202 +56,68 @@
 [INFO]    Elf section address 0x
 [INFO]    0x8048000
 [INFO]    Elf section size 
-[INFO]    0x27d4
+[INFO]    0x3ea0
 [INFO]    Elf section address 0x
-[INFO]    0x804b000
+[INFO]    0x804cea0
 [INFO]    Elf section size 
-[INFO]    0xa04OK
-[INFO]    1024
-[INFO]    768
-[INFO]    0x41000 - allocated address
+[INFO]    0x1084OK
 [INFO]    Elf section address 0x
 [INFO]    0x8048000
 [INFO]    Elf section size 
-[INFO]    0x1968
+[INFO]    0x43cc
 [INFO]    Elf section address 0x
-[INFO]    0x804a968
+[INFO]    0x804d000
 [INFO]    Elf section size 
-[INFO]    0x84
-[INFO]    Elf section address 0x
-[INFO]    0x8048000
-[INFO]    Elf section size 
-[INFO]    0x2508
-[INFO]    Elf section address 0x
-[INFO]    0x804b508
-[INFO]    Elf section size 
-[INFO]    0x594
-[INFO]    0x41000 - allocated address
-[INFO]    0x41000 - allocated address
-[INFO]    0x41000 - allocated address
-[INFO]    Initializing Lemon...
-
-[INFO]    Video Resolution:
-[INFO]    1024x768x32
-[WARN]    Small Resolution, it is recommended to use a higher resoulution if possible.
-[INFO]    RAM: 63MB
-[INFO]    Initializing System Timer...OK
-[INFO]    Multiboot Module Count: 
-[INFO]    1
-[INFO]    Initializing Ramdisk...OK
-[INFO]    Ramdisk Contents:
-    dev
-    progressbar.bmp
-    splash.bmp
-    init.lef
-    fm.lef
-    snake.lef
-    file.bmp
-    binaryfile.bmp
-    folder.bmp
-    shell.lef
-
-[INFO]    Initializing HID...
-[INFO]    OK
-[INFO]    Registering Syscall Handler...OK
-[INFO]    Initializing Task Scheduler...OK
-[INFO]    Loading init Process...
+[INFO]    0x1f80
+[INFO]    Opening: /dev/mouse0
+[INFO]    Opening: /close.bmp
+[INFO]    Opening: /bg1.bmp
+[INFO]    Opening: /menu.txt
 [INFO]    Elf section address 0x
 [INFO]    0x8048000
 [INFO]    Elf section size 
-[INFO]    0x27d4
+[INFO]    0x58ec
 [INFO]    Elf section address 0x
-[INFO]    0x804b000
+[INFO]    0x804e000
 [INFO]    Elf section size 
-[INFO]    0xa04OK
-[INFO]    1024
-[INFO]    768
-[INFO]    0x41000 - allocated address
-[INFO]    Elf section address 0x
-[INFO]    0x8048000
-[INFO]    Elf section size 
-[INFO]    0x1968
-[INFO]    Elf section address 0x
-[INFO]    0x804a968
-[INFO]    Elf section size 
-[INFO]    0x84
+[INFO]    0xbd8
+[INFO]    Opening: /
+[INFO]    Opening: /file.bmp
+[INFO]    Opening: /binfile.bmp
+[INFO]    Opening: /folder.bmp
 [INFO]    Elf section address 0x
 [INFO]    0x8048000
 [INFO]    Elf section size 
-[INFO]    0x2508
+[INFO]    0x53b8
 [INFO]    Elf section address 0x
-[INFO]    0x804b508
+[INFO]    0x804e000
 [INFO]    Elf section size 
-[INFO]    0x594
-[INFO]    0x41000 - allocated address
-[INFO]    0x41000 - allocated address
-[INFO]    0x41000 - allocated address
-[INFO]    Initializing Lemon...
-
-[INFO]    Video Resolution:
-[INFO]    1024x768x32
-[WARN]    Small Resolution, it is recommended to use a higher resoulution if possible.
-[INFO]    RAM: 63MB
-[INFO]    Initializing System Timer...OK
-[INFO]    Multiboot Module Count: 
-[INFO]    1
-[INFO]    Initializing Ramdisk...OK
-[INFO]    Ramdisk Contents:
-    dev
-    progressbar.bmp
-    splash.bmp
-    init.lef
-    fm.lef
-    snake.lef
-    file.bmp
-    binaryfile.bmp
-    folder.bmp
-    shell.lef
-
-[INFO]    Initializing HID...
-[INFO]    OK
-[INFO]    Registering Syscall Handler...OK
-[INFO]    Initializing Task Scheduler...OK
-[INFO]    Loading init Process...
+[INFO]    0xda0
+[INFO]    Opening: /banner.bmp
 [INFO]    Elf section address 0x
 [INFO]    0x8048000
 [INFO]    Elf section size 
-[INFO]    0x27d4
+[INFO]    0x1ec6c
 [INFO]    Elf section address 0x
-[INFO]    0x804b000
+[INFO]    0x8067c6c
 [INFO]    Elf section size 
-[INFO]    0xa04O
-[INFO]    1024
-[INFO]    768
-[INFO]    0x41000 - allocated address
+[INFO]    0x810f8
+[INFO]    Opening: mario.gbcmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 [INFO]    Elf section address 0x
 [INFO]    0x8048000
 [INFO]    Elf section size 
-[INFO]    0x1968
+[INFO]    0x53b8
 [INFO]    Elf section address 0x
-[INFO]    0x804a968
+[INFO]    0x804e000
 [INFO]    Elf section size 
-[INFO]    0x84
+[INFO]    0xda0
+[INFO]    Opening: /banner.bmp
 [INFO]    Elf section address 0x
 [INFO]    0x8048000
 [INFO]    Elf section size 
-[INFO]    0x2508
+[INFO]    0x53b8
 [INFO]    Elf section address 0x
-[INFO]    0x804b508
+[INFO]    0x804e000
 [INFO]    Elf section size 
-[INFO]    0x594K
-[INFO]    0x41000 - allocated address
-[INFO]    0x41000 - allocated address
-[INFO]    0x41000 - allocated address
-[INFO]    Key: 
-
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
-[INFO]    Key: 
+[INFO]    0xda0
+[INFO]    Opening: /banner.bmpmmmmmmnnnnmmmnmnmmmmmmmmmmmmmmmmmmmmmmnndmdmdmdmdmmddmddmnnnnnnnnnnnnnnnnnnnnnnnnd

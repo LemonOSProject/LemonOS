@@ -5,15 +5,25 @@
 #include <gfx/window/window.h>
 #include <stdlib.h>
 #include <core/ipc.h>
+#include <stdio.h>
+#include <core/filesystem.h>
 
-typedef struct fs_dirent {
-	uint32_t inode; // Inode number
-	char name[128]; // Filename
-} fs_dirent_t;
+uint8_t* fileIconBuffer;
+uint8_t* exIconBuffer;
+uint8_t* folderIconBuffer;
+
+unsigned int fd;
+
+Window* win;
+win_info_t windowInfo;
+
+void RefreshFiles();
 
 struct FileButton : public Button{
 	bool executable;
-	fs_dirent_t dirent;
+	lemon_dirent_t dirent;
+
+	int icon = 0;
 
 	char filepath[128];
 
@@ -26,50 +36,113 @@ struct FileButton : public Button{
 		if(executable){
 			syscall(SYS_EXEC, (uint32_t)filepath,0,0,0,0);
 		}
+		
+		if (icon == 2){
+			lemon_close(fd);
+			fd = 0;
+			fd = lemon_open(filepath, 0);
+			if(fd) {
+				win->widgets.clear();
+				//RefreshFiles();
+			}
+		}
+	}
+
+	void Paint(surface_t* surface){
+		if(pressed){
+			DrawRect(bounds.pos.x+1, bounds.pos.y+1, bounds.size.x-2, (bounds.size.y)/2 - 1, 224/1.1, 224/1.1, 219/1.1, surface);
+			DrawRect(bounds.pos.x+1, bounds.pos.y + bounds.size.y / 2, bounds.size.x-2, bounds.size.y/2-1, 224/1.1, 224/1.1, 219/1.1, surface);
+			
+			DrawRect(bounds.pos.x+1, bounds.pos.y, bounds.size.x - 2, 1, 96, 96, 96, surface);
+			DrawRect(bounds.pos.x+1, bounds.pos.y + bounds.size.y - 1, bounds.size.x - 2, 1, 96, 96, 96, surface);
+			DrawRect(bounds.pos.x, bounds.pos.y + 1, 1, bounds.size.y - 2, 96, 96, 96, surface);
+			DrawRect(bounds.pos.x + bounds.size.x - 1, bounds.pos.y + 1, 1, bounds.size.y-2, 96, 96, 96, surface);
+		}
+
+		if(icon == 0)
+			DrawBitmapImage(bounds.pos.x + bounds.size.x / 2 - 24,bounds.pos.y,48,48,fileIconBuffer,surface);
+		else if (icon == 1)
+			DrawBitmapImage(bounds.pos.x + bounds.size.x / 2 - 24,bounds.pos.y,48,48,exIconBuffer,surface);
+		else if (icon == 2)
+			DrawBitmapImage(bounds.pos.x + bounds.size.x / 2 - 24,bounds.pos.y,48,48,folderIconBuffer,surface);
+
+		DrawString(label, bounds.pos.x + bounds.size.x / 2 - (labelLength*8)/2, bounds.pos.y + bounds.size.y - 16, 0, 0, 0, surface);
 	}
 };
 
-extern "C"
-void pmain(){
-	win_info_t windowInfo;
+void RefreshFiles(){
+	lemon_dirent_t dirent;
+	uint32_t ret;
+	//syscall(SYS_READDIR, fd, (uint32_t)&dirent, 0,(uint32_t)&ret,0);
+	ret = lemon_readdir(fd, 0, &dirent);
+	int xpos = 0;
+	int ypos = 0;
+	int i = 0;
+	while(ret){
+		FileButton* btn = new FileButton(dirent.name, {{xpos + 2, ypos + 2},{96,72}});
+		btn->filepath[0] = '/';
+		btn->filepath[1] = '\0';
+		strcat(btn->filepath, dirent.name);
+		if(btn->filepath[strlen(btn->filepath)-1] == 'f' && btn->filepath[strlen(btn->filepath)-2] == 'e' && btn->filepath[strlen(btn->filepath)-3] == 'l' && btn->filepath[strlen(btn->filepath)-4] == '.'){
+			btn->executable = true;
+			btn->icon = 1;
+		}
 
-	windowInfo.width = 400;
-	windowInfo.height = 300;
+		if(dirent.type == FS_NODE_DIRECTORY){
+			btn->icon = 2;
+		}
+		AddWidget(btn, win);
+
+		ret = lemon_readdir(fd, ++i, &dirent);
+
+		xpos += 100;
+		if(xpos + 100 > windowInfo.width){
+			ypos += 76;
+			xpos = 0;
+		}
+	}
+
+}
+
+extern "C"
+int main(char argc, char** argv){
+
+	windowInfo.width = 500;
+	windowInfo.height = 500;
 	windowInfo.x = 50;
 	windowInfo.y = 50;
 	windowInfo.flags = 0;
+	strcpy(windowInfo.title, "File Manager");
 
-	Window* win = CreateWindow(&windowInfo);
+	win = CreateWindow(&windowInfo);
 
-	unsigned int fd;
-	syscall(SYS_OPEN, (uint32_t)"/",(uint32_t)&fd, 0, 0, 0);
+	fd = lemon_open("/", 0);
 
-	fs_dirent_t dirent;
-		uint32_t ret;
-		syscall(SYS_READDIR, fd, (uint32_t)&dirent, 0,(uint32_t)&ret,0);
-		int xpos = 10;
-		int ypos = 10;
-		int i = 0;
-		while(ret){
-			//DrawBitmapImage(0, 0, 48, 48, (uint8_t*)(fileIconBMP + 54), &windowSurface);
-			//if(!readReturn) DrawRect(0,0,20,20,255,0,0, &windowSurface);
+	FILE* icon = fopen("/file.bmp","r");
 
-			FileButton* btn = new FileButton(dirent.name, {{xpos, ypos},{120,24}});
-			btn->filepath[0] = '/';
-			btn->filepath[1] = '\0';
-			strcat(btn->filepath, dirent.name);
-			if(btn->filepath[strlen(btn->filepath)-1] == 'f' && btn->filepath[strlen(btn->filepath)-2] == 'e' && btn->filepath[strlen(btn->filepath)-3] == 'l' && btn->filepath[strlen(btn->filepath)-4] == '.')
-				btn->executable = true;
-			win->AddWidget(btn);
+	size_t fileIconBufferSize = ftell(icon);
+	fileIconBuffer = (uint8_t*)malloc(fileIconBufferSize);
+	fread(fileIconBuffer, fileIconBufferSize, 1, icon);
 
-			syscall(SYS_READDIR, fd, (uint32_t)&dirent, ++i,(uint32_t)&ret,0);
+	fclose(icon);
 
-			xpos += 128;
-			if(xpos + 128 > 400){
-				ypos += 32;
-				xpos = 10;
-			}
-		}
+	icon = fopen("/binfile.bmp","r");
+	
+	fileIconBufferSize = ftell(icon);
+	exIconBuffer = (uint8_t*)malloc(fileIconBufferSize);
+	fread(exIconBuffer, fileIconBufferSize, 1, icon);
+
+	fclose(icon);
+
+	icon = fopen("/folder.bmp","r");
+	
+	fileIconBufferSize = ftell(icon);
+	folderIconBuffer = (uint8_t*)malloc(fileIconBufferSize);
+	fread(folderIconBuffer, fileIconBufferSize, 1, icon);
+
+	fclose(icon);
+
+	RefreshFiles();
 
 	for(;;){
 		ipc_message_t msg;
@@ -86,90 +159,13 @@ void pmain(){
 				uint16_t mouseY = msg.data & 0xFFFF;
 
 				HandleMouseDown(win, {mouseX, mouseY});
+			} else if (msg.id == WINDOW_EVENT_CLOSE){
+				DestroyWindow(win);
+				exit();
+				for(;;);
 			}
 		}
-
 		PaintWindow(win);
+		asm("hlt");
 	}
 }
-
-/*
-extern "C"
-void pmain(){
-	win_info_t windowInfo;
-	handle_t windowHandle;
-
-	windowInfo.width = 400;
-	windowInfo.height = 300;
-	windowInfo.x = 50;
-	windowInfo.y = 50;
-	windowInfo.flags = 0;
-
-	windowHandle = CreateWindow(&windowInfo);
-
-	surface_t windowSurface;
-	windowSurface.buffer = (uint8_t*)malloc(400*300*4);
-	windowSurface.width = 400;
-	windowSurface.height = 300;
-	
-	unsigned int fd;
-	syscall(SYS_OPEN, (uint32_t)"/",(uint32_t)&fd, 0, 0, 0);
-
-	void* fileIconBMP;
-	void* folderIconBMP;
-	void* binFileIconBMP;
-
-	int fileIconFd;
-	syscall(SYS_OPEN, (uint32_t)"/file.bmp",(uint32_t)&fileIconFd, 0, 0, 0);
-	int folderIconFd;
-	syscall(SYS_OPEN, (uint32_t)"/folder.bmp",(uint32_t)&folderIconFd, 0, 0, 0);
-	int binFileIconFd;
-	syscall(SYS_OPEN, (uint32_t)"/binaryfile.bmp",(uint32_t)&binFileIconFd, 0, 0, 0);
-
-	int fileIconBMPSize;
-	int folderIconBMPSize;
-	int binFileIconBMPSize;
-
-	/*syscall(SYS_LSEEK, fileIconFd, 0, 2, (uint32_t)&fileIconBMPSize, 0);
-	syscall(SYS_LSEEK, binFileIconFd, 0, 2, (uint32_t)&binFileIconBMPSize, 0);
-	syscall(SYS_LSEEK, folderIconFd, 0, 2, (uint32_t)&folderIconBMPSize, 0);
-
-	fileIconBMP = malloc(fileIconBMPSize);
-	folderIconBMP = malloc(folderIconBMPSize);
-	binFileIconBMP = malloc(binFileIconBMPSize);
-
-	uint32_t readReturn;
-	syscall(SYS_READ, fileIconFd, (uint32_t)fileIconBMP,fileIconBMPSize,(uint32_t)&readReturn,0);
-	syscall(SYS_READ, folderIconFd, (uint32_t)folderIconBMP,folderIconBMPSize,0,0);
-	syscall(SYS_READ, binFileIconFd, (uint32_t)binFileIconBMP,binFileIconBMPSize,0,0);
-	* /for(;;){
-		DrawRect(0,0,400,300,220,220,220,&windowSurface);
-
-		fs_dirent_t dirent;
-		uint32_t ret;
-		syscall(SYS_READDIR, fd, (uint32_t)&dirent, 0,(uint32_t)&ret,0);
-		int xpos = 4;
-		int ypos = 4;
-		int i = 0;
-		while(ret){
-			//DrawBitmapImage(0, 0, 48, 48, (uint8_t*)(fileIconBMP + 54), &windowSurface);
-			//if(!readReturn) DrawRect(0,0,20,20,255,0,0, &windowSurface);
-
-			DrawString(dirent.name, xpos,ypos,0,0,0,&windowSurface);
-
-			syscall(SYS_READDIR, fd, (uint32_t)&dirent, ++i,(uint32_t)&ret,0);
-
-			/*xpos += 128;
-			if(xpos + 128 > 400){
-				ypos += 64;
-				xpos = 10;
-			}* /
-			ypos += 24;
-		}
-
-		syscall(SYS_PAINT_WINDOW, (uint32_t)windowHandle, (uint32_t)&windowSurface,0,0,0);
-	}
-
-	for(;;);
-}
-*/

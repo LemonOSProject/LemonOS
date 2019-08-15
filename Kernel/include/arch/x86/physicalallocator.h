@@ -34,4 +34,7 @@ namespace Memory{
 
     // Frees a block of physical memory
     void FreePhysicalMemoryBlock(uint32_t addr);
+
+    // Used Blocks of Memory
+    extern uint32_t usedPhysicalBlocks;
 }

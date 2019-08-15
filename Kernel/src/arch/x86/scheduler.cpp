@@ -8,7 +8,6 @@
 #include <idt.h>
 #include <string.h>
 #include <system.h>
-#include <elf.h>
 #include <logging.h>
 
 uint32_t processBase;
@@ -43,6 +42,7 @@ namespace Scheduler{
         schedulerLock = true;
         handles = new List<handle_index_t>();
         CreateProcess((void*)IdleProc);
+        currentProcess->pageDirectory.page_directory_phys = Memory::GetKernelPageDirectory();
         processEntryPoint = currentProcess->threads[0].registers.eip;
         processStack = currentProcess->threads[0].registers.esp;
         processBase = currentProcess->threads[0].registers.ebp;
@@ -121,6 +121,18 @@ namespace Scheduler{
         }
     }
 
+    void RemoveProcessFromQueue(process_t* proc){
+        process_t* _proc = proc->next;
+        process_t* nextProc = proc->next;
+        while(_proc->next && _proc != proc){
+            if(_proc->next == proc){
+                _proc->next = nextProc;
+                break;
+            }
+            _proc = _proc->next;
+        }
+    }
+
     uint64_t CreateProcess(void* entry) {
 
         bool schedulerState = schedulerLock; // Get current value for scheduker lock
@@ -143,6 +155,8 @@ namespace Scheduler{
         proc->thread_count = 1;
 
         proc->pageDirectory = Memory::CreateAddressSpace();
+        proc->timeSliceDefault = 1;
+        proc->timeSlice = proc->timeSliceDefault;
 
         // Create structure for the main thread
         thread_t* thread = proc->threads;
@@ -165,6 +179,7 @@ namespace Scheduler{
         thread->registers.esp = (uint32_t)thread->stack;
         thread->registers.ebp = (uint32_t)thread->stack;
         thread->registers.eip = (uint32_t)entry;
+        //memset(stack, 0, 16384);
 
         InsertProcessIntoQueue(proc);
 
@@ -193,22 +208,23 @@ namespace Scheduler{
         proc->state = PROCESS_STATE_ACTIVE;
 
         proc->pageDirectory = Memory::CreateAddressSpace();
+        proc->timeSliceDefault = 15;
 
         elf32_hdr_t elf_hdr = *(elf32_hdr_t*)elf;
 
         elf32_section_header_t elf_shstr = *((elf32_section_header_t*)((uint32_t)elf + elf_hdr.e_shoff + elf_hdr.e_shstrndx * elf_hdr.e_shentsize));
-
 
         if(true){
             for(int i = 0; i < elf_hdr.e_phnum; i++){
                 elf32_program_header_t elf_ph = *((elf32_program_header_t*)(elf + elf_hdr.e_phoff + i * elf_hdr.e_phentsize));
 
                 if(elf_ph.p_memsz <= 0) continue;
-                //uint32_t tempAddr = Memory::KernelAllocateVirtualPages((elf_ph.p_memsz / PAGE_SIZE) + 1);
+
+                proc->programHeaders.add_back(elf_ph);
+
                 Memory::LoadKernelPageDirectory();
                 for(int i = 0; i < ((elf_ph.p_memsz / PAGE_SIZE) + 2); i++){
                     uint32_t phys = Memory::AllocatePhysicalMemoryBlock();
-                    //Memory::MapVirtualPages(phys,tempAddr + i * PAGE_SIZE, 1, currentProcess->pageDirectory);
                     Memory::MapVirtualPages(phys,elf_ph.p_vaddr + i * PAGE_SIZE, 1/*, currentProcess->pageDirectory*/);
                     Memory::MapVirtualPages(phys,elf_ph.p_vaddr + i * PAGE_SIZE, 1, proc->pageDirectory);
                 }
@@ -217,8 +233,6 @@ namespace Scheduler{
                     Log::Info(elf_ph.p_vaddr);
                     Log::Info("Elf section size ");
                     Log::Info(elf_ph.p_memsz);
-                    //memset((void*)tempAddr,0,elf_ph.p_memsz);
-                    //memcpy((void*)tempAddr,(void*)(elf + elf_ph.p_offset),elf_ph.p_memsz);
                 
                     memset((void*)elf_ph.p_vaddr,0,elf_ph.p_memsz);
                     memcpy((void*)elf_ph.p_vaddr,(void*)(elf + elf_ph.p_offset),elf_ph.p_filesz);
@@ -248,7 +262,7 @@ namespace Scheduler{
         thread->stack = stack + 16384;
         thread->registers.esp = (uint32_t)thread->stack;
         thread->registers.ebp = (uint32_t)thread->stack;
-        memset(stack,0,16384);
+        //memset(stack,0,16384);
 
         thread->registers.eip = elf_hdr.e_entry;
 
@@ -257,19 +271,53 @@ namespace Scheduler{
         return proc->pid;
     }
 
+    void EndProcess(process_t* process){
+        RemoveProcessFromQueue(process);
+
+        for(int i = 0; i < process->fileDescriptors.get_length(); i++){
+            if(process->fileDescriptors[i])
+                process->fileDescriptors[i]->close(process->fileDescriptors[i]);
+        }
+
+        process->fileDescriptors.clear();
+
+        for(int i = 0; i < process->programHeaders.get_length(); i++){
+            elf32_program_header_t programHeader = process->programHeaders[i];
+
+            for(int i = 0; i < ((programHeader.p_memsz / PAGE_SIZE) + 2); i++){
+                uint32_t address = Memory::VirtualToPhysicalAddress(programHeader.p_vaddr + i * PAGE_SIZE);
+                Memory::FreePhysicalMemoryBlock(address);
+            }
+        }
+        currentProcess = process->next;
+        kfree(process);
+
+        processEntryPoint = currentProcess->threads[0].registers.eip;
+        processStack = currentProcess->threads[0].registers.esp;
+        processBase = currentProcess->threads[0].registers.ebp;
+        processPageDirectory = currentProcess->pageDirectory.page_directory_phys;
+        TaskSwitch();
+    }
+
     void Tick(){
+        if(currentProcess->timeSlice > 0) {
+            currentProcess->timeSlice--;
+            return;
+        }
         if(schedulerLock) return;
 
-        uint32_t currentESP;
-        uint32_t currentEBP;
-        asm volatile ("mov %%esp, %0" : "=r" (currentESP));
-        asm volatile ("mov %%ebp, %0" : "=r" (currentEBP));
+        currentProcess->timeSlice = currentProcess->timeSliceDefault;
 
         uint32_t currentEIP = ReadEIP();
 
         if(currentEIP == 0xC0000123) {
             return;
         }
+
+        uint32_t currentESP;
+        uint32_t currentEBP;
+        asm volatile ("mov %%esp, %0" : "=r" (currentESP));
+        asm volatile ("mov %%ebp, %0" : "=r" (currentEBP));
 
         currentProcess->threads[0].registers.esp = currentESP;
         currentProcess->threads[0].registers.eip = currentEIP;

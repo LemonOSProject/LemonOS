@@ -1,2 +1,10 @@
-"Snake" /snake.lef
-"File Manager" /fm.lef 
+File Manager:/fm.lef
+Snake:/snake.lef
+Draw:/draw.lef
+Solitaire:/solitaire.lef
+Gnuboy:/lemongnuboy.lef
+Text Editor:/texteditor.lef
+Image Viewer:/imgview.lef
+CHIP-8 Emulator:/c8emu.lef
+Terminal:/terminal.lef
+System Information:/sysinfo.lef

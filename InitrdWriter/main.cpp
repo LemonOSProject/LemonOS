@@ -56,6 +56,7 @@ int main(int argc, char** argv){
         lemoninitfs_node_t* node = &initrd_nodes[i / 2];
 
         input.open(argv[i + 2]);
+		if(input.bad())continue;
         input.seekg(0,ios::beg);
         uint32_t start = input.tellg();
         input.seekg(0,ios::end);

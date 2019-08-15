@@ -1,6 +1,8 @@
 #include <gfx/graphics.h>
 
-uint8_t font_default[128][8] = {
+extern uint8_t font_default[];
+
+uint8_t font_old[128][8] = {
 	{ 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },   // U+0000 (nul)
 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },   // U+0001
 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },   // U+0002
@@ -131,16 +133,18 @@ uint8_t font_default[128][8] = {
 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }    // U+007F
 };
 
-void DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface){
-	for (int i = 0; i < 8; i++)
-	{
-		int row = font_default[(int)c][i];
-		for (int j = 0; j < 8; j++)
-		{
-			if ((row & (1 << j)) >> j)
-				DrawRect(x + j , y + i * 2, 1, 2, r, g, b, surface);
-		}
-	}
+void DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface){
+    character &= 0x7F;
+
+    for(int i = 0; i < 12; i++) {
+        uint8_t line = font_default[i * 128 + character];
+
+        for(int j = 0; j < 8; j++) {
+            if(line & 0x80)
+                DrawRect(j + x, i + y, 1, 1, r, g, b, surface);
+            line <<= 1; // Shift line left by one
+        }
+    }
 }
 
 void DrawString(char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface) {

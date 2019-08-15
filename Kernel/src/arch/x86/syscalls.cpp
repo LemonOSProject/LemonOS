@@ -11,8 +11,12 @@
 #include <logging.h>
 #include <gui.h>
 #include <timer.h>
+#include <pty.h>
+#include <lemon.h>
+#include <systeminfo.h>
+#include <cpuid.h>
 
-#define NUM_SYSCALLS 34
+#define NUM_SYSCALLS 38
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -46,15 +50,20 @@
 #define SYS_UPTIME 31
 #define SYS_GETVIDEOMODE 32
 #define SYS_DESTROY_WINDOW 33
+#define SYS_GRANTPTY 34
+#define SYS_FORKEXEC 35
+#define SYS_GET_SYSINFO 36
 
 typedef int(*syscall_t)(regs32_t*);
 
 int SysExit(regs32_t* r){
+	Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 	return 0;
 }
 
 int SysExec(regs32_t* r){
 	char* filepath = (char*)r->ebx;
+	
 	fs_node_t* root = Initrd::GetRoot();
 	fs_node_t* current_node = root;
 	char* file = strtok(filepath,"/");
@@ -84,7 +93,7 @@ int SysRead(regs32_t* r){
 	if(!buffer) return 1;
 	uint32_t count = r->edx;
 	int ret = node->read(node, 0, count, buffer);
-	if(r->esi) *(uint32_t*)r->esi = ret;
+	*(int*)r->esi = ret;
 	return 0;
 }
 
@@ -96,9 +105,16 @@ int SysWrite(regs32_t* r){
 		return 2;
 	}
 
-	if(!(r->ecx && r->edx))
+	if(!(r->ecx && r->edx)) return 1;
 
-	fs::Write(node, 0, r->edx, (uint8_t*)r->ecx);
+	uint8_t* buffer = (uint8_t*)kmalloc(r->edx);
+	memcpy(buffer, (uint8_t*)r->ecx, r->edx);
+
+	int ret = fs::Write(node, 0, r->edx, buffer);
+
+	if(r->esi){
+		*((int*)r->esi) = ret;
+	}
 
 	return 0;
 }
@@ -107,6 +123,8 @@ int SysOpen(regs32_t* r){
 	char* filepath = (char*)r->ebx;
 	fs_node_t* root = Initrd::GetRoot();
 	fs_node_t* current_node = root;
+	Log::Info("Opening: ");
+	Log::Write(filepath);
 	uint32_t fd;
 	if(strcmp(filepath,"/") == 0){
 
@@ -119,6 +137,7 @@ int SysOpen(regs32_t* r){
 	char* file = strtok(filepath,"/");
 	while(file != NULL){
 		fs_node_t* node = current_node->findDir(current_node,file);
+		if(!node) return 1;
 		if(node->flags & FS_NODE_DIRECTORY){
 			current_node = node;
 			file = strtok(NULL, "/");
@@ -178,12 +197,14 @@ int SysSendMessage(regs32_t* r){
 	uint32_t pid = r->ebx;
 	uint32_t id = r->ecx;
 	uint32_t data = r->edx;
+	uint32_t data2 = r->esi;
 
 	message_t message;
 	message.senderPID = Scheduler::GetCurrentProcess()->pid;
 	message.recieverPID = pid;
 	message.id = id;
 	message.data = data;
+	message.data2 = data2;
 
 	return Scheduler::SendMessage(message); // Send the message
 }
@@ -202,7 +223,8 @@ int SysReceiveMessage(regs32_t* r){
 }
 
 int SysUname(regs32_t* r){
-
+	if(!r->ebx) return 1;
+	else strcpy((char*)r->ebx, Lemon::versionString);
 }
 
 int SysMemalloc(regs32_t* r){
@@ -216,9 +238,6 @@ int SysMemalloc(regs32_t* r){
 	}
 
 	uint32_t* addr = (uint32_t*)r->ecx;
-
-	Log::Info(virt,true);
-	Log::Write(" - allocated address");
 
 	*addr = virt;
 	asm("sti");
@@ -236,6 +255,10 @@ int SysLSeek(regs32_t* r){
 
 	uint32_t* ret = (uint32_t*)r->esi;
 	int fd = r->ebx;
+
+	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length() || !Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
+		return 1;
+	}
 
 	switch(r->edx){
 	case 0: // SEEK_SET
@@ -284,9 +307,6 @@ int SysCreateDesktop(regs32_t* r){
 	surface_ptr->height = HAL::videoMode.height;
 	surface_ptr->depth = 32;
 
-
-	Log::Info(desktop->surface.width, false);
-	Log::Info(desktop->surface.height, false);
 	*handle_ptr = handle;
 
 	return 0;
@@ -303,8 +323,15 @@ int SysCreateWindow(regs32_t* r){
 	Scheduler::RegisterHandle(handle);
 	window_t* win = (window_t*)handle;
 	win->info = winfo;
+	strcpy(win->info.title, winfo.title);
 	win->info.ownerPID = Scheduler::GetCurrentProcess()->pid;
-	win->buffer = (uint8_t*)kmalloc(win->info.width*win->info.height*4+4);
+	//win->buffer = (uint8_t*)kmalloc(win->info.width*win->info.height*4+4);
+	surface_t surface;
+	bool needsPadding = (winfo.width * 4) % 0x10;
+	int horizontalSizePadded = winfo.width * 4 + (0x10 - ((winfo.width * 4) % 0x10));
+	surface.buffer = (uint8_t*)kmalloc(horizontalSizePadded * winfo.height);
+	//surface.linePadding = (0x10 - ((winfo.width * 4) % 0x10));
+	win->surface = surface;
 	GetDesktop()->windows->add_back((window_t*)handle);
 	return 0;
 }
@@ -317,7 +344,7 @@ int SysPaintDesktop(regs32_t* r){
 	if(!(Scheduler::FindHandle(handle).handle)) return 1;
 	desktop_t* desktop = (desktop_t*)handle;
 
-	memcpy_optimized(desktop->surface.buffer,surface->buffer,desktop->surface.width*desktop->surface.height*4);
+	memcpy_optimized(/*desktop->surface.buffer*/(void*)HAL::videoMode.address,surface->buffer,desktop->surface.width*desktop->surface.height*4);
 	return 0;
 }
 
@@ -330,7 +357,7 @@ int SysPaintWindow(regs32_t* r){
 	if(!(Scheduler::FindHandle(handle).handle)) return 1;
 	window_t* window = (window_t*)handle;
 
-	memcpy_optimized(window->buffer,surface->buffer,window->info.width*window->info.height*4);
+	memcpy_optimized(window->surface.buffer,surface->buffer,(window->info.width * 4 /*+ window->surface.linePadding*/)*window->info.height);
 	return 0;
 }
 
@@ -347,13 +374,13 @@ int SysDesktopGetWindow(regs32_t* r){
 	if(!window) return 2;
 
 	*infoStruct = window->info;
+	//strcpy(infoStruct->title, window->info.title);
 	return 0;
 }
 
 // Get window count (uint32_t* windowCount)
 int SysDesktopGetWindowCount(regs32_t* r){
 	if(!r->ebx) return 1;
-
 	*((uint32_t*)r->ebx) = GetDesktop()->windows->get_length();
 
 	return 0;
@@ -371,12 +398,20 @@ int SysCopyWindowSurface(regs32_t* r){
 	
 	window_t* window = (window_t*)handle;
 
+	rect_t windowRegion;
+	if(!r->edx) windowRegion = {{0,0},{window->info.width,window->info.height}};
+	else windowRegion = *((rect_t*)r->esi);
+
 	surface_t* dest = (surface_t*)r->ebx;
 
-	int rowSize = ((dest->width - offset.x) > window->info.width) ? window->info.width : (dest->width - offset.x);
+	int rowSize = ((dest->width - offset.x) > windowRegion.size.x) ? windowRegion.size.x : (dest->width - offset.x);
 
-	for(int i = 0; i < window->info.height && i < dest->height - offset.y; i++){
-		memcpy(dest->buffer + (i + offset.y) * dest->width * 4 + offset.x * 4, window->buffer + i * window->info.width * 4, rowSize*4);
+	for(int i = windowRegion.pos.y; i < windowRegion.size.y && i < dest->height - offset.y; i++){
+		uint8_t* bufferAddress = dest->buffer + (i + offset.y) * (dest->width * 4 /*+ dest->linePadding*/)+ offset.x * 4;
+		//if(!((uint32_t)bufferAddress % 0x10))
+			memcpy_optimized(bufferAddress, window->surface.buffer + i * (window->info.width * 4 /*+ window->surface.linePadding*/) + windowRegion.pos.x * 4, rowSize * 4);
+		//else
+		//	memcpy(bufferAddress, window->surface.buffer + i * window->info.width * 4, rowSize*4);
 	}
 
 	return 0;
@@ -386,6 +421,8 @@ int SysReadDir(regs32_t* r){
 	if(!(r->ebx && r->ecx)) return 1;
 
 	unsigned int fd = r->ebx;
+
+	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()) return 2;
 	
 	fs_dirent_t* direntPointer = (fs_dirent_t*)r->ecx;
 
@@ -399,6 +436,7 @@ int SysReadDir(regs32_t* r){
 	}
 
 	direntPointer->inode = dirent->inode;
+	direntPointer->type = dirent->type;
 	strcpy(direntPointer->name,dirent->name);
 	direntPointer->name[strlen(dirent->name)] = 0;
 	if(r->esi) *((uint32_t*)r->esi) = 1;
@@ -407,12 +445,12 @@ int SysReadDir(regs32_t* r){
 
 int SysUptime(regs32_t* r){
 	uint32_t* seconds = (uint32_t*)r->ebx;
-	uint32_t* ticks = (uint32_t*)r->ecx;
+	uint32_t* milliseconds = (uint32_t*)r->ecx;
 	if(seconds){
 		*seconds = Timer::GetSystemUptime();
 	}
-	if(ticks){
-		*ticks = Timer::GetTicks();
+	if(milliseconds){
+		*milliseconds = Timer::GetTicks()/(Timer::GetFrequency()/1000);
 	}
 }
 
@@ -439,6 +477,75 @@ int SysDestroyWindow(regs32_t* r){
 
 	kfree(win);
 
+	return 0;
+}
+
+int SysGrantPty(regs32_t* r){
+	if(!r->ebx) return 1;
+
+	PTY* pty = GrantPTY(Scheduler::GetCurrentProcess()->pid);
+
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	*((uint32_t*)r->ebx) = currentProcess->fileDescriptors.get_length();
+
+	currentProcess->fileDescriptors.add_back(&pty->masterFile);
+
+	currentProcess->fileDescriptors.replace_at(0, &pty->slaveFile); // Stdin
+	currentProcess->fileDescriptors.replace_at(1, &pty->slaveFile); // Stdout
+	currentProcess->fileDescriptors.replace_at(2, &pty->slaveFile); // Stderr
+
+	return 0;
+}
+
+int SysForkExec(regs32_t* r){
+	char* filepath = (char*)r->ebx;
+	
+	fs_node_t* root = Initrd::GetRoot();
+	fs_node_t* current_node = root;
+	char* file = strtok(filepath,"/");
+	while(file != NULL){ // Iterate through the directories to find the file
+		fs_node_t* node = current_node->findDir(current_node,file);
+		if(!node) return 1;
+		if(node->flags & FS_NODE_DIRECTORY){
+			current_node = node;
+			file = strtok(NULL, "/");
+			continue;
+		}
+		current_node = node;
+		break;
+	}
+
+	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
+	uint32_t a = current_node->read(current_node, 0, current_node->size, buffer);
+	uint64_t pid = Scheduler::LoadELF((void*)buffer);
+	process_t* proc = Scheduler::FindProcessByPID(pid);
+	process_t* currentProc = Scheduler::GetCurrentProcess();
+	proc->fileDescriptors.clear();
+	for(int i = 0; i < currentProc->fileDescriptors.get_length(); i++){
+		proc->fileDescriptors.add_back(currentProc->fileDescriptors[i]);
+	}
+	kfree(buffer);
+	return 0;
+}
+
+int SysGetSysinfo(regs32_t* r){
+	if(!r->ebx) return 1;
+
+	sys_info_t sysInfo;
+	sysInfo.memSize = HAL::multibootInfo.memoryHi + HAL::multibootInfo.memoryLo;
+	sysInfo.usedMemory = Memory::usedPhysicalBlocks;
+
+	strcpy(sysInfo.versionString, Lemon::versionString);
+	strcpy(sysInfo.cpuVendor, CPU::GetCPUInfo().vendor_string);
+
+	memcpy((void*)r->ebx, &sysInfo, sizeof(sys_info_t));
+	return 0;
+}
+
+int SysDebug(regs32_t* r){
+	Log::Info((char*)r->ebx);
+	Log::Info(r->ecx);
 	return 0;
 }
 
@@ -476,7 +583,11 @@ syscall_t syscalls[]{
 	SysReadDir,
 	SysUptime,
 	SysGetVideoMode,
-	SysDestroyWindow
+	SysDestroyWindow,
+	SysGrantPty,
+	SysForkExec,
+	SysGetSysinfo,
+	SysDebug
 };
 
 namespace Scheduler{extern bool schedulerLock;};

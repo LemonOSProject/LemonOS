@@ -111,4 +111,5 @@ namespace Memory{
 
 	page_directory_ptr_t CreateAddressSpace();
 	void LoadKernelPageDirectory();
+	uint32_t GetKernelPageDirectory();
 }

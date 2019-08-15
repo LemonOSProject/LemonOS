@@ -39,6 +39,7 @@ typedef struct fs_node{
 typedef struct fs_dirent {
 	uint32_t inode; // Inode number
 	char name[128]; // Filename
+    uint32_t type;
 } fs_dirent_t;
 
 namespace fs{

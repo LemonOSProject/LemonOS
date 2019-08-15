@@ -61,6 +61,12 @@ void* memset(void* src, int c, size_t count)
 void *memcpy(void* dest, void* src, size_t count) {
 	const char *sp = (char *)src;
 	char *dp = (char *)dest;
+	for(size_t i = count; i >= sizeof(uint64_t); i = count){
+		*((uint64_t*)dp) = *((uint64_t*)sp);
+		sp = sp + sizeof(uint64_t);
+		dp = dp + sizeof(uint64_t);
+		count -= sizeof(uint64_t);
+	}
 	for(size_t i = count; i >= 4; i = count){
 		*((uint32_t*)dp) = *((uint32_t*)sp);
 		sp = sp + 4;
@@ -76,13 +82,15 @@ void *memcpy(void* dest, void* src, size_t count) {
 
 void strcpy(char* dest, const char* src)
 {
-	for(int i = 0; src[i] != '\0'; i++)
+	int i = 0;
+	for(; src[i] != '\0'; i++)
 	{
 		dest[i] = src[i];
 	}
+	dest[i] = 0;
 }
 
-int strlen(char* str)
+int strlen(const char* str)
 {
 	int i = 0;
 	while(str[i] != '\0') i++;

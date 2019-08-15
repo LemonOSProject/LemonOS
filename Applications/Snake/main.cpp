@@ -17,17 +17,20 @@ rgba_colour_t snakeCellColours[]{
 	{96,128,96,255},
 	{64,64,64,255},
 	{64,64,64,255},
-	{64,64,64,255},
+	{64,64,0,255},
 };
 
-uint32_t frameWaitTime = 100; // For 10 FPS (in ticks)
+rgba_colour_t bgColourDefault = {96,128,96,255};
 
-uint32_t timerFrequency = 1000; // Timer frequency (Hz)
+uint32_t frameWaitTime = 83; // For ~12 FPS (in ms)
+uint32_t frameWaitTimeDefault = 83;
+
+int powerUp = 0;
 
 uint64_t lastUptimeSeconds;
-uint32_t lastUptimeTicks;
+uint32_t lastUptimeMs;
 
-uint32_t tickCounter;
+uint32_t msCounter;
 
 bool gameOver;
 
@@ -40,22 +43,26 @@ unsigned int rand()
 }
 
 void Wait(){
-	while(tickCounter < frameWaitTime){
+	while(msCounter < frameWaitTime){
+		asm("hlt");
 		uint32_t seconds;
-		uint32_t ticks;
+		uint32_t milliseconds;
 
-		syscall(SYS_UPTIME, (uint32_t)&seconds, (uint32_t)&ticks,0,0,0);
+		syscall(SYS_UPTIME, (uint32_t)&seconds, (uint32_t)&milliseconds,0,0,0);
 
-		tickCounter += (seconds - lastUptimeSeconds)*1000 + (ticks - lastUptimeTicks);
+		msCounter += (seconds - lastUptimeSeconds)*1000 + (milliseconds - lastUptimeMs);
 		lastUptimeSeconds = seconds;
-		lastUptimeTicks = ticks;
+		lastUptimeMs = milliseconds;
 	}
-	tickCounter = 0;
+	msCounter = 0;
 }
 
 List<vector2i_t>* snake;
 	
 uint8_t snakeMapCells[16][16];
+int powerUpTimer;
+int powerUpTimerDefault = 100;
+int fruitType = 0; // 0 - Apple, 1 - Lemon
 
 void Reset(){
 	//delete snake;
@@ -63,12 +70,16 @@ void Reset(){
 	
 	snake->add_back({8,8});
 	snake->add_back({9,8});
+
+	powerUp = 0;
+	frameWaitTime = frameWaitTimeDefault;
+	snakeCellColours[0] = bgColourDefault;
 }
 
 vector2i_t applePos = {1,1};
 
 extern "C"
-void pmain(){
+int main(char argc, char** argv){
 	win_info_t windowInfo;
 	//handle_t windowHandle;
 	Window* window;
@@ -78,11 +89,6 @@ void pmain(){
 	windowInfo.x = 64;
 	windowInfo.y = 0;
 	windowInfo.flags = 0;
-
-	/*surface_t windowSurface;
-	windowSurface.buffer = (uint8_t*)malloc(256*256*4);
-	windowSurface.width = 256;
-	windowSurface.height = 256;*/
 
 	snake = new List<vector2i_t>();
 
@@ -101,6 +107,17 @@ void pmain(){
 
 	for(;;){
 		Wait();
+
+		if(powerUp){
+			if(powerUpTimer){
+				powerUpTimer--;
+				snakeCellColours[0] = {255, 0, 0, 255};
+			} else {
+				powerUp = 0;
+				frameWaitTime = frameWaitTimeDefault;
+				snakeCellColours[0] = bgColourDefault;
+			}
+		}
 
 		ipc_message_t msg;
 		while(ReceiveMessage(&msg)){
@@ -123,6 +140,9 @@ void pmain(){
 						direction = 3;
 						break;
 				}
+			} else if (msg.id == WINDOW_EVENT_CLOSE){
+				DestroyWindow(window);
+				exit();
 			}
 		}
 		
@@ -134,7 +154,7 @@ void pmain(){
 			}
 		}
 
-		snakeMapCells[applePos.x][applePos.y] = SNAKE_CELL_APPLE;
+		snakeMapCells[applePos.x][applePos.y] = fruitType ? SNAKE_CELL_LEMON : SNAKE_CELL_APPLE;
 
 		for(int i = 0; i < snake->get_length();i++){
 			snakeMapCells[snake->get_at(i).x][snake->get_at(i).y] = SNAKE_CELL_SNAKE; 
@@ -167,13 +187,29 @@ void pmain(){
 
 		if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_SNAKE || snake->get_at(0).y < 0 || snake->get_at(0).x < 0 || snake->get_at(0).y >= 16 || snake->get_at(0).x >= 16){
 			gameOver = true;
-			DrawString("Game Over, Press ENTER to Reset", 0, 0, 255, 255, 255, &window->surface);
+			DrawString("Game Over, Press any key to Reset", 0, 0, 255, 255, 255, &window->surface);
 			syscall(SYS_PAINT_WINDOW, (uint32_t)window->handle, (uint32_t)&window->surface,0,0,0);
 			continue;
 		} else if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_APPLE){
 			snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] = SNAKE_CELL_EMPTY;
 			
 			applePos = { rand() % 16, rand() % 16 };
+			if(!(rand() % 4))
+				fruitType = 1;
+			else fruitType = 0;
+
+			snake->add_back({0,0});
+		} else if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_LEMON){
+			snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] = SNAKE_CELL_EMPTY;
+			
+			powerUp = 1;
+			powerUpTimer = powerUpTimerDefault;
+			frameWaitTime /= 2;
+
+			applePos = { rand() % 16, rand() % 16 };
+			if(!(rand() % 3))
+				fruitType = 1;
+			else fruitType = 0;
 
 			snake->add_back({0,0});
 		}

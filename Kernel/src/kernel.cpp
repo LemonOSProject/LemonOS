@@ -13,21 +13,28 @@
 #include <gui.h>
 #include <mouse.h>
 #include <keyboard.h>
+#include <pci.h>
+#include <panic.h>
 
+void* initElf;
 extern "C"
 void IdleProcess(){
 	Log::Info("Loading init Process...");
 	Log::SetVideoConsole(NULL);
-	void* initElf;
 	fs_node_t* initFsNode = fs::FindDir(Initrd::GetRoot(),"init.lef");
+	if(!initFsNode){
+		char* panicReasons[]{
+			"Failed to load init task (init.lef)!"
+		};
+		KernelPanic(panicReasons,1);
+	}
+		
 	initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 	Scheduler::LoadELF(initElf);
 	Log::Write("OK");
-	Log::SetVideoConsole(NULL);
-	while(!GetDesktop());
 	for(;;){ 
-		memcpy((void*)HAL::videoMode.address, GetDesktop()->surface.buffer, HAL::videoMode.width*HAL::videoMode.height*4);
+		asm("hlt");
 	}
 }
 
@@ -37,21 +44,12 @@ void kmain(multiboot_info_t* mb_info){
 
 	video_mode_t videoMode = Video::GetVideoMode();
 
-	uint8_t gray = 0;
-	uint8_t op = 0;
-	for(int i = 0; i < videoMode.height; i += 1){
-		Video::DrawRect(0, i, videoMode.width, 1, gray, gray, gray);
-
-		if(gray >= 255) op = 1;
-		else if(gray <= 0) op = 0;
-
-		if(op == 0) gray++;
-		else gray--;
-	}
-
 	VideoConsole con = VideoConsole(0,0,videoMode.width,videoMode.height);
 
-	Log::SetVideoConsole(&con);
+	//Log::SetVideoConsole(&con);
+	Log::SetVideoConsole(NULL);
+
+	Video::DrawRect(0, 0, videoMode.width, videoMode.height, 0, 0, 0);
 
 	char* stringBuffer = (char*)kmalloc(16);
 	Log::Info("Video Resolution:");
@@ -62,9 +60,7 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Write(itoa(videoMode.bpp, stringBuffer, 10));
 	kfree(stringBuffer);
 
-	con.Update();
-
-	if(videoMode.height < 800)
+	if(videoMode.height < 600)
 		Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");
 	if(videoMode.bpp != 32)
 		Log::Warning("Unsupported Colour Depth expect issues.");
@@ -75,7 +71,7 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Write("MB");
 
 	Log::Info("Initializing System Timer...");
-	Timer::Initialize(1000);
+	Timer::Initialize(1200);
 	Log::Write("OK");
 
 	Log::Info("Multiboot Module Count: ");
@@ -85,6 +81,19 @@ void kmain(multiboot_info_t* mb_info){
 	multiboot_module_t initrdModule = *((multiboot_module_t*)HAL::multibootInfo.modsAddr); // Get initrd as a multiboot module
 	Initrd::Initialize(initrdModule.mod_start,initrdModule.mod_end - initrdModule.mod_start); // Initialize Initrd
 	Log::Write("OK");
+
+	fs_node_t* splashFile;
+	if(splashFile = fs::FindDir(Initrd::GetRoot(),"splash.bmp")){
+		uint32_t size = splashFile->size;
+		uint8_t* buffer = (uint8_t*)kmalloc(size);
+		if(fs::Read(splashFile, 0, size, buffer))
+			Video::DrawBitmapImage(videoMode.width/2 - 484/2, videoMode.height/2 - 292/2, 484, 292, buffer);
+	}
+
+	Video::DrawString("Copyright 2018-2019 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
+
+	long uptimeSeconds = Timer::GetSystemUptime();
+	while((uptimeSeconds - Timer::GetSystemUptime()) < 2);
 
 	Log::Info("Ramdisk Contents:\n");
 	fs_dirent_t* dirent;
@@ -101,6 +110,7 @@ void kmain(multiboot_info_t* mb_info){
 		}
 		Log::Write("\n");
 	}
+
 	Log::Info("Initializing HID...");
 
 	Mouse::Install();
@@ -115,6 +125,8 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Write("OK");
 
 	Log::Info("Initializing Task Scheduler...");
+	
 	Scheduler::Initialize();
+	
 	//Log::Write("OK");
 }

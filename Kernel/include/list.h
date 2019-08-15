@@ -18,6 +18,7 @@ public:
 	{
 		front = NULL;
 		back = NULL;
+		num = 0;
 	}
 
 	~List() {
@@ -79,6 +80,26 @@ public:
 		for (unsigned int i = 0; i < pos; i++) current = current->next;
 
 		return current->obj;
+	}
+
+	T get_at(unsigned pos) {
+		if (num < 0 || pos >= num) return *(T*)nullptr;
+
+		ListNode<T>* current = front;
+
+		for (unsigned int i = 0; i < pos; i++) current = current->next;
+
+		return current->obj;
+	}
+
+	void replace_at(unsigned pos, T obj) {
+		if (num < 0 || pos >= num) return ;
+
+		ListNode<T>* current = front;
+
+		for (unsigned int i = 0; i < pos; i++) current = current->next;
+
+		current->obj = obj;
 	}
 
 	int get_length() {

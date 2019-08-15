@@ -7,6 +7,7 @@
 #include <system.h>
 #include <scheduler.h>
 #include <physicalallocator.h>
+#include <panic.h>
 
 //extern uint32_t kernel_end;
 
@@ -251,7 +252,7 @@ namespace Memory{
 			kernelPageDirectory[i] = 0 | PDE_WRITABLE;
 		}
 
-		for (int i = 0, frame = 0x0, virt = 0; i<6144; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) {
+		for (int i = 0, frame = 0x0, virt = 0; i<4096; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) {
 
 			//Create a new page
 			page_t page = 0;
@@ -266,7 +267,7 @@ namespace Memory{
 			kernelPageTables[pdindex][PAGE_TABLE_INDEX(virt)] = page;
 		}
 
-		for (int i = 0, frame = 0x0, virt = 0xC0000000; i<6144; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) {
+		for (int i = 0, frame = 0x0, virt = 0xC0000000; i<4096; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) {
 
 			//Create a new page
 			page_t page = 0;
@@ -278,32 +279,19 @@ namespace Memory{
 			uint32_t pdindex = PAGE_DIRECTORY_INDEX(virt);
 			SetFlags(&kernelPageDirectory[pdindex], PDE_PRESENT);
 			SetFlags(&kernelPageDirectory[pdindex], PDE_WRITABLE);
-			SetPDEFrame(&(kernelPageDirectory[pdindex]), ((uint32_t)&(kernelPageTables[pdindex])) - 0xC0000000);
+			SetPDEFrame(&(kernelPageDirectory[pdindex]), ((uint32_t)(&(kernelPageTables[pdindex]))) - 0xC0000000);
 			kernelPageTables[pdindex][PAGE_TABLE_INDEX(virt)] = page;
 		}
 
 		SwitchPageDirectory((uint32_t)kernelPageDirectory - 0xC0000000);
-	}
-
-	void MapKernel() {
-		for (int i = 0, frame = 0x0, virt = 0xC0000000; i<8192; i++, frame += PAGE_SIZE, virt += PAGE_SIZE) {
-
-			//Create a new page
-			page_t page = 0;
-			SetFlags(&page, PAGE_PRESENT | PAGE_WRITABLE); // Make it present and writable
-			SetPageFrame(&page, frame);
-
-			// Add it to the page table and directory
-			uint32_t pdindex = PAGE_DIRECTORY_INDEX(virt);
-			SetFlags(&kernelPageDirectory[pdindex], PDE_PRESENT);
-			SetFlags(&kernelPageDirectory[pdindex], PDE_WRITABLE);
-			SetPDEFrame(&kernelPageDirectory[pdindex], (uint32_t)&kernelPageTables[pdindex]);
-			kernelPageTables[pdindex][PAGE_TABLE_INDEX(virt)] = page;
-		}
 	}
 
 	void LoadKernelPageDirectory(){
 		SwitchPageDirectory((uint32_t)kernelPageDirectory - 0xC0000000);
+	}
+
+	uint32_t GetKernelPageDirectory(){
+		return (uint32_t)kernelPageDirectory - 0xC0000000;
 	}
 
 	// Switch Page Directory
@@ -332,33 +320,37 @@ namespace Memory{
 		ptr.page_directory_phys = AllocatePhysicalMemoryBlock();
 
 		MapVirtualPages((uint32_t)ptr.page_directory_phys, (uint32_t)ptr.page_directory, 1); // Map page directory into kernel space
+		memset(ptr.page_directory,0,sizeof(page_directory_t));
 
 		for(uint32_t i = PAGE_DIRECTORY_INDEX(0xC0000000); i < TABLES_PER_DIR; i++){
 			SetFlags(&((*ptr.page_directory)[i]), PDE_PRESENT | PDE_WRITABLE); // Map everything above the 3GB mark (kernel space)
 			SetPDEFrame(&((*ptr.page_directory)[i]), (uint32_t)&(kernelPageTables[i]) - 0xC0000000);
 		}
 
-		ptr.page_tables = (page_table_t*)KernelAllocateVirtualPages(sizeof(page_table_t) * PAGE_DIRECTORY_INDEX(0xC0000000) / PAGE_SIZE + PAGE_SIZE); // Don't allocate space for page tables above 3 GB in memory
+		ptr.page_tables = (page_table_t*)KernelAllocateVirtualPages((sizeof(page_table_t) * PAGE_DIRECTORY_INDEX(0xC0000000) + 1) / PAGE_SIZE); // Don't allocate space for page tables above 3 GB in memory
 
 		for(uint32_t i = 0; i < PAGE_DIRECTORY_INDEX(0xC0000000); i++){
 			uint32_t phys = AllocatePhysicalMemoryBlock();
 			MapVirtualPages(phys,(uint32_t)&(ptr.page_tables[i]), 1); // 1 page table takes up 4096 bytes (1 page) in memory
+			//MapVirtualPages(phys,((uint32_t)ptr.page_tables) + i * PAGE_SIZE, 1);
 		}
 
 		for(uint32_t i = 0; i < PAGE_DIRECTORY_INDEX(0xC0000000); i++){
 			SetFlags(&((*ptr.page_directory)[i]), PDE_PRESENT | PDE_WRITABLE | PDE_USER);
-			SetPDEFrame(&((*ptr.page_directory)[i]), VirtualToPhysicalAddress((uint32_t)&(ptr.page_tables[i])));
+			//SetPDEFrame(&((*ptr.page_directory)[i]), VirtualToPhysicalAddress((uint32_t)&(ptr.page_tables[i])));
 		}
 
-		memset((uint8_t*)ptr.page_tables, 0, sizeof(page_table_t) * TABLES_PER_DIR);
+		memset((uint8_t*)ptr.page_tables, 0, sizeof(page_table_t) * PAGE_DIRECTORY_INDEX(0xC0000000));
+
 		asm("sti");
 		return ptr;
 	}
 
 	void PageFaultHandler(regs32_t* regs)
 	{
+		asm("cli");
 		Log::Error("Page Fault!\r\n");
-		//Log::SetVideoConsole(nullptr);
+		Log::SetVideoConsole(nullptr);
 
 		uint32_t faultAddress;
 		asm volatile("mov %%cr2, %0" : "=r" (faultAddress));
@@ -394,6 +386,12 @@ namespace Memory{
 
 		Log::Info("\r\nFault address: ");
 		Log::Info(faultAddress);
+
+		char temp[16];
+		char temp2[16];
+		char temp3[16];
+		char* reasons[]{"Page Fault","EIP: ", itoa(regs->eip, temp, 16),"Address: ",itoa(faultAddress, temp2, 16), "Process:", itoa(Scheduler::GetCurrentProcess()->pid,temp3,10)};;
+		KernelPanic(reasons,7);
 
 		for (;;);
 	}

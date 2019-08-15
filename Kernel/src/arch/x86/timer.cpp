@@ -3,9 +3,9 @@
 #include <scheduler.h>
 
 namespace Timer{
-    uint32_t frequency; // Timer frequency
-    uint32_t ticks; // Timer tick counter
-    uint64_t uptime; // System uptime in seconds since the timer was initialized
+    uint32_t frequency = 0; // Timer frequency
+    uint32_t ticks = 0; // Timer tick counter
+    uint64_t uptime = 0; // System uptime in seconds since the timer was initialized
 
     uint64_t GetSystemUptime(){
         return uptime;
@@ -13,6 +13,10 @@ namespace Timer{
 
     uint32_t GetTicks(){
         return ticks;
+    }
+
+    uint32_t GetFrequency(){
+        return frequency;
     }
 
     // Timer handler
@@ -28,7 +32,7 @@ namespace Timer{
     // Initialize
     void Initialize(uint32_t freq) {
         frequency = freq;
-        uint32_t divisor = 1193180 / freq;
+        uint32_t divisor = 1193182 / freq;
 
         // Send the command byte.
         outportb(0x43, 0x36);

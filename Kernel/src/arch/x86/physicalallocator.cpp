@@ -13,7 +13,6 @@ namespace Memory{
     uint32_t usedPhysicalBlocks = 0;
     uint32_t maxPhysicalBlocks = 0;
 
-
     // Initialize the physical page allocator
     void InitializePhysicalAllocator(memory_info_t* mem_info)
     {

@@ -4,6 +4,7 @@
 #include <string.h>
 #include <memory.h>
 #include <logging.h>
+#include <panic.h>
 
 namespace Initrd{
 	fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index);
@@ -56,6 +57,7 @@ namespace Initrd{
 		dev.flags = FS_NODE_DIRECTORY;
 		dev.inode = 0;
 		strcpy(devDirent.name, "dev");
+		devDirent.type = FS_NODE_DIRECTORY;
 
 		dev.readDir = Initrd::ReadDir;
 		dev.findDir = Initrd::FindDir;
@@ -117,6 +119,7 @@ namespace Initrd{
 		memset(dirent.name,0,128); // Zero the string
 		strcpy(dirent.name,nodes[index-1].filename);
 		dirent.inode = index-1;
+		dirent.type = 0;
 
 		return &dirent;
 	}
@@ -131,6 +134,9 @@ namespace Initrd{
 		} else if(node == &dev){
 			for(int i = 0; i < deviceCount; i++)
 				if(strcmp(devices[i]->name, name) == 0) return devices[0];
+		} else {
+			char* pr[] = {"could not find dir"};
+			KernelPanic(pr,1);
 		}
 		return NULL;
 	}

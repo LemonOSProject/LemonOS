@@ -2,18 +2,19 @@
 
 ARCH := x86
 
-MAKEFILE_DIR := $(shell pwd)
-SRCDIRS := src/gfx src/gfx/window
-INCLUDEPATH := -I include -I ../LibC/include
+SRCDIRS := src src/gfx src/gfx/window
+INCLUDEPATH := -I include
 
-CFLAGS-x86 := -fPIC -Wall -Wno-int-conversion -Wno-pointer-arith -Wno-write-strings -fno-exceptions -Wno-address -nostdlib -m32 -ffreestanding -Wno-write-strings -fno-exceptions -fno-rtti -std=c++14 $(INCLUDEPATH)
+CFLAGS-x86 := -O3 -fPIC -Wall -Wno-int-conversion -Wno-pointer-arith -Wno-write-strings -fno-exceptions -Wno-address -nostdlib -m32 -ffreestanding -Wno-write-strings -fno-exceptions -fno-rtti -std=c++14 $(INCLUDEPATH)
 ASFLAGS-x86 := -f elf32 -g -F dwarf
 
 CFILES := $(shell find $(SRCDIRS) -type f -name "*.cpp")
+ASMFILES := $(shell find $(SRCDIRS) -type f -name "*.asm")
 OBJFILES := $(patsubst %.asm,%.asm.o,$(ASMFILES)) $(patsubst %.cpp,%.cpp.o,$(CFILES))
 
 ifeq ($(ARCH),x86)
 CFLAGS=$(CFLAGS-x86)
+ASFLAGS=$(ASFLAGS-x86)
 endif
 
 ifeq ($(ARCH),x86_64)
@@ -26,10 +27,12 @@ all: $(ARCH)
 
 x86: $(OBJFILES)
 	@ar rcs bin/liblemon.a obj/*
+	#@cp bin/liblemon.a ../FakeSysroot/usr/lib/
+	@cp -r include ../FakeSysroot/usr/
 
 %.cpp.o: %.cpp
 	@echo Compiling $<
-	@i686-elf-gcc $(CFLAGS) -c $< -o obj/$(shell basename $@);
+	@i686-lemon-gcc $(CFLAGS) -c $< -o obj/$(shell basename $@);
 
 %.asm.o: %.asm
 	@echo Assembling $<

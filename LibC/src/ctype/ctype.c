@@ -45,3 +45,11 @@ int isprint(int c){
 int ispunct(int c){
     return (isgraph(c) && !isalnum(c));
 }
+
+int toupper(int c){
+    return c & 0x5f;
+}
+
+int tolower(int c){
+    return c | 0x20;
+}

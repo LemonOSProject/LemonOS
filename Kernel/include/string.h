@@ -13,5 +13,5 @@ int strcmp(char* s1, char* s2);
 
 char *strtok(char * str, const char * delim);
 
-int strlen(char* str);
+int strlen(const char* str);
 char* strcat(char* dest, const char* src);

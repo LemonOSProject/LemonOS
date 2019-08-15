@@ -1,0 +1,3 @@
+int usleep(unsigned seconds){
+	
+}

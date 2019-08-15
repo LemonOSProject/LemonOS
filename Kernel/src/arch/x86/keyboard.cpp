@@ -3,7 +3,7 @@
 #include <idt.h>
 #include <logging.h>
 
-char key = 0;
+uint8_t key = 0;
 bool caps = false;
 
 char keymap_us[128] =
@@ -57,14 +57,11 @@ namespace Keyboard{
         asm("cli");
         // Read from the keyboard's data buffer
         key = inportb(0x60);
-
-        if (key & 0x80) {
-            // Shift, Ctrl, Alt, etc. is held down
-        } else if(key == 0x3A){
+		
+		if(key == 0x3A){
             caps = !caps;
         } else {
-            Log::Info("Key: ");
-            test[0] = keymap_us[key];
+            test[0] = keymap_us[(key >> 7) ? key-128 :key];
             test[1] = 0;
             Log::Write(test);
             wmKeyMessage.senderPID = 0;
@@ -80,6 +77,8 @@ namespace Keyboard{
     // Register interrupt handler
     void Install() {
         IDT::RegisterInterruptHandler(33, Handler);
+
+		//outportb(0x64, )
 
         wmKeyMessage.senderPID = 0;
         wmKeyMessage.recieverPID = 1; // Should be the Window Manager
