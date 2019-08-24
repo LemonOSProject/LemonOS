@@ -3,6 +3,7 @@
 #include <string.h>
 #include <hal.h>
 #include <video.h>
+#ifdef Lemon32
 #include <videoconsole.h>
 #include <liballoc.h>
 #include <timer.h>
@@ -15,7 +16,9 @@
 #include <keyboard.h>
 #include <pci.h>
 #include <panic.h>
+#endif
 
+#ifdef Lemon32
 void* initElf;
 extern "C"
 void IdleProcess(){
@@ -37,11 +40,13 @@ void IdleProcess(){
 		asm("hlt");
 	}
 }
+#endif
 
 extern "C"
 void kmain(multiboot_info_t* mb_info){
 	HAL::Init(*mb_info);
 
+	#ifdef Lemon32
 	video_mode_t videoMode = Video::GetVideoMode();
 
 	VideoConsole con = VideoConsole(0,0,videoMode.width,videoMode.height);
@@ -127,6 +132,6 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Info("Initializing Task Scheduler...");
 	
 	Scheduler::Initialize();
-	
+	#endif
 	//Log::Write("OK");
 }

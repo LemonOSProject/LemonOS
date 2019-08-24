@@ -1,19 +1,20 @@
 #pragma once
 
+//#define KERNEL_VIRTUAL_BASE 0xC0000000
+
 #include <stdint.h>
 
-inline void outportb(uint16_t port, uint8_t value){
-    asm volatile ("outb %1, %0" : : "dN" (port), "a" (value));
-}
+void outportb(uint16_t port, uint8_t value);
+void outportw(uint16_t port, uint16_t value);
+void outportl(uint16_t port, uint32_t value);
 
-inline uint8_t inportb(uint16_t port){
-    uint8_t value;
-    asm volatile("inb %1, %0" : "=a" (value) : "dN" (port));
-    return value;
-}
+uint8_t inportb(uint16_t port);
+uint16_t inportw(uint16_t port);
+uint32_t inportl(uint16_t port);
 
-inline uint16_t inportw(uint16_t port){
-    uint16_t value;
-    asm volatile("inw %1, %0" : "=a" (value) : "dN" (port));
-    return value;
-} 
+typedef struct {
+	unsigned int gs,fs,es,ds;
+	unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;
+	unsigned int int_num, err_code;
+	unsigned int eip, cs, eflags, usr_esp, ss;
+} regs32_t;

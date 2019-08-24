@@ -2,6 +2,9 @@
 
 #include <stdint.h>
 
+#pragma GCC push_options
+#pragma GCC optimize ("O1")
+
 void reverse(char *str, int length)
 {
    int c;
@@ -48,9 +51,8 @@ char* itoa(unsigned long long num, char* str, int base)
 
 	return str;
 }
-
-void* memset(void* src, int c, size_t count)
-{
+extern "C"
+void* memset(void* src, int c, size_t count) {
 	unsigned char *xs = (uint8_t*)src;
 
 	while (count--)
@@ -157,3 +159,5 @@ char *strtok(char * str, const char * delim)
 char* strcat(char* dest, const char* src){
     strcpy(dest + strlen(dest), src);
 }
+
+#pragma GCC pop_options

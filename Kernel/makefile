@@ -5,10 +5,10 @@ ARCH := x86
 SRCDIRS := src/arch/$(ARCH) src src/liballoc src/fs src/tty
 INCLUDEPATH := -I include -I include/arch/$(ARCH)
 
-CFLAGS-x86_64 := -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -z max-page-size=0x1000 -nostdlib $(INCLUDEPATH)
+CFLAGS-x86_64 := -DLemon64 -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -z max-page-size=0x1000 -nostdlib $(INCLUDEPATH)
 ASFLAGS-x86_64 := -f elf64 -g -F dwarf -w+gnu-elf-extensions
 
-CFLAGS-x86 := -fno-pic -Wall -Wno-pointer-arith -fno-permissive -fno-exceptions -fno-rtti -std=c++14 -fno-pic -Wno-address -m32 -ffreestanding -Wno-write-strings -fno-stack-protector -nostdlib $(INCLUDEPATH)
+CFLAGS-x86 := -DLemon32 -fno-pic -Wall -Wno-pointer-arith -fno-permissive -fno-exceptions -fno-rtti -std=c++14 -fno-pic -Wno-address -m32 -ffreestanding -Wno-write-strings -fno-stack-protector -nostdlib $(INCLUDEPATH)
 ASFLAGS-x86 := -f elf32 -g -F dwarf
 
 ifeq ($(ARCH),x86)

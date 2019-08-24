@@ -5,7 +5,7 @@ ARCH := x86
 SRCDIRS := src src/liballoc src/lemon src/string src/stdio src/ctype src/stdlib src/unistd src/sys src/math
 INCLUDEPATH := -I include
 
-CFLAGS-x86 := -fPIC -Wall -Wno-int-conversion -Wno-pointer-arith -fno-exceptions -Wno-address -nostdlib -m32 -ffreestanding -Wno-write-strings $(INCLUDEPATH)
+CFLAGS-x86 := -O3 -fPIC -Wall -Wno-int-conversion -Wno-pointer-arith -fno-exceptions -Wno-address -nostdlib -m32 -ffreestanding -Wno-write-strings $(INCLUDEPATH)
 ASFLAGS-x86 := -f elf32 -g -F dwarf
 
 CFILES := $(shell find $(SRCDIRS) -type f -name "*.c")

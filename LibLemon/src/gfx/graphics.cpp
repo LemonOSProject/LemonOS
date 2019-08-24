@@ -4,8 +4,9 @@
 #include <string.h>
 
 extern "C" void memcpy_sse2(void* dest, void* src, size_t count);
+extern "C" void memset_sse2(void* dest, uint32_t c, uint32_t count);
 void memcpy_optimized(void* dest, void* src, size_t count) {
-	if(((size_t)dest % 0x10) || ((size_t)src % 0x10)) memcpy(dest, src, count);
+	if(((size_t)dest % 0x10) || ((size_t)src % 0x10)) memcpy(dest, src, count); 
 
 	dest = dest; //+ 0x10-start_overflow;
 	count -= 0;//0x10 - start_overflow;
@@ -18,6 +19,55 @@ void memcpy_optimized(void* dest, void* src, size_t count) {
 	if (overflow > 0)
 		memcpy(dest + size_aligned, src + size_aligned, overflow);
 }
+#define PORT 0x3F8 // COM 1
+void outportb(uint16_t port, uint8_t value){
+    asm volatile ("outb %1, %0" : : "dN" (port), "a" (value));
+}
+
+uint8_t inportb(uint16_t port){
+    uint8_t value;
+    asm volatile("inb %1, %0" : "=a" (value) : "dN" (port));
+    return value;
+}
+
+int is_transmit_empty() {
+	return inportb(PORT + 5) & 0x20;
+}
+
+void write_serial(char c) {
+	while (is_transmit_empty() == 0);
+
+	outportb(PORT, c);
+}
+
+void write_serial(char* s) {
+	while (*s != '\0'){
+		while(is_transmit_empty() == 0);
+		outportb(PORT, *s++);
+	}
+}
+
+#include <stdlib.h>
+
+void memset32_optimized(void* dest, uint32_t c, size_t count) {
+	if(((size_t)dest % 0x10)){
+        while(count--){
+            *((uint32_t*)dest) = c;
+            dest+=sizeof(uint32_t);
+        }
+        return;
+    }
+
+	size_t overflow = (count % 0x4); // Amount of overflow bytes
+	size_t size_aligned = (count - overflow); // Size rounded DOWN to lowest multiple of 128 bits
+
+	memset_sse2(dest, c, size_aligned/0x4);
+
+    while(overflow--){
+            *((uint32_t*)dest) = c;
+            dest+=sizeof(uint32_t);
+        }
+}
 
 int floor(double num) {
 	int x = (int)num;
@@ -25,11 +75,22 @@ int floor(double num) {
 }
 
 void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface){
+    if(rect.pos.x < 0){
+        rect.size.x += rect.pos.x;
+        rect.pos.x = 0;
+    }
+
+    if(rect.pos.y < 0){
+        rect.size.y += rect.pos.y;
+        rect.pos.y = 0;
+    }
+    
     uint32_t colour_i = (colour.a << 24) | (colour.r << 16) | (colour.g << 8) | colour.b;
     uint32_t* buffer = (uint32_t*)surface->buffer; // Convert byte array into an array of 32-bit unsigned integers as the supported colour depth is 32 bit
     for(int i = 0; i < rect.size.y && i + rect.pos.y < surface->height; i++){
         for(int j = 0; j < rect.size.x && j + rect.pos.x < surface->width; j++){
             buffer[(i + rect.pos.y) * (surface->width + surface->linePadding / 4 /*Padding should always be divisible by 4*/) + (j + rect.pos.x)] = colour_i;
+        // Memset here has been causing issues memset32_optimized((void*)(buffer + (i + rect.pos.y) * (surface->width + surface->linePadding / 4) + rect.pos.x), colour_i, ((rect.pos.x + rect.size.x) < surface->width) ? rect.size.x : (surface->width - rect.pos.x));
         }
     }
 }
@@ -54,13 +115,14 @@ void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t
     uint32_t colour_i = (r << 16) | (g << 8) | b;
     uint32_t* buffer = (uint32_t*)surface->buffer; // Convert byte array into an array of 32-bit unsigned integers as the supported colour depth is 32 bit
     for(int i = 0; i < height && (i + y) < surface->height; i++){
-        int yOffset = (i + y) * (surface->width + surface->linePadding / 4 /*Padding should always be divisible by 4*/);
-        for(int j = 0; j < width && (x + j) < surface->width;){
+        int yOffset = (i + y) * (surface->width );//+ surface->linePadding / 4 /*Padding should always be divisible by 4*/);
+        /*for(int j = 0; j < width && (x + j) < surface->width;){
             {
                 buffer[yOffset + (j + x)] = colour_i;
                 j++;
             }
-        }
+        }*/
+        memset32_optimized((void*)(buffer + yOffset + x), colour_i, ((x + width) < surface->width) ? width : (surface->width - x));
     }
 }
 
@@ -80,17 +142,17 @@ void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface
     uint32_t* buffer = (uint32_t*)surface->buffer; // Convert byte array into an array of 32-bit unsigned integers as the supported colour depth is 32 bit
     for(int i = 0; i < height && (i + y) < surface->height; i++){
         uint32_t yOffset = (i + y) * (surface->width + surface->linePadding / 4 /*Padding should always be divisible by 4*/);
-        for(int j = 0; j < width && (x + j) < surface->width; j++){
+        /*for(int j = 0; j < width && (x + j) < surface->width; j++){
             //buffer[(i + y) * surface->width + (j + x)] = colour_i;
             /*if(!(j % sizeof(uint64_t))){
                 ((uint64_t*)(buffer + ((i + y) * surface->width + x) * 4))[j/sizeof(uint64_t)] = colour_l;
                 j += 1;
-            } else*/
+            } else* /
             {
                 buffer[yOffset + (j + x)] = colour_i;
-            }
-            
-        }
+            }*/
+        //}
+            memset32_optimized((void*)(buffer + yOffset + x), colour_i, ((x + width) < surface->width) ? width : (surface->width - x));
     }
 }
 

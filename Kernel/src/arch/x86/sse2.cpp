@@ -1,6 +1,8 @@
 #include <stddef.h>
 #include <string.h>
 
+#pragma GCC push_options
+#pragma GCC optimize ("O3")
 extern "C" void memcpy_sse2(void* dest, void* src, size_t count);
 void memcpy_optimized(void* dest, void* src, size_t count) {
 	if(((size_t)dest % 0x10) != ((size_t)src % 0x10)) {
@@ -22,3 +24,5 @@ void memcpy_optimized(void* dest, void* src, size_t count) {
 	if (overflow > 0)
 		memcpy(dest + size_aligned, src + size_aligned, overflow);
 }
+
+#pragma GCC pop_options
