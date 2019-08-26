@@ -418,6 +418,7 @@ int SysCopyWindowSurface(regs32_t* r){
 }
 
 int SysReadDir(regs32_t* r){
+	Log::Info("reading dir");
 	if(!(r->ebx && r->ecx)) return 1;
 
 	unsigned int fd = r->ebx;
@@ -427,6 +428,8 @@ int SysReadDir(regs32_t* r){
 	fs_dirent_t* direntPointer = (fs_dirent_t*)r->ecx;
 
 	unsigned int count = r->edx;
+
+	Log::Info("reading dir2");
 
 	fs_dirent_t* dirent = fs::ReadDir(Scheduler::GetCurrentProcess()->fileDescriptors[fd],count);
 
@@ -440,6 +443,8 @@ int SysReadDir(regs32_t* r){
 	strcpy(direntPointer->name,dirent->name);
 	direntPointer->name[strlen(dirent->name)] = 0;
 	if(r->esi) *((uint32_t*)r->esi) = 1;
+
+	Log::Info("reading dir3");
 	return 0;
 }
 

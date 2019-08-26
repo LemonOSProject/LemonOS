@@ -4,9 +4,10 @@
 #include <string.h>
 
 extern "C" void memcpy_sse2(void* dest, void* src, size_t count);
+extern "C" void memcpy_sse2_unaligned(void* dest, void* src, size_t count);
 extern "C" void memset_sse2(void* dest, uint32_t c, uint32_t count);
 void memcpy_optimized(void* dest, void* src, size_t count) {
-	if(((size_t)dest % 0x10) || ((size_t)src % 0x10)) memcpy(dest, src, count); 
+	//if(((size_t)dest % 0x10) || ((size_t)src % 0x10)) memcpy(dest, src, count); 
 
 	dest = dest; //+ 0x10-start_overflow;
 	count -= 0;//0x10 - start_overflow;
@@ -14,40 +15,14 @@ void memcpy_optimized(void* dest, void* src, size_t count) {
 	size_t overflow = (count % 0x10); // Amount of overflow bytes
 	size_t size_aligned = (count - overflow); // Size rounded DOWN to lowest multiple of 128 bits
 
-	memcpy_sse2(dest, src, size_aligned/0x10);
+    if(((size_t)dest % 0x10) || ((size_t)src % 0x10))
+	    memcpy_sse2_unaligned(dest, src, size_aligned/0x10);
+    else
+	    memcpy_sse2(dest, src, size_aligned/0x10);
 
 	if (overflow > 0)
 		memcpy(dest + size_aligned, src + size_aligned, overflow);
 }
-#define PORT 0x3F8 // COM 1
-void outportb(uint16_t port, uint8_t value){
-    asm volatile ("outb %1, %0" : : "dN" (port), "a" (value));
-}
-
-uint8_t inportb(uint16_t port){
-    uint8_t value;
-    asm volatile("inb %1, %0" : "=a" (value) : "dN" (port));
-    return value;
-}
-
-int is_transmit_empty() {
-	return inportb(PORT + 5) & 0x20;
-}
-
-void write_serial(char c) {
-	while (is_transmit_empty() == 0);
-
-	outportb(PORT, c);
-}
-
-void write_serial(char* s) {
-	while (*s != '\0'){
-		while(is_transmit_empty() == 0);
-		outportb(PORT, *s++);
-	}
-}
-
-#include <stdlib.h>
 
 void memset32_optimized(void* dest, uint32_t c, size_t count) {
 	if(((size_t)dest % 0x10)){
@@ -90,7 +65,7 @@ void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface){
     for(int i = 0; i < rect.size.y && i + rect.pos.y < surface->height; i++){
         for(int j = 0; j < rect.size.x && j + rect.pos.x < surface->width; j++){
             buffer[(i + rect.pos.y) * (surface->width + surface->linePadding / 4 /*Padding should always be divisible by 4*/) + (j + rect.pos.x)] = colour_i;
-        // Memset here has been causing issues memset32_optimized((void*)(buffer + (i + rect.pos.y) * (surface->width + surface->linePadding / 4) + rect.pos.x), colour_i, ((rect.pos.x + rect.size.x) < surface->width) ? rect.size.x : (surface->width - rect.pos.x));
+        // Memset here has been causing issues // memset32_optimized((void*)(buffer + (i + rect.pos.y) * (surface->width + surface->linePadding / 4) + rect.pos.x), colour_i, ((rect.pos.x + rect.size.x) < surface->width) ? rect.size.x : (surface->width - rect.pos.x));
         }
     }
 }
