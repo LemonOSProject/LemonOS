@@ -64,6 +64,12 @@ copy:
 dump:
 	@cd bin/$(ARCH)/ && objdump -d kernel.sys > dump.txt
 
+clean:
+	@rm obj/x86/*
+	@rm obj/x86_64/*
+	@rm ../Applications/*/*.lef
+	@rm ../Applications/*/*.o
+
 %.cpp.o: %.cpp
 	@echo Compiling $<
 	@$(CC) $(CFLAGS) -c $< -o obj/$(ARCH)/$(shell basename $@);
