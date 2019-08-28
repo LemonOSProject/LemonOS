@@ -21,7 +21,7 @@ namespace Timer{
     }
 
     // Timer handler
-    void Handler(regs32_t *r) {
+    void Handler(regs64_t *r) {
         ticks++;
         if(ticks >= frequency){
             uptime++;

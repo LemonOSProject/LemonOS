@@ -1,9 +1,19 @@
+
 #include <videoconsole.h>
 
 #include <liballoc.h>
 #include <math.h>
 #include <string.h>
 #include <video.h>
+
+#ifdef Lemon64
+void VideoConsole::Update(){}
+
+void VideoConsole::Print(char c, uint8_t r, uint8_t g, uint8_t b){}
+void VideoConsole::Print(char* str, uint8_t r, uint8_t g, uint8_t b){}
+#endif
+
+#ifdef Lemon32
 
 VideoConsole::VideoConsole(int x, int y, int width, int height){
     this->x = x;
@@ -77,3 +87,4 @@ void VideoConsole::Print(char* str, uint8_t r, uint8_t g, uint8_t b){
 void VideoConsole::Scroll(){
     memcpy(characterBuffer,(void*)(characterBuffer + widthInCharacters*sizeof(ConsoleCharacter)), widthInCharacters*(heightInCharacters-1)*sizeof(ConsoleCharacter));
 }
+#endif

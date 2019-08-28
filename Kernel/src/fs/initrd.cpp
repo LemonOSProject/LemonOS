@@ -1,3 +1,5 @@
+#ifdef Lemon32
+
 #include <initrd.h>
 
 #include <filesystem.h>
@@ -183,3 +185,5 @@ namespace Initrd{
 		devices[deviceCount++] = device;
 	}
 }
+}
+#endif

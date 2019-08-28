@@ -1,8 +1,6 @@
 #pragma once
 
-#include <stddef.h>
-#include <memory.h>
-
+#ifdef Lemon32
 #include <memory.h>
 #include <stddef.h>
 
@@ -36,3 +34,4 @@ void operator delete[](void *p, size_t)
 {
 	::operator delete[](p);
 }
+#endif

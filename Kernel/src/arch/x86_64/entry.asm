@@ -139,6 +139,7 @@ entry:
   lgdt [GDT64.Pointer]
   jmp GDT64.Code:entry64 - KERNEL_VIRTUAL_BASE
 BITS 64
+
   cli
   hlt
 

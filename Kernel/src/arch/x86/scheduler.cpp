@@ -154,7 +154,7 @@ namespace Scheduler{
         proc->state = PROCESS_STATE_ACTIVE;
         proc->thread_count = 1;
 
-        proc->pageDirectory = Memory::CreateAddressSpace();
+        //proc->pageDirectory = Memory::CreateAddressSpace(); So far this function is only used for idle task, we don't need an address space
         proc->timeSliceDefault = 1;
         proc->timeSlice = proc->timeSliceDefault;
 
@@ -222,7 +222,7 @@ namespace Scheduler{
 
                 proc->programHeaders.add_back(elf_ph);
 
-                Memory::LoadKernelPageDirectory();
+                Memory::LoadKernelPageDirectory(); // Switch to kernel page directory so we don't interfere with the current process's address space
                 for(int i = 0; i < ((elf_ph.p_memsz / PAGE_SIZE) + 2); i++){
                     uint32_t phys = Memory::AllocatePhysicalMemoryBlock();
                     Memory::MapVirtualPages(phys,elf_ph.p_vaddr + i * PAGE_SIZE, 1/*, currentProcess->pageDirectory*/);
@@ -237,6 +237,7 @@ namespace Scheduler{
                     memset((void*)elf_ph.p_vaddr,0,elf_ph.p_memsz);
                     memcpy((void*)elf_ph.p_vaddr,(void*)(elf + elf_ph.p_offset),elf_ph.p_filesz);
                 }
+
                 Memory::SwitchPageDirectory(currentProcess->pageDirectory.page_directory_phys);
 
             }

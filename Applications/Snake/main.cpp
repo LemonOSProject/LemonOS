@@ -32,7 +32,7 @@ uint32_t lastUptimeMs;
 
 uint32_t msCounter;
 
-bool gameOver;
+bool gameOver = true;
 
 unsigned long int rand_next = 1;
 
@@ -65,8 +65,9 @@ int powerUpTimerDefault = 100;
 int fruitType = 0; // 0 - Apple, 1 - Lemon
 
 void Reset(){
+	snake->clear();
 	//delete snake;
-	snake = new List<vector2i_t>();
+	//snake = new List<vector2i_t>();
 	
 	snake->add_back({8,8});
 	snake->add_back({9,8});

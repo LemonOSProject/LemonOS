@@ -1,3 +1,5 @@
+#ifdef Lemon32
+
 #include <filesystem.h>
 #include <string.h>
 #include <pty.h>
@@ -84,3 +86,5 @@ size_t PTY::Master_Write(char* buffer, size_t count){
 size_t PTY::Slave_Write(char* buffer, size_t count){
 	return master.Write(buffer, count);
 }
+
+#endif

@@ -1,3 +1,5 @@
+#ifdef Lemon32
+
 #include <liballoc.h>
 
 /**  Durand's Amazing Super Duper Memory functions.  */
@@ -745,4 +747,4 @@ void*   PREFIX(realloc)(void *p, size_t size)
 }
 
 #pragma GCC diagnostic pop
-
+#endif

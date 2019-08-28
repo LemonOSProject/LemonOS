@@ -4,6 +4,7 @@
 #include <serial.h>
 #include <logging.h>
 #include <video.h>
+#include <idt.h>
 
 namespace HAL{
     memory_info_t mem_info;
@@ -15,15 +16,15 @@ namespace HAL{
 
         // Check if Debugging Mode is enabled and if so initialize serial port
         initialize_serial();
-        Log::Info("Initializing Lemon...\r\n");
-        
-        /*// Initialize GDT and IDT
-        GDT::Initialize();
-        IDT::Initialize();
+        //Log::Info("Initializing Lemon...\r\n");
+        write_serial("Initializing Lemon x86_64...\r\n");
 
+        // Initialize GDT and IDT
+        IDT::Initialize();
+        
         // Initialize Paging/Virtual Memory Manager
         Memory::InitializeVirtualMemory();
-
+        /*
         // Allocate virtual memory for memory map
         uint32_t mmap_virt = Memory::KernelAllocateVirtualPages(mb_info.mmapLength / PAGE_SIZE + 1);
 

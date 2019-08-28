@@ -1,3 +1,5 @@
+#ifdef Lemon32
+
 #include <paging.h>
 #include <physicalallocator.h>
 #include <serial.h>
@@ -33,3 +35,5 @@ extern "C" {
 		return 0;
 	}
 }
+
+#endif

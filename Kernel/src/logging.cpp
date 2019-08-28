@@ -28,6 +28,7 @@ namespace Log{
 
 	void Write(char* str, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255){
 		write_serial(str);
+		return;
 		if(console){
 			console->Print(str, r, g, b);
 			console->Update();

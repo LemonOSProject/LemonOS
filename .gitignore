@@ -6,4 +6,5 @@ InitrdWriter/Contents/lemongnuboy
 *.o
 *.lef
 Kernel/obj
+Applications/*/*.lef
 
