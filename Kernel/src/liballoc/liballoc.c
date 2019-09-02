@@ -1,5 +1,3 @@
-#ifdef Lemon32
-
 #include <liballoc.h>
 
 /**  Durand's Amazing Super Duper Memory functions.  */
@@ -87,8 +85,12 @@ struct	liballoc_minor
 
 static struct liballoc_major *l_memRoot = NULL;	///< The root memory block acquired from the system.
 static struct liballoc_major *l_bestBet = NULL; ///< The major with the most free memory.
-
+#ifdef Lemon32
 static unsigned int l_pageSize = 4096;			///< The size of an individual page. Set up in liballoc_init.
+#endif
+#ifdef Lemon64
+static unsigned int l_pageSize = 0x200000;
+#endif
 static unsigned int l_pageCount = 16;			///< The number of pages to request per chunk. Set up in liballoc_init.
 unsigned long long l_allocated = 0;		///< Running total of allocated memory.
 unsigned long long l_inuse = 0;		///< Running total of used memory.
@@ -747,4 +749,3 @@ void*   PREFIX(realloc)(void *p, size_t size)
 }
 
 #pragma GCC diagnostic pop
-#endif

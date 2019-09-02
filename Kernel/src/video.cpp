@@ -177,7 +177,7 @@ namespace Video{
 
         for(int i = 0; i < height; i++){
             for(int j = 0; j < width; j++){
-                ((uint32_t*)videoMemory)[((i + y) * screenWidth) + j + x] = colour;
+            ((uint32_t*)videoMemory)[((i + y) * screenWidth) + j + x] = colour;
             }
         }
     }

@@ -1,9 +1,13 @@
+#pragma once
+
 #include <stdint.h>
+#include <system.h>
 
 #define KERNEL_VIRTUAL_BASE 0xFFFFFFFF80000000
 
 #define PML4_GET_INDEX(addr) (((addr) >> 39) & 0x1FF)
 #define PDPT_GET_INDEX(addr) (((addr) >> 30) & 0x1FF)
+#define PAGE_DIR_GET_INDEX(addr) (((addr) >> 21) & 0x1FF)
 
 #define PML4_PRESENT 1
 #define PML4_WRITABLE (1 << 1)
@@ -26,15 +30,32 @@
 #define PAGE_SIZE_4K 4096
 #define PAGE_SIZE_2M 0x200000
 #define PAGE_SIZE_1G 0x40000000
+#define PDPT_SIZE 0x8000000000
+
+#define PAGES_PER_TABLE 512
+#define TABLES_PER_DIR	512
+#define DIRS_PER_PDPT 512
+#define PDPTS_PER_PML4 512
+
+typedef uint64_t page_t;
+typedef uint64_t pd_entry_t;
+typedef uint64_t pdpt_entry_t;
+typedef uint64_t pml4_entry_t;
+
+using page_table_t = page_t[PAGES_PER_TABLE];
+using page_dir_t = pd_entry_t[TABLES_PER_DIR];
+using pdpt_t = pdpt_entry_t[DIRS_PER_PDPT];
+using pml4_t = pml4_entry_t[PDPTS_PER_PML4];
 
 namespace Memory{
 
-    void InitializePaging();
+    void InitializeVirtualMemory();
 
     void* AllocateVirtualMemory(uint64_t size);
     void* KernelAllocateVirtualMemory(uint64_t size);
 
     void FreeVirtualMemory(void* pointer, uint64_t size);
+    void KernelFree2MPages(void* addr, uint64_t amount);
 
     void* Allocate4KPages(uint64_t amount);
     void* Allocate2MPages(uint64_t amount);
@@ -43,11 +64,14 @@ namespace Memory{
     void* KernelAllocate2MPages(uint64_t amount);
     void* KernelAllocate1GPages(uint64_t amount);
 
-    void MapVirtualMemory4K(uint32_t phys, uint32_t virt);
-    void MapVirtualMemory2M(uint32_t phys, uint32_t virt);
-    void MapVirtualMemory1G(uint32_t phys, uint32_t virt);
+    //void MapVirtualMemory4K(uint32_t phys, uint32_t virt);
+    //void MapVirtualMemory2M(uint32_t phys, uint32_t virt);
+    //void MapVirtualMemory1G(uint32_t phys, uint32_t virt);
+    void KernelMap2MPages(uint64_t phys, uint64_t virt, uint64_t amount);
 
     void SwitchPageDirectory(uint64_t phys);
+    
+	void PageFaultHandler(regs64_t* regs);
 
     inline void SetPageFrame(uint64_t* page, uint64_t addr){
         *page = (*page & ~PAGE_FRAME) | addr;
@@ -55,5 +79,9 @@ namespace Memory{
 
     inline void SetPageFlags(uint64_t* page, uint64_t flags){
         *page |= flags;
+    }
+
+    inline uint32_t GetPageFrame(uint64_t p) {
+	    return (p & PAGE_FRAME) >> 12;
     }
 }

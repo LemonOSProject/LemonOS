@@ -60,7 +60,7 @@ typedef struct{
 
     uint32_t pitch; // Video mode pitch
 
-    uint32_t address; // Video memory address
+    void* address; // Video memory address
 } video_mode_t;
 
 typedef struct {

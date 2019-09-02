@@ -3,10 +3,10 @@
 #include <string.h>
 #include <hal.h>
 #include <video.h>
-#ifdef Lemon32
 #include <videoconsole.h>
 #include <liballoc.h>
 #include <timer.h>
+#ifdef Lemon32
 #include <scheduler.h>
 #include <math.h>
 #include <initrd.h>
@@ -46,10 +46,9 @@ extern "C"
 void kmain(multiboot_info_t* mb_info){
 	HAL::Init(*mb_info);
 
-	#ifdef Lemon32
 	video_mode_t videoMode = Video::GetVideoMode();
 
-	VideoConsole con = VideoConsole(0,0,videoMode.width,videoMode.height);
+	//VideoConsole con = VideoConsole(0,0,videoMode.width,videoMode.height);
 
 	//Log::SetVideoConsole(&con);
 	Log::SetVideoConsole(NULL);
@@ -65,6 +64,7 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Write(itoa(videoMode.bpp, stringBuffer, 10));
 	kfree(stringBuffer);
 
+	#ifdef Lemon32
 	if(videoMode.height < 600)
 		Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");
 	if(videoMode.bpp != 32)
@@ -133,5 +133,5 @@ void kmain(multiboot_info_t* mb_info){
 	
 	Scheduler::Initialize();
 	#endif
-	//Log::Write("OK");
+	for(;;);
 }

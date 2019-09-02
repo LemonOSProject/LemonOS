@@ -5,6 +5,8 @@
 #include <logging.h>
 #include <video.h>
 #include <idt.h>
+#include <paging.h>
+#include <physicalallocator.h>
 
 namespace HAL{
     memory_info_t mem_info;
@@ -21,15 +23,14 @@ namespace HAL{
 
         // Initialize GDT and IDT
         IDT::Initialize();
-        
+
         // Initialize Paging/Virtual Memory Manager
         Memory::InitializeVirtualMemory();
-        /*
-        // Allocate virtual memory for memory map
-        uint32_t mmap_virt = Memory::KernelAllocateVirtualPages(mb_info.mmapLength / PAGE_SIZE + 1);
 
+        // Allocate virtual memory for memory map
+        uint64_t mmap_virt = (uint64_t)Memory::KernelAllocate2MPages(mb_info.mmapLength / PAGE_SIZE_2M + 1);
         // Get Memory Map
-        Memory::MapVirtualPages(mb_info.mmapAddr, mmap_virt, mb_info.mmapLength / PAGE_SIZE + 1);
+        Memory::KernelMap2MPages(mb_info.mmapAddr, mmap_virt, mb_info.mmapLength / PAGE_SIZE_2M + 1);
         multiboot_memory_map_t* memory_map = (multiboot_memory_map_t*)mb_info.mmapAddr;
 
         // Initialize Memory Info Structure to pass to Physical Memory Allocator
@@ -38,22 +39,20 @@ namespace HAL{
         mem_info.mem_map = memory_map;
         mem_info.memory_map_len = mb_info.mmapLength;
 
-        uint32_t mbModsVirt = Memory::KernelAllocateVirtualPages(1);
-        Memory::MapVirtualPages(multibootInfo.modsAddr, mbModsVirt, 1);
+        //uint64_t mbModsVirt = Memory::KernelAllocateVirtualPages(1);
+        //Memory::MapVirtualPages(multibootInfo.modsAddr, mbModsVirt, 1);
         //multibootInfo.modsAddr = mbModsVirt;
 
         // Initialize Physical Memory Allocator
-        Memory::InitializePhysicalAllocator(&mem_info);*/
-
-for(;;);
+        Memory::InitializePhysicalAllocator(&mem_info);
     } 
 
     void InitVideo(){
         // Map Video Memory
-        /*uint32_t vidMemSize = multibootInfo.framebufferHeight*multibootInfo.framebufferPitch;
+        uint64_t vidMemSize = multibootInfo.framebufferHeight*multibootInfo.framebufferPitch;
         
-        uint32_t vidMemVirt = Memory::KernelAllocateVirtualPages(vidMemSize / PAGE_SIZE + 1);
-        Memory::MapVirtualPages(multibootInfo.framebufferAddr, vidMemVirt, vidMemSize / PAGE_SIZE + 1);
+        void* vidMemVirt = Memory::KernelAllocate2MPages(vidMemSize / PAGE_SIZE_2M + 1);
+        Memory::KernelMap2MPages(multibootInfo.framebufferAddr, (uint64_t)vidMemVirt, vidMemSize / PAGE_SIZE_2M + 1);
 
         // Initialize Video Mode structure
         videoMode.width = multibootInfo.framebufferWidth;
@@ -62,8 +61,12 @@ for(;;);
         videoMode.pitch = multibootInfo.framebufferPitch;
         videoMode.address = vidMemVirt;
 
+//Log::Info(multibootInfo.framebufferAddr);
+//Log::Info((uint64_t)vidMemVirt);
+
         Video::Initialize(videoMode);
-        Video::DrawRect(0,0,videoMode.width,videoMode.height, 48,48,48);*/
+        Video::DrawRect(0,0,videoMode.width,videoMode.height, 0,0,255);
+        Video::DrawString("Starting Lemon x64...", 0, 0, 255, 255, 255);
     }
 
     void InitExtra(){

@@ -81,7 +81,7 @@ namespace Log{
 		Write("INFO");
 		Write("]    ");
 			
-		char buf[18];
+		char buf[32];
 		if(hex){
 			buf[0] = '0';
 			buf[1] = 'x';

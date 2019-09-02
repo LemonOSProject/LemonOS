@@ -1,7 +1,9 @@
 BITS    32
 
 global entry
-global pml4
+global kernel_pml4
+global kernel_pdpt
+global kernel_pdpt2
 extern kmain
 
 MBALIGN     equ 1<<0
@@ -17,15 +19,15 @@ KERNEL_BASE_PDPT_INDEX equ  (((KERNEL_VIRTUAL_BASE) >> 30) & 0x1FF)
 
 section .boot.data
 align 4096
-pml4:
+kernel_pml4:
 times 512 dq 0
 
 align 4096
-pdpt:
+kernel_pdpt:
 times 512 dq 0
 
 align 4096
-pdpt2:
+kernel_pdpt2:
 times 512 dq 0
 
 
@@ -87,6 +89,8 @@ no64:
   jmp $
 
 entry:
+  mov dword [mb_addr], ebx
+
   mov eax, [ebx+88] ; Framebuffer pointer address in multiboot header
   mov dword [fb_addr], eax 
 
@@ -110,21 +114,21 @@ entry:
   or eax, 1 << 5  ; Set PAE bit
   mov cr4, eax
 
-  mov eax, pdpt
+  mov eax, kernel_pdpt ; Get address of PDPT
+  or eax, 3 ; Present, Write
+  mov dword [kernel_pml4], eax
+
+  mov eax, kernel_pdpt2 ; Seconds PDPT
   or eax, 3
-  mov dword [pml4], eax
+  mov dword [kernel_pml4 + KERNEL_BASE_PML4_INDEX * 8], eax
 
-  mov eax, pdpt2
-  or eax, 3
-  mov dword [pml4 + KERNEL_BASE_PML4_INDEX * 8], eax
+  mov eax, 0x83 ; 1 GB Pages
+  mov dword [kernel_pdpt], eax
 
-  mov eax, 0x83
-  mov dword [pdpt], eax
+  mov eax, 0x83 ; 1 GB Pages
+  mov dword [kernel_pdpt2 + KERNEL_BASE_PDPT_INDEX * 8], eax
 
-  mov eax, 0x83
-  mov dword [pdpt2 + KERNEL_BASE_PDPT_INDEX * 8], eax
-
-  mov eax, pml4
+  mov eax, kernel_pml4
   mov cr3, eax
 
   mov ecx, 0xC0000080 ; EFER Model Specific Register
@@ -150,11 +154,15 @@ fb_pitch:
 dd 0
 fb_height:
 dd 0
+mb_addr:
+dd 0
+dd 0
 
 BITS 64
 section .text
 entry64:
   mov rsp, stack_top
+  push rax
 
   mov ax, 0
   mov ds, ax
@@ -163,7 +171,19 @@ entry64:
   mov gs, ax
   mov ss, ax
 
-  push rbx
+  push rax
+  mov rax, cr0
+	and ax, 0xFFFB		; Clear coprocessor emulation
+	or ax, 0x2			; Set coprocessor monitoring
+	mov cr0, rax
+
+	;Enable SSE
+	mov rax, cr4
+	or ax, 3 << 9		; Set flags for SSE
+	mov cr4, rax
+
+  mov rdi, qword[mb_addr] ; Pass multiboot info struct
+  add rdi, KERNEL_VIRTUAL_BASE
   call kmain
 
   cli

@@ -212,22 +212,23 @@ namespace IDT{
 }
 
 extern "C"
-	void isr_handler(int int_num, regs64_t* regs) {
-
+	void isr_handler(int int_num, regs64_t* regs, int err_code) {
+			char temp[23];
+			Log::Error("Error Code: ");
+			Log::Error(itoa(err_code,temp,16));
 		if (interrupt_handlers[int_num] != 0) {
 			interrupt_handlers[int_num](regs);
 		} else if(int_num == 0x69){
 			Log::Warning("\r\nEarly syscall");
 		}
 		else {
-			char temp[16];
 			Log::Error("Fatal Exception: ");
 			Log::Info(itoa(int_num, temp, 16));
 			Log::Info(itoa(regs->r15, temp, 16));
 			Log::Info("EIP: ");
 			Log::Error(itoa(regs->rip,temp,16));
-			//Log::Error("Error Code: ");
-			//Log::Error(itoa(regs->err_code,temp,16));
+			Log::Error("Error Code: ");
+			Log::Error(itoa(err_code,temp,16));
 			for (;;);
 		}
 	}

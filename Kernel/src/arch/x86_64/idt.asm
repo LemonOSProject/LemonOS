@@ -61,7 +61,7 @@ idt_flush:
         pushaq
         mov rdi, %1
         mov rsi, rsp
-        xor rdx, rdx
+        mov rdx, qword [rsp+20*8]
         call isr_handler
         popaq
         iretq
