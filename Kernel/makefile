@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-ARCH := x86
+ARCH := x86_64
 
 SRCDIRS := src/arch/$(ARCH) src src/liballoc src/fs src/tty
 INCLUDEPATH := -I include -I include/arch/$(ARCH)
