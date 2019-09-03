@@ -60,8 +60,9 @@ void* memset(void* src, int c, size_t count) {
 	return src;
 }
 
-void *memcpy(void* dest, void* src, size_t count) {
-	const char *sp = (char *)src;
+extern "C"
+void *memcpy(void* dest, const void* src, size_t count) {
+	const char *sp = (char*)src;
 	char *dp = (char *)dest;
 	for(size_t i = count; i >= sizeof(uint64_t); i = count){
 		*((uint64_t*)dp) = *((uint64_t*)sp);
@@ -80,6 +81,22 @@ void *memcpy(void* dest, void* src, size_t count) {
 		count--;
 	} 
 	return dest;
+}
+
+extern "C"
+int memcmp(const void *s1, const void *s2, size_t n) {
+    const uint8_t* a = (uint8_t*)s1;
+    const uint8_t* b = (uint8_t*)s2;
+
+    for (size_t i = 0; i < n; i++) {
+        if (a[i] < b[i]) {
+            return -1;
+        } else if (a[i] > b[i]) {
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 void strcpy(char* dest, const char* src)
@@ -101,7 +118,7 @@ int strlen(const char* str)
 
 int strcmp(char* s1, char* s2)
 {
-	for (int i = 0; ; i++)
+	for (size_t i = 0; ; i++)
 	{
 		if (s1[i] != s2[i])
 			return s1[i] < s2[i] ? -1 : 1;

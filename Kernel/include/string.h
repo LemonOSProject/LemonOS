@@ -6,7 +6,11 @@ char* itoa(unsigned long long num, char* str, int base);
 
 extern "C"
 void* memset(void* src, int c, size_t count);
-void *memcpy(void* dest, void* src, size_t count);
+extern "C"
+void *memcpy(void* dest, const void* src, size_t count);
+extern "C"
+int memcmp(const void *s1, const void *s2, size_t n);
+
 void memcpy_optimized(void* dest, void* src, size_t count);
 
 void strcpy(char* dest, const char* src);

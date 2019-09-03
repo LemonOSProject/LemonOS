@@ -1,5 +1,4 @@
 #ifdef Lemon32
-
 #include <initrd.h>
 
 #include <filesystem.h>

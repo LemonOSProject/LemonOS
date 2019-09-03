@@ -7,6 +7,7 @@
 #include <idt.h>
 #include <paging.h>
 #include <physicalallocator.h>
+#include <pci.h>
 
 namespace HAL{
     memory_info_t mem_info;
@@ -18,8 +19,7 @@ namespace HAL{
 
         // Check if Debugging Mode is enabled and if so initialize serial port
         initialize_serial();
-        //Log::Info("Initializing Lemon...\r\n");
-        write_serial("Initializing Lemon x86_64...\r\n");
+        Log::Info("Initializing Lemon...\r\n");
 
         // Initialize GDT and IDT
         IDT::Initialize();
@@ -39,12 +39,14 @@ namespace HAL{
         mem_info.mem_map = memory_map;
         mem_info.memory_map_len = mb_info.mmapLength;
 
-        //uint64_t mbModsVirt = Memory::KernelAllocateVirtualPages(1);
-        //Memory::MapVirtualPages(multibootInfo.modsAddr, mbModsVirt, 1);
-        //multibootInfo.modsAddr = mbModsVirt;
+        uint64_t mbModsVirt = (uint64_t)Memory::KernelAllocate2MPages(1);
+        Memory::KernelMap2MPages(multibootInfo.modsAddr, mbModsVirt, 1);
+        multibootInfo.modsAddr = mbModsVirt;
 
         // Initialize Physical Memory Allocator
         Memory::InitializePhysicalAllocator(&mem_info);
+
+        PCI::Init();
     } 
 
     void InitVideo(){

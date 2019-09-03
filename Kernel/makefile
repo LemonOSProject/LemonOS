@@ -2,7 +2,7 @@
 
 ARCH := x86_64
 
-SRCDIRS := src/arch/$(ARCH) src src/liballoc src/fs src/tty
+SRCDIRS := src/arch/$(ARCH) src src/liballoc src/fs src/tty src/lai/core src/lai/helpers src/lai/drivers
 INCLUDEPATH := -I include -I include/arch/$(ARCH)
 
 CFLAGS-x86_64 := -Wno-write-strings -DLemon64 -ffreestanding -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -z max-page-size=0x1000 -nostdlib $(INCLUDEPATH)
@@ -14,13 +14,15 @@ ASFLAGS-x86 := -f elf32 -g -F dwarf
 ifeq ($(ARCH),x86)
 CFLAGS=$(CFLAGS-x86)
 ASFLAGS=$(ASFLAGS-x86)
-CC=i686-lemon-g++
+CC=i686-lemon-gcc
+CPP=i686-lemon-g++
 endif
 
 ifeq ($(ARCH),x86_64)
 CFLAGS=$(CFLAGS-x86_64)
 ASFLAGS=$(ASFLAGS-x86_64)
-CC=x86_64-elf-g++
+CPP=x86_64-elf-g++
+CC=x86_64-elf-gcc
 endif
 
 
@@ -72,7 +74,7 @@ clean:
 
 %.cpp.o: %.cpp
 	@echo Compiling $<
-	@$(CC) $(CFLAGS) -c $< -o obj/$(ARCH)/$(shell basename $@);
+	@$(CPP) $(CFLAGS) -c $< -o obj/$(ARCH)/$(shell basename $@);
 
 %.c.o: %.c
 	@echo Compiling $<
