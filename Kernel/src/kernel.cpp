@@ -6,16 +6,16 @@
 #include <videoconsole.h>
 #include <liballoc.h>
 #include <timer.h>
-#ifdef Lemon32
-#include <scheduler.h>
 #include <math.h>
 #include <initrd.h>
-#include <syscalls.h>
-#include <gui.h>
 #include <mouse.h>
 #include <keyboard.h>
 #include <pci.h>
 #include <panic.h>
+#include <scheduler.h>
+#ifdef Lemon32
+#include <syscalls.h>
+#include <gui.h>
 #endif
 
 #ifdef Lemon32
@@ -64,7 +64,6 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Write(itoa(videoMode.bpp, stringBuffer, 10));
 	kfree(stringBuffer);
 
-	#ifdef Lemon32
 	if(videoMode.height < 600)
 		Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");
 	if(videoMode.bpp != 32)
@@ -75,10 +74,6 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Write(itoa((mb_info->memoryHi + mb_info->memoryLo) / 1024, stringBuffer, 10));
 	Log::Write("MB");
 
-	Log::Info("Initializing System Timer...");
-	Timer::Initialize(1200);
-	Log::Write("OK");
-
 	Log::Info("Multiboot Module Count: ");
 	Log::Info(HAL::multibootInfo.modsCount, false);
 
@@ -86,20 +81,7 @@ void kmain(multiboot_info_t* mb_info){
 	multiboot_module_t initrdModule = *((multiboot_module_t*)HAL::multibootInfo.modsAddr); // Get initrd as a multiboot module
 	Initrd::Initialize(initrdModule.mod_start,initrdModule.mod_end - initrdModule.mod_start); // Initialize Initrd
 	Log::Write("OK");
-
-	fs_node_t* splashFile;
-	if(splashFile = fs::FindDir(Initrd::GetRoot(),"splash.bmp")){
-		uint32_t size = splashFile->size;
-		uint8_t* buffer = (uint8_t*)kmalloc(size);
-		if(fs::Read(splashFile, 0, size, buffer))
-			Video::DrawBitmapImage(videoMode.width/2 - 484/2, videoMode.height/2 - 292/2, 484, 292, buffer);
-	}
-
-	Video::DrawString("Copyright 2018-2019 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
-
-	long uptimeSeconds = Timer::GetSystemUptime();
-	while((uptimeSeconds - Timer::GetSystemUptime()) < 2);
-
+	
 	Log::Info("Ramdisk Contents:\n");
 	fs_dirent_t* dirent;
 	fs_node_t* root = Initrd::GetRoot();
@@ -116,6 +98,20 @@ void kmain(multiboot_info_t* mb_info){
 		Log::Write("\n");
 	}
 
+	fs_node_t* splashFile;
+	if(splashFile = fs::FindDir(Initrd::GetRoot(),"splash.bmp")){
+		uint32_t size = splashFile->size;
+		uint8_t* buffer = (uint8_t*)kmalloc(size);
+		if(fs::Read(splashFile, 0, size, buffer))
+			Video::DrawBitmapImage(videoMode.width/2 - 484/2, videoMode.height/2 - 292/2, 484, 292, buffer);
+	} else Log::Warning("Could not load splash image");
+
+	Video::DrawString("Copyright 2018-2019 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
+
+	//long uptimeSeconds = Timer::GetSystemUptime();
+	//while((uptimeSeconds - Timer::GetSystemUptime()) < 2);
+
+
 	Log::Info("Initializing HID...");
 
 	Mouse::Install();
@@ -123,15 +119,15 @@ void kmain(multiboot_info_t* mb_info){
 
 	Log::Info("OK");
 
+	#ifdef Lemon32
 	Log::Info("Registering Syscall Handler...");
 
 	InitializeSyscalls();
 
 	Log::Write("OK");
-
+#endif
 	Log::Info("Initializing Task Scheduler...");
 	
 	Scheduler::Initialize();
-	#endif
 	for(;;);
 }

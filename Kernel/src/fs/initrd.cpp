@@ -1,4 +1,3 @@
-#ifdef Lemon32
 #include <initrd.h>
 
 #include <filesystem.h>
@@ -23,7 +22,7 @@ namespace Initrd{
 	lemoninitfs_node_t* nodes;
 	fs_node_t* fsNodes;
 
-	uint32_t initrd_address;
+	void* initrd_address;
 
 	fs_node_t root;
 	fs_dirent_t rootDirent;
@@ -39,9 +38,14 @@ namespace Initrd{
 	uint32_t deviceCount = 0;
 
 	void Initialize(uint32_t address, uint32_t size) {
-		
-		uint32_t virtual_address = Memory::KernelAllocateVirtualPages(size / PAGE_SIZE + 1);
-		Memory::MapVirtualPages(address, virtual_address, size / PAGE_SIZE + 1);
+		#ifdef Lemon32
+		void* virtual_address = (void*)Memory::KernelAllocateVirtualPages(size / PAGE_SIZE + 1);
+		Memory::MapVirtualPages(address, (uint32_t)virtual_address, size / PAGE_SIZE + 1);
+		#endif
+		#ifdef Lemon64
+		void* virtual_address = Memory::KernelAllocate2MPages(size / PAGE_SIZE_2M + 1);
+		Memory::KernelMapVirtualMemory2M(address, (uint64_t)virtual_address, size / PAGE_SIZE_2M + 1);
+		#endif
 		initrd_address = virtual_address;
 		initrdHeader = *(lemoninitfs_header_t*)address;
 		nodes = (lemoninitfs_node_t*)(virtual_address + sizeof(lemoninitfs_header_t));
@@ -88,7 +92,7 @@ namespace Initrd{
 
 		if(offset > inode.size || offset + size > inode.size) return 0;
 
-		memcpy(buffer, (void*)(inode.offset + initrd_address + offset), size);
+		memcpy(buffer, (void*)(inode.offset + (uintptr_t)initrd_address + offset), size);
 		return size;
 	}
 
@@ -151,8 +155,8 @@ namespace Initrd{
 		return &initrdHeader;
 	}
 
-	uint32_t Read(int node) {
-		return nodes[node].offset+initrd_address;
+	void* Read(int node) {
+		return (void*)(nodes[node].offset+(uintptr_t)initrd_address);
 	}
 
 	uint8_t* Read(lemoninitfs_node_t node, uint8_t* buffer) {
@@ -160,10 +164,10 @@ namespace Initrd{
 		return buffer;
 	}
 
-	uint32_t Read(char* filename) {
+	void* Read(char* filename) {
 		for (uint32_t i = 0; i < initrdHeader.fileCount; i++) {
 			if (nodes[i].filename == filename)
-				return nodes[i].offset+initrd_address;
+				return (void*)(nodes[i].offset+(uintptr_t)initrd_address);
 		}
 		return 0;
 	}
@@ -184,5 +188,3 @@ namespace Initrd{
 		devices[deviceCount++] = device;
 	}
 }
-}
-#endif

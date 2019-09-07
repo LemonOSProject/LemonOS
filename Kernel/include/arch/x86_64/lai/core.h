@@ -39,6 +39,10 @@ typedef enum lai_api_error {
     LAI_ERROR_UNSUPPORTED,
 } lai_api_error_t;
 
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 // Convert a lai_api_error_t to a human readable string
 const char *lai_api_error_to_string(lai_api_error_t);
 
@@ -151,3 +155,6 @@ void lai_set_acpi_revision(int);
 
 // Trace all opcodes. This will produce *very* verbose output.
 void lai_enable_tracing(int enable);
+#ifdef __cplusplus
+}
+#endif

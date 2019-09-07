@@ -10,6 +10,7 @@
 #include <physicalallocator.h>
 #include <pci.h>
 #include <ahci.h>
+#include <timer.h>
 
 namespace HAL{
     memory_info_t mem_info;
@@ -50,6 +51,9 @@ namespace HAL{
         // Initialize Physical Memory Allocator
         Memory::InitializePhysicalAllocator(&mem_info);
 
+        Log::Info("Initializing System Timer...");
+        Timer::Initialize(1200);
+        Log::Write("OK");
 
         Log::Info("Initializing PCI Driver...");
 

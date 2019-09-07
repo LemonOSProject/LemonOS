@@ -33,12 +33,20 @@ __attribute__((weak, noreturn)) void laihost_panic(const char *);
 
 __attribute__((weak)) void *laihost_scan(char *, size_t);
 __attribute__((weak)) void *laihost_map(size_t, size_t);
-__attribute__((weak)) void laihost_outb(uint16_t, uint8_t);
-__attribute__((weak)) void laihost_outw(uint16_t, uint16_t);
-__attribute__((weak)) void laihost_outd(uint16_t, uint32_t);
-__attribute__((weak)) uint8_t laihost_inb(uint16_t);
-__attribute__((weak)) uint16_t laihost_inw(uint16_t);
-__attribute__((weak)) uint32_t laihost_ind(uint16_t);
+__attribute__((weak)) void outportb(uint16_t, uint8_t);
+__attribute__((weak)) void outportw(uint16_t, uint16_t);
+__attribute__((weak)) void outportd(uint16_t, uint32_t);
+__attribute__((weak)) uint8_t inportb(uint16_t);
+__attribute__((weak)) uint16_t inportw(uint16_t);
+__attribute__((weak)) uint32_t inportd(uint16_t);
+
+#define laihost_outb outportb
+#define laihost_outw outportw
+#define laihost_outd outportd
+
+#define laihost_inb inportb
+#define laihost_inw inportw
+#define laihost_ind inportd
 
 __attribute__((weak)) void laihost_pci_writeb(uint16_t, uint8_t, uint8_t, uint8_t, uint16_t, uint8_t);
 __attribute__((weak)) uint8_t laihost_pci_readb(uint16_t, uint8_t, uint8_t, uint8_t, uint16_t);

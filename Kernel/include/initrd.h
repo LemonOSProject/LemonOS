@@ -26,8 +26,8 @@ namespace Initrd{
 
     lemoninitfs_node_t* List();
     lemoninitfs_header_t* GetHeader();
-    uint32_t Read(int node);
-    uint32_t Read(char* filename);
+    void* Read(int node);
+    void* Read(char* filename);
 
     lemoninitfs_node_t GetNode(char* filename);
     uint8_t* Read(lemoninitfs_node_t node, uint8_t* buffer);

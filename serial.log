@@ -1,38 +1,95 @@
-Initializing Lemon x86_64...
 
-[INFO]    0x113000
-[INFO]    pdpt: 
-[INFO]    511
-[INFO]    pml4: 
-[INFO]    511
-[INFO]    pdir: 
-[INFO]    0
-[INFO]    2pdpt: 
-[INFO]    511
-[INFO]    2pml4: 
-[INFO]    511
-[INFO]    2pdir: 
-[INFO]    0
-[INFO]    0x100b3
-[INFO]    pdpt: 
-[INFO]    511
-[INFO]    pml4: 
-[INFO]    511
-[INFO]    pdir: 
+[INFO]    Initializing Lemon...
+
+[INFO]    Initializing PCI Driver...
+[INFO]    OK
+[INFO]    Initializing AHCI Driver...
+[INFO]    No device found with class
+[INFO]    0x1
+[INFO]    0x6
+[WARN]    ERROR: No AHCI Controller Found
+[INFO]    Video Resolution:
+[INFO]    1024x768x32
+[INFO]    RAM: 51MB
+[INFO]    Initializing System Timer...OK
+[INFO]    Multiboot Module Count: 
 [INFO]    1
-[INFO]    2pdpt: 
-[INFO]    511
-[INFO]    2pml4: 
-[INFO]    511
-[INFO]    2pdir: 
-[INFO]    1
-[INFO]    0xe0000083
-[INFO]    0xe0000000
-[INFO]    0xffffffffc0200000
+[INFO]    Initializing Ramdisk...OK
+[INFO]    Ramdisk Contents:
+    dev
+    fm.lef
+    snake.lef
+    file.bmp
+    binfile.bmp
+    folder.bmp
+    shell.lef
+    menu.txt
+    texteditor.lef
+    terminal.lef
+    draw.lef
+    sysinfo.lef
+    banner.bmp
+    taskbar.lef
+    c8emu.lef
+    tetris.c8
+    spinvade.c8
+    missile.c8
+    pong.c8
+    pong2.c8
+    tictac.c8
+    ufo.c8
+    close.bmp
+    lemongnuboy.lef
+    bg1.bmp
+    imgview.lef
+    solitaire.lef
+    mario.gbc
+    guitest.lef
+    splash.bmp
+    init.lef
+
+[INFO]    Initializing HID...
+[INFO]    OK
+[INFO]    Registering Syscall Handler...OK
+[INFO]    Initializing Task Scheduler...OK
+[INFO]    Loading init Process...
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x4210
+[INFO]    Elf section address 0x
+[INFO]    0x804d210
+[INFO]    Elf section size 
+[INFO]    0x1094OK
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x48c0
+[INFO]    Elf section address 0x
+[INFO]    0x804d000
+[INFO]    Elf section size 
+[INFO]    0x1f80
+[INFO]    Opening: /dev/mouse0
+[INFO]    Opening: /close.bmp
+[INFO]    Opening: /bg1.bmp
+[INFO]    Opening: /menu.txt
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x6270
+[INFO]    Elf section address 0x
+[INFO]    0x804f270
+[INFO]    Elf section size 
+[INFO]    0xb40
+[INFO]    Opening: /
 [ERROR]   Page Fault!
 
+[INFO]    Page not present
+[INFO]    Read Only
 [INFO]    EIP:
-[INFO]    0x107f1b
+[INFO]    Process:
+[INFO]    0x3
+[INFO]    0x80485f3
 [INFO]    
 Fault address: 
-[INFO]    0xffffffffc0200000
+[INFO]    0xb8000

@@ -116,7 +116,7 @@ int strlen(const char* str)
 	return i;
 }
 
-int strcmp(char* s1, char* s2)
+int strcmp(const char* s1, const char* s2)
 {
 	for (size_t i = 0; ; i++)
 	{

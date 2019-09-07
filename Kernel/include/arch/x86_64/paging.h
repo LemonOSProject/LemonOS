@@ -8,6 +8,7 @@
 #define PML4_GET_INDEX(addr) (((addr) >> 39) & 0x1FF)
 #define PDPT_GET_INDEX(addr) (((addr) >> 30) & 0x1FF)
 #define PAGE_DIR_GET_INDEX(addr) (((addr) >> 21) & 0x1FF)
+#define PAGE_TABLE_GET_INDEX(addr) (((addr) >> 12) & 0x1FF)
 
 #define PML4_PRESENT 1
 #define PML4_WRITABLE (1 << 1)
@@ -47,6 +48,12 @@ using page_dir_t = pd_entry_t[TABLES_PER_DIR];
 using pdpt_t = pdpt_entry_t[DIRS_PER_PDPT];
 using pml4_t = pml4_entry_t[PDPTS_PER_PML4];
 
+typedef struct{ // Each process will have a maximum of 96GB of virtual memory.
+    pdpt_t pdpt; // 512GB is more than ample
+    page_dir_t pageDirs[96]; // 96 GB is enough
+    page_t* pageTables[96][TABLES_PER_DIR];
+} address_space_t;
+
 namespace Memory{
 
     void InitializeVirtualMemory();
@@ -67,7 +74,11 @@ namespace Memory{
     //void MapVirtualMemory4K(uint32_t phys, uint32_t virt);
     //void MapVirtualMemory2M(uint32_t phys, uint32_t virt);
     //void MapVirtualMemory1G(uint32_t phys, uint32_t virt);
-    void KernelMap2MPages(uint64_t phys, uint64_t virt, uint64_t amount);
+    void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount);
+    void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount);
+
+    address_space_t* CreateAddressSpace();
+    void ChangeAddressSpace(address_space_t*);
 
     void SwitchPageDirectory(uint64_t phys);
     

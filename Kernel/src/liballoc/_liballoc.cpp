@@ -41,7 +41,7 @@ void* liballoc_alloc(int pages) {
 	for (int i = 0; i < pages; i++)
 	{
 		uint32_t phys = Memory::AllocateLargePhysicalMemoryBlock();
-		Memory::KernelMap2MPages(phys, (uint64_t)addr + i * 0x200000, 1);
+		Memory::KernelMapVirtualMemory2M(phys, (uint64_t)addr + i * 0x200000, 1);
 	}
 	return addr;
 }

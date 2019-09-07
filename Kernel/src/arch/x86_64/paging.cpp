@@ -1,12 +1,12 @@
 #include <paging.h>
 #include <idt.h>
-//#include <memory.h>
-//#include <fatal.h>
+#include <memory.h>
+#include <panic.h>
 #include <string.h>
 #include <logging.h>
 #include <system.h>
-//#include <scheduler.h>
-//#include <physicalallocator.h>
+#include <scheduler.h>
+#include <physicalallocator.h>
 #include <panic.h>
 
 //extern uint32_t kernel_end;
@@ -18,26 +18,32 @@ extern uint64_t* kernel_pml4;
 extern uint64_t* kernel_pdpt; // First 1GB Start Identity Mapped
 extern uint64_t* kernel_pdpt2; // At entry to long mode, first 1GB is mapped to the last 2GB of virtual memory
 
+address_space_t* currentAddressSpace;
+
 namespace Memory{
 	pml4_t kernelPML4 __attribute__((aligned(4096)));
 	pdpt_t kernelPDPT __attribute__((aligned(4096))); // Kernel itself will reside here (0xFFFFFFFF80000000)
 	//uint64_t* kernelHeapPDPT = kernel_pdpt; // We will reserve 1 GB of virtual memory for the kernel heap
 	page_dir_t kernelHeapDir __attribute__((aligned(4096)));
-	uint64_t* kernelHeapDirTables;
+	page_t kernelHeapDirTables[TABLES_PER_DIR][PAGES_PER_TABLE];
 
-	uint32_t VirtualToPhysicalAddress(uint32_t addr) {
-		//return ((uint32_t*)(*currentPageDirectory[addr >> 22] & ~0xfff))[addr << 10 >> 10 >> 12];
-		uint32_t address;
+	uint64_t VirtualToPhysicalAddress(uint64_t addr) {
+		uint64_t address;
 
 		uint32_t pml4Index = PML4_GET_INDEX(addr);
 		uint32_t pdptIndex = PDPT_GET_INDEX(addr);
 		uint32_t pageDirIndex = PAGE_DIR_GET_INDEX(addr);
+		uint32_t pageTableIndex = PAGE_TABLE_GET_INDEX(addr);
 
-		if(kernelPML4[pdptIndex] & PDPT_1G){
-			address = GetPageFrame(kernelPML4[pdptIndex]) << 12;
+		if(pml4Index == 0){ // From Process Address Space
+			
+		} else { // From Kernel Address Space
+			if(kernelHeapDir[pageDirIndex] | 0x80){
+				address = (GetPageFrame(kernelHeapDir[pageDirIndex])) << 12;
+			} else {
+				address = (GetPageFrame(kernelHeapDirTables[pageDirIndex][pageTableIndex])) << 12;
+			}
 		}
-		
-		//address = (GetPageFrame(currentPageTables[pd_index][pt_index])) << 12;
 		return address;
 	}
 
@@ -65,14 +71,65 @@ namespace Memory{
 		asm("mov %%rax, %%cr3" :: "a"((uint64_t)kernelPML4 - KERNEL_VIRTUAL_BASE));
 	}
 
-	void* KernelAllocate4KPages(uint64_t amount){
-		for(int i = 0; i < TABLES_PER_DIR; i++){
-			if(kernelHeapDir[i] & 0x3){
-				/*for(int j = 0; j < TABLES_PER_DIR; i++){
-					if([i][j] & 0x3){
+	address_space_t* CreateAddressSpace(){
+		address_space_t* addressSpace = (address_space_t*)KernelAllocate4KPages(sizeof(address_space_t)/PAGE_SIZE_4K + 1);
+		for(int i = 0; i < sizeof(address_space_t)/PAGE_SIZE_4K + 1; i++){
+			uintptr_t phys = Memory::AllocatePhysicalMemoryBlock();
+			Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)(addressSpace + i*PAGE_SIZE_4K),1);
+		}
+	}
 
+	void* KernelAllocate4KPages(uint64_t amount){
+		uint64_t offset;
+		uint64_t counter;
+		uintptr_t address;
+
+		uint64_t pml4Index = KERNEL_HEAP_PML4_INDEX;
+		uint64_t pdptIndex = KERNEL_HEAP_PDPT_INDEX;
+
+		/* Attempt 1: Already Allocated Page Tables*/
+		for(int i = 0; i < TABLES_PER_DIR; i++){
+			if(kernelHeapDir[i] & 0x1 && !(kernelHeapDir[i] & 0x80)){
+				offset = 0;
+				for(int j = 0; j < TABLES_PER_DIR; i++){
+					if(kernelHeapDirTables[i][j] & 0x1){
+						offset = i+1;
+						counter = 0;
+						continue;
 					}
-				}*/
+
+					counter++;
+
+					if(counter >= amount){
+						address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (i * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
+						address |= 0xFFFF000000000000;
+						while(counter--){
+							kernelHeapDirTables[i][offset] = 0x3;
+							offset++;
+						}
+
+						return (void*)address;
+					}
+				}
+			}
+		}
+		
+offset = 0;
+
+		/* Attempt 2: Allocate Page Tables*/
+		for(int i = 0; i < TABLES_PER_DIR; i++){
+			if(!kernelHeapDir[i]){
+				for(int j = 0; j < TABLES_PER_DIR; i++){
+					address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (i * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
+					address |= 0xFFFF000000000000;
+					kernelHeapDir[i] = (PAGE_FRAME & (uintptr_t)&(kernelHeapDirTables[i]) - KERNEL_VIRTUAL_BASE) | 0x3;
+					while(counter--){
+						kernelHeapDirTables[i][offset] = 0x3;
+						offset++;
+					}
+
+					return (void*)address;
+				}
 			}
 		}
 	}
@@ -91,12 +148,6 @@ namespace Memory{
 				continue;
 			}
 			counter++;
-				Log::Info("pdpt: ");
-				Log::Info(pdptIndex, false);
-				Log::Info("pml4: ");
-				Log::Info(pml4Index, false);
-				Log::Info("pdir: ");
-				Log::Info(offset, false);
 
 			if(counter >= amount){
 				address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + offset * PAGE_SIZE_2M;
@@ -121,29 +172,43 @@ namespace Memory{
 		}
 	}
 
-	void KernelMap2MPages(uint64_t phys, uint64_t virt, uint64_t amount){
+	void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount){
 		uint64_t pml4Index = PML4_GET_INDEX(virt);
 		uint64_t pdptIndex = PDPT_GET_INDEX(virt);
 		uint64_t pageDirIndex = PAGE_DIR_GET_INDEX(virt);
-		//phys = 0;
-				Log::Info("2pdpt: ");
-				Log::Info(pdptIndex, false);
-				Log::Info("2pml4: ");
-				Log::Info(pml4Index, false);
-				Log::Info("2pdir: ");
-				Log::Info(pageDirIndex, false);
 
 		while(amount--){
-			Log::Info(phys);
 			kernelHeapDir[pageDirIndex] = 0x83;
 			SetPageFrame(&(kernelHeapDir[pageDirIndex]), phys);
 			kernelHeapDir[pageDirIndex] |= 0x83;
-			Log::Info(kernelHeapDir[pageDirIndex]);
 			pageDirIndex++;
 			phys += PAGE_SIZE_2M;
 		}
 
 		asm("invlpg (%%rbx)" :: "b"(virt));
+	}
+
+	void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount){
+		uint64_t pml4Index = PML4_GET_INDEX(virt);
+		uint64_t pdptIndex = PDPT_GET_INDEX(virt);
+		uint64_t pageDirIndex = PAGE_DIR_GET_INDEX(virt);
+		uint64_t pageIndex = PAGE_TABLE_GET_INDEX(virt);
+
+		while(amount--){
+			pml4Index = PML4_GET_INDEX(virt);
+			pdptIndex = PDPT_GET_INDEX(virt);
+			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
+			pageIndex = PAGE_TABLE_GET_INDEX(virt);
+			SetPageFrame(&(kernelHeapDirTables[pageDirIndex][pageIndex]), phys);
+			kernelHeapDirTables[pageDirIndex][pageIndex] |= 0x83;
+			phys += PAGE_SIZE_4K;
+			virt += PAGE_SIZE_4K;
+		}
+	}
+
+	void ChangeAddressSpace(address_space_t* addressSpace){
+		currentAddressSpace = addressSpace;
+		kernelPML4[0] = VirtualToPhysicalAddress((uint64_t)addressSpace->pdpt) | 0x3;
 	}
 
 	void PageFaultHandler(regs64_t* regs/*, int err_code*/)

@@ -14,7 +14,7 @@ int memcmp(const void *s1, const void *s2, size_t n);
 void memcpy_optimized(void* dest, void* src, size_t count);
 
 void strcpy(char* dest, const char* src);
-int strcmp(char* s1, char* s2);
+int strcmp(const char* s1, const char* s2);
 
 char *strtok(char * str, const char * delim);
 

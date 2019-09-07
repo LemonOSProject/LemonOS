@@ -8,6 +8,8 @@
 #include <paging.h>
 #include <physicalallocator.h>
 #include <pci.h>
+#include <acpi.h>
+#include <timer.h>
 
 namespace HAL{
     memory_info_t mem_info;
@@ -30,7 +32,7 @@ namespace HAL{
         // Allocate virtual memory for memory map
         uint64_t mmap_virt = (uint64_t)Memory::KernelAllocate2MPages(mb_info.mmapLength / PAGE_SIZE_2M + 1);
         // Get Memory Map
-        Memory::KernelMap2MPages(mb_info.mmapAddr, mmap_virt, mb_info.mmapLength / PAGE_SIZE_2M + 1);
+        Memory::KernelMapVirtualMemory2M(mb_info.mmapAddr, mmap_virt, mb_info.mmapLength / PAGE_SIZE_2M + 1);
         multiboot_memory_map_t* memory_map = (multiboot_memory_map_t*)mb_info.mmapAddr;
 
         // Initialize Memory Info Structure to pass to Physical Memory Allocator
@@ -40,13 +42,23 @@ namespace HAL{
         mem_info.memory_map_len = mb_info.mmapLength;
 
         uint64_t mbModsVirt = (uint64_t)Memory::KernelAllocate2MPages(1);
-        Memory::KernelMap2MPages(multibootInfo.modsAddr, mbModsVirt, 1);
-        multibootInfo.modsAddr = mbModsVirt;
+        Memory::KernelMapVirtualMemory2M(multibootInfo.modsAddr, mbModsVirt, 1);
+        //multibootInfo.modsAddr = mbModsVirt;
 
         // Initialize Physical Memory Allocator
         Memory::InitializePhysicalAllocator(&mem_info);
 
+        Log::Info("Initializing System Timer...");
+        Timer::Initialize(1200);
+        Log::Write("OK");
+
+        Log::Info("Initializing PCI...");
         PCI::Init();
+        Log::Write("OK");
+
+        Log::Info("Initializing ACPI...");
+        //ACPI::Init();
+        Log::Write("OK");
     } 
 
     void InitVideo(){
@@ -54,7 +66,7 @@ namespace HAL{
         uint64_t vidMemSize = multibootInfo.framebufferHeight*multibootInfo.framebufferPitch;
         
         void* vidMemVirt = Memory::KernelAllocate2MPages(vidMemSize / PAGE_SIZE_2M + 1);
-        Memory::KernelMap2MPages(multibootInfo.framebufferAddr, (uint64_t)vidMemVirt, vidMemSize / PAGE_SIZE_2M + 1);
+        Memory::KernelMapVirtualMemory2M(multibootInfo.framebufferAddr, (uint64_t)vidMemVirt, vidMemSize / PAGE_SIZE_2M + 1);
 
         // Initialize Video Mode structure
         videoMode.width = multibootInfo.framebufferWidth;
@@ -62,9 +74,6 @@ namespace HAL{
         videoMode.bpp = multibootInfo.framebufferBpp;
         videoMode.pitch = multibootInfo.framebufferPitch;
         videoMode.address = vidMemVirt;
-
-//Log::Info(multibootInfo.framebufferAddr);
-//Log::Info((uint64_t)vidMemVirt);
 
         Video::Initialize(videoMode);
         Video::DrawRect(0,0,videoMode.width,videoMode.height, 0,0,255);
