@@ -68,7 +68,13 @@ namespace Memory{
 		SetPageFrame(&(kernelPDPT[KERNEL_HEAP_PDPT_INDEX]), (uint64_t)kernelHeapDir - KERNEL_VIRTUAL_BASE);
 		kernelPDPT[KERNEL_HEAP_PDPT_INDEX] | 0x3;
 		Log::Info(kernelPDPT[KERNEL_HEAP_PDPT_INDEX]);
+
+		for(int i = 0; i < TABLES_PER_DIR; i++){
+			memset(&(kernelHeapDirTables[i]),0,sizeof(page_t)*PAGES_PER_TABLE);
+		}
+
 		asm("mov %%rax, %%cr3" :: "a"((uint64_t)kernelPML4 - KERNEL_VIRTUAL_BASE));
+		//kernelPML4[0] = 0;
 	}
 
 	address_space_t* CreateAddressSpace(){
@@ -80,9 +86,9 @@ namespace Memory{
 	}
 
 	void* KernelAllocate4KPages(uint64_t amount){
-		uint64_t offset;
-		uint64_t counter;
-		uintptr_t address;
+		uint64_t offset = 0;
+		uint64_t counter = 0;
+		uintptr_t address = 0;
 
 		uint64_t pml4Index = KERNEL_HEAP_PML4_INDEX;
 		uint64_t pdptIndex = KERNEL_HEAP_PDPT_INDEX;
@@ -91,7 +97,7 @@ namespace Memory{
 		for(int i = 0; i < TABLES_PER_DIR; i++){
 			if(kernelHeapDir[i] & 0x1 && !(kernelHeapDir[i] & 0x80)){
 				offset = 0;
-				for(int j = 0; j < TABLES_PER_DIR; i++){
+				for(int j = 0; j < TABLES_PER_DIR; j++){
 					if(kernelHeapDirTables[i][j] & 0x1){
 						offset = i+1;
 						counter = 0;
@@ -103,7 +109,7 @@ namespace Memory{
 					if(counter >= amount){
 						address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (i * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
 						address |= 0xFFFF000000000000;
-						while(counter--){
+						while(counter-- > 0){
 							kernelHeapDirTables[i][offset] = 0x3;
 							offset++;
 						}
@@ -119,10 +125,12 @@ offset = 0;
 		/* Attempt 2: Allocate Page Tables*/
 		for(int i = 0; i < TABLES_PER_DIR; i++){
 			if(!kernelHeapDir[i]){
-				for(int j = 0; j < TABLES_PER_DIR; i++){
+				for(int j = 0; j < TABLES_PER_DIR; j++){
 					address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (i * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
 					address |= 0xFFFF000000000000;
-					kernelHeapDir[i] = (PAGE_FRAME & (uintptr_t)&(kernelHeapDirTables[i]) - KERNEL_VIRTUAL_BASE) | 0x3;
+					//kernelHeapDir[i] = (PAGE_FRAME & ((uintptr_t)&(kernelHeapDirTables[i]) - KERNEL_VIRTUAL_BASE)) | 0x3;
+					SetPageFrame(&(kernelHeapDir[i]),((uintptr_t)&(kernelHeapDirTables[i]) - KERNEL_VIRTUAL_BASE));
+					kernelHeapDir[i] |= 0x3;
 					while(counter--){
 						kernelHeapDirTables[i][offset] = 0x3;
 						offset++;
@@ -177,6 +185,7 @@ offset = 0;
 		uint64_t pdptIndex = PDPT_GET_INDEX(virt);
 		uint64_t pageDirIndex = PAGE_DIR_GET_INDEX(virt);
 
+
 		while(amount--){
 			kernelHeapDir[pageDirIndex] = 0x83;
 			SetPageFrame(&(kernelHeapDir[pageDirIndex]), phys);
@@ -184,8 +193,6 @@ offset = 0;
 			pageDirIndex++;
 			phys += PAGE_SIZE_2M;
 		}
-
-		asm("invlpg (%%rbx)" :: "b"(virt));
 	}
 
 	void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount){

@@ -10,10 +10,9 @@
 #include <system.h>
 #include <logging.h>
 
-uint32_t processBase;
-uint32_t processStack;
-uint32_t processEntryPoint;
-uint32_t processPageDirectory;
+uintptr_t processBase;
+uintptr_t processStack;
+uintptr_t processEntryPoint;
 
 uint32_t kernel_stack;
 
@@ -50,6 +49,7 @@ namespace Scheduler{
         asm("cli");
         Log::Write("OK");
         schedulerLock = false;
+        //Memory::ChangeAddressSpace(currentProcess->addressSpace);
         //TaskSwitch();
         for(;;);
     }
@@ -155,7 +155,7 @@ namespace Scheduler{
         proc->state = PROCESS_STATE_ACTIVE;
         proc->thread_count = 1;
 
-        //proc->pageDirectory = Memory::CreateAddressSpace(); So far this function is only used for idle task, we don't need an address space
+        proc->addressSpace = Memory::CreateAddressSpace();// So far this function is only used for idle task, we don't need an address space
         proc->timeSliceDefault = 1;
         proc->timeSlice = proc->timeSliceDefault;
 
@@ -173,13 +173,13 @@ namespace Scheduler{
 
         void* stack = (void*)Memory::KernelAllocate4KPages(4);
         for(int i = 0; i < 4; i++){
-            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uint32_t)stack + PAGE_SIZE_4K * i, 1);
+            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)stack + PAGE_SIZE_4K * i, 1);
         }
 
         thread->stack = stack + 16384;
-        thread->registers.rsp = (uint32_t)thread->stack;
-        thread->registers.rbp = (uint32_t)thread->stack;
-        thread->registers.rip = (uint32_t)entry;
+        thread->registers.rsp = (uintptr_t)thread->stack;
+        thread->registers.rbp = (uintptr_t)thread->stack;
+        thread->registers.rip = (uintptr_t)entry;
 
         InsertProcessIntoQueue(proc);
 

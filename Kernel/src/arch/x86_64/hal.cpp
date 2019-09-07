@@ -14,8 +14,9 @@
 namespace HAL{
     memory_info_t mem_info;
     video_mode_t videoMode;
-
     multiboot_info_t multibootInfo;
+    uintptr_t multibootModulesAddress;
+
     void InitCore(multiboot_info_t mb_info){ // ALWAYS call this first
         multibootInfo = mb_info;
 
@@ -28,12 +29,13 @@ namespace HAL{
 
         // Initialize Paging/Virtual Memory Manager
         Memory::InitializeVirtualMemory();
+        Log::Info(mb_info.mmapAddr);
 
         // Allocate virtual memory for memory map
-        uint64_t mmap_virt = (uint64_t)Memory::KernelAllocate2MPages(mb_info.mmapLength / PAGE_SIZE_2M + 1);
+        //uint64_t mmap_virt = (uint64_t)Memory::KernelAllocate4KPages(mb_info.mmapLength / PAGE_SIZE_4K + 1);
         // Get Memory Map
-        Memory::KernelMapVirtualMemory2M(mb_info.mmapAddr, mmap_virt, mb_info.mmapLength / PAGE_SIZE_2M + 1);
-        multiboot_memory_map_t* memory_map = (multiboot_memory_map_t*)mb_info.mmapAddr;
+        //Memory::KernelMapVirtualMemory4K(mb_info.mmapAddr, mmap_virt, mb_info.mmapLength / PAGE_SIZE_4K + 1);
+        multiboot_memory_map_t* memory_map = (multiboot_memory_map_t*)(mb_info.mmapAddr + KERNEL_VIRTUAL_BASE);
 
         // Initialize Memory Info Structure to pass to Physical Memory Allocator
         mem_info.memory_high = mb_info.memoryHi;
@@ -41,19 +43,21 @@ namespace HAL{
         mem_info.mem_map = memory_map;
         mem_info.memory_map_len = mb_info.mmapLength;
 
-        uint64_t mbModsVirt = (uint64_t)Memory::KernelAllocate2MPages(1);
-        Memory::KernelMapVirtualMemory2M(multibootInfo.modsAddr, mbModsVirt, 1);
-        //multibootInfo.modsAddr = mbModsVirt;
+        uint64_t mbModsVirt = (uint64_t)Memory::KernelAllocate4KPages(1);
+        Memory::KernelMapVirtualMemory4K(multibootInfo.modsAddr, mbModsVirt, 1);
+		Log::Info("aaa");
+        multibootModulesAddress = mbModsVirt;
 
         // Initialize Physical Memory Allocator
         Memory::InitializePhysicalAllocator(&mem_info);
+		Log::Info("aaa");
 
         Log::Info("Initializing System Timer...");
         Timer::Initialize(1200);
         Log::Write("OK");
 
         Log::Info("Initializing PCI...");
-        PCI::Init();
+        //PCI::Init();
         Log::Write("OK");
 
         Log::Info("Initializing ACPI...");

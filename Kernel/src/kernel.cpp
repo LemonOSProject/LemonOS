@@ -18,12 +18,12 @@
 #include <gui.h>
 #endif
 
-#ifdef Lemon32
 void* initElf;
 extern "C"
 void IdleProcess(){
 	Log::Info("Loading init Process...");
 	Log::SetVideoConsole(NULL);
+#ifdef Lemon32
 	fs_node_t* initFsNode = fs::FindDir(Initrd::GetRoot(),"init.lef");
 	if(!initFsNode){
 		char* panicReasons[]{
@@ -35,12 +35,12 @@ void IdleProcess(){
 	initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 	Scheduler::LoadELF(initElf);
+#endif
 	Log::Write("OK");
 	for(;;){ 
 		asm("hlt");
 	}
 }
-#endif
 
 extern "C"
 void kmain(multiboot_info_t* mb_info){
@@ -78,7 +78,7 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Info(HAL::multibootInfo.modsCount, false);
 
 	Log::Info("Initializing Ramdisk...");
-	multiboot_module_t initrdModule = *((multiboot_module_t*)HAL::multibootInfo.modsAddr); // Get initrd as a multiboot module
+	multiboot_module_t initrdModule = *((multiboot_module_t*)HAL::multibootModulesAddress); // Get initrd as a multiboot module
 	Initrd::Initialize(initrdModule.mod_start,initrdModule.mod_end - initrdModule.mod_start); // Initialize Initrd
 	Log::Write("OK");
 	

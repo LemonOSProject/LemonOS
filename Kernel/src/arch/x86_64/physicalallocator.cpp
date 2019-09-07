@@ -3,6 +3,7 @@
 #include <paging.h>
 #include <serial.h>
 #include <string.h>
+#include <logging.h>
 
 extern void* kernel_end;
 
@@ -16,10 +17,12 @@ namespace Memory{
     // Initialize the physical page allocator
     void InitializePhysicalAllocator(memory_info_t* mem_info)
     {
+        Log::Info("test");
         memset(physicalMemoryBitmap, 0xFFFFFFFF, PHYSALLOC_BITMAP_SIZE_DWORDS * 4);
 
         multiboot_memory_map_t* mem_map = mem_info->mem_map;
         multiboot_memory_map_t* mem_map_end = (multiboot_memory_map_t*)(mem_info->mem_map + mem_info->memory_map_len);
+        Log::Info("test");
 
         while (mem_map < mem_map_end)
         {
@@ -27,6 +30,7 @@ namespace Memory{
                 MarkMemoryRegionFree(mem_map->base, mem_map->length);
             mem_map = (multiboot_memory_map_t*)((uint64_t)mem_map + mem_map->size + sizeof(mem_map->size));
         }
+        Log::Info("test");
         maxPhysicalBlocks = mem_info->memory_high * 1024 / PHYSALLOC_BLOCK_SIZE;
         MarkMemoryRegionUsed(0, 6144*4096/*(uint32_t)&kernel_end*/);
     }

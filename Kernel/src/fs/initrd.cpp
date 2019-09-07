@@ -37,14 +37,14 @@ namespace Initrd{
 	fs_node_t* devices[64];
 	uint32_t deviceCount = 0;
 
-	void Initialize(uint32_t address, uint32_t size) {
+	void Initialize(uintptr_t address, uint32_t size) {
 		#ifdef Lemon32
 		void* virtual_address = (void*)Memory::KernelAllocateVirtualPages(size / PAGE_SIZE + 1);
 		Memory::MapVirtualPages(address, (uint32_t)virtual_address, size / PAGE_SIZE + 1);
 		#endif
 		#ifdef Lemon64
-		void* virtual_address = Memory::KernelAllocate2MPages(size / PAGE_SIZE_2M + 1);
-		Memory::KernelMapVirtualMemory2M(address, (uint64_t)virtual_address, size / PAGE_SIZE_2M + 1);
+		void* virtual_address = Memory::KernelAllocate4KPages(size / PAGE_SIZE_4K + 1);
+		Memory::KernelMapVirtualMemory4K(address, (uint64_t)virtual_address, size / PAGE_SIZE_4K + 1);
 		#endif
 		initrd_address = virtual_address;
 		initrdHeader = *(lemoninitfs_header_t*)address;

@@ -39,7 +39,7 @@ typedef struct {
 typedef struct process {
 	uint64_t pid; // PID
 	uint8_t priority; // Process Priority
-	//page_directory_ptr_t pageDirectory; // Pointer to page directory and tables
+	address_space_t* addressSpace; // Pointer to page directory and tables
 	uint8_t state; // Process state
 	//thread_t* threads; // Array of threads
 	thread_t threads[1];

@@ -11,7 +11,7 @@
 #define PHYSALLOC_BLOCKS_PER_BYTE 8
 
 // The size of the memory bitmap in dwords
-#define PHYSALLOC_BITMAP_SIZE_DWORDS 262144 // 32GB
+#define PHYSALLOC_BITMAP_SIZE_DWORDS 524488 // 64GB
 
 extern void* kernel_end;
 

@@ -22,7 +22,7 @@ typedef struct {
 } __attribute__((packed)) lemoninitfs_node_t ;
 
 namespace Initrd{
-    void Initialize(uint32_t address, uint32_t size);
+    void Initialize(uintptr_t address, uint32_t size);
 
     lemoninitfs_node_t* List();
     lemoninitfs_header_t* GetHeader();

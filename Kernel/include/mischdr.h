@@ -64,9 +64,9 @@ typedef struct{
 } video_mode_t;
 
 typedef struct {
-	uint32_t memory_low;
-	uint32_t memory_high;
+	uintptr_t memory_low;
+	uintptr_t memory_high;
 
 	multiboot_memory_map_t* mem_map;
-	uint32_t memory_map_len;
+	uintptr_t memory_map_len;
 } memory_info_t;
