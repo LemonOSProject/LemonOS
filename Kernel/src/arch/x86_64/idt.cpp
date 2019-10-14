@@ -132,44 +132,44 @@ namespace IDT{
 		idt_ptr.limit = sizeof(idt_entry_t) * 256 - 1;
 		idt_ptr.base = (uint64_t)&idt;
 
-		//memset((uint8_t*)&idt, 0, sizeof(idt_entry_t) * 256);
+		memset((uint8_t*)&idt, 0, sizeof(idt_entry_t) * 256);
 		memset((uint8_t*)&interrupt_handlers, 0, sizeof(isr_t) * 256);
 		for(int i = 0; i < 256; i++){
 			SetGate(i, 0,0x08,0x8E);
 		}
 
-		SetGate(0, (uint64_t)isr0-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(1, (uint64_t)isr1-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(2, (uint64_t)isr2-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(3, (uint64_t)isr3-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(4, (uint64_t)isr4-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(5, (uint64_t)isr5-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(6, (uint64_t)isr6-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(7, (uint64_t)isr7-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(8, (uint64_t)isr8-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(9, (uint64_t)isr9-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(10, (uint64_t)isr10-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(11, (uint64_t)isr11-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(12, (uint64_t)isr12-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(13, (uint64_t)isr13-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(14, (uint64_t)isr14-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(15, (uint64_t)isr15-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(16, (uint64_t)isr16-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(17, (uint64_t)isr17-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(18, (uint64_t)isr18-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(19, (uint64_t)isr19-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(20, (uint64_t)isr20-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(21, (uint64_t)isr21-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(22, (uint64_t)isr22-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(23, (uint64_t)isr23-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(24, (uint64_t)isr24-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(25, (uint64_t)isr25-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(26, (uint64_t)isr26-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(27, (uint64_t)isr27-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(28, (uint64_t)isr28-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(29, (uint64_t)isr29-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(30, (uint64_t)isr30-KERNEL_VIRTUAL_BASE,0x08,0x8E);
-		SetGate(31, (uint64_t)isr31-KERNEL_VIRTUAL_BASE,0x08,0x8E);
+		SetGate(0, (uint64_t)isr0,0x08,0x8E);
+		SetGate(1, (uint64_t)isr1,0x08,0x8E);
+		SetGate(2, (uint64_t)isr2,0x08,0x8E);
+		SetGate(3, (uint64_t)isr3,0x08,0x8E);
+		SetGate(4, (uint64_t)isr4,0x08,0x8E);
+		SetGate(5, (uint64_t)isr5,0x08,0x8E);
+		SetGate(6, (uint64_t)isr6,0x08,0x8E);
+		SetGate(7, (uint64_t)isr7,0x08,0x8E);
+		SetGate(8, (uint64_t)isr8,0x08,0x8E);
+		SetGate(9, (uint64_t)isr9,0x08,0x8E);
+		SetGate(10, (uint64_t)isr10,0x08,0x8E);
+		SetGate(11, (uint64_t)isr11,0x08,0x8E);
+		SetGate(12, (uint64_t)isr12,0x08,0x8E);
+		SetGate(13, (uint64_t)isr13,0x08,0x8E);
+		SetGate(14, (uint64_t)isr14,0x08,0x8E);
+		SetGate(15, (uint64_t)isr15,0x08,0x8E);
+		SetGate(16, (uint64_t)isr16,0x08,0x8E);
+		SetGate(17, (uint64_t)isr17,0x08,0x8E);
+		SetGate(18, (uint64_t)isr18,0x08,0x8E);
+		SetGate(19, (uint64_t)isr19,0x08,0x8E);
+		SetGate(20, (uint64_t)isr20,0x08,0x8E);
+		SetGate(21, (uint64_t)isr21,0x08,0x8E);
+		SetGate(22, (uint64_t)isr22,0x08,0x8E);
+		SetGate(23, (uint64_t)isr23,0x08,0x8E);
+		SetGate(24, (uint64_t)isr24,0x08,0x8E);
+		SetGate(25, (uint64_t)isr25,0x08,0x8E);
+		SetGate(26, (uint64_t)isr26,0x08,0x8E);
+		SetGate(27, (uint64_t)isr27,0x08,0x8E);
+		SetGate(28, (uint64_t)isr28,0x08,0x8E);
+		SetGate(29, (uint64_t)isr29,0x08,0x8E);
+		SetGate(30, (uint64_t)isr30,0x08,0x8E);
+		SetGate(31, (uint64_t)isr31,0x08,0x8E);
 		SetGate(0x69, (uint64_t)isr0x69, 0x08, 0x8E);
 
 		idt_flush();
@@ -185,22 +185,22 @@ namespace IDT{
 		outportb(0x21, 0x0);
 		outportb(0xA1, 0x0);
 
-		SetGate(32, (uint64_t)irq0-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(33, (uint64_t)irq1-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(34, (uint64_t)irq2-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(35, (uint64_t)irq3-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(36, (uint64_t)irq4-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(37, (uint64_t)irq5-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(38, (uint64_t)irq6-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(39, (uint64_t)irq7-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(40, (uint64_t)irq8-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(41, (uint64_t)irq9-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(42, (uint64_t)irq10-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(43, (uint64_t)irq11-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(44, (uint64_t)irq12-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(45, (uint64_t)irq13-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(46, (uint64_t)irq14-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
-		SetGate(47, (uint64_t)irq15-KERNEL_VIRTUAL_BASE, 0x08, 0x8E);
+		SetGate(32, (uint64_t)irq0, 0x08, 0x8E);
+		SetGate(33, (uint64_t)irq1, 0x08, 0x8E);
+		SetGate(34, (uint64_t)irq2, 0x08, 0x8E);
+		SetGate(35, (uint64_t)irq3, 0x08, 0x8E);
+		SetGate(36, (uint64_t)irq4, 0x08, 0x8E);
+		SetGate(37, (uint64_t)irq5, 0x08, 0x8E);
+		SetGate(38, (uint64_t)irq6, 0x08, 0x8E);
+		SetGate(39, (uint64_t)irq7, 0x08, 0x8E);
+		SetGate(40, (uint64_t)irq8, 0x08, 0x8E);
+		SetGate(41, (uint64_t)irq9, 0x08, 0x8E);
+		SetGate(42, (uint64_t)irq10, 0x08, 0x8E);
+		SetGate(43, (uint64_t)irq11, 0x08, 0x8E);
+		SetGate(44, (uint64_t)irq12, 0x08, 0x8E);
+		SetGate(45, (uint64_t)irq13, 0x08, 0x8E);
+		SetGate(46, (uint64_t)irq14, 0x08, 0x8E);
+		SetGate(47, (uint64_t)irq15, 0x08, 0x8E);
 
 		memset((uint8_t*)&interrupt_handlers, 0, sizeof(isr_t) * 256);
 		__asm__ __volatile__("sti");
@@ -213,9 +213,7 @@ namespace IDT{
 
 extern "C"
 	void isr_handler(int int_num, regs64_t* regs, int err_code) {
-			char temp[23];
-			Log::Error("Error Code: ");
-			Log::Error(itoa(err_code,temp,16));
+		Log::Error("Exception");
 		if (interrupt_handlers[int_num] != 0) {
 			interrupt_handlers[int_num](regs);
 		} else if(int_num == 0x69){
@@ -223,19 +221,19 @@ extern "C"
 		}
 		else {
 			Log::Error("Fatal Exception: ");
-			Log::Info(itoa(int_num, temp, 16));
-			Log::Info(itoa(regs->r15, temp, 16));
+			Log::Info(int_num);
+			Log::Info(regs->r15);
 			Log::Info("EIP: ");
-			Log::Error(itoa(regs->rip,temp,16));
+			Log::Error(regs->rip);
 			Log::Error("Error Code: ");
-			Log::Error(itoa(err_code,temp,16));
+			Log::Error(err_code);
 			for (;;);
 		}
 	}
 
 	extern "C"
 	void irq_handler(int int_num, regs64_t* regs) {
-
+		Log::Info(int_num);
 		if (int_num >= 40) {
 			outportb(0xA0, 0x20);
 		}

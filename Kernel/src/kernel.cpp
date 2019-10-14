@@ -21,9 +21,9 @@
 void* initElf;
 extern "C"
 void IdleProcess(){
-	Log::Info("Loading init Process...");
+	//asm("sti");
+	Log::Info("Loading Init Process...");
 	Log::SetVideoConsole(NULL);
-#ifdef Lemon32
 	fs_node_t* initFsNode = fs::FindDir(Initrd::GetRoot(),"init.lef");
 	if(!initFsNode){
 		char* panicReasons[]{
@@ -34,11 +34,11 @@ void IdleProcess(){
 		
 	initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
+	#ifdef Lemon32
 	Scheduler::LoadELF(initElf);
-#endif
+	#endif
 	Log::Write("OK");
-	for(;;){ 
-		asm("hlt");
+	for(;;){
 	}
 }
 

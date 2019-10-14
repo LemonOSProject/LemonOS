@@ -14,10 +14,6 @@
 #define KERNEL_HEAP_PDPT_INDEX 511
 #define KERNEL_HEAP_PML4_INDEX 511
 
-extern uint64_t* kernel_pml4;
-extern uint64_t* kernel_pdpt; // First 1GB Start Identity Mapped
-extern uint64_t* kernel_pdpt2; // At entry to long mode, first 1GB is mapped to the last 2GB of virtual memory
-
 address_space_t* currentAddressSpace;
 
 namespace Memory{
@@ -60,7 +56,7 @@ namespace Memory{
 		}*/
 		SetPageFrame(&(kernelPML4[PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)]),((uint64_t)kernelPDPT - KERNEL_VIRTUAL_BASE));
 		kernelPML4[PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)] |= 0x3;
-		Log::Info((kernelPML4[PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)]), true);
+		Log::Info((PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)), false);
 		kernelPML4[0] = kernelPML4[PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)];
 		kernelPDPT[PDPT_GET_INDEX(KERNEL_VIRTUAL_BASE)] = 0x83;
 		kernelPDPT[0] = 0x83;
@@ -82,6 +78,11 @@ namespace Memory{
 		for(int i = 0; i < sizeof(address_space_t)/PAGE_SIZE_4K + 1; i++){
 			uintptr_t phys = Memory::AllocatePhysicalMemoryBlock();
 			Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)(addressSpace + i*PAGE_SIZE_4K),1);
+		}
+
+		for(int i = 0; i < DIRS_PER_PDPT; i++){
+			addressSpace->pdpt[i] = 0;
+			//addressSpace->pageDirs
 		}
 	}
 
@@ -215,7 +216,7 @@ offset = 0;
 
 	void ChangeAddressSpace(address_space_t* addressSpace){
 		currentAddressSpace = addressSpace;
-		kernelPML4[0] = VirtualToPhysicalAddress((uint64_t)addressSpace->pdpt) | 0x3;
+		kernelPML4[0] = 0;//VirtualToPhysicalAddress((uint64_t)(&addressSpace->pdpt)) | 0x3;
 	}
 
 	void PageFaultHandler(regs64_t* regs/*, int err_code*/)

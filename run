@@ -1,1 +1,1 @@
-qemu-system-x86_64 --enable-kvm -drive file=Disks/Lemon.vhd,id=ahci
+qemu-system-x86_64 --enable-kvm -drive file=Disks/Lemon.vhd,id=ahci -no-reboot -no-shutdown

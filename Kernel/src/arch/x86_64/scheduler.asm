@@ -3,13 +3,13 @@ extern processBase
 extern processEntryPoint
 
 global TaskSwitch
-global ReadEIP
+global ReadRIP
 global IdleProc
 
 extern IdleProcess
 
-ReadEIP:
-    mov eax, [esp]
+ReadRIP:
+    mov rax, [rsp]
     ret
 
 TaskSwitch:

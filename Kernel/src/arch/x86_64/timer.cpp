@@ -1,6 +1,6 @@
 #include <stdint.h>
-//#include <idt.h>
-//#include <scheduler.h>
+#include <idt.h>
+#include <scheduler.h>
 #include <system.h>
 
 namespace Timer{
@@ -46,6 +46,6 @@ namespace Timer{
         outportb(0x40, l);
         outportb(0x40, h);
 
-        //IDT::RegisterInterruptHandler(IRQ0, Handler);
+        IDT::RegisterInterruptHandler(IRQ0, Handler);
     }
 }

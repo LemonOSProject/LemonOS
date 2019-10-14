@@ -21,7 +21,7 @@ bool schedulerLock = true;
 extern "C" void TaskSwitch();
 
 extern "C"
-uint32_t ReadEIP();
+uintptr_t ReadRIP();
 
 extern "C"
 void IdleProc();
@@ -49,8 +49,8 @@ namespace Scheduler{
         asm("cli");
         Log::Write("OK");
         schedulerLock = false;
-        //Memory::ChangeAddressSpace(currentProcess->addressSpace);
-        //TaskSwitch();
+        Memory::ChangeAddressSpace(currentProcess->addressSpace);
+        TaskSwitch();
         for(;;);
     }
 
@@ -214,7 +214,7 @@ namespace Scheduler{
         processBase = currentProcess->threads[0].registers.ebp;
         processPageDirectory = currentProcess->pageDirectory.page_directory_phys;
         TaskSwitch();
-    }
+    }*/
 
     void Tick(){
         if(currentProcess->timeSlice > 0) {
@@ -225,27 +225,28 @@ namespace Scheduler{
 
         currentProcess->timeSlice = currentProcess->timeSliceDefault;
 
-        uint32_t currentEIP = ReadEIP();
+        uint64_t currentRIP = ReadRIP();
 
-        if(currentEIP == 0xC0000123) {
+        if(currentRIP == 0xFFFFFFFF8000BEEF) {
             return;
         }
 
-        uint32_t currentESP;
-        uint32_t currentEBP;
-        asm volatile ("mov %%esp, %0" : "=r" (currentESP));
-        asm volatile ("mov %%ebp, %0" : "=r" (currentEBP));
+        uint64_t currentRSP;
+        uint64_t currentRBP;
+        asm volatile ("mov %%rsp, %0" : "=r" (currentRSP));
+        asm volatile ("mov %%rbp, %0" : "=r" (currentRBP));
 
-        currentProcess->threads[0].registers.rsp = currentESP;
-        currentProcess->threads[0].registers.rip = currentEIP;
-        currentProcess->threads[0].registers.rbp = currentEBP;
+        currentProcess->threads[0].registers.rsp = currentRSP;
+        currentProcess->threads[0].registers.rip = currentRIP;
+        currentProcess->threads[0].registers.rbp = currentRBP;
 
         currentProcess = currentProcess->next;
 
         processEntryPoint = currentProcess->threads[0].registers.rip;
         processStack = currentProcess->threads[0].registers.rsp;
         processBase = currentProcess->threads[0].registers.rbp;
-        processPageDirectory = currentProcess->pageDirectory.page_directory_phys;
+        asm("cli");
+        Memory::ChangeAddressSpace(currentProcess->addressSpace);
         TaskSwitch();
-    }*/
+    }
 }

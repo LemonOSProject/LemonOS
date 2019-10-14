@@ -1,6 +1,105 @@
 
 [INFO]    Initializing Lemon...
 
-[INFO]    0x134003
-[INFO]    0x135003
-[INFO]    0x100c4
+[INFO]    Initializing PCI Driver...
+[INFO]    OK
+[INFO]    Initializing AHCI Driver...
+[INFO]    No device found with class
+[INFO]    0x1
+[INFO]    0x6
+[WARN]    ERROR: No AHCI Controller Found
+[INFO]    Video Resolution:
+[INFO]    1024x768x32
+[INFO]    RAM: 127MB
+[INFO]    Initializing System Timer...OK
+[INFO]    Multiboot Module Count: 
+[INFO]    1
+[INFO]    Initializing Ramdisk...OK
+[INFO]    Ramdisk Contents:
+    dev
+    fm.lef
+    snake.lef
+    file.bmp
+    binfile.bmp
+    folder.bmp
+    shell.lef
+    menu.txt
+    texteditor.lef
+    terminal.lef
+    draw.lef
+    sysinfo.lef
+    banner.bmp
+    taskbar.lef
+    c8emu.lef
+    tetris.c8
+    spinvade.c8
+    missile.c8
+    pong.c8
+    pong2.c8
+    tictac.c8
+    ufo.c8
+    close.bmp
+    lemongnuboy.lef
+    bg1.bmp
+    imgview.lef
+    solitaire.lef
+    mario.gbc
+    guitest.lef
+    splash.bmp
+    init.lef
+
+[INFO]    Initializing HID...
+[INFO]    OK
+[INFO]    Registering Syscall Handler...OK
+[INFO]    Initializing Task Scheduler...OK
+[INFO]    Loading init Process...
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x4210
+[INFO]    Elf section address 0x
+[INFO]    0x804d210
+[INFO]    Elf section size 
+[INFO]    0x1094OK
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x48c0
+[INFO]    Elf section address 0x
+[INFO]    0x804d000
+[INFO]    Elf section size 
+[INFO]    0x1f80
+[INFO]    Opening: /dev/mouse0
+[INFO]    Opening: /close.bmp
+[INFO]    Opening: /bg1.bmp
+[INFO]    Opening: /menu.txt
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x1eaec
+[INFO]    Elf section address 0x
+[INFO]    0x8067aec
+[INFO]    Elf section size 
+[INFO]    0x810f8
+[INFO]    Opening: mario.gbcmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmddddnnnnnnnnnnnnnnnnnnnnnnnnnnnmmmmmmnnnnmnmmmmmmmmmmmmmmmmmmmmmmmmdmmdwwmnnnnmmmmmmmmmmmmmnmmmmmmmmmdddnmnmmmmmmmmmmmmmmmmmmnnnnmnmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmdaadmmmmmmmmnnnnnmmmmmmmddddmmddmmnnnnnmmmmmmmmmmmmmmmmmmmmmmmddmdmdnnmnmmmmmmmmmmmmmmmmmmmmmmd
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x5c78
+[INFO]    Elf section address 0x
+[INFO]    0x804e000
+[INFO]    Elf section size 
+[INFO]    0xbd8
+[INFO]    Opening: /
+[INFO]    Opening: /file.bmp
+[INFO]    Opening: /binfile.bmp
+[INFO]    Opening: /folder.bmp
+[INFO]    Elf section address 0x
+[INFO]    0x8048000
+[INFO]    Elf section size 
+[INFO]    0x571c
+[INFO]    Elf section address 0x
+[INFO]    0x804e000
+[INFO]    Elf section size 
+[INFO]    0xda0
+[INFO]    Opening: /banner.bmp
