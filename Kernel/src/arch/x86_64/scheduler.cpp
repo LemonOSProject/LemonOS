@@ -9,6 +9,7 @@
 #include <string.h>
 #include <system.h>
 #include <logging.h>
+#include <elf.h>
 
 uintptr_t processBase;
 uintptr_t processStack;
@@ -54,9 +55,9 @@ namespace Scheduler{
         for(;;);
     }
 
-    /*process_t* GetCurrentProcess(){ return currentProcess; }
+    process_t* GetCurrentProcess(){ return currentProcess; }
 
-    void RegisterHandle(handle_t handle){
+    /*void RegisterHandle(handle_t handle){
         handle_index_t index;
         index.handle = handle;
         index.owner = currentProcess;
@@ -72,7 +73,7 @@ namespace Scheduler{
         handle_index_t nullIndex;
         nullIndex.handle = 0;
         return nullIndex;
-    }
+    }*/
 
     process_t* FindProcessByPID(uint64_t pid){
         process_t* proc = processQueueStart;
@@ -85,7 +86,7 @@ namespace Scheduler{
         return NULL;
     }
 
-    int SendMessage(message_t msg){
+    /*int SendMessage(message_t msg){
         process_t* proc = FindProcessByPID(msg.recieverPID);
         if(!proc) return 1; // Failed to find process with specified PID
         proc->messageQueue.add_back(msg);
@@ -187,9 +188,93 @@ namespace Scheduler{
 
         return proc->pid;
     }
-/*
+
+    uint64_t LoadELF(void* elf) {
+
+        bool schedulerState = schedulerLock; // Get current value for scheduker lock
+        schedulerLock = true; // Lock Scheduler
+
+        // Create process structure
+        process_t* proc = (process_t*)kmalloc(sizeof(process_t));
+
+        memset(proc,0,sizeof(process_t));
+
+        // Reserve 3 file descriptors for when stdin, out and err are implemented
+        //proc->fileDescriptors.add_back(NULL);
+        //proc->fileDescriptors.add_back(NULL);
+        //proc->fileDescriptors.add_back(NULL);
+
+        proc->pid = nextPID++; // Set Process ID to the next availiable
+        proc->priority = 1;
+        proc->thread_count = 1;
+        proc->state = PROCESS_STATE_ACTIVE;
+        proc->thread_count = 1;
+
+        proc->addressSpace = Memory::CreateAddressSpace();// So far this function is only used for idle task, we don't need an address space
+        proc->timeSliceDefault = 1;
+        proc->timeSlice = proc->timeSliceDefault;
+
+        // Create structure for the main thread
+        thread_t* thread = proc->threads;
+
+        thread->stack = 0;
+        thread->parent = proc;
+        thread->priority = 1;
+        thread->parent = proc;
+
+        regs64_t* registers = &thread->registers;
+        memset((uint8_t*)registers, 0, sizeof(regs64_t));
+        //registers->eflags = 0x200;
+
+        elf64_header_t elfHdr = *(elf64_header_t*)elf;
+
+        for(int i = 0; i < elfHdr.phNum; i++){
+            elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
+
+            if(elfPHdr.memSize <= 0) continue;
+
+            //proc->programHeaders.add_back(elfPHdr);
+
+            Memory::ChangeAddressSpace(proc->addressSpace); // Switch to kernel page directory so we don't interfere with the current process's address space
+            for(int i = 0; i < ((elfPHdr.memSize / PAGE_SIZE_4K) + 2); i++){
+                uint32_t phys = Memory::AllocatePhysicalMemoryBlock();
+                //Memory::MapVirtualMemory4K(phys,elfPHdr.vaddr + i * PAGE_SIZE_4K, 1/*, currentProcess->pageDirectory*/);
+                Memory::MapVirtualMemory4K(phys,elfPHdr.vaddr + i * PAGE_SIZE_4K, 1/*, proc->addressSpace*/);
+            }
+            if (elfPHdr.memSize > 0){
+                Log::Info("Elf section address 0x");
+                Log::Info(elfPHdr.vaddr);
+                Log::Info("Elf section size ");
+                Log::Info(elfPHdr.memSize);
+            
+                memset((void*)elfPHdr.vaddr,0,elfPHdr.memSize);
+                memcpy((void*)elfPHdr.vaddr,(void*)(elf + elfPHdr.offset),elfPHdr.fileSize);;
+            }
+
+            Memory::ChangeAddressSpace(currentProcess->addressSpace);
+
+        }
+
+
+        void* stack = (void*)Memory::KernelAllocate4KPages(4);
+        for(int i = 0; i < 4; i++){
+            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)stack + PAGE_SIZE_4K * i, 1);
+        }
+
+        thread->stack = stack + 16384;
+        thread->registers.rsp = (uintptr_t)thread->stack;
+        thread->registers.rbp = (uintptr_t)thread->stack;
+        thread->registers.rip = (uintptr_t)elfHdr.entry;
+
+        InsertProcessIntoQueue(proc);
+
+        schedulerLock = schedulerState; // Restore previous lock state
+
+        return proc->pid;
+    }
+
     void EndProcess(process_t* process){
-        RemoveProcessFromQueue(process);
+        RemoveProcessFromQueue(process);/*
 
         for(int i = 0; i < process->fileDescriptors.get_length(); i++){
             if(process->fileDescriptors[i])
@@ -201,8 +286,8 @@ namespace Scheduler{
         for(int i = 0; i < process->programHeaders.get_length(); i++){
             elf32_program_header_t programHeader = process->programHeaders[i];
 
-            for(int i = 0; i < ((programHeader.p_memsz / PAGE_SIZE) + 2); i++){
-                uint32_t address = Memory::VirtualToPhysicalAddress(programHeader.p_vaddr + i * PAGE_SIZE);
+            for(int i = 0; i < ((programHeader.memSize / PAGE_SIZE) + 2); i++){
+                uint32_t address = Memory::VirtualToPhysicalAddress(programHeader.vaddr + i * PAGE_SIZE);
                 Memory::FreePhysicalMemoryBlock(address);
             }
         }
@@ -213,13 +298,13 @@ namespace Scheduler{
         processStack = currentProcess->threads[0].registers.esp;
         processBase = currentProcess->threads[0].registers.ebp;
         processPageDirectory = currentProcess->pageDirectory.page_directory_phys;
-        TaskSwitch();
-    }*/
+        TaskSwitch();*/
+    }
 
     void Tick(){
         if(currentProcess->timeSlice > 0) {
             currentProcess->timeSlice--;
-            return;
+            //return;
         }
         if(schedulerLock) return;
 

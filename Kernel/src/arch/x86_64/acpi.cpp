@@ -34,7 +34,7 @@ namespace ACPI{
 		}
 
 		{
-		char* panicReasons[]{"System not ACPI Complaiant."};
+		const char* panicReasons[]{"System not ACPI Complaiant."};
 		KernelPanic(panicReasons,1);
 		}
 

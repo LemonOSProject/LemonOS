@@ -1,6 +1,6 @@
 #include <video.h>
 
-void KernelPanic(char** reasons, int reasonCount){
+void KernelPanic(const char** reasons, int reasonCount){
 	asm("cli");
 	video_mode_t v = Video::GetVideoMode();
 	Video::DrawRect(0,0,v.width,v.height,255,0,0);

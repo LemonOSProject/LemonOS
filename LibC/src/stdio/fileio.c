@@ -27,7 +27,7 @@ FILE* fopen(const char* filename, const char* mode){
 	file = fdopen(fd, mode);
 	if (file) return file;
 
-	//lemon_close(fd);
+	lemon_close(fd);
 	return 0;
 }
 

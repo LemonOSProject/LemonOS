@@ -219,7 +219,7 @@ namespace Video{
         }
     }
     
-    void DrawString(char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b) {
+    void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b) {
         int xOffset = 0;
         while (*str != 0) {
             Video::DrawChar(*str, x + xOffset, y, r, g, b);

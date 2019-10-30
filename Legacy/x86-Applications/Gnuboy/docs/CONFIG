@@ -1,0 +1,645 @@
+
+GUIDE TO CONFIGURING GNUBOY
+
+
+[ P A R T   I ]
+  OVERVIEW
+
+There are two major ways of configuring the way gnuboy behaves at
+runtime: setting the values of variables, and binding commands to keys
+and joystick buttons. Each can be done either on the command line, or
+from a config (rc) file.
+
+If you don't want to read all this detailed info, look at the sample
+rc files provided, then browse back through this file to clarify
+anything that seems confusing. You might also skip down to Part II if
+you're already familiar with the syntax of gnuboy rc files and such;
+the second part explains the configurable variables which you can play
+with.
+
+
+  WHAT HAPPENS AT STARTUP
+
+When gnuboy is started, it first processes gnuboy.rc, the primary
+configuration file. On *nix systems, gnuboy will initially look for
+its rc files in ~/.gnuboy, or if that fails, the present working
+directory. On DOS and Windows, the current directory will be searched
+first, followed by the directory containing the gnuboy executable.
+
+After finishing with gnuboy.rc, gnuboy next looks for an rc file with
+the same base name as the rom to be loaded. For example, if the name
+of the rom is mygame.gb, gnuboy will process mygame.rc, if it exists.
+This allows you to configure different preferences on a per-rom
+basis. The locations searched for the rom-specific rc file are the
+same as those searched for gnuboy.rc, unless gnuboy.rc has changed the
+search path (see below for more info).
+
+Finally, options on the command line are processed. The command line
+will override any settings in the auto-loaded rc files. This is a good
+place for options that you just want to use occasionally, but not on a
+regular basis.
+
+After all of the above is finished, gnuboy loads the rom and starts
+emulation.
+
+
+  RC FILES
+
+The rc files gnuboy uses are plain text files, with one command on
+each line. Lines that start with # are treated as comments, that is to
+say they are ignored, and blank lines are ignored as well.
+
+There are three major types of commands.
+
+
+  RC FILES -- SETTING VARIABLES
+
+First of all, there is the "set" command, which is used for setting
+the values of variables. For example,
+
+  set scale 2
+
+will set the screen scaling factor to 2. If you need to include a
+space in the value of a variable, you can do something like this:
+
+  set savename "I like spaces in my filenames"
+
+and then your save files will be named something like:
+
+  I like spaces in my filenames.sav
+  I like spaces in my filenames.000
+  I like spaces in my filenames.001
+  I like spaces in my filenames.002
+  etc.
+
+Finally, some variables allow multiple numbers to be given. For
+example, to set the video mode to 640x480, 16bpp, you might do
+something like this:
+
+  set vmode 640 480 16
+
+Observe that each number is separate, and there are no quotation marks
+used.
+
+
+  RC FILES -- KEYBINDINGS
+
+Next, we have commands that deal with key and joystick bindings. These
+are fairly simple.
+
+The "unbindall" command removes all existing keybindings -- be
+careful! -- and its main use is for people who want to redefine their
+keyboard controls entirely and throw away the defaults. Be warned that
+if you unbind the quit key and don't bind a new key for quitting, you
+may be unable to exit gnuboy cleanly!
+
+The "unbind" command is similar, but it only unbinds one key at a
+time. For example, to unbind the "space" key, use this command:
+
+  unbind space
+
+See below for a list of key names to use with unbind.
+
+Now we get to the main useful keybinding command: "bind". For example,
+if you want the "tab" key to perform the Gameboy "select" button
+function, use the following bind command:
+
+  bind tab +select
+
+The significance of the + sign will be explained below. As with the
+"set" command, quotation marks can be used with bind if the command
+needs to contain spaces.
+
+
+  KEY NAMES FOR BINDINGS
+
+When using the bind and unbind commands, you need to tell gnuboy which
+key you wish to affect. Most of the keys that correspond to a
+character you can type can just be referenced by that character. For
+example, the alphabetical keys are bound by the lowercase letter they
+represent, and the numeral keys (on the main keyboard, not the numeric
+keypad) can be bound by their numeral. Other keys require a name. Some
+are really obvious:
+
+  shift, ctrl, alt, up, down, right, left
+  enter, tab, space, home, end, esc, pause
+  f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12
+
+Others are a bit less obvious but still should make sense. Some of
+these can also be referenced by other names; read the source file
+keytable.c for a full list:
+
+  bs            Backspace
+  ins           Insert
+  del           Delete
+  prior         Page Up
+  next          Page Down
+  caps          Caps Lock
+  numlock       Num Lock
+  scroll        Scroll Lock
+  minus         - or _
+  equals        = or +
+  tilde         ` or ~
+  slash         / or ?
+  bslash        \ or |
+  semi          ; or :
+  quote         ' or "
+
+The numeric keypad is referenced as follows
+
+  num0-num9     Numeral keys 0-9 (on keypad)
+  numplus       Numeric keypad +
+  numminus      Numeric keypad -
+  nummul        Numeric keypad *
+  numdiv        Numeric keypad /
+  numdot        Numeric keypad .
+  numenter      Numeric keypad Enter key
+
+Joystick buttons and directions also have names for binding, and they
+are bound just like ordinary keys. Their names are as follows:
+
+  joyup         Joystick up
+  joydown       Joystick down
+  joyleft       Joystick left
+  joyright      Joystick right
+  joy0-joy15    Joystick buttons
+
+The way joystick buttons are numbered varies from one joystick to
+another. Experiment to find the names that are right for the buttons
+you want to use.
+
+
+  RC FILES -- THE SOURCE COMMAND
+
+The "source" command simply causes gnuboy to process another rc file
+before resuming processing of the current one. It is useful for
+splitting up your config into multiple parts, perhaps one file
+auto-generated by a front-end and another hand-customized. Use of this
+command is very simple:
+
+  source myfile.rc
+
+will perform all the commands in myfile.rc. Note that the source
+command also provides a method for binding multiple commands to a
+single key. For example, simply
+
+  bind f1 "source f1stuff.rc"
+
+and then f1stuff.rc will be run whenever you press F1.
+
+
+  RC FILES -- ACTION COMMANDS
+
+Finally, we have rc commands that perform actions. These commands are
+probably only useful when bound to a key, and might cause unexpected
+behavior or even crashes if used by themselves in an rc file loaded at
+startup.
+
+First of all, the "quit" command should be obvious. It simply exits
+the emulator. If the rom that's loaded uses battery backed save ram or
+realtime clock, these files will automatically be saved at exit.
+
+The "reset" command should also be fairly obvious. It acts as a reset
+button, restarting execution of the loaded rom at the beginning, as if
+you turned the Gameboy power off and back on.
+
+Slightly more interesting are the "savestate" and "loadstate"
+commands. These are used for saving and resuming "saved state" files,
+which allow you to save the exact status of the emulation environment
+and restore it later, effectively letting you "save game" at any point
+in any game. If a number is specified after either of those commands,
+the indicated save slot number is used. Otherwise, the slot set in the
+"saveslot" variable will be used. See the information on variables
+below for more info.
+
+Most importantly, we have the action commands that control the
+emulated Gameboy input pad. They are described below:
+
+
+  COMMANDS THAT BEGIN WITH A PLUS SIGN
+
+Normally, gnuboy only performs the command bound to a key when the key
+is pressed; nothing happens when it is released. But for some things,
+particularly the Gameboy pad buttons, it's important for something to
+happen when the bound key is released. This is the purpose of commands
+that begin with a + sign. When a key is released, gnuboy checks to see
+if the bound command begins with +, and if so, it changes the + to -
+and performs the resulting command. This causes the Gameboy pad
+buttons to go back to their normal state when the keys bound to them
+are released.
+
+The Gameboy pad commands, which should be self-explanatory, are as
+follows:
+
+  +a, +b, +start, +select, +up, +down, +left, +right
+
+If you're at all familiar with Quake's config system, this should all
+be clear.
+
+
+  THE GNUBOY COMMAND LINE
+
+Additional rc files to process, variable settings, and keybindings can
+be specified on the command line when gnuboy is run.
+
+Processing an extra config file is simple:
+
+  gnuboy --source myfile.rc game.gb
+
+Specifying an extra rc file on the command line like this is
+especially useful for frontends, which may want to put all the options
+they set in one rc file so they don't have to pass a super-long
+command line to gnuboy.
+
+Binding keys is also pretty simple. Just use something like:
+
+  gnuboy --bind tab +select game.gb
+
+Setting variables is where things get a bit more complicated. For
+on/off (boolean) settings, you can just do something like
+
+  gnuboy --no-sound game.gb
+
+to turn a variable (sound) off, i.e. set it to 0. Likewise, boolean
+variables can be turned on via something like
+
+  gnuboy --rgb332 game.gb
+
+which turns the "rgb332" variable on (see below for information on
+what it does).
+
+For other variables where you actually want to set a number or a
+string, use this form:
+
+  gnuboy --savename=mygame2 game.gb
+
+Finally, for variables with multiple numbers to be set, you can
+separate them by commas as follows:
+
+  gnuboy --vmode=512,384,32
+
+to avoid having to quote the spaces.
+
+
+[ P A R T   I I ]
+  GUIDE TO CONFIGURABLE VARIABLES
+
+What follows is a detailed explanation of most of the configuration
+variables available for your tweaking. They are organized by what part
+of gnuboy's behavior they affect -- graphics, sound, emulation, and so
+on.
+
+Some variables may or may not be available depending on how gnuboy was
+built. For example, if you built gnuboy on a system without sound
+support, some variables related to sound may not exist for you, and
+attempts to set them will be silently ignored. In most cases, it's
+noted in the documentation when variables might not be available.
+
+Also, there are a few highly system-specific variables, such as names
+of devices to use for video and sound on *nix systems. These are
+listed separately at the end, and it should go without saying that
+they will not be available on all builds of gnuboy.
+
+
+  VIDEO AND GRAPHICS SETTINGS
+
+Since this is everyone's favorite thing to customize, video seems a
+good place to start.
+
+
+  SCREEN SCALING
+
+There are a number of variables that control how gnuboy scales the
+display. The most basic is the "scale" option, which is just the
+factor to scale by. For example
+
+  set scale 2
+
+will double the size of the display. Set the scale factor to 1 for no
+scaling.
+
+There are two ways gnuboy can go about doing scaling. The preferable
+way is to use your computer's graphics hardware to do all the work.
+This cuts down on the amount of CPU time consumed and provides
+filtering to smooth out the blocky pixels, but it's not available on
+all systems. The other way is for gnuboy to scale the screen itself.
+
+Normally gnuboy will choose hardware scaling automatically if it's
+available, but if you want to force it on or off, you can set the
+option "yuv" (for hardware YUV-colorspace scaling) to 1 or 0. Yes,
+this option is poorly named, and is likely to change in future
+versions of gnuboy.
+
+On one display platform, Linux fbcon, it's possible to disable the
+interpolation filter in the hardware scaling. To do this, set the
+variable "yuvinterp" to 0. Some users who like a crisper display may
+prefer this setting, especially on video cards that make the picture
+look "muddy" when they scale it. Unfortunately SDL does not seem to
+provide such an option, so interpolation is always enabled on the SDL
+based ports.
+
+When hardware scaling is disabled or not available, gnuboy will do its
+own scaling. However, the scale factor is limited to 1, 2, 3, or 4.
+Also, when performing its own scaling, gnuboy defaults to leaving some
+scanlines blank. This saves a lot of CPU time and allows gnuboy to run
+full speed on slower systems. You can configure what portion gets
+filled in with the "density" variable. For example.
+
+  set scale 4
+  set density 4
+
+will give you 4x scaling with no blank scanlines. Keep in mind that a
+fairly fast computer (at least 400 MHz or so on x86, or something
+comparable on other types of CPUs) is required to run fullspeed with
+this setting. In general, "density" is the number of lines that get
+filled in, so set it the same as "scale" if you want everything filled
+in, or lower if you need more speed.
+
+
+  VIDEO MODE
+
+The variable for setting the desired video mode is called "vmode", and
+it's made up of three parts: width, height, and bits-per-pixel. For
+example, to set 640x480x16bpp mode, use
+
+  set vmode 640 480 16
+
+By default gnuboy will enable hardware scaling and try to scale to the
+entire screen size if a video mode at least 320x288 is specified. If
+you don't want this behavior, set the "yuv" option (see above) to 0.
+Also, if you're setting the "scale" variable to do scaling, you
+probably don't need to use the "vmode" option, since gnuboy will
+try to automatically pick a mode that fits the scale. It's there in
+case you need it, though.
+
+Note that the DOS port is not yet capable of auto-choosing a video
+mode, so if you want anything but the default 320x200x8bpp you'll have
+to set "vmode" yourself. Also, not all ports are capable of all modes.
+Experiment to find what works for you. Video mode selection is a
+little bit messy and confusing at this time, and we hope to improve it
+a good deal in the future.
+
+
+  FULLSCREEN VIDEO
+
+Some versions of gnuboy provide both fullscreen and windowed
+operation. The variable "fullscreen" can be set to 1 or 0 to enable or
+disable fullscreen mode. Also, the variable "altenter" can be set to
+enable or disable switching between fullscreen and windowed mode at
+runtime with the Alt+Enter key combination. Unfortunately, this does
+not yet work on Windows; we hope to fix this limitation in the
+future.
+
+
+  DMG PALETTE SELECTION
+
+gnuboy allows you to set the palette used for grayscale when running
+DMG (original mono Gameboy) roms. There are four variables for this
+purpose, allowing the background, window, and both sprite palettes to
+be colored differently. Each one is made up of four numbers, the color
+to use for each shade of gray, from lightest to darkest. Colors are
+represented as 24bit numbers, with red in the low (rightmost) places
+and blue in the upper (leftmost) places. Although you could specify
+colors in decimal (base 10) if you really wanted, they'd be very
+difficult to read, so it's preferable to use hex (base 16).
+
+For example, to set the background to shades of white, the window to
+shades of red, and the sprite palettes to shades of green and blue,
+you could use:
+
+  set dmg_bgp  0xffffff 0xaaaaaa 0x555555 0x000000
+  set dmg_wndp 0x0000ff 0x0000aa 0x000055 0x000000
+  set dmg_obp0 0x00ff00 0x00aa00 0x005500 0x000000
+  set dmg_obp1 0xff0000 0xaa0000 0x550000 0x000000
+
+This will of course look rather ugly, but it does the job illustrating
+how you set various colors.
+
+For more extensive examples, see the sample file palette.rc included
+with gnuboy, which provides a number of sample palettes to try.
+
+
+  RGB MODE WITH ONLY 256 COLORS
+
+Normally when run in 256-color (8bpp) modes, gnuboy will dynamically
+allocate colors in the palette as they're needed. However, on the
+Gameboy Color, it's possible to have well over 1000 colors on the
+screen at a time, and in games that make use of these "hicolor"
+tricks, gnuboy will run out of colors and things will look bad.
+
+If you prefer, you can set the "rgb332" variable:
+
+  set rgb332 1
+
+This tells gnuboy that instead of using 256-color mode as a
+palette-based mode, you want it to setup a static palette and pretend
+8bpp is just a really low quality "truecolor" mode, with only 3 bits
+of precision in red and green, and only 2 bits of precision in blue.
+In general this will make most games look worse, since colors have to
+be approximated fairly poorly and since smooth color gradients are not
+possible, but it will make "hicolor" Gameboy Color games look a good
+deal better. Also, rgb332 mode should run slightly faster since it
+avoids the overhead in dynamic palette allocation.
+
+If you have to run at 8bpp mode, try it with and without this option
+and see which way you like better. Of course, the better solution, if
+at all possible, is to use 16bpp or higher mode, but that may run too
+slowly on older computers.
+
+
+  COLOR FILTERING
+
+Optionally, gnuboy can filter screen colors to make them look more
+washed out or faded like on a real GBC. To enable this feature,
+
+  set colorfilter 1
+
+By default, gnuboy will not apply the filter when running DMG (mono)
+games, since many of the sample palettes are already designed to
+immitate a Gameboy LCD. If you would like to have the filter also take
+effect when running in DMG mode,
+
+  set filterdmg 1
+
+You can also customize the filter parameters to get different color
+effects from the default ones. See the sample file filters.rc for
+examples.
+
+
+  SPRITE SORTING
+
+Normally sprites are sorted and prioritized according to their x
+coordinate when in DMG mode. However, this takes a little bit of extra
+cpu time, and it's not needed by most DMG games, so it can be disabled
+as follows:
+
+  set sprsort 0
+
+Note that although sprite sorting was disabled in previous releases
+because it was not working properly, it now works great, so unless you
+really need to maximize performance, you should probably leave it
+enabled.
+
+
+  SOUND OPTIONS
+
+Fortunately sound is a lot simpler than video. At this time, there are
+no fancy interpolation or filtering options, only your basic audio
+parameters.
+
+To enable or disable sound, set the "sound" variable to 1 or 0. By
+default, it's enabled.
+
+To enable or disable stereo sound, set the "stereo" variable to 1 or
+0.  It defaults to 1 on most ports, but since stereo sometimes fails
+to work properly on DOS, it's disabled by default on the DOS port.
+Disabling stereo in no way improves performance, so it should only be
+done if stereo mode causes a problem on your computer.
+
+To set the audio sampling rate, use the "samplerate" variable. The
+default is 44100 Hz. Setting this lower can improve performance. For
+example, if you have a really slow computer, you might use:
+
+  set samplerate 8000
+
+Keep in mind that this will sound really really bad.
+
+
+  FILESYSTEM OPTIONS
+
+There are a good deal of options that affect where and how files are
+saved and loaded by gnuboy. First, there's "rcpath", which specifies
+where gnuboy searches for rc files. The default depends on your
+operating system; see the beginning of this file for details.
+
+The search path for rc files can contain multiple directories.
+Normally, the list is separated by colons (:), but on DOS and Windows
+the colon is used for drive letters, so semicolon (;) must be used
+instead. Here are some examples, first for *nix:
+
+  set rcpath "/home/laguna/.gnuboy:/usr/local/etc/gnuboy"
+  set rcpath "."
+
+and for DOS/Windows:
+
+  set rcpath "c:/gnuboy;."
+  set rcpath "c:/Program Files/Gnuboy"
+
+If you really insist on using backslashes on DOS or Windows, you'll
+have to double them up, since the backslash normally means "treat the
+next character literally." For example,
+
+  set rcpath "c:\\gnuboy"
+
+This is untested, and your milage may vary. I recommend just using
+forward slashes and keeping things simple.
+
+
+  SAVE RELATED OPTIONS
+
+These are all fairly simple, so I'll just list them quickly, then give
+a couple examples.
+
+  savedir     - directory to store saved games (SRAM and savestates) in
+  savename    - base filename to use for saves
+  saveslot    - which savestate slot to use
+  forcebatt   - always save SRAM even on carts that don't have battery
+  nobatt      - never save SRAM
+  syncrtc     - resync the realtime clock for elapsed time when loading
+
+The "savename" variable is particularly useful if you wish to have
+more than one save associated with a particular rom. Just do something
+like:
+
+  gnuboy --savename=mygame2 mygame.gb
+
+and the save files will be called mygame2.sav, mygame2.000, etc rather
+than just mygame.sav, etc.
+
+The "saveslot" variable is normally just changed by keybindings, so
+you can pick a savestate slot while you're playing a game. However, if
+you for example prefer that the default slot at startup be 1 rather
+than 0, you can use:
+
+  set saveslot 1
+
+The "forcebatt" and "nobatt" options are fairly self-explanatory and
+not very useful, except perhaps for debugging or use with corrupted
+roms.
+
+The "syncrtc" option needs a bit of explanation. Some roms, notably
+Pokemon ones and Harvest Moon, use a realtime clock to keep track of
+the time of day even when they're not running. Since gnuboy is just an
+emulator, it can't work like a real cartridge and make things like
+this keep happening while the emulator is not running. However, it can
+resync the Gameboy realtime clock based on your computer's clock when
+it starts. This is what the "syncrtc" option does. By default it's
+enabled. If you disable it, then no time will seem to have elapsed
+between when you exit the emulator once and when you start it again
+the next time.
+
+
+  JOYSTICK OPTIONS
+
+So far there is just one joystick option, "joy", used to enable or
+disable joystick support.
+
+
+  DEBUGGING OPTIONS
+
+These probably won't be useful to most people, but if you're trying to
+debug a homebrew game you're writing or fix a bug in gnuboy they might
+be of help:
+
+The "trace" variable, if enabled, dumps a full execution trace to
+stdout. Be prepared for at least 20 megs of logs to look through at
+minimum, and more like 150 megs if you want enough to find anything
+useful. Redirecting stdout to a file is a must!
+
+The "sprdebug" variable is used to see how many sprites are visible
+per line. Try it and see!
+
+
+  PLATFORM-SPECIFIC OPTIONS
+
+On certain *nix systems, you may need to specify device nodes to use
+if the defaults don't work:
+
+  oss_device  - Open Sound System "DSP" device
+  fb_device   - Video framebuffer device
+  joy_device  - Joystick device
+  
+The Linux fbcon version of gnuboy does not support the "vmode" option
+yet, but it can set the mode for you by running the "fbset" program,
+if you have it. Just set the "fb_mode" variable to the exact name of
+the mode you want in /etc/fb.modes. For example,
+
+  set fb_mode 640x480-90
+
+You can also override the default color depth with the "fb_depth"
+variable.
+
+The DOS port of gnuboy has support for real console system gamepads
+via the "Directpad Pro" (DPP) connector. To enable this feature, set
+"dpp" to 1, set "dpp_port" to the IO port number the pad is connected
+to (e.g. 0x378 -- be sure to prefix it with 0x for hex!!), and set
+"dpp_pad" to the number of the pad you want to use. This code has not
+been heavily tested, so it may or may not work for you. Be sure to get
+the port number right or bad things may happen!
+
+
+  CONCLUSION
+
+Well, that's about it for configuration. Hopefully this document
+clears up a lot of the confusion about what you can and can't
+configure in gnuboy yet, and how you go about doing it. Again, check
+the sample.rc, palette.rc, and classic.rc files for lots of examples
+of how rc files work.
+
+As always, more info will come as time passes on. Keep on the lookout
+for new releases and more features. Thank you for flying gnuboy and
+have a nice day.
+
+
+
+                                                 - Laguna

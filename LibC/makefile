@@ -1,12 +1,15 @@
 .PHONY: all clean
 
-ARCH := x86
+ARCH := x86_64
 
 SRCDIRS := src src/liballoc src/lemon src/string src/stdio src/ctype src/stdlib src/unistd src/sys src/math
 INCLUDEPATH := -I include
 
 CFLAGS-x86 := -O3 -fPIC -Wall -Wno-int-conversion -Wno-pointer-arith -fno-exceptions -Wno-address -nostdlib -m32 -ffreestanding -Wno-write-strings $(INCLUDEPATH)
 ASFLAGS-x86 := -f elf32 -g -F dwarf
+
+CFLAGS-x86_64 := -O3 -fPIC -Wall -Wno-int-conversion -Wno-pointer-arith -fno-exceptions -Wno-address -nostdlib -m64 -ffreestanding -Wno-write-strings $(INCLUDEPATH)
+ASFLAGS-x86_64 := -f elf64 -g -F dwarf
 
 CFILES := $(shell find $(SRCDIRS) -type f -name "*.c")
 ASMFILES := $(shell find $(SRCDIRS) -type f -name "*.S")
@@ -24,7 +27,7 @@ endif
 
 all: $(ARCH)
 
-x86: $(OBJFILES)
+x86_64: $(OBJFILES)
 	@echo $(OBJFILES)
 	@ar rcs bin/libc.a obj/*
 	@cp obj/crt0.o bin/crt0.o
@@ -38,11 +41,11 @@ x86: $(OBJFILES)
 
 %.c.o: %.c
 	@echo Compiling $<
-	@i686-lemon-gcc $(CFLAGS) -c $< -o obj/$(shell basename $@);
+	@x86_64-lemon-gcc $(CFLAGS) -c $< -o obj/$(shell basename $@);
 
 %.o: %.S
 	@echo Assembling $<
-	@i686-lemon-gcc $(CFLAGS) -c $< -o obj/$(shell basename $@);
+	@x86_64-lemon-gcc $(CFLAGS) -c $< -o obj/$(shell basename $@);
 
 %.asm.o: %.asm
 	@echo Assembling $<

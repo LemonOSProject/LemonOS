@@ -1,0 +1,259 @@
+
+AC_INIT(cpu.c)
+
+CFLAGS="$CFLAGS"
+
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_INSTALL
+
+
+test "$cross_compiling" = "yes" || AC_C_BIGENDIAN
+test "$ac_cv_c_bigendian" = "no" && ENDIAN="-DIS_LITTLE_ENDIAN"
+
+
+
+AC_CHECK_FUNCS(usleep, ,[
+AC_CHECK_FUNCS(select, ,[
+AC_MSG_ERROR(your system must support either usleep or select)
+])])
+
+
+
+
+LIBS="$LIBS -L/usr/local/lib -L/usr/X11R6/lib"
+
+
+
+
+
+AC_ARG_WITH(fb,      [  --with-fb               build framebuffer device interface], [], [with_fb=yes])
+AC_ARG_WITH(svgalib, [  --with-svgalib          build Linux svgalib interface], [], [with_svgalib=yes])
+AC_ARG_WITH(sdl,     [  --with-sdl              build SDL interface], [], [with_sdl=yes])
+
+
+
+
+
+SOUND=""
+JOY=""
+
+case `uname -s` in
+Linux)
+SYS_DEFS=-DIS_LINUX
+AC_CHECK_HEADERS(sys/soundcard.h, [SOUND=sys/oss/oss.o])
+AC_CHECK_HEADERS(linux/joystick.h, [JOY=sys/linux/joy.o])
+test "$with_fb" = "no" || AC_CHECK_HEADERS(linux/fb.h, [with_fb=linux])
+;;
+FreeBSD)
+SYS_DEFS=-DIS_FBSD
+AC_CHECK_HEADERS(machine/soundcard.h, [SOUND=sys/oss/oss.o])
+;;
+OpenBSD)
+SYS_DEFS=-DIS_OBSD
+AC_CHECK_HEADERS(soundcard.h, [SOUND=sys/oss/oss.o])
+;;
+esac
+
+test "$SOUND" || SOUND=sys/dummy/nosound.o
+test "$JOY" || JOY=sys/dummy/nojoy.o
+
+
+
+
+
+
+case "$with_fb" in
+linux) FB_OBJS="sys/linux/fbdev.o sys/linux/kb.o sys/pc/keymap.o" ;;
+*) FB_OBJS="" ; with_fb=no ;;
+esac
+
+if test "$with_svgalib" != "no" ; then
+AC_CHECK_LIB(vga, vga_init, [
+AC_CHECK_HEADERS(vga.h vgakeyboard.h, ,[
+AC_MSG_WARN(svgalib found but headers are missing!!)
+with_svgalib=no
+])], [with_svgalib=no])
+fi
+
+if test "$with_sdl" != "no" ; then
+AC_CHECK_PROG(SDL_CONFIG, sdl-config, yes)
+if test "$SDL_CONFIG" ; then
+SDL_LIBS="`sdl-config --libs`"
+SDL_CFLAGS="`sdl-config --cflags`"
+old_incs="$INCS"
+INCS="$INCS $SDL_CFLAGS"
+AC_CHECK_LIB(SDL, SDL_Init, [
+AC_CHECK_HEADERS(SDL/SDL.h, ,[
+AC_MSG_WARN(SDL found but headers are missing!!)
+with_sdl=no
+])], [with_sdl=no], $SDL_LIBS)
+INCS="$old_incs"
+else
+with_sdl=no
+fi
+fi
+
+AC_PATH_X
+
+if test "$no_x" != "yes" ; then
+with_x=yes
+AC_CHECK_LIB(Xext, XShmCreateImage)
+AC_CHECK_HEADERS(sys/ipc.h sys/shm.h X11/extensions/XShm.h)
+test "$x_includes" && XINCS="-I$x_includes"
+test "$x_libraries" && XLIBS="-L$x_libraries"
+else
+with_x=no
+fi
+
+
+
+test "$with_x" = "no" || TARGETS="$TARGETS xgnuboy"
+test "$with_fb" = "no" || TARGETS="$TARGETS fbgnuboy"
+test "$with_svgalib" = "no" || TARGETS="$TARGETS sgnuboy"
+test "$with_sdl" = "no" || TARGETS="$TARGETS sdlgnuboy"
+
+
+
+
+
+
+
+
+
+
+AC_ARG_ENABLE(warnings, [  --enable-warnings       enable selected compiler warnings], [], [enable_warnings=yes])
+AC_ARG_ENABLE(debug,    [  --enable-debug          include debugging symbols], [])
+AC_ARG_ENABLE(profile,  [  --enable-profile        enable performance profiling], [])
+AC_ARG_ENABLE(arch,     [  --enable-arch           compile for specific host cpu architecture], [], [enable_arch=yes])
+AC_ARG_ENABLE(optimize, [  --enable-optimize=LEVEL select optimization level (full,low,none)], [], [enable_optimize=yes])
+AC_ARG_ENABLE(asm,      [  --enable-asm            use hand-optimized asm cores], [], [enable_asm=yes])
+
+
+if test "$enable_warnings" = yes ; then
+case "$CC" in *gcc*)
+AC_MSG_RESULT(enabling selected compiler warnings)
+CFLAGS="$CFLAGS -ansi -pedantic -Wall" ;;
+*)
+AC_MSG_RESULT(disabling warnings for non-gcc compiler) ;;
+esac
+fi
+
+if test "$enable_debug" = yes ; then
+AC_MSG_RESULT(including debugging symbols)
+CFLAGS="$CFLAGS -g"
+fi
+
+if test "$enable_profile" = yes ; then
+AC_MSG_RESULT(enabling performance profiling)
+CFLAGS="$CFLAGS -pg"
+fi
+
+if test "$enable_arch" = yes ; then
+if test `uname -s` = Linux -a -f /proc/cpuinfo ; then
+case `grep "model name" /proc/cpuinfo` in
+*AMD-K6*) enable_arch=k6 ;;
+*Pentium*Pro*|*Pentium\ I*|*Klamath*) enable_arch=i686 ;;
+*Pentium*|*586*) enable_arch=i586 ;;
+*486*) enable_arch=i486 ;;
+*386*) enable_arch=i386 ;;
+*) enable_arch=no ;;
+esac
+else
+enable_arch=no
+#case `uname -m` in
+#i686) enable_arch=i686 ;;
+#i586) enable_arch=i586 ;;
+#i486) enable_arch=i486 ;;
+#i386) enable_arch=i386 ;;
+#*) enable_arch=no ;;
+#esac
+fi
+fi
+
+
+case `$CC --version` in
+
+2.9*|3.*)
+
+case "$enable_arch" in
+k6|i686|i586|i486|i386) CFLAGS="$CFLAGS -march=$enable_arch" ;;
+no) ;;
+*) AC_MSG_WARN(unknown architecture $enable_arch) ;;
+esac ;;
+
+*)
+
+case "$enable_arch" in
+k6|i686|i586) AC_MSG_WARN(your compiler is too old to support $enable_arch optimizations) ;;
+i486) CFLAGS="$CFLAGS -m486" ;;
+i386) CFLAGS="$CFLAGS -m386" ;;
+no) ;;
+*) AC_MSG_WARN(unknown architecture $enable_arch) ;;
+esac ;;
+
+esac
+
+
+case "$enable_optimize" in
+yes|full)
+AC_MSG_RESULT(producing heavily optimized code)
+
+CFLAGS="$CFLAGS -O3"
+
+case `uname -m` in
+i?86) CFLAGS="$CFLAGS -DALLOW_UNALIGNED_IO" ;;
+esac
+
+#case `$CC --version` in
+#2.9*|3.*)
+CFLAGS="$CFLAGS -fstrength-reduce -fthread-jumps \
+ -fcse-follow-jumps -fcse-skip-blocks -frerun-cse-after-loop \
+ -fexpensive-optimizations -fforce-addr"
+#;;
+#*)
+#AC_MSG_WARN(your compiler is too old for fancy optimizations)
+#;;
+#esac
+
+if test "$enable_debug" != yes -a "$enable_profile" != yes ; then
+CFLAGS="$CFLAGS -fomit-frame-pointer"
+LDFLAGS="$LDFLAGS -s"
+fi ;;
+
+low)
+
+AC_MSG_RESULT(using minimal optimizations)
+CFLAGS="$CFLAGS -O3" ;;
+
+esac
+
+if test "$enable_asm" = yes ; then
+case `uname -m` in
+i?86)
+AC_MSG_RESULT(using optimized i386 cores)
+ASM="-DUSE_ASM -I./asm/i386" ; ASM_OBJS="asm/i386/cpu.o asm/i386/lcd.o asm/i386/refresh.s" ;;
+*)
+AC_MSG_RESULT(no optimized asm core available for `uname -m`) ;;
+esac
+fi
+
+
+AC_SUBST(SYS_DEFS)
+AC_SUBST(ENDIAN)
+AC_SUBST(SOUND)
+AC_SUBST(JOY)
+AC_SUBST(ASM)
+AC_SUBST(ASM_OBJS)
+AC_SUBST(FB_OBJS)
+AC_SUBST(SDL_CFLAGS)
+AC_SUBST(SDL_LIBS)
+AC_SUBST(TARGETS)
+AC_SUBST(XINCS)
+AC_SUBST(XLIBS)
+
+AC_CONFIG_HEADER(sys/nix/config.h)
+AC_OUTPUT(Makefile)
+
+
+

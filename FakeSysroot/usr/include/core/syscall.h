@@ -42,7 +42,9 @@
 #ifdef __cplusplus
 extern "C"{
 #endif
-void syscall(uint32_t call, uint32_t arg0, uint32_t arg1, uint32_t arg2, uint32_t arg3, uint32_t arg4);
+
+__attribute__((weak))
+void syscall(uint64_t call, uint64_t arg0, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4);
 
 #ifdef __cplusplus
 }

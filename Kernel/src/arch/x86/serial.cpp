@@ -17,13 +17,13 @@ int is_transmit_empty() {
 	return inportb(PORT + 5) & 0x20;
 }
 
-void write_serial(char c) {
+void write_serial(const char c) {
 	while (is_transmit_empty() == 0);
 
 	outportb(PORT, c);
 }
 
-void write_serial(char* s) {
+void write_serial(const char* s) {
 	while (*s != '\0'){
 		while(is_transmit_empty() == 0);
 		outportb(PORT, *s++);

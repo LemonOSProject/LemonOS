@@ -1,1 +1,2 @@
-make -C LibC -j5 && make -C LibLemon -j5 && make -C Kernel -j5 && make -C Kernel initrd -j5 && make -C Kernel copy -j5
+#make -C LibC -j5 && make -C LibLemon -j5 && make -C Kernel -j5 && make -C Kernel initrd -j5 && make -C Kernel copy -j5
+make -C Kernel initrd -j5 && make -C Kernel -j5 && make -C Kernel copy

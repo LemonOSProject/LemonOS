@@ -213,7 +213,6 @@ namespace IDT{
 
 extern "C"
 	void isr_handler(int int_num, regs64_t* regs, int err_code) {
-		Log::Error("Exception");
 		if (interrupt_handlers[int_num] != 0) {
 			interrupt_handlers[int_num](regs);
 		} else if(int_num == 0x69){
@@ -233,7 +232,6 @@ extern "C"
 
 	extern "C"
 	void irq_handler(int int_num, regs64_t* regs) {
-		Log::Info(int_num);
 		if (int_num >= 40) {
 			outportb(0xA0, 0x20);
 		}

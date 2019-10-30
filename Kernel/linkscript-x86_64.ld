@@ -27,6 +27,9 @@ SECTIONS
    {
         _data = .;
         *(.data)
+    _initrd_start = .;
+        *(.initrd)    
+    _initrd_end = .;
         . = ALIGN(4096);
    }
 

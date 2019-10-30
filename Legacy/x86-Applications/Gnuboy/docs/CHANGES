@@ -1,0 +1,322 @@
+
+GNUBOY CHANGES FILE -- detailed list of all changes made
+
+  Each release is labelled with the date it appeared; unreleased
+  versions are listed without a date stamp for purely historical
+  reasons. When checking what's changed since the last release, be
+  sure to look over intermediate unreleased versions as well.
+
+  For an easy-to-read user-oriented list of major changes in each
+  release, please refer to the file WHATSNEW.
+
+
+1.0.3
+fixed a typo in the SDL keymap file that kept . from working
+added support for binding keys to the ' key
+fixed bug related in nix.c's sys_checkdir that made it always demand writable
+fixed loader.c since it depended on this bug
+removed the literal newlines inside the copyright string in main.c
+removed some parentheses in save.c's macros
+(these were perfectly valid but caused problems with a broken compiler, lcc)
+added return-type prototypes for strdup since it's not always in string.h
+(many of the above were old bugfixes sent in by Damian M Gryski)
+added slow, primitive support for gzipped rom files
+(thanks to David Madore for the portable inflate code taken from his quine)
+various minor source cleanups
+more preliminary work on the fast register/himem io routines (not used yet)
+fixed HuC3 emulation, according to TGB's sources
+added hacks to work around HuC3's IR port not being implemented
+(Robopon Sun and Star now seem to run fine)
+fixed a few sound inconsistencies after loading a savestate
+various fixes to keybinding system and X11 keymap
+integrated Jonathan Gevaryahu's color filter
+added "gbamode" rcvar to unlock gba-only features in some cgb games
+(this has NOTHING to do with gba emulation!)
+fixed DMG sprite sorting code! it's now enabled by default
+reverted mistaken CGB wave pattern "fix" in 1.0.2
+don't always reset sound positions on sound init (is this correct?)
+
+1.0.2 (2001-09-18)
+fixed bugs in rc_setvar calls in sys_initpath
+fixed multiple definition of cpu struct in cpu.h
+corrected behavior of ch1 sweep function when freq is written during sweep
+emulated wave pattern corruption to fool "emulator-detectors"
+updated savestate code to handle these changes, incremented minor version
+(this should not affect compatibility with old savestates)
+fixed major bugs in sound channel 4
+perfected channel 4 output sequence to sound like a real Gameboy
+(much thanks goes out to Lord Nightmare for all his hard work on this!)
+default channel 3 square wave is no longer 4 octaves too high
+make DI cancel pending HALT...is this correct? (fixes Konami Collection #1)
+fixed reversed stereo channels
+tweaked frequency cutoff points that prevent aliasing
+corrected default wave pattern (noise) when running in dmg mode
+fixed sound reset bug that messed up pitch after pausing in Bubble Ghost
+added new sample palettes
+fixed major interrupt/HALT bug that kept Amazing Penguin from running
+fixed sound channel 3 length regiser (info in gbspec.txt is bogus)
+tweaked volume of channel 4
+removed FFL3 tile glitch from the known bugs in the README
+(it was caused by a bad dump and/or hacked rom, not a bug in gnuboy)
+added emulation of DMG STAT register write bug (causes interrupt)
+(this fixes Legend of Zerd and perhaps one or two other games)
+
+1.0.1 (2001-07-09)
+fixed problem in "make install" if dest dir doesn't exist
+cleaned up some compiler warnings
+fixed a problem with --bindir= not working in the autoconf process
+renamed several things from mingw32 to just plain windows
+fixed lots of keys that were still missing on the SDL port
+
+1.0.0 (2001-06-29)
+renamed Makefile.mingw32 to Makefile.win to be 8.3 filename friendly
+finally fixed up configure to work around broken gcc 2.96 on Redhat 7, et al
+added lots of new documentation
+added autoconf option to disable cpu-specific code generation
+minor improvements to matroxfb hardware scaling code
+cleaned up some old deprecated variables
+
+0.9.15
+various preparations for 1.0 release
+cleaned up nix.c to remove old code and prevent errors on some systems
+fixed Makefile.nix to be usable but minimal
+
+0.9.14
+changed default dmg palette to be less yellow
+changed default keybindings not to use modifier keys
+moved vid_begin to after doevents in emu.c
+(this should fix alt+enter fullscreen toggle not working on windows)
+changed --help, etc to use stdout rather than stderr
+auto-loading config files on a per-rom basis
+
+0.9.13 (2001-04-09)
+added matroxfb YUV scaling support
+moved lcd_refreshline from the 3->0 stat change to the 2->3 one
+(this fixes a slight visual glitch in Alleyway)
+experimental: no LYC=LY interrupt during VBLANK...?
+fixed emulation bug (RL/RR) in asm cpu core that broke Montezuma's Return
+fixed some minor bugs in the matrox scaler register settings
+fixed SWAP (HL) instruction in the asm core (fixes Pokemon Yellow)
+added more assembly language scalers for performance
+
+0.9.12 (2001-04-02)
+started adding HuC3 MBC support
+removed some code that was accidentally left in that broke dos/win builds
+fixed a bug in SDL joystick support -- thanks Ralf Hoffmann
+unused bits in VBK register should be 1, not 0 -- this broke Binary Chaos
+fixed bug that kept dmg palette from restoring properly after loading savestate
+integrated hardware YUV scaling w/SDL thanks to Magnus Damm
+SDL code now turns off fb.enabled when window is iconified
+HDMA timing correction back in 0.9.6 broke Wacky Races; it's disabled for now
+
+0.9.11 (2001-04-01)
+fixed bug that kept video mode setting from working with svgalib
+implemented program counter skip after STOP instruction (konami collections)
+fixed SDL hardware surface support -- thanks Dave Kiddell
+also fixed another bug in gnuboy graphics code related to that problem
+removed sdl_hwsurface rcvar (no longer needed)
+changed SDL code to use SDL_Flip rather than SDL_UpdateRect - much faster
+most ports now can auto-choose screen size for given scale if no vmode is given
+optional shm sync skipping for x11 -- boost performance but looses frames
+lots of new scaling stuff
+allow HDMA while LCDC is off -- fixes Worms Armageddon
+correct initial values for HDMA regs -- fixes first hang in Turok 3
+major timer fixes!! fixes second hang in Turok 3
+
+0.9.10 (2001-03-26)
+hopefully fixed issue with X header locations affecting some users
+rewrote refresh_* functions to be faster and more flexible
+added scale-by-two versions of the above, including super-fast asm versions
+implemented primitive but fully functional scale-by-two mode
+added vmode rcvar to set the video mode
+disabled dmg sprite sorting by default because it doesn't seem to work right
+removed deprecated rcvars from various display modules
+heavily updated README
+changed VBLANK timings slightly - seems to fix Daedalian Opus
+enlarged OSS dma output buffer slightly; this may reduce occurance of underruns
+cleaned up all warnings 
+fixed bug that prevented reading from OAM
+fixed all compiler warnings except implicit functions
+found and fixed a few minor bugs in the process
+added spacebar to SDL keymap
+up to 16 joystick buttons are now supported w/linux and SDL
+added sdl_hwsurface rcvar to turn hardware surface back on
+added static palette mode
+quick and dirty hack to make super rc pro-am work
+fixed bug that made OAM unreadable
+
+0.9.9 (2001-03-23)
+removed some unused code from mingw32.c, fixed some bugs there too
+fixed a bad sound bug in sdl.c
+eliminated sound pops at startup with SDL
+eliminaed compiletime error about SDL_DISABLE on SDL ver < 1.1.8
+integrated new fully-thinlib-based DOS code from Matthew Conte
+added surface locking to SDL code; maybe this will fix windows+fullscreen?
+fixed serious bug in savestate loading (call mem_updatemap on load)
+new asm -- significant speed boosts for color games on older machines
+removed SDL_HWSURFACE from SDL code - this should fix fullscreen on windows
+disabled surface locking calls for now
+properly initialize default path on DOS
+added SDL_ANYFORMAT to SDL flags so we can natively support all color depths
+
+0.9.8 (2001-03-07)
+enabled support for dmg sprite sorting; not sure it works yet
+added "sprsort" rcvar to toggle this since it's usually not needed
+fixed a potential crash that could happen if sound init failed on dos
+added native SDL sound support
+fixed lots of bugs in the SDL port
+removed stupid sys_realtime() function in favor of the simple ANSI C time()
+roms can now be loaded from stdin by specifying - as the rom name
+removed lots of useless bloat from system interface modules
+take advantage of ANSI atexit() to simplify termination logic
+hide mouse cursor with SDL
+SDL fullscreen mode
+optional alt+enter fullscreen toggle for SDL
+SDL rcvars sdl_fullscreen and sdl_altenter to control these features
+changed bswapl to bswap in asm to make it work on mingw32
+added ram size code 05 for 4 banks, this seems to make Pokemon Crystal work
+backed out hack for Altered Space and W&W because it broke other games
+new code to make them work, hopefully this time it's right
+now we give an error on unknown rom/ram size to prevent crashing
+integrated Windows port by mewse
+
+0.9.7 (2001-02-27)
+added support for mono sound
+initial work on implementing sound blaster output on dos
+fixed envelope bug that made notes trail off (or amplify) too fast
+integrated dos sound support contributed by Matthew Conte using his thinlib
+added Matthew Conte to CREDITS
+tried to fix strange occasional keyboard misbehavior on dos
+build stripped binaries by default if debugging and profiling are off
+
+0.9.6
+updated the INSTALL file
+fixed something stupid that broke building SDL joystick support on non-Linux
+added Mattias Wadman to the CREDITS
+fixed VBLANK timing slightly; now altered space and wizards & warriors work
+reverted change; it breaks other games
+new trick that might fix things...
+fixed bug in command line parsing that kept --savename=- from working
+fixed warning in oss.c
+fixed an old bug in HDMA/HBLANK that only recently became apparent
+vesa support on dos is now working!
+
+0.9.5 (2001-02-22)
+added Ralf to the CREDITS, apologies for the prior omission
+show name from rom header in window title on X11 and SDL
+fixed bug that made highcolor screen flicker
+(this used to glitch sfalpha, but for some reason its ok now)
+updated README
+fixed cap on sound 3 frequency to eliminate bogus beeps
+began work on optimizing memory io in the C code
+updated HACKING slightly
+got new fast memory io functions integrated!
+moved all of high memory (registers, wave pattern, stack) to one array
+(eventually this will make memory io faster)
+changed savestate format, but old saves should still load fine
+(hopefully new format makes more sense)
+began implementing fast access to high memory
+discovered that low bits of the flags register don't exist
+optimized instruction emulation accordingly
+a few optimizations to the outer asm cpu loop
+fixed off-by-one error in C graphics code that made far right column blank
+added slow, experimental 24bpp (packed, unaligned) video support
+improved the configure script, now --without-* works
+use sdl-config instead of explicit -lpthread to support more systems
+removed stupid section directives from the asm
+got the asm cores working on dos!
+oss sound support *might* work on freebsd and openbsd now
+SDL joystick code has been integrated, but I haven't tested it
+fixed bug in new savestate code
+added David Lau to the CREDITS (SDL joystick support)
+GNU make should no longer be required to compile
+
+0.9.4 (2001-02-18)
+various changes to lots of the system interface organization
+separation of linux fb and keyboard handling code into two modules
+integrated linux joystick support contributed by Ralf Hoffmann
+dummy joystick code for systems without real support yet
+fixed HDMA; now DKC runs perfectly
+
+0.9.3
+explicit link of SDL target with -lpthread, tell me if this causes problems
+better cpu detection in configure script
+more big fixes in sweep, and now it's actually tested, so it SHOULD work (!)
+implemented default wave ram pattern
+added linux fbcon display support - very functional
+fix to allow new custom palette to take effect after loading dmg savestates
+
+0.9.2 (2001-02-12)
+mbc3 rtc support, including save and resync across sessions
+updated README
+implemented sound channel 4
+fixed yet another bug in sweep (!!)
+fixed nasty aliasing when sound frequency was higher than sample rate permits
+finally, all sound registers can be adjusted while sound is being produced
+made it so the proper shutdown functions actually get called on exit
+added SDL port by Damian M Gryski, should be auto-detected by configure
+added Damian to the CREDITS file
+cleaned up sound code to minimize the amount of state data kept
+added sound and rtc status to savestates; this won't break old saves
+changed lots of lookup tables to const
+
+0.9.1 (2001-02-11)
+fixed yet another critical bug in sweep
+fixed STAT interrupt bug
+added support for changing more sound params while sound is active
+fixed yet another major bug in envelope for channel 2
+fixed bug in HDMA, but DKC still fails
+updated README, HACKING
+made samplerate and sound (on/off) configurable rcvars
+changed command line parsing to make setting bools more intuitive
+added --showvars to list all available rcvars
+
+0.9.0
+fixed bugs in sweep and envelope functions
+added sound channel 3
+
+0.8.5
+various minor optimizations in the C code
+same in the i386 asm cpu core
+initial work on sound framework
+oss sound output for use on *nix
+dummy sound output for use on systems without sound
+sound channels 1 and 2
+
+0.8.4 (2001-02-06)
+updated README to cover new features
+fixed off-by-one-line visual error introduced in 0.8.2
+gbspec.txt is wrong, ram size code 0 != no ram, big suprise... (!)
+workaround for undocumented 512 byte ram size, won't necessarily work
+changes in saved state format
+slight improvements to asm cpu core
+cleaned up HDMA code
+removed outdated comments
+more changes to lcdc/cpu timing interaction, fixing harmless bugs
+this may slightly impact performance, i'll compensate later
+hopefully fixed bug in svgalib interface that corrupted console on exit
+updated HACKING to reflect new code, detail more internals
+workaround for a bug that would never happen but could lock the emulator
+fixed another visual glitch introduced in 0.8.2
+optimized i386 cpu.s to keep PC in a register at all times
+
+0.8.3
+changed install dir from $prefix/games to $prefix/bin
+fixed major bug in ramsize lookup table (!)
+updated HACKING to note that it's outdated
+implemented saved states!
+
+0.8.2 (2001-02-03)
+rewrote lcdc state behavior completely, fixed lots of compat issues
+implemented serial io failure for roms that need it, fixed more compat
+now, mk1, sml2, and alleyway are all fixed!
+additions to input.h and keytable.c to allow future joystick support
+
+0.8.1
+fixed stupid timer interrupt bug in asm cpu core
+renamed screen to fb so as not to conflict with allegro symbol names
+
+0.8.0 (2001-02-01)
+initial release
+
+

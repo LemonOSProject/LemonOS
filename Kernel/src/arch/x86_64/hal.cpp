@@ -43,9 +43,16 @@ namespace HAL{
         mem_info.mem_map = memory_map;
         mem_info.memory_map_len = mb_info.mmapLength;
 
+        Log::Info((uint64_t)Memory::KernelAllocate4KPages(1));
+        Log::Info((uint64_t)Memory::KernelAllocate4KPages(1));
+        Log::Info((uint64_t)Memory::KernelAllocate4KPages(1));
+        Log::Info((uint64_t)Memory::KernelAllocate4KPages(1));
+
         uint64_t mbModsVirt = (uint64_t)Memory::KernelAllocate4KPages(1);
         Memory::KernelMapVirtualMemory4K(multibootInfo.modsAddr, mbModsVirt, 1);
-		Log::Info("aaa");
+        Log::Info(multibootInfo.modsAddr);
+        Log::Info("mod addr");
+
         multibootModulesAddress = mbModsVirt;
 
         // Initialize Physical Memory Allocator
@@ -69,8 +76,8 @@ namespace HAL{
         // Map Video Memory
         uint64_t vidMemSize = multibootInfo.framebufferHeight*multibootInfo.framebufferPitch;
         
-        void* vidMemVirt = Memory::KernelAllocate2MPages(vidMemSize / PAGE_SIZE_2M + 1);
-        Memory::KernelMapVirtualMemory2M(multibootInfo.framebufferAddr, (uint64_t)vidMemVirt, vidMemSize / PAGE_SIZE_2M + 1);
+        void* vidMemVirt = Memory::KernelAllocate4KPages(vidMemSize / PAGE_SIZE_4K + 1);
+        Memory::KernelMapVirtualMemory4K(multibootInfo.framebufferAddr, (uint64_t)vidMemVirt, vidMemSize / PAGE_SIZE_4K + 1);
 
         // Initialize Video Mode structure
         videoMode.width = multibootInfo.framebufferWidth;

@@ -1,0 +1,386 @@
+
+* WHAT'S NEW *
+
+  Here you will find a summary of the changes made in each released
+  version of gnuboy, organized from an end-user perspective.
+  Webmasters, please use this file as a basis for announcing new
+  versions; the CHANGES file is too technical and unorganized.
+
+
+
+RELEASE 1.0.3
+
+All ANSI C incompatibilities should be fixed. Please report any that
+remain.
+
+Various bugs encountered when building gnuboy on strange compilers
+have been fixed.
+
+Internal support for decompressing gzipped roms now exists in a
+minimal form. The inflate code used is taken from a quine
+(self-reproducing program) written by David Madore and placed in the
+public domain. This code is very portable but is rather slow and may
+crash when given invalid data; however, there should be no impact on
+security. Currently only gzip files (not pkzip files) are supported.
+
+HuC3 emultaion has been fixed to some extent. Robopon Sun and Star are
+both playable now, but many features of the HuC3 are still not
+implemented.
+
+Color filtering to make gnuboy look much more like a real CGB is now
+included, thanks to the work of Jonathan Gevaryahu.
+
+A new rcvar "gbamode" has been added to unlock the GBA-only features
+present in some newer CGB games. (This has nothing to do with GBA
+emulation, which gnuboy does not do and will not do in the future.)
+
+Sprite sorting in DMG mode has been fixed. This should improve things
+in various DMG games where sprites previously overlapped in the wrong
+order.
+
+
+
+RELEASE 1.0.2
+
+A minor problem in the frequency sweep function on sound channel 1 was
+fixed, correcting the sound of the ice beam and metroid encounter
+sound in Metroid 2.
+
+Sound channel 3 waveform data is now trashed when the sound is
+played. This makes it more difficult for games and demos to detect
+that they are running on an emulator.
+
+The channel 3 waveform is now properly initialized in both DMG and CGB
+modes. Before it was incorrectly initialized to have frequency 16
+times too high, and the initial "random noise" pattern exhibited by
+DMG wasn't emulated. R-Type now sounds much better.
+
+The sound length register for channel 3 now works properly, fixing the
+title screen music in MegaMan 2. No thanks to gbspec.txt for having
+blatently wrong info about this matter.
+
+Major problems with sound quality on channel 4 (noise) have been
+fixed, and the pseudorandom sequence has been replaced to very closely
+resemble that of a real Gameboy, thanks to the hard work of Lord
+Nightmare. All these changes make a significant improvement in many
+games, notably Metroid 2, Final Fantasy Legend II and III, Camp
+Deadly, and Wario Land.
+
+Stereo channels are no longer backwards.
+
+The DMG STAT register write bug, which causes an interrupt if the STAT
+register is written while in HBLANK or VBLANK, is now emulated. This
+fixes Legend of Zerd and probably any other DMG game that will not run
+on a real Gameboy Color.
+
+A hack/potential fix for a problem that kept Konami Collection Vol 1
+from working has been put in place.
+
+A major interrupt bug that prevented Amazing Penguin from running has
+been fixed.
+
+Several bugs that could have resulted in crashes under strange
+circumstances have been fixed.
+
+Other minor sound issues have been tweaked or fixed.
+
+
+
+RELEASE 1.0.1
+
+  BUGS FIXED
+
+Keys that didn't work in the SDL-based ports have now been fixed.
+The --bindir= option to the configure script now works properly.
+Running "make install" no longer fails when the destination directory
+doesn't already exist.
+Various minor cleanups.
+
+
+
+RELEASE 1.0.0
+
+  NEW FEATURES
+
+Auto-loading rc files on a per-rom basis.
+Less intense yellow in the default mono palette.
+Default keybindings no longer use modifier keys.
+Lots of new documentation.
+Hardware scaling on matroxfb now looks better.
+
+  BUGS FIXED
+
+Disabled some useless optimizations to work around a bug in gcc 2.96, which
+despite being a broken compiler has become rather popular since Redhat
+decided to package it without sufficient testing. This will fix the problems
+lots of people have reported when compiling.
+Added --disable-arch option to configure to prevent the binaries built from
+being dependent on the exact host cpu they're built on. This will allow
+distro maintainers to build packages that work even on older cpus.
+
+
+
+RELEASE 0.9.13
+
+  NEW FEATURES
+
+Hardware scaling support on fbcon with matroxfb.
+
+  PERFORMANCE
+
+Now all software scaling code has assembly implementations.
+
+  COMPATIBILITY
+
+Invalid opcode crash in Montezuma's Return has been fixed.
+Visual glitches in Pokemon Yellow are now fixed.
+
+  BUGS FIXED
+
+Line refresh was taking place too late, causing visual glitch in Alleyway.
+Flags behavior on the RL, RR, RLC, and RRC opcodes was completely bogus in the
+asm cpu core. Miracle it didn't break more things. Should be correct now.
+The SWAP (HL) instruction in the asm cpu core was nonfunctional.
+
+
+
+RELEASE 0.9.12
+
+  NEW FEATURES
+
+Hardware YUV scaling with full interpolation on systems that support it,
+using SDL -- thanks goes to Magnus Damm.
+
+  COMPATIBILITY
+
+Binary Chaos no longer has graphical glitches, and is fully playable.
+Wacky Races now displays correctly again (broken since 0.9.7).
+
+  BUGS FIXED
+
+Some test code was left in cpu.s, breaking DOS/Windows builds and
+slowing things down across the board.
+SDL joystick code was generating bogus release events.
+Unused bits of VBK register were 0's; they should be 1's.
+DMG palette was not being restored correctly after loading savestates.
+
+
+
+RELEASE 0.9.11
+
+  NEW FEATURES
+
+Most ports can auto-choose screen size appropriate to scale given.
+Scaling to 2x, 3x, and 4x is now possible at all color depths.
+
+  PERFORMANCE
+
+SDL port should run considerably faster than before at hires modes.
+New X11 rcvar "x_shmsync" can be turned off for performance boost,
+but it can result in heavy shearing and skipped frames.
+The new scaling code is slightly faster than before.
+
+  COMPATIBILITY
+
+Konami Collection (GBC) series now works in color mode.
+Worms Armageddon is now playable, might still have some glitches though.
+Turok 3 no longer hangs at startup and seems fully playable.
+Sound samples that played too slow in many games now sound correct.
+
+  BUGS FIXED
+
+Video mode setting was not working with svgalib.
+Undocumented behavior - STOP instruction causes PC to skip forward.
+SDL hardware surface mode is now always on and should always work fine.
+More undocumented behavior - HDMA can occur while LCDC is off...?
+HDMA5 register was not being initialized correctly on reset.
+Timer was running at half the speed it should when in high-speed mode.
+
+
+
+RELEASE 0.9.10
+
+  NEW FEATURES
+
+Primitive but fast and fully functional scale-by-two support.
+New rcvar "vmode" sets video mode in all the targets that support it.
+Now up to 16 joystick buttons can be used, as opposed to 8 before.
+Static palette mode (rcvar "rgb332"), which can make highcolor games
+look better when run at 8bpp by faking a 3/3/2 color channel mode.
+
+  COMPATIBILITY
+
+Added a quick hack to fake serial I/O so that Super RC Pro-Am works.
+Spiderman's web is now visible in Spiderman GBC.
+
+  PERFORMANCE
+
+New refresh code blits lines slightly faster.
+Added sdl_hwsurface rcvar to turn hardware surface on for speed boost,
+disabled by default because it crashes on Windows.
+
+  BUGS FIXED
+
+Hopefully fixed issue with X header locations affecting some users.
+DMG sprite sorting isn't working right. It's now disabled by default.
+VBLANK timings have been changed slightly to fix Daedalian Opus.
+Fixed various minor bugs found by enabling compiler warnings.
+Spacebar was not working with SDL. Fixed.
+Fixed bug that made OAM unreadable.
+
+
+
+RELEASE 0.9.9
+
+  NEW FEATURES
+
+DOS port is now entirely thinlib-based. Should be more robust, featureful.
+For example, custom video modes such as 256x224 are available.
+
+  PERFORMANCE
+
+New asm routines for displaying the background layer on color games.
+This results in a significant performance boost low-end machines (~P75).
+SDL code no longer fakes 16bpp but uses the native color depth.
+
+  BUGS FIXED
+
+SDL gnuboy no longer produces random pops in sound at startup.
+Mono/stereo should now be handled correctly in the SDL code.
+Eliminated compiletime error about SDL_DISABLE on SDL ver < 1.1.8.
+Serious bug -- loading savestates was not updating the memory bank map --
+resulted in bogus behavior after loading in certain situations.
+Scrapped SDL_HWSURFACE to make fullscreen work on Windows.
+
+
+
+RELEASE 0.9.8
+
+  NEW FEATURES
+
+Native SDL sound support. This means sound will work on BeOS and Windows.
+Sprites are priority sorted on DMG games by default now.
+ROMs can be loaded from stdin using "-" as the filename.
+SDL port now runs fullscreen by default. Set sdl_fullscreen to 0 to disable.
+SDL port now supports alt+enter fullscreen toggle.
+Integrated Windows port by mewse (using SDL and mingw32).
+
+  COMPATIBILITY
+
+Added support for undocumented ram size 05 (presumably 256 kbit).
+This fixes the crash with Pokemon Crystal.
+Removed hacks for Altered Space and W&W because they break other games.
+Added new VBLANK code that should fix them again without breaking other stuff.
+
+  BUGS FIXED
+
+SDL keyboard handler was not accepting the numeral keys.
+SDL video was messed up bad when it couldn't get a true 160x144 display.
+Loading a ROM with bogus ROM/RAM size headers used to crash the program.
+
+
+
+RELEASE 0.9.7
+
+  NEW FEATURES
+
+DOS sound support!
+VESA video modes on DOS!
+Mono sound for cards that don't support stereo.
+
+  COMPATIBILITY
+
+Altered Space and Wizards & Warriors now run.
+Change was made to VBLANK behavior; hopefully it doesn't break other games.
+
+  BUGS FIXED
+
+Envelope length was being computed wrong.
+HDMA was incorrectly taking place all at once.
+Command line parsing incorrectly changed - to _ in places it shouldn't.
+SDL joystick support was not building correctly on non-Linux systems.
+
+
+
+RELEASE 0.9.5
+
+  NEW FEATURES
+
+Showing the name from the ROM header in X11 and SDL titlebars.
+The various targets can be disabled at compiletime with --without-* options.
+OSS sound support might work on FreeBSD and OpenBSD but is untested.
+SDL joystick support.
+GNU make no longer required to compile.
+
+  OPTIMIZATIONS
+
+Flags handling in the C and asm cpu cores should be faster.
+Word-at-a-time memory I/O is now done more efficiently.
+
+  BUGS FIXED
+
+Highcolor screens no longer flicker.
+Misplaced high-pitched beeps in sound have been removed, again.
+C graphics code was misaligning the screen by one pixel. Fixed.
+
+
+
+RELEASE 0.9.4
+
+  NEW FEATURES
+
+Linux fbcon display support.
+Linux joystick device support.
+
+  COMPATIBILITY
+
+HDMA now works in DKC and Lemmings Color.
+Default wave pattern is now supported.
+
+
+
+RELEASE 0.9.2
+
+  NEW FEATURES
+
+SDL port!
+Sound channel 4.
+MBC3 RTC support.
+
+  COMPATIBILITY
+
+Sound is now properly handled in savestates.
+Pokemon Silver and Gold should now be playable.
+
+  BUGS FIXED
+
+Another bug in sweep.
+Nasty aliasing from extremely high sound frequencies.
+
+
+
+RELEASE 0.9.1
+
+  NEW FEATURES
+
+Experimental sound support!
+Better command line parsing.
+Added --showvars command line option.
+Various optimizations.
+
+  BUGS FIXED
+
+HDMA bug.
+LCDC STAT interrupt bug.
+
+
+
+NOTE: Earlier releases have not yet been documented in this file.
+Hopefully they'll be added eventually, at least for the sake of
+completing the records.
+
+
+
+
+
+

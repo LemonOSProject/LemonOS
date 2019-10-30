@@ -1,0 +1,2430 @@
+
+	# i386 asm cpu core
+	# optimized for 486/pentium/k6
+	
+	# global register usage:
+	# %bl - flags
+	# %bh - A
+	# %bp - PC
+	# %esi - number of cycles we have left
+	# %edi - number of cycles used by current instruction
+
+#include "asmnames.h"
+	
+	.set PC, cpu
+	.set SP, cpu+4
+	.set BC, cpu+8
+	.set DE, cpu+12
+	.set HL, cpu+16
+	.set AF, cpu+20
+
+	.set B, cpu+9
+	.set C, cpu+8
+	.set D, cpu+13
+	.set E, cpu+12
+	.set H, cpu+17
+	.set L, cpu+16
+	.set A, cpu+21
+	.set F, cpu+20
+
+	.set IME, cpu+24
+	.set IMA, cpu+28
+	
+	.set speed, cpu+32
+	.set halt, cpu+36
+	.set div, cpu+40
+	.set tim, cpu+44
+	.set lcdc, cpu+48
+	.set snd, cpu+52
+
+	.set regs, ram
+
+	.set rmap, mbc+32
+	.set wmap, mbc+96
+
+	.set DIV, ram+4
+	.set TIMA, ram+5
+	.set TMA, ram+6
+	.set TAC, ram+7
+	
+	.set IF, ram+0x0f
+	.set IE, ram+0xff
+	.set KEY1, ram+0x4d
+
+
+	.text
+	.p2align 5
+
+debug:
+	.string "debug:	0x%08X\n"
+invalid:
+	.string "invalid opcode 0x%02X\n"
+
+	# x86 flags   - 01=carry, 10=half, 40=zero
+	#                (bit 0)  (bit 4)  (bit 6)
+	# gbz80 flags - 10=carry, 20=half, 40=neg, 80=zero
+	#                (bit 4)  (bit 5)  (bit 6) (bit 7)
+
+addflagtable:
+	.byte 0x00, 0x10, 0x00, 0x10, 0x00, 0x10, 0x00, 0x10
+	.byte 0x00, 0x10, 0x00, 0x10, 0x00, 0x10, 0x00, 0x10
+	.byte 0x20, 0x30, 0x20, 0x30, 0x20, 0x30, 0x20, 0x30
+	.byte 0x20, 0x30, 0x20, 0x30, 0x20, 0x30, 0x20, 0x30
+	.byte 0x00, 0x10, 0x00, 0x10, 0x00, 0x10, 0x00, 0x10
+	.byte 0x00, 0x10, 0x00, 0x10, 0x00, 0x10, 0x00, 0x10
+	.byte 0x20, 0x30, 0x20, 0x30, 0x20, 0x30, 0x20, 0x30
+	.byte 0x20, 0x30, 0x20, 0x30, 0x20, 0x30, 0x20, 0x30
+	.byte 0x80, 0x90, 0x80, 0x90, 0x80, 0x90, 0x80, 0x90
+	.byte 0x80, 0x90, 0x80, 0x90, 0x80, 0x90, 0x80, 0x90
+	.byte 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0
+	.byte 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0
+	.byte 0x80, 0x90, 0x80, 0x90, 0x80, 0x90, 0x80, 0x90
+	.byte 0x80, 0x90, 0x80, 0x90, 0x80, 0x90, 0x80, 0x90
+	.byte 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0
+	.byte 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0
+	.byte 0x00, 0x10, 0x00, 0x10, 0x00, 0x10, 0x00, 0x10
+	.byte 0x00, 0x10, 0x00, 0x10, 0x00, 0x10, 0x00, 0x10
+	.byte 0x20, 0x30, 0x20, 0x30, 0x20, 0x30, 0x20, 0x30
+	.byte 0x20, 0x30, 0x20, 0x30, 0x20, 0x30, 0x20, 0x30
+	.byte 0x00, 0x10, 0x00, 0x10, 0x00, 0x10, 0x00, 0x10
+	.byte 0x00, 0x10, 0x00, 0x10, 0x00, 0x10, 0x00, 0x10
+	.byte 0x20, 0x30, 0x20, 0x30, 0x20, 0x30, 0x20, 0x30
+	.byte 0x20, 0x30, 0x20, 0x30, 0x20, 0x30, 0x20, 0x30
+	.byte 0x80, 0x90, 0x80, 0x90, 0x80, 0x90, 0x80, 0x90
+	.byte 0x80, 0x90, 0x80, 0x90, 0x80, 0x90, 0x80, 0x90
+	.byte 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0
+	.byte 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0
+	.byte 0x80, 0x90, 0x80, 0x90, 0x80, 0x90, 0x80, 0x90
+	.byte 0x80, 0x90, 0x80, 0x90, 0x80, 0x90, 0x80, 0x90
+	.byte 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0
+	.byte 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0, 0xA0, 0xB0
+
+subflagtable:	
+	.byte 0x40, 0x50, 0x40, 0x50, 0x40, 0x50, 0x40, 0x50
+	.byte 0x40, 0x50, 0x40, 0x50, 0x40, 0x50, 0x40, 0x50
+	.byte 0x60, 0x70, 0x60, 0x70, 0x60, 0x70, 0x60, 0x70
+	.byte 0x60, 0x70, 0x60, 0x70, 0x60, 0x70, 0x60, 0x70
+	.byte 0x40, 0x50, 0x40, 0x50, 0x40, 0x50, 0x40, 0x50
+	.byte 0x40, 0x50, 0x40, 0x50, 0x40, 0x50, 0x40, 0x50
+	.byte 0x60, 0x70, 0x60, 0x70, 0x60, 0x70, 0x60, 0x70
+	.byte 0x60, 0x70, 0x60, 0x70, 0x60, 0x70, 0x60, 0x70
+	.byte 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0
+	.byte 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0
+	.byte 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0
+	.byte 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0
+	.byte 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0
+	.byte 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0
+	.byte 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0
+	.byte 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0
+	.byte 0x40, 0x50, 0x40, 0x50, 0x40, 0x50, 0x40, 0x50
+	.byte 0x40, 0x50, 0x40, 0x50, 0x40, 0x50, 0x40, 0x50
+	.byte 0x60, 0x70, 0x60, 0x70, 0x60, 0x70, 0x60, 0x70
+	.byte 0x60, 0x70, 0x60, 0x70, 0x60, 0x70, 0x60, 0x70
+	.byte 0x40, 0x50, 0x40, 0x50, 0x40, 0x50, 0x40, 0x50
+	.byte 0x40, 0x50, 0x40, 0x50, 0x40, 0x50, 0x40, 0x50
+	.byte 0x60, 0x70, 0x60, 0x70, 0x60, 0x70, 0x60, 0x70
+	.byte 0x60, 0x70, 0x60, 0x70, 0x60, 0x70, 0x60, 0x70
+	.byte 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0
+	.byte 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0
+	.byte 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0
+	.byte 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0
+	.byte 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0
+	.byte 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0, 0xC0, 0xD0
+	.byte 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0
+	.byte 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0, 0xE0, 0xF0
+
+incflagtable:
+	.byte 0xa0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+
+decflagtable:
+	.byte 192, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+	.byte 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 96
+
+
+cycles_table:
+	.byte 1, 3, 2, 2, 1, 1, 2, 1, 5, 2, 2, 2, 1, 1, 2, 1
+	.byte 1, 3, 2, 2, 1, 1, 2, 1, 3, 2, 2, 2, 1, 1, 2, 1
+	.byte 3, 3, 2, 2, 1, 1, 2, 1, 3, 2, 2, 2, 1, 1, 2, 1
+	.byte 3, 3, 2, 2, 1, 3, 3, 3, 3, 2, 2, 2, 1, 1, 2, 1
+	.byte 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1
+	.byte 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1
+	.byte 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1
+	.byte 2, 2, 2, 2, 2, 2, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1
+	.byte 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1
+	.byte 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1
+	.byte 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1
+	.byte 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 2, 1
+	.byte 5, 3, 4, 4, 6, 4, 2, 4, 5, 4, 4, 1, 6, 6, 2, 4
+	.byte 5, 3, 4, 0, 6, 4, 2, 4, 5, 4, 4, 0, 6, 0, 2, 4
+	.byte 3, 3, 2, 0, 0, 4, 2, 4, 4, 1, 4, 0, 0, 0, 2, 4
+	.byte 3, 3, 2, 1, 0, 4, 2, 4, 3, 2, 4, 1, 0, 0, 2, 4
+
+cb_cycles_table:
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+	.byte 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 3, 2
+	.byte 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 3, 2
+	.byte 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 3, 2
+	.byte 2, 2, 2, 2, 2, 2, 3, 2, 2, 2, 2, 2, 2, 2, 3, 2
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+	.byte 2, 2, 2, 2, 2, 2, 4, 2, 2, 2, 2, 2, 2, 2, 4, 2
+
+	
+
+optable:
+	# 00
+	.long __NOP, __LD_BC_IMM, __LD_$BC_A, __INC_BC
+	.long __INC_B, __DEC_B, __LD_B_IMM, __RLCA
+	.long __LD_$IMM_SP, __ADD_BC, __LD_A_$BC, __DEC_BC
+	.long __INC_C, __DEC_C, __LD_C_IMM, __RRCA
+	# 10
+	.long __STOP, __LD_DE_IMM, __LD_$DE_A, __INC_DE
+	.long __INC_D, __DEC_D, __LD_D_IMM, __RLA
+	.long __JR, __ADD_DE, __LD_A_$DE, __DEC_DE
+	.long __INC_E, __DEC_E, __LD_E_IMM, __RRA
+	# 20
+	.long __JR_NZ, __LD_HL_IMM, __LDI_$HL_A, __INC_HL
+	.long __INC_H, __DEC_H, __LD_H_IMM, __DAA
+	.long __JR_Z, __ADD_HL, __LDI_A_$HL, __DEC_HL
+	.long __INC_L, __DEC_L, __LD_L_IMM, __CPL
+	# 30
+	.long __JR_NC, __LD_SP_IMM, __LDD_$HL_A, __INC_SP
+	.long __INC_$HL, __DEC_$HL, __LD_$HL_IMM, __SCF
+	.long __JR_C, __ADD_SP, __LDD_A_$HL, __DEC_SP
+	.long __INC_A, __DEC_A, __LD_A_IMM, __CCF
+	# 40
+	.long __LD_B_B, __LD_B_C, __LD_B_D, __LD_B_E
+	.long __LD_B_H, __LD_B_L, __LD_B_$HL, __LD_B_A
+	.long __LD_C_B, __LD_C_C, __LD_C_D, __LD_C_E
+	.long __LD_C_H, __LD_C_L, __LD_C_$HL, __LD_C_A
+	# 50
+	.long __LD_D_B, __LD_D_C, __LD_D_D, __LD_D_E
+	.long __LD_D_H, __LD_D_L, __LD_D_$HL, __LD_D_A
+	.long __LD_E_B, __LD_E_C, __LD_E_D, __LD_E_E
+	.long __LD_E_H, __LD_E_L, __LD_E_$HL, __LD_E_A
+	# 60
+	.long __LD_H_B, __LD_H_C, __LD_H_D, __LD_H_E
+	.long __LD_H_H, __LD_H_L, __LD_H_$HL, __LD_H_A
+	.long __LD_L_B, __LD_L_C, __LD_L_D, __LD_L_E
+	.long __LD_L_H, __LD_L_L, __LD_L_$HL, __LD_L_A
+	# 70
+	.long __LD_$HL_B, __LD_$HL_C, __LD_$HL_D, __LD_$HL_E
+	.long __LD_$HL_H, __LD_$HL_L, __HALT, __LD_$HL_A
+	.long __LD_A_B, __LD_A_C, __LD_A_D, __LD_A_E
+	.long __LD_A_H, __LD_A_L, __LD_A_$HL, __LD_A_A
+	# 80
+	.long __ADD_B, __ADD_C, __ADD_D, __ADD_E
+	.long __ADD_H, __ADD_L, __ADD_$HL, __ADD_A
+	.long __ADC_B, __ADC_C, __ADC_D, __ADC_E
+	.long __ADC_H, __ADC_L, __ADC_$HL, __ADC_A
+	# 90
+	.long __SUB_B, __SUB_C, __SUB_D, __SUB_E
+	.long __SUB_H, __SUB_L, __SUB_$HL, __SUB_A
+	.long __SBC_B, __SBC_C, __SBC_D, __SBC_E
+	.long __SBC_H, __SBC_L, __SBC_$HL, __SBC_A
+	# A0
+	.long __AND_B, __AND_C, __AND_D, __AND_E
+	.long __AND_H, __AND_L, __AND_$HL, __AND_A
+	.long __XOR_B, __XOR_C, __XOR_D, __XOR_E
+	.long __XOR_H, __XOR_L, __XOR_$HL, __XOR_A
+	# B0
+	.long __OR_B, __OR_C, __OR_D, __OR_E
+	.long __OR_H, __OR_L, __OR_$HL, __OR_A
+	.long __CP_B, __CP_C, __CP_D, __CP_E
+	.long __CP_H, __CP_L, __CP_$HL, __CP_A
+	# C0
+	.long __RET_NZ, __POP_BC, __JP_NZ, __JP
+	.long __CALL_NZ, __PUSH_BC, __ADD_IMM, __RST_00
+	.long __RET_Z, __RET, __JP_Z, __CB_OPS
+	.long __CALL_Z, __CALL, __ADC_IMM, __RST_08
+	# D0
+	.long __RET_NC, __POP_DE, __JP_NC, __INVALID
+	.long __CALL_NC, __PUSH_DE, __SUB_IMM, __RST_10
+	.long __RET_C, __RETI, __JP_C, __INVALID
+	.long __CALL_C, __INVALID, __SBC_IMM, __RST_18
+	# E0
+	.long __LDH_$IMM_A, __POP_HL, __LDH_$C_A, __INVALID
+	.long __INVALID, __PUSH_HL, __AND_IMM, __RST_20
+	.long __ADD_SP_IMM, __JP_HL, __LD_$IMM_A, __INVALID
+	.long __INVALID, __INVALID, __XOR_IMM, __RST_28
+	# F0
+	.long __LDH_A_$IMM, __POP_AF, __LDH_A_$C, __DI
+	.long __INVALID, __PUSH_AF, __OR_IMM, __RST_30
+	.long __LD_HL_SP_IMM, __LD_SP_HL, __LD_A_$IMM, __EI
+	.long __INVALID, __INVALID, __CP_IMM, __RST_38
+
+	
+cb_optable:	
+	.long __RLC_B, __RLC_C, __RLC_D, __RLC_E
+	.long __RLC_H, __RLC_L, __RLC_$HL, __RLC_A
+	.long __RRC_B, __RRC_C, __RRC_D, __RRC_E
+	.long __RRC_H, __RRC_L, __RRC_$HL, __RRC_A
+	.long __RL_B, __RL_C, __RL_D, __RL_E
+	.long __RL_H, __RL_L, __RL_$HL, __RL_A
+	.long __RR_B, __RR_C, __RR_D, __RR_E
+	.long __RR_H, __RR_L, __RR_$HL, __RR_A
+	.long __SLA_B, __SLA_C, __SLA_D, __SLA_E
+	.long __SLA_H, __SLA_L, __SLA_$HL, __SLA_A
+	.long __SRA_B, __SRA_C, __SRA_D, __SRA_E
+	.long __SRA_H, __SRA_L, __SRA_$HL, __SRA_A
+	.long __SWAP_B, __SWAP_C, __SWAP_D, __SWAP_E
+	.long __SWAP_H, __SWAP_L, __SWAP_$HL, __SWAP_A
+	.long __SRL_B, __SRL_C, __SRL_D, __SRL_E
+	.long __SRL_H, __SRL_L, __SRL_$HL, __SRL_A
+	.long __BIT_0_B, __BIT_0_C, __BIT_0_D, __BIT_0_E
+	.long __BIT_0_H, __BIT_0_L, __BIT_0_$HL, __BIT_0_A
+	.long __BIT_1_B, __BIT_1_C, __BIT_1_D, __BIT_1_E
+	.long __BIT_1_H, __BIT_1_L, __BIT_1_$HL, __BIT_1_A
+	.long __BIT_2_B, __BIT_2_C, __BIT_2_D, __BIT_2_E
+	.long __BIT_2_H, __BIT_2_L, __BIT_2_$HL, __BIT_2_A
+	.long __BIT_3_B, __BIT_3_C, __BIT_3_D, __BIT_3_E
+	.long __BIT_3_H, __BIT_3_L, __BIT_3_$HL, __BIT_3_A
+	.long __BIT_4_B, __BIT_4_C, __BIT_4_D, __BIT_4_E
+	.long __BIT_4_H, __BIT_4_L, __BIT_4_$HL, __BIT_4_A
+	.long __BIT_5_B, __BIT_5_C, __BIT_5_D, __BIT_5_E
+	.long __BIT_5_H, __BIT_5_L, __BIT_5_$HL, __BIT_5_A
+	.long __BIT_6_B, __BIT_6_C, __BIT_6_D, __BIT_6_E
+	.long __BIT_6_H, __BIT_6_L, __BIT_6_$HL, __BIT_6_A
+	.long __BIT_7_B, __BIT_7_C, __BIT_7_D, __BIT_7_E
+	.long __BIT_7_H, __BIT_7_L, __BIT_7_$HL, __BIT_7_A
+	.long __RES_0_B, __RES_0_C, __RES_0_D, __RES_0_E
+	.long __RES_0_H, __RES_0_L, __RES_0_$HL, __RES_0_A
+	.long __RES_1_B, __RES_1_C, __RES_1_D, __RES_1_E
+	.long __RES_1_H, __RES_1_L, __RES_1_$HL, __RES_1_A
+	.long __RES_2_B, __RES_2_C, __RES_2_D, __RES_2_E
+	.long __RES_2_H, __RES_2_L, __RES_2_$HL, __RES_2_A
+	.long __RES_3_B, __RES_3_C, __RES_3_D, __RES_3_E
+	.long __RES_3_H, __RES_3_L, __RES_3_$HL, __RES_3_A
+	.long __RES_4_B, __RES_4_C, __RES_4_D, __RES_4_E
+	.long __RES_4_H, __RES_4_L, __RES_4_$HL, __RES_4_A
+	.long __RES_5_B, __RES_5_C, __RES_5_D, __RES_5_E
+	.long __RES_5_H, __RES_5_L, __RES_5_$HL, __RES_5_A
+	.long __RES_6_B, __RES_6_C, __RES_6_D, __RES_6_E
+	.long __RES_6_H, __RES_6_L, __RES_6_$HL, __RES_6_A
+	.long __RES_7_B, __RES_7_C, __RES_7_D, __RES_7_E
+	.long __RES_7_H, __RES_7_L, __RES_7_$HL, __RES_7_A
+	.long __SET_0_B, __SET_0_C, __SET_0_D, __SET_0_E
+	.long __SET_0_H, __SET_0_L, __SET_0_$HL, __SET_0_A
+	.long __SET_1_B, __SET_1_C, __SET_1_D, __SET_1_E
+	.long __SET_1_H, __SET_1_L, __SET_1_$HL, __SET_1_A
+	.long __SET_2_B, __SET_2_C, __SET_2_D, __SET_2_E
+	.long __SET_2_H, __SET_2_L, __SET_2_$HL, __SET_2_A
+	.long __SET_3_B, __SET_3_C, __SET_3_D, __SET_3_E
+	.long __SET_3_H, __SET_3_L, __SET_3_$HL, __SET_3_A
+	.long __SET_4_B, __SET_4_C, __SET_4_D, __SET_4_E
+	.long __SET_4_H, __SET_4_L, __SET_4_$HL, __SET_4_A
+	.long __SET_5_B, __SET_5_C, __SET_5_D, __SET_5_E
+	.long __SET_5_H, __SET_5_L, __SET_5_$HL, __SET_5_A
+	.long __SET_6_B, __SET_6_C, __SET_6_D, __SET_6_E
+	.long __SET_6_H, __SET_6_L, __SET_6_$HL, __SET_6_A
+	.long __SET_7_B, __SET_7_C, __SET_7_D, __SET_7_E
+	.long __SET_7_H, __SET_7_L, __SET_7_$HL, __SET_7_A
+
+
+
+daa_table:
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x60, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	
+	.byte 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	.byte 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66, 0x66
+	
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	.byte 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+	.byte 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0, 0xA0
+
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+	.byte 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA, 0xFA
+
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+	.byte 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A, 0x9A
+
+daa_carry_table:	
+	.byte 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00	
+	.byte 00, 00, 00, 00, 00, 00, 00, 00, 16, 16, 00, 00, 00, 00, 00, 00
+	.byte 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16
+	.byte 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 00, 16
+
+zflag_table:
+	.byte 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+	.byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+
+int_mask_table:
+	.byte  ~0, ~1, ~2, ~1, ~4, ~1, ~2, ~1
+	.byte  ~8, ~1, ~2, ~1, ~4, ~1, ~2, ~1
+	.byte ~16, ~1, ~2, ~1, ~4, ~1, ~2, ~1
+	.byte  ~8, ~1, ~2, ~1, ~4, ~1, ~2, ~1
+
+int_vec_table:
+	.long 0x00, 0x40, 0x48, 0x40, 0x50, 0x40, 0x48, 0x40
+	.long 0x58, 0x40, 0x48, 0x40, 0x50, 0x40, 0x48, 0x40
+	.long 0x60, 0x40, 0x48, 0x40, 0x50, 0x40, 0x48, 0x40
+	.long 0x58, 0x40, 0x48, 0x40, 0x50, 0x40, 0x48, 0x40
+
+
+	.macro _print arg=0
+	pushf
+	pusha
+	movl \arg, %eax
+	pushl %eax
+	pushl $debug
+	call printf
+	addl $8, %esp
+	popa
+	popf
+	.endm
+
+	.macro _trace
+	testb $1, debug_trace
+	jz .Lnotrace\@
+	pushl %eax
+	pushl %ecx
+	pushl %edx
+	movl %ebx, AF
+	movl %ebp, PC
+	movl $1, %eax
+	pushl %eax
+	pushl %ebp
+	call debug_disassemble
+	addl $8, %esp
+	popl %edx
+	popl %ecx
+	popl %eax
+.Lnotrace\@:	
+	.endm
+	
+
+	# all macros preserve %ebp, %ebx, %esi, and %edi
+	
+
+	# write to addr %eax, upper bytes must be zero
+	# source byte passed in %dl
+	.macro _writeb
+	movl %eax, %ecx
+	shrl $12, %eax
+	movl wmap(,%eax,4), %eax
+	testl %eax,%eax
+	jnz .Lusemap\@
+	pushl %edx
+	pushl %ecx
+	call mem_write
+	addl $8,%esp
+	jmp .Lfinish\@
+.Lusemap\@:
+	movb %dl, (%eax,%ecx)
+.Lfinish\@:
+	.endm
+	
+	# read from addr %eax, upper bytes must be zero
+	# result in %al, upper bytes filled with 0 automagically
+	.macro _readb
+	movl %eax, %ecx
+	shrl $12, %eax
+	movl rmap(,%eax,4), %edx
+	testl %edx,%edx
+	jnz .Lusemap\@
+	pushl %ecx
+	call mem_read
+	popl %ecx
+	jmp .Lfinish\@
+.Lusemap\@:
+	movb (%edx,%ecx),%al
+.Lfinish\@:
+	.endm
+
+	# read signed byte from addr %eax, upper bytes must be zero
+	# result in %eax
+	.macro _readbs
+	movl %eax, %ecx
+	shrl $12, %eax
+	movl rmap(,%eax,4), %edx
+	testl %edx,%edx
+	jnz .Lusemap\@
+	pushl %ecx
+	call mem_read
+	movsbl %al, %eax
+	popl %ecx
+	jmp .Lfinish\@
+.Lusemap\@:
+	movsbl (%edx,%ecx),%eax
+.Lfinish\@:
+	.endm
+
+	# fetch from PC
+	# result in %al, upper bytes filled with 0 automagically
+	.macro _fetch
+	movl %ebp, %eax
+	movl %ebp, %ecx
+	shrl $12, %eax
+	incw %bp
+	movl rmap(,%eax,4), %edx
+	testl %edx,%edx
+	jnz .Lusemap\@
+	pushl %ecx
+	call mem_read
+	popl %ecx
+	jmp .Lfinish\@
+.Lusemap\@:
+	movb (%edx,%ecx),%al
+.Lfinish\@:	
+	.endm
+
+	# fetch signed byte from PC
+	# result in %eax
+	.macro _fetchs
+	movl %ebp, %eax
+	movl %ebp, %ecx
+	shrl $12, %eax
+	incw %bp
+	movl rmap(,%eax,4), %edx
+	testl %edx,%edx
+	jnz .Lusemap\@
+	pushl %ecx
+	call mem_read
+	popl %ecx
+	movsbl %al, %eax
+	jmp .Lfinish\@
+.Lusemap\@:
+	movsbl (%edx,%ecx),%eax
+.Lfinish\@:	
+	.endm
+
+	# fetch word from PC
+	# result in %ax, padded with zeros
+	.macro _fetchw
+	movl %ebp, %eax
+	movl %ebp, %edx
+	shrl $12, %eax
+	incl %edx
+	movl %ebp, %ecx
+	testl $0xfff, %edx
+	jz .Lunaligned\@
+	movl rmap(,%eax,4), %edx
+	testl %edx, %edx
+	jnz .Lusemap\@
+.Lunaligned\@:
+	incl %ebp
+	pushl %ecx
+	call mem_read
+	pushl %eax
+	pushl %ebp
+	incl %ebp
+	call mem_read
+	popl %ecx
+	popl %ecx
+	movb %al, %ah
+	movb %cl, %al
+	popl %ecx
+	andl $0xffff, %ebp
+	jmp .Lfinish\@
+.Lusemap\@:
+	movw (%edx,%ecx),%ax
+	addw $2, %bp
+.Lfinish\@:
+	.endm
+
+	# read word from %eax, upper byte must be zero
+	# result in %ax, padded with zeros
+	.macro _readw
+	movl %eax, %edx
+	shrl $12, %eax
+	movl %edx, %ecx
+	incl %edx
+	testl $0xfff, %edx
+	jz .Lunaligned\@
+	movl rmap(,%eax,4), %edx
+	testl %edx, %edx
+	jnz .Lusemap\@
+.Lunaligned\@:
+	pushl %ecx
+	pushl %ecx
+	call mem_read
+	popl %ecx
+	popl %ecx
+	incl %ecx
+	pushl %eax
+	pushl %ecx
+	call mem_read
+	popl %ecx
+	popl %ecx
+	movb %al, %ah
+	movb %cl, %al
+	jmp .Lfinish\@
+.Lusemap\@:
+	movw (%edx,%ecx),%ax
+.Lfinish\@:
+	.endm
+
+	# write word to addr %eax, upper bytes must be zero
+	# source byte passed in %dx
+	.macro _writew
+	movl %eax, %ecx
+	shrl $12, %eax
+	pushl %edx
+	movl %ecx, %edx
+	incl %edx
+	testl $0xfff, %edx
+	jz .Lunaligned\@
+	movl wmap(,%eax,4), %edx
+	testl %edx, %edx
+	jnz .Lusemap\@
+.Lunaligned\@:
+	popl %edx
+	pushl %edx
+	pushl %ecx
+	pushl %edx
+	pushl %ecx
+	call mem_write
+	popl %ecx
+	popl %ecx
+	popl %ecx
+	popl %edx
+	incl %ecx
+	shrl $8, %edx
+	pushl %edx
+	pushl %ecx
+	call mem_write
+	addl $8, %esp
+	jmp .Lfinish\@
+.Lusemap\@:
+	popl %eax
+	movw %ax, (%edx,%ecx)
+.Lfinish\@:
+	.endm
+	
+	
+	.macro _end
+	jmp opdone
+	.endm
+
+	.macro _endnz
+	jnz opdone
+	.endm
+
+	.macro _endz
+	jz opdone
+	.endm
+
+	
+	.macro _LD dst=B, src=B
+	movb \src, %al
+	movb %al, \dst
+	_end
+	.endm
+
+	.macro _ld_from_hl dst=B
+	movl HL, %eax
+	_readb
+	movb %al, \dst
+	.endm
+
+	.macro _ld_to_hl src=B
+	movl HL, %eax
+	movb \src, %dl
+	_writeb
+	.endm
+
+	.macro _ld_from_imm dst=B
+	_fetch
+	movb %al, \dst
+	.endm
+
+	.macro _push
+	movl %eax, %edx
+	movl SP, %eax
+	subw $2, %ax
+	movl %eax, SP
+	_writew
+	.endm
+
+	.macro _pop
+	movl SP, %eax
+	_readw
+	addw $2, SP
+	.endm
+
+	.macro _JR
+	movl %ebp, %eax
+	_readbs
+	incl %eax
+	addw %ax, %bp
+	.endm
+
+	.macro _JP
+	_fetchw
+	movl %eax, %ebp
+	.endm
+
+	.macro _CALL
+	movl %ebp, %eax
+	addl $2, %eax
+	_push
+	_JP
+	.endm
+
+	.macro _RET
+	_pop
+	movl %eax, %ebp
+	.endm
+
+	.macro _NOJR
+	incw %bp
+	decl %edi
+	.endm
+
+	.macro _NOJP
+	addw $2, %bp
+	decl %edi
+	.endm
+
+	.macro _NOCALL
+	addw $2, %bp
+	subl $3, %edi
+	.endm
+
+	.macro _NORET
+	subl $3, %edi
+	.endm
+
+	# Use %dl to pass memory values to inc
+	.macro _INC reg=B, instr=incb, table=incflagtable
+	xorl %eax, %eax
+	\instr \reg
+	movb \reg, %al
+	andb $0x1f, %bl
+	orb \table(%eax), %bl
+	.endm
+
+	.macro _DEC reg=B
+	_INC \reg, decb, decflagtable
+	.endm
+
+	.macro _INCW reg=HL
+	incw \reg
+	_end
+	.endm
+
+	.macro _DECW reg=HL
+	decw \reg
+	_end
+	.endm
+
+	.macro _ADD instr=addb, table=addflagtable
+	\instr %al, %bh
+	lahf
+	xorl %ecx, %ecx
+	movb %ah, %cl
+	movb \table(%ecx), %bl
+	.endm
+
+	.macro _SUB
+	_ADD subb, subflagtable
+	.endm
+
+	.macro _ADC instr=adcb, table=addflagtable
+	rolb $4, %bl
+	_ADD \instr, \table
+	.endm
+
+	.macro _SBC
+	_ADC sbbb, subflagtable
+	.endm
+
+	.macro _CP
+	_ADD cmpb, subflagtable
+	.endm
+
+	.macro _ADDW
+	movl HL, %edx
+	addb %al, %dl
+	adcb %ah, %dh
+	lahf
+	movl %edx, HL
+	movb $0, %dh
+	movb %ah, %dl
+	andb $0x8f, %bl
+	movb addflagtable(%edx), %al
+	andb $0x70, %al
+	orb %al, %bl
+	.endm
+	
+	.macro _ADDSP dst=SP
+	movl SP, %edx
+	addb %al, %dl
+	adcb %ah, %dh
+	lahf
+	movl %edx, \dst
+	movb $0, %dh
+	movb %ah, %dl
+	andb $0x0f, %bl
+	movb addflagtable(%edx), %al
+	andb $0x70, %al
+	orb %al, %bl
+	.endm
+
+	.macro _AND
+	movb $0x20, %bl
+	andb %al, %bh
+	_endnz
+	orb $0x80, %bl
+	.endm
+
+	.macro _OR instr=orb
+	\instr %al, %bh
+	setzb %bl
+	rorb $1, %bl
+	.endm
+
+	.macro _XOR
+	_OR xorb
+	.endm
+
+
+
+	.macro _RLCA instr=rolb
+	movb $0, %bl
+	\instr $1, %bh
+	rcrb $4, %bl
+	.endm
+
+	.macro _RRCA
+	_RLCA rorb
+	.endm
+
+	.macro _RLA instr=rclb
+	rolb $4, %bl
+	movb $0, %bl
+	\instr $1, %bh
+	rcrb $4, %bl
+	.endm
+
+	.macro _RRA
+	_RLA rcrb
+	.endm
+
+	.macro _RLC reg=B, instr=rolb
+	xorl %eax, %eax
+	movb \reg, %al
+	xorb %bl, %bl
+	\instr $1, %al
+	rcrb $4, %bl
+	movb %al, \reg
+	orb zflag_table(%eax), %bl
+	.endm
+
+	.macro _RRC reg=B
+	_RLC \reg, rorb
+	.endm
+	
+	.macro _RL reg=B, instr=rclb
+	xorl %eax, %eax
+	andb $0x10, %bl
+	movb \reg, %al
+	rclb $4, %bl
+	\instr $1, %al
+	rcrb $4, %bl
+	movb %al, \reg
+	orb zflag_table(%eax), %bl
+	.endm
+	
+	.macro _RR reg=B
+	_RL \reg, rcrb
+	.endm
+
+	.macro _SLA reg=B instr=shlb
+	movb $0, %cl
+	\instr $1, \reg
+	setz %bl
+	rcrb $4, %cl
+	rorb $1, %bl
+	orb %cl, %bl
+	.endm
+
+	.macro _SRA reg=B
+	_SLA \reg, sarb
+	.endm
+	
+	.macro _SRL reg=B
+	_SLA \reg, shrb
+	.endm
+
+	.macro _SWAP reg=B
+	movb \reg, %al
+	xorb %bl, %bl
+	rolb $4, %al
+	testb %al, %al
+	movb %al, \reg
+	_endnz
+	orb $0x80, %bl
+	_end
+	.endm
+	
+	.macro _SWAP_A
+	xorb %bl, %bl
+	rolb $4, %bh
+	testb %bh, %bh
+	_endnz
+	orb $0x80, %bl
+	_end
+	.endm
+	
+	.macro _SWAP_MEM
+	movl HL, %eax
+	_readb
+	movb %al, %dl
+	xorb %bl, %bl
+	rolb $4, %dl
+	movl HL, %eax
+	testb %dl, %dl
+	jnz .Lnonzero\@
+	orb $0x80, %bl
+.Lnonzero\@:
+	_writeb
+	_end
+	.endm
+
+	.macro _BIT bit=0, reg=B
+	andb $0x1f, %bl
+	movb \reg, %al
+	orb $0x20, %bl
+	testb $(1<<\bit), %al
+	_endnz
+	orb $0x80, %bl
+	_end
+	.endm
+
+	.macro _BIT_MEM bit=0
+	movl HL, %eax
+	_readb
+	_BIT \bit, %al
+	.endm
+
+	.macro _RES bit=0, reg=B
+	andb $(~(1<<\bit)), \reg
+	_end
+	.endm
+	
+	.macro _RES_MEM bit=0
+	movl HL, %eax
+	_readb
+	movb %al, %dl
+	movl HL, %eax
+	andb $(~(1<<\bit)), %dl
+	_writeb
+	_end
+	.endm
+
+	.macro _SET bit=0, reg=B
+	orb $(1<<\bit), \reg
+	_end
+	.endm
+	
+	.macro _SET_MEM bit=0
+	movl HL, %eax
+	_readb
+	movb %al, %dl
+	movl HL, %eax
+	orb $(1<<\bit), %dl
+	_writeb
+	_end
+	.endm
+
+
+	
+	.macro _DAA
+	xorl %eax, %eax
+	movb %bl, %ah
+	andb $0x70, %ah
+	movb %bh, %al
+	shrb $4, %ah
+	xorl %ecx, %ecx
+	movb daa_table(%eax), %cl
+	andb $0x4f, %bl
+	addb %cl, %al
+	shrb $2, %cl
+	xorb %ah, %ah
+	movb %al, %bh
+	orb daa_carry_table(%ecx), %bl
+	orb zflag_table(%eax), %bl
+	.endm
+	
+	
+
+
+
+
+
+
+	.macro _make_bit_ops reg=B, op=BIT, bit=0, u=_
+__\op\u\bit\u\reg:	
+	_\op \bit, \reg
+	.endm
+
+	.macro _make_cb_ops reg=B
+__RLC_\reg:
+	_RLC \reg
+	_end
+__RRC_\reg:
+	_RRC \reg
+	_end
+__RL_\reg:
+	_RL \reg
+	_end
+__RR_\reg:
+	_RR \reg
+	_end
+__SLA_\reg:
+	_SLA \reg
+	_end
+__SRA_\reg:
+	_SRA \reg
+	_end
+__SWAP_\reg:
+	_SWAP \reg
+__SRL_\reg:
+	_SRL \reg
+	_end
+	_make_bit_ops \reg, BIT, 0
+	_make_bit_ops \reg, BIT, 1
+	_make_bit_ops \reg, BIT, 2
+	_make_bit_ops \reg, BIT, 3
+	_make_bit_ops \reg, BIT, 4
+	_make_bit_ops \reg, BIT, 5
+	_make_bit_ops \reg, BIT, 6
+	_make_bit_ops \reg, BIT, 7
+	_make_bit_ops \reg, RES, 0
+	_make_bit_ops \reg, RES, 1
+	_make_bit_ops \reg, RES, 2
+	_make_bit_ops \reg, RES, 3
+	_make_bit_ops \reg, RES, 4
+	_make_bit_ops \reg, RES, 5
+	_make_bit_ops \reg, RES, 6
+	_make_bit_ops \reg, RES, 7
+	_make_bit_ops \reg, SET, 0
+	_make_bit_ops \reg, SET, 1
+	_make_bit_ops \reg, SET, 2
+	_make_bit_ops \reg, SET, 3
+	_make_bit_ops \reg, SET, 4
+	_make_bit_ops \reg, SET, 5
+	_make_bit_ops \reg, SET, 6
+	_make_bit_ops \reg, SET, 7
+	.endm
+	
+	.macro _make_cb_hl_op op=RLC suf=_$HL mem=_MEM
+__\op\suf:
+	movl HL, %eax
+	_readb
+	movb %al, %dl
+	_\op %dl
+	movl HL, %eax
+	_writeb
+	_end
+	.endm
+	
+	.macro _make_cb_hl_bit_op op=BIT bit=0 u=_ suf=_$HL mem=_MEM
+__\op\u\bit\suf:
+	_\op\mem \bit
+	.endm
+	
+
+	
+	
+	.text
+	.p2align 5
+
+	.globl cpu_emulate
+	.globl cpu_step
+
+__INVALID:
+	pushl %eax
+	pushl $invalid
+	call die
+
+
+__LD_B_C:
+	_LD B,C
+__LD_B_D:
+	_LD B,D
+__LD_B_E:
+	_LD B,E
+__LD_B_H:
+	_LD B,H
+__LD_B_L:
+	_LD B,L
+__LD_B_A:
+	movb %bh, B
+	_end
+__LD_C_B:
+	_LD C,B
+__LD_C_D:
+	_LD C,D
+__LD_C_E:
+	_LD C,E
+__LD_C_H:
+	_LD C,H
+__LD_C_L:
+	_LD C,L
+__LD_C_A:
+	movb %bh, C
+	_end
+__LD_D_B:
+	_LD D,B
+__LD_D_C:
+	_LD D,C
+__LD_D_E:
+	_LD D,E
+__LD_D_H:
+	_LD D,H
+__LD_D_L:
+	_LD D,L
+__LD_D_A:
+	movb %bh, D
+	_end
+__LD_E_B:
+	_LD E,B
+__LD_E_C:
+	_LD E,C
+__LD_E_D:
+	_LD E,D
+__LD_E_H:
+	_LD E,H
+__LD_E_L:
+	_LD E,L
+__LD_E_A:
+	movb %bh, E
+	_end
+__LD_H_B:
+	_LD H,B
+__LD_H_C:
+	_LD H,C
+__LD_H_D:
+	_LD H,D
+__LD_H_E:
+	_LD H,E
+__LD_H_L:
+	_LD H,L
+__LD_H_A:
+	movb %bh, H
+	_end
+__LD_L_B:
+	_LD L,B
+__LD_L_C:
+	_LD L,C
+__LD_L_D:
+	_LD L,D
+__LD_L_E:
+	_LD L,E
+__LD_L_H:
+	_LD L,H
+__LD_L_A:
+	movb %bh, L
+	_end
+__LD_A_B:
+	movb B, %bh
+	_end
+__LD_A_C:
+	movb C, %bh
+	_end
+__LD_A_D:
+	movb D, %bh
+	_end
+__LD_A_E:
+	movb E, %bh
+	_end
+__LD_A_H:
+	movb H, %bh
+	_end
+__LD_A_L:
+	movb L, %bh
+	_end
+
+	
+__LD_$HL_B:
+	_ld_to_hl B
+	_end
+__LD_$HL_C:
+	_ld_to_hl C
+	_end
+__LD_$HL_D:
+	_ld_to_hl D
+	_end
+__LD_$HL_E:
+	_ld_to_hl E
+	_end
+__LD_$HL_H:
+	_ld_to_hl H
+	_end
+__LD_$HL_L:
+	_ld_to_hl L
+	_end
+__LD_$HL_A:
+	_ld_to_hl %bh
+	_end
+
+__LD_B_$HL:
+	_ld_from_hl B
+	_end
+__LD_C_$HL:
+	_ld_from_hl C
+	_end
+__LD_D_$HL:
+	_ld_from_hl D
+	_end
+__LD_E_$HL:
+	_ld_from_hl E
+	_end
+__LD_H_$HL:
+	_ld_from_hl H
+	_end
+__LD_L_$HL:
+	_ld_from_hl L
+	_end
+__LD_A_$HL:
+	_ld_from_hl %bh
+	_end
+
+
+__LD_$BC_A:
+	movl BC, %eax
+	movb %bh, %dl
+	_writeb
+	_end
+__LD_A_$BC:
+	movl BC, %eax
+	_readb
+	movb %al, %bh
+	_end
+__LD_$DE_A:
+	movl DE, %eax
+	movb %bh, %dl
+	_writeb
+	_end
+__LD_A_$DE:
+	movl DE, %eax
+	_readb
+	movb %al, %bh
+	_end
+
+__LDI_$HL_A:
+	_ld_to_hl %bh
+	_INCW HL
+__LDI_A_$HL:
+	_ld_from_hl %bh
+	_INCW HL
+__LDD_$HL_A:
+	_ld_to_hl %bh
+	_DECW HL
+__LDD_A_$HL:
+	_ld_from_hl %bh
+	_DECW HL
+		
+
+__FETCH:
+	_fetch
+	ret
+
+__LD_B_IMM:
+	call __FETCH
+	movb %al, B
+	_end
+__LD_C_IMM:
+	call __FETCH
+	movb %al, C
+	_end
+__LD_D_IMM:
+	call __FETCH
+	movb %al, D
+	_end
+__LD_E_IMM:
+	call __FETCH
+	movb %al, E
+	_end
+__LD_H_IMM:
+	call __FETCH
+	movb %al, H
+	_end
+__LD_L_IMM:
+	call __FETCH
+	movb %al, L
+	_end
+__LD_$HL_IMM:
+	call __FETCH
+	movb %al, %dl
+	movl HL, %eax
+	_writeb
+	_end
+__LD_A_IMM:
+	call __FETCH
+	movb %al, %bh
+	_end
+
+
+__FETCHW:
+	_fetchw
+	ret
+
+__LD_BC_IMM:
+	call __FETCHW
+	movl %eax, BC
+	_end
+__LD_DE_IMM:
+	call __FETCHW
+	movl %eax, DE
+	_end
+__LD_HL_IMM:
+	call __FETCHW
+	movl %eax, HL
+	_end
+__LD_SP_IMM:
+	call __FETCHW
+	movl %eax, SP
+	_end
+
+
+
+__LD_$IMM_SP:
+	_fetchw
+	movl SP, %edx
+	_writew
+	_end
+__LD_SP_HL:
+	movl HL, %eax
+	movl %eax, SP
+	_end
+__LD_HL_SP_IMM:
+	_fetchs
+	_ADDSP HL
+	_end
+
+	
+	
+	
+__LD_$IMM_A:
+	_fetchw
+	movb %bh, %dl
+	_writeb
+	_end
+__LD_A_$IMM:
+	_fetchw
+	_readb
+	movb %al, %bh
+	_end
+
+
+
+__LDH_$IMM_A:
+	_fetch
+	movb $0xff, %ah
+	movb %bh, %dl
+	_writeb
+	_end
+__LDH_A_$IMM:
+	_fetch
+	movb $0xff, %ah
+	_readb
+	movb %al, %bh
+	_end
+__LDH_$C_A:
+	movl $0xff00, %eax
+	movb C, %al
+	movb %bh, %dl
+	_writeb
+	_end
+__LDH_A_$C:
+	movl $0xff00, %eax
+	movb C, %al
+	_readb
+	movb %al, %bh
+	_end
+	
+	
+
+__ADD_IMM:
+	_fetch
+	jmp __ADD
+__ADD_$HL:
+	movl HL, %eax
+	_readb
+	jmp __ADD
+__ADD_B:
+	movb B, %al
+	jmp __ADD
+__ADD_C:
+	movb C, %al
+	jmp __ADD
+__ADD_D:
+	movb D, %al
+	jmp __ADD
+__ADD_E:
+	movb E, %al
+	jmp __ADD
+__ADD_H:
+	movb H, %al
+	jmp __ADD
+__ADD_L:
+	movb L, %al
+	jmp __ADD
+__ADD_A:
+	movb %bh, %al
+__ADD:
+	_ADD
+	_end
+		
+__ADC_IMM:
+	_fetch
+	jmp __ADC
+__ADC_$HL:
+	movl HL, %eax
+	_readb
+	jmp __ADC
+__ADC_B:
+	movb B, %al
+	jmp __ADC
+__ADC_C:
+	movb C, %al
+	jmp __ADC
+__ADC_D:
+	movb D, %al
+	jmp __ADC
+__ADC_E:
+	movb E, %al
+	jmp __ADC
+__ADC_H:
+	movb H, %al
+	jmp __ADC
+__ADC_L:
+	movb L, %al
+	jmp __ADC
+__ADC_A:
+	movb %bh, %al
+__ADC:	
+	_ADC
+	_end
+		
+__SUB_IMM:
+	_fetch
+	jmp __SUB
+__SUB_$HL:
+	movl HL, %eax
+	_readb
+	jmp __SUB
+__SUB_B:
+	movb B, %al
+	jmp __SUB
+__SUB_C:
+	movb C, %al
+	jmp __SUB
+__SUB_D:
+	movb D, %al
+	jmp __SUB
+__SUB_E:
+	movb E, %al
+	jmp __SUB
+__SUB_H:
+	movb H, %al
+	jmp __SUB
+__SUB_L:
+	movb L, %al
+	jmp __SUB
+__SUB_A:
+	movb %bh, %al
+__SUB:
+	_SUB
+	_end
+		
+__SBC_IMM:
+	_fetch
+	jmp __SBC
+__SBC_$HL:
+	movl HL, %eax
+	_readb
+	jmp __SBC
+__SBC_B:
+	movb B, %al
+	jmp __SBC
+__SBC_C:
+	movb C, %al
+	jmp __SBC
+__SBC_D:
+	movb D, %al
+	jmp __SBC
+__SBC_E:
+	movb E, %al
+	jmp __SBC
+__SBC_H:
+	movb H, %al
+	jmp __SBC
+__SBC_L:
+	movb L, %al
+	jmp __SBC
+__SBC_A:
+	movb %bh, %al
+__SBC:
+	_SBC
+	_end
+		
+__AND_IMM:
+	_fetch
+	jmp __AND
+__AND_$HL:
+	movl HL, %eax
+	_readb
+	jmp __AND
+__AND_B:
+	movb B, %al
+	jmp __AND
+__AND_C:
+	movb C, %al
+	jmp __AND
+__AND_D:
+	movb D, %al
+	jmp __AND
+__AND_E:
+	movb E, %al
+	jmp __AND
+__AND_H:
+	movb H, %al
+	jmp __AND
+__AND_L:
+	movb L, %al
+	jmp __AND
+__AND_A:
+	movb %bh, %al
+__AND:
+	_AND
+	_end
+
+__XOR_IMM:
+	_fetch
+	jmp __XOR
+__XOR_$HL:
+	movl HL, %eax
+	_readb
+	jmp __XOR
+__XOR_B:
+	movb B, %al
+	jmp __XOR
+__XOR_C:
+	movb C, %al
+	jmp __XOR
+__XOR_D:
+	movb D, %al
+	jmp __XOR
+__XOR_E:
+	movb E, %al
+	jmp __XOR
+__XOR_H:
+	movb H, %al
+	jmp __XOR
+__XOR_L:
+	movb L, %al
+	jmp __XOR
+__XOR_A:
+	movb %bh, %al
+__XOR:
+	_XOR
+	_end
+	
+__OR_IMM:
+	_fetch
+	jmp __OR
+__OR_$HL:
+	movl HL, %eax
+	_readb
+	jmp __OR
+__OR_B:
+	movb B, %al
+	jmp __OR
+__OR_C:
+	movb C, %al
+	jmp __OR
+__OR_D:
+	movb D, %al
+	jmp __OR
+__OR_E:
+	movb E, %al
+	jmp __OR
+__OR_H:
+	movb H, %al
+	jmp __OR
+__OR_L:
+	movb L, %al
+	jmp __OR
+__OR_A:
+	movb %bh, %al
+__OR:
+	_OR
+	_end
+	
+__CP_IMM:
+	_fetch
+	jmp __CP
+__CP_$HL:
+	movl HL, %eax
+	_readb
+	jmp __CP
+__CP_B:
+	movb B, %al
+	jmp __CP
+__CP_C:
+	movb C, %al
+	jmp __CP
+__CP_D:
+	movb D, %al
+	jmp __CP
+__CP_E:
+	movb E, %al
+	jmp __CP
+__CP_H:
+	movb H, %al
+	jmp __CP
+__CP_L:
+	movb L, %al
+	jmp __CP
+__CP_A:
+	movb %bh, %al
+__CP:
+	_CP
+	_end
+	
+		
+__ADD_BC:
+	movl BC, %eax
+	jmp __ADDW
+__ADD_DE:
+	movl DE, %eax
+	jmp __ADDW
+__ADD_SP:
+	movl SP, %eax
+	jmp __ADDW
+__ADD_HL:
+	movl HL, %eax
+__ADDW:
+	_ADDW
+	_end
+
+
+
+__INC_B:
+	_INC B
+	_end
+__INC_C:
+	_INC C
+	_end
+__INC_D:
+	_INC D
+	_end
+__INC_E:
+	_INC E
+	_end
+__INC_H:
+	_INC H
+	_end
+__INC_L:
+	_INC L
+	_end
+__INC_$HL:
+	movl HL, %eax
+	_readb
+	movb %al, %dl
+	_INC %dl
+	movl HL, %eax
+	_writeb
+	_end
+__INC_A:
+	_INC %bh
+	_end
+
+
+__DEC_B:
+	_DEC B
+	_end
+__DEC_C:
+	_DEC C
+	_end
+__DEC_D:
+	_DEC D
+	_end
+__DEC_E:
+	_DEC E
+	_end
+__DEC_H:
+	_DEC H
+	_end
+__DEC_L:
+	_DEC L
+	_end
+__DEC_$HL:
+	movl HL, %eax
+	_readb
+	movb %al, %dl
+	_DEC %dl
+	movl HL, %eax
+	_writeb
+	_end
+__DEC_A:
+	_DEC %bh
+	_end
+
+	
+	
+__INC_BC:
+	_INCW BC
+__INC_DE:
+	_INCW DE
+__INC_HL:
+	_INCW HL
+__INC_SP:
+	_INCW SP
+__DEC_BC:
+	_DECW BC
+__DEC_DE:
+	_DECW DE
+__DEC_HL:
+	_DECW HL
+__DEC_SP:
+	_DECW SP
+
+	
+
+__ADD_SP_IMM:
+	_fetchs
+	_ADDSP
+	_end
+
+
+
+__RLCA:
+	_RLCA
+	_end
+__RRCA:
+	_RRCA
+	_end
+__RLA:
+	_RLA
+	_end
+__RRA:
+	_RRA
+	_end
+
+
+__DAA:
+	_DAA
+	_end
+
+
+__SCF:
+	andb $0x8f, %bl
+	orb $0x10, %bl
+	_end
+__CCF:
+	andb $0x9f, %bl
+	xorb $0x10, %bl
+	_end
+
+__CPL:
+	orb $0x60, %bl
+	xorb $-1, %bh
+	_end
+
+	
+__EI:
+	movl $1, IMA
+	_end
+__DI:
+	xorl %eax,%eax
+	movl %eax, halt
+	movl %eax, IME
+	movl %eax, IMA
+	_end
+
+
+__PUSH_BC:
+	movl BC, %eax
+	jmp __PUSH
+__PUSH_DE:
+	movl DE, %eax
+	jmp __PUSH
+__PUSH_HL:
+	movl HL, %eax
+	jmp __PUSH
+__PUSH_AF:
+	movl %ebx, %eax
+__PUSH:	
+	_push
+	_end
+
+__POP_BC:
+	_pop
+	movl %eax, BC
+	_end
+__POP_DE:
+	_pop
+	movl %eax, DE
+	_end
+__POP_HL:
+	_pop
+	movl %eax, HL
+	_end
+__POP_AF:
+	_pop
+	movl %eax, %ebx
+	_end
+
+	
+
+	
+	
+__JR_NZ:
+	testb $0x80, %bl
+	jz __JR
+	_NOJR
+	_end
+
+__JR_Z:
+	testb $0x80, %bl
+	jnz __JR
+	_NOJR
+	_end
+
+__JR_NC:
+	testb $0x10, %bl
+	jz __JR
+	_NOJR
+	_end
+
+__JR_C:
+	testb $0x10, %bl
+	jnz __JR
+	_NOJR
+	_end
+
+__JR:
+	_JR
+	_end
+
+
+	
+__JP_HL:
+	movl HL, %eax
+	movl %eax, %ebp
+	_end
+
+__JP_NZ:
+	testb $0x80, %bl
+	jz __JP
+	_NOJP
+	_end
+
+__JP_Z:
+	testb $0x80, %bl
+	jnz __JP
+	_NOJP
+	_end
+
+__JP_NC:
+	testb $0x10, %bl
+	jz __JP
+	_NOJP
+	_end
+
+__JP_C:
+	testb $0x10, %bl
+	jnz __JP
+	_NOJP
+	_end
+
+__JP:
+	_JP
+	_end
+
+
+
+__CALL_NZ:
+	testb $0x80, %bl
+	jz __CALL
+	_NOCALL
+	_end
+
+__CALL_Z:
+	testb $0x80, %bl
+	jnz __CALL
+	_NOCALL
+	_end
+
+__CALL_NC:
+	testb $0x10, %bl
+	jz __CALL
+	_NOCALL
+	_end
+
+__CALL_C:
+	testb $0x10, %bl
+	jnz __CALL
+	_NOCALL
+	_end
+	
+__CALL:
+	_CALL
+	_end
+
+	
+
+
+__RET_NZ:
+	testb $0x80, %bl
+	jz __RET
+	_NORET
+	_end
+
+__RET_Z:
+	testb $0x80, %bl
+	jnz __RET
+	_NORET
+	_end
+
+__RET_NC:
+	testb $0x10, %bl
+	jz __RET
+	_NORET
+	_end
+
+__RET_C:
+	testb $0x10, %bl
+	jnz __RET
+	_NORET
+	_end
+
+__RETI:
+	movl $1, %eax
+	movl %eax, IME
+	movl %eax, IMA
+__RET:
+	_RET
+	_end
+
+	
+__RST_00:
+	movl $0x00, %eax
+	jmp __RST
+__RST_08:
+	movl $0x08, %eax
+	jmp __RST
+__RST_10:
+	movl $0x10, %eax
+	jmp __RST
+__RST_18:
+	movl $0x18, %eax
+	jmp __RST
+__RST_20:
+	movl $0x20, %eax
+	jmp __RST
+__RST_28:
+	movl $0x28, %eax
+	jmp __RST
+__RST_30:
+	movl $0x30, %eax
+	jmp __RST
+__RST_38:
+	movl $0x38, %eax
+__RST:
+	pushl %eax
+	movl %ebp, %eax
+	_push
+	popl %ebp
+	_end
+
+
+	
+		
+
+__HALT:
+	movl $1, %eax
+	movl %eax, halt
+	_end
+
+__STOP:
+	movb KEY1, %al
+	testb $1, %al
+	jz .Loldstop
+	movb speed, %ah
+	xorb $1, %ah
+	movb %ah, speed
+	shlb $7, %ah
+	andb $0x7e, %al
+	orb %ah, %al
+	movb %al, KEY1
+.Loldstop:
+	incw %bp
+	_end
+	
+
+__CB_OPS:
+	_fetch
+	xorl %ecx, %ecx
+	movb cb_cycles_table(%eax), %cl
+	movl %ecx, %edi
+	jmp *cb_optable(,%eax,4)
+
+
+
+
+
+
+	_make_cb_ops B
+	_make_cb_ops C
+	_make_cb_ops D
+	_make_cb_ops E
+	_make_cb_ops H
+	_make_cb_ops L
+
+__RLC_A:
+	_RLC %bh
+	_end
+__RRC_A:
+	_RRC %bh
+	_end
+__RL_A:
+	_RL %bh
+	_end
+__RR_A:
+	_RR %bh
+	_end
+__SLA_A:
+	_SLA %bh
+	_end
+__SRA_A:
+	_SRA %bh
+	_end
+__SWAP_A:
+	_SWAP_A
+__SRL_A:
+	_SRL %bh
+	_end
+__BIT_0_A:	_BIT 0, %bh
+__BIT_1_A:	_BIT 1, %bh
+__BIT_2_A:	_BIT 2, %bh
+__BIT_3_A:	_BIT 3, %bh
+__BIT_4_A:	_BIT 4, %bh
+__BIT_5_A:	_BIT 5, %bh
+__BIT_6_A:	_BIT 6, %bh
+__BIT_7_A:	_BIT 7, %bh
+__RES_0_A:	_RES 0, %bh
+__RES_1_A:	_RES 1, %bh
+__RES_2_A:	_RES 2, %bh
+__RES_3_A:	_RES 3, %bh
+__RES_4_A:	_RES 4, %bh
+__RES_5_A:	_RES 5, %bh
+__RES_6_A:	_RES 6, %bh
+__RES_7_A:	_RES 7, %bh
+__SET_0_A:	_SET 0, %bh
+__SET_1_A:	_SET 1, %bh
+__SET_2_A:	_SET 2, %bh
+__SET_3_A:	_SET 3, %bh
+__SET_4_A:	_SET 4, %bh
+__SET_5_A:	_SET 5, %bh
+__SET_6_A:	_SET 6, %bh
+__SET_7_A:	_SET 7, %bh
+	
+	_make_cb_hl_op RLC
+	_make_cb_hl_op RRC
+	_make_cb_hl_op RL
+	_make_cb_hl_op RR
+	_make_cb_hl_op SLA
+	_make_cb_hl_op SRA
+__SWAP_$HL:	
+	_SWAP_MEM
+	_make_cb_hl_op SRL
+
+	_make_cb_hl_bit_op BIT, 0
+	_make_cb_hl_bit_op BIT, 1
+	_make_cb_hl_bit_op BIT, 2
+	_make_cb_hl_bit_op BIT, 3
+	_make_cb_hl_bit_op BIT, 4
+	_make_cb_hl_bit_op BIT, 5
+	_make_cb_hl_bit_op BIT, 6
+	_make_cb_hl_bit_op BIT, 7
+	
+	_make_cb_hl_bit_op RES, 0
+	_make_cb_hl_bit_op RES, 1
+	_make_cb_hl_bit_op RES, 2
+	_make_cb_hl_bit_op RES, 3
+	_make_cb_hl_bit_op RES, 4
+	_make_cb_hl_bit_op RES, 5
+	_make_cb_hl_bit_op RES, 6
+	_make_cb_hl_bit_op RES, 7
+
+	_make_cb_hl_bit_op SET, 0
+	_make_cb_hl_bit_op SET, 1
+	_make_cb_hl_bit_op SET, 2
+	_make_cb_hl_bit_op SET, 3
+	_make_cb_hl_bit_op SET, 4
+	_make_cb_hl_bit_op SET, 5
+	_make_cb_hl_bit_op SET, 6
+	_make_cb_hl_bit_op SET, 7
+
+	.text
+	.p2align 5
+
+cpu_emulate:
+	pushl %ebp
+	pushl %ebx
+	pushl %esi
+	pushl %edi
+
+	movl AF, %ebx
+	movl PC, %ebp
+	movl 20(%esp), %esi
+	cmpl $0, %esi
+	jle .Ldone
+
+.Lnext:
+	movl halt, %eax
+	andl IME, %eax
+	jnz .Lidle
+
+.Ldoop:
+	# check for pending interrupts
+	movl IME, %eax
+	testl %eax, %eax
+	jz .Lnoint
+	movb IF, %cl
+	movb IE, %al
+	andb %cl, %al
+	jnz .Lint
+
+.Lnoint:
+	# update interrupt master enable
+	movl IMA, %eax
+	movl %eax, IME
+.Lendint:
+
+	_trace
+	
+	_fetch
+	xorl %ecx, %ecx
+	movb cycles_table(%eax), %cl
+	movl %ecx, %edi
+	jmp *optable(,%eax,4)
+	
+__NOP:
+__LD_B_B:
+__LD_C_C:
+__LD_D_D:
+__LD_E_E:
+__LD_H_H:
+__LD_L_L:
+__LD_A_A:
+opdone:
+	shll $1, %edi
+
+	# advance div
+	movl %edi, %ecx
+	movb div, %al
+	addl %ecx, %ecx
+	movb DIV, %ah
+	addl %ecx, %eax
+	movb %al, div
+	movb %ah, DIV
+
+	# advance timer
+	movb TAC, %cl
+	testb $0x04, %cl
+	jnz .Ltimer
+.Lendtimer:
+
+	movb speed, %cl
+	shrl %cl, %edi
+	
+	# advance lcdc
+	subl %edi, lcdc
+	jg .Lnolcdc
+	call lcdc_trans
+.Lnolcdc:	
+
+	# increment sound cycle counter
+	addl %edi, snd
+	
+	# count off cycles used
+	subl %edi, %esi
+	jg .Lnext
+	jmp .Ldone
+
+
+.Lint:	
+	# throw an interrupt
+	xorl %edx, %edx
+	movb int_mask_table(%eax), %ch
+	movl %edx, IMA
+	andb %ch, %cl
+	movl %edx, IME
+	movb %cl, IF
+	movl int_vec_table(,%eax,4), %edx
+	movl %ebp, %eax
+	movl %edx, %ebp
+	_push
+	jmp .Lendint
+
+
+.Ltimer:
+	xorb $0xff, %cl
+	movl %edi, %eax
+	incb %cl
+	movl tim, %edx
+	andb $0x03, %cl
+	addb %cl, %cl
+	
+	shll %cl, %eax
+	addl %eax, %edx
+	movl %edx, tim
+	cmpl $512, %edx
+	jl .Lendtimer
+
+	xorl %eax, %eax
+	movl %edx, %ecx
+	movb TIMA, %al
+	shrl $9, %ecx
+	andl $0x1ff, %edx
+	addl %ecx, %eax
+	movl %edx, tim
+	movb %al, TIMA
+	cmpl $256, %eax
+	jl .Lendtimer
+
+	movb $4, %cl
+	xorl %edx, %edx
+	orb %cl, IF
+	movl $256, %ecx
+	movb TMA, %dl
+	subl $256, %eax
+	subl %edx, %ecx
+.Ltimermod:
+	subl %ecx, %eax
+	jnc .Ltimermod
+	movb %al, TIMA
+	jmp .Lendtimer
+
+.Ldone:
+	movl %ebx, AF
+	movl %ebp, PC
+	movl 20(%esp), %eax
+	subl %esi, %eax
+	
+	popl %edi
+	popl %esi
+	popl %ebx
+	popl %ebp
+	ret
+
+
+.Lidle:	
+	pushl %esi
+	call cpu_idle
+	popl %ecx
+	testl %eax, %eax
+	jz .Ldoop
+	
+	subl %eax, %esi
+	jg .Lnext
+	jmp .Ldone
+
+
+
+
+cpu_step:
+	movl 20(%esp), %edx
+	movl halt, %eax
+	andl IME, %eax
+	jz .Lruncpu
+	pushl %edx
+	pushl %edx
+	call cpu_idle
+	popl %edx
+	popl %edx
+	subl %eax, %edx
+	jnz .Lruncpu
+	ret
+.Lruncpu:
+	pushl $1
+	call cpu_emulate
+	popl %edx
+	ret
+
+
+
+
+
+
+
+

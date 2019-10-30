@@ -1,0 +1,36 @@
+
+
+/* taken from fbtv */
+
+#define BES_BASE	0x3d00
+#define BESA1ORG	(BES_BASE+0x00)
+#define BESA2ORG	(BES_BASE+0x04)
+#define BESB1ORG	(BES_BASE+0x08)
+#define BESB2ORG	(BES_BASE+0x0c)
+#define BESA1CORG	(BES_BASE+0x10)
+#define BESA2CORG	(BES_BASE+0x14)
+#define BESB1CORG	(BES_BASE+0x18)
+#define BESB2CORG	(BES_BASE+0x1c)
+#define BESCTL		(BES_BASE+0x20)
+#define BESPITCH	(BES_BASE+0x24)
+#define BESHCOORD	(BES_BASE+0x28)
+#define BESVCOORD	(BES_BASE+0x2c)
+#define BESHISCAL	(BES_BASE+0x30)
+#define BESVISCAL	(BES_BASE+0x34)
+#define BESHSRCST	(BES_BASE+0x38)
+#define BESHSRCEND	(BES_BASE+0x3c)
+
+#define BESV1WGHT	(BES_BASE+0x48)
+#define BESV2WGHT	(BES_BASE+0x4c)
+#define BESHSRCLST	(BES_BASE+0x50)
+#define BESV1SRCLST	(BES_BASE+0x54)
+#define BESV2SRCLST	(BES_BASE+0x58)
+#define BESGLOBCTL	(BES_BASE+0xc0)
+#define BESSTATUS	(BES_BASE+0xc4)
+
+#define PALWTADD        0x3c00
+#define X_DATAREG       0x3c0a
+#define XKEYOPMODE      0x51
+
+
+

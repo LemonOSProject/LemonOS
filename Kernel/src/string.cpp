@@ -106,7 +106,7 @@ void strcpy(char* dest, const char* src)
 	{
 		dest[i] = src[i];
 	}
-	dest[i] = 0;
+	dest[i] = '\0';
 }
 
 int strlen(const char* str)

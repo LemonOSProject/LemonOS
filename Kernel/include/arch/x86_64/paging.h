@@ -38,21 +38,27 @@
 #define DIRS_PER_PDPT 512
 #define PDPTS_PER_PML4 512
 
+#define MAX_PDPT_INDEX 63
+
 typedef uint64_t page_t;
 typedef uint64_t pd_entry_t;
 typedef uint64_t pdpt_entry_t;
 typedef uint64_t pml4_entry_t;
 
-using page_table_t = page_t[PAGES_PER_TABLE];
+typedef struct{
+    uint64_t phys;
+    page_t* virt;
+} __attribute__((packed)) page_table_t;
+
 using page_dir_t = pd_entry_t[TABLES_PER_DIR];
 using pdpt_t = pdpt_entry_t[DIRS_PER_PDPT];
 using pml4_t = pml4_entry_t[PDPTS_PER_PML4];
 
 typedef struct{ // Each process will have a maximum of 96GB of virtual memory.
     pdpt_t pdpt; // 512GB is more than ample
-    page_dir_t pageDirs[96]; // 96 GB is enough
-    page_t* pageTables[96][TABLES_PER_DIR];
-} address_space_t;
+    page_dir_t pageDirs[64]; // 64 GB is enough
+    page_t* pageTables[64][TABLES_PER_DIR];
+} __attribute__((packed)) address_space_t;
 
 namespace Memory{
 
@@ -67,13 +73,14 @@ namespace Memory{
     void* Allocate4KPages(uint64_t amount);
     void* Allocate2MPages(uint64_t amount);
     void* Allocate1GPages(uint64_t amount);
+
     void* KernelAllocate4KPages(uint64_t amount);
     void* KernelAllocate2MPages(uint64_t amount);
     void* KernelAllocate1GPages(uint64_t amount);
 
-    //void MapVirtualMemory4K(uint32_t phys, uint32_t virt);
-    //void MapVirtualMemory2M(uint32_t phys, uint32_t virt);
-    //void MapVirtualMemory1G(uint32_t phys, uint32_t virt);
+    void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount);
+    void MapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount);
+    void MapVirtualMemory1G(uint64_t phys, uint64_t virt, uint64_t amount);
     void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount);
     void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount);
 

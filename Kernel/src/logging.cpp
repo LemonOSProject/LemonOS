@@ -26,16 +26,16 @@ namespace Log{
 
 	}
 
-	void Write(char* str, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255){
+	void Write(const char* str, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255){
 		write_serial(str);
 		return;
 		if(console){
-			console->Print(str, r, g, b);
+			//console->Print(str, r, g, b);
 			console->Update();
 		}
 	}
 
-    void Warning(char* str){
+    void Warning(const char* str){
 		Write("\r\n");
 		Write("[");
 		Write("WARN", 255, 255, 0);
@@ -51,7 +51,7 @@ namespace Log{
 		//Write(str);
     }
 
-    void Error(char* str){
+    void Error(const char* str){
 		Write("\r\n");
 		Write("[");
 		Write("ERROR", 255, 0, 0);
@@ -67,7 +67,7 @@ namespace Log{
 		//Write(str);
     }
 
-    void Info(char* str){
+    void Info(const char* str){
 		Write("\r\n");
 		Write("[");
 		Write("INFO");

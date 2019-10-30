@@ -1,0 +1,31 @@
+
+CC = gcc
+AS = $(CC)
+LD = $(CC)
+
+CFLAGS = -O3 -I./asm/i386 -Dmain=SDL_main
+LDFLAGS = -s -lmingw32 -lSDLmain -lSDL
+ASFLAGS = -x assembler-with-cpp
+
+SYS_DEFS = -DIS_LITTLE_ENDIAN -DALT_PATH_SEP -DUSE_ASM
+ASM_OBJS = asm/i386/cpu.o asm/i386/lcd.o asm/i386/refresh.o
+#SND_OBJS = sys/dummy/nosound.o
+
+SYS_OBJS = $(ASM_OBJS) $(SND_OBJS) sys/windows/windows.o sys/windows/resource.o
+SYS_INCS = -I./sys/windows
+
+SDL_OBJS = sys/sdl/sdl.o sys/sdl/keymap.o
+SDL_LIBS = -lSDL
+
+all: gnuboy
+
+include Rules
+
+%.o: %.rc
+	windres -o $@ $<
+
+gnuboy: $(OBJS) $(SYS_OBJS) $(SDL_OBJS)
+	$(LD) $(LDFLAGS) $(OBJS) $(SYS_OBJS) $(SDL_OBJS) -o $@ $(SDL_LIBS)
+
+clean:
+	rm -f gnuboy.exe *.o sys/*.o sys/*/*.o asm/*/*.o

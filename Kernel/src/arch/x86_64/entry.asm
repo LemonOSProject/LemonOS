@@ -194,6 +194,10 @@ entry64:
   cli
   hlt
 
+section .initrd_test
+global test_start
+test_start: dd 0
+
 section .bss
 align 64
 stack_bottom:

@@ -13,20 +13,20 @@
 #include <pci.h>
 #include <panic.h>
 #include <scheduler.h>
-#ifdef Lemon32
 #include <syscalls.h>
+#ifdef Lemon32
 #include <gui.h>
 #endif
 
 void* initElf;
 extern "C"
 void IdleProcess(){
-	//asm("sti");
+	asm("sti");
 	Log::Info("Loading Init Process...");
 	Log::SetVideoConsole(NULL);
 	fs_node_t* initFsNode = fs::FindDir(Initrd::GetRoot(),"init.lef");
 	if(!initFsNode){
-		char* panicReasons[]{
+		const char* panicReasons[]{
 			"Failed to load init task (init.lef)!"
 		};
 		KernelPanic(panicReasons,1);
@@ -34,13 +34,18 @@ void IdleProcess(){
 		
 	initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
-	#ifdef Lemon32
+	//#ifdef Lemon32
 	Scheduler::LoadELF(initElf);
-	#endif
+	//#endif
 	Log::Write("OK");
 	for(;;){
 	}
 }
+
+extern uint64_t _initrd_end;
+extern uint64_t _initrd_start;
+uint64_t initrd_end = (uint64_t)&_initrd_end;
+uint64_t initrd_start = (uint64_t)&_initrd_start;
 
 extern "C"
 void kmain(multiboot_info_t* mb_info){
@@ -67,7 +72,7 @@ void kmain(multiboot_info_t* mb_info){
 	if(videoMode.height < 600)
 		Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");
 	if(videoMode.bpp != 32)
-		Log::Warning("Unsupported Colour Depth expect issues.");
+		Log::Warning("Unsupported Colour Depth expect	 issues.");
 
 	stringBuffer = (char*)kmalloc(16);
 	Log::Info("RAM: ");
@@ -78,11 +83,11 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Info(HAL::multibootInfo.modsCount, false);
 
 	Log::Info("Initializing Ramdisk...");
-	multiboot_module_t initrdModule = *((multiboot_module_t*)HAL::multibootModulesAddress); // Get initrd as a multiboot module
-	Initrd::Initialize(initrdModule.mod_start,initrdModule.mod_end - initrdModule.mod_start); // Initialize Initrd
+	Initrd::Initialize(/*initrdModule.mod_start*/initrd_start,initrd_end - initrd_start); // Initialize Initrd
 	Log::Write("OK");
 	
 	Log::Info("Ramdisk Contents:\n");
+
 	fs_dirent_t* dirent;
 	fs_node_t* root = Initrd::GetRoot();
 	int i = 0;
@@ -108,9 +113,8 @@ void kmain(multiboot_info_t* mb_info){
 
 	Video::DrawString("Copyright 2018-2019 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
 
-	//long uptimeSeconds = Timer::GetSystemUptime();
-	//while((uptimeSeconds - Timer::GetSystemUptime()) < 2);
-
+	long uptimeSeconds = Timer::GetSystemUptime();
+	while((uptimeSeconds - Timer::GetSystemUptime()) < 2);
 
 	Log::Info("Initializing HID...");
 
@@ -119,13 +123,13 @@ void kmain(multiboot_info_t* mb_info){
 
 	Log::Info("OK");
 
-	#ifdef Lemon32
+	//#ifdef Lemon32
 	Log::Info("Registering Syscall Handler...");
 
 	InitializeSyscalls();
 
 	Log::Write("OK");
-#endif
+
 	Log::Info("Initializing Task Scheduler...");
 	
 	Scheduler::Initialize();

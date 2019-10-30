@@ -1,0 +1,29 @@
+
+
+AS = $(CC)
+LD = $(CC)
+
+CFLAGS = -O3 -fstrength-reduce -fomit-frame-pointer -I./asm/i386
+ASFLAGS = -x assembler-with-cpp
+LDFLAGS = -s
+
+THIN_NAMES = tl_main tl_log tl_timer tl_key tl_mouse tl_joy tl_dpp tl_event \
+	tl_bmp tl_vesa tl_vga tl_video tl_sb tl_sound tl_int
+THIN_OBJS = $(THIN_NAMES:%=sys/thinlib/lib/%.o)
+
+SYS_DEFS = -DIS_LITTLE_ENDIAN -DALLOW_UNALIGNED_IO -DALT_PATH_SEP -DUSE_ASM
+
+SYS_INCS = -I./sys/dos -I./sys/thinlib/lib
+SYS_OBJS = sys/dos/dos.o sys/thinlib/thinlib.o sys/thinlib/keymap.o $(THIN_OBJS) \
+	asm/i386/cpu.o asm/i386/lcd.o asm/i386/refresh.o
+
+all: gnuboy.exe
+
+include Rules
+
+gnuboy.exe: $(OBJS) $(SYS_OBJS)
+	$(LD) $(CFLAGS) $(LDFLAGS) $(OBJS) $(SYS_OBJS) -o $@
+
+clean:
+	rm -f gnuboy.exe gmon.out *.o sys/*.o sys/dos/*.o sys/pc/*.o asm/i386/*.o \
+	sys/thinlib/*.o sys/thinlib/*.exe sys/thinlib/*.o

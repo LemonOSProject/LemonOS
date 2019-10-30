@@ -21,7 +21,7 @@ namespace Memory{
 	pdpt_t kernelPDPT __attribute__((aligned(4096))); // Kernel itself will reside here (0xFFFFFFFF80000000)
 	//uint64_t* kernelHeapPDPT = kernel_pdpt; // We will reserve 1 GB of virtual memory for the kernel heap
 	page_dir_t kernelHeapDir __attribute__((aligned(4096)));
-	page_t kernelHeapDirTables[TABLES_PER_DIR][PAGES_PER_TABLE];
+	page_t kernelHeapDirTables[TABLES_PER_DIR][PAGES_PER_TABLE] __attribute__((aligned(4096)));
 
 	uint64_t VirtualToPhysicalAddress(uint64_t addr) {
 		uint64_t address;
@@ -67,6 +67,7 @@ namespace Memory{
 
 		for(int i = 0; i < TABLES_PER_DIR; i++){
 			memset(&(kernelHeapDirTables[i]),0,sizeof(page_t)*PAGES_PER_TABLE);
+			//kernelHeapDir[i] = (uint64_t)(&kernelHeapDirTables[i]) - KERNEL_VIRTUAL_BASE | 0x3;
 		}
 
 		asm("mov %%rax, %%cr3" :: "a"((uint64_t)kernelPML4 - KERNEL_VIRTUAL_BASE));
@@ -82,12 +83,43 @@ namespace Memory{
 
 		for(int i = 0; i < DIRS_PER_PDPT; i++){
 			addressSpace->pdpt[i] = 0;
-			//addressSpace->pageDirs
+			if(i < 64){
+				addressSpace->pdpt[i] = VirtualToPhysicalAddress((uint64_t)addressSpace->pageDirs[i]);
+
+				for(int j = 0; j < TABLES_PER_DIR; j++){
+					addressSpace->pageDirs[i][j] = 0;
+					addressSpace->pageTables[i][j] = 0;
+				}
+			}
 		}
 	}
 
-	void* KernelAllocate4KPages(uint64_t amount){
+	page_table_t AllocatePageTable(){
+		void* virt = KernelAllocate4KPages(1);
+		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
+
+		KernelMapVirtualMemory4K(phys,(uintptr_t)virt, 1);
+
+		page_table_t pTable;
+		pTable.phys = phys;
+		pTable.virt = (page_t*)virt;
+
+		for(int i = 0; i < PAGES_PER_TABLE; i++){
+			((page_t*)virt)[i] = 0;
+		}
+
+		return pTable;
+	}
+
+	void CreatePageTable(uint16_t pdptIndex, uint16_t pageDirIndex){
+		page_table_t pTable = AllocatePageTable();
+		currentAddressSpace->pageDirs[pdptIndex][pageDirIndex] = pTable.phys | 0x3;
+		currentAddressSpace->pageTables[pdptIndex][pageDirIndex] = pTable.virt;
+	}
+
+	void* Allocate4KPages(uint64_t amount){
 		uint64_t offset = 0;
+		uint64_t pageDirOffset = 0;
 		uint64_t counter = 0;
 		uintptr_t address = 0;
 
@@ -97,10 +129,10 @@ namespace Memory{
 		/* Attempt 1: Already Allocated Page Tables*/
 		for(int i = 0; i < TABLES_PER_DIR; i++){
 			if(kernelHeapDir[i] & 0x1 && !(kernelHeapDir[i] & 0x80)){
-				offset = 0;
 				for(int j = 0; j < TABLES_PER_DIR; j++){
 					if(kernelHeapDirTables[i][j] & 0x1){
-						offset = i+1;
+						pageDirOffset = i;
+						offset = j+1;
 						counter = 0;
 						continue;
 					}
@@ -108,37 +140,147 @@ namespace Memory{
 					counter++;
 
 					if(counter >= amount){
-						address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (i * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
+						address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (pageDirOffset * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
 						address |= 0xFFFF000000000000;
-						while(counter-- > 0){
-							kernelHeapDirTables[i][offset] = 0x3;
+						while(counter--){
+							if(offset >= 512){
+								pageDirOffset++;
+								offset = 0;
+							}
+							kernelHeapDirTables[pageDirOffset][offset] = 0x3;
 							offset++;
 						}
 
 						return (void*)address;
 					}
 				}
+			} else {
+				pageDirOffset = i+1;
+				offset = 0;
+				counter = 0;
 			}
 		}
 		
-offset = 0;
+		pageDirOffset = 0;
+		offset = 0;
+		counter = 0;
 
 		/* Attempt 2: Allocate Page Tables*/
 		for(int i = 0; i < TABLES_PER_DIR; i++){
-			if(!kernelHeapDir[i]){
+			if(!(kernelHeapDir[i] & 0x1)){
 				for(int j = 0; j < TABLES_PER_DIR; j++){
-					address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (i * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
+					address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (pageDirOffset * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
 					address |= 0xFFFF000000000000;
 					//kernelHeapDir[i] = (PAGE_FRAME & ((uintptr_t)&(kernelHeapDirTables[i]) - KERNEL_VIRTUAL_BASE)) | 0x3;
-					SetPageFrame(&(kernelHeapDir[i]),((uintptr_t)&(kernelHeapDirTables[i]) - KERNEL_VIRTUAL_BASE));
-					kernelHeapDir[i] |= 0x3;
-					while(counter--){
-						kernelHeapDirTables[i][offset] = 0x3;
+					SetPageFrame(&(kernelHeapDir[pageDirOffset]),((uintptr_t)&(kernelHeapDirTables[pageDirOffset]) - KERNEL_VIRTUAL_BASE));
+					kernelHeapDir[pageDirOffset] |= 0x3;
+					while(amount--){
+						if(offset >= 512){
+							pageDirOffset ++;
+							offset = 0;	
+							SetPageFrame(&(kernelHeapDir[pageDirOffset]),((uintptr_t)&(kernelHeapDirTables[pageDirOffset]) - KERNEL_VIRTUAL_BASE));
+							kernelHeapDir[pageDirOffset] |= 0x3;
+						}
+						
+					//Log::Info("page index:");
+					//Log::Info(offset);
+					//Log::Info("page dir index:");
+					//Log::Info(pageDirOffset);
+						kernelHeapDirTables[pageDirOffset][offset] = 0x3;
 						offset++;
 					}
-
+					Log::Info("Address:");
+					Log::Info(address);
 					return (void*)address;
 				}
+			} else {
+				pageDirOffset = i+1;
+				offset = 0;
+				counter = 0;
+			}
+		}
+	}
+
+	void* KernelAllocate4KPages(uint64_t amount){
+		uint64_t offset = 0;
+		uint64_t pageDirOffset = 0;
+		uint64_t counter = 0;
+		uintptr_t address = 0;
+
+		uint64_t pml4Index = KERNEL_HEAP_PML4_INDEX;
+		uint64_t pdptIndex = KERNEL_HEAP_PDPT_INDEX;
+
+		/* Attempt 1: Already Allocated Page Tables*/
+		for(int i = 0; i < TABLES_PER_DIR; i++){
+			if(kernelHeapDir[i] & 0x1 && !(kernelHeapDir[i] & 0x80)){
+				for(int j = 0; j < TABLES_PER_DIR; j++){
+					if(kernelHeapDirTables[i][j] & 0x1){
+						pageDirOffset = i;
+						offset = j+1;
+						counter = 0;
+						continue;
+					}
+
+					counter++;
+
+					if(counter >= amount){
+						address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (pageDirOffset * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
+						address |= 0xFFFF000000000000;
+						while(counter--){
+							if(offset >= 512){
+								pageDirOffset++;
+								offset = 0;
+							}
+							kernelHeapDirTables[pageDirOffset][offset] = 0x3;
+							offset++;
+						}
+
+						return (void*)address;
+					}
+				}
+			} else {
+				pageDirOffset = i+1;
+				offset = 0;
+				counter = 0;
+			}
+		}
+		
+		pageDirOffset = 0;
+		offset = 0;
+		counter = 0;
+
+		/* Attempt 2: Allocate Page Tables*/
+		for(int i = 0; i < TABLES_PER_DIR; i++){
+			if(!(kernelHeapDir[i] & 0x1)){
+				for(int j = 0; j < TABLES_PER_DIR; j++){
+					address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (pageDirOffset * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
+					address |= 0xFFFF000000000000;
+					//kernelHeapDir[i] = (PAGE_FRAME & ((uintptr_t)&(kernelHeapDirTables[i]) - KERNEL_VIRTUAL_BASE)) | 0x3;
+					SetPageFrame(&(kernelHeapDir[pageDirOffset]),((uintptr_t)&(kernelHeapDirTables[pageDirOffset]) - KERNEL_VIRTUAL_BASE));
+					kernelHeapDir[pageDirOffset] |= 0x3;
+					while(amount--){
+						if(offset >= 512){
+							pageDirOffset ++;
+							offset = 0;	
+							SetPageFrame(&(kernelHeapDir[pageDirOffset]),((uintptr_t)&(kernelHeapDirTables[pageDirOffset]) - KERNEL_VIRTUAL_BASE));
+							kernelHeapDir[pageDirOffset] |= 0x3;
+						}
+						
+					//Log::Info("page index:");
+					//Log::Info(offset);
+					//Log::Info("page dir index:");
+					//Log::Info(pageDirOffset);
+						kernelHeapDirTables[pageDirOffset][offset] = 0x3;
+						offset++;
+					}
+					Log::Info("Address:");
+					Log::Info(address);
+					return (void*)address;
+				}
+			} else {
+				pageDirOffset = i+1;
+				offset = 0;
+				counter = 0;
 			}
 		}
 	}
@@ -169,7 +311,7 @@ offset = 0;
 			}
 		}
 
-		*(int*)0xDEADC0DEDEADBEEF = 0xDEADBEEF;
+		*(int*)0xFFFDC0DEDEADBEEF = 0xDEADBEEF;
 		for(;;);
 	}
 
@@ -186,7 +328,6 @@ offset = 0;
 		uint64_t pdptIndex = PDPT_GET_INDEX(virt);
 		uint64_t pageDirIndex = PAGE_DIR_GET_INDEX(virt);
 
-
 		while(amount--){
 			kernelHeapDir[pageDirIndex] = 0x83;
 			SetPageFrame(&(kernelHeapDir[pageDirIndex]), phys);
@@ -197,10 +338,7 @@ offset = 0;
 	}
 
 	void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount){
-		uint64_t pml4Index = PML4_GET_INDEX(virt);
-		uint64_t pdptIndex = PDPT_GET_INDEX(virt);
-		uint64_t pageDirIndex = PAGE_DIR_GET_INDEX(virt);
-		uint64_t pageIndex = PAGE_TABLE_GET_INDEX(virt);
+		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
 
 		while(amount--){
 			pml4Index = PML4_GET_INDEX(virt);
@@ -208,15 +346,53 @@ offset = 0;
 			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
 			pageIndex = PAGE_TABLE_GET_INDEX(virt);
 			SetPageFrame(&(kernelHeapDirTables[pageDirIndex][pageIndex]), phys);
-			kernelHeapDirTables[pageDirIndex][pageIndex] |= 0x83;
+			kernelHeapDirTables[pageDirIndex][pageIndex] |= 0x3;
 			phys += PAGE_SIZE_4K;
 			virt += PAGE_SIZE_4K;
 		}
 	}
 
+	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount){
+		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
+
+		while(amount--){
+			pml4Index = PML4_GET_INDEX(virt);
+			pdptIndex = PDPT_GET_INDEX(virt);
+			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
+			pageIndex = PAGE_TABLE_GET_INDEX(virt);
+			
+			if(pdptIndex > MAX_PDPT_INDEX || pml4Index) KernelPanic((const char**)(&("Process address space cannot be >64GB")),1);
+
+			if(!currentAddressSpace->pageTables[pdptIndex][pageDirIndex]) CreatePageTable(pdptIndex,pageDirIndex); // If we don't have a page table at this address, create one.
+			SetPageFrame(&(currentAddressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
+			currentAddressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] |= 0x3;
+			phys += PAGE_SIZE_4K;
+			virt += PAGE_SIZE_4K; /* Go to next page */
+		}
+	}
+
+	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, address_space_t* addressSpace){
+		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
+
+		while(amount--){
+			pml4Index = PML4_GET_INDEX(virt);
+			pdptIndex = PDPT_GET_INDEX(virt);
+			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
+			pageIndex = PAGE_TABLE_GET_INDEX(virt);
+			
+			if(pdptIndex > MAX_PDPT_INDEX || pml4Index) KernelPanic((const char**)(&("Process address space cannot be >64GB")),1);
+
+			if(!addressSpace->pageTables[pdptIndex][pageDirIndex]) CreatePageTable(pdptIndex,pageDirIndex); // If we don't have a page table at this address, create one.
+			SetPageFrame(&(addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
+			addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] |= 0x3;
+			phys += PAGE_SIZE_4K;
+			virt += PAGE_SIZE_4K; /* Go to next page */
+		}
+	}
+
 	void ChangeAddressSpace(address_space_t* addressSpace){
 		currentAddressSpace = addressSpace;
-		kernelPML4[0] = 0;//VirtualToPhysicalAddress((uint64_t)(&addressSpace->pdpt)) | 0x3;
+		kernelPML4[0] = VirtualToPhysicalAddress((uint64_t)(&addressSpace->pdpt)) | 0x3;
 	}
 
 	void PageFaultHandler(regs64_t* regs/*, int err_code*/)
@@ -227,26 +403,6 @@ offset = 0;
 
 		uint64_t faultAddress;
 		asm volatile("movq %%cr2, %0" : "=r" (faultAddress));
-
-		/*int present = !(err_code & 0x1); // Page not present
-		int rw = err_code & 0x2;           // Attempted write to read only page
-		int us = err_code & 0x4;           // Processor was in user-mode and tried to access kernel page
-		int reserved = err_code & 0x8;     // Overwritten CPU-reserved bits of page entry
-		int id = err_code & 0x10;          // Caused by an instruction fetch
-
-		char* msg = "Page fault ";
-		char* reason;
-		if (present)
-			Log::Info("Page not present"); // Print fault to serial
-		if (rw)
-			Log::Info("Read Only");
-		if (us)
-			Log::Info("User mode process tried to access kernel memory");
-		if (reserved)
-			Log::Info("Reserved");
-		if (id)
-			Log::Info("instruction fetch");
-*/
 		
 		//Log::Info(reason); // Print fault to serial
 

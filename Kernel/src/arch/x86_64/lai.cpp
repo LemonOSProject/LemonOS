@@ -11,7 +11,7 @@ extern "C"{
 	}
 
 	void laihost_panic(const char* s){
-		char* reasons[]{"ACPI Error",(char*)s};
+		const char* reasons[]{"ACPI Error",s};
 		KernelPanic(reasons,2);
 	}
 

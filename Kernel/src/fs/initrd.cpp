@@ -41,14 +41,20 @@ namespace Initrd{
 		#ifdef Lemon32
 		void* virtual_address = (void*)Memory::KernelAllocateVirtualPages(size / PAGE_SIZE + 1);
 		Memory::MapVirtualPages(address, (uint32_t)virtual_address, size / PAGE_SIZE + 1);
+		initrd_address = virtual_address;
 		#endif
 		#ifdef Lemon64
-		void* virtual_address = Memory::KernelAllocate4KPages(size / PAGE_SIZE_4K + 1);
-		Memory::KernelMapVirtualMemory4K(address, (uint64_t)virtual_address, size / PAGE_SIZE_4K + 1);
+		initrd_address = (void*)address;
 		#endif
-		initrd_address = virtual_address;
-		initrdHeader = *(lemoninitfs_header_t*)address;
-		nodes = (lemoninitfs_node_t*)(virtual_address + sizeof(lemoninitfs_header_t));
+		Log::Info("Initrd address: ");
+		Log::Info(address);
+		Log::Info("Size:");
+		Log::Info(size, false);
+		Log::Info("File Count:");
+		Log::Info(*((uint32_t*)initrd_address), false);
+		Log::Write("files\r\n");
+		initrdHeader = *(lemoninitfs_header_t*)initrd_address;
+		nodes = (lemoninitfs_node_t*)(initrd_address + sizeof(lemoninitfs_header_t));
 		
 		strcpy(root.name,"");
 		root.flags = FS_NODE_DIRECTORY;
@@ -132,7 +138,8 @@ namespace Initrd{
 	fs_node_t* FindDir(fs_node_t* node, char* name){
 		if(node == &root){
 			if(strcmp(name,dev.name) == 0) return &dev;
-
+			
+			Log::Info(initrdHeader.fileCount);
 			for(int i = 0; i < initrdHeader.fileCount;i++){
 				if(strcmp(fsNodes[i].name,name) == 0) return &(fsNodes[i]);
 			}
@@ -140,7 +147,7 @@ namespace Initrd{
 			for(int i = 0; i < deviceCount; i++)
 				if(strcmp(devices[i]->name, name) == 0) return devices[0];
 		} else {
-			char* pr[] = {"could not find dir"};
+			const char* pr[] = {"could not find dir"};
 			KernelPanic(pr,1);
 		}
 		return NULL;
@@ -172,13 +179,13 @@ namespace Initrd{
 		return 0;
 	}
 
-	lemoninitfs_node_t GetNode(char* filename) {
+	/*lemoninitfs_node_t GetNode(char* filename) {
 		for (uint32_t i = 0; i < initrdHeader.fileCount; i++) {
 			if (nodes[i].filename == filename)
 				return nodes[i];
 		}
 		return nodes[0];
-	}
+	}*/
 
 	fs_node_t* GetRoot(){
 		return &root;

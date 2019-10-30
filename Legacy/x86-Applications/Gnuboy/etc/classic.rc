@@ -1,0 +1,41 @@
+#
+# classic.rc - change keybindings, palette, etc
+# to match the old pre-1.0 settings.
+#
+
+unbindall
+
+bind esc quit
+bind up +up
+bind down +down
+bind left +left
+bind right +right
+bind alt +a
+bind ctrl +b
+bind enter +start
+bind space +select
+bind joyup +up
+bind joydown +down
+bind joyleft +left
+bind joyright +right
+bind joy0 +b
+bind joy1 +a
+bind joy2 +select
+bind joy3 +start
+bind 1 "set saveslot 1"
+bind 2 "set saveslot 2"
+bind 3 "set saveslot 3"
+bind 4 "set saveslot 4"
+bind 5 "set saveslot 5"
+bind 6 "set saveslot 6"
+bind 7 "set saveslot 7"
+bind 8 "set saveslot 8"
+bind 9 "set saveslot 9"
+bind 0 "set saveslot 0"
+bind ins savestate
+bind del loadstate
+
+set dmg_bgp  0x78f0f0 0x58b8b8 0x487878 0x184848
+set dmg_wndp 0x78f0f0 0x58b8b8 0x487878 0x184848
+set dmg_obp0 0x78f0f0 0x58b8b8 0x487878 0x184848
+set dmg_obp1 0x78f0f0 0x58b8b8 0x487878 0x184848

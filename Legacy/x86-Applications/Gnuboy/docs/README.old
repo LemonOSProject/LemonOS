@@ -1,0 +1,355 @@
+
+GNUBOY README
+
+
+  INTRO
+
+Welcome to gnuboy, one of the few pieces of Free Software to emulate
+the Game Boy handheld game console. Written in ANSI C with a few
+optional assembler optimizations for particular cpus, gnuboy supports
+a wide range of host systems, and has been tested successfully on:
+
+  GNU/Linux
+  FreeBSD
+  OpenBSD
+  BeOS
+  Linux/390 (IBM S/390 Mainframe)
+  SunOS/Sun Ultra60
+  IRIX/SGI O2
+  IRIX/SGI Indy
+  AIX/Unknown
+  DR-DOS
+  MS-DOS
+  Windows DOS box
+  Windows 9x/NT/2k
+
+Additionally, gnuboy should run on any other *nix variants that have
+ANSI C compilers and that are remotely POSIX compliant. As gnuboy is
+Free Software, you're welcome to fix any problems you encounter
+building it for a particular system, or to port it to entirely new
+systems.
+
+For build instructions, see the file INSTALL. For information on the
+structure of the source tree, program flow, design decisions and
+guidelines, porting, and so on, read HACKING.
+
+
+  GENERAL USAGE
+
+Just pass the name of the rom to load on the command line. Default
+keybindings are as follows:
+
+  esc         - exit
+  arrow keys  - d-pad
+  alt         - a
+  ctrl        - b
+  space       - select
+  enter       - start
+  0-9         - select savestate slot
+  ins         - save current state
+  del         - return to saved state
+
+  joypad      - d-pad
+  joy0        - b
+  joy1        - a
+  joy2        - select
+  joy3        - start
+
+(Note: joystick is not available on all platforms at this time.)
+
+If you want to change these or other options, you should create a
+gnuboy.rc file. See the system-specific info below for where to put
+it.
+
+The rc subsystem is very similar to Quake's console in many
+respects. You have commands and variables. First, the commands:
+
+  quit        - exit gnuboy (saving sram)
+  reset       - reset to powerup state
+  source      - process another rc file
+  set         - set a variable's value
+  bind        - bind keys
+  unbind      - remove a keybinding
+  unbindall   - remove all keybindings
+  savestate   - save current state
+  loadstate   - return to saved state
+
+Additionally, each gameboy pad button has two commands, one to press
+it, and another to release it -- for example, +start and -start. When
+a key is bound to one of these commands that starts with a +, it will
+perform the corresponding - command when it's released, as expected.
+
+Here's a list of the + commands, though they should be obvious:
+
+  +start  +select  +a  +b  +up  +down  +left  +right
+
+Now for the variables. To set any of the rc variables, just put the
+command of the form "set variable value" in your gnuboy.rc or other rc
+file. Some of the more interesting variables are:
+
+  rcpath      - search path for loading extra rc files
+  savedir     - the directory where save files will be stored
+  savename    - base of filename to use for sram and savestates
+  forcedmg    - set to 1/true/yes to force color roms to play mono
+  framelen    - delay in microseconds between frames
+  framecount  - run only the given number of frames, then exit
+
+  dmg_bgp     - specify 4 custom colors to be used for mono background
+  dmg_wndp    - same thing, but for the window layer
+  dmg_obp0    - and for sprite palette 0
+  dmg_obp1    - and sprite palette 1
+
+  scale       - factor for screen scaling; currently only 1 and 2 work
+  density     - density level for screen scaling; see description below
+
+  sprsort     - x-sort sprites for correctness on dmg roms
+
+  syncrtc     - fake elapsed time on rtc since last session at startup
+
+  trace       - output a complete cpu trace to stdout
+  sprdebug    - display bars indicating sprite count per line
+
+There are a few others which may or not be useful. Also, certain
+system and display targets have their own variables, which will be
+described in the relevant sections below. For more info on how the
+variables work, read the source.
+
+For sample rc files, look in the etc/ directory.
+
+Finally, to display help, version, or copying information, use the
+--help, --version, or --copying options respectively on the gnuboy
+command line.
+
+
+  USAGE - *NIX SYSTEMS
+
+The file gnuboy.rc should be placed in ~/.gnuboy/. If it is not found
+in this location, the current working directory will be
+searched. The following defaults will be used:
+
+  rcpath      - ~/.gnuboy:.
+  savedir     - ~/.gnuboy/saves
+
+If you don't like these, override them with gnuboy.rc.
+
+There are presently four *nix targets supported: X11, SDL, and Linux
+fbcon and svgalib. In the future other fb devices (such as the Sun
+console) should be supported as well.
+
+If you have problems with gnuboy running too slowly on svgalib, turn
+off the vsync option, i.e. set vsync 0. Putting --no-vsync on the
+command line works as well. At this point svgalib is the only one that
+supports vsync, so it's a non-issue on the others.
+
+
+  USAGE - DOS and Windows
+
+Place your gnuboy.rc in the same directory as gnuboy.exe. You need to
+specify a save directory in it; otherwise the working directory will
+be used, which is probably not what you want. For example, if you've
+installed gnuboy.exe in c:/gnuboy, and you want your saves to be
+stored in c:/gnuboy/saves, place the following in a plain text file
+called gnuboy.rc in c:/gnuboy.
+
+  set savedir c:/gnuboy/saves
+
+By default stereo sound is disabled on DOS since it doesn't work right
+on some of the systems we've tested; to enable it, add the following
+line to your gnuboy.rc:
+
+  set stereo 1
+
+
+  VIDEO MODES
+
+Now all the display targets except Linux fbcon support the uniform
+"vmode" rcvar to set the video mode. From the rc file, you can specify
+a video mode like this (for 640x480, 16bpp):
+
+  set vmode 640 480 16
+
+Or you can specify the mode on the command line, as
+
+  --vmode=640,480,16
+
+If the requested video mode is not available, gnuboy may either give
+an error message or use a similar available mode.
+
+
+  SCREEN SCALING
+
+Scaling by integral factors 1-4 is now supported. Just set the rcvar
+"scale" to the desired scaling factor. Most of the display targets
+will automatically choose a video mode appropriate to the chosen
+scale, but DOS and Linux fbcon users should be aware they they need to
+set the mode manually, as described above. Of course, if you prefer,
+you can always set it manually.
+
+By default, for performance reasons, vertical scaling will not be
+fully dense but will leave some blank scanlines. This behavior can be
+adjusted by means of the "density" rcvar. Density 0, the default,
+skips every other line. Nonzero values N fill in the first N copies of
+the scanline, and leave the remaining scale-N scanlines blank. So, if
+you want a fully filled in display (and the worst performance), you
+should set density to the same value as scale.
+
+Please be aware that this code is still slightly experimental, and the
+ways of configuring scaling may change considerably in the next few
+releases.
+
+
+  HARDWARE ACCELERATED YUV-SPACE SCREEN SCALING
+
+If you're using the SDL display target and your video card/driver
+supports it, hardware screen scaling is available. This feature
+provides scaling to any size with almost no cpu usage! It's enabled by
+default if the screen resolution is set to 320x288 or higher; manually
+set the "yuv" rcvar to 0 or 1 to force it off or on, respectively.
+
+Scaling will be performed to fill the entire requested video mode.
+For example, to scale to 640x480, either add the following line to
+your gnuboy.rc:
+
+  set vmode 640 480
+
+or put --vmode=640,480 on the command line. A better alternative is to
+just request a particular scale, for example with:
+
+  set scale 4
+
+or --scale=4 on the command line; this way the gameboy's near 1:1
+aspect ratio won't become distorted.
+
+
+  SOUND SUPPORT
+
+At this point all features are implemented and everything should be
+right, so any incorrect sound output should be treated as a bug, which
+we'll try to fix as soon as possible.
+
+
+  JOYSTICK AND GAMEPAD SUPPORT
+
+At this time, the Linux and SDL joystick devices are the only ones
+supported. We hope to have DOS joystick support soon.
+
+Binding joystick controls works the same way as for the keyboard. Just
+use the key names joyup, joydown, joyright, joyleft, joy0, joy1, joy2,
+etc. Default bindings should probably be ok for most users, except
+that A/B might be backwards on some gamepads.
+
+
+  PERFORMANCE
+
+Here are some performance estimates i've gathered (given in percent
+cpu utilization, running at full 60 fps)...
+
+                                 Optimized C        Assembly
+  AMD K6-2/450                       12%               8%
+  Pentium/75                     (too slow)           70%
+  SGI O2                             25%            (no asm)
+  SGI Indy                           70%            (no asm)
+  Sun Ultra60                       3-20%           (no asm)
+  IBM S/390                      about 0.3%         (no asm)
+
+Note that these figures were computed before sound was implemented.
+Until the sound code is further optimized, gnuboy may run somewhat
+slower than these numbers suggest.
+
+
+  SUPPORTED MEMORY BANK CONTROLLERS (MBCS)
+
+At this time, gnuboy supports MBC1, MBC2, MBC3 (including realtime
+clock), and MBC5 (including the version with rumble support, although
+that functionality is omitted).
+
+
+  GRAPHICS SUPPORT
+
+Color Gameboy roms are supported completely, including so-called
+"highcolor" tricks. Yes, even in 256-color mode, although in games
+that use too many colors on one screen, the later ones will only be
+approximated. Use a 16 bpp (or higher) display mode if this is a
+problem.
+
+Alternatively, for games that look bad in 256 color mode, you can
+run in simulated 3/3/2 bits per channel truecolor. Just set the
+variable rgb332 to something nonzero (or just putting --rgb332 on the
+command line will work). Color precision is lost somewhat, especially
+in smooth gradients, but for the most part it looks very good.
+
+Much care has been put into ensuring that the lcd timings and
+interrupts behave as closely to the real hardware as possible. A few
+features remain unimplemented, such as reduced length HBLANK depending
+on the number of sprites visible on the scanline, but the vast
+majority of display tricks used in current roms work fine.
+
+We do, however, lack information on proper GDMA timings, which could
+theoretically cause problems for some roms. If you can provide us with
+accurate information, please do!
+
+
+  COMPATIBILITY
+
+Eventually I'll put detailed information here. For now, just see known
+bugs for the few cases where roms fails.
+
+
+  KNOWN BUGS
+
+The portal between the temple and the Talon in FFL3 is glitched and
+the game freezes for a second or two building the incorrect animation
+when entering those screens.
+
+GDMA finishes instantly, whereas it should take time. Making it take
+time breaks Wacky Races, last I checked, so apparently the documents I
+have on GDMA timing are incorrect. Same goes for HDMA. Good
+information would be much appreciated.
+
+The main loop in emu_run is very sloppy and not quite right, but it
+works.
+
+Sound mixing is taking way too much cpu time. I have some ideas for
+fixing this, and I plan to write optimized assembly code for sound
+eventually. If it's a problem try turning down the sample rate.
+
+YUV-space hardware scaling only supports the common "YUY2" mode so
+far. More modes will be added in the future.
+
+
+  REPORTING OR FIXING BUGS
+
+Found a bug not mentioned above, or better yet, fixed one? Send bug
+reports or patches to gnuboy@starfox.org. Please be aware that
+distribution of any code based on gnuboy must follow the provisions of
+the GPL, so if you don't agree to this, don't send code to us or
+anyone else. Let us know if you wish to be included in the credits.
+
+For guidelines regarding code contributions, see the file HACKING.
+
+Please be aware that evaluating contributed code and figuring out if
+or how to work it in can take time. If we haven't done anything with
+your code yet, please be patient.
+
+
+  THANKS
+
+Thanks goes out to everyone who's expressed interest in gnuboy by
+writing -- users, porters, authors of other emulators, and so forth.
+Apologies if we don't get a personal response out to everyone, but
+either way, consider your feedback well appreciated.
+
+
+  EPILOGUE
+
+OK, that looks like about it. More to come, stick around...
+
+
+
+  -Laguna
+
+
+
+
+
+

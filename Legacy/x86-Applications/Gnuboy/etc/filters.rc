@@ -1,0 +1,43 @@
+
+#
+# Explanation of the filters:
+# 
+# If, for example, red is set to "a b c d",
+# where a, b, c, and d are four numbers,
+# then the output red value for a given input
+# color will be computed as follows:
+#
+# output_red = ( a * input_red +
+#                b * input_green +
+#                c * input_blue ) / 256 + d
+#
+# So, a, b, and c are scale factors
+# (out of 256) for how much weight the input
+# red, green, and blue components have in the
+# output color, and d is a constant base
+# value for the output.
+#
+# Below are some sample filters, which should
+# make everything more clear.
+#
+
+# Default filter as of 1.0.3
+set red   195  25   0  35
+set green  25 170  25  35
+set blue   25  60 125  40
+
+# Do-nothing filer
+set red   256   0   0   0
+set green   0 256   0   0
+set blue    0   0 256   0
+
+# Lighten the display uniformly
+set red   128   0   0 128
+set green   0 128   0 128
+set blue    0   0 128 128
+
+# Grayscale
+set red    85  85  85   0
+set green  85  85  85   0
+set blue   85  85  85   0
+

@@ -1,0 +1,81 @@
+
+GNUBOY INSTALLATION
+
+
+  *NIX SYSTEMS
+
+One or more of the following is required to compile on *nix: X, SDL,
+svgalib, or Linux fbcon. Since basically everyone has X, this should
+not be a problem. Please note that the SDL and fbcon ports are the
+most functional, however. In the future, Sun console may also be
+supported.
+
+The best and easiest way to build gnuboy for *nix is with the
+configure script:
+
+  ./configure
+  make
+  make install
+
+By default, heavy optimization and asm cpu and graphics cores will be
+used if available on your platform. For information on compiletime
+options related to performance and debugging, type:
+
+  ./configure --help
+
+Alternatively, if you don't like the GNU configure script, you may
+copy the Makefile.nix to Makefile and edit it by hand to work with
+your system. Make sure you uncomment -DIS_LITTLE_ENDIAN if your cpu is
+little endian. Please note that not everything is supported when
+compiling this way, and that it should only be done as a last resort.
+The generic Makefile.nix may be removed in the future since it's extra
+work to maintain.
+
+Running make should produce the binaries xgnuboy, fbgnuboy, sgnuboy
+and/or sdlgnuboy, depending on the availability of the various
+interface libraries on your host.  The install target will install
+these to $(prefix)/bin, where prefix is specified to configure in the
+usual way. The default prefix is of course /usr/local/.
+
+Binary packages may be available for some platforms, but they are
+usually not quite up to date, and are not built or supported by the
+gnuboy team.
+
+Binary package maintainers should be aware that, by default, gnuboy
+will be built with optimizations specific to the exact host cpu it's
+being compiled on, and may not work on older models. If you want your
+binaries to work with older systems too, run configure with the
+--disable-arch option to disable architecture specific compiler flags.
+
+
+  WINDOWS
+
+Mingw32 and the SDL development files are required to compile gnuboy
+for Windows. They may be obtained from www.mingw.org and
+www.libsdl.org, respectively.
+
+Just copy Makefile.mingw32 to Makefile and run make. When done, put
+the resulting gnuboy.exe wherever you wish to install it.
+
+Precompiled binaries are also available for Windows; check the site
+from which you obtained gnuboy to see if it provides copies.
+
+
+  DOS
+
+You'll need djgpp to use the included Makefile. Theoretically it
+shouldn't be hard to port the dos-specific modules to work with other
+compilers, but I see no reason why it should be necessary.
+
+Since all DOS systems are basically alike, just copy Makefile.dos to
+Makefile and type "make" to compile gnuboy. No configuration should be
+necessary. If you do have build problems, let us know.
+
+After compiling, place gnuboy.exe wherever you want.
+
+Precompiled binaries are also available for DOS; check the site from
+which you obtained gnuboy to see if it provides copies.
+
+
+
+

@@ -36,29 +36,30 @@ OBJFILES := $(patsubst %.cpp,%.cpp.o,$(CPPFILES)) $(patsubst %.asm,%.asm.o,$(ASM
 all: $(ARCH)
 
 x86_64: $(OBJFILES)
-	@x86_64-elf-g++ -m64 -T linkscript-x86_64.ld -o bin/$(ARCH)/kernel.sys $(CFLAGS) obj/$(ARCH)/*.asm.o obj/$(ARCH)/*.c.o obj/$(ARCH)/*.cpp.o -lgcc
+	@x86_64-elf-g++ -m64 -T linkscript-x86_64.ld -o bin/$(ARCH)/kernel.sys $(CFLAGS) obj/$(ARCH)/*.asm.o obj/$(ARCH)/*.c.o obj/$(ARCH)/*.cpp.o obj/$(ARCH)/initrd.o -lgcc
 
 x86: $(OBJFILES)
 	@i686-lemon-g++ -T linkscript-x86.ld -o bin/$(ARCH)/kernel.sys $(CFLAGS) obj/$(ARCH)/*.asm.o obj/$(ARCH)/*.c.o obj/$(ARCH)/*.cpp.o -lgcc
 
 initrd:
 	@cd ../Applications/Init && ./build.sh && cp init.lef ../../InitrdWriter/Contents
-	@cd ../Applications/FileManager && ./build.sh && cp fm.lef ../../InitrdWriter/Contents
-	@cd ../Applications/Snake && ./build.sh && cp snake.lef ../../InitrdWriter/Contents
-	@cd ../Applications/Shell && ./build.sh && cp shell.lef ../../InitrdWriter/Contents
-	@cd ../Applications/TextEditor && ./build.sh && cp texteditor.lef ../../InitrdWriter/Contents
-	@cd ../Applications/TerminalEmulator && ./build.sh && cp terminal.lef ../../InitrdWriter/Contents
-	@cd ../Applications/SystemInfo && ./build.sh && cp sysinfo.lef ../../InitrdWriter/Contents
-	@cd ../Applications/CHIP8Emu && ./build.sh && cp c8emu.lef ../../InitrdWriter/Contents
-	@cd ../Applications/Draw && ./build.sh && cp draw.lef ../../InitrdWriter/Contents
-	@cd ../Applications/Taskbar && ./build.sh && cp taskbar.lef ../../InitrdWriter/Contents
-	@cd ../Applications/Solitaire && ./build.sh && cp solitaire.lef ../../InitrdWriter/Contents
-	@cd ../Applications/ImageViewer && ./build.sh && cp imgview.lef ../../InitrdWriter/Contents
-	@cd ../Applications/GUITest && ./build.sh && cp guitest.lef ../../InitrdWriter/Contents
-	@make -C ../Applications/Gnuboy lemongnuboy && cp ../Applications/Gnuboy/lemongnuboy ../InitrdWriter/Contents
+	#@cd ../Applications/FileManager && ./build.sh && cp fm.lef ../../InitrdWriter/Contents
+	#@cd ../Applications/Snake && ./build.sh && cp snake.lef ../../InitrdWriter/Contents
+	#@cd ../Applications/Shell && ./build.sh && cp shell.lef ../../InitrdWriter/Contents
+	#@cd ../Applications/TextEditor && ./build.sh && cp texteditor.lef ../../InitrdWriter/Contents
+	#@cd ../Applications/TerminalEmulator && ./build.sh && cp terminal.lef ../../InitrdWriter/Contents
+	#@cd ../Applications/SystemInfo && ./build.sh && cp sysinfo.lef ../../InitrdWriter/Contents
+	#@cd ../Applications/CHIP8Emu && ./build.sh && cp c8emu.lef ../../InitrdWriter/Contents
+	#@cd ../Applications/Draw && ./build.sh && cp draw.lef ../../InitrdWriter/Contents
+	#@cd ../Applications/Taskbar && ./build.sh && cp taskbar.lef ../../InitrdWriter/Contents
+	#@cd ../Applications/Solitaire && ./build.sh && cp solitaire.lef ../../InitrdWriter/Contents
+	#@cd ../Applications/ImageViewer && ./build.sh && cp imgview.lef ../../InitrdWriter/Contents
+	#@cd ../Applications/GUITest && ./build.sh && cp guitest.lef ../../InitrdWriter/Contents
+	#@make -C ../Applications/Gnuboy lemongnuboy && cp ../Applications/Gnuboy/lemongnuboy ../InitrdWriter/Contents
 	
-	@cd ../InitrdWriter && rm initrd.img && ./copy.sh
-	@cp ../InitrdWriter/initrd.img ../initrd.img
+	@cd ../InitrdWriter && rm initrd-$(ARCH).img && ./copy.sh
+	@cp ../InitrdWriter/initrd-$(ARCH).img ../initrd.img
+	@cd .. && ./convertinitrd.sh
 
 copy:
 	@cd .. && sudo ./copytodisk.sh

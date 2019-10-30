@@ -27,7 +27,7 @@ namespace Timer{
             uptime++;
             ticks -= frequency;
         }
-        //Scheduler::Tick();
+        Scheduler::Tick();
     }
 
     // Initialize

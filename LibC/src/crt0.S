@@ -4,26 +4,26 @@
 
 .global _start
 _start:
-    mov $0, %ebp
-	push %ebp
-	push %ebp 
-	mov %esp, %ebp
+    mov $0, %rbp
+	push %rbp
+	push %rbp 
+	mov %rsp, %rbp
 
 	call liballoc_init
 
 	# Argc and Argv
-	push %esi
-	push %edi
+	push %rsi
+	push %rdi
 
 	call _init
 
-	pop %edi
-	pop %esi
+	pop %rdi
+	pop %rsi
 
 	# Run main
 	call main
 
-	mov $0, %eax # SYS_EXIT
+	mov $1, %rax # SYS_EXIT
 	int $0x69
 
 	hang: hlt

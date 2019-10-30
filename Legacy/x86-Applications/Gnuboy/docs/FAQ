@@ -1,0 +1,90 @@
+
+GNUBOY FREQUENTLY ASKED QUESTIONS
+
+
+Q: How do I configure gnuboy?
+
+A: You can specify various options to gnuboy by means of "rcvars",
+either on the command line or in your gnuboy.rc file. To set rcvars
+from the command line, just use --varname=value, or --no-varname to
+turn off yes/no options. If you wish to use a gnuboy.rc file, create
+it with any text editor and save it in ~/.gnuboy (for *nix systems) or
+the same directory as gnuboy.exe (for DOS/Windows systems). In this
+file you can set rcvars with lines of the form "set varname value".
+See the sample.rc file included for examples.
+
+
+Q: Are you planning to add serial cable (gamelink) emulation?
+
+A: Yes, read the wishlist in the README. At this time we don't have
+all the technical information to emulate it 100% correctly, so if you
+think you can help us find the info, get in touch.
+
+
+Q: gnuboy is too slow. How can I make it run faster?
+
+A: You can try turning the sampling rate for sound down (for example,
+--samplerate=22050) or disabling sound entirely (--no-sound). Also,
+running at 8bpp with --rgb565 enabled will result in the highest video
+performance at the expense of some color quality. Of course, gnuboy is
+very fast, and shouldn't need any performance tweaks as long as your
+system is at least as fast as a Pentium/120.
+
+
+Q: Why did the keybindings change in 1.0?
+
+A: Even though lots of emulators do it, we figured it wasn't a very
+good idea to use modifier keys for the controls, since some systems
+may be configured to trap these for other uses. This especially became
+a problem after adding support for Alt+Enter to toggle fullscreen. If
+you want to go back to the old bindings and don't want to configure
+them yourself, you can find all the old settings (including the old
+default palette) in classic.rc. Just copy and paste to your gnuboy.rc.
+
+
+Q: Will gnuboy ever support recording and playback?
+
+A: We get this question fairly often, and I'm never sure how to answer
+it. We are planning to support recording audio output before too
+terribly long, but whether full demo recording and playback will ever
+be supported is uncertain. We'll keep it in mind for the future,
+though.
+
+
+Q: Why doesn't gnuboy do anything when I run it?
+
+A: You need to specify the name of the ROM to load on the command
+line. One way to do this on Windows is to drag the ROM file onto
+gnuboy.exe (or a shortcut to it). Associating *.gb and *.gbc with
+gnuboy also works. Of course, you can also just use the run command on
+the start menu, or open a dos prompt. Unix users of course are
+expected to know how to run programs.
+
+
+Q: gnuboy doesn't run on WinNT/2k!!
+
+A: Set the following environment variables before running:
+    SDL_VIDEODRIVER=windib
+    SDL_AUDIODRIVER=waveout
+Doing so should fix problems with other SDL programs too. If it still
+doesn't work, let us know. Your milage may vary; some people have
+reported that this doesn't help.
+
+
+Q: Why is sound pitch off by about 1% in gnuboy?
+
+A: You have a very good ear. It's a rounding issue that won't be
+outright fixed for a while. If you want a workaround, set the sample
+rate to a power of two (for example 32768 works well) on the command
+line or in your gnuboy.rc.
+
+
+Q: Why does sound have ugly static noise on Windows?
+
+A: This is a bug in SDL's DirectSound support. Try setting the
+environment variable:
+    SDL_AUDIODRIVER=waveout
+before running gnuboy. Hopefully this won't cause any problems.
+
+
+
