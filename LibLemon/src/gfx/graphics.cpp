@@ -1,11 +1,17 @@
 #include <gfx/graphics.h>
 
-#include <core/syscall.h>
+#include <lemon/syscall.h>
+#include <lemon/fb.h>
+
 #include <string.h>
+#include <stdlib.h>
 
 extern "C" void memcpy_sse2(void* dest, void* src, size_t count);
 extern "C" void memcpy_sse2_unaligned(void* dest, void* src, size_t count);
-extern "C" void memset_sse2(void* dest, uint32_t c, uint32_t count);
+extern "C" void memset32_sse2(void* dest, uint32_t c, uint64_t count);
+extern "C" void memset64_sse2(void* dest, uint64_t c, uint64_t count);
+
+#ifdef Lemon32
 void memcpy_optimized(void* dest, void* src, size_t count) {
 	//if(((size_t)dest % 0x10) || ((size_t)src % 0x10)) memcpy(dest, src, count); 
 
@@ -43,6 +49,60 @@ void memset32_optimized(void* dest, uint32_t c, size_t count) {
             dest+=sizeof(uint32_t);
         }
 }
+#else
+void memset32_optimized(void* dest, uint32_t c, size_t count) {
+	{//if(((size_t)dest % 0x10)){
+        while(count--){
+            *((uint32_t*)dest) = c;
+            dest+=sizeof(uint32_t);
+        }
+        return;
+    }
+
+	size_t overflow = (count % 0x4); // Amount of overflow bytes
+	size_t size_aligned = (count - overflow); // Size rounded DOWN to lowest multiple of 128 bits
+
+	memset32_sse2(dest, c, size_aligned/0x4);
+
+    while(overflow--){
+            *((uint32_t*)dest) = c;
+            dest+=sizeof(uint32_t);
+        }
+}
+
+void memset64_optimized(void* dest, uint64_t c, size_t count) {
+	if(((size_t)dest % 0x10)){
+        while(count--){
+            *((uint64_t*)dest) = c;
+            dest+=sizeof(uint64_t);
+        }
+        return;
+    }
+
+	size_t overflow = (count % 0x8); // Amount of overflow bytes
+	size_t size_aligned = (count - overflow); // Size rounded DOWN to lowest multiple of 128 bits
+
+	memset64_sse2(dest, c, size_aligned/0x8);
+
+    while(overflow--){
+            *((uint64_t*)dest) = c;
+            dest+=sizeof(uint64_t);
+        }
+}
+#endif
+
+surface_t* CreateFramebufferSurface(fb_info_t fbInfo, void* address){
+    surface_t* surface = (surface_t*)malloc(sizeof(surface_t));
+    surface->x = surface->y = 0;
+    surface->width = fbInfo.width;
+    surface->height = fbInfo.height;
+    surface->depth = fbInfo.bpp;
+    surface->pitch = fbInfo.pitch;
+
+    surface->buffer = (uint8_t*)address;
+
+    return surface;
+}
 
 int floor(double num) {
 	int x = (int)num;
@@ -72,7 +132,7 @@ void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface){
 
 video_mode_t GetVideoMode(){
     video_mode_t v;
-    syscall(SYS_GETVIDEOMODE, (uint32_t)&v, 0, 0, 0, 0);
+    //syscall(SYS_GETVIDEOMODE, (uint32_t)&v, 0, 0, 0, 0);
     return v;
 }
 
@@ -88,31 +148,6 @@ void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t
     }
     
     uint32_t colour_i = (r << 16) | (g << 8) | b;
-    uint32_t* buffer = (uint32_t*)surface->buffer; // Convert byte array into an array of 32-bit unsigned integers as the supported colour depth is 32 bit
-    for(int i = 0; i < height && (i + y) < surface->height; i++){
-        int yOffset = (i + y) * (surface->width );//+ surface->linePadding / 4 /*Padding should always be divisible by 4*/);
-        /*for(int j = 0; j < width && (x + j) < surface->width;){
-            {
-                buffer[yOffset + (j + x)] = colour_i;
-                j++;
-            }
-        }*/
-        memset32_optimized((void*)(buffer + yOffset + x), colour_i, ((x + width) < surface->width) ? width : (surface->width - x));
-    }
-}
-
-void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface){
-    if(x < 0){
-        width += x;
-        x = 0;
-    }
-
-    if(y < 0){
-        height += y;
-        y = 0;
-    }
-    
-    uint32_t colour_i = (colour.r << 16) | (colour.g << 8) | colour.b;
     uint64_t colour_l = (colour_i << 32) | colour_i;
     uint32_t* buffer = (uint32_t*)surface->buffer; // Convert byte array into an array of 32-bit unsigned integers as the supported colour depth is 32 bit
     for(int i = 0; i < height && (i + y) < surface->height; i++){
@@ -127,8 +162,13 @@ void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface
                 buffer[yOffset + (j + x)] = colour_i;
             }*/
         //}
-            memset32_optimized((void*)(buffer + yOffset + x), colour_i, ((x + width) < surface->width) ? width : (surface->width - x));
+            
+        memset32_optimized((void*)(buffer + yOffset + x), colour_i, ((x + width) < surface->width) ? width : (surface->width - x));
     }
+}
+
+void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface){
+    DrawRect(x,y,width,height,colour.r,colour.g,colour.b,surface);
 }
 
 void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface) {
@@ -196,7 +236,7 @@ void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset){
 		/*for(int j = 0; j < src->width && j < dest->width - offset.x; j++){
 			destBuffer[(i+offset.y)*dest->width + j + offset.x] = srcBuffer[i*src->width + j];
 		}*/
-        memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4 + dest->linePadding) + offset.x*4), src->buffer + i*src->width*4, src->width*4);
+        //memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4 + dest->linePadding) + offset.x*4), src->buffer + i*src->width*4, src->width*4);
 	}
 }
 

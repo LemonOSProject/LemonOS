@@ -1,11 +1,11 @@
 #include <stdio.h>
 
 #include <stdarg.h>
-#include <core/syscall.h>
+#include <lemon/syscall.h>
 
-int printf(const char* fmt, ...){
+/*int printf(const char* fmt, ...){
 
-}
+}*/
 
 int sprintf(char* str, const char* fmt, ...){
 

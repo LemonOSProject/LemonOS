@@ -50,11 +50,13 @@ typedef struct process {
 
 	//List<elf32_program_header_t> programHeaders;
 
-	//List<fs_node_t*> fileDescriptors;
+	List<fs_node_t*> fileDescriptors;
 	//List<message_t> messageQueue;
 } process_t;
 
 namespace Scheduler{
+	extern process_t* currentProcess;
+
     uint64_t CreateProcess(void* entry);
     uint64_t LoadELF(void* entry);
 

@@ -59,12 +59,17 @@ namespace Log{
 		Write(str);
     }
 
-    void Error(unsigned long long num){
+    void Error(unsigned long long num, bool hex){
 		Write("\r\n");
 		Write("[");
 		Write("ERROR", 255, 0, 0);
-		Write("]   ");
-		//Write(str);
+		Write("]   ");char buf[32];
+		if(hex){
+			buf[0] = '0';
+			buf[1] = 'x';
+		}
+		itoa(num, (char*)(buf + (hex ? 2 : 0)), hex ? 16 : 10);
+		Write(buf);
     }
 
     void Info(const char* str){

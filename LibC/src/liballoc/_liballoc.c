@@ -1,4 +1,4 @@
-#include <core/syscall.h>
+#include <lemon/syscall.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -21,7 +21,7 @@ int liballoc_unlock() {
 
 void* liballoc_alloc(int pages) {
 	void* addr;
-	syscall(SYS_MEMALLOC, pages, (uint32_t)&addr, 0, 0, 0);
+	syscall(SYS_ALLOC, pages, &addr, 0, 0, 0);
 	return addr;
 }
 

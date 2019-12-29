@@ -24,4 +24,6 @@ typedef void(*isr_t)(regs64_t*);
 namespace IDT{
 	void Initialize();
 	void RegisterInterruptHandler(uint8_t interrupt, isr_t handler);
+	
+	int GetErrCode();
 }

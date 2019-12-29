@@ -121,7 +121,7 @@ entry:
   or eax, 3 ; Present, Write
   mov dword [kernel_pml4], eax
 
-  mov eax, kernel_pdpt2 ; Seconds PDPT
+  mov eax, kernel_pdpt2 ; Second PDPT
   or eax, 3
   mov dword [kernel_pml4 + KERNEL_BASE_PML4_INDEX * 8], eax
 

@@ -14,8 +14,9 @@
 uintptr_t processBase;
 uintptr_t processStack;
 uintptr_t processEntryPoint;
+uint64_t processPML4;
 
-uint32_t kernel_stack;
+uint64_t kernel_stack;
 
 bool schedulerLock = true;
 
@@ -26,7 +27,6 @@ uintptr_t ReadRIP();
 
 extern "C"
 void IdleProc();
-
 
 namespace Scheduler{
     bool schedulerLock = true;
@@ -42,15 +42,14 @@ namespace Scheduler{
         schedulerLock = true;
         //handles = new List<handle_index_t>();
         CreateProcess((void*)IdleProc);
-        //currentProcess->pageDirectory.page_directory_phys = Memory::GetKernelPageDirectory();
         processEntryPoint = currentProcess->threads[0].registers.rip;
         processStack = currentProcess->threads[0].registers.rsp;
         processBase = currentProcess->threads[0].registers.rbp;
-        //processPageDirectory = currentProcess->pageDirectory.page_directory_phys;
+        processPML4 = currentProcess->addressSpace->pml4Phys;
         asm("cli");
         Log::Write("OK");
-        schedulerLock = false;
         Memory::ChangeAddressSpace(currentProcess->addressSpace);
+        schedulerLock = false;
         TaskSwitch();
         for(;;);
     }
@@ -145,10 +144,12 @@ namespace Scheduler{
 
         memset(proc,0,sizeof(process_t));
 
+        proc->fileDescriptors.clear();
+
         // Reserve 3 file descriptors for when stdin, out and err are implemented
-        //proc->fileDescriptors.add_back(NULL);
-        //proc->fileDescriptors.add_back(NULL);
-        //proc->fileDescriptors.add_back(NULL);
+        proc->fileDescriptors.add_back(NULL);
+        proc->fileDescriptors.add_back(NULL);
+        proc->fileDescriptors.add_back(NULL);
 
         proc->pid = nextPID++; // Set Process ID to the next availiable
         proc->priority = 1;
@@ -199,10 +200,12 @@ namespace Scheduler{
 
         memset(proc,0,sizeof(process_t));
 
+        proc->fileDescriptors.clear();
+
         // Reserve 3 file descriptors for when stdin, out and err are implemented
-        //proc->fileDescriptors.add_back(NULL);
-        //proc->fileDescriptors.add_back(NULL);
-        //proc->fileDescriptors.add_back(NULL);
+        proc->fileDescriptors.add_back(NULL);
+        proc->fileDescriptors.add_back(NULL);
+        proc->fileDescriptors.add_back(NULL);
 
         proc->pid = nextPID++; // Set Process ID to the next availiable
         proc->priority = 1;
@@ -227,35 +230,41 @@ namespace Scheduler{
         //registers->eflags = 0x200;
 
         elf64_header_t elfHdr = *(elf64_header_t*)elf;
+        asm("cli");
+
+        Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),0,1,proc->addressSpace);
 
         for(int i = 0; i < elfHdr.phNum; i++){
             elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
 
-            if(elfPHdr.memSize <= 0) continue;
-
-            //proc->programHeaders.add_back(elfPHdr);
+            if(elfPHdr.memSize == 0) continue;
 
             Memory::ChangeAddressSpace(proc->addressSpace); // Switch to kernel page directory so we don't interfere with the current process's address space
-            for(int i = 0; i < ((elfPHdr.memSize / PAGE_SIZE_4K) + 2); i++){
-                uint32_t phys = Memory::AllocatePhysicalMemoryBlock();
-                //Memory::MapVirtualMemory4K(phys,elfPHdr.vaddr + i * PAGE_SIZE_4K, 1/*, currentProcess->pageDirectory*/);
-                Memory::MapVirtualMemory4K(phys,elfPHdr.vaddr + i * PAGE_SIZE_4K, 1/*, proc->addressSpace*/);
+            for(int i = 0; i < ((elfPHdr.memSize / PAGE_SIZE_4K) + 1); i++){
+                uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
+                Memory::MapVirtualMemory4K(phys,elfPHdr.vaddr + i * PAGE_SIZE_4K, 1, proc->addressSpace);
             }
+
             if (elfPHdr.memSize > 0){
-                Log::Info("Elf section address 0x");
+                Log::Info("Elf section address");
                 Log::Info(elfPHdr.vaddr);
-                Log::Info("Elf section size ");
+                Log::Info("Elf section size");
                 Log::Info(elfPHdr.memSize);
             
+                asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
+
                 memset((void*)elfPHdr.vaddr,0,elfPHdr.memSize);
-                memcpy((void*)elfPHdr.vaddr,(void*)(elf + elfPHdr.offset),elfPHdr.fileSize);;
+                memcpy((void*)elfPHdr.vaddr,(void*)(elf + elfPHdr.offset),elfPHdr.fileSize);
+
+                asm volatile("mov %%rax, %%cr3" :: "a"(currentProcess->addressSpace->pml4Phys));
             }
 
             Memory::ChangeAddressSpace(currentProcess->addressSpace);
-
         }
+            Log::Info(elfHdr.entry);
+            Log::Write(" entry");
 
-
+        asm("sti");
         void* stack = (void*)Memory::KernelAllocate4KPages(4);
         for(int i = 0; i < 4; i++){
             Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)stack + PAGE_SIZE_4K * i, 1);
@@ -304,7 +313,7 @@ namespace Scheduler{
     void Tick(){
         if(currentProcess->timeSlice > 0) {
             currentProcess->timeSlice--;
-            //return;
+            return;
         }
         if(schedulerLock) return;
 
@@ -330,8 +339,12 @@ namespace Scheduler{
         processEntryPoint = currentProcess->threads[0].registers.rip;
         processStack = currentProcess->threads[0].registers.rsp;
         processBase = currentProcess->threads[0].registers.rbp;
+        processPML4 = currentProcess->addressSpace->pml4Phys;
+
         asm("cli");
-        Memory::ChangeAddressSpace(currentProcess->addressSpace);
+        
         TaskSwitch();
+        
+        for(;;);
     }
 }

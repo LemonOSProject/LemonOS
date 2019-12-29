@@ -4,7 +4,9 @@ cd "%~dp0%"
 
 del mount.cfg
 
-echo sel vdisk file="%~dp0%..\Disks\Lemon.vhd" > mount.cfg
+cd ..
+echo sel vdisk file="%cd%\Disks\Lemon.vhd" > build-win\mount.cfg
+cd "%~dp0%"
 echo detach vdisk >> mount.cfg
 
 DiskPart /s "%~dp0%mount.cfg"

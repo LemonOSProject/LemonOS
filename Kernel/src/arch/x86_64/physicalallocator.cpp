@@ -4,6 +4,7 @@
 #include <serial.h>
 #include <string.h>
 #include <logging.h>
+#include <panic.h>
 
 extern void* kernel_end;
 
@@ -32,7 +33,7 @@ namespace Memory{
         }
         Log::Info("test");
         maxPhysicalBlocks = mem_info->memory_high * 1024 / PHYSALLOC_BLOCK_SIZE;
-        MarkMemoryRegionUsed(0, 6144*4096/*(uint32_t)&kernel_end*/);
+        MarkMemoryRegionUsed(0, 8192*4096/*(uint32_t)&kernel_end*/);
     }
 
     // Sets a bit in the physical memory bitmap
@@ -77,8 +78,12 @@ namespace Memory{
     // Allocates a block of physical memory
     uint64_t AllocatePhysicalMemoryBlock() {
         uint64_t index = GetFirstFreeMemoryBlock();
-        if (index == 0)
-            return 0;
+        if (index == 0){
+            Log::Error("Out of memory!");
+            KernelPanic((const char**)(&"Out of memory!"),1);
+            for(;;);
+            //return 0;
+        }
 
         bit_set(index);
         usedPhysicalBlocks++;
@@ -87,9 +92,9 @@ namespace Memory{
     }
 
     // Allocates a block of 2MB physical memory
-    uint64_t AllocateLargePhysicalMemoryBlock() {
+    /*uint64_t AllocateLargePhysicalMemoryBlock() {
         uint64_t index = GetFirstFreeMemoryBlock();
-        uint64_t blockCount = 0x200000 /* 2MB */ / PHYSALLOC_BLOCK_SIZE;
+        uint64_t blockCount = 0x200000 /* 2MB * / / PHYSALLOC_BLOCK_SIZE;
         uint64_t counter = 0;
         while(counter < blockCount){
             if(bit_test(index)){
@@ -112,7 +117,7 @@ namespace Memory{
         usedPhysicalBlocks += counter;
 
         return addr;
-    }
+    }*/
 
     // Frees a block of physical memory
     void FreePhysicalMemoryBlock(uint64_t addr) {

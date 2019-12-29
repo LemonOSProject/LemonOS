@@ -21,21 +21,22 @@ endif
 
 ifeq ($(ARCH),x86_64)
 CFLAGS=$(CFLAGS-x86_64)
+ASFLAGS=$(ASFLAGS-x86_64)
 endif
-
-.PHONY: all copy initrd
 
 all: $(ARCH)
 
 x86_64: $(OBJFILES)
 	@echo $(OBJFILES)
 	@ar rcs bin/libc.a obj/*
-	@cp obj/crt0.o bin/crt0.o
+	@ranlib bin/libc.a
+	@cp bin/libc.a ../FakeSysroot/usr/lib/libc.a
+	#@cp obj/crt0.o bin/crt0.o
 	@cp bin/crt0.o ../FakeSysroot/usr/lib/crt0.o
-	@cp obj/crt0.o bin/crti.o
-	@cp bin/crt0.o ../FakeSysroot/usr/lib/crti.o
-	@cp obj/crt0.o bin/crtn.o
-	@cp bin/crt0.o ../FakeSysroot/usr/lib/crtn.o
+	#@cp obj/crti.o bin/crti.o
+	@cp bin/crti.o ../FakeSysroot/usr/lib/crti.o
+	#@cp obj/crtn.o bin/crtn.o
+	@cp bin/crtn.o ../FakeSysroot/usr/lib/crtn.o
 	@rm -rf ../FakeSysroot/usr/include
 	@cp -r include ../FakeSysroot/usr/
 
@@ -45,7 +46,8 @@ x86_64: $(OBJFILES)
 
 %.o: %.S
 	@echo Assembling $<
-	@x86_64-lemon-gcc $(CFLAGS) -c $< -o obj/$(shell basename $@);
+	@x86_64-lemon-gcc $(CFLAGS) -c $< -o bin/$(shell basename $@); 
+	##obj/$(shell basename $@);
 
 %.asm.o: %.asm
 	@echo Assembling $<

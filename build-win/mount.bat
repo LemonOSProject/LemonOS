@@ -4,7 +4,10 @@ cd "%~dp0%"
 
 del mount.cfg
 
-echo sel vdisk file="%~dp0%..\Disks\Lemon.vhd" > mount.cfg
+cd ..
+echo %cd%\Disks\Lemon.vhd
+echo sel vdisk file="%cd%\Disks\Lemon.vhd" > build-win\mount.cfg
+cd "%~dp0%"
 echo attach vdisk >> mount.cfg
 echo assign letter=X >> mount.cfg
 

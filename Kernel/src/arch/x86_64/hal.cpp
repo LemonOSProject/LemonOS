@@ -31,10 +31,6 @@ namespace HAL{
         Memory::InitializeVirtualMemory();
         Log::Info(mb_info.mmapAddr);
 
-        // Allocate virtual memory for memory map
-        //uint64_t mmap_virt = (uint64_t)Memory::KernelAllocate4KPages(mb_info.mmapLength / PAGE_SIZE_4K + 1);
-        // Get Memory Map
-        //Memory::KernelMapVirtualMemory4K(mb_info.mmapAddr, mmap_virt, mb_info.mmapLength / PAGE_SIZE_4K + 1);
         multiboot_memory_map_t* memory_map = (multiboot_memory_map_t*)(mb_info.mmapAddr + KERNEL_VIRTUAL_BASE);
 
         // Initialize Memory Info Structure to pass to Physical Memory Allocator
@@ -50,8 +46,6 @@ namespace HAL{
 
         uint64_t mbModsVirt = (uint64_t)Memory::KernelAllocate4KPages(1);
         Memory::KernelMapVirtualMemory4K(multibootInfo.modsAddr, mbModsVirt, 1);
-        Log::Info(multibootInfo.modsAddr);
-        Log::Info("mod addr");
 
         multibootModulesAddress = mbModsVirt;
 
@@ -92,9 +86,6 @@ namespace HAL{
     }
 
     void InitExtra(){
-        // Intialize Keyboard
-
-        // Initalize Mouse
     }
 
     void Init(multiboot_info_t mb_info){

@@ -115,6 +115,7 @@ void isr0x69();
 extern "C"
 void idt_flush();
 
+	int errCode = 0;
 namespace IDT{
 	static void SetGate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags) {
 		idt[num].base_high = (base >> 32);
@@ -209,12 +210,19 @@ namespace IDT{
 	void RegisterInterruptHandler(uint8_t interrupt, isr_t handler) {
 		interrupt_handlers[interrupt] = handler;
 	}
+	int GetErrCode(){
+		return errCode;
+	}
 }
 
 extern "C"
 	void isr_handler(int int_num, regs64_t* regs, int err_code) {
+		Log::Info("Error code:");
+		Log::Info(err_code);
+		errCode = err_code;
 		if (interrupt_handlers[int_num] != 0) {
 			interrupt_handlers[int_num](regs);
+			Log::Info(int_num);
 		} else if(int_num == 0x69){
 			Log::Warning("\r\nEarly syscall");
 		}
@@ -223,9 +231,9 @@ extern "C"
 			Log::Info(int_num);
 			Log::Info(regs->r15);
 			Log::Info("EIP: ");
-			Log::Error(regs->rip);
-			Log::Error("Error Code: ");
-			Log::Error(err_code);
+			Log::Info(regs->rip);
+			Log::Info("Error Code: ");
+			Log::Info(err_code);
 			for (;;);
 		}
 	}

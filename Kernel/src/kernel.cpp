@@ -19,11 +19,13 @@
 #endif
 
 void* initElf;
+
+void test();
+
 extern "C"
 void IdleProcess(){
 	asm("sti");
 	Log::Info("Loading Init Process...");
-	Log::SetVideoConsole(NULL);
 	fs_node_t* initFsNode = fs::FindDir(Initrd::GetRoot(),"init.lef");
 	if(!initFsNode){
 		const char* panicReasons[]{
@@ -36,9 +38,15 @@ void IdleProcess(){
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 	//#ifdef Lemon32
 	Scheduler::LoadELF(initElf);
-	//#endif
+	//#endif*/
 	Log::Write("OK");
 	for(;;){
+	}
+}
+
+void test(){
+	for(;;){
+		Log::Warning("rtest");
 	}
 }
 
@@ -53,9 +61,6 @@ void kmain(multiboot_info_t* mb_info){
 
 	video_mode_t videoMode = Video::GetVideoMode();
 
-	//VideoConsole con = VideoConsole(0,0,videoMode.width,videoMode.height);
-
-	//Log::SetVideoConsole(&con);
 	Log::SetVideoConsole(NULL);
 
 	Video::DrawRect(0, 0, videoMode.width, videoMode.height, 0, 0, 0);
@@ -83,7 +88,7 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Info(HAL::multibootInfo.modsCount, false);
 
 	Log::Info("Initializing Ramdisk...");
-	Initrd::Initialize(/*initrdModule.mod_start*/initrd_start,initrd_end - initrd_start); // Initialize Initrd
+	Initrd::Initialize(initrd_start,initrd_end - initrd_start); // Initialize Initrd
 	Log::Write("OK");
 	
 	Log::Info("Ramdisk Contents:\n");
@@ -131,7 +136,6 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Write("OK");
 
 	Log::Info("Initializing Task Scheduler...");
-	
 	Scheduler::Initialize();
 	for(;;);
 }

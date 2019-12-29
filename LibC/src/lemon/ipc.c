@@ -1,5 +1,5 @@
-#include <core/syscall.h>
-#include <core/ipc.h>
+#include <lemon/syscall.h>
+#include <lemon/ipc.h>
 /*
 uint32_t ReceiveMessage(ipc_message_t* msg){
 	uint32_t queue_size;

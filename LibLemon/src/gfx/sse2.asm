@@ -1,63 +1,64 @@
 global memcpy_sse2
-global memset_sse2
+global memset32_sse2
+global memset64_sse2
 global memcpy_sse2_unaligned
 
 memcpy_sse2:
 	;ret
-	push ebp    ; save the prior EBP value
-    mov ebp, esp
+	push rbp    ; save the prior rbp value
+    mov rbp, rsp
 
-	mov eax, [ebp + 8]
-	mov ebx, [ebp + 12]
-	mov ecx, [ebp + 16]
+	mov rax, rcx
+	mov rbx, rdx
+	mov rcx, r8
 .loop:
 
-	movdqa xmm0, [ebx]
+	movdqa xmm0, [rbx]
 
-	movdqa [eax], xmm0
+	movdqa [rax], xmm0
 
-	add eax, 0x10
-	add ebx, 0x10
+	add rax, 0x10
+	add rbx, 0x10
 	loop .loop
 
-	mov esp, ebp
-	pop ebp
+	mov rsp, rbp
+	pop rbp
 	ret
 
 memcpy_sse2_unaligned:
 	;ret
-	push ebp    ; save the prior EBP value
-    mov ebp, esp
+	push rbp    ; save the prior rbp value
+    mov rbp, rsp
 
-	mov eax, [ebp + 8]
-	mov ebx, [ebp + 12]
-	mov ecx, [ebp + 16]
+	mov rax, rcx
+	mov rbx, rdx
+	mov rcx, r8
 .loop:
 
-	movdqu xmm0, [ebx]
+	movdqu xmm0, [rbx]
 
-	movdqu [eax], xmm0
+	movdqu [rax], xmm0
 
-	add eax, 0x10
-	add ebx, 0x10
+	add rax, 0x10
+	add rbx, 0x10
 	loop .loop
 
-	mov esp, ebp
-	pop ebp
+	mov rsp, rbp
+	pop rbp
 	ret
 
-memset_sse2:
-	push ebp    ; save the prior EBP value
-    mov ebp, esp
+memset32_sse2:
+	push rbp    ; save the prior rbp value
+    mov rbp, rsp
 
-	mov eax, [ebp + 8]
-	mov ebx, [ebp + 12]
-	mov ecx, [ebp + 16]
+	mov rax, rcx
+	mov rbx, rdx
+	mov rcx, r8
 
-	cmp ecx, 1
+	cmp rcx, 1
 	jle .ret ; Avoid 0s
 	
-	movd xmm1, ebx
+	movq xmm1, rbx
 	movdqa xmm0, [bigzero]
 
 	paddq xmm0, xmm1
@@ -69,14 +70,44 @@ memset_sse2:
 	paddq xmm0, xmm1
 
 .loop:
-	movdqa [eax], xmm0
-	add eax, 0x10
+	movdqa [rax], xmm0
+	add rax, 0x10
 	
 	loop .loop
 
 .ret:
-	mov esp, ebp
-	pop ebp
+	mov rsp, rbp
+	pop rbp
+
+	ret
+
+memset64_sse2:
+	push rbp    ; save the prior rbp value
+    mov rbp, rsp
+
+	mov rax, rcx
+	mov rbx, rdx
+	mov rcx, r8
+
+	cmp rcx, 1
+	jle .ret ; Avoid 0s
+	
+	movq xmm1, rbx
+	movdqa xmm0, [bigzero]
+
+	paddq xmm0, xmm1
+	pslldq xmm0, 8
+	paddq xmm0, xmm1
+
+.loop:
+	movdqa [rax], xmm0
+	add rax, 0x10
+	
+	loop .loop
+
+.ret:
+	mov rsp, rbp
+	pop rbp
 
 	ret
 

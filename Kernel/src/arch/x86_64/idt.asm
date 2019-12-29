@@ -49,14 +49,11 @@ idt_flush:
     ;add rsp, 8
     iretq
 
-test__:
-    ret
 
 %macro ISR_ERROR_CODE 1
 	global isr%1
 	isr%1:
         cli
-        call test__
         push qword [rsp+5*8]
         push qword [rsp+5*8]
         push qword [rsp+5*8]
@@ -75,7 +72,6 @@ test__:
 	global isr%1
 	isr%1:
 		cli
-        call test__
         pushaq
         mov rdi, %1
         mov rsi, rsp

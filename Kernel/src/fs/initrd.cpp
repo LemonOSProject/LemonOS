@@ -98,7 +98,7 @@ namespace Initrd{
 
 		if(offset > inode.size || offset + size > inode.size) return 0;
 
-		memcpy(buffer, (void*)(inode.offset + (uintptr_t)initrd_address + offset), size);
+		memcpy(buffer, (void*)((uintptr_t)inode.offset + (uintptr_t)initrd_address + offset), size);
 		return size;
 	}
 

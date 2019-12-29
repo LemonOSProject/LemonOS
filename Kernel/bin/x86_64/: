@@ -1,0 +1,95 @@
+ffffffff80105dc4:	41 5b                	pop    %r11
+ffffffff80105dc6:	41 5a                	pop    %r10
+ffffffff80105dc8:	41 59                	pop    %r9
+ffffffff80105dca:	41 58                	pop    %r8
+ffffffff80105dcc:	5d                   	pop    %rbp
+ffffffff80105dcd:	5f                   	pop    %rdi
+ffffffff80105dce:	5e                   	pop    %rsi
+ffffffff80105dcf:	5a                   	pop    %rdx
+ffffffff80105dd0:	59                   	pop    %rcx
+ffffffff80105dd1:	5b                   	pop    %rbx
+ffffffff80105dd2:	58                   	pop    %rax
+ffffffff80105dd3:	48 cf                	iretq  
+ffffffff80105dd5:	66 2e 0f 1f 84 00 00 	nopw   %cs:0x0(%rax,%rax,1)
+ffffffff80105ddc:	00 00 00 
+ffffffff80105ddf:	90                   	nop
+
+ffffffff80105de0 <ReadRIP>:
+ffffffff80105de0:	48 8b 04 24          	mov    (%rsp),%rax
+ffffffff80105de4:	c3                   	retq   
+
+ffffffff80105de5 <TaskSwitch>:
+ffffffff80105de5:	fa                   	cli    
+ffffffff80105de6:	48 8b 1c 25 40 b3 8f 	mov    0xffffffff808fb340,%rbx
+ffffffff80105ded:	80 
+ffffffff80105dee:	48 8b 24 25 38 b3 8f 	mov    0xffffffff808fb338,%rsp
+ffffffff80105df5:	80 
+ffffffff80105df6:	48 8b 2c 25 30 b3 8f 	mov    0xffffffff808fb330,%rbp
+ffffffff80105dfd:	80 
+ffffffff80105dfe:	48 8b 04 25 48 b3 8f 	mov    0xffffffff808fb348,%rax
+ffffffff80105e05:	80 
+ffffffff80105e06:	0f 22 d8             	mov    %rax,%cr3
+--
+ffffffff801202f3:	48 8b 05 66 b0 7d 00 	mov    0x7db066(%rip),%rax        # ffffffff808fb360 <_ZN9Scheduler14currentProcessE>
+ffffffff801202fa:	48 8b 40 73          	mov    0x73(%rax),%rax
+ffffffff801202fe:	48 89 05 2b b0 7d 00 	mov    %rax,0x7db02b(%rip)        # ffffffff808fb330 <processBase>
+ffffffff80120305:	48 8b 05 54 b0 7d 00 	mov    0x7db054(%rip),%rax        # ffffffff808fb360 <_ZN9Scheduler14currentProcessE>
+ffffffff8012030c:	48 8b 40 10          	mov    0x10(%rax),%rax
+ffffffff80120310:	48 8b 40 30          	mov    0x30(%rax),%rax
+ffffffff80120314:	48 89 05 2d b0 7d 00 	mov    %rax,0x7db02d(%rip)        # ffffffff808fb348 <processPML4>
+ffffffff8012031b:	fa                   	cli    
+ffffffff8012031c:	b9 ff 00 00 00       	mov    $0xff,%ecx
+ffffffff80120321:	ba ff 00 00 00       	mov    $0xff,%edx
+ffffffff80120326:	be ff 00 00 00       	mov    $0xff,%esi
+ffffffff8012032b:	48 c7 c7 ac 7c 12 80 	mov    $0xffffffff80127cac,%rdi
+ffffffff80120332:	e8 25 d5 ff ff       	callq  ffffffff8011d85c <_ZN3Log5WriteEPKchhh>
+ffffffff80120337:	48 8b 05 22 b0 7d 00 	mov    0x7db022(%rip),%rax        # ffffffff808fb360 <_ZN9Scheduler14currentProcessE>
+ffffffff8012033e:	48 8b 40 10          	mov    0x10(%rax),%rax
+ffffffff80120342:	48 89 c7             	mov    %rax,%rdi
+ffffffff80120345:	e8 0f f1 ff ff       	callq  ffffffff8011f459 <_ZN6Memory18ChangeAddressSpaceEP15address_space_t>
+ffffffff8012034a:	c6 05 68 80 00 00 00 	movb   $0x0,0x8068(%rip)        # ffffffff801283b9 <_ZN9Scheduler13schedulerLockE>
+ffffffff80120351:	48 c7 c7 af 7c 12 80 	mov    $0xffffffff80127caf,%rdi
+ffffffff80120358:	e8 4f d7 ff ff       	callq  ffffffff8011daac <_ZN3Log4InfoEPKc>
+ffffffff8012035d:	e8 83 5a fe ff       	callq  ffffffff80105de5 <TaskSwitch>
+ffffffff80120362:	eb fe                	jmp    ffffffff80120362 <_ZN9Scheduler10InitializeEv+0xcb>
+
+ffffffff80120364 <_ZN9Scheduler17GetCurrentProcessEv>:
+ffffffff80120364:	55                   	push   %rbp
+ffffffff80120365:	48 89 e5             	mov    %rsp,%rbp
+ffffffff80120368:	48 8b 05 f1 af 7d 00 	mov    0x7daff1(%rip),%rax        # ffffffff808fb360 <_ZN9Scheduler14currentProcessE>
+ffffffff8012036f:	5d                   	pop    %rbp
+ffffffff80120370:	c3                   	retq   
+
+ffffffff80120371 <_ZN9Scheduler16FindProcessByPIDEm>:
+--
+ffffffff80120be3:	48 8b 80 c3 00 00 00 	mov    0xc3(%rax),%rax
+ffffffff80120bea:	48 89 05 47 a7 7d 00 	mov    %rax,0x7da747(%rip)        # ffffffff808fb338 <processStack>
+ffffffff80120bf1:	48 8b 05 68 a7 7d 00 	mov    0x7da768(%rip),%rax        # ffffffff808fb360 <_ZN9Scheduler14currentProcessE>
+ffffffff80120bf8:	48 8b 40 73          	mov    0x73(%rax),%rax
+ffffffff80120bfc:	48 89 05 2d a7 7d 00 	mov    %rax,0x7da72d(%rip)        # ffffffff808fb330 <processBase>
+ffffffff80120c03:	48 8b 05 56 a7 7d 00 	mov    0x7da756(%rip),%rax        # ffffffff808fb360 <_ZN9Scheduler14currentProcessE>
+ffffffff80120c0a:	48 8b 40 10          	mov    0x10(%rax),%rax
+ffffffff80120c0e:	48 8b 40 30          	mov    0x30(%rax),%rax
+ffffffff80120c12:	48 89 05 2f a7 7d 00 	mov    %rax,0x7da72f(%rip)        # ffffffff808fb348 <processPML4>
+ffffffff80120c19:	fa                   	cli    
+ffffffff80120c1a:	48 8b 05 3f a7 7d 00 	mov    0x7da73f(%rip),%rax        # ffffffff808fb360 <_ZN9Scheduler14currentProcessE>
+ffffffff80120c21:	48 8b 40 10          	mov    0x10(%rax),%rax
+ffffffff80120c25:	48 89 c7             	mov    %rax,%rdi
+ffffffff80120c28:	e8 2c e8 ff ff       	callq  ffffffff8011f459 <_ZN6Memory18ChangeAddressSpaceEP15address_space_t>
+ffffffff80120c2d:	48 8b 05 2c a7 7d 00 	mov    0x7da72c(%rip),%rax        # ffffffff808fb360 <_ZN9Scheduler14currentProcessE>
+ffffffff80120c34:	48 8b 40 10          	mov    0x10(%rax),%rax
+ffffffff80120c38:	48 8b 40 30          	mov    0x30(%rax),%rax
+ffffffff80120c3c:	be 01 00 00 00       	mov    $0x1,%esi
+ffffffff80120c41:	48 89 c7             	mov    %rax,%rdi
+ffffffff80120c44:	e8 f9 ce ff ff       	callq  ffffffff8011db42 <_ZN3Log4InfoEyb>
+ffffffff80120c49:	e8 97 51 fe ff       	callq  ffffffff80105de5 <TaskSwitch>
+ffffffff80120c4e:	eb 04                	jmp    ffffffff80120c54 <_ZN9Scheduler4TickEv+0x174>
+ffffffff80120c50:	90                   	nop
+ffffffff80120c51:	eb 01                	jmp    ffffffff80120c54 <_ZN9Scheduler4TickEv+0x174>
+ffffffff80120c53:	90                   	nop
+ffffffff80120c54:	c9                   	leaveq 
+ffffffff80120c55:	c3                   	retq   
+
+ffffffff80120c56 <_Z17initialize_serialv>:
+ffffffff80120c56:	55                   	push   %rbp
+ffffffff80120c57:	48 89 e5             	mov    %rsp,%rbp

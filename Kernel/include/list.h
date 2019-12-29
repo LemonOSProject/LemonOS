@@ -30,7 +30,7 @@ public:
 
 	void clear() {
 		ListNode<T>* node = front;
-		while (node->next) {
+		while (node && node->next) {
 			ListNode<T>* n = node->next;
 			kfree(node);
 			node = n;

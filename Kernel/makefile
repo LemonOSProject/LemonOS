@@ -5,7 +5,7 @@ ARCH := x86_64
 SRCDIRS := src/arch/$(ARCH) src src/liballoc src/fs src/tty src/lai/core src/lai/helpers src/lai/drivers
 INCLUDEPATH := -I include -I include/arch/$(ARCH)
 
-CFLAGS-x86_64 := -Wno-write-strings -DLemon64 -ffreestanding -mcmodel=kernel -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -z max-page-size=0x1000 -nostdlib $(INCLUDEPATH)
+CFLAGS-x86_64 := -Wno-write-strings -Wno-pointer-arith -DLemon64 -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -z max-page-size=0x1000 -nostdlib -fno-pic -fno-stack-protector -fno-exceptions -fno-rtti -fno-stack-protector $(INCLUDEPATH)
 ASFLAGS-x86_64 := -f elf64 -g -F dwarf -w+gnu-elf-extensions
 
 CFLAGS-x86 := -DLemon32 -fno-pic -Wall -Wno-pointer-arith -fno-permissive -fno-exceptions -fno-rtti -std=c++14 -fno-pic -Wno-address -m32 -ffreestanding -Wno-write-strings -fno-stack-protector -nostdlib $(INCLUDEPATH)
@@ -21,8 +21,8 @@ endif
 ifeq ($(ARCH),x86_64)
 CFLAGS=$(CFLAGS-x86_64)
 ASFLAGS=$(ASFLAGS-x86_64)
-CPP=x86_64-elf-g++
-CC=x86_64-elf-gcc
+CPP=x86_64-lemon-g++
+CC=x86_64-lemon-gcc
 endif
 
 
@@ -36,7 +36,7 @@ OBJFILES := $(patsubst %.cpp,%.cpp.o,$(CPPFILES)) $(patsubst %.asm,%.asm.o,$(ASM
 all: $(ARCH)
 
 x86_64: $(OBJFILES)
-	@x86_64-elf-g++ -m64 -T linkscript-x86_64.ld -o bin/$(ARCH)/kernel.sys $(CFLAGS) obj/$(ARCH)/*.asm.o obj/$(ARCH)/*.c.o obj/$(ARCH)/*.cpp.o obj/$(ARCH)/initrd.o -lgcc
+	@x86_64-lemon-g++ -m64 -T linkscript-x86_64.ld -o bin/$(ARCH)/kernel.sys $(CFLAGS) obj/$(ARCH)/*.asm.o obj/$(ARCH)/*.c.o obj/$(ARCH)/*.cpp.o obj/$(ARCH)/initrd.o -lgcc
 
 x86: $(OBJFILES)
 	@i686-lemon-g++ -T linkscript-x86.ld -o bin/$(ARCH)/kernel.sys $(CFLAGS) obj/$(ARCH)/*.asm.o obj/$(ARCH)/*.c.o obj/$(ARCH)/*.cpp.o -lgcc
@@ -57,12 +57,15 @@ initrd:
 	#@cd ../Applications/GUITest && ./build.sh && cp guitest.lef ../../InitrdWriter/Contents
 	#@make -C ../Applications/Gnuboy lemongnuboy && cp ../Applications/Gnuboy/lemongnuboy ../InitrdWriter/Contents
 	
-	@cd ../InitrdWriter && rm initrd-$(ARCH).img && ./copy.sh
+	@cd ../InitrdWriter && ./copy.sh
 	@cp ../InitrdWriter/initrd-$(ARCH).img ../initrd.img
 	@cd .. && ./convertinitrd.sh
 
 copy:
 	@cd .. && sudo ./copytodisk.sh
+
+copy_wsl:
+	@cd .. && cmd.exe /c build-win\\copytodisk.bat
 
 dump:
 	@cd bin/$(ARCH)/ && objdump -d kernel.sys > dump.txt

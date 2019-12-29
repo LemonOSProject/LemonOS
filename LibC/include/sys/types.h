@@ -2,7 +2,7 @@
 #define TYPES_H
 
 #include <stdint.h>
-#include <core/types.h>
+#include <lemon/types.h>
 
 typedef uint32_t pid_t;
 typedef int off_t;

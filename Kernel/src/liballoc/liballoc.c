@@ -89,7 +89,7 @@ static struct liballoc_major *l_bestBet = NULL; ///< The major with the most fre
 static unsigned int l_pageSize = 4096;			///< The size of an individual page. Set up in liballoc_init.
 #endif
 #ifdef Lemon64
-static unsigned int l_pageSize = 0x200000;
+static unsigned int l_pageSize = 4096;
 #endif
 static unsigned int l_pageCount = 16;			///< The number of pages to request per chunk. Set up in liballoc_init.
 unsigned long long l_allocated = 0;		///< Running total of allocated memory.

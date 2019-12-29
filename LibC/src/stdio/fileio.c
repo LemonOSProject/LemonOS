@@ -1,5 +1,5 @@
-#include <core/syscall.h>
-#include <core/filesystem.h>
+#include <lemon/syscall.h>
+#include <lemon/filesystem.h>
 #include <string.h>
 
 #include "stdio_internal.h"

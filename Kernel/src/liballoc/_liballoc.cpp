@@ -37,17 +37,18 @@ int liballoc_unlock() {
 
 #ifdef Lemon64
 void* liballoc_alloc(int pages) {
-	void* addr = (void*)Memory::KernelAllocate2MPages(pages);
+	void* addr = (void*)Memory::KernelAllocate4KPages(pages);
 	for (int i = 0; i < pages; i++)
 	{
-		uint32_t phys = Memory::AllocateLargePhysicalMemoryBlock();
-		Memory::KernelMapVirtualMemory2M(phys, (uint64_t)addr + i * 0x200000, 1);
+		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
+		Memory::KernelMapVirtualMemory4K(phys, (uint64_t)addr + i * PAGE_SIZE_4K, 1);
 	}
 	return addr;
 }
 
 int liballoc_free(void* addr, size_t pages) {
-	Memory::KernelFree2MPages(addr, pages);
+	#warning "liballoc_free is a stub"
+	//Memory::KernelFree4KPages(addr, pages);
 	return 0;
 }
 #endif

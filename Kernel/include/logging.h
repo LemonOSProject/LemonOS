@@ -13,7 +13,7 @@ namespace Log{
     void Warning(unsigned long long num);
 
     void Error(const char* str);
-    void Error(unsigned long long num);
+    void Error(unsigned long long num, bool hex = true);
 
     void Info(const char* str);
     void Info(unsigned long long num, bool hex = true);
