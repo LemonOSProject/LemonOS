@@ -17,7 +17,7 @@ typedef struct{
 	uint16_t shEntrySize;
 	uint16_t shNum;
 	uint16_t shStrIndex;
-} elf64_header_t;
+} __attribute__((packed)) elf64_header_t;
 
 typedef struct{
 	uint32_t type;
@@ -28,4 +28,4 @@ typedef struct{
 	uint64_t fileSize;
 	uint64_t memSize;
 	uint64_t align;
-} elf64_program_header_t;
+} __attribute__((packed)) elf64_program_header_t;

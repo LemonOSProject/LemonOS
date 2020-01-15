@@ -157,7 +157,7 @@ namespace Memory{
 		uintptr_t address = 0;
 
 		uint64_t pml4Index = 0;
-		for(int d = 4; d < /*DIRS_PER_PDPT*/5; d++){
+		for(int d = 0; d < DIRS_PER_PDPT; d++){
 			uint64_t pdptIndex = d;
 			/* Attempt 1: Already Allocated Page Tables*/
 			for(int i = 0; i < TABLES_PER_DIR; i++){
@@ -199,7 +199,7 @@ namespace Memory{
 
 			/* Attempt 2: Allocate Page Tables*/
 			for(int i = 0; i < TABLES_PER_DIR; i++){
-				if(!(currentAddressSpace->pageDirs[d][i] & 0x1)){
+				if(!(addressSpace->pageDirs[d][i] & 0x1)){
 					
 					CreatePageTable(d,i,addressSpace);
 					for(int j = 0; j < PAGES_PER_TABLE; j++){
@@ -208,7 +208,6 @@ namespace Memory{
 						counter++;
 						
 						if(counter >= amount){
-							
 							address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (pageDirOffset * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
 							while(counter--){
 								if(offset >= 512){
@@ -227,6 +226,7 @@ namespace Memory{
 					counter = 0;
 				}
 			}
+			Log::Info("new dir");
 		}
 	}
 
@@ -381,6 +381,9 @@ namespace Memory{
 	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, address_space_t* addressSpace){
 		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
 
+		phys &= ~(PAGE_SIZE_4K-1);
+		virt &= ~(PAGE_SIZE_4K-1);
+
 		while(amount--){
 			pml4Index = PML4_GET_INDEX(virt);
 			pdptIndex = PDPT_GET_INDEX(virt);
@@ -392,9 +395,11 @@ namespace Memory{
 			if(!(addressSpace->pageDirs[pdptIndex][pageDirIndex] & 0x1)) CreatePageTable(pdptIndex,pageDirIndex,addressSpace); // If we don't have a page table at this address, create one.
 			
 			SetPageFrame(&(addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
-			addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] = 0x3;
+			addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] |= 0x3;
 
-			invlpg(virt);
+			/*uint64_t cr3;
+			asm("mov %%cr3, %0" : "=r"(cr3));
+			if(cr3 == addressSpace->pml4Phys)*/ invlpg(virt);
 
 			phys += PAGE_SIZE_4K;
 			virt += PAGE_SIZE_4K; /* Go to next page */
@@ -446,64 +451,11 @@ namespace Memory{
 		Log::Info("\r\nFault address: ");
 		Log::Info(faultAddress);
 
-		if(faultAddress == regs->rip){
-			faultAddress |= KERNEL_VIRTUAL_BASE;
-		}
-		
-		if(/*currentAddressSpace*/0){
-			Log::Info("Page Table Dump:");
-
-			char temp[18];
-
-			Log::Info("Kernel PML4:");
-
-			for(int i = 0; i < PDPTS_PER_PML4; i++){
-				Log::Info(i, false);
-				Log::Write(": ");
-				Log::Write(itoa(kernelPML4[i], temp, 16));
-			}
-			
-			Log::Info("PML4:");
-
-			for(int i = 0; i < PDPTS_PER_PML4; i++){
-				Log::Info(i, false);
-				Log::Write(": ");
-				Log::Write(itoa(currentAddressSpace->pml4[i], temp, 16));
-			}
-			
-			Log::Info("PDPT 0:");
-			for(int i = 0; i < PDPTS_PER_PML4; i++){
-				Log::Info(i, false);
-				Log::Write(": ");
-				Log::Write(itoa(currentAddressSpace->pdpt[i], temp, 16));
-			}
-
-			Log::Info("PDPT 511 (Kernel PDPT):");
-			for(int i = 0; i < PDPTS_PER_PML4; i++){
-				Log::Info(i, false);
-				Log::Write(": ");
-				Log::Write(itoa(kernelPDPT[i], temp, 16));
-			}
-
-			//Log::Info(kernelPML4[0]);
-			/*if(currentAddressSpace) Log::Info(currentAddressSpace->pml4[PML4_GET_INDEX(faultAddress)]);
-
-			if(currentAddressSpace && (PML4_GET_INDEX(faultAddress) == 0)){
-				Log::Info(currentAddressSpace->pdpt[PDPT_GET_INDEX(faultAddress)]);
-				Log::Info(currentAddressSpace->pageDirs[PDPT_GET_INDEX(faultAddress)][PAGE_DIR_GET_INDEX(faultAddress)]);
-				Log::Info((uint64_t)currentAddressSpace->pageTables[PDPT_GET_INDEX(faultAddress)][PAGE_DIR_GET_INDEX(faultAddress)]);
-				if(currentAddressSpace->pageTables[PDPT_GET_INDEX(faultAddress)][PAGE_DIR_GET_INDEX(faultAddress)])
-					Log::Info(currentAddressSpace->pageTables[PDPT_GET_INDEX(faultAddress)][PAGE_DIR_GET_INDEX(faultAddress)][PAGE_TABLE_GET_INDEX(faultAddress)]);
-			}// else if(currentAddressSpace && PML4_GET_INDEX(faultAddress) == KERNEL_HEAP_PML4_INDEX){
-				//Log::Info(kernelPDPT[PDPT_GET_INDEX(faultAddress)]);
-			//}*/
-
-			//char temp[16];
-			//char temp2[16];
-			//char temp3[16];
-			//char* reasons[]{"Page Fault","EIP: ", itoa(regs->eip, temp, 16),"Address: ",itoa(faultAddress, temp2, 16), "Process:", itoa(Scheduler::GetCurrentProcess()->pid,temp3,10)};;
-			//KernelPanic(reasons,7);
-		}
+		char temp[16];
+		char temp2[16];
+		char temp3[16];
+		const char* reasons[]{"Page Fault","RIP: ", itoa(regs->rip, temp, 16),"Address: ",itoa(faultAddress, temp2, 16), "Process:", itoa(Scheduler::GetCurrentProcess()->pid,temp3,10)};;
+		KernelPanic(reasons,7);
 		for (;;);
 	}
 }

@@ -45,7 +45,7 @@ typedef struct {
 
 	char title[96]; // Title of window
 
-	uint32_t ownerPID;
+	uint64_t ownerPID;
 
 	handle_t handle;
 } __attribute__((packed)) win_info_t;

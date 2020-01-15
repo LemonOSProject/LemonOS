@@ -8,9 +8,9 @@ memcpy_sse2:
 	push rbp    ; save the prior rbp value
     mov rbp, rsp
 
-	mov rax, rcx
-	mov rbx, rdx
-	mov rcx, r8
+	mov rax, rdi
+	mov rbx, rsi
+	mov rcx, rdx
 .loop:
 
 	movdqa xmm0, [rbx]
@@ -30,9 +30,9 @@ memcpy_sse2_unaligned:
 	push rbp    ; save the prior rbp value
     mov rbp, rsp
 
-	mov rax, rcx
-	mov rbx, rdx
-	mov rcx, r8
+	mov rax, rdi
+	mov rbx, rsi
+	mov rcx, rdx
 .loop:
 
 	movdqu xmm0, [rbx]

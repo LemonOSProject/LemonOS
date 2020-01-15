@@ -217,12 +217,9 @@ namespace IDT{
 
 extern "C"
 	void isr_handler(int int_num, regs64_t* regs, int err_code) {
-		Log::Info("Error code:");
-		Log::Info(err_code);
 		errCode = err_code;
 		if (interrupt_handlers[int_num] != 0) {
 			interrupt_handlers[int_num](regs);
-			Log::Info(int_num);
 		} else if(int_num == 0x69){
 			Log::Warning("\r\nEarly syscall");
 		}

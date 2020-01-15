@@ -1,15 +1,18 @@
 #include <stdint.h>
 
-#include <core/types.h>
+#include <lemon/types.h>
 #include <gfx/window/window.h>
 
-#include <runtime.h>
+//#include <runtime.h>
 
 struct Surface;
 
 handle_t _CreateWindow(win_info_t* wininfo){
 	handle_t h;
-	syscall(SYS_CREATE_WINDOW,(uintptr_t)&h,(uintptr_t)wininfo,0,0,0);
+	syscall(SYS_CREATE_WINDOW,(uintptr_t)wininfo,0,0,0,0);
+
+	h = wininfo->handle;
+
 	return h;
 }
 
@@ -18,7 +21,7 @@ void _DestroyWindow(handle_t window){
 }
 
 void _PaintWindow(handle_t window, surface_t* surface){
-	syscall(SYS_PAINT_WINDOW, (uintptr_t)window, (uintptr_t)surface, 0, 0, 0);
+	syscall(SYS_UPDATE_WINDOW, (uintptr_t)window, (uintptr_t)surface, 0, 0, 0);
 }
 
 Window* CreateWindow(win_info_t* info){
@@ -54,16 +57,16 @@ void DestroyWindow(Window* win){
 }
 
 void PaintWindow(Window* win){
-	if(win->info.flags & WINDOW_FLAGS_NOBACKGROUND) goto nobg;
+	//if(win->info.flags & WINDOW_FLAGS_NOBACKGROUND) goto nobg;
 	DrawRect(0,0,win->info.width, win->info.height, win->background, &win->surface);
-	nobg:
+	/*nobg:
 	for(int i = 0; i < win->widgets.get_length(); i++){
 		win->widgets[i]->Paint(&win->surface);
 	}
 
 	if(win->OnPaint){
 		win->OnPaint(&win->surface);
-	}
+	}*/
 
 	_PaintWindow(win->handle, &win->surface);
 }

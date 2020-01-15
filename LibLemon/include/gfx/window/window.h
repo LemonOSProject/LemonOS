@@ -5,8 +5,8 @@
 #define WINDOW_FLAGS_NOBACKGROUND 0x4
 
 #include <stdint.h>
-#include <core/types.h>
-#include <core/syscall.h>
+#include <lemon/types.h>
+#include <lemon/syscall.h>
 #include <gfx/surface.h>
 #include <gfx/window/widgets.h>
 #include <list.h>
@@ -24,7 +24,7 @@ typedef struct {
 
 	char title[96]; // Title of window
 
-	uint32_t ownerPID;
+	uint64_t ownerPID;
 
 	handle_t handle;
 } __attribute__((packed)) win_info_t;

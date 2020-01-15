@@ -74,7 +74,7 @@ namespace Mouse{
 		mouseCharDev.flags = FS_NODE_CHARDEVICE;
 		mouseCharDev.read = ReadDevice;
 		strcpy(mouseCharDev.name, "mouse0");
-		//Initrd::RegisterDevice(&mouseCharDev);
+		Initrd::RegisterDevice(&mouseCharDev);
 
 		Wait(1);
 		outportb(0x64, 0xA8);

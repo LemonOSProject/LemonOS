@@ -8,6 +8,7 @@
 #include <hal.h>
 #include <fb.h>
 #include <physicalallocator.h>
+#include <gui.h>
 
 #define NUM_SYSCALLS 38
 
@@ -25,11 +26,19 @@
 #define SYS_TIME 13
 #define SYS_MAP_FB 14
 #define SYS_ALLOC 15
+#define SYS_CREATE_DESKTOP 17
 
 #define SYS_LSEEK 19
-#define SYS_READDIR 0
-#define SYS_UNAME 0
-#define SYS_UPTIME 0
+#define SYS_GETPID 20
+#define SYS_MOUNT 21
+#define SYS_CREATE_WINDOW 22
+#define SYS_DESTROY_WINDOW 23
+#define SYS_DESKTOP_GET_WINDOW 24
+#define SYS_DESKTOP_GET_WINDOW_COUNT 25
+#define SYS_UPDATE_WINDOW 26
+#define SYS_RENDER_WINDOW 27
+#define SYS_SEND_MESSAGE 28
+#define SYS_RECEIVE_MESSAGE 29
 
 typedef int(*syscall_t)(regs64_t*);
 
@@ -69,7 +78,7 @@ int SysRead(regs64_t* r){
 	uint8_t* buffer = (uint8_t*)r->rcx;
 	if(!buffer) { return 1; }
 	uint64_t count = r->rdx;
-	int ret;// = node->read(node, 0, count, buffer);
+	int ret = node->read(node, 0, count, buffer);
 	*(int*)r->rsi = ret;
 	return 0;
 }
@@ -142,8 +151,8 @@ int SysTime(regs64_t* r){
 int SysMapFB(regs64_t *r){
 	video_mode_t vMode = Video::GetVideoMode();
 
-	uintptr_t fbVirt = (uintptr_t)Memory::KernelAllocate4KPages(vMode.height*vMode.pitch/PAGE_SIZE_4K + 1);//, Scheduler::currentProcess->addressSpace);
-	Memory::KernelMapVirtualMemory4K(HAL::multibootInfo.framebufferAddr,fbVirt,vMode.height*vMode.pitch/PAGE_SIZE_4K + 1);//,Scheduler::currentProcess->addressSpace);
+	uintptr_t fbVirt = (uintptr_t)Memory::Allocate4KPages(vMode.height*vMode.pitch/PAGE_SIZE_4K + 1, Scheduler::currentProcess->addressSpace);
+	Memory::MapVirtualMemory4K(HAL::multibootInfo.framebufferAddr,fbVirt,vMode.height*vMode.pitch/PAGE_SIZE_4K + 1,Scheduler::currentProcess->addressSpace);
 
 	fb_info_t fbInfo;
 	fbInfo.width = vMode.width;
@@ -165,10 +174,6 @@ int SysAlloc(regs64_t* r){
 	for(int i = 0; i < pageCount; i++){
 		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),address + i * PAGE_SIZE_4K,1,Scheduler::currentProcess->addressSpace);
 	}
-
-
-		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),address,1,Scheduler::currentProcess->addressSpace);
-		((uint8_t*)address)[0] = 0;
 
 	*addressPointer = address;
 }
@@ -215,6 +220,121 @@ int SysGetPID(regs64_t* r){
 	return 0;
 }
 
+int SysMount(regs64_t* r){
+	return 0;
+}
+
+int SysCreateDesktop(regs64_t* r){
+	desktop_t* desktop = (desktop_t*)kmalloc(sizeof(desktop_t));
+
+	desktop->windows = new List<window_t*>();
+
+	SetDesktop(desktop);
+
+	return 0;
+}
+
+int SysCreateWindow(regs64_t* r){
+	win_info_t* info = (win_info_t*)r->rbx;
+	window_t* win = (window_t*)kmalloc(sizeof(window_t));
+	info->handle = Scheduler::RegisterHandle(win);
+	win->info = *info;
+	win->desktop = GetDesktop();
+
+	surface_t surface;
+	surface.buffer = (uint8_t*)kmalloc(info->width * info->height * 4);
+
+	win->surface = surface;
+
+	GetDesktop()->windows->add_back(win);
+	return 0;
+}
+
+int SysDestroyWindow(regs64_t* r){
+	handle_t handle = (handle_t)r->rbx;
+	return 0;
+}
+
+int SysDesktopGetWindow(regs64_t* r){
+	win_info_t* winInfo = (win_info_t*)r->rbx;
+
+	*winInfo = GetDesktop()->windows->get_at(r->rcx)->info;
+
+	return 0;
+}
+
+int SysDesktopGetWindowCount(regs64_t* r){
+	uint64_t* count = (uint64_t*)r->rbx;
+	*count = GetDesktop()->windows->get_length();
+	
+	return 0;
+}
+
+int SysUpdateWindow(regs64_t* r){
+	handle_t handle = (handle_t*)r->rbx;
+	Window* window = (Window*)Scheduler::FindHandle(handle);
+	surface_t* surface = (surface_t*)r->rcx;
+
+	memcpy_optimized(window->surface.buffer,surface->buffer,(window->info.width * 4)*window->info.height);
+	return 0;
+}
+
+// SysRenderWindow(surface_t* dest, handle_t win, vector2i_t* offset, rect_t* region)
+int SysRenderWindow(regs64_t* r){
+	if(!(r->rbx && r->rcx)) return 1; // We need at least the destination surface and the window handle
+	vector2i_t offset;
+	if(!r->rdx) offset = {0,0};
+	else offset = *((vector2i_t*)r->rdx);
+
+	handle_t handle = (handle_t)r->rcx;
+	window_t* window;
+	if(!(window = (window_t*)Scheduler::FindHandle(handle))) return 2;
+
+	rect_t windowRegion;
+	if(!r->rsi) windowRegion = {{0,0},{window->info.width,window->info.height}};
+	else windowRegion = *((rect_t*)r->rsi);
+
+	surface_t* dest = (surface_t*)r->rbx;
+
+	int rowSize = ((dest->width - offset.x) > windowRegion.size.x) ? windowRegion.size.x : (dest->width - offset.x);
+
+	for(int i = windowRegion.pos.y; i < windowRegion.size.y && i < dest->height - offset.y; i++){
+		uint8_t* bufferAddress = dest->buffer + (i + offset.y) * (dest->width * 4) + offset.x * 4;
+		memcpy_optimized(bufferAddress, window->surface.buffer + i * (window->info.width * 4) + windowRegion.pos.x * 4, rowSize * 4);
+	}
+	return 0;
+}
+
+// SendMessage(message_t* msg) - Sends an IPC message to a process
+int SysSendMessage(regs64_t* r){
+	uint64_t pid = r->rbx;
+	uint64_t msg = r->rcx;
+	uint64_t data = r->rdx;
+	uint64_t data2 = r->rsi;
+
+	message_t message;
+	message.senderPID = Scheduler::GetCurrentProcess()->pid;
+	message.recieverPID = pid;
+	message.msg = msg;
+	message.data = data;
+	message.data2 = data2;
+
+	return Scheduler::SendMessage(message); // Send the message
+}
+
+// RecieveMessage(message_t* msg) - Grabs next message on queue and copies it to msg
+int SysReceiveMessage(regs64_t* r){
+	if(!(r->rbx && r->rcx)) return 1; // Was given null pointers
+
+	message_t* msg = (message_t*)r->rbx;
+	uint32_t* queueSize = (uint32_t*)r->rcx;
+
+	*queueSize = Scheduler::GetCurrentProcess()->messageQueue.get_length();
+	*msg = Scheduler::RecieveMessage(Scheduler::GetCurrentProcess());
+
+	return 0;
+}
+
 int SysDebug(regs64_t* r){
 	Log::Info((char*)r->rbx);
 	Log::Info(r->rcx);
@@ -239,14 +359,21 @@ syscall_t syscalls[]{
 	SysMapFB,
 	SysAlloc,					// 15
 	SysChmod,
+	SysCreateDesktop,
 	SysStat,
-	nullptr,
 	SysLSeek,
-	SysGetPID,
-	
-	/*SysSendMessage,
-	SysReceiveMessage,			// 15
-	SysUname,
+	SysGetPID,					// 20
+	SysMount,
+	SysCreateWindow,
+	SysDestroyWindow,
+	SysDesktopGetWindow,
+	SysDesktopGetWindowCount,	// 25
+	SysUpdateWindow,
+	SysRenderWindow,
+	SysSendMessage,
+	SysReceiveMessage,
+
+	/*SysUname,
 	SysMemalloc,
 	SysStat,
 	SysLSeek,
@@ -277,8 +404,6 @@ void SyscallHandler(regs64_t* regs) {
 	//	return;
 		
 	Scheduler::schedulerLock = true;
-	Log::Info("Syscall");
-	Log::Info(regs->rax);
 	int ret = syscalls[regs->rax](regs); // Call syscall
 	regs->rax = ret;
 	Scheduler::schedulerLock = false;

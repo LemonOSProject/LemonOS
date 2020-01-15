@@ -29,11 +29,11 @@ typedef struct {
 } __attribute__((packed)) thread_t;
 
 typedef struct {
-	uint32_t senderPID; // PID of Sender
-	uint32_t recieverPID; // PID of Reciever
-	uint32_t id; // ID of message
-	uint32_t data; // Message Data
-	uint32_t data2;
+	uint64_t senderPID; // PID of Sender
+	uint64_t recieverPID; // PID of Reciever
+	uint64_t msg; // ID of message
+	uint64_t data; // Message Data
+	uint64_t data2;
 } __attribute__((packed)) message_t;
 
 typedef struct process {
@@ -51,7 +51,7 @@ typedef struct process {
 	//List<elf32_program_header_t> programHeaders;
 
 	List<fs_node_t*> fileDescriptors;
-	//List<message_t> messageQueue;
+	List<message_t> messageQueue;
 } process_t;
 
 namespace Scheduler{
@@ -62,8 +62,8 @@ namespace Scheduler{
 
 	process_t* GetCurrentProcess();
 
-	void RegisterHandle(handle_t handle);
-	handle_index_t FindHandle(handle_t handle);
+	handle_t RegisterHandle(void* handle);
+	void* FindHandle(handle_t handle);
 
 	int SendMessage(message_t msg);
 	int SendMessage(process_t* proc, message_t msg);

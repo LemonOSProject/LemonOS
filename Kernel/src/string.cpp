@@ -60,6 +60,8 @@ void* memset(void* src, int c, size_t count) {
 	return src;
 }
 
+#pragma GCC push_options
+#pragma GCC optimize ("O3")
 extern "C"
 void *memcpy(void* dest, const void* src, size_t count) {
 	const char *sp = (char*)src;
@@ -82,6 +84,7 @@ void *memcpy(void* dest, const void* src, size_t count) {
 	} 
 	return dest;
 }
+#pragma GCC pop_options
 
 extern "C"
 int memcmp(const void *s1, const void *s2, size_t n) {

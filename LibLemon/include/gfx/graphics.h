@@ -8,6 +8,10 @@ typedef struct Vector2i{
     int x, y;
 } vector2i_t; // Two dimensional integer vector
 
+inline vector2i_t operator+ (const vector2i_t& l, const vector2i_t& r){
+    return {l.x + r.x, l.y + r.y};
+}
+
 typedef struct Rect{
     vector2i_t pos;
     vector2i_t size;
@@ -83,4 +87,4 @@ video_mode_t GetVideoMode();
 void DrawGradient(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
 void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
 
-void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset);
+void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset = {0,0});

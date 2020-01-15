@@ -72,6 +72,7 @@ namespace HAL{
         
         void* vidMemVirt = Memory::KernelAllocate4KPages(vidMemSize / PAGE_SIZE_4K + 1);
         Memory::KernelMapVirtualMemory4K(multibootInfo.framebufferAddr, (uint64_t)vidMemVirt, vidMemSize / PAGE_SIZE_4K + 1);
+        Memory::MarkMemoryRegionUsed(multibootInfo.framebufferAddr,vidMemSize);
 
         // Initialize Video Mode structure
         videoMode.width = multibootInfo.framebufferWidth;

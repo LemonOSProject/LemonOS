@@ -17,11 +17,23 @@
 #define SYS_TIME 13
 #define SYS_MAP_FB 14
 #define SYS_ALLOC 15
+#define SYS_CREATE_DESKTOP 17
 
 #define SYS_LSEEK 19
+#define SYS_GETPID 20
+#define SYS_MOUNT 21
+#define SYS_CREATE_WINDOW 22
+#define SYS_DESTROY_WINDOW 23
+#define SYS_DESKTOP_GET_WINDOW 24
+#define SYS_DESKTOP_GET_WINDOW_COUNT 25
+#define SYS_UPDATE_WINDOW 26
+#define SYS_RENDER_WINDOW 27
+#define SYS_SEND_MESSAGE 28
+#define SYS_RECEIVE_MESSAGE 29
+
 #define SYS_READDIR 0
-#define SYS_UNAME 0
 #define SYS_UPTIME 0
+#define SYS_UNAME 0
 
 #ifdef __cplusplus
 extern "C"{

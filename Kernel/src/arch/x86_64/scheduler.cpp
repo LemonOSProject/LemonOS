@@ -11,6 +11,8 @@
 #include <logging.h>
 #include <elf.h>
 
+#define INITIAL_HANDLE_TABLE_SIZE 0xFFFF
+
 uintptr_t processBase;
 uintptr_t processStack;
 uintptr_t processEntryPoint;
@@ -37,6 +39,9 @@ namespace Scheduler{
     uint64_t nextPID = 0;
 
     //List<handle_index_t>* handles;
+    handle_t handles[INITIAL_HANDLE_TABLE_SIZE];
+    uint32_t handleCount = 1; // We don't want null handles
+    uint32_t handleTableSize = INITIAL_HANDLE_TABLE_SIZE;
 
     void Initialize() {
         schedulerLock = true;
@@ -56,23 +61,15 @@ namespace Scheduler{
 
     process_t* GetCurrentProcess(){ return currentProcess; }
 
-    /*void RegisterHandle(handle_t handle){
-        handle_index_t index;
-        index.handle = handle;
-        index.owner = currentProcess;
-        index.owner_pid = currentProcess->pid;
-
-        handles->add_back(index);
+    handle_t RegisterHandle(void* pointer){
+        handle_t handle = (handle_t)handleCount++;
+        handles[(uint64_t)handle] = pointer;
+        return handle;
     }
 
-    handle_index_t FindHandle(handle_t handle){
-        for(int i = 0; i < handles->get_length(); i++){
-            if((*handles)[i].handle == handle) return (*handles)[i];
-        }
-        handle_index_t nullIndex;
-        nullIndex.handle = 0;
-        return nullIndex;
-    }*/
+    void* FindHandle(handle_t handle){
+        return handles[(uint64_t)handle];
+    }
 
     process_t* FindProcessByPID(uint64_t pid){
         process_t* proc = processQueueStart;
@@ -85,7 +82,7 @@ namespace Scheduler{
         return NULL;
     }
 
-    /*int SendMessage(message_t msg){
+    int SendMessage(message_t msg){
         process_t* proc = FindProcessByPID(msg.recieverPID);
         if(!proc) return 1; // Failed to find process with specified PID
         proc->messageQueue.add_back(msg);
@@ -105,7 +102,7 @@ namespace Scheduler{
             return nullMsg;
         }
         return proc->messageQueue.remove_at(0);
-    }*/
+    }
 
     void InsertProcessIntoQueue(process_t* proc){
         if(!processQueueStart){ // If queue is empty, add the process and link to itself
@@ -232,6 +229,18 @@ namespace Scheduler{
         elf64_header_t elfHdr = *(elf64_header_t*)elf;
         asm("cli");
 
+        asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
+
+        for(int i = 0; i < elfHdr.phNum; i++){
+            elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
+
+            if(elfPHdr.memSize == 0) continue;
+            for(int j = 0; j < (((elfPHdr.memSize + (elfPHdr.vaddr & (PAGE_SIZE_4K-1))) / PAGE_SIZE_4K)) + 1; j++){
+                uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
+                Memory::MapVirtualMemory4K(phys,elfPHdr.vaddr /* - (elfPHdr.vaddr & (PAGE_SIZE_4K-1))*/ + j * PAGE_SIZE_4K, 1, proc->addressSpace);
+            }
+        }
+
         Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),0,1,proc->addressSpace);
 
         for(int i = 0; i < elfHdr.phNum; i++){
@@ -239,30 +248,17 @@ namespace Scheduler{
 
             if(elfPHdr.memSize == 0) continue;
 
-            Memory::ChangeAddressSpace(proc->addressSpace); // Switch to kernel page directory so we don't interfere with the current process's address space
-            for(int i = 0; i < ((elfPHdr.memSize / PAGE_SIZE_4K) + 1); i++){
-                uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
-                Memory::MapVirtualMemory4K(phys,elfPHdr.vaddr + i * PAGE_SIZE_4K, 1, proc->addressSpace);
-            }
+            memset((void*)elfPHdr.vaddr,0,elfPHdr.memSize);
 
-            if (elfPHdr.memSize > 0){
-                Log::Info("Elf section address");
-                Log::Info(elfPHdr.vaddr);
-                Log::Info("Elf section size");
-                Log::Info(elfPHdr.memSize);
-            
-                asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
-
-                memset((void*)elfPHdr.vaddr,0,elfPHdr.memSize);
-                memcpy((void*)elfPHdr.vaddr,(void*)(elf + elfPHdr.offset),elfPHdr.fileSize);
-
-                asm volatile("mov %%rax, %%cr3" :: "a"(currentProcess->addressSpace->pml4Phys));
-            }
+            memcpy((void*)elfPHdr.vaddr,(void*)(elf + elfPHdr.offset),elfPHdr.fileSize);
 
             Memory::ChangeAddressSpace(currentProcess->addressSpace);
         }
-            Log::Info(elfHdr.entry);
-            Log::Write(" entry");
+        
+        Log::Info(elfHdr.entry);
+        Log::Write(" entry");
+        
+        asm volatile("mov %%rax, %%cr3" :: "a"(currentProcess->addressSpace->pml4Phys));
 
         asm("sti");
         void* stack = (void*)Memory::KernelAllocate4KPages(4);

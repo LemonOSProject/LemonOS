@@ -44,7 +44,7 @@ x86: $(OBJFILES)
 initrd:
 	@cd ../Applications/Init && ./build.sh && cp init.lef ../../InitrdWriter/Contents
 	#@cd ../Applications/FileManager && ./build.sh && cp fm.lef ../../InitrdWriter/Contents
-	#@cd ../Applications/Snake && ./build.sh && cp snake.lef ../../InitrdWriter/Contents
+	@cd ../Applications/Snake && ./build.sh && cp snake.lef ../../InitrdWriter/Contents
 	#@cd ../Applications/Shell && ./build.sh && cp shell.lef ../../InitrdWriter/Contents
 	#@cd ../Applications/TextEditor && ./build.sh && cp texteditor.lef ../../InitrdWriter/Contents
 	#@cd ../Applications/TerminalEmulator && ./build.sh && cp terminal.lef ../../InitrdWriter/Contents
