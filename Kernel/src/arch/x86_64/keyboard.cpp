@@ -1,4 +1,4 @@
-//#include <scheduler.h>
+#include <scheduler.h>
 #include <system.h>
 #include <idt.h>
 #include <logging.h>
@@ -58,11 +58,16 @@ namespace Keyboard{
         // Read from the keyboard's data buffer
         key = inportb(0x60);
 		
+		
 		if(key == 0x3A){
             caps = !caps;
         } else {
-            test[0] = keymap_us[(key >> 7) ? key-128 :key];
-            test[1] = 0;
+			message_t wmKeyMessage;
+            wmKeyMessage.senderPID = 0;
+            wmKeyMessage.recieverPID = 1; // Should be the Window Manager
+            wmKeyMessage.msg = 0x1BEEF; // Desktop Event - Key Press
+            wmKeyMessage.data = key; // The key that was pressed
+            Scheduler::SendMessage(wmKeyMessage);
         }
 
         asm("sti");

@@ -12,19 +12,19 @@
 #define DESKTOP_EVENT_KEY_RELEASED 0x2BEEF
 
 typedef struct {
-	uint32_t senderPID; // PID of Sender
-	uint32_t recieverPID; // PID of Reciever
-	uint32_t id; // ID of message
-	uint32_t data; // Message Data
-	uint32_t data2;
+	uint64_t senderPID; // PID of Sender
+	uint64_t recieverPID; // PID of Reciever
+	uint64_t msg; // ID of message
+	uint64_t data; // Message Data
+	uint64_t data2;
 } __attribute__((packed)) ipc_message_t;
 
 #ifdef __cplusplus
 extern "C"{
 #endif
 
-void SendMessage(uint32_t pid, ipc_message_t msg);
-uint32_t ReceiveMessage(ipc_message_t* msg);
+void SendMessage(uint64_t pid, ipc_message_t msg);
+uint64_t ReceiveMessage(ipc_message_t* msg);
 
 #ifdef __cplusplus
 }
