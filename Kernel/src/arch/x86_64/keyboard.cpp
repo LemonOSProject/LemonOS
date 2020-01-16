@@ -58,7 +58,6 @@ namespace Keyboard{
         // Read from the keyboard's data buffer
         key = inportb(0x60);
 		
-		
 		if(key == 0x3A){
             caps = !caps;
         } else {

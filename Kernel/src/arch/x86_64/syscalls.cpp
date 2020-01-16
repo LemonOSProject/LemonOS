@@ -9,6 +9,7 @@
 #include <fb.h>
 #include <physicalallocator.h>
 #include <gui.h>
+#include <timer.h>
 
 #define NUM_SYSCALLS 38
 
@@ -39,6 +40,7 @@
 #define SYS_RENDER_WINDOW 27
 #define SYS_SEND_MESSAGE 28
 #define SYS_RECEIVE_MESSAGE 29
+#define SYS_UPTIME 30
 
 typedef int(*syscall_t)(regs64_t*);
 
@@ -238,6 +240,7 @@ int SysCreateWindow(regs64_t* r){
 	win_info_t* info = (win_info_t*)r->rbx;
 	window_t* win = (window_t*)kmalloc(sizeof(window_t));
 	info->handle = Scheduler::RegisterHandle(win);
+	info->ownerPID = Scheduler::GetCurrentProcess()->pid;
 	win->info = *info;
 	win->desktop = GetDesktop();
 
@@ -312,6 +315,10 @@ int SysSendMessage(regs64_t* r){
 	uint64_t data = r->rdx;
 	uint64_t data2 = r->rsi;
 
+	/*Log::Info("Sending: ");
+	Log::Info(msg);
+	Log::Info(data);*/
+
 	message_t message;
 	message.senderPID = Scheduler::GetCurrentProcess()->pid;
 	message.recieverPID = pid;
@@ -327,12 +334,23 @@ int SysReceiveMessage(regs64_t* r){
 	if(!(r->rbx && r->rcx)) return 1; // Was given null pointers
 
 	message_t* msg = (message_t*)r->rbx;
-	uint32_t* queueSize = (uint32_t*)r->rcx;
+	uint64_t* queueSize = (uint64_t*)r->rcx;
 
 	*queueSize = Scheduler::GetCurrentProcess()->messageQueue.get_length();
 	*msg = Scheduler::RecieveMessage(Scheduler::GetCurrentProcess());
 
 	return 0;
+}
+
+int SysUptime(regs64_t* r){
+	uint64_t* seconds = (uint64_t*)r->rbx;
+	uint64_t* milliseconds = (uint64_t*)r->rcx;
+	if(seconds){
+		*seconds = Timer::GetSystemUptime();
+	}
+	if(milliseconds){
+		*milliseconds = Timer::GetTicks()/(Timer::GetFrequency()/1000);
+	}
 }
 
 int SysDebug(regs64_t* r){
@@ -372,6 +390,7 @@ syscall_t syscalls[]{
 	SysRenderWindow,
 	SysSendMessage,
 	SysReceiveMessage,
+	SysUptime,
 
 	/*SysUname,
 	SysMemalloc,

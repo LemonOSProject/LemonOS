@@ -2,7 +2,7 @@
 [INFO]    Initializing Lemon...
 
 [INFO]    511
-[INFO]    0x40b003
+[INFO]    0x412003
 [INFO]    0x100c4
 [INFO]    0xffffffffc0000000
 [INFO]    0xffffffffc0001000
@@ -22,9 +22,9 @@
 [INFO]    1
 [INFO]    Initializing Ramdisk...
 [INFO]    Initrd address: 
-[INFO]    0xffffffff8012ec80
+[INFO]    0xffffffff8012ef40
 [INFO]    Size:
-[INFO]    2935992
+[INFO]    2962720
 [INFO]    File Count:
 [INFO]    10files
 OK
@@ -60,65 +60,8 @@ OK
 [INFO]    Loading Init Process...
 [INFO]    0xa
 [INFO]    0x2116000
-[INFO]    ELF Dump:7f 45 4c 46 2 1 1 0 0 0 0 0 0 0 0 0 2 0 3e 0 1 0 0 0 c0 0 40 0 0 0 0 0 40 0 0 0 0 0 0 0 f0 5d 0 0 0 0 0 0 0 0 0 0 40 0 38 0 2 0 40 0 17 0 16 0 1 0 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0 0 40 0 0 0 0 0 0 0 40 0 0 0 0 0 60 2d 0 0 0 0 0 0 60 2d 0 0 0 0 0 0 0 10 0 0 0 0 0 0 1 0 0 0 6 0 0 0 60 2d 0 0 0 0 0 0 60 3d 40 0 0 0 0 0 60 3d 40 0 0 0 0 0 38 0 0 0 0 0 0 0 38 1 0 0 0 0 0 0 0 10 0 0 0 0 0 0 e8 2b 1 0 0 e8 86 24 0 0 c2 0 0 0 0 0 48 c7 c5 0 0 0 0 55 55 48 89 e5 e8 df ff ff ff e8 bf 4 0 0 f4 eb fd f 1f 80 0 0 0 0 b8 98 3d 40 0 48 3d 98 3d 40 0 74 13 b8 0 0 0 0 48 85 c0 74 9 bf 98 3d 40 0 ff e0 66 90 
-[INFO]    Elf section address
-[INFO]    0x400000
-[INFO]    Elf section offset
-[INFO]    0x0
-[INFO]    Elf section size
-[INFO]    0x2d60
-[INFO]    Elf section file size
-[INFO]    0x2d60
-[INFO]    Elf section address
-[INFO]    0x403d60
-[INFO]    Elf section offset
-[INFO]    0x2d60
-[INFO]    Elf section size
-[INFO]    0x138
-[INFO]    Elf section file size
-[INFO]    0x38
 [INFO]    0x4000c0 entryOK
-[INFO]    page count
-[INFO]    0x10
-[INFO]    finished alloc
-[INFO]    page count
-[INFO]    0x301
-[INFO]    finished alloc
 [INFO]    0xa
-[INFO]    0x24ca000
-[INFO]    ELF Dump:7f 45 4c 46 2 1 1 0 0 0 0 0 0 0 0 0 2 0 3e 0 1 0 0 0 c0 0 40 0 0 0 0 0 40 0 0 0 0 0 0 0 88 44 0 0 0 0 0 0 0 0 0 0 40 0 38 0 2 0 40 0 16 0 15 0 1 0 0 0 5 0 0 0 0 0 0 0 0 0 0 0 0 0 40 0 0 0 0 0 0 0 40 0 0 0 0 0 90 22 0 0 0 0 0 0 90 22 0 0 0 0 0 0 0 10 0 0 0 0 0 0 1 0 0 0 6 0 0 0 90 22 0 0 0 0 0 0 90 32 40 0 0 0 0 0 90 32 40 0 0 0 0 0 30 0 0 0 0 0 0 0 c8 0 0 0 0 0 0 0 0 10 0 0 0 0 0 0 e8 2b 1 0 0 e8 c6 1a 0 0 c2 0 0 0 0 0 48 c7 c5 0 0 0 0 55 55 48 89 e5 e8 df ff ff ff e8 37 1 0 0 f4 eb fd f 1f 80 0 0 0 0 b8 c0 32 40 0 48 3d c0 32 40 0 74 13 b8 0 0 0 0 48 85 c0 74 9 bf c0 32 40 0 ff e0 66 90 
-[INFO]    Elf section address
-[INFO]    0x400000
-[INFO]    Elf section offset
-[INFO]    0x0
-[INFO]    Elf section size
-[INFO]    0x2290
-[INFO]    Elf section file size
-[INFO]    0x2290
-[INFO]    Elf section address
-[INFO]    0x403290
-[INFO]    Elf section offset
-[INFO]    0x2290
-[INFO]    Elf section size
-[INFO]    0xc8
-[INFO]    Elf section file size
-[INFO]    0x30
+[INFO]    0x24db000
 [INFO]    0x4000c0 entry
 [INFO]    Opening: /dev/mouse0
-[INFO]    page count
-[INFO]    0x10
-[INFO]    finished alloc
-[INFO]    page count
-[INFO]    0xe0
-[INFO]    finished alloc
-[ERROR]   Page Fault!
-
-[INFO]    Page not present
-[INFO]    Read Only
-[INFO]    RIP:
-[INFO]    0x400e4b
-[INFO]    Process:
-[INFO]    0x1
-[INFO]    
-Fault address: 
-[INFO]    0x312000

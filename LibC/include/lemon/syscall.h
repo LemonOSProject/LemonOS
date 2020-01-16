@@ -30,9 +30,9 @@
 #define SYS_RENDER_WINDOW 27
 #define SYS_SEND_MESSAGE 28
 #define SYS_RECEIVE_MESSAGE 29
+#define SYS_UPTIME 30
 
 #define SYS_READDIR 0
-#define SYS_UPTIME 0
 #define SYS_UNAME 0
 
 #ifdef __cplusplus

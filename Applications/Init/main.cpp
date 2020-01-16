@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <list.h>
 #include <lemon/keyboard.h>
+#include <lemon/ipc.h>
 
 #define WINDOW_BORDER_COLOUR {32,32,32}
 #define WINDOW_TITLEBAR_HEIGHT 24
@@ -74,6 +75,8 @@ vector2i_t mousePos = {100,100};
 bool mouseDown = false;
 bool drag = false;
 vector2i_t dragOffset = {0,0};
+
+char lastKey;
 
 void DrawWindow(Window_s* win){
 
@@ -180,6 +183,21 @@ int main(){
 					if(mousePos.y < win->pos.y + 25 && !(win->info.flags & WINDOW_FLAGS_NODECORATION)){
 						dragOffset = {mousePos.x - win->pos.x, mousePos.y - win->pos.y};
 						drag = true;
+					} else {
+						ipc_message_t mouseEventMessage;
+						mouseEventMessage.msg = WINDOW_EVENT_MOUSEDOWN;
+						uint32_t mouseX;
+						uint16_t mouseY;
+						if(win->info.flags & WINDOW_FLAGS_NODECORATION){
+							mouseX = mousePos.x - win->pos.x;
+							mouseY = mousePos.y - win->pos.y;
+						} else {
+							mouseX = mousePos.x - win->pos.x - 1; // Account for window border
+							mouseY = mousePos.y - win->pos.y - 25; // Account for border and title bar
+						}
+						mouseEventMessage.data = (mouseX << 16) + mouseY;
+						mouseEventMessage.data2 = (uintptr_t)win->info.handle;
+						SendMessage(win->info.ownerPID, mouseEventMessage);
 					}
 					break;
 				}
@@ -227,6 +245,32 @@ int main(){
 
 			if(!windowFound) windows.remove_at(i);
 		}
+		
+		ipc_message_t msg;
+		while(ReceiveMessage(&msg)){
+			switch(msg.msg){
+				case DESKTOP_EVENT_KEY:
+					lastKey = keymap_us[msg.data];
+
+					if(active){
+						ipc_message_t keyMsg;
+
+						if((msg.data >> 7) && (msg.data & 0x7F)) {
+							keyMsg.msg = WINDOW_EVENT_KEYRELEASED;
+							keyMsg.data = keymap_us[msg.data & 0x7F];
+						} else {
+							keyMsg.msg = WINDOW_EVENT_KEY;
+							keyMsg.data = keymap_us[msg.data];
+						}
+						keyMsg.data2 = (uintptr_t)active->info.handle;
+						SendMessage(active->info.ownerPID, keyMsg);
+					}
+
+					break;
+			}
+		}
+
+		DrawChar(lastKey,0,500,255,255,255,&renderBuffer);
 
 		DrawRect(mousePos.x, mousePos.y, 5, 5, 255, 0, 0, &renderBuffer);
 
