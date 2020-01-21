@@ -31,9 +31,10 @@
 #define SYS_SEND_MESSAGE 28
 #define SYS_RECEIVE_MESSAGE 29
 #define SYS_UPTIME 30
+#define SYS_GET_VIDEO_MODE 31
+#define SYS_UNAME 32
 
 #define SYS_READDIR 0
-#define SYS_UNAME 0
 
 #ifdef __cplusplus
 extern "C"{

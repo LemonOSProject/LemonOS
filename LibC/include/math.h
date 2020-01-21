@@ -7,6 +7,7 @@ extern "C"{
 
 unsigned int rand();
 double floor(double num);
+int abs(int num);
 
 #ifdef __cplusplus
 }

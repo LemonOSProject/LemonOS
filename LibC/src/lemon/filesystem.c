@@ -24,8 +24,8 @@ int lemon_write(int fd, void* buffer, size_t count){
     return ret;
 }
 
-int lemon_seek(int fd, uint32_t offset, int whence){
-    uint32_t ret;
+off_t lemon_seek(int fd, off_t offset, int whence){
+    uint64_t ret;
     syscall(SYS_LSEEK, fd, offset, whence, &ret, 0);
     return ret;
 }

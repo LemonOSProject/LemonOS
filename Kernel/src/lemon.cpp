@@ -3,6 +3,6 @@ namespace Lemon{
 	char* versionString = "Lemon v0.4.0 (Alpha) x86";
 	#endif
 	#ifdef Lemon64
-	char* versionString = "Lemon v0.1.0 (Alpha) x86_64";
+	char* versionString = "Lemon Nightly (Alpha) x86_64";
 	#endif
 }

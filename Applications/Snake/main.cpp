@@ -72,6 +72,8 @@ void Reset(){
 	snake->add_back({8,8});
 	snake->add_back({9,8});
 
+	gameOver = false;
+
 	powerUp = 0;
 	frameWaitTime = frameWaitTimeDefault;
 	snakeCellColours[0] = bgColourDefault;
@@ -133,19 +135,23 @@ int main(char argc, char** argv){
 				switch(msg.data){
 					case 'w':
 					case KEY_ARROW_UP:
-						direction = 0;
+						if(direction != 3)
+							direction = 0;
 						break;
 					case 'a':
 					case KEY_ARROW_LEFT:
-						direction = 1;
+						if(direction != 2)
+							direction = 1;
 						break;
 					case 'd':
 					case KEY_ARROW_RIGHT:
-						direction = 2;
+						if(direction != 1)
+							direction = 2;
 						break;
 					case 's':
 					case KEY_ARROW_DOWN:
-						direction = 3;
+						if(direction != 0)
+							direction = 3;
 						break;
 				}
 			} else if (msg.msg == WINDOW_EVENT_KEYRELEASED && gameOver) {

@@ -2,6 +2,7 @@
 #define FS_H
 
 #include <stddef.h>
+#include <sys/types.h>
 
 #ifdef __cplusplus
 extern "C"{
@@ -24,7 +25,7 @@ int lemon_open(char* filename, int flags);
 void lemon_close(int fd);
 int lemon_read(int fd, void* buffer, size_t count);
 int lemon_write(int fd, void* buffer, size_t count);
-int lemon_seek(int fd, uint32_t offset, int whence);
+off_t lemon_seek(int fd, off_t offset, int whence);
 int lemon_readdir(int fd, uint32_t count, lemon_dirent_t* dirent);
 
 #ifdef __cplusplus

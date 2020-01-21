@@ -17,6 +17,7 @@ typedef void (*open_type_t) (struct fs_node*, uint32_t flags);
 typedef void (*close_type_t) (struct fs_node*);
 typedef struct fs_dirent *(*readdir_type_t) (struct fs_node*, uint32_t);
 typedef struct fs_node*(*finddir_type_t) (struct fs_node*, char *name);
+typedef uint64_t off_t;
 
 typedef struct fs_node{
     char name[128]; // Filename
@@ -32,6 +33,8 @@ typedef struct fs_node{
     close_type_t close; // Close callback
     readdir_type_t readDir; // Read callback
     finddir_type_t findDir; // Find callback
+
+    off_t offset = 0;
 
     fs_node* ptr;
 } fs_node_t;

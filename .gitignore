@@ -1,8 +1,8 @@
 Disks/Lemon.vhd
 .vscode
-Applications/Gnuboy
-InitrdWriter/Contents/*.gbc
-InitrdWriter/Contents/lemongnuboy
+*.img
+*.wad
+*.gbc
 *.o
 *.lef
 Kernel/obj

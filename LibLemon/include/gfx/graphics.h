@@ -85,6 +85,7 @@ void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surfa
 video_mode_t GetVideoMode();
 
 void DrawGradient(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
+void DrawGradientVertical(rect_t rect, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
 void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
 
 void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset = {0,0});

@@ -21,14 +21,15 @@ void memcpy_optimized(void* dest, void* src, size_t count) {
 	size_t size_aligned = (count - overflow); // Size rounded DOWN to lowest multiple of 128 bits
 
 	
-	//if(((size_t)dest % 0x10) || ((size_t)src % 0x10)){
+	if(((size_t)dest % 0x10) || ((size_t)src % 0x10)){
 	    memcpy/*_sse2_unaligned*/(dest, src, /*size_aligned/0x10*/count);
-	/*}
+		return;
+	}
     else
 	    memcpy_sse2(dest, src, size_aligned/0x10);
 
 	if (overflow > 0)
-		memcpy(dest + size_aligned, src + size_aligned, overflow);*/
+		memcpy(dest + size_aligned, src + size_aligned, overflow);
 }
 
 #pragma GCC pop_options

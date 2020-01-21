@@ -16,11 +16,12 @@ extern "C"{
 void abort();
 
 char* itoa(long num, char* str, int base);
+int atoi(const char*);
+long int atol(const char* str);
 
-#warning "atexit, atoi and getenv not implemented"
+#warning "atexit and getenv not implemented"
 // Not implemented
 int atexit(void (*)(void));
-int atoi(const char*);
 char* getenv(const char*);
 
 void exit();

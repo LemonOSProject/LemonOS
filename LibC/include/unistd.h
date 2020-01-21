@@ -4,6 +4,10 @@
 #include <sys/types.h>
 #include <stddef.h>
 
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -13,9 +17,9 @@ extern "C" {
 int execv(const char*, char* const[]);
 int execve(const char*, char* const[], char* const[]);
 int execvp(const char*, char* const[]);
-/*pid_t*/uint32_t fork(void);
+/*pid_t */uint32_t fork(void);
 
-/*off_t*/uint32_t lseek(int fd, /*off_t*/uint32_t offset, int whence);
+off_t lseek(int fd, off_t offset, int whence);
 
 size_t read(int fd, void* buffer, size_t count);
 size_t write(int fd, void* buffer, size_t count);

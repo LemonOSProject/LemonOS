@@ -13,6 +13,15 @@ extern "C"{
 #endif
 
 #include <stddef.h>
+#include <sys/types.h>
+
+#define O_RDONLY  00
+#define O_WRONLY  01
+#define O_RDWR    02
+
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
 
 int open(const char* filename, int flags);
 int close(int fd);

@@ -9,6 +9,4 @@
 
 typedef long unsigned int size_t;
 
-typedef unsigned int off_t;
-
 #endif

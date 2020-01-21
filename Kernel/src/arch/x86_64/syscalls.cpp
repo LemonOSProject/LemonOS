@@ -41,6 +41,8 @@
 #define SYS_SEND_MESSAGE 28
 #define SYS_RECEIVE_MESSAGE 29
 #define SYS_UPTIME 30
+#define SYS_GET_VIDEO_MODE 31
+#define SYS_UNAME 32
 
 typedef int(*syscall_t)(regs64_t*);
 
@@ -80,7 +82,7 @@ int SysRead(regs64_t* r){
 	uint8_t* buffer = (uint8_t*)r->rcx;
 	if(!buffer) { return 1; }
 	uint64_t count = r->rdx;
-	int ret = node->read(node, 0, count, buffer);
+	int ret = node->read(node, node->offset, count, buffer);
 	*(int*)r->rsi = ret;
 	return 0;
 }
@@ -115,6 +117,7 @@ int SysOpen(regs64_t* r){
 		}
 		fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 		Scheduler::GetCurrentProcess()->fileDescriptors.add_back(node);
+		fs::Open(node, 0);
 		break;
 	}
 
@@ -123,6 +126,11 @@ int SysOpen(regs64_t* r){
 }
 
 int SysClose(regs64_t* r){
+	int fd = *((int*)r->rbx);
+	fs_node_t* node;
+	if(node = Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
+		fs::Close(node);
+	}
 	return 0;
 }
 
@@ -153,14 +161,17 @@ int SysTime(regs64_t* r){
 int SysMapFB(regs64_t *r){
 	video_mode_t vMode = Video::GetVideoMode();
 
-	uintptr_t fbVirt = (uintptr_t)Memory::Allocate4KPages(vMode.height*vMode.pitch/PAGE_SIZE_4K + 1, Scheduler::currentProcess->addressSpace);
-	Memory::MapVirtualMemory4K(HAL::multibootInfo.framebufferAddr,fbVirt,vMode.height*vMode.pitch/PAGE_SIZE_4K + 1,Scheduler::currentProcess->addressSpace);
+	uintptr_t fbVirt = (uintptr_t)Memory::Allocate4KPages(vMode.height*vMode.pitch/PAGE_SIZE_4K + 2, Scheduler::currentProcess->addressSpace);
+	Memory::MapVirtualMemory4K(HAL::multibootInfo.framebufferAddr,fbVirt,vMode.height*vMode.pitch/PAGE_SIZE_4K + 2,Scheduler::currentProcess->addressSpace);
 
 	fb_info_t fbInfo;
 	fbInfo.width = vMode.width;
 	fbInfo.height = vMode.height;
 	fbInfo.bpp = vMode.bpp;
 	fbInfo.pitch = vMode.pitch;
+
+	Log::Info("Mapping Framebuffer to:");
+	Log::Info(fbVirt);
 
 	*((uintptr_t*)r->rbx) = fbVirt;
 	*((fb_info_t*)r->rcx) = fbInfo;
@@ -193,7 +204,7 @@ int SysLSeek(regs64_t* r){
 		return 1;
 	}
 
-	uint32_t* ret = (uint32_t*)r->rsi;
+	uint64_t* ret = (uint64_t*)r->rsi;
 	int fd = r->rbx;
 
 	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length() || !Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
@@ -202,7 +213,8 @@ int SysLSeek(regs64_t* r){
 
 	switch(r->rdx){
 	case 0: // SEEK_SET
-		return 2; // Not implemented
+		Scheduler::GetCurrentProcess()->fileDescriptors[fd]->offset = r->rcx;
+		return 0;
 		break;
 	case 1: // SEEK_CUR
 		return 2; // Not implemented
@@ -359,8 +371,29 @@ int SysDebug(regs64_t* r){
 	return 0;
 }
 
+int SysGetVideoMode(regs64_t* r){
+	video_mode_t vMode = Video::GetVideoMode();
+	fb_info_t fbInfo;
+	fbInfo.width = vMode.width;
+	fbInfo.height = vMode.height;
+	fbInfo.bpp = vMode.bpp;
+	fbInfo.pitch = vMode.pitch;
+
+	*((fb_info_t*)r->rbx) = fbInfo;
+
+	return 0;
+}
+
+namespace Lemon { extern char* versionString; };
+int SysUName(regs64_t* r){
+	char* str = (char*)r->rbx;
+	strcpy(str, Lemon::versionString);
+
+	return 0;
+}
+
 syscall_t syscalls[]{
-	nullptr,
+	/*nullptr*/SysDebug,
 	SysExit,					// 1
 	SysExec,
 	SysRead,
@@ -390,10 +423,10 @@ syscall_t syscalls[]{
 	SysRenderWindow,
 	SysSendMessage,
 	SysReceiveMessage,
-	SysUptime,
-
-	/*SysUname,
-	SysMemalloc,
+	SysUptime,					// 30
+	SysGetVideoMode,
+	SysUName,
+	/*SysMemalloc,
 	SysStat,
 	SysLSeek,
 	SysGetPid,					// 20
@@ -413,7 +446,6 @@ syscall_t syscalls[]{
 	SysGrantPty,
 	SysForkExec,
 	SysGetSysinfo,*/
-	SysDebug
 };
 
 namespace Scheduler{extern bool schedulerLock;};

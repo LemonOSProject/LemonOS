@@ -91,20 +91,20 @@ void memset64_optimized(void* dest, uint64_t c, size_t count) {
 }
 
 void memcpy_optimized(void* dest, void* src, size_t count) {
-	if(((size_t)dest % 0x10) || ((size_t)src % 0x10)) {
+	/*if(((size_t)dest % 0x10) || ((size_t)src % 0x10)) {
         memcpy(dest, src, count);
         return;
-    }
+    }*/
 
-	dest = dest; //+ 0x10-start_overflow;
-	count -= 0;//0x10 - start_overflow;
+	//dest = dest; //+ 0x10-start_overflow;
+	//count -= 0;//0x10 - start_overflow;
 
 	size_t overflow = (count % 0x10); // Amount of overflow bytes
 	size_t size_aligned = (count - overflow); // Size rounded DOWN to lowest multiple of 128 bits
 
-    /*if(((size_t)dest % 0x10) || ((size_t)src % 0x10))
+    if(((size_t)dest % 0x10) || ((size_t)src % 0x10))
 	    memcpy_sse2_unaligned(dest, src, size_aligned/0x10);
-    else*/
+    else
 	    memcpy_sse2(dest, src, size_aligned/0x10);
 
 	if (overflow > 0)
@@ -188,7 +188,7 @@ void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surfa
 	for (int i = 0; i < h && i + y < surface->height; i++) {
 		for (int j = 0; j < w && j + x < surface->width; j++) {
             if(data[bmp_offset + j * (bmpBpp / 8)] == 1 && data[bmp_offset + j * (bmpBpp / 8) + 1] == 1 && data[bmp_offset + j * (bmpBpp / 8) + 2] == 1) continue;
-			uint32_t offset = (y + i)*(surface->width*pixelSize + surface->linePadding) + (x + j) * pixelSize;
+			uint32_t offset = (y + i)*(surface->width*pixelSize) + (x + j) * pixelSize;
 			surface->buffer[offset] = data[bmp_offset + j * (bmpBpp / 8)];
 			surface->buffer[offset + 1] = data[bmp_offset + j * (bmpBpp / 8) + 1];
 			surface->buffer[offset + 2] = data[bmp_offset + j * (bmpBpp / 8) + 2];
@@ -216,6 +216,10 @@ void DrawGradient(int x, int y, int width, int height, rgba_colour_t c1, rgba_co
     }
 }
 
+void DrawGradientVertical(rect_t rect, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface){
+    DrawGradientVertical(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, c1, c2, surface);
+}
+
 void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface){
     if(x < 0){
         width += x;
@@ -240,7 +244,7 @@ void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset){
 		/*for(int j = 0; j < src->width && j < dest->width - offset.x; j++){
 			destBuffer[(i+offset.y)*dest->width + j + offset.x] = srcBuffer[i*src->width + j];
 		}*/
-        memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4 + dest->linePadding) + offset.x*4), src->buffer + i*src->width*4, src->width*4);
+        memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4) + offset.x*4), src->buffer + i*src->width*4, src->width*4);
 	}
 }
 

@@ -15,6 +15,9 @@ extern "C"{
 
 void* memset(void* src, int c, size_t count);
 void *memcpy(void* dest, void* src, size_t count);
+void *memmove(void* dest, void* src, size_t count);
+void* memchr(const void* src, int c, size_t count);
+int memcmp(const void* ptr1, const void* ptr2, size_t count);
 
 int strlen(const char* str);
 char* strcat(char* dest, const char* src);

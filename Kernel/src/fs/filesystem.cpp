@@ -16,13 +16,17 @@ namespace fs{
     }
 
     void Open(fs_node_t* node, uint32_t flags){
-        if(node->write)
+        if(node->open){
+            node->offset = 0;
             return node->open(node,flags);
+        }
     }
 
     void Close(fs_node_t* node){
-        if(node->write)
+        if(node->close){
+            node->offset = 0;
             return node->close(node);
+        }
     }
 
     fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index){

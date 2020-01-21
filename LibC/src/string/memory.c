@@ -31,3 +31,33 @@ void *memcpy(void* dest, void* src, size_t count) {
 	} 
 	return dest;
 }
+
+void* memchr (const void* src, int c, size_t count){
+	const char* ptr = (const char*)src;
+	for(size_t i = 0; i < count; i++, ptr++){
+		if(*ptr == c){ // Found first instance of c
+			return ptr; // Return pointer to first instance of c
+		}
+	}
+}
+
+int memcmp(const void* ptr1, const void* ptr2, size_t count){
+	const char* p1 = (const char*)ptr1;
+	const char* p2 = (const char*)ptr2;
+	for(size_t i = 0; i < count; i++, p1++, p2++){
+		if(*p1 != *p2){
+			return (*p1 > *p2) - (*p1 < *p2); // Value >0 if p1 > p2, 0 if all equal and <0 if p1 < p2.
+		}
+	}
+	return 0;
+}
+
+void *memmove(void* dest, void* src, size_t count) {
+	char* buffer = malloc(count);
+
+	memcpy(buffer, src, count);
+	memcpy(dest, buffer, count);
+	
+	free(buffer);
+	return dest;
+}

@@ -62,11 +62,11 @@ void PaintWindow(Window* win){
 	/*nobg:
 	for(int i = 0; i < win->widgets.get_length(); i++){
 		win->widgets[i]->Paint(&win->surface);
-	}
+	}*/
 
 	if(win->OnPaint){
 		win->OnPaint(&win->surface);
-	}*/
+	}
 
 	_PaintWindow(win->handle, &win->surface);
 }

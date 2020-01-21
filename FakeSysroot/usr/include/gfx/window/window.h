@@ -2,7 +2,7 @@
 
 #define WINDOW_FLAGS_NODECORATION 0x1
 #define WINDOW_FLAGS_SNAP_TO_BOTTOM 0x2
-#define WINDOW_FLAGS_NOBACKGROUND 0x4
+//#define WINDOW_FLAGS_NOBACKGROUND 0x4
 
 #include <stdint.h>
 #include <lemon/types.h>

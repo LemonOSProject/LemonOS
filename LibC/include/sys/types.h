@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <lemon/types.h>
 
-typedef uint32_t pid_t;
-typedef int off_t;
+typedef uint64_t pid_t;
+typedef long off_t;
 typedef uint64_t ino_t;
 typedef int mode_t;
 typedef int uid_t;
