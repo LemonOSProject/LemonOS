@@ -31,11 +31,8 @@ public:
 	}
 
 	void clear() {
-		ListNode<T>* node = front;
-		while (node->next) {
-			ListNode<T>* n = node->next;
-			free(node);
-			node = n;
+		for(int i = 0; i < num; i++){
+			remove_at(i);
 		}
 		front = NULL;
 		back = NULL;
@@ -45,7 +42,7 @@ public:
 	void add_back(T obj) {
 		ListNode<T>* node = new ListNode<T>();
 		node->next = NULL;
-		//*node = ListNode<T>();
+		node->prev = NULL;
 		node->obj = obj;
 		
 		if (!front) {
@@ -62,6 +59,7 @@ public:
 	void add_front(T obj) {
 		ListNode<T>* node = new ListNode<T>();
 		node->next = NULL;
+		node->prev = NULL;
 		node->obj = obj;
 
 		if (!back) {

@@ -58,6 +58,8 @@ void Wait(){
 }
 
 List<vector2i_t>* snake;
+
+int direction;
 	
 uint8_t snakeMapCells[16][16];
 int powerUpTimer;
@@ -77,26 +79,8 @@ void Reset(){
 	powerUp = 0;
 	frameWaitTime = frameWaitTimeDefault;
 	snakeCellColours[0] = bgColourDefault;
-}
 
-vector2i_t applePos = {1,1};
-
-extern "C"
-int main(char argc, char** argv){
-	win_info_t windowInfo;
-	//handle_t windowHandle;
-	Window* window;
-
-	windowInfo.width = 256;
-	windowInfo.height = 256;
-	windowInfo.x = 64;
-	windowInfo.y = 0;
-	windowInfo.flags = 0;
-
-	snake = new List<vector2i_t>();
-
-	snake->add_back({8,8});
-	snake->add_back({9,8});
+	direction = 0;
 
 	for(int i = 0; i < 16; i++){
 		for(int j = 0; j < 16; j++){
@@ -104,25 +88,30 @@ int main(char argc, char** argv){
 		}
 	}
 
-	window = CreateWindow(&windowInfo);
+	syscall(SYS_UPTIME, (uintptr_t)&lastUptimeSeconds, (uintptr_t)&lastUptimeMs, 0,0,0 );
+}
 
-	int direction;
+vector2i_t applePos = {1,1};
+
+extern "C"
+int main(char argc, char** argv){
+	win_info_t windowInfo;
+	Window* window;
+
+	windowInfo.width = 256;
+	windowInfo.height = 256;
+	windowInfo.x = 50;
+	windowInfo.y = 50;
+	windowInfo.flags = 0;
+	strcpy(windowInfo.title, "Snake");
+
+	snake = new List<vector2i_t>();
+
+	window = CreateWindow(&windowInfo);
 
 	Reset();
 
 	for(;;){
-		Wait();
-
-		if(powerUp){
-			if(powerUpTimer){
-				powerUpTimer--;
-				snakeCellColours[0] = {255, 0, 0, 255};
-			} else {
-				powerUp = 0;
-				frameWaitTime = frameWaitTimeDefault;
-				snakeCellColours[0] = bgColourDefault;
-			}
-		}
 
 		ipc_message_t msg;
 		while(ReceiveMessage(&msg)){
@@ -166,6 +155,19 @@ int main(char argc, char** argv){
 		
 		if(gameOver) continue;
 
+		Wait();
+
+		if(powerUp){
+			if(powerUpTimer){
+				powerUpTimer--;
+				snakeCellColours[0] = {255, 0, 0, 255};
+			} else {
+				powerUp = 0;
+				frameWaitTime = frameWaitTimeDefault;
+				snakeCellColours[0] = bgColourDefault;
+			}
+		}
+
 		for(int i = 0; i < 16; i++){
 			for(int j = 0; j < 16; j++){
 				snakeMapCells[i][j] = SNAKE_CELL_EMPTY;
@@ -207,7 +209,6 @@ int main(char argc, char** argv){
 			gameOver = true;
 			DrawString("Game Over, Press any key to Reset", 0, 0, 255, 255, 255, &window->surface);
 			_PaintWindow(window->handle, &window->surface);
-			//syscall(SYS_UPDATE_WINDOW, (uint64_t)window->handle, (uint64_t)&window->surface,0,0,0);
 			continue;
 		} else if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_APPLE){
 			snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] = SNAKE_CELL_EMPTY;

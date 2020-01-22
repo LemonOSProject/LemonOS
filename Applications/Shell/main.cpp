@@ -32,7 +32,10 @@ int menuItemCount = 0;
 
 void OnTaskbarPaint(surface_t* surface){
 	DrawGradientVertical(100,0,surface->width - 100, surface->height, {96,96,96}, {64, 64, 64},surface);
-	DrawGradientVertical(0,0,100, surface->height, {240,24,24}, {/*160*/120, /*16*/12, /*16*/12},surface);
+	if(showMenu)
+		DrawGradientVertical(0,0,100, surface->height, {120,12,12}, {/*160*/60, /*16*/6, /*16*/6},surface);
+	else
+		DrawGradientVertical(0,0,100, surface->height, {240,24,24}, {/*160*/120, /*16*/12, /*16*/12},surface);
 }
 
 void OnMenuPaint(surface_t* surface){
@@ -132,12 +135,12 @@ int main(){
 		while(ReceiveMessage(&msg)){
 			switch (msg.msg)
 			{
-			case WINDOW_EVENT_MOUSEDOWN:
+			case WINDOW_EVENT_MOUSEUP:
 				uint32_t mouseX;
 				uint32_t mouseY;
 				mouseX = msg.data >> 32;
 				mouseY = (uint32_t)msg.data;
-				if(mouseX < 128 && (handle_t)msg.data2 == taskbar->handle){
+				if(mouseX < 100 && (handle_t)msg.data2 == taskbar->handle){
 					showMenu = !showMenu;
 
 					if(!showMenu){
@@ -146,7 +149,7 @@ int main(){
 						menu->handle = _CreateWindow(&menu->info);
 					}
 				} else if ((handle_t)msg.data2 == menu->handle){
-					if(mouseY > 42 && mouseY < (menuItemCount*14 - 42)){
+					if(mouseY > 42 && mouseY < (menuItemCount*14 + 42)){
 						syscall(SYS_EXEC,(uintptr_t)menuItems[(mouseY - 42) / 14].path,0,0,0,0);
 					}
 				}

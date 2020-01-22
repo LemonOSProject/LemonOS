@@ -59,7 +59,9 @@ int SysExec(regs64_t* r){
 	char* file = strtok(filepath,"/");
 	while(file != NULL){ // Iterate through the directories to find the file
 		fs_node_t* node = current_node->findDir(current_node,file);
-		if(!node) return 1;
+		if(!node) {
+			return 1;
+		}
 		if(node->flags & FS_NODE_DIRECTORY){
 			current_node = node;
 			file = strtok(NULL, "/");
@@ -267,6 +269,17 @@ int SysCreateWindow(regs64_t* r){
 
 int SysDestroyWindow(regs64_t* r){
 	handle_t handle = (handle_t)r->rbx;
+
+	window_t* win;
+	if(win = (window_t*)Scheduler::FindHandle(handle)){
+		for(int i = 0; i < GetDesktop()->windows->get_length(); i++){
+			if(GetDesktop()->windows->get_at(i) == win){
+				GetDesktop()->windows->remove_at(i);
+				break;
+			}
+		}
+	}
+
 	return 0;
 }
 

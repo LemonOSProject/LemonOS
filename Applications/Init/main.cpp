@@ -259,6 +259,27 @@ int main(){
 		if(mouseDown && !(mouseData[0] & 0x1)){
 			mouseDown = false;
 			drag = false;
+			if(active && mousePos.x > active->pos.x && mousePos.x < active->pos.x + active->info.width && mousePos.y > active->pos.y && mousePos.y < active->pos.y + active->info.height){
+				redrawWindowDecorations = true;
+				if(mousePos.y < active->pos.y + 25 && !(active->info.flags & WINDOW_FLAGS_NODECORATION)){
+					
+				} else {
+					ipc_message_t mouseEventMessage;
+					mouseEventMessage.msg = WINDOW_EVENT_MOUSEUP;
+					uint32_t mouseX;
+					uint32_t mouseY;
+					if(active->info.flags & WINDOW_FLAGS_NODECORATION){
+						mouseX = mousePos.x - active->pos.x;
+						mouseY = mousePos.y - active->pos.y;
+					} else {
+						mouseX = mousePos.x - active->pos.x - 1; // Account for window border
+						mouseY = mousePos.y - active->pos.y - 25; // Account for border and title bar
+					}
+					mouseEventMessage.data = (mouseX << 32) | mouseY;
+					mouseEventMessage.data2 = (uintptr_t)active->info.handle;
+					SendMessage(active->info.ownerPID, mouseEventMessage);
+				}
+			}
 		}
 
 		for(int i = 0; i < windows.get_length(); i++){ // Remove any windows that no longer exist
