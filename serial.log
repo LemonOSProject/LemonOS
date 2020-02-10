@@ -2,7 +2,7 @@
 [INFO]    Initializing Lemon...
 
 [INFO]    511
-[INFO]    0x4cf003
+[INFO]    0x4d6003
 [INFO]    0x100c4
 [INFO]    0xffffffffc0000000
 [INFO]    0xffffffffc0001000
@@ -22,44 +22,60 @@
 [INFO]    1
 [INFO]    Initializing Ramdisk...
 [INFO]    Initrd address: 
-[INFO]    0xffffffff80130320
+[INFO]    0xffffffff80130380
 [INFO]    Size:
-[INFO]    3733373
+[INFO]    3763037
 [INFO]    File Count:
 [INFO]    14files
 OK
 [INFO]    Ramdisk Contents:
-    dev
 
-[INFO]    0xe    bg.bmp
+[INFO]    0x0    dev
 
-[INFO]    0xe    banner.bmp
+[INFO]    0x1
+[INFO]    14    bg.bmp
 
-[INFO]    0xe    binico.bmp
+[INFO]    0x2
+[INFO]    14    banner.bmp
 
-[INFO]    0xe    close.bmp
+[INFO]    0x3
+[INFO]    14    binico.bmp
 
-[INFO]    0xe    fileico.bmp
+[INFO]    0x4
+[INFO]    14    close.bmp
 
-[INFO]    0xe    folderico.bmp
+[INFO]    0x5
+[INFO]    14    fileico.bmp
 
-[INFO]    0xe    progressbar.bmp
+[INFO]    0x6
+[INFO]    14    folderico.bmp
 
-[INFO]    0xe    splash.bmp
+[INFO]    0x7
+[INFO]    14    progressbar.bmp
 
-[INFO]    0xe    init.lef
+[INFO]    0x8
+[INFO]    14    splash.bmp
 
-[INFO]    0xe    snake.lef
+[INFO]    0x9
+[INFO]    14    init.lef
 
-[INFO]    0xe    lemondoom.lef
+[INFO]    0xa
+[INFO]    14    snake.lef
 
-[INFO]    0xe    shell.lef
+[INFO]    0xb
+[INFO]    14    lemondoom.lef
 
-[INFO]    0xe    menu.cfg
+[INFO]    0xc
+[INFO]    14    shell.lef
 
-[INFO]    0xe    fileman.lef
+[INFO]    0xd
+[INFO]    14    fileman.lef
 
 [INFO]    0xe
+[INFO]    14    menu.cfg
+
+[INFO]    0xf
+[INFO]    14
 [INFO]    Initializing HID...
 [INFO]    OK
 [INFO]    Registering Syscall Handler...OK
@@ -78,14 +94,26 @@ OK
 [INFO]    Initializing Task Scheduler...
 [INFO]    0x208d000OK
 [INFO]    Loading Init Process...
-[INFO]    0xe
+[INFO]    14
 [INFO]    0x2116000
 [INFO]    0x4000c0 entryOK
 [INFO]    Mapping Framebuffer to:
 [INFO]    0x600000
-[INFO]    0xe
-[INFO]    0x24db000
+[INFO]    Opening: /close.bmp
+[INFO]    14, success!
+[INFO]    BMª
+[INFO]    0x0
+[INFO]    Executing: /shell.lef
+[INFO]    14
+[INFO]    0x24cb000
 [INFO]    0x4000c0 entry
-[INFO]    Opening: /dev/mouse0
+[INFO]    Opening: /dev/mouse0, success!
 [INFO]    Opening: /menu.cfg
-[INFO]    0xe
+[INFO]    14, success!
+[ERROR]   Fatal Exception: 
+[INFO]    0xd
+[INFO]    0x0
+[INFO]    EIP: 
+[INFO]    0x401898
+[INFO]    Error Code: 
+[INFO]    0x0

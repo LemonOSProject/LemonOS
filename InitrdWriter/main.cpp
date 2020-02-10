@@ -28,8 +28,8 @@ typedef struct {
 } __attribute__((packed)) lemoninitfs_node_t ;
 
 int main(int argc, char** argv){
-    if(argc < 4){
-        cout << "Usage: " << argv[0] << " <output file> file1 file1_name [<file2> <file2name>] ...";
+    if(argc < 3){
+        cout << "Usage: " << argv[0] << " <output file> file1 [file2] ...";
         return 1;
     }
     
@@ -42,7 +42,7 @@ int main(int argc, char** argv){
 
     lemoninitfs_header_t initrd_header;
     strcpy(initrd_header.versionstring,version); // Copy the version string
-    initrd_header.num_files = argc / 2 - 1; // Get number of files (first two arguments are the command and output file)
+    initrd_header.num_files = argc - 2; // Get number of files (first two arguments are the command and output file)
 
     output.write((char*)&initrd_header,sizeof(lemoninitfs_header_t));
 
@@ -52,8 +52,8 @@ int main(int argc, char** argv){
 
     uint32_t offset = sizeof(lemoninitfs_node_t) * 256 + sizeof(lemoninitfs_header_t);
 
-    for(int i = 0; i < argc - 2; i += 2){
-        lemoninitfs_node_t* node = &initrd_nodes[i / 2];
+    for(int i = 0; i < argc - 2; i += 1){
+        lemoninitfs_node_t* node = &initrd_nodes[i];
 
         input.open(argv[i + 2]);
 		if(input.bad())continue;
@@ -66,7 +66,7 @@ int main(int argc, char** argv){
 
         input.seekg(0,ios::beg);
         input.close();
-        strcpy(node->filename,argv[i + 3]);
+        strcpy(node->filename,basename(argv[i + 2]));
         node->magic = 0xBEEF;
         node->type = LEMONINITFS_FILE;
         node->size = size;
@@ -78,7 +78,7 @@ int main(int argc, char** argv){
     output.seekp(sizeof(lemoninitfs_header_t));
     output.write((char*)initrd_nodes, sizeof(lemoninitfs_node_t) * 256);
 
-    for(int i = 0; i < argc - 2; i += 2){
+    for(int i = 0; i < argc - 2; i += 1){
         input.open(argv[i + 2]);
 
         if(!input.is_open()){
@@ -95,13 +95,13 @@ int main(int argc, char** argv){
 
         input.seekg(0,ios::beg);
 
-        cout << "Writing file at " << argv[i + 3] << " with name " << argv[i + 2] << " and size " << (size) << "B" << endl;
+        cout << "Writing file at " << argv[i + 2] << " with name " << argv[i + 2] << " and size " << (size) << "B" << endl;
 
         char* data = new char[size];
 
         input.read(data,size);
         input.close();
-        output.seekp(initrd_nodes[i/2].offset);
+        output.seekp(initrd_nodes[i].offset);
         output.write(data, size);
         delete data;
     }

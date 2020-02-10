@@ -204,14 +204,6 @@ int main(){
 
 	syscall(SYS_CREATE_DESKTOP,0,0,0,0,0); // Get Kernel to create Desktop
 
-	win_info_t testWindow;
-	testWindow.width = 100;
-	testWindow.height = 100;
-	testWindow.x = 10;
-	testWindow.y = 10;
-	strcpy(testWindow.title, "Test Window");
-	testWindow.flags = 0;
-
 	int closeButtonFd = lemon_open("/close.bmp", 0);
 	uint64_t closeButtonLength = lemon_seek(closeButtonFd, 0, SEEK_END);
 	lemon_seek(closeButtonFd, 0, SEEK_SET);
@@ -226,8 +218,6 @@ int main(){
 	DrawBitmapImage(0, 0, closeButtonSurface.width, closeButtonSurface.height, closeButtonBuffer, &closeButtonSurface);
 
 	syscall(0, (uintptr_t)((bitmap_file_header_t*)closeButtonBuffer)->magic, closeInfoHeader->width, 0, 0,0);
-
-	syscall(SYS_CREATE_WINDOW, (uintptr_t)&testWindow,0,0,0,0);
 
 	syscall(SYS_EXEC, (uintptr_t)"/shell.lef",0,0,0,0);
 

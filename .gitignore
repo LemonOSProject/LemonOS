@@ -5,6 +5,7 @@ Disks/Lemon.vhd
 *.gbc
 *.o
 *.lef
+*.a
+FakeSysroot/usr/include/*
 Kernel/obj
 Applications/*/*.lef
-
