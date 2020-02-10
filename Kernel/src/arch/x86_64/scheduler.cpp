@@ -211,7 +211,7 @@ namespace Scheduler{
         proc->thread_count = 1;
 
         proc->addressSpace = Memory::CreateAddressSpace();// So far this function is only used for idle task, we don't need an address space
-        proc->timeSliceDefault = 1;
+        proc->timeSliceDefault = 10;
         proc->timeSlice = proc->timeSliceDefault;
 
         // Create structure for the main thread

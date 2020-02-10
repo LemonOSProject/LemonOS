@@ -53,6 +53,6 @@ void DestroyWindow(Window* win);
 void PaintWindow(Window* win);
 
 void HandleMouseDown(Window* win, vector2i_t mousePos);
-Widget* HandleMouseUp(Window* win);
+Widget* HandleMouseUp(Window* win, vector2i_t mousePos);
 
 void AddWidget(Widget* widget, Window* win);

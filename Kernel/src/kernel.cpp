@@ -14,6 +14,7 @@
 #include <panic.h>
 #include <scheduler.h>
 #include <syscalls.h>
+#include <8254x.h>
 #ifdef Lemon32
 #include <gui.h>
 #endif
@@ -36,9 +37,10 @@ void IdleProcess(){
 		
 	initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
-	//#ifdef Lemon32
-	Scheduler::LoadELF(initElf);
-	//#endif*/
+	
+	uint64_t pid = Scheduler::LoadELF(initElf);
+	Scheduler::FindProcessByPID(pid)->timeSliceDefault += 5;
+
 	Log::Write("OK");
 	for(;;){
 	}
@@ -134,6 +136,9 @@ void kmain(multiboot_info_t* mb_info){
 	InitializeSyscalls();
 
 	Log::Write("OK");
+
+	PCI::Init();
+	Intel8254x::Initialize();
 
 	Log::Info("Initializing Task Scheduler...");
 	Scheduler::Initialize();

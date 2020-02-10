@@ -4,7 +4,6 @@ global memset64_sse2
 global memcpy_sse2_unaligned
 
 memcpy_sse2:
-	;ret
 	push rbp    ; save the prior rbp value
     mov rbp, rsp
 
@@ -12,6 +11,8 @@ memcpy_sse2:
 	mov rbx, rsi
 	mov rcx, rdx
 .loop:
+	;lea rdi, [rcx]
+	;shl rdi, 4
 
 	movdqa xmm0, [rbx]
 

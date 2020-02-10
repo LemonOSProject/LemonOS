@@ -59,10 +59,10 @@ void DestroyWindow(Window* win){
 void PaintWindow(Window* win){
 	//if(win->info.flags & WINDOW_FLAGS_NOBACKGROUND) goto nobg;
 	DrawRect(0,0,win->info.width, win->info.height, win->background, &win->surface);
-	/*nobg:
+	//nobg:
 	for(int i = 0; i < win->widgets.get_length(); i++){
-		win->widgets[i]->Paint(&win->surface);
-	}*/
+		win->widgets.get_at(i)->Paint(&win->surface);
+	}
 
 	if(win->OnPaint){
 		win->OnPaint(&win->surface);
@@ -73,18 +73,18 @@ void PaintWindow(Window* win){
 
 void HandleMouseDown(Window* win, vector2i_t mousePos){
 	for(int i = 0; i < win->widgets.get_length(); i++){
-		rect_t widgetBounds = win->widgets[i]->bounds;
-		if(widgetBounds.pos.x < mousePos.x && widgetBounds.pos.y < mousePos.y && widgetBounds.pos.x + widgetBounds.size.x > mousePos.x && widgetBounds.pos.y + widgetBounds.size.y > mousePos.y){
-			win->widgets[i]->OnMouseDown();
+		rect_t widgetBounds = win->widgets.get_at(i)->bounds;
+		if(widgetBounds.pos.x <= mousePos.x && widgetBounds.pos.y < mousePos.y && widgetBounds.pos.x + widgetBounds.size.x > mousePos.x && widgetBounds.pos.y + widgetBounds.size.y > mousePos.y){
+			win->widgets.get_at(i)->OnMouseDown(mousePos);
 			win->lastPressedWidget = i;
 			break;
 		}
 	}
 }
 
-Widget* HandleMouseUp(Window* win){
+Widget* HandleMouseUp(Window* win, vector2i_t mousePos){
 	if(win->lastPressedWidget >= 0){
-		win->widgets[win->lastPressedWidget]->OnMouseUp();
+		win->widgets[win->lastPressedWidget]->OnMouseUp(mousePos);
 		return win->widgets[win->lastPressedWidget];
 	}
 	win->lastPressedWidget = -1;

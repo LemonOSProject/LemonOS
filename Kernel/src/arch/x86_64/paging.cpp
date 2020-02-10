@@ -369,6 +369,7 @@ namespace Memory{
 			pageIndex = PAGE_TABLE_GET_INDEX(virt);
 			SetPageFrame(&(kernelHeapDirTables[pageDirIndex][pageIndex]), phys);
 			kernelHeapDirTables[pageDirIndex][pageIndex] |= 0x3;
+			invlpg(virt);
 			phys += PAGE_SIZE_4K;
 			virt += PAGE_SIZE_4K;
 		}

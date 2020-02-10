@@ -3,6 +3,8 @@
 #include <string.h>
 #include <logging.h>
 #include <hal.h>
+#include <panic.h>
+#include <scheduler.h>
 
 idt_entry_t idt[256];
 
@@ -231,6 +233,13 @@ extern "C"
 			Log::Info(regs->rip);
 			Log::Info("Error Code: ");
 			Log::Info(err_code);
+
+
+			char temp[16];
+			char temp2[16];
+			char temp3[16];
+			const char* reasons[]{"Generic Exception","RIP: ", itoa(regs->rip, temp, 16),"Exception: ",itoa(int_num, temp2, 16), "Process:", itoa(Scheduler::GetCurrentProcess() ? (Scheduler::GetCurrentProcess()->pid) : 0,temp3,10)};;
+			KernelPanic(reasons, 7);
 			for (;;);
 		}
 	}

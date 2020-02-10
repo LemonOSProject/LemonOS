@@ -151,23 +151,16 @@ void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t
         y = 0;
     }
     
-    uint32_t colour_i = (r << 16) | (g << 8) | b;
-    uint64_t colour_l = (colour_i << 32) | colour_i;
+    uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
+    uint64_t colour_l = (((uint64_t)colour_i) << 32) | colour_i;
     uint32_t* buffer = (uint32_t*)surface->buffer; // Convert byte array into an array of 32-bit unsigned integers as the supported colour depth is 32 bit
     for(int i = 0; i < height && (i + y) < surface->height; i++){
         uint32_t yOffset = (i + y) * (surface->width);
         for(int j = 0; j < width && (x + j) < surface->width; j++){
-            buffer[(i + y) * surface->width + (j + x)] = colour_i;
-            /*if(!(j % sizeof(uint64_t))){
-                ((uint64_t*)(buffer + ((i + y) * surface->width + x) * 4))[j/sizeof(uint64_t)] = colour_l;
-                j += 1;
-            } else* /
-            {
-                buffer[yOffset + (j + x)] = colour_i;
-            }*/
+            buffer[yOffset + (j + x)] = colour_i;
         }
-            
-        //memset32_optimized((void*)(buffer + yOffset + x), colour_i, ((x + width) < surface->width) ? width : (surface->width - x));
+          
+        //memset32_optimized((void*)(buffer + (yOffset + x)), colour_i, ((x + width) < surface->width) ? width : (surface->width - x));
     }
 }
 

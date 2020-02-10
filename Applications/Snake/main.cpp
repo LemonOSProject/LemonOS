@@ -22,8 +22,8 @@ rgba_colour_t snakeCellColours[]{
 
 rgba_colour_t bgColourDefault = {96,128,96,255};
 
-uint64_t frameWaitTime = 100; // For ~10 FPS (in ms)
-uint64_t frameWaitTimeDefault = 100;
+uint64_t frameWaitTime = 90; // For ~10 FPS (in ms)
+uint64_t frameWaitTimeDefault = 90;
 
 int powerUp = 0;
 
@@ -113,6 +113,8 @@ int main(char argc, char** argv){
 
 	for(;;){
 
+		Wait();
+
 		ipc_message_t msg;
 		while(ReceiveMessage(&msg)){
 			if(msg.msg == WINDOW_EVENT_KEY){
@@ -154,8 +156,6 @@ int main(char argc, char** argv){
 		}
 		
 		if(gameOver) continue;
-
-		Wait();
 
 		if(powerUp){
 			if(powerUpTimer){

@@ -3,17 +3,22 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <math.h>
+
 #define BUTTON_COLOUR_OUTLINE_DEFAULT
 
 void Widget::Paint(surface_t* surface){
 }
 
-void Widget::OnMouseDown(){
+void Widget::OnMouseDown(vector2i_t mousePos){
 }
 
-void Widget::OnMouseUp(){
+void Widget::OnMouseUp(vector2i_t mousePos){
 }
 
+//////////////////////////
+// Text Box
+//////////////////////////
 TextBox::TextBox(rect_t bounds){
     this->bounds = bounds;
 }
@@ -46,10 +51,13 @@ void TextBox::LoadText(char* text){
     strcpy(contents, text);
 }
 
-void TextBox::OnMouseDown(){
+void TextBox::OnMouseDown(vector2i_t mousePos){
     active = true;
 }
 
+//////////////////////////
+// Button
+//////////////////////////
 Button::Button(char* _label, rect_t _bounds){
     labelLength = strlen(_label);
     strcpy(label, _label);
@@ -111,14 +119,17 @@ void Button::Paint(surface_t* surface){
     }
 }
 
-void Button::OnMouseDown(){
+void Button::OnMouseDown(vector2i_t mousePos){
     pressed = true;
 }
 
-void Button::OnMouseUp(){
+void Button::OnMouseUp(vector2i_t mousePos){
     pressed = false;
 }
 
+//////////////////////////
+// Bitmap
+//////////////////////////
 Bitmap::Bitmap(rect_t _bounds){
     bounds = _bounds;
     surface.buffer = (uint8_t*)malloc(bounds.size.x*bounds.size.y*4);
@@ -132,6 +143,9 @@ void Bitmap::Paint(surface_t* surface){
     }
 }
 
+//////////////////////////
+// Label
+//////////////////////////
 Label::Label(char* _label, rect_t _bounds){
     labelLength = strlen(_label);
     label = (char*)malloc(labelLength);
@@ -154,10 +168,103 @@ void Label::Paint(surface_t* surface){
     }
 }
 
-ScrollContainer::ScrollContainer(rect_t _bounds){
+//////////////////////////
+// Scroll View
+//////////////////////////
+ScrollView::ScrollView(rect_t _bounds){
     bounds = _bounds;
 }
 
-void ScrollContainer::Paint(surface_t* surface){
+void ScrollView::Paint(surface_t* surface){
+    for(int i = 0; i < contents.get_length(); i++){
+        rect_t _bounds = contents[i]->bounds;
+        contents[i]->bounds = {_bounds.pos + _bounds.pos, _bounds.size};
+
+        contents[i]->Paint(surface);
+        contents[i]->bounds = _bounds;
+    }
+
+    DrawRect(bounds.pos.x + bounds.size.x - 24, bounds.pos.y, 24, bounds.size.y, {120, 120, 110, 255}, surface);
+}
+
+void ScrollView::OnMouseDown(vector2i_t mousePos){
+
+}
+
+void ScrollView::OnMouseUp(vector2i_t mousePos){
+    
+}
+
+//////////////////////////
+// ListView
+//////////////////////////
+ListItem::ListItem(char* _text){
+    text = (char*)malloc(strlen(_text) + 1);//new char[strlen(_text) + 1];
+    strcpy(text, _text);
+}
+
+ListView::ListView(rect_t _bounds, int itemHeight){
+    bounds = _bounds;
+    this->itemHeight = itemHeight;
+}
+
+ListView::~ListView(){
+}
+
+void ListView::ResetScrollBar(){
+    double iCount = contents.get_length();
+    
+    scrollMax = floor((iCount * itemHeight - bounds.size.y) / 2);
+    scrollIncrementPixels = (bounds.size.y / 2) / floor((iCount * itemHeight - bounds.size.y) / 2);
+    scrollBarHeight = bounds.size.y - scrollMax;
+    //scrollMax
+    //scrollMaxPixels = bounds.size.y / 2;
+
+    scrollPos = 0;
+}
+
+void ListView::Paint(surface_t* surface){
+    //DrawRect(bounds.pos.x, bounds.pos.y, bounds.size.x - 20, bounds.size.y, {250, 250, 250,}, surface);
+
+    for(int i = 0; i < contents.get_length(); i++){
+        ListItem* item = contents.get_at(i);
+        if(selected == i){
+            DrawRect(2,i*itemHeight + 2 - scrollPos, bounds.size.x - 24, itemHeight - 4, {165,/*24*/32,24}, surface);
+        }
+        DrawString(item->text, bounds.pos.x + 4, bounds.pos.y + i * itemHeight + (itemHeight / 2) - 6 - (scrollPos * scrollIncrementPixels * 2), 0, 0, 0, surface);
+    }
+
+    DrawRect(bounds.pos.x + bounds.size.x - 20, bounds.pos.y, 20, bounds.size.y, {120, 120, 110}, surface); 
+    
+    DrawGradientVertical(bounds.pos.x + 1 + bounds.size.x - 20, bounds.pos.y + 1 + scrollPos, 18, scrollBarHeight,{250,250,250,255},{235,235,230,255},surface);
+}
+
+void ListView::OnMouseDown(vector2i_t mousePos){
+    if(mousePos.x > bounds.pos.x + bounds.size.x - 20){
+        drag = true;
+        dragPos = mousePos;
+
+        return;
+    }
+    selected = floor(((double)mousePos.y + scrollPos) / itemHeight);
+
+    if(selected >= contents.get_length()) selected = contents.get_length();
+}
+
+void ListView::OnMouseUp(vector2i_t mousePos){
+    if(drag){
+        drag = false;
+        //scrollPos = mousePos.y;//+= mousePos.y - dragPos.y;
+        if(!scrollPos) scrollPos = scrollMax;
+        else scrollPos = 0;
+        if(scrollPos < 0) scrollPos = 0;
+        else if (scrollPos > scrollMax) scrollPos = scrollMax;
+    }
+}
+
+void ListItem::OnMouseDown(vector2i_t mousePos){
+}
+
+void ListItem::OnMouseUp(vector2i_t mousePos){
     
 }

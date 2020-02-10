@@ -64,6 +64,8 @@ typedef struct Desktop{
 	List<window_t*>* windows;
 
 	surface_t surface;
+
+	uint64_t pid;
 } __attribute__((packed)) desktop_t;
 
 void SetDesktop(desktop_t* desktop);

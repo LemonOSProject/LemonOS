@@ -43,6 +43,7 @@
 #define SYS_UPTIME 30
 #define SYS_GET_VIDEO_MODE 31
 #define SYS_UNAME 32
+#define SYS_READDIR 33
 
 typedef int(*syscall_t)(regs64_t*);
 
@@ -57,9 +58,15 @@ int SysExec(regs64_t* r){
 	fs_node_t* root = Initrd::GetRoot();
 	fs_node_t* current_node = root;
 	char* file = strtok(filepath,"/");
+
+	Log::Info("Executing: ");
+	Log::Write(filepath);
+
 	while(file != NULL){ // Iterate through the directories to find the file
 		fs_node_t* node = current_node->findDir(current_node,file);
 		if(!node) {
+			Log::Warning(filepath);
+			Log::Write(" not found!");
 			return 1;
 		}
 		if(node->flags & FS_NODE_DIRECTORY){
@@ -109,19 +116,22 @@ int SysOpen(regs64_t* r){
 	}
 
 	char* file = strtok(filepath,"/");
+	fs_node_t* node;
 	while(file != NULL){
-		fs_node_t* node = current_node->findDir(current_node,file);
+		node = current_node->findDir(current_node,file);
 		if(!node) return 1;
 		if(node->flags & FS_NODE_DIRECTORY){
 			current_node = node;
 			file = strtok(NULL, "/");
 			continue;
 		}
-		fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
-		Scheduler::GetCurrentProcess()->fileDescriptors.add_back(node);
-		fs::Open(node, 0);
 		break;
 	}
+	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
+	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(node);
+	fs::Open(node, 0);
+
+	Log::Write(", success!");
 
 	*((uint32_t*)r->rcx) = fd;
 	return 0;
@@ -133,6 +143,7 @@ int SysClose(regs64_t* r){
 	if(node = Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
 		fs::Close(node);
 	}
+	Scheduler::GetCurrentProcess()->fileDescriptors.replace_at(fd, NULL);
 	return 0;
 }
 
@@ -244,6 +255,7 @@ int SysCreateDesktop(regs64_t* r){
 	desktop_t* desktop = (desktop_t*)kmalloc(sizeof(desktop_t));
 
 	desktop->windows = new List<window_t*>();
+	desktop->pid = Scheduler::GetCurrentProcess()->pid;
 
 	SetDesktop(desktop);
 
@@ -264,6 +276,14 @@ int SysCreateWindow(regs64_t* r){
 	win->surface = surface;
 
 	GetDesktop()->windows->add_back(win);
+
+	message_t createMessage;
+	createMessage.msg = 0xBEEF; // Desktop Event
+	createMessage.data = 2; // Subevent - Window Created
+	createMessage.recieverPID = GetDesktop()->pid;
+	createMessage.senderPID = 0;
+	Scheduler::SendMessage(createMessage);
+
 	return 0;
 }
 
@@ -275,6 +295,12 @@ int SysDestroyWindow(regs64_t* r){
 		for(int i = 0; i < GetDesktop()->windows->get_length(); i++){
 			if(GetDesktop()->windows->get_at(i) == win){
 				GetDesktop()->windows->remove_at(i);
+				message_t destroyMessage;
+				destroyMessage.msg = 0xBEEF; // Desktop Event
+				destroyMessage.data = 1; // Subevent - Window Destroyed
+				destroyMessage.recieverPID = GetDesktop()->pid;
+				destroyMessage.senderPID = 0;
+				Scheduler::SendMessage(destroyMessage);
 				break;
 			}
 		}
@@ -405,6 +431,36 @@ int SysUName(regs64_t* r){
 	return 0;
 }
 
+int SysReadDir(regs64_t* r){
+	if(!(r->rbx && r->rcx)) return 1;
+
+	unsigned int fd = r->rbx;
+
+
+	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+		if(r->rsi) *((uint64_t*)r->rsi) = 0;
+		return 2;
+	} 
+	
+	fs_dirent_t* direntPointer = (fs_dirent_t*)r->rcx;
+
+	unsigned int count = r->rdx;
+
+	fs_dirent_t* dirent = fs::ReadDir(Scheduler::GetCurrentProcess()->fileDescriptors[fd],count);
+
+	if(!dirent) {
+		if(r->rsi) *((uint64_t*)r->rsi) = 0;
+		return 2;
+	}
+
+	direntPointer->inode = dirent->inode;
+	direntPointer->type = dirent->type;
+	strcpy(direntPointer->name,dirent->name);
+	direntPointer->name[strlen(dirent->name)] = 0;
+	if(r->rsi) *((uint64_t*)r->rsi) = 1;
+	return 0;
+}
+
 syscall_t syscalls[]{
 	/*nullptr*/SysDebug,
 	SysExit,					// 1
@@ -439,6 +495,7 @@ syscall_t syscalls[]{
 	SysUptime,					// 30
 	SysGetVideoMode,
 	SysUName,
+	SysReadDir,
 	/*SysMemalloc,
 	SysStat,
 	SysLSeek,

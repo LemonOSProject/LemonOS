@@ -2,7 +2,7 @@
 [INFO]    Initializing Lemon...
 
 [INFO]    511
-[INFO]    0x412003
+[INFO]    0x4cf003
 [INFO]    0x100c4
 [INFO]    0xffffffffc0000000
 [INFO]    0xffffffffc0001000
@@ -22,46 +22,70 @@
 [INFO]    1
 [INFO]    Initializing Ramdisk...
 [INFO]    Initrd address: 
-[INFO]    0xffffffff8012ef40
+[INFO]    0xffffffff80130320
 [INFO]    Size:
-[INFO]    2962720
+[INFO]    3733373
 [INFO]    File Count:
-[INFO]    10files
+[INFO]    14files
 OK
 [INFO]    Ramdisk Contents:
     dev
 
-[INFO]    0xa    bg.bmp
+[INFO]    0xe    bg.bmp
 
-[INFO]    0xa    banner.bmp
+[INFO]    0xe    banner.bmp
 
-[INFO]    0xa    binico.bmp
+[INFO]    0xe    binico.bmp
 
-[INFO]    0xa    close.bmp
+[INFO]    0xe    close.bmp
 
-[INFO]    0xa    fileico.bmp
+[INFO]    0xe    fileico.bmp
 
-[INFO]    0xa    folderico.bmp
+[INFO]    0xe    folderico.bmp
 
-[INFO]    0xa    progressbar.bmp
+[INFO]    0xe    progressbar.bmp
 
-[INFO]    0xa    splash.bmp
+[INFO]    0xe    splash.bmp
 
-[INFO]    0xa    init.lef
+[INFO]    0xe    init.lef
 
-[INFO]    0xa    snake.lef
+[INFO]    0xe    snake.lef
 
-[INFO]    0xa
+[INFO]    0xe    lemondoom.lef
+
+[INFO]    0xe    shell.lef
+
+[INFO]    0xe    menu.cfg
+
+[INFO]    0xe    fileman.lef
+
+[INFO]    0xe
 [INFO]    Initializing HID...
 [INFO]    OK
 [INFO]    Registering Syscall Handler...OK
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x1237
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x7000
+[INFO]    Found Device! Vendor: 0x80ee, Device: 0xbeef
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x1004
+[INFO]    Found Device! Vendor: 0x80ee, Device: 0xcafe
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x2415
+[INFO]    Found Device! Vendor: 0x106b, Device: 0x3f
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x7113
+[INFO]    No device found with class
+[INFO]    0x0
+[INFO]    0x0
+[WARN]    No 8254x device found!
 [INFO]    Initializing Task Scheduler...
 [INFO]    0x208d000OK
 [INFO]    Loading Init Process...
-[INFO]    0xa
+[INFO]    0xe
 [INFO]    0x2116000
 [INFO]    0x4000c0 entryOK
-[INFO]    0xa
+[INFO]    Mapping Framebuffer to:
+[INFO]    0x600000
+[INFO]    0xe
 [INFO]    0x24db000
 [INFO]    0x4000c0 entry
 [INFO]    Opening: /dev/mouse0
+[INFO]    Opening: /menu.cfg
+[INFO]    0xe

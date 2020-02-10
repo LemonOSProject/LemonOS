@@ -122,7 +122,7 @@ typedef struct {
 	uint16_t deviceID;
 	uint16_t vendorID;
 
-	char* deviceName;
+	const char* deviceName;
 
 	uint8_t bus;
 	uint8_t slot;
@@ -138,8 +138,11 @@ typedef struct {
 
 namespace PCI{
 	uint16_t ReadWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
+	void Config_WriteWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint16_t data);
 	void RegsiterPCIVendor(pci_vendor_t vendor);
 	pci_device_t RegisterPCIDevice(pci_device_t device);
+	bool CheckDevice(uint8_t bus, uint8_t device);
+	bool FindDevice(uint16_t bus, uint16_t device);
 
 	void Init();
 }

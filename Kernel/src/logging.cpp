@@ -35,6 +35,16 @@ namespace Log{
 		}
 	}
 
+	void Write(unsigned long long num, bool hex, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255){
+		char buf[32];
+		if(hex){
+			buf[0] = '0';
+			buf[1] = 'x';
+		}
+		itoa(num, (char*)(buf + (hex ? 2 : 0)), hex ? 16 : 10);
+		Write(buf);
+	}
+
     void Warning(const char* str){
 		Write("\r\n");
 		Write("[");

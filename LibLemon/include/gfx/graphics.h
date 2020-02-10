@@ -89,3 +89,4 @@ void DrawGradientVertical(rect_t rect, rgba_colour_t c1, rgba_colour_t c2, surfa
 void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
 
 void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset = {0,0});
+void surfacecpyTransparent(surface_t* dest, surface_t* src, vector2i_t offset = {0,0});

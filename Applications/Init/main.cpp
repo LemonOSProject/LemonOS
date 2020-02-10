@@ -78,7 +78,7 @@ bool redrawWindowDecorations = true;
 
 char lastKey;
 
-//#define ENABLE_FRAMERATE_COUNTER
+#define ENABLE_FRAMERATE_COUNTER
 #ifdef ENABLE_FRAMERATE_COUNTER
 
 size_t frameCounter;
@@ -94,8 +94,8 @@ uint64_t currentUptimeMilliseconds;
 void UpdateFrameRate(){
 	syscall(SYS_UPTIME, (uintptr_t)&currentUptimeSeconds, (uintptr_t)&currentUptimeMilliseconds, 0, 0, 0);
 	uint64_t difference = currentUptimeSeconds*1000 - lastUptimeSeconds*1000 - lastUptimeMilliseconds + currentUptimeMilliseconds;
-	if(difference >= 5000){
-		frameRate = frameCounter/5;
+	if(difference >= 2000){
+		frameRate = frameCounter/(difference/1000);
 		frameCounter = 0;
 		lastUptimeSeconds = currentUptimeSeconds;
 		lastUptimeMilliseconds = currentUptimeMilliseconds;
@@ -104,6 +104,69 @@ void UpdateFrameRate(){
 #endif
 
 rgba_colour_t backgroundColor = {64, 128, 128};
+surface_t closeButtonSurface;
+	
+int windowCount; // Window Count
+List<Window_s*> windows;
+Window_s* active; // Active Window
+
+void RemoveDestroyedWindows(){
+	int _windowCount; // Updated Window Count
+	syscall(SYS_DESKTOP_GET_WINDOW_COUNT, (uintptr_t)(&_windowCount),0,0,0,0);
+	windowCount = _windowCount;
+	for(int i = 0; i < windows.get_length(); i++){ // Remove any windows that no longer exist
+			bool windowFound = false;
+			for(int j = 0; j < windowCount; j++){
+				win_info_t windowInfo;
+				handle_t windowHandle;
+
+				syscall(SYS_DESKTOP_GET_WINDOW,(uintptr_t)&windowInfo,j,0,0,0);
+				windowHandle = windowInfo.handle;
+
+				if(windows[i]->handle == windowHandle){
+					windowFound = true;
+					break;
+				}
+			}
+
+			if(!windowFound) {
+				windows.remove_at(i);
+				redrawWindowDecorations = true;
+			}
+		}
+}
+
+void AddNewWindows(){
+	int _windowCount; // Updated Window Count
+	syscall(SYS_DESKTOP_GET_WINDOW_COUNT, (uintptr_t)(&_windowCount),0,0,0,0);
+	windowCount = _windowCount;
+	
+	for(int j = 0; j < windowCount; j++){ // Loop through windows and match with what the kernel has
+		bool windowFound = false;
+		win_info_t windowInfo;
+		handle_t windowHandle;
+
+		syscall(SYS_DESKTOP_GET_WINDOW,(uintptr_t)&windowInfo,j,0,0,0);
+		windowHandle = windowInfo.handle;
+
+		for(int i = 0; i < windows.get_length(); i++){
+			if(windows[i]->handle == windowHandle){ // We already know about this window
+				windowFound = true;
+				break;
+			}
+		}
+
+		if(!windowFound){ // New window?
+			Window_s* win = (Window_s*)malloc(sizeof(Window_s));
+			win->info = windowInfo;
+			win->handle = windowHandle;
+			win->pos = {win->info.x, win->info.y};
+			windows.add_back(win);
+
+			redrawWindowDecorations = true;
+		}
+	}
+}
 
 void DrawWindow(Window_s* win){
 
@@ -112,22 +175,25 @@ void DrawWindow(Window_s* win){
 		return;
 	}
 
-	if(redrawWindowDecorations){
+	//if(redrawWindowDecorations){
 		DrawRect({win->pos + (vector2i_t){1,0}, {win->info.width,1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Top Border
 		DrawRect({win->pos + (vector2i_t){0,1}, {1, win->info.height + WINDOW_TITLEBAR_HEIGHT}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Left border
 		DrawRect({win->pos + (vector2i_t){0, win->info.height + WINDOW_TITLEBAR_HEIGHT + 1}, {win->info.width + 1, 1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Bottom border
 		DrawRect({win->pos + (vector2i_t){win->info.width + 1, 1}, {1,win->info.height + WINDOW_TITLEBAR_HEIGHT + 1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Right border
 
-		DrawGradientVertical({win->pos + (vector2i_t){1,1}, {win->info.width, WINDOW_TITLEBAR_HEIGHT}}, {96, 96, 96}, {64, 64, 64}, &renderBuffer);
+		DrawGradientVertical({win->pos + (vector2i_t){1,1}, {win->info.width, WINDOW_TITLEBAR_HEIGHT}}, {96, 96, 96}, {42, 50, 64}, &renderBuffer);
+
+		//surfacecpy(&renderBuffer, &closeButtonSurface, {win->pos.x + win->info.width - 21, win->pos.y + 2});
 
 		DrawString(win->info.title, win->pos.x + 6, win->pos.y + 6, 255, 255, 255, &renderBuffer);
-	}
+	//}
 
 	vector2i_t renderPos = win->pos + (vector2i_t){1, WINDOW_TITLEBAR_HEIGHT + 1};
 
 	syscall(SYS_RENDER_WINDOW, (uintptr_t)&renderBuffer, (uintptr_t)win->handle,(uintptr_t)&renderPos,0,0);
 }
 
+void memcpy_optimized(void* dest, void* src, size_t count);
 int main(){
 	fb = lemon_map_fb(&fbInfo); // Request framebuffer mapping from kernel
 	surface_t* fbSurface = CreateFramebufferSurface(fbInfo,fb); // Create surface object for framebuffer
@@ -138,11 +204,6 @@ int main(){
 
 	syscall(SYS_CREATE_DESKTOP,0,0,0,0,0); // Get Kernel to create Desktop
 
-	int windowCount; // Window Count
-
-	List<Window_s*> windows;
-	Window_s* active; // Active Window
-
 	win_info_t testWindow;
 	testWindow.width = 100;
 	testWindow.height = 100;
@@ -150,6 +211,21 @@ int main(){
 	testWindow.y = 10;
 	strcpy(testWindow.title, "Test Window");
 	testWindow.flags = 0;
+
+	int closeButtonFd = lemon_open("/close.bmp", 0);
+	uint64_t closeButtonLength = lemon_seek(closeButtonFd, 0, SEEK_END);
+	lemon_seek(closeButtonFd, 0, SEEK_SET);
+
+	uint8_t* closeButtonBuffer = (uint8_t*)malloc(closeButtonLength + (closeButtonLength));
+	lemon_read(closeButtonFd, closeButtonBuffer, closeButtonLength);
+
+	bitmap_info_header_t* closeInfoHeader = ((bitmap_info_header_t*)closeButtonBuffer + ((bitmap_file_header_t*)closeButtonBuffer)->size);
+	closeButtonSurface.width = 19;//closeInfoHeader->width;
+	closeButtonSurface.height = 19;//closeInfoHeader->height;
+	closeButtonSurface.buffer = (uint8_t*)malloc(19*19*4);//closeButtonBuffer ;//+ 54;//((bitmap_file_header_t*)closeButtonBuffer)->offset;
+	DrawBitmapImage(0, 0, closeButtonSurface.width, closeButtonSurface.height, closeButtonBuffer, &closeButtonSurface);
+
+	syscall(0, (uintptr_t)((bitmap_file_header_t*)closeButtonBuffer)->magic, closeInfoHeader->width, 0, 0,0);
 
 	syscall(SYS_CREATE_WINDOW, (uintptr_t)&testWindow,0,0,0,0);
 
@@ -163,38 +239,6 @@ int main(){
 		frameCounter++;
 		UpdateFrameRate();
 		#endif
-
-		int _windowCount; // Updated Window Count
-		syscall(SYS_DESKTOP_GET_WINDOW_COUNT, (uintptr_t)(&_windowCount),0,0,0,0);
-		if(_windowCount != windowCount){ // Has the window count changed?
-			windowCount = _windowCount;
-			
-			for(int j = 0; j < windowCount; j++){ // Loop through windows and match with what the kernel has
-				bool windowFound = false;
-				win_info_t windowInfo;
-				handle_t windowHandle;
-
-				syscall(SYS_DESKTOP_GET_WINDOW,(uintptr_t)&windowInfo,j,0,0,0);
-				windowHandle = windowInfo.handle;
-
-				for(int i = 0; i < windows.get_length(); i++){
-					if(windows[i]->handle == windowHandle){ // We already know about this window
-						windowFound = true;
-						break;
-					}
-				}
-
-				if(!windowFound){ // New window?
-					Window_s* win = (Window_s*)malloc(sizeof(Window_s));
-					win->info = windowInfo;
-					win->handle = windowHandle;
-					win->pos = {win->info.x, win->info.y};
-					windows.add_back(win);
-
-					redrawWindowDecorations = true;
-				}
-			}
-		}
 
 		if(redrawWindowDecorations)
 			DrawRect(0, 0, renderBuffer.width, renderBuffer.height, backgroundColor, &renderBuffer);
@@ -210,7 +254,7 @@ int main(){
 		
 		mousePos.x += mouseData[1];
 		mousePos.y -= mouseData[2];
-		if(mouseData[1] || mouseData[2]) redrawWindowDecorations = true;
+		//if(mouseData[1] || mouseData[2]) redrawWindowDecorations = true;
 
 		if(drag){
 			redrawWindowDecorations = true;
@@ -243,7 +287,7 @@ int main(){
 							mouseX = mousePos.x - win->pos.x - 1; // Account for window border
 							mouseY = mousePos.y - win->pos.y - 25; // Account for border and title bar
 						}
-						mouseEventMessage.data = (mouseX << 32) | mouseY;
+						mouseEventMessage.data = (((uint64_t)mouseX) << 32) | mouseY;
 						mouseEventMessage.data2 = (uintptr_t)win->info.handle;
 						SendMessage(win->info.ownerPID, mouseEventMessage);
 					}
@@ -275,31 +319,10 @@ int main(){
 						mouseX = mousePos.x - active->pos.x - 1; // Account for window border
 						mouseY = mousePos.y - active->pos.y - 25; // Account for border and title bar
 					}
-					mouseEventMessage.data = (mouseX << 32) | mouseY;
+					mouseEventMessage.data = (((uint64_t)mouseX) << 32) | mouseY;
 					mouseEventMessage.data2 = (uintptr_t)active->info.handle;
 					SendMessage(active->info.ownerPID, mouseEventMessage);
 				}
-			}
-		}
-
-		for(int i = 0; i < windows.get_length(); i++){ // Remove any windows that no longer exist
-			bool windowFound = false;
-			for(int j = 0; j < windowCount; j++){
-				win_info_t windowInfo;
-				handle_t windowHandle;
-
-				syscall(SYS_DESKTOP_GET_WINDOW,(uintptr_t)&windowInfo,j,0,0,0);
-				windowHandle = windowInfo.handle;
-
-				if(windows[i]->handle == windowHandle){
-					windowFound = true;
-					break;
-				}
-			}
-
-			if(!windowFound) {
-				windows.remove_at(i);
-				redrawWindowDecorations = true;
 			}
 		}
 		
@@ -322,6 +345,13 @@ int main(){
 					}
 
 					break;
+				case DESKTOP_EVENT:
+					if(msg.data == DESKTOP_SUBEVENT_WINDOW_DESTROYED){
+						RemoveDestroyedWindows();
+					} else if (msg.data == DESKTOP_SUBEVENT_WINDOW_CREATED){
+						AddNewWindows();
+					}
+					break;
 			}
 		}
 
@@ -335,7 +365,7 @@ int main(){
 
 		DrawRect(mousePos.x, mousePos.y, 5, 5, 255, 0, 0, &renderBuffer);
 
-		surfacecpy(fbSurface,&renderBuffer); // Render our buffer
+		memcpy_optimized(fbSurface->buffer, renderBuffer.buffer, fbInfo.width * fbInfo.height * 4);//surfacecpy(fbSurface,&renderBuffer); // Render our buffer
 
 		DrawRect(mousePos.x, mousePos.y, 5, 5, backgroundColor, &renderBuffer);
 	}

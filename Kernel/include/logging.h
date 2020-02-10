@@ -8,6 +8,7 @@ namespace Log{
     void SetVideoConsole(VideoConsole* con);
 
     void Write(const char* str, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255);
+    void Write(unsigned long long num, bool hex = true, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255);
 
     void Warning(const char* str);
     void Warning(unsigned long long num);

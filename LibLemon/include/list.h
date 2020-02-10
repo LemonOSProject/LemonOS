@@ -48,7 +48,7 @@ public:
 		if (!front) {
 			front = node;
 		}
-		else {
+		else if (back) {
 			back->next = node;
 			node->prev = back;
 		}
@@ -65,7 +65,7 @@ public:
 		if (!back) {
 			back = node;
 		}
-		else {
+		else if(front) {
 			front->prev = node;
 			node->next = front;
 		}
@@ -74,13 +74,7 @@ public:
 	}
 
 	T operator[](unsigned pos) {
-		if (num < 0 || pos >= num) return *(T*)nullptr;
-
-		ListNode<T>* current = front;
-
-		for (unsigned int i = 0; i < pos; i++) current = current->next;
-
-		return current->obj;
+		return get_at(pos);
 	}
 
 	T get_at(unsigned pos) {

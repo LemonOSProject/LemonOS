@@ -2,7 +2,7 @@
 
 #include <system.h>
 #include <logging.h>
-//#include <list.h>
+#include <list.h>
 
 #define AMD 0x1022
 #define INTEL 0x8086
@@ -22,7 +22,7 @@ pci_vendor_t PCIVendors[]{
 
 namespace PCI{
 	pci_vendor_t vendors[0xFFFF];
-	//List<pci_device_t>* devices;
+	List<pci_device_t>* devices;
 
 	char* unknownDeviceString = "Unknown Device.";
 
@@ -54,9 +54,23 @@ namespace PCI{
 		return data;
 	}
 
+	void Config_WriteWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint16_t data){
+		uint32_t address = (uint32_t)((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | 0x80000000);
+
+		outportl(0xCF8, address);
+		outportw(0xCFC, data);
+	}
+
+	void Config_WriteByte(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint8_t data){
+		uint32_t address = (uint32_t)((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | 0x80000000);
+
+		outportl(0xCF8, address);
+		outportb(0xCFC, data);
+	}
+
 	pci_device_header_type0_t ReadConfig(uint8_t bus, uint8_t slot){
 		pci_device_header_type0_t header;
-		uint8_t offset;
+		uint8_t offset = 0;
 		header.headerType = Config_ReadByte(bus, slot, 0, 13) & 0x7F;
 		if(header.headerType) return header;
 		for(; offset < sizeof(pci_device_header_type0_t); offset += 1){
@@ -85,15 +99,23 @@ namespace PCI{
 	uint16_t GetDeviceID(uint8_t bus, uint8_t slot){
 		uint16_t id;
 
-		id = Config_ReadWord(bus, slot, 0, 0);
+		id = Config_ReadWord(bus, slot, 0, 2);
 		return id;
 	}
 
 	bool CheckDevice(uint8_t bus, uint8_t device){
 		if(GetVendor(bus, device) == 0xFFFF){
 			return false;
-		} else {
-			return true;
+		}
+
+		return true;
+	}
+
+	bool FindDevice(uint16_t deviceID, uint16_t vendorID){
+		for(int i = 0; i < devices->get_length(); i++){
+			if(devices->get_at(i).deviceID == deviceID && devices->get_at(i).vendorID == vendorID){
+				return true;
+			}
 		}
 	}
 
@@ -103,34 +125,20 @@ namespace PCI{
 
 	pci_device_t RegisterPCIDevice(pci_device_t device){
 		device.vendor = &vendors[device.vendorID];
-/* 
-		if(!device.generic){
-			for(int i = 0; i < devices->get_length(); i++){
-				if(devices->get_at(i).deviceID == device.deviceID && devices->get_at(i).vendorID == device.vendorID){
-					pci_device_t dev;
-					dev = devices->get_at(i);
-					dev.deviceName = device.deviceName;
-					dev.generic = device.generic;
-					devices->replace_at(i, dev);
-					Log::Info("PCI Device Found: ");
-					Log::Write(dev.deviceName);
-					return dev;
-				}
+		
+		for(int i = 0; i < devices->get_length(); i++){
+			if(device.generic ? (devices->get_at(i).classCode == device.classCode && devices->get_at(i).subclass == device.subclass) : (devices->get_at(i).deviceID == device.deviceID && devices->get_at(i).vendorID == device.vendorID)){
+				pci_device_t dev;
+				dev = devices->get_at(i);
+				dev.deviceName = device.deviceName;
+				dev.generic = device.generic;
+				devices->replace_at(i, dev);
+				Log::Info("PCI Device Found: ");
+				Log::Info(dev.deviceName);
+				return dev;
 			}
-		} else {
-			for(int i = 0; i < devices->get_length(); i++){
-				if(devices->get_at(i).classCode == device.classCode && devices->get_at(i).subclass == device.subclass){
-					pci_device_t dev;
-					dev = devices->get_at(i);
-					dev.deviceName = device.deviceName;
-					dev.generic = device.generic;
-					devices->replace_at(i, dev);
-					Log::Info("PCI Device Found: ");
-					Log::Info(dev.deviceName);
-					return dev;
-				}
-			}
-		}*/
+		}
+
 		Log::Info("No device found with class");
 		Log::Info(device.classCode);
 		Log::Info(device.subclass);
@@ -139,7 +147,7 @@ namespace PCI{
 	}
 
 	void Init(){
-		//devices = new List<pci_device_t>();
+		devices = new List<pci_device_t>();
 
 		LoadVendorList();
 
@@ -149,6 +157,13 @@ namespace PCI{
 					pci_device_t device;
 
 					device.vendorID = GetVendor(i, j);
+					device.deviceID = GetDeviceID(i, j);
+
+					Log::Info("Found Device! Vendor: ");
+					Log::Write(device.vendorID);
+					Log::Write(", Device: ");
+					Log::Write(device.deviceID);
+
 					device.bus = i;
 					device.slot = j;
 					device.deviceName = unknownDeviceString;
@@ -164,7 +179,7 @@ namespace PCI{
 						device.subclass = device.header0.subclass;
 					}
 
-					//devices->add_back(device);
+					devices->add_back(device);
 				}
 			}
 		}

@@ -22,8 +22,7 @@ void memcpy_optimized(void* dest, void* src, size_t count) {
 
 	
 	if(((size_t)dest % 0x10) || ((size_t)src % 0x10)){
-	    memcpy/*_sse2_unaligned*/(dest, src, /*size_aligned/0x10*/count);
-		return;
+	    memcpy_sse2_unaligned(dest, src, size_aligned/0x10);
 	}
     else
 	    memcpy_sse2(dest, src, size_aligned/0x10);

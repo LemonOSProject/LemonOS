@@ -11,8 +11,60 @@ public:
     rect_t bounds;
 
     virtual void Paint(surface_t* surface);
-    virtual void OnMouseDown();
-    virtual void OnMouseUp();
+    virtual void OnMouseDown(vector2i_t mousePos);
+    virtual void OnMouseUp(vector2i_t mousePos);
+};
+
+class ScrollView : public Widget {
+public:
+    int scrollPos;
+    int scrollMax;
+
+    int scrollBarHeight;
+
+    List<Widget*> contents;
+
+    ScrollView(rect_t bounds);
+
+    void Paint(surface_t* surface);
+    void OnMouseDown(vector2i_t mousePos);
+    void OnMouseUp(vector2i_t mousePos);
+};
+
+class ListItem : public Widget {
+public:
+    ListItem(char* _text);
+    char* text;
+    void OnMouseDown(vector2i_t mousePos);
+    void OnMouseUp(vector2i_t mousePos);
+};
+
+class ListView : public Widget{
+protected:
+    int itemHeight;
+    int scrollMax;
+    int scrollIncrementPixels;
+    int scrollMaxPixels;
+    int scrollBarHeight;
+
+    bool drag = false;
+    vector2i_t dragPos;
+
+    surface_t buffer;
+public:
+    int scrollPos;
+    int selected = 0;
+    List<ListItem*> contents;
+
+    ListView(rect_t bounds, int itemHeight = 20);
+
+    void ResetScrollBar();
+
+    void Paint(surface_t* surface);
+    void OnMouseDown(vector2i_t mousePos);
+    void OnMouseUp(vector2i_t mousePos);
+
+    ~ListView();
 };
 
 class TextBox : public Widget{
@@ -28,7 +80,7 @@ public:
     void Paint(surface_t* surface);
     void LoadText(char* text);
 
-    void OnMouseDown();
+    void OnMouseDown(vector2i_t mousePos);
     void OnKeyDown(char c);
 
     rgba_colour_t textColour = {0,0,0,225};
@@ -47,8 +99,8 @@ public:
     Button(char* _label, rect_t _bounds);
 
     void Paint(surface_t* surface);
-    void OnMouseDown();
-    void OnMouseUp();
+    void OnMouseDown(vector2i_t mousePos);
+    void OnMouseUp(vector2i_t mousePos);
     void DrawButtonBorders(surface_t* surface, bool white);
 };
 
@@ -87,13 +139,5 @@ class ContextMenu : public Widget{
 public:
     List<ContextMenuItem> items;
 
-    void Paint(surface_t* surface);
-};
-
-class ScrollContainer : public Widget{
-public:
-    List<Widget> widgets;
-
-    ScrollContainer(rect_t bounds);
     void Paint(surface_t* surface);
 };

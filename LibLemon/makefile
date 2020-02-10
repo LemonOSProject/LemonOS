@@ -8,7 +8,7 @@ INCLUDEPATH := -I include
 CFLAGS-x86 := -O3 -fPIC -Wall -Wno-int-conversion -Wno-pointer-arith -Wno-write-strings -fno-exceptions -Wno-address -nostdlib -m32 -ffreestanding -fno-rtti -std=c++14 $(INCLUDEPATH)
 ASFLAGS-x86 := -f elf32 -g -F dwarf
 
-CFLAGS-x86_64 := -O3 -fPIC -Wall -Wno-int-conversion -Wno-pointer-arith -Wno-write-strings -fno-exceptions -fno-rtti -Wno-address -nostdlib -m64 -ffreestanding -std=c++14 $(INCLUDEPATH)
+CFLAGS-x86_64 := -fPIC -Wall -Wno-int-conversion -Wno-pointer-arith -Wno-write-strings -fno-exceptions -fno-rtti -Wno-address -nostdlib -m64 -ffreestanding -std=c++14 $(INCLUDEPATH) -O3
 ASFLAGS-x86_64 := -f elf64 -g -F dwarf
 
 CFILES := $(shell find $(SRCDIRS) -type f -name "*.cpp")

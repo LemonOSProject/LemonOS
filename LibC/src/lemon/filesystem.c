@@ -30,8 +30,8 @@ off_t lemon_seek(int fd, off_t offset, int whence){
     return ret;
 }
 
-int lemon_readdir(int fd, uint32_t count, lemon_dirent_t* dirent){
-    int ret;
+int lemon_readdir(int fd, uint64_t count, lemon_dirent_t* dirent){
+    uint64_t ret;
     syscall(SYS_READDIR, fd, dirent, count, &ret, 0);
     return ret;
 }

@@ -122,8 +122,17 @@ namespace Initrd{
 	}
 
 	fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index){
+			Log::Info(index);
 		if(node == &root && index == 0){
 			return &devDirent;
+		} else if(node == &dev){
+			if(index >= deviceCount) return NULL;
+			memset(dirent.name,0,128); // Zero the string
+			strcpy(dirent.name,devices[index]->name);
+			dirent.inode = index;
+			dirent.type = 0;
+			Log::Info(dirent.name);
+			return &dirent;
 		} else if (index >= initrdHeader.fileCount + 1){ // All files in initrd + /dev
 			return NULL;
 		}
@@ -139,7 +148,7 @@ namespace Initrd{
 		if(node == &root){
 			if(strcmp(name,dev.name) == 0) return &dev;
 			
-			Log::Info(initrdHeader.fileCount);
+			Log::Info(initrdHeader.fileCount, false);
 			for(int i = 0; i < initrdHeader.fileCount;i++){
 				if(strcmp(fsNodes[i].name,name) == 0) return &(fsNodes[i]);
 			}
