@@ -41,7 +41,7 @@ int main(char argc, char** argv){
 		while(ReceiveMessage(&msg)){
 			if (msg.msg == WINDOW_EVENT_CLOSE){
 				DestroyWindow(window);
-				exit();
+				exit(0);
 			} else if(msg.msg == WINDOW_EVENT_MOUSEDOWN){
 				uint32_t mouseX;
 				uint32_t mouseY;
@@ -73,11 +73,11 @@ int main(char argc, char** argv){
 						char path[64];
 						strcpy(path, "/");
 						strcpy(path, dirent.name);
-						currentDir = lemon_open("/dev", 0);
+						currentDir = lemon_open(path, 0);
 						
-						//for(int i = fileList->contents.get_length() - 1; i >= 0; i--){
-						//	delete fileList->contents.get_at(i);//fileList->contents.remove_at(i);
-						//}
+						for(int i = fileList->contents.get_length() - 1; i >= 0; i--){
+							delete fileList->contents.get_at(i);//fileList->contents.remove_at(i);
+						}
 						fileList->contents.clear();
 						
 						int i = 0;

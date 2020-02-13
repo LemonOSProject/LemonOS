@@ -1,1 +1,0 @@
-#define EINVAL 22

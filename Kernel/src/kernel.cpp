@@ -15,13 +15,6 @@
 #include <scheduler.h>
 #include <syscalls.h>
 #include <8254x.h>
-#ifdef Lemon32
-#include <gui.h>
-#endif
-
-void* initElf;
-
-void test();
 
 extern "C"
 void IdleProcess(){
@@ -35,21 +28,15 @@ void IdleProcess(){
 		KernelPanic(panicReasons,1);
 	}
 		
-	initElf = (void*)kmalloc(initFsNode->size);
+	
+	void* initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 	
 	uint64_t pid = Scheduler::LoadELF(initElf);
-	Scheduler::FindProcessByPID(pid)->timeSliceDefault += 5;
+	Scheduler::FindProcessByPID(pid)->timeSliceDefault += 5; // By increasing the Init processes time slice it gets more CPU time
 
 	Log::Write("OK");
-	for(;;){
-	}
-}
-
-void test(){
-	for(;;){
-		Log::Warning("rtest");
-	}
+	for(;;);
 }
 
 extern uint64_t _initrd_end;
@@ -79,7 +66,7 @@ void kmain(multiboot_info_t* mb_info){
 	if(videoMode.height < 600)
 		Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");
 	if(videoMode.bpp != 32)
-		Log::Warning("Unsupported Colour Depth expect	 issues.");
+		Log::Warning("Unsupported Colour Depth expect issues.");
 
 	stringBuffer = (char*)kmalloc(16);
 	Log::Info("RAM: ");
@@ -130,7 +117,6 @@ void kmain(multiboot_info_t* mb_info){
 
 	Log::Info("OK");
 
-	//#ifdef Lemon32
 	Log::Info("Registering Syscall Handler...");
 
 	InitializeSyscalls();

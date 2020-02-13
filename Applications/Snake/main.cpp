@@ -36,11 +36,11 @@ bool gameOver = true;
 
 unsigned long int rand_next = 1;
 
-unsigned int rand()
+/*unsigned int rand()
 {
 	rand_next = rand_next * 1103515245 + 12345;
 	return ((unsigned int)(rand_next / 65536) % 32768);
-}
+}*/
 
 void Wait(){
 	while(msCounter < frameWaitTime){
@@ -151,7 +151,7 @@ int main(char argc, char** argv){
 				continue;
 			} else if (msg.msg == WINDOW_EVENT_CLOSE){
 				DestroyWindow(window);
-				exit();
+				exit(0);
 			}
 		}
 		

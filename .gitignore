@@ -9,3 +9,4 @@ Disks/Lemon.vhd
 FakeSysroot/usr/include/*
 Kernel/obj
 Applications/*/*.lef
+LibC

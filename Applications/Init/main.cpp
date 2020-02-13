@@ -13,6 +13,7 @@
 #include <list.h>
 #include <lemon/keyboard.h>
 #include <lemon/ipc.h>
+#include <lemon/itoa.h>
 
 #define WINDOW_BORDER_COLOUR {32,32,32}
 #define WINDOW_TITLEBAR_HEIGHT 24

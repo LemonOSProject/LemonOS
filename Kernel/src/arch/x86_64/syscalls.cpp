@@ -97,6 +97,28 @@ int SysRead(regs64_t* r){
 }
 
 int SysWrite(regs64_t* r){
+	if(r->rbx > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+		*((int*)r->rsi) = -1; // Return -1
+		return -1;
+	}
+	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
+	if(!node){
+		Log::Warning("Invalid File Descriptor");
+		Log::Warning(r->rbx);
+		return 2;
+	}
+
+	if(!(r->rcx && r->rdx)) return 1;
+
+	uint8_t* buffer = (uint8_t*)kmalloc(r->rdx);
+	memcpy(buffer, (uint8_t*)r->rcx, r->rdx);
+
+	int ret = fs::Write(node, 0, r->rdx, buffer);
+
+	if(r->rsi){
+		*((int*)r->rsi) = ret;
+	}
+
 	return 0;
 }
 
@@ -217,10 +239,11 @@ int SysLSeek(regs64_t* r){
 		return 1;
 	}
 
-	uint64_t* ret = (uint64_t*)r->rsi;
+	int64_t* ret = (int64_t*)r->rsi;
 	int fd = r->rbx;
 
 	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length() || !Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
+		*ret = -1;
 		return 1;
 	}
 
