@@ -11,8 +11,6 @@
 #include <gui.h>
 #include <timer.h>
 
-#define NUM_SYSCALLS 38
-
 #define SYS_EXIT 1
 #define SYS_EXEC 2
 #define SYS_READ 3
@@ -44,6 +42,8 @@
 #define SYS_GET_VIDEO_MODE 31
 #define SYS_UNAME 32
 #define SYS_READDIR 33
+
+#define NUM_SYSCALLS 34
 
 typedef int(*syscall_t)(regs64_t*);
 
@@ -221,6 +221,7 @@ int SysAlloc(regs64_t* r){
 	uintptr_t address = (uintptr_t)Memory::Allocate4KPages(pageCount, Scheduler::currentProcess->addressSpace);
 	for(int i = 0; i < pageCount; i++){
 		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),address + i * PAGE_SIZE_4K,1,Scheduler::currentProcess->addressSpace);
+		memset((void*)(address + i * PAGE_SIZE_4K), 0, PAGE_SIZE_4K);
 	}
 
 	*addressPointer = address;
@@ -249,17 +250,22 @@ int SysLSeek(regs64_t* r){
 
 	switch(r->rdx){
 	case 0: // SEEK_SET
-		Scheduler::GetCurrentProcess()->fileDescriptors[fd]->offset = r->rcx;
+		*ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->offset = r->rcx;
 		return 0;
 		break;
 	case 1: // SEEK_CUR
-		return 2; // Not implemented
+		*ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->offset;
+		return 0;
 		break;
 	case 2: // SEEK_END
-		*ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->size;
+		*ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->offset = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->size;
 		return 0;
 		break;
 	default:
+		Log::Info("Invalid seek: ");
+		Log::Write(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->name);
+		Log::Write(", ");
+		Log::Write(r->rdx);
 		return 3; // Invalid seek mode
 		break;
 	}
@@ -267,6 +273,10 @@ int SysLSeek(regs64_t* r){
 }
 
 int SysGetPID(regs64_t* r){
+	uint64_t* pid = (uint64_t*)r->rbx;
+
+	*pid = Scheduler::GetCurrentProcess()->pid;
+	
 	return 0;
 }
 
@@ -327,7 +337,7 @@ int SysDestroyWindow(regs64_t* r){
 				break;
 			}
 		}
-	}
+	} else return 2;
 
 	return 0;
 }
@@ -350,6 +360,7 @@ int SysDesktopGetWindowCount(regs64_t* r){
 int SysUpdateWindow(regs64_t* r){
 	handle_t handle = (handle_t*)r->rbx;
 	Window* window = (Window*)Scheduler::FindHandle(handle);
+	if(!window) return 2;
 	surface_t* surface = (surface_t*)r->rcx;
 
 	memcpy_optimized(window->surface.buffer,surface->buffer,(window->info.width * 4)*window->info.height);
@@ -374,6 +385,8 @@ int SysRenderWindow(regs64_t* r){
 	surface_t* dest = (surface_t*)r->rbx;
 
 	int rowSize = ((dest->width - offset.x) > windowRegion.size.x) ? windowRegion.size.x : (dest->width - offset.x);
+
+	if(rowSize <= 0) return 0;
 
 	for(int i = windowRegion.pos.y; i < windowRegion.size.y && i < dest->height - offset.y; i++){
 		uint8_t* bufferAddress = dest->buffer + (i + offset.y) * (dest->width * 4) + offset.x * 4;
@@ -423,7 +436,7 @@ int SysUptime(regs64_t* r){
 		*seconds = Timer::GetSystemUptime();
 	}
 	if(milliseconds){
-		*milliseconds = Timer::GetTicks()/(Timer::GetFrequency()/1000);
+		*milliseconds = ((double)Timer::GetTicks())/(Timer::GetFrequency()/1000);
 	}
 }
 
@@ -519,33 +532,13 @@ syscall_t syscalls[]{
 	SysGetVideoMode,
 	SysUName,
 	SysReadDir,
-	/*SysMemalloc,
-	SysStat,
-	SysLSeek,
-	SysGetPid,					// 20
-	SysMount,
-	SysUmount,
-	SysCreateDesktop,
-	SysCreateWindow,
-	SysPaintDesktop,			// 25
-	SysPaintWindow,
-	SysDesktopGetWindow,
-	SysDesktopGetWindowCount,
-	SysCopyWindowSurface,
-	SysReadDir,
-	SysUptime,
-	SysGetVideoMode,
-	SysDestroyWindow,
-	SysGrantPty,
-	SysForkExec,
-	SysGetSysinfo,*/
 };
 
 namespace Scheduler{extern bool schedulerLock;};
 
 void SyscallHandler(regs64_t* regs) {
-	//if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
-	//	return;
+	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
+		return;
 		
 	Scheduler::schedulerLock = true;
 	int ret = syscalls[regs->rax](regs); // Call syscall

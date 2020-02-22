@@ -48,6 +48,8 @@ typedef struct process {
 	uint32_t timeSliceDefault;
 	process* next;
 
+	void* fxState; // State of the extended registers
+
 	//List<elf32_program_header_t> programHeaders;
 
 	List<fs_node_t*> fileDescriptors;

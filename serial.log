@@ -2,7 +2,7 @@
 [INFO]    Initializing Lemon...
 
 [INFO]    511
-[INFO]    0x4d6003
+[INFO]    0x6a5003
 [INFO]    0x100c4
 [INFO]    0xffffffffc0000000
 [INFO]    0xffffffffc0001000
@@ -24,58 +24,55 @@
 [INFO]    Initrd address: 
 [INFO]    0xffffffff80130380
 [INFO]    Size:
-[INFO]    3763037
+[INFO]    5656085
 [INFO]    File Count:
-[INFO]    14files
+[INFO]    13files
 OK
 [INFO]    Ramdisk Contents:
 
 [INFO]    0x0    dev
 
 [INFO]    0x1
-[INFO]    14    bg.bmp
+[INFO]    13    bg.bmp
 
 [INFO]    0x2
-[INFO]    14    banner.bmp
+[INFO]    13    banner.bmp
 
 [INFO]    0x3
-[INFO]    14    binico.bmp
+[INFO]    13    binico.bmp
 
 [INFO]    0x4
-[INFO]    14    close.bmp
+[INFO]    13    close.bmp
 
 [INFO]    0x5
-[INFO]    14    fileico.bmp
+[INFO]    13    fileico.bmp
 
 [INFO]    0x6
-[INFO]    14    folderico.bmp
+[INFO]    13    folderico.bmp
 
 [INFO]    0x7
-[INFO]    14    progressbar.bmp
+[INFO]    13    progressbar.bmp
 
 [INFO]    0x8
-[INFO]    14    splash.bmp
+[INFO]    13    splash.bmp
 
 [INFO]    0x9
-[INFO]    14    init.lef
+[INFO]    13    init.lef
 
 [INFO]    0xa
-[INFO]    14    snake.lef
+[INFO]    13    snake.lef
 
 [INFO]    0xb
-[INFO]    14    lemondoom.lef
+[INFO]    13    shell.lef
 
 [INFO]    0xc
-[INFO]    14    shell.lef
+[INFO]    13    fileman.lef
 
 [INFO]    0xd
-[INFO]    14    fileman.lef
+[INFO]    13    menu.cfg
 
 [INFO]    0xe
-[INFO]    14    menu.cfg
-
-[INFO]    0xf
-[INFO]    14
+[INFO]    13
 [INFO]    Initializing HID...
 [INFO]    OK
 [INFO]    Registering Syscall Handler...OK
@@ -94,26 +91,144 @@ OK
 [INFO]    Initializing Task Scheduler...
 [INFO]    0x208d000OK
 [INFO]    Loading Init Process...
-[INFO]    14
-[INFO]    0x2116000
-[INFO]    0x4000c0 entryOK
+[INFO]    13
+[INFO]    0x21c0000
+[INFO]    0x400100 entryOK
 [INFO]    Mapping Framebuffer to:
 [INFO]    0x600000
 [INFO]    Opening: /close.bmp
-[INFO]    14, success!
+[INFO]    13, success!
 [INFO]    BMª
 [INFO]    0x0
 [INFO]    Executing: /shell.lef
-[INFO]    14
-[INFO]    0x24cb000
-[INFO]    0x4000c0 entry
+[INFO]    13
+[INFO]    0x27ab000
+[INFO]    0x400100 entry
 [INFO]    Opening: /dev/mouse0, success!
 [INFO]    Opening: /menu.cfg
-[INFO]    14, success!
+[INFO]    13, success!
 [ERROR]   Fatal Exception: 
 [INFO]    0xd
 [INFO]    0x0
 [INFO]    EIP: 
-[INFO]    0x401898
+[INFO]    0x4018d8
 [INFO]    Error Code: 
 [INFO]    0x0
+[INFO]    Initializing Lemon...
+
+[INFO]    511
+[INFO]    0x6a5003
+[INFO]    0x100c4
+[INFO]    0xffffffffc0000000
+[INFO]    0xffffffffc0001000
+[INFO]    0xffffffffc0002000
+[INFO]    0xffffffffc0003000
+[INFO]    test
+[INFO]    test
+[INFO]    test
+[INFO]    aaa
+[INFO]    Initializing System Timer...OK
+[INFO]    Initializing PCI...OK
+[INFO]    Initializing ACPI...OK
+[INFO]    Video Resolution:
+[INFO]    1024x768x32
+[INFO]    RAM: 255MB
+[INFO]    Multiboot Module Count: 
+[INFO]    1
+[INFO]    Initializing Ramdisk...
+[INFO]    Initrd address: 
+[INFO]    0xffffffff80130380
+[INFO]    Size:
+[INFO]    5656085
+[INFO]    File Count:
+[INFO]    13files
+OK
+[INFO]    Ramdisk Contents:
+
+[INFO]    0x0    dev
+
+[INFO]    0x1
+[INFO]    13    bg.bmp
+
+[INFO]    0x2
+[INFO]    13    banner.bmp
+
+[INFO]    0x3
+[INFO]    13    binico.bmp
+
+[INFO]    0x4
+[INFO]    13    close.bmp
+
+[INFO]    0x5
+[INFO]    13    fileico.bmp
+
+[INFO]    0x6
+[INFO]    13    folderico.bmp
+
+[INFO]    0x7
+[INFO]    13    progressbar.bmp
+
+[INFO]    0x8
+[INFO]    13    splash.bmp
+
+[INFO]    0x9
+[INFO]    13    init.lef
+
+[INFO]    0xa
+[INFO]    13    snake.lef
+
+[INFO]    0xb
+[INFO]    13    shell.lef
+
+[INFO]    0xc
+[INFO]    13    fileman.lef
+
+[INFO]    0xd
+[INFO]    13    menu.cfg
+
+[INFO]    0xe
+[INFO]    13
+[INFO]    Initializing HID...
+[INFO]    OK
+[INFO]    Registering Syscall Handler...OK
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x1237
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x7000
+[INFO]    Found Device! Vendor: 0x80ee, Device: 0xbeef
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x1004
+[INFO]    Found Device! Vendor: 0x80ee, Device: 0xcafe
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x2415
+[INFO]    Found Device! Vendor: 0x106b, Device: 0x3f
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x7113
+[INFO]    No device found with class
+[INFO]    0x0
+[INFO]    0x0
+[WARN]    No 8254x device found!
+[INFO]    Initializing Task Scheduler...
+[INFO]    0x208d000OK
+[INFO]    Loading Init Process...
+[INFO]    13
+[INFO]    0x21c0000
+[INFO]    0x400100 entryOK
+[INFO]    Mapping Framebuffer to:
+[INFO]    0x600000
+[INFO]    Opening: /close.bmp
+[INFO]    13, success!
+[INFO]    BMª
+[INFO]    0x0
+[INFO]    Executing: /shell.lef
+[INFO]    13
+[INFO]    0x27ab000
+[INFO]    0x400100 entry
+[INFO]    Opening: /dev/mouse0, success!
+[INFO]    Opening: /menu.cfg
+[INFO]    13, success!
+[ERROR]   Page Fault!
+
+[INFO]    Page not present
+[INFO]    RIP:
+[INFO]    0xffffffff80105e2d
+[INFO]    Process:
+[INFO]    0x2
+[INFO]    
+Fault address: 
+[INFO]    0x14a000

@@ -17,6 +17,7 @@ uintptr_t processBase;
 uintptr_t processStack;
 uintptr_t processEntryPoint;
 uint64_t processPML4;
+uintptr_t processFxStatePtr;
 
 uint64_t kernel_stack;
 
@@ -51,6 +52,7 @@ namespace Scheduler{
         processStack = currentProcess->threads[0].registers.rsp;
         processBase = currentProcess->threads[0].registers.rbp;
         processPML4 = currentProcess->addressSpace->pml4Phys;
+        asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");
         asm("cli");
         Log::Write("OK");
         Memory::ChangeAddressSpace(currentProcess->addressSpace);
@@ -68,14 +70,20 @@ namespace Scheduler{
     }
 
     void* FindHandle(handle_t handle){
-        return handles[(uint64_t)handle];
+        if((uintptr_t)handle < handleTableSize)
+            return handles[(uint64_t)handle];
+        else {
+            Log::Warning("Invalid Handle! Process:");
+            Log::Write((unsigned long)(currentProcess ? currentProcess->pid : -1));
+        }
     }
 
     process_t* FindProcessByPID(uint64_t pid){
         process_t* proc = processQueueStart;
         if(pid == proc->pid) return proc;
-            proc = proc->next;
-        while (proc != processQueueStart){
+        proc = proc->next;
+
+        while (proc != processQueueStart && proc){
             if(pid == proc->pid) return proc;
             proc = proc->next;
         }
@@ -158,6 +166,8 @@ namespace Scheduler{
         proc->timeSliceDefault = 1;
         proc->timeSlice = proc->timeSliceDefault;
 
+        proc->next = NULL;
+
         // Create structure for the main thread
         thread_t* thread = proc->threads;
 
@@ -179,6 +189,14 @@ namespace Scheduler{
         thread->registers.rsp = (uintptr_t)thread->stack;
         thread->registers.rbp = (uintptr_t)thread->stack;
         thread->registers.rip = (uintptr_t)entry;
+
+        proc->fxState = Memory::KernelAllocate4KPages(1);
+        Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)proc->fxState, 1);
+        memset(proc->fxState, 0, 1024);
+
+        ((fx_state_t*)proc->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
+        ((fx_state_t*)proc->fxState)->mxcsrMask = 0xffbf;
+        ((fx_state_t*)proc->fxState)->fcw = 0x33f; // Default FPU Control Word State
 
         InsertProcessIntoQueue(proc);
 
@@ -213,6 +231,8 @@ namespace Scheduler{
         proc->addressSpace = Memory::CreateAddressSpace();// So far this function is only used for idle task, we don't need an address space
         proc->timeSliceDefault = 10;
         proc->timeSlice = proc->timeSliceDefault;
+
+        proc->next = NULL;
 
         // Create structure for the main thread
         thread_t* thread = proc->threads;
@@ -271,6 +291,14 @@ namespace Scheduler{
         thread->registers.rbp = (uintptr_t)thread->stack;
         thread->registers.rip = (uintptr_t)elfHdr.entry;
 
+        proc->fxState = Memory::KernelAllocate4KPages(1);
+        Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)proc->fxState, 1);
+        memset(proc->fxState, 0, 1024);
+
+        ((fx_state_t*)proc->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
+        ((fx_state_t*)proc->fxState)->mxcsrMask = 0xffbf;
+        ((fx_state_t*)proc->fxState)->fcw = 0x33f; // Default FPU Control Word State
+
         InsertProcessIntoQueue(proc);
 
         schedulerLock = schedulerState; // Restore previous lock state
@@ -279,7 +307,7 @@ namespace Scheduler{
     }
 
     void EndProcess(process_t* process){
-        RemoveProcessFromQueue(process);/*
+        RemoveProcessFromQueue(process);
 
         for(int i = 0; i < process->fileDescriptors.get_length(); i++){
             if(process->fileDescriptors[i])
@@ -288,22 +316,22 @@ namespace Scheduler{
 
         process->fileDescriptors.clear();
 
-        for(int i = 0; i < process->programHeaders.get_length(); i++){
+        /*for(int i = 0; i < process->programHeaders.get_length(); i++){
             elf32_program_header_t programHeader = process->programHeaders[i];
 
             for(int i = 0; i < ((programHeader.memSize / PAGE_SIZE) + 2); i++){
                 uint32_t address = Memory::VirtualToPhysicalAddress(programHeader.vaddr + i * PAGE_SIZE);
                 Memory::FreePhysicalMemoryBlock(address);
             }
-        }
+        }*/
         currentProcess = process->next;
         kfree(process);
 
-        processEntryPoint = currentProcess->threads[0].registers.eip;
-        processStack = currentProcess->threads[0].registers.esp;
-        processBase = currentProcess->threads[0].registers.ebp;
-        processPageDirectory = currentProcess->pageDirectory.page_directory_phys;
-        TaskSwitch();*/
+        processEntryPoint = currentProcess->threads[0].registers.rip;
+        processStack = currentProcess->threads[0].registers.rsp;
+        processBase = currentProcess->threads[0].registers.rbp;
+        processPML4 = currentProcess->addressSpace->pml4Phys;
+        TaskSwitch();
     }
 
     void Tick(){
@@ -325,6 +353,7 @@ namespace Scheduler{
         uint64_t currentRBP;
         asm volatile ("mov %%rsp, %0" : "=r" (currentRSP));
         asm volatile ("mov %%rbp, %0" : "=r" (currentRBP));
+        asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");
 
         currentProcess->threads[0].registers.rsp = currentRSP;
         currentProcess->threads[0].registers.rip = currentRIP;
@@ -336,6 +365,7 @@ namespace Scheduler{
         processStack = currentProcess->threads[0].registers.rsp;
         processBase = currentProcess->threads[0].registers.rbp;
         processPML4 = currentProcess->addressSpace->pml4Phys;
+        asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");
 
         asm("cli");
         

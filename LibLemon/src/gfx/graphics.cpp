@@ -234,7 +234,8 @@ void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset){
 		/*for(int j = 0; j < src->width && j < dest->width - offset.x; j++){
 			destBuffer[(i+offset.y)*dest->width + j + offset.x] = srcBuffer[i*src->width + j];
 		}*/
-        memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4) + offset.x*4), src->buffer + i*src->width*4, src->width*4);
+        int rowSize = ((offset.x + src->width) > dest->width) ? dest->width - offset.x : src->width;
+        memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4) + offset.x*4), src->buffer + i*src->width*4, rowSize*4);
 	}
 }
 

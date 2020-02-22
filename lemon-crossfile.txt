@@ -1,0 +1,14 @@
+[binaries]
+c = 'x86_64-lemon-gcc'
+cpp = 'x86_64-lemon-gcc'
+ar = 'x86_64-lemon-ar'
+strip = 'x86_64-lemon-strip'
+
+[host_machine]
+system = 'lemon'
+cpu_family = 'x86_64'
+cpu = 'x86_64'
+endian = 'little'
+
+[paths]
+prefix = '~/.local/share/lemon/sysroot/usr'

@@ -15,6 +15,8 @@
 #include <scheduler.h>
 #include <syscalls.h>
 #include <8254x.h>
+#include <nvme.h>
+#include <ahci.h>
 
 extern "C"
 void IdleProcess(){
@@ -125,6 +127,8 @@ void kmain(multiboot_info_t* mb_info){
 
 	PCI::Init();
 	Intel8254x::Initialize();
+	NVMe::Initialize();
+	AHCI::Init();
 
 	Log::Info("Initializing Task Scheduler...");
 	Scheduler::Initialize();

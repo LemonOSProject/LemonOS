@@ -1,1 +1,1 @@
-qemu-system-x86_64 --enable-kvm -drive file=Disks/Lemon.vhd,id=ahci -no-reboot -no-shutdown -m 256M
+qemu-system-x86_64 --enable-kvm -M q35 -drive id=disk,file=Disks/Lemon.vhd,if=none -device ahci,id=ahci -device ide-hd,drive=disk,bus=ahci.0 -no-reboot -no-shutdown -m 256M

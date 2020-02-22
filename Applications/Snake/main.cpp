@@ -36,11 +36,11 @@ bool gameOver = true;
 
 unsigned long int rand_next = 1;
 
-/*unsigned int rand()
+unsigned int snakeRand()
 {
 	rand_next = rand_next * 1103515245 + 12345;
 	return ((unsigned int)(rand_next / 65536) % 32768);
-}*/
+}
 
 void Wait(){
 	while(msCounter < frameWaitTime){
@@ -213,8 +213,8 @@ int main(char argc, char** argv){
 		} else if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_APPLE){
 			snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] = SNAKE_CELL_EMPTY;
 			
-			applePos = { rand() % 16, rand() % 16 };
-			if(!(rand() % 4))
+			applePos = { snakeRand() % 16, snakeRand() % 16 };
+			if(!(snakeRand() % 4))
 				fruitType = 1;
 			else fruitType = 0;
 
@@ -226,8 +226,8 @@ int main(char argc, char** argv){
 			powerUpTimer = powerUpTimerDefault;
 			frameWaitTime /= 2;
 
-			applePos = { rand() % 16, rand() % 16 };
-			if(!(rand() % 3))
+			applePos = { snakeRand() % 16, snakeRand() % 16 };
+			if(!(snakeRand() % 3))
 				fruitType = 1;
 			else fruitType = 0;
 

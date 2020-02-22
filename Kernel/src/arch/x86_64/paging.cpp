@@ -398,9 +398,7 @@ namespace Memory{
 			SetPageFrame(&(addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
 			addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] |= 0x3;
 
-			/*uint64_t cr3;
-			asm("mov %%cr3, %0" : "=r"(cr3));
-			if(cr3 == addressSpace->pml4Phys)*/ invlpg(virt);
+			invlpg(virt);
 
 			phys += PAGE_SIZE_4K;
 			virt += PAGE_SIZE_4K; /* Go to next page */

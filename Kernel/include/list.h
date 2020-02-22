@@ -73,13 +73,7 @@ public:
 	}
 
 	T operator[](unsigned pos) {
-		if (num < 0 || pos >= num) return *(T*)nullptr;
-
-		ListNode<T>* current = front;
-
-		for (unsigned int i = 0; i < pos; i++) current = current->next;
-
-		return current->obj;
+		return get_at(pos);
 	}
 
 	T get_at(unsigned pos) {
@@ -107,7 +101,10 @@ public:
 	}
 
 	T remove_at(unsigned pos) {
-		if (num < 0 || pos >= num) return *(T*)nullptr;
+		if (num < 0 || pos >= num){
+			T t;
+			return t;
+		}
 
 		ListNode<T>* current = front;
 

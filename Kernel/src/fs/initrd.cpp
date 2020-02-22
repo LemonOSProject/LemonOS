@@ -96,7 +96,10 @@ namespace Initrd{
 	uint32_t Read(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer){
 		lemoninitfs_node_t inode = nodes[node->inode];
 
-		if(offset > inode.size || offset + size > inode.size) return 0;
+		if(offset > inode.size) return 0;
+		else if(offset + size > inode.size || size > inode.size) size = inode.size - offset;
+
+		if(!size) return 0;
 
 		memcpy(buffer, (void*)((uintptr_t)inode.offset + (uintptr_t)initrd_address + offset), size);
 		return size;

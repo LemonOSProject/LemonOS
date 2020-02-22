@@ -38,3 +38,17 @@ typedef struct {
     uint64_t rsp;
     uint64_t ss;
 } regs64_t;
+
+typedef struct {
+    uint16_t fcw; // FPU Control Word
+    uint16_t fsw; // FPU Status Word
+    uint8_t ftw; // FPU Tag Words
+    uint8_t zero; // Literally just contains a zero
+    uint16_t fop; // FPU Opcode
+    uint64_t rip;
+    uint64_t rdp;
+    uint32_t mxcsr; // SSE Control Register
+    uint32_t mxcsrMask; // SSE Control Register Mask
+    uint8_t st[8][16]; // FPU Registers, Last 6 bytes reserved
+    uint8_t xmm[16][16]; // XMM Registers
+} fx_state_t;

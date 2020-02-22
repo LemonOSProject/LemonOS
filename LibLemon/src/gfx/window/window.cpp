@@ -36,14 +36,10 @@ Window* CreateWindow(win_info_t* info){
 	surface.height = info->height;
 	bool needsPadding = (info->width * 4) % 0x10;
 	int horizontalSizePadded = info->width * 4 + (0x10 - ((info->width * 4) % 0x10));
-	if(info->width < 180 || info->height < 180){
-		surface.buffer = (uint8_t*)malloc((horizontalSizePadded) * (info->height + 180) * 4);
-		//surface.linePadding = (0x10 - ((info->width * 4) % 0x10));
-	}
-	else{
-		surface.buffer = (uint8_t*)malloc(horizontalSizePadded * info->height);
-		//surface.linePadding = (0x10 - ((info->width * 4) % 0x10));
-	}
+
+	surface.buffer = (uint8_t*)malloc((horizontalSizePadded) * (info->height + 180) * 4);
+	surface.buffer = (uint8_t*)malloc(horizontalSizePadded * info->height);
+
 	surface.linePadding = 0;
 
 	win->surface = surface;

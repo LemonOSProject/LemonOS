@@ -14,6 +14,11 @@
 #include <lemon/keyboard.h>
 #include <lemon/ipc.h>
 #include <lemon/itoa.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #define WINDOW_BORDER_COLOUR {32,32,32}
 #define WINDOW_TITLEBAR_HEIGHT 24
@@ -79,7 +84,10 @@ bool redrawWindowDecorations = true;
 
 char lastKey;
 
-#define ENABLE_FRAMERATE_COUNTER
+FT_Library library;
+FT_Face mainFont;
+
+//#define ENABLE_FRAMERATE_COUNTER
 #ifdef ENABLE_FRAMERATE_COUNTER
 
 size_t frameCounter;
@@ -205,12 +213,12 @@ int main(){
 
 	syscall(SYS_CREATE_DESKTOP,0,0,0,0,0); // Get Kernel to create Desktop
 
-	int closeButtonFd = lemon_open("/close.bmp", 0);
-	uint64_t closeButtonLength = lemon_seek(closeButtonFd, 0, SEEK_END);
-	lemon_seek(closeButtonFd, 0, SEEK_SET);
+	FILE* closeButtonFile = fopen("close.bmp", "r");
+	uint64_t closeButtonLength = fseek(closeButtonFile, 0, SEEK_END);
+	fseek(closeButtonFile, 0, SEEK_SET);
 
 	uint8_t* closeButtonBuffer = (uint8_t*)malloc(closeButtonLength + (closeButtonLength));
-	lemon_read(closeButtonFd, closeButtonBuffer, closeButtonLength);
+	fread(closeButtonBuffer, closeButtonLength, 1, closeButtonFile);
 
 	bitmap_info_header_t* closeInfoHeader = ((bitmap_info_header_t*)closeButtonBuffer + ((bitmap_file_header_t*)closeButtonBuffer)->size);
 	closeButtonSurface.width = 19;//closeInfoHeader->width;
@@ -218,12 +226,33 @@ int main(){
 	closeButtonSurface.buffer = (uint8_t*)malloc(19*19*4);//closeButtonBuffer ;//+ 54;//((bitmap_file_header_t*)closeButtonBuffer)->offset;
 	DrawBitmapImage(0, 0, closeButtonSurface.width, closeButtonSurface.height, closeButtonBuffer, &closeButtonSurface);
 
-	syscall(0, (uintptr_t)((bitmap_file_header_t*)closeButtonBuffer)->magic, closeInfoHeader->width, 0, 0,0);
+	//syscall(0, (uintptr_t)((bitmap_file_header_t*)closeButtonBuffer)->magic, closeInfoHeader->width, 0, 0,0);* /
 
-	syscall(SYS_EXEC, (uintptr_t)"/shell.lef",0,0,0,0);
+	syscall(SYS_EXEC, (uintptr_t)"/shell.lef", 0, 0, 0, 0);
 
 	int mouseDevice = lemon_open("/dev/mouse0", 0);
 	lemon_read(mouseDevice, mouseData, 3);
+
+	if(FT_Init_FreeType(&library)){
+		syscall(0,(uintptr_t)"Error initializing freetype",0,0,0,0);
+	}
+
+	/*fseek(fontFile, 0, SEEK_END);
+	size_t fontSize = ftell(fontFile);
+	fseek(fontFile, 0, SEEK_SET);
+	syscall(0, (uintptr_t)"sz:", fontSize, 0, 0, 0);
+	uint8_t* fontBuffer = (uint8_t*)malloc(fontSize);
+	fread(fontBuffer, fontSize, 1, fontFile);*/
+
+	if(int err = FT_New_Face(library, "/montserrat.ttf", 0, &mainFont)){//*/FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &mainFont)){
+		syscall(0,(uintptr_t)"Error loading font from memory /montserrat.ttf",err,0,0,0);
+	}
+
+	FT_Set_Pixel_Sizes(mainFont, 0, 12);
+
+	int index = FT_Get_Char_Index(mainFont, 'A');
+	FT_Load_Glyph(mainFont, index, FT_LOAD_DEFAULT);
+	//FT_Render_Glyph(mainFont->glyph, FT_RENDER_MODE_NORMAL);
 
 	for(;;){
 		#ifdef ENABLE_FRAMERATE_COUNTER
@@ -245,7 +274,6 @@ int main(){
 		
 		mousePos.x += mouseData[1];
 		mousePos.y -= mouseData[2];
-		//if(mouseData[1] || mouseData[2]) redrawWindowDecorations = true;
 
 		if(drag){
 			redrawWindowDecorations = true;
@@ -298,7 +326,7 @@ int main(){
 				redrawWindowDecorations = true;
 				if(mousePos.y < active->pos.y + 25 && !(active->info.flags & WINDOW_FLAGS_NODECORATION)){
 					
-				} else {
+				} else if(active) {
 					ipc_message_t mouseEventMessage;
 					mouseEventMessage.msg = WINDOW_EVENT_MOUSEUP;
 					uint32_t mouseX;
@@ -355,6 +383,12 @@ int main(){
 		#endif
 
 		DrawRect(mousePos.x, mousePos.y, 5, 5, 255, 0, 0, &renderBuffer);
+
+		for(int i = 0; i < 12; i++){
+			for(int j = 0; j < 12; j++){
+				//DrawRect(j, i, 1, 1, mainFont->glyph->bitmap.buffer[i * 12 + j]*255, 0, 0, &renderBuffer);
+			}
+		}
 
 		memcpy_optimized(fbSurface->buffer, renderBuffer.buffer, fbInfo.width * fbInfo.height * 4);//surfacecpy(fbSurface,&renderBuffer); // Render our buffer
 

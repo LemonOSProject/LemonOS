@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <list.h>
 #include <lemon/filesystem.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 extern "C"
 int main(char argc, char** argv){
@@ -26,8 +28,7 @@ int main(char argc, char** argv){
 	ListView* fileList = new ListView((rect_t){{0,0},{512,256}},20);
 	window->widgets.add_back(fileList);
 
-	int currentDir = lemon_open("/", 0);
-
+	int currentDir = open("/", 666);
 	int i = 0;
 	lemon_dirent_t dirent;
 	while(lemon_readdir(currentDir, i++, &dirent)){
@@ -48,13 +49,14 @@ int main(char argc, char** argv){
 				mouseX = (msg.data >> 32);
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
 				HandleMouseDown(window, {(int)mouseX, (int)mouseY});
-			} else if(msg.msg == WINDOW_EVENT_MOUSEUP){	
+			}
+			else if(msg.msg == WINDOW_EVENT_MOUSEUP){	
 				uint32_t mouseX;
 				uint32_t mouseY;
 				mouseX = msg.data >> 32;
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
 				HandleMouseUp(window, {(int)mouseX, (int)mouseY});
-			} else if(msg.msg == WINDOW_EVENT_KEY){
+			} /*else if(msg.msg == WINDOW_EVENT_KEY){
 				if(msg.data == KEY_ARROW_DOWN){
 					fileList->selected++;
 					if(fileList->selected >= fileList->contents.get_length()){
@@ -69,7 +71,7 @@ int main(char argc, char** argv){
 					ListItem* item = fileList->contents.get_at(fileList->selected);
 					lemon_readdir(currentDir, fileList->selected, &dirent);
 					if(dirent.type & FS_NODE_DIRECTORY){
-						lemon_close(currentDir);
+						close(currentDir);
 						char path[64];
 						strcpy(path, "/");
 						strcpy(path, dirent.name);
@@ -88,7 +90,7 @@ int main(char argc, char** argv){
 						fileList->ResetScrollBar();
 					}
 				}
-			}
+			}*/
 		}
 
 		PaintWindow(window);

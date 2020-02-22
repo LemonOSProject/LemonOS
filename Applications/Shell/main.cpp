@@ -13,6 +13,8 @@
 #include <list.h>
 #include <lemon/keyboard.h>
 #include <lemon/ipc.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define MENU_ITEM_HEIGHT 24
 
@@ -56,15 +58,16 @@ void OnMenuPaint(surface_t* surface){
 }
 
 void LoadConfig(){
-	int menuConfig = lemon_open("/menu.cfg",0);
+	FILE* menuConfig = fopen("/menu.cfg","r");
 
-	size_t configSize = lemon_seek(menuConfig, 0, SEEK_END);
+	fseek(menuConfig, 0, SEEK_END);
+	size_t configSize = ftell(menuConfig);
 
-	lemon_seek(menuConfig, 0, SEEK_SET);
+	fseek(menuConfig, 0, SEEK_SET);
 
 	char* config = (char*)malloc(configSize);
 
-	lemon_read(menuConfig, config, configSize);
+	fread(config, configSize, 1, menuConfig);
 
 	char name[64];
 	char buffer[64];

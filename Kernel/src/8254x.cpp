@@ -3,6 +3,7 @@
 #include <paging.h>
 #include <physicalallocator.h>
 #include <system.h>
+#include <idt.h>
 
 #define INTEL_VENDOR_ID 0x8086
 
@@ -11,6 +12,8 @@
 #define I8254_REGISTER_EECD         0x10
 #define I8254_REGISTER_EEPROM       0x14
 #define I8254_REGISTER_CTRL_EXT     0x18
+#define I8254_REGISTER_INT_READ     0xC0
+
 
 #define I8254_REGISTER_RCTL         0x100
 #define I8254_REGISTER_RDESC_LO     0x2800
@@ -60,7 +63,18 @@ namespace Intel8254x{
         uint8_t status; // Status
         uint8_t errors; // Errors
         uint16_t spec; // Special
-    } r_desc_t;
+    } r_desc_t __attribute__((packed));
+
+    struct {
+        uint64_t addr; // Buffer Address
+        uint16_t length;
+        uint8_t cso; // Checksum Offset
+        uint8_t cmd; // Command
+        uint8_t status; // Status
+        uint8_t reserved;
+        uint8_t css;
+        uint16_t special;
+    } t_desc_t __attribute__((packed));
 
     int supportedDeviceCount = 23;
 
@@ -99,6 +113,14 @@ namespace Intel8254x{
         return false;
     }
 
+    void InterruptHandler(regs64_t* r){
+        uint32_t status = ReadMem32(I8254_REGISTER_INT_READ);
+
+        if(status & 0x04){
+            Log::Info("Initializing Link...");
+        }
+    }
+
     void Initialize(){
         for(int i = 0; i < supportedDeviceCount; i++){
             if(PCI::FindDevice(supportedDevices[i],INTEL_VENDOR_ID)){
@@ -125,7 +147,6 @@ namespace Intel8254x{
 
         Memory::MarkMemoryRegionUsed(memBase, 4*0x1000);
 
-
         Log::Info("i8254x    Base Address: ");
         Log::Write(device.header0.baseAddress0);
         Log::Write(", Base Address (virtual): ");
@@ -134,8 +155,13 @@ namespace Intel8254x{
         Log::Write(", EEPROM Present: ");
         Log::Write(hasEEPROM ? "true" : "false");
 
-        uint8_t macAddr[6];
+        int irqNum = device.header0.interruptLine;
+        Log::Write(",IRQ: ");
+        Log::Write(irqNum);
 
+        IDT::RegisterInterruptHandler(irqNum, InterruptHandler);
+
+        uint8_t macAddr[6];
 
         uint16_t cmd = device.header0.command;
         cmd |= (4 | 1); // Enable Bus Mastering
@@ -165,5 +191,12 @@ namespace Intel8254x{
         Log::Write(macAddr[4]);
         Log::Write(":");
         Log::Write(macAddr[5]);
+
+        uint32_t ctrlReg = ReadMem32(I8254_REGISTER_CTRL);
+        WriteMem32(I8254_REGISTER_CTRL, ctrlReg | (0x80000000));
+        ReadMem32(I8254_REGISTER_STATUS);
+
+        ctrlReg = ReadMem32(I8254_REGISTER_CTRL);
+        WriteMem32(I8254_REGISTER_CTRL, ctrlReg | (1 << 26));
     }
 }
