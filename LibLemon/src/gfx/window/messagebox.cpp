@@ -1,11 +1,10 @@
-#pragma once
-/*
 #include <gfx/window/window.h>
-#include <core/ipc.h>
+#include <lemon/ipc.h>
 #include <gfx/window/widgets.h>
 #include <gfx/window/messagebox.h>
 
 int MessageBox(char* messageString, int flags){
+	return 0;
 	win_info_t msgBoxWindowInfo;
 	msgBoxWindowInfo.x = 50;
 	msgBoxWindowInfo.y = 50;
@@ -18,7 +17,7 @@ int MessageBox(char* messageString, int flags){
 
 	Window* win = CreateWindow(&msgBoxWindowInfo);
 
-	Label* message = new Label(messageString, {{50,50},{strlen(messageString)*8,12}});
+	Label* message = new Label(messageString, {{msgBoxWindowInfo.width / 2 - strlen(messageString) * 8 / 2,50},{strlen(messageString)*8,12}});
 
 	Button* btn1;
 	Button* btn2;
@@ -54,13 +53,16 @@ int MessageBox(char* messageString, int flags){
 	AddWidget(message, win);
 
 	PaintWindow(win);
-
 	for(;;){
 		ipc_message_t msg;
 		while(ReceiveMessage(&msg)){
-			if (msg.id == WINDOW_EVENT_MOUSEUP){
+			if (msg.msg == WINDOW_EVENT_MOUSEUP){	
+				uint32_t mouseX;
+				uint32_t mouseY;
+				mouseX = msg.data >> 32;
+				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
 				Widget* widget;
-				if(widget = HandleMouseUp(win)){
+				if((widget = HandleMouseUp(win, {mouseX, mouseY}))){
 					if(flags & MESSAGEBOX_OK){
 						if(widget == btn1) {
 							DestroyWindow(win);
@@ -90,14 +92,14 @@ int MessageBox(char* messageString, int flags){
 						}
 					}
 				}
-			} else if (msg.id == WINDOW_EVENT_MOUSEDOWN){
-				uint16_t mouseX = msg.data >> 16;
-				uint16_t mouseY = msg.data & 0xFFFF;
+			} else if (msg.msg == WINDOW_EVENT_MOUSEDOWN){
+				uint32_t mouseX = msg.data >> 32;
+				uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
 				HandleMouseDown(win, {mouseX, mouseY});
-			} else if (msg.id == WINDOW_EVENT_CLOSE){
+			} else if (msg.msg == WINDOW_EVENT_CLOSE){
 				return 0;
 			}
 		}
 	}
-}*/
+}

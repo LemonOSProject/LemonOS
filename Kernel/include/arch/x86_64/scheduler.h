@@ -75,7 +75,7 @@ namespace Scheduler{
 	process_t* FindProcessByPID(uint64_t pid);
 
     void Initialize();
-    void Tick();
+    void Tick(regs64_t* r);
 
 	void EndProcess(process_t* process);
 }

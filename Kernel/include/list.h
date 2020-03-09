@@ -101,14 +101,19 @@ public:
 	}
 
 	T remove_at(unsigned pos) {
-		if (num < 0 || pos >= num){
+		if (num <= 0 || pos >= num){
 			T t;
 			return t;
 		}
 
 		ListNode<T>* current = front;
 
-		for (unsigned int i = 0; i < pos; i++) current = current->next;
+		for (unsigned int i = 0; i < pos && current; i++) current = current->next;
+
+		if(!current){
+			T t;
+			return t;
+		}
 
 		T obj = current->obj;
 

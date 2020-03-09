@@ -6,6 +6,9 @@ global kernel_pdpt
 global kernel_pdpt2
 extern kmain
 
+global GDT64
+global GDT64.TSS
+
 MBALIGN     equ 1<<0
 MEMINFO     equ 1<<1
 VIDINFO		equ 1<<2
@@ -53,6 +56,35 @@ GDT64:                           ; Global Descriptor Table (64-bit).
     db 10010010b                 ; Access (read/write).
     db 00000000b                 ; Granularity.
     db 0                         ; Base (high).
+    .UserCode: equ $ - GDT64     ; The usermode code descriptor.
+    dw 0                         ; Limit (low).
+    dw 0                         ; Base (low).
+    db 0                         ; Base (middle)
+    db 11111010b                 ; Access (exec/read).
+    db 00100000b                 ; Granularity, 64 bits flag, limit19:16.
+    db 0                         ; Base (high).
+    .UserData: equ $ - GDT64     ; The usermode data descriptor.
+    dw 0                         ; Limit (low).
+    dw 0                         ; Base (low).
+    db 0                         ; Base (middle)
+    db 11110010b                 ; Access (read/write).
+    db 00000000b                 ; Granularity.
+    db 0                         ; Base (high).
+    .TSS: ;equ $ - GDT64          ; TSS Descriptor
+    .len:
+    dw 0                         ; TSS Length
+    .low:
+    dw 0                         ; Base (low).
+    .mid:
+    db 0                         ; Base (middle)
+    db 10001001b                 ; Flags
+    db 00000000b                 ; Flags 2
+    .high:
+    db 0                         ; Base (high).
+    dd 0                         ; Reserved
+    .high32:
+    dd 0                         ; High 32 bits
+
     .Pointer:                    ; The GDT-pointer.
     dw $ - GDT64 - 1             ; Limit.
     dq GDT64                     ; Base.
@@ -169,7 +201,7 @@ entry64:
 
   lgdt [GDT64.Pointer64]
 
-  mov ax, 0
+  mov ax, 0x10
   mov ds, ax
   mov es, ax
   mov fs, ax

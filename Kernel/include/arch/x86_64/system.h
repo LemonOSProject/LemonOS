@@ -51,4 +51,4 @@ typedef struct {
     uint32_t mxcsrMask; // SSE Control Register Mask
     uint8_t st[8][16]; // FPU Registers, Last 6 bytes reserved
     uint8_t xmm[16][16]; // XMM Registers
-} fx_state_t;
+} __attribute__((packed)) fx_state_t;

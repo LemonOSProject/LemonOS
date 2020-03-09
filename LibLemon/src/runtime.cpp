@@ -4,14 +4,18 @@
 __attribute__((weak))
 void *operator new(long unsigned int size)
 {
-    if (size == 0)
-        size = 1;
+	if (size == 0){
+		size = 1;
+	}
 	return malloc(size);
 }
 
 __attribute__((weak))
 void *operator new[](long unsigned int size)
 {
+	if (size == 0){
+		size = 1;
+	}
 	return malloc(size);
 }
 

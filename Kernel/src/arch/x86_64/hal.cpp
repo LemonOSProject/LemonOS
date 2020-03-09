@@ -82,7 +82,6 @@ namespace HAL{
         videoMode.address = vidMemVirt;
 
         Video::Initialize(videoMode);
-        Video::DrawRect(0,0,videoMode.width,videoMode.height, 0,0,255);
         Video::DrawString("Starting Lemon x64...", 0, 0, 255, 255, 255);
     }
 

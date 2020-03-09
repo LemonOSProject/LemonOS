@@ -126,36 +126,44 @@ int SysOpen(regs64_t* r){
 	char* filepath = (char*)r->rbx;
 	fs_node_t* root = Initrd::GetRoot();
 	fs_node_t* current_node = root;
-	Log::Info("Opening: ");
-	Log::Write(filepath);
-	uint32_t fd;
+	int fd;
 	if(strcmp(filepath,"/") == 0){
 
 		fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 		Scheduler::GetCurrentProcess()->fileDescriptors.add_back(root);
-		*((uint32_t*)r->rcx) = fd;
+		*((int*)r->rcx) = fd;
 		return 0;
 	}
 
 	char* file = strtok(filepath,"/");
+	if(!file){
+		*((int*)r->rcx) = 0;
+		Log::Info("Error Opening: ");
+		Log::Write(filepath);
+		return -1;
+	}
 	fs_node_t* node;
 	while(file != NULL){
 		node = current_node->findDir(current_node,file);
-		if(!node) return 1;
+		if(!node) {
+			*((int*)r->rcx) = 0;
+			Log::Info("Error Opening: ");
+			Log::Write(filepath);
+			return -1;
+		}
 		if(node->flags & FS_NODE_DIRECTORY){
 			current_node = node;
-			file = strtok(NULL, "/");
-			continue;
 		}
-		break;
+		file = strtok(NULL, "/");
 	}
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(node);
 	fs::Open(node, 0);
 
-	Log::Write(", success!");
+	Log::Info(node->name);
+	Log::Write(" Opened!");
 
-	*((uint32_t*)r->rcx) = fd;
+	*((int*)r->rcx) = fd;
 	return 0;
 }
 
@@ -225,6 +233,7 @@ int SysAlloc(regs64_t* r){
 	}
 
 	*addressPointer = address;
+	return 0;
 }
 
 int SysChmod(regs64_t* r){
@@ -266,6 +275,7 @@ int SysLSeek(regs64_t* r){
 		Log::Write(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->name);
 		Log::Write(", ");
 		Log::Write(r->rdx);
+		*ret = -1;
 		return 3; // Invalid seek mode
 		break;
 	}
@@ -323,19 +333,19 @@ int SysCreateWindow(regs64_t* r){
 int SysDestroyWindow(regs64_t* r){
 	handle_t handle = (handle_t)r->rbx;
 
-	window_t* win;
-	if(win = (window_t*)Scheduler::FindHandle(handle)){
+	window_t* win = (window_t*)Scheduler::FindHandle(handle);
+	if(win){
 		for(int i = 0; i < GetDesktop()->windows->get_length(); i++){
-			if(GetDesktop()->windows->get_at(i) == win){
-				GetDesktop()->windows->remove_at(i);
+			/*if(GetDesktop()->windows->get_at(i) == win){
+				/*GetDesktop()->windows->remove_at(i);
 				message_t destroyMessage;
 				destroyMessage.msg = 0xBEEF; // Desktop Event
 				destroyMessage.data = 1; // Subevent - Window Destroyed
 				destroyMessage.recieverPID = GetDesktop()->pid;
 				destroyMessage.senderPID = 0;
-				Scheduler::SendMessage(destroyMessage);
+				Scheduler::SendMessage(destroyMessage);* /
 				break;
-			}
+			}*/
 		}
 	} else return 2;
 
@@ -402,10 +412,6 @@ int SysSendMessage(regs64_t* r){
 	uint64_t data = r->rdx;
 	uint64_t data2 = r->rsi;
 
-	/*Log::Info("Sending: ");
-	Log::Info(msg);
-	Log::Info(data);*/
-
 	message_t message;
 	message.senderPID = Scheduler::GetCurrentProcess()->pid;
 	message.recieverPID = pid;
@@ -413,7 +419,10 @@ int SysSendMessage(regs64_t* r){
 	message.data = data;
 	message.data2 = data2;
 
-	return Scheduler::SendMessage(message); // Send the message
+	if(Scheduler::SendMessage(message)){ // Send the message
+		Log::Info("Error sending message");
+	}
+	return 0;
 }
 
 // RecieveMessage(message_t* msg) - Grabs next message on queue and copies it to msg
@@ -424,8 +433,8 @@ int SysReceiveMessage(regs64_t* r){
 	uint64_t* queueSize = (uint64_t*)r->rcx;
 
 	*queueSize = Scheduler::GetCurrentProcess()->messageQueue.get_length();
-	*msg = Scheduler::RecieveMessage(Scheduler::GetCurrentProcess());
 
+	*msg = Scheduler::RecieveMessage(Scheduler::GetCurrentProcess());
 	return 0;
 }
 
@@ -539,10 +548,12 @@ namespace Scheduler{extern bool schedulerLock;};
 void SyscallHandler(regs64_t* regs) {
 	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
 		return;
-		
+
 	Scheduler::schedulerLock = true;
+    asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)Scheduler::GetCurrentProcess()->fxState) : "memory");
 	int ret = syscalls[regs->rax](regs); // Call syscall
 	regs->rax = ret;
+    asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)Scheduler::GetCurrentProcess()->fxState) : "memory");
 	Scheduler::schedulerLock = false;
 }
 

@@ -22,7 +22,7 @@ public:
 	}
 
 	~List() {
-		ListNode<T>* node = front;
+		//ListNode<T>* node = front;
 		//ListNode<T>* next = node->next;
 		/*while (node = next) {
 			free(node);

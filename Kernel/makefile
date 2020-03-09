@@ -46,6 +46,7 @@ initrd:
 	@cd ../Applications/FileManager && ./build.sh && cp fileman.lef ../../InitrdWriter/Contents
 	@cd ../Applications/Snake && ./build.sh && cp snake.lef ../../InitrdWriter/Contents
 	@cd ../Applications/Shell && ./build.sh && cp shell.lef ../../InitrdWriter/Contents
+	@cd ../Applications/TextEdit && ./build.sh && cp textedit.lef ../../InitrdWriter/Contents
 	
 	@cd ../InitrdWriter && ./copy.sh
 	@cp ../InitrdWriter/initrd-$(ARCH).img ../initrd.img

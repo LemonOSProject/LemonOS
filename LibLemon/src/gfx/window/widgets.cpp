@@ -27,7 +27,7 @@ void TextBox::Paint(surface_t* surface){
     DrawRect(bounds.pos.x, bounds.pos.y, bounds.size.x, bounds.size.y, 255, 255, 255, surface);
     int xpos = 0;
     int ypos = 0;
-    for(int i = 0; i < strlen(contents); i++){
+    for(size_t i = 0; i < strlen(contents); i++){
         DrawChar(contents[i], bounds.pos.x + xpos, bounds.pos.y + ypos, textColour.r, textColour.g, textColour.b, surface);
         xpos += 8;
 
@@ -157,7 +157,7 @@ Label::Label(char* _label, rect_t _bounds){
 void Label::Paint(surface_t* surface){
     int xpos = 0;
     int ypos = 0;
-    for(int i = 0; i < strlen(label); i++){
+    for(size_t i = 0; i < strlen(label); i++){
         DrawChar(label[i], bounds.pos.x + xpos, bounds.pos.y + ypos, 0, 0, 0, surface);
         xpos += 8;
 

@@ -18,9 +18,15 @@
 #include <nvme.h>
 #include <ahci.h>
 
+uint8_t* progressBuffer;
+video_mode_t videoMode;
+
 extern "C"
 void IdleProcess(){
 	asm("sti");
+
+	Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+
 	Log::Info("Loading Init Process...");
 	fs_node_t* initFsNode = fs::FindDir(Initrd::GetRoot(),"init.lef");
 	if(!initFsNode){
@@ -38,7 +44,19 @@ void IdleProcess(){
 	Scheduler::FindProcessByPID(pid)->timeSliceDefault += 5; // By increasing the Init processes time slice it gets more CPU time
 
 	Log::Write("OK");
-	for(;;);
+
+	/*asm volatile("cli;movq %rsp, %rax;\
+     	push $0x23;\
+     	pushq %rax;\
+     	pushfq;\
+		popq %rax;\
+		or $0x200, %rax;\
+		pushq %rax;\
+    	push $0x1B;push $1f;\
+		iretq;1:");*/
+	for(;;){
+		asm("hlt");
+	}
 }
 
 extern uint64_t _initrd_end;
@@ -48,9 +66,10 @@ uint64_t initrd_start = (uint64_t)&_initrd_start;
 
 extern "C"
 void kmain(multiboot_info_t* mb_info){
+	
 	HAL::Init(*mb_info);
 
-	video_mode_t videoMode = Video::GetVideoMode();
+	videoMode = Video::GetVideoMode();
 
 	Log::SetVideoConsole(NULL);
 
@@ -107,10 +126,21 @@ void kmain(multiboot_info_t* mb_info){
 			Video::DrawBitmapImage(videoMode.width/2 - 484/2, videoMode.height/2 - 292/2, 484, 292, buffer);
 	} else Log::Warning("Could not load splash image");
 
+	if(splashFile = fs::FindDir(Initrd::GetRoot(),"pbar.bmp")){
+		uint32_t size = splashFile->size;
+		progressBuffer = (uint8_t*)kmalloc(size);
+		if(fs::Read(splashFile, 0, size, progressBuffer)){
+			Video::DrawBitmapImage(videoMode.width/2 - 24*6, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+			Video::DrawBitmapImage(videoMode.width/2 - 24*5, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+		}
+	} else Log::Warning("Could not load progress bar image");
+
 	Video::DrawString("Copyright 2018-2019 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
 
 	long uptimeSeconds = Timer::GetSystemUptime();
-	while((uptimeSeconds - Timer::GetSystemUptime()) < 2);
+	while((uptimeSeconds - Timer::GetSystemUptime()) < 1);
+	Video::DrawBitmapImage(videoMode.width/2 - 24*4, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+	while((uptimeSeconds - Timer::GetSystemUptime()) < 1);
 
 	Log::Info("Initializing HID...");
 
@@ -125,10 +155,19 @@ void kmain(multiboot_info_t* mb_info){
 
 	Log::Write("OK");
 
+
 	PCI::Init();
+
+	Video::DrawBitmapImage(videoMode.width/2 - 24*3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+
 	Intel8254x::Initialize();
+
+	Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+
 	NVMe::Initialize();
 	AHCI::Init();
+
+	Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Initializing Task Scheduler...");
 	Scheduler::Initialize();

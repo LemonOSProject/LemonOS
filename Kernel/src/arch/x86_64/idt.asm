@@ -46,7 +46,6 @@ extern idt_ptr
 idt_flush:
     lidt[idt_ptr]
 	ret
-    ;add rsp, 8
     iretq
 
 

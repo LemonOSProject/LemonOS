@@ -226,33 +226,42 @@ int main(){
 	closeButtonSurface.buffer = (uint8_t*)malloc(19*19*4);//closeButtonBuffer ;//+ 54;//((bitmap_file_header_t*)closeButtonBuffer)->offset;
 	DrawBitmapImage(0, 0, closeButtonSurface.width, closeButtonSurface.height, closeButtonBuffer, &closeButtonSurface);
 
-	//syscall(0, (uintptr_t)((bitmap_file_header_t*)closeButtonBuffer)->magic, closeInfoHeader->width, 0, 0,0);* /
-
 	syscall(SYS_EXEC, (uintptr_t)"/shell.lef", 0, 0, 0, 0);
 
 	int mouseDevice = lemon_open("/dev/mouse0", 0);
 	lemon_read(mouseDevice, mouseData, 3);
 
-	if(FT_Init_FreeType(&library)){
+	/*if(FT_Init_FreeType(&library)){
 		syscall(0,(uintptr_t)"Error initializing freetype",0,0,0,0);
 	}
 
-	/*fseek(fontFile, 0, SEEK_END);
+	/*FILE* fontFile = fopen("/montserrat.ttf", "r");
+
+	fseek(fontFile, 0, SEEK_END);
 	size_t fontSize = ftell(fontFile);
 	fseek(fontFile, 0, SEEK_SET);
 	syscall(0, (uintptr_t)"sz:", fontSize, 0, 0, 0);
 	uint8_t* fontBuffer = (uint8_t*)malloc(fontSize);
-	fread(fontBuffer, fontSize, 1, fontFile);*/
+	fread(fontBuffer, fontSize, 1, fontFile);* /
 
-	if(int err = FT_New_Face(library, "/montserrat.ttf", 0, &mainFont)){//*/FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &mainFont)){
+	if(int err = FT_New_Face(library, "/montserrat.ttf", 0, &mainFont)){//* /FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &mainFont)){
 		syscall(0,(uintptr_t)"Error loading font from memory /montserrat.ttf",err,0,0,0);
 	}
 
-	FT_Set_Pixel_Sizes(mainFont, 0, 12);
+	if(int err = FT_Set_Pixel_Sizes(mainFont, 12, 12)){
+		syscall(0,(uintptr_t)"Error Setting Font Size", err, 0, 0, 0);
+	}
 
 	int index = FT_Get_Char_Index(mainFont, 'A');
-	FT_Load_Glyph(mainFont, index, FT_LOAD_DEFAULT);
-	//FT_Render_Glyph(mainFont->glyph, FT_RENDER_MODE_NORMAL);
+	if(int err = FT_Load_Glyph(mainFont, index, FT_LOAD_DEFAULT)){
+		syscall(0,(uintptr_t)"Error Loading Font Glyph", err, 0, 0, 0);
+	}
+	
+	if(int err = FT_Render_Glyph(mainFont->glyph, FT_RENDER_MODE_NORMAL)){
+		syscall(0,(uintptr_t)"Error Rendering Font Glyph", err, 0, 0, 0);
+	}//*/
+
+	DrawRect(0, 0, renderBuffer.width, renderBuffer.height, backgroundColor, &renderBuffer);
 
 	for(;;){
 		#ifdef ENABLE_FRAMERATE_COUNTER
@@ -272,8 +281,8 @@ int main(){
 
 		lemon_read(mouseDevice, mouseData, 3);
 		
-		mousePos.x += mouseData[1];
-		mousePos.y -= mouseData[2];
+		mousePos.x += mouseData[1] * 2;
+		mousePos.y -= mouseData[2] * 2;
 
 		if(drag){
 			redrawWindowDecorations = true;
@@ -385,8 +394,8 @@ int main(){
 		DrawRect(mousePos.x, mousePos.y, 5, 5, 255, 0, 0, &renderBuffer);
 
 		for(int i = 0; i < 12; i++){
-			for(int j = 0; j < 12; j++){
-				//DrawRect(j, i, 1, 1, mainFont->glyph->bitmap.buffer[i * 12 + j]*255, 0, 0, &renderBuffer);
+			for(int j = 0; j < 8; j++){
+				//DrawRect(j, i, 1, 1, mainFont->glyph->bitmap.buffer[i * 8 + j]*255, 0, 0, &renderBuffer);
 			}
 		}
 

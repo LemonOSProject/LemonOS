@@ -117,7 +117,8 @@ void isr0x69();
 extern "C"
 void idt_flush();
 
-	int errCode = 0;
+int errCode = 0;
+
 namespace IDT{
 	static void SetGate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags) {
 		idt[num].base_high = (base >> 32);
@@ -228,11 +229,58 @@ extern "C"
 		else {
 			Log::Error("Fatal Exception: ");
 			Log::Info(int_num);
-			Log::Info(regs->r15);
 			Log::Info("EIP: ");
 			Log::Info(regs->rip);
 			Log::Info("Error Code: ");
 			Log::Info(err_code);
+			Log::Info("Register Dump: a: ");
+			Log::Write(regs->rax);
+			Log::Write(", b:");
+			Log::Write(regs->rbx);
+			Log::Write(", c:");
+			Log::Write(regs->rcx);
+			Log::Write(", d:");
+			Log::Write(regs->rdx);
+			Log::Write(", S:");
+			Log::Write(regs->rsi);
+			Log::Write(", D:");
+			Log::Write(regs->rdi);
+			Log::Write(", sp:");
+			Log::Write(regs->rsp);
+			Log::Write(", bp:");
+			Log::Write(regs->rbp);
+
+			uint8_t xmm_x[16];
+			asm("movdqu %%xmm0, (%0)" : "=r"(xmm_x));
+			Log::Write("\r\nxmm0: {");
+			for(int i = 15; i >= 0; i--){
+				Log::Write(xmm_x[i]);
+				Log::Write(", ");
+			}
+			asm("movdqu %%xmm1, (%0)" : "=r"(xmm_x));
+			Log::Write("}, xmm1: {");
+			for(int i = 15; i >= 0; i--){
+				Log::Write(xmm_x[i]);
+				Log::Write(", ");
+			}
+			asm("movdqu %%xmm2, (%0)" : "=r"(xmm_x));
+			Log::Write("}, xmm3: {");
+			for(int i = 15; i >= 0; i--){
+				Log::Write(xmm_x[i]);
+				Log::Write(", ");
+			}
+			asm("movdqu %%xmm3, (%0)" : "=r"(xmm_x));
+			Log::Write("}, xmm3: {");
+			for(int i = 15; i >= 0; i--){
+				Log::Write(xmm_x[i]);
+				Log::Write(", ");
+			}
+			asm("movdqu %%xmm4, (%0)" : "=r"(xmm_x));
+			Log::Write("}, xmx4: {");
+			for(int i = 15; i >= 0; i--){
+				Log::Write(xmm_x[i]);
+				Log::Write(", ");
+			}
 
 
 			char temp[16];

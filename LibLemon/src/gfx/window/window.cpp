@@ -34,11 +34,8 @@ Window* CreateWindow(win_info_t* info){
 	surface_t surface;
 	surface.width = info->width;
 	surface.height = info->height;
-	bool needsPadding = (info->width * 4) % 0x10;
-	int horizontalSizePadded = info->width * 4 + (0x10 - ((info->width * 4) % 0x10));
 
-	surface.buffer = (uint8_t*)malloc((horizontalSizePadded) * (info->height + 180) * 4);
-	surface.buffer = (uint8_t*)malloc(horizontalSizePadded * info->height);
+	surface.buffer = (uint8_t*)malloc((surface.width * 4) * info->height);
 
 	surface.linePadding = 0;
 

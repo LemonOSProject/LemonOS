@@ -14,21 +14,37 @@ extern IdleProcess
 
 section .text
 
+%macro popaq 0
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rbp
+    pop rdi
+    pop rsi
+    pop rdx
+    pop rcx
+    pop rbx
+    ; Dont pop rax yet
+%endmacro
+
 ReadRIP:
     mov rax, [rsp]
     ret
 
 TaskSwitch:
-	cli
-    mov rbx, [processEntryPoint]
-    mov rsp, [processStack]
-    mov rbp, [processBase]
+    mov rsp, rdi ; Set the stack pointer to the location of our register context
+    popaq ; Load register context (we don't load RAX yet)
+
     mov rax, [processPML4]
-    mov cr3, rax
-    
-	mov rax, 0xFFFFFFFF8000BEEF ; Let the scheduler know the task has been switched
-    sti
-    jmp rbx
+    mov cr3, rax ; Set CR3
+
+    pop rax ; Now pop RAX
+    iretq ; This will pop RIP, CS, RFLAGS, RSP and SS.
 
 IdleProc:
     call IdleProcess
