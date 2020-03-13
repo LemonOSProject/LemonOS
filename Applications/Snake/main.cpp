@@ -44,7 +44,6 @@ unsigned int snakeRand()
 
 void Wait(){
 	while(msCounter < frameWaitTime){
-		asm("hlt");
 		uint64_t seconds;
 		uint64_t milliseconds;
 
