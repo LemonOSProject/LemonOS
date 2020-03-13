@@ -8,6 +8,10 @@ extern kmain
 
 global GDT64
 global GDT64.TSS
+global GDT64.TSS.low
+global GDT64.TSS.mid
+global GDT64.TSS.high
+global GDT64.TSS.high32
 
 MBALIGN     equ 1<<0
 MEMINFO     equ 1<<1
@@ -70,9 +74,9 @@ GDT64:                           ; Global Descriptor Table (64-bit).
     db 11110010b                 ; Access (read/write).
     db 00000000b                 ; Granularity.
     db 0                         ; Base (high).
-    .TSS: ;equ $ - GDT64          ; TSS Descriptor
+    .TSS: ;equ $ - GDT64         ; TSS Descriptor
     .len:
-    dw 0                         ; TSS Length
+    dw 108                       ; TSS Length - the x86_64 TSS is 108 bytes loong
     .low:
     dw 0                         ; Base (low).
     .mid:
@@ -81,10 +85,9 @@ GDT64:                           ; Global Descriptor Table (64-bit).
     db 00000000b                 ; Flags 2
     .high:
     db 0                         ; Base (high).
-    dd 0                         ; Reserved
     .high32:
     dd 0                         ; High 32 bits
-
+    dd 0                         ; Reserved
     .Pointer:                    ; The GDT-pointer.
     dw $ - GDT64 - 1             ; Limit.
     dq GDT64                     ; Base.

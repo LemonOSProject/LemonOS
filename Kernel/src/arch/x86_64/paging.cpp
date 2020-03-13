@@ -105,7 +105,7 @@ namespace Memory{
 			KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)pageTables[i],1);
 
 			SetPageFrame(&(pdpt[i]),pageDirsPhys[i]);
-			pdpt[i] |= 0x3; // R/W, Present
+			pdpt[i] |= PDPT_WRITABLE | PDPT_PRESENT | PDPT_USER;
 
 			memset(pageDirs[i],0,4096);
 			memset(pageTables[i],0,4096);
@@ -117,8 +117,9 @@ namespace Memory{
 		addressSpace->pml4 = pml4;
 		addressSpace->pdptPhys = pdptPhys;
 		addressSpace->pml4Phys = pml4Phys;
+		addressSpace->pdpt = pdpt;
 
-		pml4[0] = pdptPhys | 3;
+		pml4[0] = pdptPhys | PML4_PRESENT | PML4_WRITABLE | PAGE_USER;
 
 		Log::Info(pml4Phys);
 
@@ -146,7 +147,7 @@ namespace Memory{
 	void CreatePageTable(uint16_t pdptIndex, uint16_t pageDirIndex, address_space_t* addressSpace){
 		page_table_t pTable = AllocatePageTable();
 		SetPageFrame(&(addressSpace->pageDirs[pdptIndex][pageDirIndex]),pTable.phys);
-		addressSpace->pageDirs[pdptIndex][pageDirIndex] |= 0x3;
+		addressSpace->pageDirs[pdptIndex][pageDirIndex] |= PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
 		addressSpace->pageTables[pdptIndex][pageDirIndex] = pTable.virt;
 	}
 
@@ -157,8 +158,9 @@ namespace Memory{
 		uintptr_t address = 0;
 
 		uint64_t pml4Index = 0;
-		for(int d = 0; d < DIRS_PER_PDPT; d++){
+		for(int d = 0; d < 64; d++){
 			uint64_t pdptIndex = d;
+			if(!(addressSpace->pdpt[d] & 0x1)) break;
 			/* Attempt 1: Already Allocated Page Tables*/
 			for(int i = 0; i < TABLES_PER_DIR; i++){
 				if(addressSpace->pageDirs[d][i] & 0x1 && !(addressSpace->pageDirs[d][i] & 0x80)){
@@ -228,6 +230,9 @@ namespace Memory{
 			}
 			Log::Info("new dir");
 		}
+
+		const char* reasons[1] = {"Out of Virtual Memory!"};
+		KernelPanic(reasons, 1);
 	}
 
 	void* KernelAllocate4KPages(uint64_t amount){
@@ -382,8 +387,8 @@ namespace Memory{
 	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, address_space_t* addressSpace){
 		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
 
-		phys &= ~(PAGE_SIZE_4K-1);
-		virt &= ~(PAGE_SIZE_4K-1);
+		//phys &= ~(PAGE_SIZE_4K-1);
+		//virt &= ~(PAGE_SIZE_4K-1);
 
 		while(amount--){
 			pml4Index = PML4_GET_INDEX(virt);
@@ -396,7 +401,7 @@ namespace Memory{
 			if(!(addressSpace->pageDirs[pdptIndex][pageDirIndex] & 0x1)) CreatePageTable(pdptIndex,pageDirIndex,addressSpace); // If we don't have a page table at this address, create one.
 			
 			SetPageFrame(&(addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
-			addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] |= 0x3;
+			addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] |= PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
 
 			invlpg(virt);
 

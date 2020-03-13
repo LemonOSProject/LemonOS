@@ -39,9 +39,11 @@ void IdleProcess(){
 	
 	void* initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
-	
+	asm("cli");
 	uint64_t pid = Scheduler::LoadELF(initElf);
-	Scheduler::FindProcessByPID(pid)->timeSliceDefault += 5; // By increasing the Init processes time slice it gets more CPU time
+	if(process_t* proc = Scheduler::FindProcessByPID(pid))
+		proc->timeSliceDefault += 5; // By increasing the Init processes time slice it gets more CPU time
+	//asm("sti");
 
 	Log::Write("OK");
 
@@ -135,7 +137,7 @@ void kmain(multiboot_info_t* mb_info){
 		}
 	} else Log::Warning("Could not load progress bar image");
 
-	Video::DrawString("Copyright 2018-2019 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
+	Video::DrawString("Copyright 2018-2020 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
 
 	long uptimeSeconds = Timer::GetSystemUptime();
 	while((uptimeSeconds - Timer::GetSystemUptime()) < 1);

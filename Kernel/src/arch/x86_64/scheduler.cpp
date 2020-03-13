@@ -14,13 +14,7 @@
 
 #define INITIAL_HANDLE_TABLE_SIZE 0xFFFF
 
-uintptr_t processBase;
-uintptr_t processStack;
-uintptr_t processEntryPoint;
 uint64_t processPML4;
-uintptr_t processFxStatePtr;
-
-uint64_t kernel_stack;
 
 bool schedulerLock = true;
 
@@ -36,7 +30,7 @@ extern "C"
 void LoadTSS(uint64_t address);
 
 namespace Scheduler{
-    tss_t tss;
+    tss_t tss __attribute__((aligned(16)));
 
     bool schedulerLock = true;
 
@@ -54,20 +48,23 @@ namespace Scheduler{
         schedulerLock = true;
         memset(handles, 0, handleTableSize);
         CreateProcess((void*)IdleProc);
-        //processEntryPoint = currentProcess->threads[0].registers.rip;
-        //processStack = currentProcess->threads[0].registers.rsp;
-        //processBase = currentProcess->threads[0].registers.rbp;
+
         processPML4 = currentProcess->addressSpace->pml4Phys;
         asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");
+
         asm("cli");
         Log::Write("OK");
         Memory::ChangeAddressSpace(currentProcess->addressSpace);
 
-        LoadTSS((uintptr_t)&tss - KERNEL_VIRTUAL_BASE);
+        Log::Info("TSS: ");
+        Log::Write((uintptr_t)&tss);
+        LoadTSS((uintptr_t)&tss);// - KERNEL_VIRTUAL_BASE);
 
-        asm volatile("mov %%rsp, %0" :"=r"(tss.rsp0));
+        memset(&tss, 0, sizeof(tss_t));
         
-        //asm volatile("ltr %%ax" :: "a"(0x2B));
+        asm volatile("ltr %%ax" :: "a"(0x2B));
+
+        tss.rsp0 = (uintptr_t)currentProcess->threads[0].kernelStack;
 
         schedulerLock = false;
         TaskSwitch(&currentProcess->threads[0].registers);
@@ -190,13 +187,19 @@ namespace Scheduler{
 
         regs64_t* registers = &thread->registers;
         memset((uint8_t*)registers, 0, sizeof(regs64_t));
-        registers->rflags = 0x200; // IF - Interrupt Flag
+        registers->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
         registers->cs = 0x08; // Kernel CS
         registers->ss = 0x10; // Kernel SS
 
         proc->fxState = Memory::KernelAllocate4KPages(1); // Allocate Memory for the FPU/Extended Register State
         Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)proc->fxState, 1);
         memset(proc->fxState, 0, 1024);
+
+        void* kernelStack = (void*)Memory::KernelAllocate4KPages(8); // Allocate Memory For Kernel Stack
+        for(int i = 0; i < 8; i++){
+            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)kernelStack + PAGE_SIZE_4K * i, 1);
+        }
+        thread->kernelStack = kernelStack + PAGE_SIZE_4K * 8;
 
         ((fx_state_t*)proc->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
         ((fx_state_t*)proc->fxState)->mxcsrMask = 0xffbf;
@@ -213,12 +216,12 @@ namespace Scheduler{
         process_t* proc = InitializeProcessStructure();
         thread_t* thread = &proc->threads[0];
 
-        void* stack = (void*)Memory::KernelAllocate4KPages(4);//, proc->addressSpace);
-        for(int i = 0; i < 4; i++){
+        void* stack = (void*)Memory::KernelAllocate4KPages(32);//, proc->addressSpace);
+        for(int i = 0; i < 32; i++){
             Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)stack + PAGE_SIZE_4K * i, 1);//, proc->addressSpace);
         }
 
-        thread->stack = stack + 16384;
+        thread->stack = stack + PAGE_SIZE_4K * 32; // 128KB stack size
         thread->registers.rsp = (uintptr_t)thread->stack;
         thread->registers.rbp = (uintptr_t)thread->stack;
         thread->registers.rip = (uintptr_t)entry;
@@ -238,6 +241,8 @@ namespace Scheduler{
         // Create process structure
         process_t* proc = InitializeProcessStructure();
         thread_t* thread = &proc->threads[0];
+        thread->registers.cs = 0x1B; // We want user mode so use user mode segments, make sure RPL is 3
+        thread->registers.ss = 0x23;
 
         elf64_header_t elfHdr = *(elf64_header_t*)elf;
         asm("cli");
@@ -273,18 +278,18 @@ namespace Scheduler{
         
         asm volatile("mov %%rax, %%cr3" :: "a"(currentProcess->addressSpace->pml4Phys));
 
-        asm("sti");
-        void* stack = (void*)Memory::KernelAllocate4KPages(4);//, proc->addressSpace);
-        for(int i = 0; i < 4; i++){
-            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)stack + PAGE_SIZE_4K * i, 1);//, proc->addressSpace);
+        void* stack = (void*)Memory::Allocate4KPages(32, proc->addressSpace);
+        for(int i = 0; i < 32; i++){
+            Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)stack + PAGE_SIZE_4K * i, 1, proc->addressSpace);
         }
 
-        thread->stack = stack + 16384;
+        thread->stack = stack + PAGE_SIZE_4K * 32; // 128KB stack size
         thread->registers.rsp = (uintptr_t)thread->stack;
         thread->registers.rbp = (uintptr_t)thread->stack;
         thread->registers.rip = (uintptr_t)elfHdr.entry;
 
         InsertProcessIntoQueue(proc);
+        asm("sti");
 
         schedulerLock = schedulerState; // Restore previous lock state
 
@@ -334,9 +339,10 @@ namespace Scheduler{
         currentProcess = currentProcess->next;
 
         processPML4 = currentProcess->addressSpace->pml4Phys;
+        
         asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");
 
-        //asm("cli");
+        tss.rsp0 = (uintptr_t)currentProcess->threads[0].kernelStack;
         
         TaskSwitch(&currentProcess->threads[0].registers);
         

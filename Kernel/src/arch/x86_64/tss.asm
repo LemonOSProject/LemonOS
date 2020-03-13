@@ -1,26 +1,33 @@
 extern GDT64
 extern GDT64.TSS
+extern GDT64.TSS.low
+extern GDT64.TSS.mid
+extern GDT64.TSS.high
+extern GDT64.TSS.high32
 
 global LoadTSS
 
-LoadTSS: ; rdi - address 
+LoadTSS: ; RDI - address 
+    push rbx ; Save RBX
 
-    mov rax, GDT64.TSS + 2 ; Low Bytes of TSS
-    mov word [rax], di
+    mov eax, edi
+    mov rbx, GDT64.TSS + 2 ; Low Bytes of TSS
+    mov word [rbx], ax
 
-    shr rdi, 16 ; Shift Address 16-bits
+    mov eax, edi
+    shr eax, 16
+    mov rbx, GDT64.TSS + 4 ; Mid
+    mov byte [rbx], al
 
-    mov rax, GDT64.TSS + 4 ; Mid
-    mov byte [rax], dl
+    mov eax, edi
+    shr eax, 24
+    mov rbx, GDT64.TSS + 7 ; High
+    mov byte [rbx], al
 
-    shr rdi, 8
+    mov rax, rdi
+    shr rax, 32
+    mov rbx, GDT64.TSS + 8 ; High 32
+    mov dword [rbx], eax
 
-    mov rax, GDT64.TSS + 7 ; High
-    mov byte [rax], dl
-
-    shr rdi, 8
-
-    mov rax, GDT64.TSS + 12 ; High 32
-    mov dword [rax], edi
-
+    pop rbx ; Restore RBX
     ret

@@ -23,6 +23,7 @@ typedef struct {
 	process* parent; // Parent Process
 	void* stack; // Pointer to the initial stack
 	void* stackLimit; // The limit of the stack
+	void* kernelStack; // Kernel Stack
 	uint8_t priority; // Thread priority
 	uint8_t state; // Thread state
 	regs64_t registers;  // Registers

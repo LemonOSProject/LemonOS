@@ -5,7 +5,7 @@ ARCH := x86_64
 SRCDIRS := src/arch/$(ARCH) src src/liballoc src/fs src/tty src/lai/core src/lai/helpers src/lai/drivers
 INCLUDEPATH := -I include -I include/arch/$(ARCH)
 
-CFLAGS-x86_64 := -Wno-write-strings -Wno-pointer-arith -DLemon64 -ffreestanding -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -z max-page-size=0x1000 -nostdlib -fno-pic -fno-stack-protector -fno-exceptions -fno-rtti -fno-stack-protector $(INCLUDEPATH)
+CFLAGS-x86_64 := -Wno-write-strings -Wno-pointer-arith -DLemon64 -ffreestanding -fstack-protector -mcmodel=large -mno-red-zone -mno-mmx -mno-sse -mno-sse2 -z max-page-size=0x1000 -nostdlib -fno-pic -fno-exceptions -fno-rtti -fno-stack-protector $(INCLUDEPATH)
 ASFLAGS-x86_64 := -f elf64 -g -F dwarf -w+gnu-elf-extensions
 
 CFLAGS-x86 := -DLemon32 -fno-pic -Wall -Wno-pointer-arith -fno-permissive -fno-exceptions -fno-rtti -std=c++14 -fno-pic -Wno-address -m32 -ffreestanding -Wno-write-strings -fno-stack-protector -nostdlib $(INCLUDEPATH)

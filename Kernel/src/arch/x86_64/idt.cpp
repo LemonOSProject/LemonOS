@@ -249,7 +249,7 @@ extern "C"
 			Log::Write(regs->rsp);
 			Log::Write(", bp:");
 			Log::Write(regs->rbp);
-
+			/*
 			uint8_t xmm_x[16];
 			asm("movdqu %%xmm0, (%0)" : "=r"(xmm_x));
 			Log::Write("\r\nxmm0: {");
@@ -287,7 +287,7 @@ extern "C"
 			char temp2[16];
 			char temp3[16];
 			const char* reasons[]{"Generic Exception","RIP: ", itoa(regs->rip, temp, 16),"Exception: ",itoa(int_num, temp2, 16), "Process:", itoa(Scheduler::GetCurrentProcess() ? (Scheduler::GetCurrentProcess()->pid) : 0,temp3,10)};;
-			KernelPanic(reasons, 7);
+			KernelPanic(reasons, 7);*/
 			for (;;);
 		}
 	}

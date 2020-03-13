@@ -1,0 +1,1 @@
+bochs -f bochs.bxrc

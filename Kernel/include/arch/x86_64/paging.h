@@ -17,15 +17,18 @@
 #define PDPT_PRESENT 1
 #define PDPT_WRITABLE (1 << 1)
 #define PDPT_1G (1 << 7)
+#define PDPT_USER (1 << 2)
 #define PDPT_FRAME 0xFFFFFFFFFF000
 
 #define PDE_PRESENT 1
 #define PDE_WRITABLE (1 << 1)
+#define PDE_USER (1 << 2)
 #define PDE_2M (1 << 7)
 #define PDE_FRAME 0xFFFFFFFFFF000
 
 #define PAGE_PRESENT 1
 #define PAGE_WRITABLE (1 << 1)
+#define PAGE_USER (1 << 2)
 #define PAGE_FRAME 0xFFFFFFFFFF000
 
 #define PAGE_SIZE_4K 4096

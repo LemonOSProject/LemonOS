@@ -8,3 +8,5 @@ Disks/Lemon.vhd
 *.a
 Kernel/obj
 LibC
+serial.log
+
