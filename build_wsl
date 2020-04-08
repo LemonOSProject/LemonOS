@@ -1,1 +1,1 @@
-ninja -C LibC/build -j7 && cd LibC/build && meson install && cd ../.. && ninja -C LibLemon/build -j5 && ninja -C LibLemon/build install && ./buildinitrd.sh && ninja -C Kernel/build -j7 && cmd.exe /c build-win\\copytodisk.bat
+ninja -C LibC/build -j7 && ninja install -C LibC/build && ninja -C LibLemon/build -j7 && ninja -C LibLemon/build install && Scripts/buildinitrd.sh && ninja -C Kernel/build -j7 && cmd.exe /c Scripts\\build-win\\copytodisk.bat
