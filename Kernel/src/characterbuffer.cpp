@@ -1,5 +1,3 @@
-#ifdef Lemon32
-
 #include <characterbuffer.h>
 
 #include <string.h>
@@ -41,5 +39,3 @@ size_t CharacterBuffer::Read(char* _buffer, size_t count){
 
     return count;
 }
-
-#endif

@@ -42,8 +42,10 @@
 #define SYS_GET_VIDEO_MODE 31
 #define SYS_UNAME 32
 #define SYS_READDIR 33
+#define SYS_SET_FS_BASE 34
+#define SYS_MMAP 35
 
-#define NUM_SYSCALLS 34
+#define NUM_SYSCALLS 36
 
 typedef int(*syscall_t)(regs64_t*);
 
@@ -123,47 +125,42 @@ int SysWrite(regs64_t* r){
 }
 
 int SysOpen(regs64_t* r){
-	char* filepath = (char*)r->rbx;
+	char* filepath = (char*)kmalloc(strlen((char*)r->rbx) + 1);
+	strcpy(filepath, (char*)r->rbx);
 	fs_node_t* root = Initrd::GetRoot();
 	fs_node_t* current_node = root;
-	int fd;
+	Log::Info("Opening: ");
+	Log::Write(filepath);
+	uint32_t fd;
 	if(strcmp(filepath,"/") == 0){
-
 		fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 		Scheduler::GetCurrentProcess()->fileDescriptors.add_back(root);
-		*((int*)r->rcx) = fd;
+		*((uint32_t*)r->rcx) = fd;
 		return 0;
 	}
 
 	char* file = strtok(filepath,"/");
-	if(!file){
-		*((int*)r->rcx) = 0;
-		Log::Info("Error Opening: ");
-		Log::Write(filepath);
-		return -1;
-	}
 	fs_node_t* node;
 	while(file != NULL){
 		node = current_node->findDir(current_node,file);
 		if(!node) {
-			*((int*)r->rcx) = 0;
-			Log::Info("Error Opening: ");
-			Log::Write(filepath);
-			return -1;
+			*((uint32_t*)r->rcx) = 0;
+			return 1;
 		}
 		if(node->flags & FS_NODE_DIRECTORY){
 			current_node = node;
+			file = strtok(NULL, "/");
+			continue;
 		}
-		file = strtok(NULL, "/");
+		break;
 	}
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(node);
 	fs::Open(node, 0);
 
-	Log::Info(node->name);
-	Log::Write(" Opened!");
+	Log::Write(", success!");
 
-	*((int*)r->rcx) = fd;
+	*((uint32_t*)r->rcx) = fd;
 	return 0;
 }
 
@@ -233,7 +230,6 @@ int SysAlloc(regs64_t* r){
 	}
 
 	*addressPointer = address;
-	return 0;
 }
 
 int SysChmod(regs64_t* r){
@@ -275,7 +271,6 @@ int SysLSeek(regs64_t* r){
 		Log::Write(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->name);
 		Log::Write(", ");
 		Log::Write(r->rdx);
-		*ret = -1;
 		return 3; // Invalid seek mode
 		break;
 	}
@@ -333,19 +328,19 @@ int SysCreateWindow(regs64_t* r){
 int SysDestroyWindow(regs64_t* r){
 	handle_t handle = (handle_t)r->rbx;
 
-	window_t* win = (window_t*)Scheduler::FindHandle(handle);
-	if(win){
+	window_t* win;
+	if(win = (window_t*)Scheduler::FindHandle(handle)){
 		for(int i = 0; i < GetDesktop()->windows->get_length(); i++){
-			/*if(GetDesktop()->windows->get_at(i) == win){
-				/*GetDesktop()->windows->remove_at(i);
+			if(GetDesktop()->windows->get_at(i) == win){
+				GetDesktop()->windows->remove_at(i);
 				message_t destroyMessage;
 				destroyMessage.msg = 0xBEEF; // Desktop Event
 				destroyMessage.data = 1; // Subevent - Window Destroyed
 				destroyMessage.recieverPID = GetDesktop()->pid;
 				destroyMessage.senderPID = 0;
-				Scheduler::SendMessage(destroyMessage);* /
+				Scheduler::SendMessage(destroyMessage);
 				break;
-			}*/
+			}
 		}
 	} else return 2;
 
@@ -419,10 +414,7 @@ int SysSendMessage(regs64_t* r){
 	message.data = data;
 	message.data2 = data2;
 
-	if(Scheduler::SendMessage(message)){ // Send the message
-		Log::Info("Error sending message");
-	}
-	return 0;
+	return Scheduler::SendMessage(message); // Send the message
 }
 
 // RecieveMessage(message_t* msg) - Grabs next message on queue and copies it to msg
@@ -433,8 +425,8 @@ int SysReceiveMessage(regs64_t* r){
 	uint64_t* queueSize = (uint64_t*)r->rcx;
 
 	*queueSize = Scheduler::GetCurrentProcess()->messageQueue.get_length();
-
 	*msg = Scheduler::RecieveMessage(Scheduler::GetCurrentProcess());
+
 	return 0;
 }
 
@@ -481,7 +473,6 @@ int SysReadDir(regs64_t* r){
 
 	unsigned int fd = r->rbx;
 
-
 	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 		if(r->rsi) *((uint64_t*)r->rsi) = 0;
 		return 2;
@@ -490,6 +481,11 @@ int SysReadDir(regs64_t* r){
 	fs_dirent_t* direntPointer = (fs_dirent_t*)r->rcx;
 
 	unsigned int count = r->rdx;
+
+	if(!(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->flags & FS_NODE_DIRECTORY)){
+		if(r->rsi) *((uint64_t*)r->rsi) = 0;
+		return 2;
+	}
 
 	fs_dirent_t* dirent = fs::ReadDir(Scheduler::GetCurrentProcess()->fileDescriptors[fd],count);
 
@@ -504,6 +500,19 @@ int SysReadDir(regs64_t* r){
 	direntPointer->name[strlen(dirent->name)] = 0;
 	if(r->rsi) *((uint64_t*)r->rsi) = 1;
 	return 0;
+}
+
+int SysSetFsBase(regs64_t* r){
+	asm("wrmsr" :: "a"(r->rbx & 0xFFFFFFFF) /*Value low*/, "b"((r->rbx >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
+	return 0;
+}
+
+int SysMmap(regs64_t* r){
+	uint64_t* address = (uint64_t*)r->rbx;
+	size_t count = r->rcx;
+	uintptr_t hint = r->rdx;
+
+	
 }
 
 syscall_t syscalls[]{
@@ -541,6 +550,8 @@ syscall_t syscalls[]{
 	SysGetVideoMode,
 	SysUName,
 	SysReadDir,
+	SysSetFsBase,
+	SysMmap,
 };
 
 namespace Scheduler{extern bool schedulerLock;};
@@ -548,12 +559,10 @@ namespace Scheduler{extern bool schedulerLock;};
 void SyscallHandler(regs64_t* regs) {
 	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
 		return;
-
+		
 	Scheduler::schedulerLock = true;
-    asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)Scheduler::GetCurrentProcess()->fxState) : "memory");
 	int ret = syscalls[regs->rax](regs); // Call syscall
 	regs->rax = ret;
-    asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)Scheduler::GetCurrentProcess()->fxState) : "memory");
 	Scheduler::schedulerLock = false;
 }
 

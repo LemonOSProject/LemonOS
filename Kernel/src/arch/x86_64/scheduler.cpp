@@ -89,6 +89,8 @@ namespace Scheduler{
     }
 
     process_t* FindProcessByPID(uint64_t pid){
+        if(!processQueueStart) return NULL;
+        
         process_t* proc = processQueueStart;
         if(pid == proc->pid) return proc;
         proc = proc->next;
@@ -195,11 +197,11 @@ namespace Scheduler{
         Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)proc->fxState, 1);
         memset(proc->fxState, 0, 1024);
 
-        void* kernelStack = (void*)Memory::KernelAllocate4KPages(8); // Allocate Memory For Kernel Stack
-        for(int i = 0; i < 8; i++){
+        void* kernelStack = (void*)Memory::KernelAllocate4KPages(24); // Allocate Memory For Kernel Stack
+        for(int i = 0; i < 24; i++){
             Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)kernelStack + PAGE_SIZE_4K * i, 1);
         }
-        thread->kernelStack = kernelStack + PAGE_SIZE_4K * 8;
+        thread->kernelStack = kernelStack + PAGE_SIZE_4K * 24;
 
         ((fx_state_t*)proc->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
         ((fx_state_t*)proc->fxState)->mxcsrMask = 0xffbf;
@@ -299,7 +301,7 @@ namespace Scheduler{
     void EndProcess(process_t* process){
         RemoveProcessFromQueue(process);
 
-        for(int i = 0; i < process->fileDescriptors.get_length(); i++){
+        /*for(int i = 0; i < process->fileDescriptors.get_length(); i++){
             if(process->fileDescriptors[i])
                 process->fileDescriptors[i]->close(process->fileDescriptors[i]);
         }
@@ -314,11 +316,18 @@ namespace Scheduler{
                 Memory::FreePhysicalMemoryBlock(address);
             }
         }*/
-        currentProcess = process->next;
-        kfree(process);
+        if(currentProcess == process){
+            currentProcess = process->next;
+            kfree(process);
+            processPML4 = currentProcess->addressSpace->pml4Phys;
+            
+            asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");
 
-        processPML4 = currentProcess->addressSpace->pml4Phys;
-        TaskSwitch(&currentProcess->threads[0].registers);
+            tss.rsp0 = (uintptr_t)currentProcess->threads[0].kernelStack;
+            
+            TaskSwitch(&currentProcess->threads[0].registers);
+        }
+        kfree(process);
     }
 
     void Tick(regs64_t* r){

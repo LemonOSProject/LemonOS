@@ -20,4 +20,4 @@ public:
     size_t Slave_Write(char* buffer, size_t count);
 };
 
-PTY* GrantPTY(pid_t pid);
+PTY* GrantPTY(uint64_t pid);

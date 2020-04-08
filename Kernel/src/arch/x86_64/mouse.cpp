@@ -65,7 +65,7 @@ namespace Mouse{
 	}
 
 	fs_node_t mouseCharDev;
-	uint32_t ReadDevice(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer);
+	size_t ReadDevice(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
 
 	void Install()
 	{
@@ -110,7 +110,7 @@ namespace Mouse{
 	}
 
 
-	uint32_t ReadDevice(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer){
+	size_t ReadDevice(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 		if(size < 3) return 0;
 
 		if(DataUpdated())

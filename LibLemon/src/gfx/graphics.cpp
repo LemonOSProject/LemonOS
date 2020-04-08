@@ -146,11 +146,11 @@ void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t
     uint32_t* buffer = (uint32_t*)surface->buffer; // Convert byte array into an array of 32-bit unsigned integers as the supported colour depth is 32 bit
     for(int i = 0; i < height && (i + y) < surface->height; i++){
         uint32_t yOffset = (i + y) * (surface->width);
-        for(int j = 0; j < width && (x + j) < surface->width; j++){
+        /*for(int j = 0; j < width && (x + j) < surface->width; j++){
             buffer[yOffset + (j + x)] = colour_i;
-        }
+        }*/
           
-        //memset32_optimized((void*)(buffer + (yOffset + x)), colour_i, ((x + width) < surface->width) ? width : (surface->width - x));
+        memset32_optimized((void*)(buffer + (yOffset + x)), colour_i, ((x + width) < surface->width) ? width : (surface->width - x));
     }
 }
 
@@ -212,6 +212,8 @@ void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1,
         y = 0;
     }
     
+    width = (width + x > surface->width) ? (surface->width - x) : width;
+
     for(int j = 0; j < height && (y + j) < surface->height; j++){
             DrawRect(x, y + j, width, 1, (uint8_t)(j*(((double)c2.r - (double)c1.r)/height)+c1.r),(uint8_t)(j*(((double)c2.g - (double)c1.g)/height)+c1.g),(uint8_t)(j*(((double)c2.b - (double)c1.b)/height)+c1.b),surface);
     }

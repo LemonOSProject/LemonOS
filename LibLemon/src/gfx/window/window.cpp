@@ -46,7 +46,7 @@ Window* CreateWindow(win_info_t* info){
 
 void DestroyWindow(Window* win){
 	_DestroyWindow(win->handle);
-	//delete win;
+	delete win;
 }
 
 void PaintWindow(Window* win){

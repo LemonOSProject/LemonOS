@@ -17,6 +17,8 @@
 #include <8254x.h>
 #include <nvme.h>
 #include <ahci.h>
+#include <ata.h>
+#include <devicemanager.h>
 
 uint8_t* progressBuffer;
 video_mode_t videoMode;
@@ -68,7 +70,6 @@ uint64_t initrd_start = (uint64_t)&_initrd_start;
 
 extern "C"
 void kmain(multiboot_info_t* mb_info){
-	
 	HAL::Init(*mb_info);
 
 	videoMode = Video::GetVideoMode();
@@ -98,8 +99,9 @@ void kmain(multiboot_info_t* mb_info){
 
 	Log::Info("Multiboot Module Count: ");
 	Log::Info(HAL::multibootInfo.modsCount, false);
-
+	
 	Log::Info("Initializing Ramdisk...");
+	fs::Initialize();
 	Initrd::Initialize(initrd_start,initrd_end - initrd_start); // Initialize Initrd
 	Log::Write("OK");
 	
@@ -139,10 +141,13 @@ void kmain(multiboot_info_t* mb_info){
 
 	Video::DrawString("Copyright 2018-2020 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
 
+	Video::DrawBitmapImage(videoMode.width/2 - 24*3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+
+	DeviceManager::Init();
+
 	long uptimeSeconds = Timer::GetSystemUptime();
 	while((uptimeSeconds - Timer::GetSystemUptime()) < 1);
 	Video::DrawBitmapImage(videoMode.width/2 - 24*4, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
-	while((uptimeSeconds - Timer::GetSystemUptime()) < 1);
 
 	Log::Info("Initializing HID...");
 
@@ -157,16 +162,11 @@ void kmain(multiboot_info_t* mb_info){
 
 	Log::Write("OK");
 
-
-	PCI::Init();
-
-	Video::DrawBitmapImage(videoMode.width/2 - 24*3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
-
-	Intel8254x::Initialize();
-
 	Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	NVMe::Initialize();
+	Intel8254x::Initialize();
+	ATA::Init();
 	AHCI::Init();
 
 	Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);

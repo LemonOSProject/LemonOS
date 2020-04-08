@@ -53,11 +53,11 @@ idt_flush:
 	global isr%1
 	isr%1:
         cli
-        push qword [rsp+5*8]
-        push qword [rsp+5*8]
-        push qword [rsp+5*8]
-        push qword [rsp+5*8]
-        push qword [rsp+5*8]
+        push qword [rsp+5*8] ; SS
+        push qword [rsp+5*8] ; RSP
+        push qword [rsp+5*8] ; RFLAGS
+        push qword [rsp+5*8] ; CS
+        push qword [rsp+5*8] ; RIP
         pushaq
         mov rdi, %1
         mov rsi, rsp

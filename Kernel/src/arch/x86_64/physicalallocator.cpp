@@ -6,7 +6,7 @@
 #include <logging.h>
 #include <panic.h>
 
-extern void* kernel_end;
+extern void* _end;
 
 namespace Memory{
 
@@ -33,7 +33,7 @@ namespace Memory{
         }
         Log::Info("test");
         maxPhysicalBlocks = mem_info->memory_high * 1024 / PHYSALLOC_BLOCK_SIZE;
-        MarkMemoryRegionUsed(0, 8192*4096/*(uint32_t)&kernel_end*/);
+        MarkMemoryRegionUsed(0, /*8192*4096/**/(uintptr_t)&_end - KERNEL_VIRTUAL_BASE/**/);
     }
 
     // Sets a bit in the physical memory bitmap

@@ -2,6 +2,7 @@
 
 #include <memory.h>
 #include <stddef.h>
+#include <panic.h>
 
 void *operator new(size_t size)
 {
@@ -32,4 +33,10 @@ void operator delete[](void *p)
 void operator delete[](void *p, size_t)
 {
 	::operator delete[](p);
+}
+
+extern "C"
+void __cxa_pure_virtual(){
+	const char* reasons[1] = {"__cxa_pure_virtual"};
+	KernelPanic(reasons, 1);
 }

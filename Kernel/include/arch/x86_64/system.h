@@ -37,7 +37,7 @@ typedef struct {
     uint64_t rflags;
     uint64_t rsp;
     uint64_t ss;
-} regs64_t;
+} __attribute__((packed)) regs64_t;
 
 typedef struct {
     uint16_t fcw; // FPU Control Word

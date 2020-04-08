@@ -1,5 +1,11 @@
 #include <gfx/graphics.h>
 
+#include <ft2build.h>
+#include <lemon/syscall.h>
+#include FT_FREETYPE_H
+
+#include <ctype.h>
+
 extern uint8_t font_default[];
 
 uint8_t font_old[128][8] = {
@@ -133,25 +139,148 @@ uint8_t font_old[128][8] = {
 { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }    // U+007F
 };
 
-void DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface){
-    character &= 0x7F;
+static int fontState = 0;
+static FT_Library library;
+static FT_Face mainFont;
 
-    for(int i = 0; i < 12; i++) {
-        uint8_t line = font_default[i * 128 + character];
+void RefreshFonts(){
+    FT_Done_FreeType(library);
+    fontState = 0;
+}
 
-        for(int j = 0; j < 8; j++) {
-            if(line & 0x80)
-                DrawRect(j + x, i + y, 1, 1, r, g, b, surface);
-            line <<= 1; // Shift line left by one
+void InitializeFonts(){
+    fontState = -1;
+
+	if(FT_Init_FreeType(&library)){
+		syscall(0,(uintptr_t)"Error initializing freetype",0,0,0,0);
+        return;
+	}
+
+	FILE* fontFile = fopen("/montserrat.ttf", "r");
+
+	fseek(fontFile, 0, SEEK_END);
+	size_t fontSize = ftell(fontFile);
+	fseek(fontFile, 0, SEEK_SET);
+	uint8_t* fontBuffer = (uint8_t*)malloc(fontSize);
+	fread(fontBuffer, fontSize, 1, fontFile);
+
+    fclose(fontFile);
+
+	if(int err = /*FT_New_Face(library, "/montserrat.ttf", 0, &mainFont)){//*/FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &mainFont)){
+		syscall(0,(uintptr_t)"Error loading font from memory /montserrat.ttf",err,0,0,0);
+        return;
+	}
+
+	if(int err = FT_Set_Pixel_Sizes(mainFont, 0, 12)){
+		syscall(0,(uintptr_t)"Error Setting Font Size", err, 0, 0, 0);
+        return;
+	}
+
+    //free(fontBuffer);
+
+    fontState = 1;
+}
+
+int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface){
+    if (!isprint(character)) {
+        return 0;
+    }
+    
+    if(fontState == 0) InitializeFonts();
+    if(fontState == -1){ //
+        character &= 0x7F;
+
+        for(int i = 0; i < 12; i++) {
+            uint8_t line = font_default[i * 128 + character];
+
+            for(int j = 0; j < 8; j++) {
+                if(line & 0x80)
+                    DrawRect(j + x, i + y, 1, 1, r, g, b, surface);
+                line <<= 1; // Shift line left by one
+            }
+        }
+        return 8;
+    }
+
+    uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
+    uint32_t* buffer = (uint32_t*)surface->buffer; 
+    if(int err = FT_Load_Char(mainFont, character, FT_LOAD_RENDER)) {
+        syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
+        fontState = 0;
+        return 0;
+    }
+    
+    for(int i = 0; i < mainFont->glyph->bitmap.rows; i++){
+        uint32_t yOffset = (i + y + (12/*mainFont->glyph->bitmap.rows*/ - mainFont->glyph->bitmap_top)) * (surface->width);
+        for(int j = 0; j < mainFont->glyph->bitmap.width; j++){
+            if(mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j] == 255)
+                buffer[yOffset + (j + x)] = colour_i;
+            else if( mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j]){
+                double val = mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j] * 1.0 / 255;
+                uint32_t oldColour = buffer[yOffset + (j + x)];
+                int oldB = oldColour & 0xFF;
+                int oldG = (oldColour >> 8) & 0xFF;
+                int oldR = (oldColour >> 16) & 0xFF;
+                uint32_t newColour = (int)(b * val + oldB * (1 - val)) | (((int)(b * val + oldB * (1 - val)) << 8)) | (((int)(b * val + oldB * (1 - val)) << 16));
+                buffer[yOffset + (j + x)] = newColour;
+            }
         }
     }
+    return mainFont->glyph->advance.x >> 6;
 }
 
 void DrawString(char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface) {
-	int xOffset = 0;
-	while (*str != 0) {
-		DrawChar(*str, x + xOffset, y, r, g, b, surface);
-		xOffset += 8;
-		str++;
-	}
+    if(fontState == 0 || !mainFont || !library) InitializeFonts();
+    if(fontState == -1){
+        int xOffset = 0;
+        while (*str != 0) {
+            DrawChar(*str, x + xOffset, y, r, g, b, surface);
+            xOffset += 8;
+            str++;
+        }
+        return;
+    }
+
+    uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
+    uint32_t* buffer = (uint32_t*)surface->buffer; 
+
+    int xOffset = 0;
+    while (*str != 0) {
+        if(*str == '\n'){
+            /*if(y + 12 >= surface->height) break;
+            str++;
+            continue;*/
+            break;
+        } else if (!isprint(*str)) {
+            str++;
+            continue;
+        }
+
+        if(int err = FT_Load_Char(mainFont, *str, FT_LOAD_RENDER)) {
+            syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
+            fontState = 0;
+            return;
+        }
+
+        for(int i = 0; i < mainFont->glyph->bitmap.rows && (i + y + 12 - mainFont->glyph->bitmap_top) < surface->height; i++){
+            uint32_t yOffset = (i + y + (12/*mainFont->glyph->bitmap.rows*/ - mainFont->glyph->bitmap_top)) * (surface->width);
+            
+            for(int j = 0; j < mainFont->glyph->bitmap.width /*&& (x + xOffset + j) < surface->width*/; j++){
+                
+                if(mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j] == 255)
+                    buffer[yOffset + (j + x + xOffset)] = colour_i;
+                else if( mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j]){
+                    double val = mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j] * 1.0 / 255;
+                    uint32_t oldColour = buffer[yOffset + (j + x + xOffset)];
+                    int oldB = oldColour & 0xFF;
+                    int oldG = (oldColour >> 8) & 0xFF;
+                    int oldR = (oldColour >> 16) & 0xFF;
+                    uint32_t newColour = (int)(b * val + oldB * (1 - val)) | (((int)(b * val + oldB * (1 - val)) << 8)) | (((int)(b * val + oldB * (1 - val)) << 16));
+                    buffer[yOffset + (j + x + xOffset)] = newColour;
+                }
+            }
+        }
+        xOffset += mainFont->glyph->advance.x >> 6;
+        str++;
+    }
 }

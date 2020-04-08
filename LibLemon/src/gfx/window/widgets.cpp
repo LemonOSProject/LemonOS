@@ -27,15 +27,20 @@ void TextBox::Paint(surface_t* surface){
     DrawRect(bounds.pos.x, bounds.pos.y, bounds.size.x, bounds.size.y, 255, 255, 255, surface);
     int xpos = 0;
     int ypos = 0;
-    for(size_t i = 0; i < strlen(contents); i++){
-        DrawChar(contents[i], bounds.pos.x + xpos, bounds.pos.y + ypos, textColour.r, textColour.g, textColour.b, surface);
-        xpos += 8;
+    for(size_t i = 0; i < lineCount; i++){
+        for(size_t j = 0; j < strlen(contents[i]); j++){
+            xpos += DrawChar(contents[i][j], bounds.pos.x + xpos, bounds.pos.y + ypos, textColour.r, textColour.g, textColour.b, surface);
 
-        if((xpos > (bounds.size.x - 8 - 16) ) || (contents[i] == '\n')){
-            xpos = 0;
-            ypos += 12;
+            if((xpos > (bounds.size.x - 8 - 16))){
+                xpos = 0;
+                ypos += 13;
+            }
         }
+        ypos += 13;
+        xpos = 0;
+        if(ypos + 12 >= bounds.size.y) break;
     }
+
     DrawRect(xpos + 1, ypos, 2, 12, 0, 0, 0, surface);
 
     DrawRect(bounds.size.x - 16, 0, 16, bounds.size.y, 240, 240, 240, surface);
@@ -45,10 +50,30 @@ void TextBox::Paint(surface_t* surface){
 }
 
 void TextBox::LoadText(char* text){
-    if(strlen(text) > 256)
-        realloc(contents, strlen(text));
-    memset(contents,0,256);
-    strcpy(contents, text);
+    char* text2 = text;
+    int lineCount = 0;
+    int lineIndex = 0;
+
+    while(*text2){
+        if(*text2++ == '\n') lineCount++;
+        text2++;
+    }
+
+    contents = (char**)malloc(sizeof(char*) * lineCount);
+
+    char* line = strtok(text, "\n");
+
+    contents[lineIndex] = (char*)malloc(strlen(line) + 1);
+    memset(contents[lineIndex], 0, strlen(line) + 1);
+    strcpy(contents[lineIndex++], line);
+
+    while (line = strtok(NULL, "\n"))
+    {
+        contents[lineIndex] = (char*)malloc(strlen(line) + 1);
+        strcpy(contents[lineIndex++], line);
+    }
+    
+    this->lineCount = lineCount;
 }
 
 void TextBox::OnMouseDown(vector2i_t mousePos){
@@ -229,7 +254,7 @@ void ListView::Paint(surface_t* surface){
     for(int i = 0; i < contents.get_length(); i++){
         ListItem* item = contents.get_at(i);
         if(selected == i){
-            DrawRect(2,i*itemHeight + 2 - scrollPos, bounds.size.x - 24, itemHeight - 4, {165,/*24*/32,24}, surface);
+            DrawRect(bounds.pos.x + 2,bounds.pos.y + i*itemHeight + 2 - scrollPos, bounds.size.x - 24, itemHeight - 4, {165,/*24*/32,24}, surface);
         }
         DrawString(item->text, bounds.pos.x + 4, bounds.pos.y + i * itemHeight + (itemHeight / 2) - 6 - (scrollPos * scrollIncrementPixels * 2), 0, 0, 0, surface);
     }

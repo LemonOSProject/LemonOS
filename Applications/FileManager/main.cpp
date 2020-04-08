@@ -10,6 +10,7 @@
 #include <lemon/filesystem.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <gfx/window/messagebox.h>
 
 extern "C"
 int main(char argc, char** argv){
@@ -25,10 +26,14 @@ int main(char argc, char** argv){
 
 	window = CreateWindow(&windowInfo);
 
-	ListView* fileList = new ListView((rect_t){{0,0},{512,256}},20);
+	ListView* fileList = new ListView((rect_t){{0,20},{windowInfo.width,windowInfo.height - 20}},20);
+	
 	window->widgets.add_back(fileList);
 
-	int currentDir = open("/", 666);
+	char* currentPath = (char*)malloc(512);
+	strcpy(currentPath, "/");
+
+	int currentDir = open(currentPath, 666);
 	int i = 0;
 	lemon_dirent_t dirent;
 	while(lemon_readdir(currentDir, i++, &dirent)){
@@ -56,7 +61,7 @@ int main(char argc, char** argv){
 				mouseX = msg.data >> 32;
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
 				HandleMouseUp(window, {(int)mouseX, (int)mouseY});
-			} /*else if(msg.msg == WINDOW_EVENT_KEY){
+			} else if(msg.msg == WINDOW_EVENT_KEY){
 				if(msg.data == KEY_ARROW_DOWN){
 					fileList->selected++;
 					if(fileList->selected >= fileList->contents.get_length()){
@@ -72,10 +77,18 @@ int main(char argc, char** argv){
 					lemon_readdir(currentDir, fileList->selected, &dirent);
 					if(dirent.type & FS_NODE_DIRECTORY){
 						close(currentDir);
-						char path[64];
-						strcpy(path, "/");
-						strcpy(path, dirent.name);
-						currentDir = lemon_open(path, 0);
+						//strcat(currentPath, "/");
+						asm("int $0x69" :: "a"(0), "b"((uintptr_t)currentPath));
+						strcpy(currentPath + strlen(currentPath), "/");
+						strcpy(currentPath + strlen(currentPath), dirent.name);
+						asm("int $0x69" :: "a"(0), "b"((uintptr_t)currentPath));
+						//strcat(currentPath, dirent.name);
+						currentDir = lemon_open(currentPath, 666);
+
+						if(!currentDir){
+							MessageBox("Failed to open directory!", MESSAGEBOX_OK);
+							return 1;
+						}
 						
 						for(int i = fileList->contents.get_length() - 1; i >= 0; i--){
 							delete fileList->contents.get_at(i);//fileList->contents.remove_at(i);
@@ -90,7 +103,7 @@ int main(char argc, char** argv){
 						fileList->ResetScrollBar();
 					}
 				}
-			}*/
+			}
 		}
 
 		PaintWindow(window);

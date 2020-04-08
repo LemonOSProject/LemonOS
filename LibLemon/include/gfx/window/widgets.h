@@ -72,7 +72,8 @@ public:
     bool editable;
     bool multiline;
     bool active;
-    char contents[256];
+    char** contents;
+    int lineCount;
     size_t bufferSize;
 
     TextBox(rect_t bounds);
@@ -83,7 +84,7 @@ public:
     void OnMouseDown(vector2i_t mousePos);
     void OnKeyDown(char c);
 
-    rgba_colour_t textColour = {0,0,0,225};
+    rgba_colour_t textColour = {0,0,0,255};
 };
 
 class Button : public Widget{

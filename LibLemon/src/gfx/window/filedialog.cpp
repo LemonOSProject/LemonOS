@@ -20,7 +20,7 @@ public:
 
 	}
 
-	void OnMouseUp(){
+	void OnMouseUp(vector2i_t mousePos){
 		*ret = true;
 		memcpy(returnPath, filepath, 128);
 	}
@@ -91,6 +91,8 @@ char* FileDialog(char* directoryPath){
 			break;
 		}
 	}
+
+	RefreshFonts();
 
 	DestroyWindow(dialogWindow);
 	return returnPath;

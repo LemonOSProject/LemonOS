@@ -112,6 +112,16 @@ void strcpy(char* dest, const char* src)
 	dest[i] = '\0';
 }
 
+void strncpy(char* dest, const char* src, size_t n)
+{
+	int i = 0;
+	for(; src[i] != '\0' && i < n; i++)
+	{
+		dest[i] = src[i];
+	}
+	dest[i] = '\0';
+}
+
 int strlen(const char* str)
 {
 	int i = 0;
@@ -128,6 +138,19 @@ int strcmp(const char* s1, const char* s2)
 		else if (s1[i] == '\0')
 			return 0;
 	}
+}
+
+int strncmp(const char* s1, const char* s2, size_t n)
+{
+	for (size_t i = 0; i < n; i++)
+	{
+		if (s1[i] != s2[i])
+			return s1[i] < s2[i] ? -1 : 1;
+		else if (s1[i] == '\0')
+			return 0;
+	}
+
+	return 0;
 }
 
 // strchr - Get pointer to first occurance of c in string s
@@ -178,6 +201,32 @@ char *strtok(char * str, const char * delim)
 
 char* strcat(char* dest, const char* src){
     strcpy(dest + strlen(dest), src);
+}
+
+char* strncat(char* dest, const char* src, size_t n){
+    strncpy(dest + strlen(dest), src, n);
+}
+
+char toupper(char c){
+	if(c >= 'a' && c <= 'z')
+		return c - 'a' + 'A';
+	else return c;
+}
+
+char* strupr(char* s){
+	for(int i = 0; s[i] != '\0'; i++){
+		s[i] = toupper(s[i]);
+	}
+}
+
+char* strnupr(char* s, size_t n){
+
+	for(int i = 0; s[i] && i < n; i++){
+		if(!(i < n)) break;
+		s[i] = toupper(s[i]);
+	}
+
+	return s;
 }
 
 #pragma GCC pop_options

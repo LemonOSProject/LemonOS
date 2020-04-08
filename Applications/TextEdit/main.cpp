@@ -24,13 +24,13 @@ int main(char argc, char** argv){
 	windowInfo.flags = 0;
 	strcpy(windowInfo.title, "TextEdit");
 
+	char* filePath = FileDialog("/");
+
 	window = CreateWindow(&windowInfo);
 
 	TextBox* textBox = new TextBox({{0, 0}, {512, 256}});
 
 	window->widgets.add_back(textBox);
-
-	char* filePath = FileDialog("/");
 
 	FILE* textFile = fopen(filePath, "r");
 
@@ -39,7 +39,6 @@ int main(char argc, char** argv){
 		MessageBox("Failed to open file!", MESSAGEBOX_OK);
 		exit(1);
 	}
-	for(;;);
 
 	fseek(textFile, 0, SEEK_END);
 	size_t textFileSize = ftell(textFile);

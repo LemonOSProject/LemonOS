@@ -52,14 +52,12 @@ memset32_sse2:
 	push rbp    ; save the prior rbp value
     mov rbp, rsp
 
-	mov rax, rcx
-	mov rbx, rdx
-	mov rcx, r8
+	mov rcx, rdx
 
 	cmp rcx, 1
 	jle .ret ; Avoid 0s
 	
-	movq xmm1, rbx
+	movq xmm1, rsi
 	movdqa xmm0, [bigzero]
 
 	paddq xmm0, xmm1
@@ -71,8 +69,8 @@ memset32_sse2:
 	paddq xmm0, xmm1
 
 .loop:
-	movdqa [rax], xmm0
-	add rax, 0x10
+	movdqa [rdi], xmm0
+	add rdi, 0x10
 	
 	loop .loop
 

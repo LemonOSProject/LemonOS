@@ -54,11 +54,11 @@ namespace HAL{
 		Log::Info("aaa");
 
         Log::Info("Initializing System Timer...");
-        Timer::Initialize(1200);
+        Timer::Initialize(1500);
         Log::Write("OK");
 
         Log::Info("Initializing PCI...");
-        //PCI::Init();
+        PCI::Init();
         Log::Write("OK");
 
         Log::Info("Initializing ACPI...");

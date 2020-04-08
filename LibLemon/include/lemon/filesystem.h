@@ -7,10 +7,10 @@
 
 #define FS_NODE_FILE 0x1
 #define FS_NODE_DIRECTORY 0x2
-#define FS_NODE_BLKDEVICE 0x3
-#define FS_NODE_SYMLINK 0x4
-#define FS_NODE_CHARDEVICE 0x5
 #define FS_NODE_MOUNTPOINT 0x8
+#define FS_NODE_BLKDEVICE 0x10
+#define FS_NODE_SYMLINK 0x20
+#define FS_NODE_CHARDEVICE 0x40
 
 typedef struct lemon_dirent {
 	uint32_t inode; // Inode number

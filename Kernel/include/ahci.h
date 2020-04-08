@@ -291,6 +291,64 @@ typedef struct tagHBA_CMD_TBL
 	hba_prdt_entry_t	prdt_entry[1];	// Physical region descriptor table entries, 0 ~ 65535
 } hba_cmd_tbl_t;
 
+#define	SATA_SIG_SATA	0x00000101	// SATA drive
+#define	SATA_SIG_ATAPI	0xEB140101	// SATAPI drive
+#define	SATA_SIG_SEMB	0xC33C0101	// Enclosure management bridge
+#define	SATA_SIG_PM	0x96690101	// Port multiplier
+
+#define HBA_PxCMD_ST    0x0001
+#define HBA_PxCMD_FRE   0x0010
+#define HBA_PxCMD_FR    0x4000
+#define HBA_PxCMD_CR    0x8000
+
+#define HBA_PORT_IPM_ACTIVE 1
+#define HBA_PORT_DET_PRESENT 3
+
 namespace AHCI{
+	class Port{
+	public:
+		Port(int num, hba_port_t* portStructure);
+		int Read(uint32_t startl, uint32_t starth, uint32_t count, uint16_t *buf);
+		int FindCmdSlot();
+		int test();
+	private:
+		hba_port_t* registers;
+
+		hba_cmd_header_t* commandList; // Address Mapping of the Command List
+		void* fis; // Address Mapping of the FIS
+
+		hba_cmd_tbl_t* commandTables[8];
+	};
+
 	int Init();
+
+	inline void startCMD(hba_port_t *port)
+	{
+		// Wait until CR (bit15) is cleared
+		while (port->cmd & HBA_PxCMD_CR);
+
+		// Set FRE (bit4) and ST (bit0)
+		port->cmd |= HBA_PxCMD_FRE;
+		port->cmd |= HBA_PxCMD_ST; 
+	}
+	
+	// Stop command engine
+	inline void stopCMD(hba_port_t *port)
+	{
+		// Clear ST (bit0)
+		port->cmd &= ~HBA_PxCMD_ST;
+	
+		// Wait until FR (bit14), CR (bit15) are cleared
+		while(1)
+		{
+			if (port->cmd & HBA_PxCMD_FR)
+				continue;
+			if (port->cmd & HBA_PxCMD_CR)
+				continue;
+			break;
+		}
+	
+		// Clear FRE (bit4)
+		port->cmd &= ~HBA_PxCMD_FRE;
+	}
 }

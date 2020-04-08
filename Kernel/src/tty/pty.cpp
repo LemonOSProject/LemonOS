@@ -1,5 +1,3 @@
-#ifdef Lemon32
-
 #include <filesystem.h>
 #include <string.h>
 #include <pty.h>
@@ -11,13 +9,14 @@
 char nextPTY = '0';
 
 char GetNextPTY(){
+	nextPTY++;
 	if(nextPTY < 'a' && nextPTY > '9') nextPTY = 'a';
 	else if (nextPTY < 'A' && nextPTY > 'z') nextPTY = 'A';
 }
 
 List<PTY*>* ptys = NULL;
 
-PTY* GrantPTY(pid_t pid){
+PTY* GrantPTY(uint64_t pid){
 	if(!ptys) ptys = new List<PTY*>();
 	Log::Info(ptys->get_length());
 
@@ -26,15 +25,14 @@ PTY* GrantPTY(pid_t pid){
 	return pty;
 }
 
-uint32_t FS_Slave_Read(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer){
+size_t FS_Slave_Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 	PTY* pty = (*ptys)[node->inode];
 	return pty->Slave_Read((char*)buffer,size);
 }
 
-uint32_t FS_Master_Read(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer){
+size_t FS_Master_Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 	PTY* pty = (*ptys)[node->inode];
-	uint32_t ret = pty->Master_Read((char*)buffer,size);
-	Log::Info("reading");
+	size_t ret = pty->Master_Read((char*)buffer,size);
 	if(ret > 0){
 		Log::Info("Returning with:");
 		Log::Info(ret,false);
@@ -42,29 +40,42 @@ uint32_t FS_Master_Read(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t
 	return ret;
 }
 	
-uint32_t FS_Slave_Write(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer){
+size_t FS_Slave_Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 	PTY* pty = (*ptys)[node->inode];
 	return pty->Slave_Write((char*)buffer,size);
 }
 
-uint32_t FS_Master_Write(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer){
+size_t FS_Master_Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 	PTY* pty = (*ptys)[node->inode];
 	return pty->Master_Write((char*)buffer,size);
 }
 
 PTY::PTY(){
+	Log::Warning("test2");
 	slaveFile.flags = FS_NODE_CHARDEVICE;
-
-	strcpy(slaveFile.name, &nextPTY);
+	Log::Warning("test2");
+	strcpy(slaveFile.name, "pty");
+	char _name[] = {nextPTY, 0};
+	strcpy(slaveFile.name + strlen(slaveFile.name), _name);
+	Log::Warning("test1");
 	GetNextPTY();
 
 	slaveFile.read = FS_Slave_Read;
 	slaveFile.write = FS_Slave_Write;
+	slaveFile.findDir = nullptr;
+	slaveFile.readDir = nullptr;
+	slaveFile.open = nullptr;
+	slaveFile.close = nullptr;
 	slaveFile.inode = ptys->get_length();
 
 	masterFile.read = FS_Master_Read;
 	masterFile.write = FS_Master_Write;
+	masterFile.findDir = nullptr;
+	masterFile.readDir = nullptr;
+	masterFile.open = nullptr;
+	masterFile.close = nullptr;
 	masterFile.inode = ptys->get_length();
+	Log::Warning("test");
 
 	Initrd::RegisterDevice(&slaveFile);
 
@@ -86,5 +97,3 @@ size_t PTY::Master_Write(char* buffer, size_t count){
 size_t PTY::Slave_Write(char* buffer, size_t count){
 	return master.Write(buffer, count);
 }
-
-#endif

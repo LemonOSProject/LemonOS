@@ -226,10 +226,10 @@ extern "C"
 		} else if(int_num == 0x69){
 			Log::Warning("\r\nEarly syscall");
 		}
-		else {
+		else if(!(regs->ss & 0x3)){ // Check the CPL of the segment, caused by kernel?
 			Log::Error("Fatal Exception: ");
 			Log::Info(int_num);
-			Log::Info("EIP: ");
+			Log::Info("RIP: ");
 			Log::Info(regs->rip);
 			Log::Info("Error Code: ");
 			Log::Info(err_code);
@@ -280,15 +280,22 @@ extern "C"
 			for(int i = 15; i >= 0; i--){
 				Log::Write(xmm_x[i]);
 				Log::Write(", ");
-			}
-
+			}*/
 
 			char temp[16];
 			char temp2[16];
 			char temp3[16];
 			const char* reasons[]{"Generic Exception","RIP: ", itoa(regs->rip, temp, 16),"Exception: ",itoa(int_num, temp2, 16), "Process:", itoa(Scheduler::GetCurrentProcess() ? (Scheduler::GetCurrentProcess()->pid) : 0,temp3,10)};;
-			KernelPanic(reasons, 7);*/
+			KernelPanic(reasons, 7);
 			for (;;);
+		} else {
+			Log::Warning("Process crashed, PID: ");
+			Log::Write(Scheduler::GetCurrentProcess()->pid);
+			Log::Write(", RIP: ");
+			Log::Write(regs->rip);
+			Log::Write(", Exception: ");
+			Log::Write(int_num);
+			Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 		}
 	}
 
@@ -304,5 +311,7 @@ extern "C"
 			isr_t handler;
 			handler = interrupt_handlers[int_num];
 			handler(regs);
+		} else {
+			Log::Warning("Unhandled IRQ!");
 		}
 	}

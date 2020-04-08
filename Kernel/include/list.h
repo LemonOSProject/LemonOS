@@ -77,11 +77,11 @@ public:
 	}
 
 	T get_at(unsigned pos) {
-		if (num < 0 || pos >= num) return *(T*)nullptr;
+		if (num <= 0 || pos >= num || front == NULL) return front->obj; // Need to do something when item not in list
 
 		ListNode<T>* current = front;
 
-		for (unsigned int i = 0; i < pos; i++) current = current->next;
+		for (unsigned int i = 0; i < pos && i < num && current->next; i++) current = current->next;
 
 		return current->obj;
 	}

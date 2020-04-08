@@ -5,18 +5,20 @@
 #include <memory.h>
 #include <logging.h>
 #include <panic.h>
+#include <list.h>
+#include <fsvolume.h>
 
 namespace Initrd{
 	fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index);
 	fs_node_t* FindDir(fs_node_t* node, char* name);
 
-	uint32_t Read(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer);
-	uint32_t ReadNull(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer);
+	size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
+	size_t ReadNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
 
 	void Open(fs_node_t* node, uint32_t flags);
 	void Close(fs_node_t* node);
 	
-	uint32_t Write(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer);
+	size_t Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
 
 	lemoninitfs_header_t initrdHeader;
 	lemoninitfs_node_t* nodes;
@@ -93,7 +95,7 @@ namespace Initrd{
 		}
 	}
 
-	uint32_t Read(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer){
+	size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 		lemoninitfs_node_t inode = nodes[node->inode];
 
 		if(offset > inode.size) return 0;
@@ -105,14 +107,14 @@ namespace Initrd{
 		return size;
 	}
 
-	uint32_t ReadNull(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer){
+	size_t ReadNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 		// /if(offset > inode.length || offset + size > inode.length) return 0;
 
 		memset(buffer, -1, size);
 		return size;
 	}
 
-	uint32_t Write(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer){
+	size_t Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 		return 0; // It's a ramdisk.
 	}
 
@@ -128,6 +130,8 @@ namespace Initrd{
 			Log::Info(index);
 		if(node == &root && index == 0){
 			return &devDirent;
+		} else if (node == &root && index < fs::volumes->get_length() + 1){
+			return &(fs::volumes->get_at(index - 1)->mountPointDirent);
 		} else if(node == &dev){
 			if(index >= deviceCount) return NULL;
 			memset(dirent.name,0,128); // Zero the string
@@ -136,11 +140,11 @@ namespace Initrd{
 			dirent.type = 0;
 			Log::Info(dirent.name);
 			return &dirent;
-		} else if (index >= initrdHeader.fileCount + 1){ // All files in initrd + /dev
+		} else if (index >= initrdHeader.fileCount + 1 + fs::volumes->get_length()){ // All files in initrd + /dev + volumes
 			return NULL;
 		}
 		memset(dirent.name,0,128); // Zero the string
-		strcpy(dirent.name,nodes[index-1].filename);
+		strcpy(dirent.name,nodes[index-1-fs::volumes->get_length()].filename);
 		dirent.inode = index-1;
 		dirent.type = 0;
 
@@ -150,6 +154,10 @@ namespace Initrd{
 	fs_node_t* FindDir(fs_node_t* node, char* name){
 		if(node == &root){
 			if(strcmp(name,dev.name) == 0) return &dev;
+
+			for(int i = 0; i < fs::volumes->get_length(); i++){
+				if(strcmp(fs::volumes->get_at(i)->mountPoint.name,name) == 0) return &(fs::volumes->get_at(i)->mountPoint);
+			}
 			
 			Log::Info(initrdHeader.fileCount, false);
 			for(int i = 0; i < initrdHeader.fileCount;i++){
@@ -157,7 +165,7 @@ namespace Initrd{
 			}
 		} else if(node == &dev){
 			for(int i = 0; i < deviceCount; i++)
-				if(strcmp(devices[i]->name, name) == 0) return devices[0];
+				if(strcmp(devices[i]->name, name) == 0) return devices[i];
 		} else {
 			const char* pr[] = {"could not find dir"};
 			KernelPanic(pr,1);
@@ -204,6 +212,8 @@ namespace Initrd{
 	}
 
 	void RegisterDevice(fs_node_t* device){
+		Log::Info("Device Registered: ");
+		Log::Write(device->name);
 		devices[deviceCount++] = device;
 	}
 }

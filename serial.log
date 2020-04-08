@@ -2,119 +2,224 @@
 [INFO]    Initializing Lemon...
 
 [INFO]    511
-[INFO]    0x775003
-[INFO]    0x100c4
+[INFO]    0x1eeb003
+[INFO]    0x100a8
 [INFO]    0xffffffffc0000000
 [INFO]    0xffffffffc0001000
 [INFO]    0xffffffffc0002000
 [INFO]    0xffffffffc0003000
 [INFO]    test
 [INFO]    test
+[WARN]    Unhandled IRQ!
+[WARN]    Unhandled IRQ!
+[WARN]    Unhandled IRQ!
 [INFO]    test
 [INFO]    aaa
 [INFO]    Initializing System Timer...OK
-[INFO]    Initializing PCI...OK
+[INFO]    Initializing PCI...
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x1237, Class: 0x81, Subclass: 0xff
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x7000, Class: 0x6, Subclass: 0x0
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x7111, Class: 0x6, Subclass: 0x1
+[INFO]    Found Device! Vendor: 0x80ee, Device: 0xbeef, Class: 0x1, Subclass: 0x1
+[INFO]    Found Device! Vendor: 0x80ee, Device: 0xcafe, Class: 0x3, Subclass: 0x0
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x2415, Class: 0x8, Subclass: 0x80
+[INFO]    Found Device! Vendor: 0x106b, Device: 0x3f, Class: 0x4, Subclass: 0x1
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x7113, Class: 0xc, Subclass: 0x3
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x265c, Class: 0x6, Subclass: 0x80OK
 [INFO]    Initializing ACPI...OK
 [INFO]    Video Resolution:
 [INFO]    1024x768x32
 [INFO]    RAM: 255MB
 [INFO]    Multiboot Module Count: 
-[INFO]    1
+[INFO]    0
 [INFO]    Initializing Ramdisk...
 [INFO]    Initrd address: 
-[INFO]    0xffffffff801323a0
+[INFO]    0xffffffff80137240
 [INFO]    Size:
-[INFO]    6501077
+[INFO]    31077451
 [INFO]    File Count:
-[INFO]    16files
+[INFO]    20files
 OK
 [INFO]    Ramdisk Contents:
 
 [INFO]    0x0    dev
 
 [INFO]    0x1
-[INFO]    16    bg.bmp
+[INFO]    20    bg.bmp
 
 [INFO]    0x2
-[INFO]    16    banner.bmp
+[INFO]    20    banner.bmp
 
 [INFO]    0x3
-[INFO]    16    binico.bmp
+[INFO]    20    binico.bmp
 
 [INFO]    0x4
-[INFO]    16    close.bmp
+[INFO]    20    close.bmp
 
 [INFO]    0x5
-[INFO]    16    fileico.bmp
+[INFO]    20    fileico.bmp
 
 [INFO]    0x6
-[INFO]    16    folderico.bmp
+[INFO]    20    folderico.bmp
 
 [INFO]    0x7
-[INFO]    16    splash.bmp
+[INFO]    20    splash.bmp
 
 [INFO]    0x8
-[INFO]    16    init.lef
+[INFO]    20    init.lef
 
 [INFO]    0x9
-[INFO]    16    snake.lef
+[INFO]    20    snake.lef
 
 [INFO]    0xa
-[INFO]    16    shell.lef
+[INFO]    20    shell.lef
 
 [INFO]    0xb
-[INFO]    16    fileman.lef
+[INFO]    20    fileman.lef
 
 [INFO]    0xc
-[INFO]    16    menu.cfg
+[INFO]    20    menu.cfg
 
 [INFO]    0xd
-[INFO]    16    montserrat.ttf
+[INFO]    20    montserrat.ttf
 
 [INFO]    0xe
-[INFO]    16    montserratlicense.txt
+[INFO]    20    montserratlicense.txt
 
 [INFO]    0xf
-[INFO]    16    textedit.lef
+[INFO]    20    textedit.lef
 
 [INFO]    0x10
-[INFO]    16    pbar.bmp
+[INFO]    20    pbar.bmp
 
 [INFO]    0x11
-[INFO]    16
-[INFO]    16
+[INFO]    20    gnuboy.lef
+
+[INFO]    0x12
+[INFO]    20    terminal.lef
+
+[INFO]    0x13
+[INFO]    20    mario.gbc
+
+[INFO]    0x14
+[INFO]    20    lsh.lef
+
+[INFO]    0x15
+[INFO]    20
+[INFO]    20
 [INFO]    Initializing HID...
+[INFO]    Device Registered: mouse0
+[WARN]    Unhandled IRQ!
+[WARN]    Unhandled IRQ!
+[WARN]    Unhandled IRQ!
 [INFO]    OK
 [INFO]    Registering Syscall Handler...OK
-[INFO]    Found Device! Vendor: 0x8086, Device: 0x1237
-[INFO]    Found Device! Vendor: 0x8086, Device: 0x7000
-[INFO]    Found Device! Vendor: 0x80ee, Device: 0xbeef
-[INFO]    Found Device! Vendor: 0x8086, Device: 0x1004
-[INFO]    Found Device! Vendor: 0x80ee, Device: 0xcafe
-[INFO]    Found Device! Vendor: 0x8086, Device: 0x2415
-[INFO]    Found Device! Vendor: 0x106b, Device: 0x3f
-[INFO]    Found Device! Vendor: 0x8086, Device: 0x7113
-[INFO]    No device found with class
-[INFO]    0x0
-[INFO]    0x0
-[WARN]    No 8254x device found!
 [INFO]    No device found with class
 [INFO]    0x1
 [INFO]    0x8
 [WARN]    NVMe Controller Not Found!
 [INFO]    No device found with class
+[INFO]    0x0
+[INFO]    0x0
+[WARN]    No 8254x device found!
+[INFO]    PCI Device Found: 
+[INFO]    Generic ATA Compaitble Storage Controller
+[INFO]    Initializing ATA: Bus Master: 0xd000
+[INFO]    Found ATA Drive: Port: 0x0, master
+[INFO]    Found GPT Header Partitions: 0x80 Entry Size:0x80
+[INFO]    GPT Partition: LBA Start: 0x800, LBA End: 0xfff, Size: 0xffe00
+[INFO]    GPT Partition: LBA Start: 0x1000, LBA End: 0x31fde, Size: 0x61fbc00
+[INFO]    GPT Partition: LBA Start: 0x0, LBA End: 0x0, Size: 0x0
+[INFO]    GPT Partition: LBA Start: 0x0, LBA End: 0x0, Size: 0x0
+[INFO]    FAT version: 0x0
+[INFO]    Signature: 0x29
+[INFO]    volume label string: NO NAME    FAT32   3ÉŽÑ¼ô{ŽÁŽÙ½
+[INFO]    oem id: MSDOS5.0
+[INFO]    volume size: 97 MB
+[INFO]    No device found with class
 [INFO]    0x1
 [INFO]    0x6
 [INFO]    Initializing Task Scheduler...
-[INFO]    0x208d000OK
+[INFO]    0x24ec000OK
+[INFO]    TSS: 0xffffffff823ec350
 [INFO]    Loading Init Process...
-[INFO]    16
-[INFO]    0x21e0000
+[INFO]    20
+[INFO]    0x29de000
 [INFO]    0x400100 entryOK
 [INFO]    Mapping Framebuffer to:
 [INFO]    0x600000
-[INFO]    16
-[INFO]    close.bmp Opened!
+[INFO]    Opening: close.bmp
+[ERROR]   close.bmp
+[INFO]    20, success!
+[INFO]    In function determine_bufmode, file ../options/ansi/generic/file-io.cpp:421
+__ensure(Library function fails due to missing sysd
+[INFO]    0x0
+[INFO]    ep) failed
+[INFO]    0x0
 [INFO]    Executing: /shell.lef
-[INFO]    16
-[INFO]    0x2869000
+[INFO]    20
+[INFO]    0x34a7000
+[INFO]    0x400100 entry
+[INFO]    Opening: /dev/mouse0
+[ERROR]   dev
+[ERROR]   mouse0, success!
+[INFO]    Opening: /montserrat.ttf
+[ERROR]   montserrat.ttf
+[INFO]    20, success!
+[INFO]    In function determine_bufmode, file ../options/ansi/generic/file-io.cpp:421
+__ensure(Library function fails due to missing sysd
+[INFO]    0x0
+[INFO]    ep) failed
+[INFO]    0x0
+[INFO]    Opening: /menu.cfg
+[ERROR]   menu.cfg
+[INFO]    20, success!
+[INFO]    In function determine_bufmode, file ../options/ansi/generic/file-io.cpp:421
+__ensure(Library function fails due to missing sysd
+[INFO]    0x0
+[INFO]    ep) failed
+[INFO]    0x0
+[INFO]    Opening: /montserrat.ttf
+[ERROR]   montserrat.ttf
+[INFO]    20, success!
+[INFO]    In function determine_bufmode, file ../options/ansi/generic/file-io.cpp:421
+__ensure(Library function fails due to missing sysd
+[INFO]    0x0
+[INFO]    ep) failed
+[INFO]    0x0
+[INFO]    Executing: /fileman.lef
+[INFO]    20
+[INFO]    0x44d2000
+[INFO]    0x400100 entry
+[INFO]    Opening: /
+[INFO]    0x0
+[INFO]    0x1
+[INFO]    0x2
+[INFO]    0x3
+[INFO]    0x4
+[INFO]    0x5
+[INFO]    0x6
+[INFO]    0x7
+[INFO]    0x8
+[INFO]    0x9
+[INFO]    0xa
+[INFO]    0xb
+[INFO]    0xc
+[INFO]    0xd
+[INFO]    0xe
+[INFO]    0xf
+[INFO]    0x10
+[INFO]    0x11
+[INFO]    0x12
+[INFO]    0x13
+[INFO]    0x14
+[INFO]    0x15
+[INFO]    0x16
+[INFO]    Opening: /montserrat.ttf
+[ERROR]   montserrat.ttf
+[INFO]    20, success!
+[INFO]    In function determine_bufmode, file ../options/ansi/generic/file-io.cpp:421
+__ensure(Library function fails due to missing sysd
+[INFO]    0x0
+[INFO]    ep) failed
+[INFO]    0x0

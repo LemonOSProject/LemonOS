@@ -78,9 +78,10 @@ void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface);
 void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
 void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface);
 
-void DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
+int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
 void DrawString(char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
 void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface);
+void RefreshFonts();
 
 video_mode_t GetVideoMode();
 

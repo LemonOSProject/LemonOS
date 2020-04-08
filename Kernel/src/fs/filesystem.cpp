@@ -3,13 +3,19 @@
 namespace fs{
     fs_node_t root;
 
-    uint32_t Read(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer){
+	List<FsVolume*>* volumes;
+
+    void Initialize(){
+		volumes = new List<FsVolume*>();
+    }
+
+    size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
         if(node->read)
             return node->read(node,offset,size,buffer);
         else return 0;
     }
 
-    uint32_t Write(fs_node_t* node, uint32_t offset, uint32_t size, uint8_t *buffer){
+    size_t Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
         if(node->write)
             return node->write(node,offset,size,buffer);
         else return 0;
@@ -39,9 +45,5 @@ namespace fs{
         if(node->findDir)
             return node->findDir(node,name);
         else return 0;
-    }
-
-    void Initialize(){
-        
     }
 }
