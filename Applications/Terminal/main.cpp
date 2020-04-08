@@ -51,7 +51,7 @@ void OnPaint(surface_t* surface){
 
 extern "C"
 int main(char argc, char** argv){
-	Window* window;
+	/*Window* window;
 
 	windowInfo.width = 640;
 	windowInfo.height = 300;
@@ -81,7 +81,7 @@ int main(char argc, char** argv){
 			} /*else if (msg.msg == WINDOW_EVENT_CLOSE){
 				DestroyWindow(window);
 				return 0;
-			}*/
+			}* /
 		}
 		int num = lemon_read(masterPTYFd, &buffer[currentLine][bufferPos], 1);
 		do{
@@ -95,6 +95,6 @@ int main(char argc, char** argv){
 		} while (num = lemon_read(masterPTYFd, &buffer[currentLine][bufferPos], 1));
 
 		PaintWindow(window);
-	}
+	}*/
 	for(;;);
 }

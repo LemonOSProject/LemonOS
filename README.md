@@ -15,7 +15,7 @@ Work In Progess:
 
 System requirements:
 - 128 MB RAM
-- SSE2 Compatible x86_64 Processor
+- x86_64 Processor
 - VESA VBE support
 
 Build Requirements:

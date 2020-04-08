@@ -1,1 +1,1 @@
-ninja -C LibC/build -j5 && cd LibC/build && meson install && cd ../.. && make -C LibLemon -j5 && ./buildinitrd.sh && ninja -C Kernel/build -j5 && ./copytodisk.sh
+ninja -C LibC/build -j5 && cd LibC/build && meson install && cd ../.. && ninja -C LibLemon/build -j5 && ninja -C LibLemon/build install && ./buildinitrd.sh && ninja -C Kernel/build -j5 && ./copytodisk.sh

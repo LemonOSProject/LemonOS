@@ -6,7 +6,8 @@ Disks/Lemon.vhd
 *.o
 *.lef
 *.a
-Kernel/obj
 LibC
 serial.log
 Kernel/build
+Applications/build
+LibLemon/build
