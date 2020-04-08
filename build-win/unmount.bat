@@ -10,3 +10,5 @@ cd "%~dp0%"
 echo detach vdisk >> mount.cfg
 
 DiskPart /s "%~dp0%mount.cfg"
+
+del mount.cfg

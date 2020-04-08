@@ -21,6 +21,7 @@ System requirements:
 Build Requirements:
 - UNIX-like system (e.g. Linux or Windows under WSL)
 - GNU binutils, make and GCC (yet to provide patch files)
+- meson and ninja
 - Freetype (yet to provide patch)
 - [mlibc](https://github.com/managarm/mlibc) C Library (crossfile provided)
 

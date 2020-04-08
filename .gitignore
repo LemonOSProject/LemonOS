@@ -9,4 +9,4 @@ Disks/Lemon.vhd
 Kernel/obj
 LibC
 serial.log
-
+Kernel/build

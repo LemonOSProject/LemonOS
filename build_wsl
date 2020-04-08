@@ -1,2 +1,1 @@
-#make -C LibC -j5 && make -C LibLemon -j5 && make -C Kernel -j5 && make -C Kernel initrd -j5 && make -C Kernel copy -j5
-ninja -C LibC/build -j7 && cd LibC/build && meson install && cd ../.. && make -C LibLemon -j7 && make -C Kernel initrd -j7 && make -C Kernel -j7 && make -C Kernel copy_wsl
+ninja -C LibC/build -j7 && cd LibC/build && meson install && cd ../.. && make -C LibLemon -j7 && ./buildinitrd.sh && ninja -C Kernel/build -j7 && cmd.exe /c build-win\\copytodisk.bat

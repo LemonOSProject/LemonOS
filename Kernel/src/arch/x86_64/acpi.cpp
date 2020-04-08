@@ -3,21 +3,21 @@
 #include <string.h>
 #include <logging.h>
 #include <panic.h>
-
+/*
 #include <lai/core.h>
 #include <lai/helpers/pm.h>
-#include <lai/helpers/sci.h>
+#include <lai/helpers/sci.h>*/
 
 namespace ACPI{
-	const char* signature = "RSD PTR ";
+	/*const char* signature = "RSD PTR ";
 
 	RSDPDescriptor desc;
-	RSDTHeader header;
+	RSDTHeader header;*/
 
 	char oem[7];
 
 	void Init(){
-		for(int i = 0; i <= 0x400; i++){ // Search first KB for RSDP
+		/*for(int i = 0; i <= 0x400; i++){ // Search first KB for RSDP
 			if(memcmp((void*)i,signature,8) == 0){
 				desc = *((RSDPDescriptor*)i);
 
@@ -51,10 +51,10 @@ namespace ACPI{
 		Log::Write(oem);
 
 		lai_set_acpi_revision(header.revision);
-		lai_enable_acpi(0);
+		lai_enable_acpi(0);*/
 	}
 
 	void Reset(){
-		lai_acpi_reset();
+		//lai_acpi_reset();
 	}
 }

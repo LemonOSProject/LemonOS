@@ -12,3 +12,5 @@ echo attach vdisk >> mount.cfg
 echo assign letter=X >> mount.cfg
 
 DiskPart /s "%~dp0%mount.cfg"
+
+del mount.cfg
