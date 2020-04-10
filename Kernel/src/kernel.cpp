@@ -18,6 +18,7 @@
 #include <nvme.h>
 #include <ahci.h>
 #include <ata.h>
+#include <xhci.h>
 #include <devicemanager.h>
 
 uint8_t* progressBuffer;
@@ -43,21 +44,9 @@ void IdleProcess(){
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 	asm("cli");
 	uint64_t pid = Scheduler::LoadELF(initElf);
-	if(process_t* proc = Scheduler::FindProcessByPID(pid))
-		proc->timeSliceDefault += 5; // By increasing the Init processes time slice it gets more CPU time
-	//asm("sti");
 
 	Log::Write("OK");
 
-	/*asm volatile("cli;movq %rsp, %rax;\
-     	push $0x23;\
-     	pushq %rax;\
-     	pushfq;\
-		popq %rax;\
-		or $0x200, %rax;\
-		pushq %rax;\
-    	push $0x1B;push $1f;\
-		iretq;1:");*/
 	for(;;){
 		asm("hlt");
 	}
@@ -168,6 +157,7 @@ void kmain(multiboot_info_t* mb_info){
 	Intel8254x::Initialize();
 	ATA::Init();
 	AHCI::Init();
+	USB::XHCI::Initialize();
 
 	Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 

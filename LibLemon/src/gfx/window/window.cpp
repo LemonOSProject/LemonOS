@@ -50,9 +50,9 @@ void DestroyWindow(Window* win){
 }
 
 void PaintWindow(Window* win){
-	//if(win->info.flags & WINDOW_FLAGS_NOBACKGROUND) goto nobg;
-	DrawRect(0,0,win->info.width, win->info.height, win->background, &win->surface);
-	//nobg:
+	//if(!(win->info.flags & WINDOW_FLAGS_NOBACKGROUND))
+		DrawRect(0,0,win->info.width, win->info.height, win->background, &win->surface);
+
 	for(int i = 0; i < win->widgets.get_length(); i++){
 		win->widgets.get_at(i)->Paint(&win->surface);
 	}

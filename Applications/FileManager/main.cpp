@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <gfx/window/messagebox.h>
+#include <lemon/spawn.h>
 
 extern "C"
 int main(char argc, char** argv){
@@ -39,6 +40,9 @@ int main(char argc, char** argv){
 	while(lemon_readdir(currentDir, i++, &dirent)){
 		fileList->contents.add_back(new ListItem(dirent.name));
 	}
+
+	Label* pathLabel = new Label("test", {{4,4},{508, 24}});
+	window->widgets.add_back(pathLabel);
 
 	fileList->ResetScrollBar();
 
@@ -77,12 +81,10 @@ int main(char argc, char** argv){
 					lemon_readdir(currentDir, fileList->selected, &dirent);
 					if(dirent.type & FS_NODE_DIRECTORY){
 						close(currentDir);
-						//strcat(currentPath, "/");
-						asm("int $0x69" :: "a"(0), "b"((uintptr_t)currentPath));
+
 						strcpy(currentPath + strlen(currentPath), "/");
 						strcpy(currentPath + strlen(currentPath), dirent.name);
-						asm("int $0x69" :: "a"(0), "b"((uintptr_t)currentPath));
-						//strcat(currentPath, dirent.name);
+
 						currentDir = lemon_open(currentPath, 666);
 
 						if(!currentDir){
@@ -101,6 +103,8 @@ int main(char argc, char** argv){
 						}
 
 						fileList->ResetScrollBar();
+					} else if (strcmp(dirent.name + strlen(dirent.name) - 4, ".lef")){
+						lemon_spawn(dirent.name);
 					}
 				}
 			}

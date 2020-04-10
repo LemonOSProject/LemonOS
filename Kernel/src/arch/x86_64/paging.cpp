@@ -364,7 +364,7 @@ namespace Memory{
 		}
 	}
 
-	void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount){
+	void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags){
 		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
 
 		while(amount--){
@@ -373,11 +373,15 @@ namespace Memory{
 			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
 			pageIndex = PAGE_TABLE_GET_INDEX(virt);
 			SetPageFrame(&(kernelHeapDirTables[pageDirIndex][pageIndex]), phys);
-			kernelHeapDirTables[pageDirIndex][pageIndex] |= 0x3;
+			kernelHeapDirTables[pageDirIndex][pageIndex] |= flags;
 			invlpg(virt);
 			phys += PAGE_SIZE_4K;
 			virt += PAGE_SIZE_4K;
 		}
+	}
+
+	void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount){
+		KernelMapVirtualMemory4K(phys, virt, amount, PAGE_WRITABLE | PAGE_PRESENT);
 	}
 
 	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount){

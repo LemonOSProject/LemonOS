@@ -60,6 +60,8 @@ cpp_files = [
     'src/storage/partitiondevice.cpp',
     
     'src/tty/pty.cpp',
+    
+    'src/usb/xhci.cpp',
 ]
 
 cpp_files_x86_64 = [

@@ -29,6 +29,8 @@
 #define PAGE_PRESENT 1
 #define PAGE_WRITABLE (1 << 1)
 #define PAGE_USER (1 << 2)
+#define PAGE_WRITETHROUGH (1 << 3)
+#define PAGE_CACHE_DISABLED (1 << 4)
 #define PAGE_FRAME 0xFFFFFFFFFF000
 
 #define PAGE_SIZE_4K 4096
@@ -91,6 +93,7 @@ namespace Memory{
     void MapVirtualMemory1G(uint64_t phys, uint64_t virt, uint64_t amount);
     void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount);
     void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount);
+    void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags);
     void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, address_space_t* addressSpace);
 
     address_space_t* CreateAddressSpace();

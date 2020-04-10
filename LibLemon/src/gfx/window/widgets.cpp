@@ -172,7 +172,7 @@ void Bitmap::Paint(surface_t* surface){
 // Label
 //////////////////////////
 Label::Label(char* _label, rect_t _bounds){
-    labelLength = strlen(_label);
+    labelLength = strlen(_label) + 1;
     label = (char*)malloc(labelLength);
     strcpy(label, _label);
 
@@ -180,17 +180,7 @@ Label::Label(char* _label, rect_t _bounds){
 }
 
 void Label::Paint(surface_t* surface){
-    int xpos = 0;
-    int ypos = 0;
-    for(size_t i = 0; i < strlen(label); i++){
-        DrawChar(label[i], bounds.pos.x + xpos, bounds.pos.y + ypos, 0, 0, 0, surface);
-        xpos += 8;
-
-        if((xpos > (bounds.size.x - 8) ) || (label[i] == '\n')){
-            xpos = 0;
-            ypos += 12;
-        }
-    }
+    DrawString(label, bounds.pos.x, bounds.pos.y, 0, 0, 0, surface);
 }
 
 //////////////////////////
@@ -271,7 +261,7 @@ void ListView::OnMouseDown(vector2i_t mousePos){
 
         return;
     }
-    selected = floor(((double)mousePos.y + scrollPos) / itemHeight);
+    selected = floor(((double)mousePos.y + scrollPos - bounds.pos.y) / itemHeight);
 
     if(selected >= contents.get_length()) selected = contents.get_length();
 }

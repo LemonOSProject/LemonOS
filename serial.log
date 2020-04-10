@@ -17,15 +17,14 @@
 [INFO]    aaa
 [INFO]    Initializing System Timer...OK
 [INFO]    Initializing PCI...
-[INFO]    Found Device! Vendor: 0x8086, Device: 0x1237, Class: 0x0, Subclass: 0xff
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x1237, Class: 0x81, Subclass: 0xff
 [INFO]    Found Device! Vendor: 0x8086, Device: 0x7000, Class: 0x6, Subclass: 0x0
 [INFO]    Found Device! Vendor: 0x8086, Device: 0x7111, Class: 0x6, Subclass: 0x1
 [INFO]    Found Device! Vendor: 0x80ee, Device: 0xbeef, Class: 0x1, Subclass: 0x1
 [INFO]    Found Device! Vendor: 0x80ee, Device: 0xcafe, Class: 0x3, Subclass: 0x0
 [INFO]    Found Device! Vendor: 0x8086, Device: 0x2415, Class: 0x8, Subclass: 0x80
-[INFO]    Found Device! Vendor: 0x106b, Device: 0x3f, Class: 0x4, Subclass: 0x1
-[INFO]    Found Device! Vendor: 0x8086, Device: 0x7113, Class: 0xc, Subclass: 0x3
-[INFO]    Found Device! Vendor: 0x8086, Device: 0x265c, Class: 0x6, Subclass: 0x80OK
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x7113, Class: 0x4, Subclass: 0x1
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x1e31, Class: 0x6, Subclass: 0x80OK
 [INFO]    Initializing ACPI...OK
 [INFO]    Video Resolution:
 [INFO]    1024x768x32
@@ -34,9 +33,9 @@
 [INFO]    0
 [INFO]    Initializing Ramdisk...
 [INFO]    Initrd address: 
-[INFO]    0xffffffff80119180
+[INFO]    0xffffffff80119220
 [INFO]    Size:
-[INFO]    30922024
+[INFO]    30921960
 [INFO]    File Count:
 [INFO]    18files
 OK
@@ -133,45 +132,8 @@ OK
 [INFO]    No device found with class
 [INFO]    0x1
 [INFO]    0x6
-[INFO]    Initializing Task Scheduler...
-[INFO]    0x24a6000OK
-[INFO]    TSS: 0xffffffff823a6350
-[INFO]    Loading Init Process...
-[INFO]    18
-[INFO]    0x29a2000
-[INFO]    0x400100 entryOK
-[INFO]    Mapping Framebuffer to:
-[INFO]    0x800000
-[INFO]    Opening: close.bmp
-[INFO]    18, success!
-[INFO]    In function determine_bufmode, file ../options/ansi/generic/file-io.cpp:421
-__ensure(Library function fails due to missing sysd
-[INFO]    0x0
-[INFO]    ep) failed
-[INFO]    0x0
-[INFO]    Executing: /shell.lef
-[INFO]    18
-[INFO]    0x3478000
-[INFO]    0x400100 entry
-[INFO]    Opening: /dev/mouse0, success!
-[INFO]    Opening: /menu.cfg
-[INFO]    18, success!
-[INFO]    In function determine_bufmode, file ../options/ansi/generic/file-io.cpp:421
-__ensure(Library function fails due to missing sysd
-[INFO]    0x0
-[INFO]    ep) failed
-[INFO]    0x0
-[INFO]    Opening: /montserrat.ttf
-[INFO]    18, success!
-[INFO]    In function determine_bufmode, file ../options/ansi/generic/file-io.cpp:421
-__ensure(Library function fails due to missing sysd
-[INFO]    0x0
-[INFO]    ep) failed
-[INFO]    0x0
-[INFO]    Opening: /montserrat.ttf
-[INFO]    18, success!
-[INFO]    In function determine_bufmode, file ../options/ansi/generic/file-io.cpp:421
-__ensure(Library function fails due to missing sysd
-[INFO]    0x0
-[INFO]    ep) failed
+[INFO]    PCI Device Found: 
+[INFO]    Generic XHCI Controller
+[INFO]    0xf0410000
+[INFO]    0xf0410000
 [INFO]    0x0
