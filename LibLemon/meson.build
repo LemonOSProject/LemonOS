@@ -46,6 +46,9 @@ asm_files = [
     'src/gfx/sse2.asm',
 ]
 
+prefix = get_option('prefix')
+install_subdir('include', install_dir: prefix)
+
 static_library('lemon', [asmg.process(asm_files), cpp_files],
     include_directories : liblemon_include_dirs, cpp_args : liblemon_cpp_args, link_args: liblemon_cpp_args,
     install: true)

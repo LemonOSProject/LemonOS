@@ -60,8 +60,8 @@ typedef struct process {
 namespace Scheduler{
 	extern process_t* currentProcess;
 
-    uint64_t CreateProcess(void* entry);
-    uint64_t LoadELF(void* entry);
+    process_t* CreateProcess(void* entry);
+    process_t* LoadELF(void* entry);
 
 	process_t* GetCurrentProcess();
 

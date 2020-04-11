@@ -9,7 +9,7 @@
 extern "C"{
 #endif
 
-void lemon_spawn(const char* path);
+int lemon_spawn(const char* path, int argc, char** argv, int flags = 0);
 
 #ifdef __cplusplus
 }

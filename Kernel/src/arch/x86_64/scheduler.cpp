@@ -210,7 +210,7 @@ namespace Scheduler{
         return proc;
     }
 
-    uint64_t CreateProcess(void* entry) {
+    process_t* CreateProcess(void* entry) {
 
         bool schedulerState = schedulerLock; // Get current value for scheduker lock
         schedulerLock = true; // Lock Scheduler
@@ -232,10 +232,20 @@ namespace Scheduler{
 
         schedulerLock = schedulerState; // Restore previous lock state
 
-        return proc->pid;
+        return proc;
     }
 
-    uint64_t LoadELF(void* elf) {
+    process_t* LoadELF(void* elf) {
+
+        elf64_header_t elfHdr = *(elf64_header_t*)elf;
+
+        char id[4];
+        strncpy(id, (char*)elfHdr.id + 1, 3);
+        if(strncmp("ELF", id, 3)){
+            Log::Warning("Invalid ELF Header: ");
+            Log::Write(id);
+            return nullptr;
+        }
 
         bool schedulerState = schedulerLock; // Get current value for scheduker lock
         schedulerLock = true; // Lock Scheduler
@@ -246,7 +256,6 @@ namespace Scheduler{
         thread->registers.cs = 0x1B; // We want user mode so use user mode segments, make sure RPL is 3
         thread->registers.ss = 0x23;
 
-        elf64_header_t elfHdr = *(elf64_header_t*)elf;
         asm("cli");
 
         asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
@@ -295,7 +304,7 @@ namespace Scheduler{
 
         schedulerLock = schedulerState; // Restore previous lock state
 
-        return proc->pid;
+        return proc;
     }
 
     void EndProcess(process_t* process){

@@ -10,6 +10,7 @@
 #include <physicalallocator.h>
 #include <gui.h>
 #include <timer.h>
+#include <pty.h>
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -44,8 +45,11 @@
 #define SYS_READDIR 33
 #define SYS_SET_FS_BASE 34
 #define SYS_MMAP 35
+#define SYS_GRANT_PTY 36
 
-#define NUM_SYSCALLS 36
+#define NUM_SYSCALLS 37
+
+#define EXEC_FLAG_DUP_FD 1
 
 typedef int(*syscall_t)(regs64_t*);
 
@@ -55,7 +59,11 @@ int SysExit(regs64_t* r){
 }
 
 int SysExec(regs64_t* r){
-	char* filepath = (char*)r->rbx;
+	char* filepath = (char*)kmalloc(strlen((char*)r->rbx) + 1);
+	strcpy(filepath, (char*)r->rbx);
+	int argc = r->rcx;
+	char** argv = (char**)r->rdx;
+	uint64_t flags = r->rsi;
 	
 	fs_node_t* root = Initrd::GetRoot();
 	fs_node_t* current_node = root;
@@ -82,13 +90,49 @@ int SysExec(regs64_t* r){
 
 	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
 	uint64_t a = current_node->read(current_node, 0, current_node->size, buffer);
-	Scheduler::LoadELF((void*)buffer);
+
+	process_t* proc = Scheduler::LoadELF((void*)buffer);
+
+	if(!proc) return 1;
+
+	if(argc && argv){
+		char** _argv = (char**)Memory::KernelAllocate4KPages(1);
+		uintptr_t newargv = (uintptr_t)Memory::Allocate4KPages(1, proc->addressSpace);
+		char* _args = (char*)Memory::KernelAllocate4KPages(1);
+		uintptr_t args = (uintptr_t)Memory::Allocate4KPages(1, proc->addressSpace);
+
+		proc->threads->registers.rdi = argc; // argc
+		proc->threads->registers.rsi = newargv; // argv
+
+		uintptr_t phys = Memory::AllocatePhysicalMemoryBlock();
+		Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)_argv, 1);
+		Memory::MapVirtualMemory4K(phys, newargv, 1, proc->addressSpace);
+
+		phys = Memory::AllocatePhysicalMemoryBlock();
+		Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)_args, 1);
+		Memory::MapVirtualMemory4K(phys, args, 1, proc->addressSpace);
+
+		for(int i = 0; i < argc; i++){
+			_argv[i] = (char*)args;
+			strcpy(_args, argv[i]);
+
+			args += strlen(argv[i]) + 1; // Account for null terminator
+			_args += strlen(argv[i]) + 1;
+		}
+	}
+
+	if(flags & EXEC_FLAG_DUP_FD){
+		proc->fileDescriptors.replace_at(0, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));
+		proc->fileDescriptors.replace_at(1, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1));
+		proc->fileDescriptors.replace_at(2, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2));
+	}
+
 	kfree(buffer);
 	return 0;
 }
 
 int SysRead(regs64_t* r){
-	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
+	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx);
 	if(!node){ Log::Warning("read failed! file descriptor: "); Log::Info(r->rbx, false); return 1; }
 	uint8_t* buffer = (uint8_t*)r->rcx;
 	if(!buffer) { return 1; }
@@ -437,7 +481,7 @@ int SysUptime(regs64_t* r){
 		*seconds = Timer::GetSystemUptime();
 	}
 	if(milliseconds){
-		*milliseconds = ((double)Timer::GetTicks())/(Timer::GetFrequency()/1000);
+		*milliseconds = ((double)Timer::GetTicks())/(Timer::GetFrequency()/1000.0);
 	}
 }
 
@@ -515,6 +559,24 @@ int SysMmap(regs64_t* r){
 	
 }
 
+int SysGrantPTY(regs64_t* r){
+	if(!r->rbx) return 1;
+
+	PTY* pty = GrantPTY(Scheduler::GetCurrentProcess()->pid);
+
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	*((int*)r->rbx) = currentProcess->fileDescriptors.get_length();
+
+	currentProcess->fileDescriptors.add_back(&pty->masterFile);
+
+	currentProcess->fileDescriptors.replace_at(0, &pty->slaveFile); // Stdin
+	currentProcess->fileDescriptors.replace_at(1, &pty->slaveFile); // Stdout
+	currentProcess->fileDescriptors.replace_at(2, &pty->slaveFile); // Stderr
+
+	return 0;
+}
+
 syscall_t syscalls[]{
 	/*nullptr*/SysDebug,
 	SysExit,					// 1
@@ -552,6 +614,7 @@ syscall_t syscalls[]{
 	SysReadDir,
 	SysSetFsBase,
 	SysMmap,
+	SysGrantPTY,
 };
 
 namespace Scheduler{extern bool schedulerLock;};

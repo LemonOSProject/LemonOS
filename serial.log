@@ -2,7 +2,7 @@
 [INFO]    Initializing Lemon...
 
 [INFO]    511
-[INFO]    0x1ea5003
+[INFO]    0x1eac003
 [INFO]    0x100a8
 [INFO]    0xffffffffc0000000
 [INFO]    0xffffffffc0001000
@@ -17,7 +17,7 @@
 [INFO]    aaa
 [INFO]    Initializing System Timer...OK
 [INFO]    Initializing PCI...
-[INFO]    Found Device! Vendor: 0x8086, Device: 0x1237, Class: 0x81, Subclass: 0xff
+[INFO]    Found Device! Vendor: 0x8086, Device: 0x1237, Class: 0x0, Subclass: 0xff
 [INFO]    Found Device! Vendor: 0x8086, Device: 0x7000, Class: 0x6, Subclass: 0x0
 [INFO]    Found Device! Vendor: 0x8086, Device: 0x7111, Class: 0x6, Subclass: 0x1
 [INFO]    Found Device! Vendor: 0x80ee, Device: 0xbeef, Class: 0x1, Subclass: 0x1
@@ -33,9 +33,9 @@
 [INFO]    0
 [INFO]    Initializing Ramdisk...
 [INFO]    Initrd address: 
-[INFO]    0xffffffff80119220
+[INFO]    0xffffffff80119228
 [INFO]    Size:
-[INFO]    30921960
+[INFO]    30949720
 [INFO]    File Count:
 [INFO]    18files
 OK
@@ -116,24 +116,5 @@ OK
 [INFO]    0x0
 [WARN]    No 8254x device found!
 [INFO]    PCI Device Found: 
-[INFO]    Generic ATA Compaitble Storage Controller
-[INFO]    Initializing ATA: Bus Master: 0xd000
-[INFO]    Found ATA Drive: Port: 0x0, master
-[INFO]    Found GPT Header Partitions: 0x80 Entry Size:0x80
-[INFO]    GPT Partition: LBA Start: 0x800, LBA End: 0xfff, Size: 0xffe00
-[INFO]    GPT Partition: LBA Start: 0x1000, LBA End: 0x31fde, Size: 0x61fbc00
-[INFO]    GPT Partition: LBA Start: 0x0, LBA End: 0x0, Size: 0x0
-[INFO]    GPT Partition: LBA Start: 0x0, LBA End: 0x0, Size: 0x0
-[INFO]    FAT version: 0x0
-[INFO]    Signature: 0x29
-[INFO]    volume label string: NO NAME    FAT32   3ÉŽÑ¼ô{ŽÁŽÙ½
-[INFO]    oem id: MSDOS5.0
-[INFO]    volume size: 97 MB
-[INFO]    No device found with class
-[INFO]    0x1
-[INFO]    0x6
-[INFO]    PCI Device Found: 
 [INFO]    Generic XHCI Controller
-[INFO]    0xf0410000
-[INFO]    0xf0410000
-[INFO]    0x0
+[INFO]    0xffffffffc007d000

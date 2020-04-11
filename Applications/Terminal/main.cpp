@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <list.h>
 #include <lemon/filesystem.h>
+#include <lemon/spawn.h>
 
 #define TASKBAR_COLOUR_R 128
 #define TASKBAR_COLOUR_G 128
@@ -51,7 +52,7 @@ void OnPaint(surface_t* surface){
 
 extern "C"
 int main(char argc, char** argv){
-	/*Window* window;
+	Window* window;
 
 	windowInfo.width = 640;
 	windowInfo.height = 300;
@@ -66,7 +67,9 @@ int main(char argc, char** argv){
 	int masterPTYFd;
 	syscall(SYS_GRANT_PTY, (uintptr_t)&masterPTYFd, 0, 0, 0, 0);
 
-	syscall(SYS_EXEC_FD, (uintptr_t)"/lsh.lef", 0, 0, 0, 0);
+	//char* _argv[2] = {"/lsh.lef", "test arg"};
+	//lemon_spawn("/lsh.lef", 0, nullptr, 0);
+	syscall(SYS_EXEC, (uintptr_t)"/lsh.lef", 0, 0, 1, 0);
 	
 	window->OnPaint = OnPaint;
 
@@ -76,12 +79,12 @@ int main(char argc, char** argv){
 			if(msg.msg == WINDOW_EVENT_KEY){
 				if(msg.data < 256){
 					char key = (char)msg.data;
-					lemon_write(masterPTYFd, &key, 1);
+					//lemon_write(masterPTYFd, &key, 1);
 				}
-			} /*else if (msg.msg == WINDOW_EVENT_CLOSE){
+			} else if (msg.msg == WINDOW_EVENT_CLOSE){
 				DestroyWindow(window);
 				return 0;
-			}* /
+			}
 		}
 		int num = lemon_read(masterPTYFd, &buffer[currentLine][bufferPos], 1);
 		do{
@@ -93,8 +96,8 @@ int main(char argc, char** argv){
 			}
 		}
 		} while (num = lemon_read(masterPTYFd, &buffer[currentLine][bufferPos], 1));
-
+		
 		PaintWindow(window);
-	}*/
+	}
 	for(;;);
 }

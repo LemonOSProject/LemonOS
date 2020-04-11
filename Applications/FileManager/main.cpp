@@ -41,7 +41,7 @@ int main(char argc, char** argv){
 		fileList->contents.add_back(new ListItem(dirent.name));
 	}
 
-	Label* pathLabel = new Label("test", {{4,4},{508, 24}});
+	Label* pathLabel = new Label(currentPath, {{4,4},{508, 24}});
 	window->widgets.add_back(pathLabel);
 
 	fileList->ResetScrollBar();
@@ -103,8 +103,8 @@ int main(char argc, char** argv){
 						}
 
 						fileList->ResetScrollBar();
-					} else if (strcmp(dirent.name + strlen(dirent.name) - 4, ".lef")){
-						lemon_spawn(dirent.name);
+					} else if (strcmp(dirent.name + strlen(dirent.name) - 4, ".lef") == 0){
+						lemon_spawn(dirent.name, 0, nullptr, 0);
 					}
 				}
 			}

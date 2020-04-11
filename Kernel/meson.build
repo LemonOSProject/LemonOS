@@ -93,10 +93,9 @@ asm_files_x86_64 = [
 
 kernel_link_args = [
     '-m64',
-    '-T', meson.current_source_dir() + '/linkscript-x86_64.ld',
-    meson.current_source_dir() + '/initrd.o',
+    '-T', meson.current_source_dir() + '/linkscript-x86_64.ld'
 ]
 
 kernel_link_args += kernel_cpp_args
 
-executable('kernel.sys', [asmg.process(asm_files_x86_64), cpp_files, cpp_files_x86_64], include_directories : kernel_include_dirs, cpp_args : kernel_cpp_args, link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')
+executable('kernel.sys', [asmg.process(asm_files_x86_64), cpp_files, cpp_files_x86_64], objects : 'initrd.o', include_directories : kernel_include_dirs, cpp_args : kernel_cpp_args, link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')

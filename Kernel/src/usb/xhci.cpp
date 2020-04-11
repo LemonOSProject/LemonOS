@@ -3,6 +3,9 @@
 #include <pci.h>
 #include <logging.h>
 #include <paging.h>
+#include <idt.h>
+
+#include <video.h>
 
 namespace USB{
     namespace XHCI{
@@ -20,7 +23,12 @@ namespace USB{
         xhci_op_regs_t* opRegs;
         xhci_port_regs_t* portRegs;
 
+        void IRQHandler(regs64_t* r){
+
+        }
+
         int Initialize(){
+
             xhciControllerPci = PCI::RegisterPCIDevice(xhciControllerPci);
 
             if(xhciControllerPci.vendorID == 0xFFFF || xhciControllerPci.header0.progIF != 0x30) {
@@ -33,7 +41,11 @@ namespace USB{
             xhciBaseAddress = (uint64_t)(xhciControllerPci.header0.baseAddress0 & 0xFFFFFFF0) | (((uint64_t)xhciControllerPci.header0.baseAddress1) << 32);
             xhciVirtualAddress = (uintptr_t)Memory::KernelAllocate4KPages(0xF);
             
-            Memory::KernelMapVirtualMemory4K(xhciBaseAddress, xhciVirtualAddress, 0xF, PAGE_WRITABLE | PAGE_PRESENT);
+            Memory::KernelMapVirtualMemory4K(xhciBaseAddress, xhciVirtualAddress, 0xF);
+
+            IDT::RegisterInterruptHandler(IRQ0 + 11, IRQHandler);
+
+            Log::Info(xhciVirtualAddress);
 
             capRegs = (xhci_cap_regs_t*)xhciVirtualAddress;
             opRegs = (xhci_op_regs_t*)xhciVirtualAddress + capRegs->capLength;

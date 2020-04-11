@@ -38,12 +38,12 @@ void IdleProcess(){
 		};
 		KernelPanic(panicReasons,1);
 	}
-		
-	
+
 	void* initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 	asm("cli");
-	uint64_t pid = Scheduler::LoadELF(initElf);
+
+	Scheduler::LoadELF(initElf);
 
 	Log::Write("OK");
 
@@ -130,13 +130,10 @@ void kmain(multiboot_info_t* mb_info){
 
 	Video::DrawString("Copyright 2018-2020 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
 
-	Video::DrawBitmapImage(videoMode.width/2 - 24*3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+	Video::DrawBitmapImage(videoMode.width/2 - 24*4, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	DeviceManager::Init();
-
-	long uptimeSeconds = Timer::GetSystemUptime();
-	while((uptimeSeconds - Timer::GetSystemUptime()) < 1);
-	Video::DrawBitmapImage(videoMode.width/2 - 24*4, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+	
 
 	Log::Info("Initializing HID...");
 
@@ -144,6 +141,8 @@ void kmain(multiboot_info_t* mb_info){
 	Keyboard::Install();
 
 	Log::Info("OK");
+	
+	Video::DrawBitmapImage(videoMode.width/2 - 24*3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Registering Syscall Handler...");
 
@@ -155,9 +154,9 @@ void kmain(multiboot_info_t* mb_info){
 
 	NVMe::Initialize();
 	Intel8254x::Initialize();
+	USB::XHCI::Initialize();
 	ATA::Init();
 	AHCI::Init();
-	USB::XHCI::Initialize();
 
 	Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
