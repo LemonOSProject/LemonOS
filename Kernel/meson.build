@@ -81,6 +81,7 @@ cpp_files_x86_64 = [
     'src/arch/x86_64/syscalls.cpp',
     'src/arch/x86_64/system.cpp',
     'src/arch/x86_64/timer.cpp',
+    'src/arch/x86_64/tss.cpp',
 ]
 
 asm_files_x86_64 = [

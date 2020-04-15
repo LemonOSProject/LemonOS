@@ -134,7 +134,6 @@ void kmain(multiboot_info_t* mb_info){
 
 	DeviceManager::Init();
 	
-
 	Log::Info("Initializing HID...");
 
 	Mouse::Install();

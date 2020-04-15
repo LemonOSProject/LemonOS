@@ -4,6 +4,7 @@
 #include <system.h>
 
 #define KERNEL_VIRTUAL_BASE 0xFFFFFFFF80000000
+#define IO_VIRTUAL_BASE (KERNEL_VIRTUAL_BASE - 0x100000000) // KERNEL_VIRTUAL_BASE - 4GB
 
 #define PML4_GET_INDEX(addr) (((addr) >> 39) & 0x1FF)
 #define PDPT_GET_INDEX(addr) (((addr) >> 30) & 0x1FF)
@@ -95,6 +96,8 @@ namespace Memory{
     void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount);
     void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags);
     void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, address_space_t* addressSpace);
+
+    uintptr_t GetIOMapping(uintptr_t addr);
 
     address_space_t* CreateAddressSpace();
     void ChangeAddressSpace(address_space_t*);

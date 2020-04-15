@@ -15,6 +15,8 @@ namespace ATA{
 
 	int port0 = 0x1f0;
 	int port1 = 0x170;
+	int controlPort0 = 0x3f6;
+	int controlPort1 = 0x376;
 	int master = 0xa0;
 	int slave = 0xb0;
 
@@ -48,6 +50,15 @@ namespace ATA{
 	inline uint8_t ReadRegister(uint8_t port, uint8_t reg){
 		return inportb((port ? port1 : port0 ) + reg);
 	}
+	
+	inline void WriteControlRegister(uint8_t port, uint8_t reg, uint8_t value){
+		outportb((port ? controlPort1 : controlPort0 ) + reg, value);
+	}
+
+	inline uint8_t ReadControlRegister(uint8_t port, uint8_t reg){
+		return inportb((port ? controlPort1 : controlPort0 ) + reg);
+	}
+
 
 	int DetectDrive(int port, int drive){
 		WriteRegister(port, ATA_REGISTER_DRIVE_HEAD, (drive ? slave : master)); // Drive
@@ -75,7 +86,7 @@ namespace ATA{
 	}
 
 	void IRQHandler(regs64_t* r){
-		return;
+		Log::Info("Drive IRQ!");
 	}
 
 	int Init(){
@@ -116,19 +127,23 @@ namespace ATA{
 			Log::Warning("ATA::Read was called with count > 4");
 			return 1;
 		}
+		
+		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80 || !ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x40);
 
-		outportb(busMasterPort + (drive->port ? ATA_BMR_CMD_SECONDARY : ATA_BMR_CMD), 0);
-		outportd(busMasterPort + (drive->port ? ATA_BMR_PRDT_ADDRESS_SECONDARY : ATA_BMR_PRDT_ADDRESS), drive->prdtPhys);
+		outportb(busMasterPort + ATA_BMR_CMD, 0);
+		outportd(busMasterPort + ATA_BMR_PRDT_ADDRESS, drive->prdtPhys);
 
-		outportb(busMasterPort + (drive->port ? ATA_BMR_STATUS_SECONDARY : ATA_BMR_STATUS), inportb(busMasterPort + (drive->port ? ATA_BMR_STATUS_SECONDARY : ATA_BMR_STATUS)) | 4 | 2); // Clear Error and Interrupt Bits
+		outportb(busMasterPort + ATA_BMR_STATUS, inportb(busMasterPort +  ATA_BMR_STATUS) | 4 | 2); // Clear Error and Interrupt Bits
 
-		int driveReg = drive->drive ? 0x50 /*Slave*/ : 0x40 /*Master*/;
-		WriteRegister(drive->port, ATA_REGISTER_DRIVE_HEAD, driveReg);
+		outportb(busMasterPort + ATA_BMR_CMD, 8 /* Read */);
+		
+		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80);
+
+		WriteRegister(drive->port, ATA_REGISTER_DRIVE_HEAD, 0x40 | (drive->drive << 4));
+		WriteControlRegister(drive->port, 0, 0);
 
 		for(int i = 0; i < 4; i++) inportb(0x3f6);
 
-		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80);
-		
 		WriteRegister(drive->port, ATA_REGISTER_SECTOR_COUNT, (count >> 8) & 0xFF);
 
 		WriteRegister(drive->port, ATA_REGISTER_LBA_LOW, (lba >> 24) & 0xFF);
@@ -140,22 +155,21 @@ namespace ATA{
 		WriteRegister(drive->port, ATA_REGISTER_LBA_LOW, lba & 0xFF);
 		WriteRegister(drive->port, ATA_REGISTER_LBA_MID, (lba >> 8) & 0xFF);
 		WriteRegister(drive->port, ATA_REGISTER_LBA_HIGH, (lba >> 16) & 0xFF);
-		
-		for(int i = 0; i < 4; i++) inportb(0x3f6);
-		
-		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80);
+
+		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80 || !ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x40);
 
 		WriteRegister(drive->port, ATA_REGISTER_COMMAND, 0x25); // 48-bit read DMA
 
 		for(int i = 0; i < 4; i++) inportb(0x3f6);
 
-		outportb(busMasterPort + (drive->port ? ATA_BMR_CMD_SECONDARY : ATA_BMR_CMD), 8 /* Read */ | 1 /* Start*/);
+		outportb(busMasterPort + ATA_BMR_CMD, 8 /*Read*/ | 1 /* Start*/);
+		
+		while(!(inportb(busMasterPort + ATA_BMR_STATUS) & 0x4));// || (ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80));
+		
+		outportb(busMasterPort + ATA_BMR_CMD, 0);
+		outportb(busMasterPort + ATA_BMR_STATUS, 4 | 2);
 
-		while(!(inportb(busMasterPort + (drive->port ? ATA_BMR_STATUS_SECONDARY : ATA_BMR_STATUS)) & 0x4) && !(inportb(busMasterPort + (drive->port ? ATA_BMR_STATUS_SECONDARY : ATA_BMR_STATUS)) & 0x2)) inportb(0x3f6);//Log::Write("i");
-
-		outportb(busMasterPort + (drive->port ? ATA_BMR_CMD_SECONDARY : ATA_BMR_CMD), 0);
-
-		if(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x2){
+		if(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x1){
 			Log::Warning("Disk Error!");
 			return 1;
 		}

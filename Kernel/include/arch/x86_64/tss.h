@@ -19,3 +19,9 @@ typedef struct {
     uint32_t reserved4;
     uint32_t iopbOffset;
 } __attribute__((packed)) tss_t;
+
+namespace TSS
+{
+    void Initialize();
+    void SetKernelStack(uint64_t stack);
+}

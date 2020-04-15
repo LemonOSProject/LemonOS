@@ -196,9 +196,18 @@ mb_addr:
 dd 0
 dd 0
 
+extern _bss
+extern _bss_end
+
 BITS 64
 section .text
 entry64:
+  mov rdi, _bss
+  mov rcx, _bss_end
+  sub rcx, _bss
+  mov rax, 0
+  rep stosb
+
   mov rsp, stack_top
   push rax
 
@@ -228,10 +237,6 @@ entry64:
 
   cli
   hlt
-
-section .initrd_test
-global test_start
-test_start: dd 0
 
 section .bss
 align 64

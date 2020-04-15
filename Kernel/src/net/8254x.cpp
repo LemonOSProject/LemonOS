@@ -144,10 +144,7 @@ namespace Intel8254x{
 
         memBase = (device.header0.headerType ? device.header1.baseAddress0 : device.header0.baseAddress0) & 0xFFFFFFFFFFFFF000;
 
-        memBaseVirt = Memory::KernelAllocate4KPages(8);
-        Memory::KernelMapVirtualMemory4K(memBase,(uintptr_t)memBaseVirt,8);
-
-        Memory::MarkMemoryRegionUsed(memBase, 8*0x1000);
+        memBaseVirt = (void*)Memory::GetIOMapping(memBase);
 
         Log::Info("i8254x    Base Address: ");
         Log::Write(device.header0.baseAddress0);
@@ -156,6 +153,11 @@ namespace Intel8254x{
         hasEEPROM = CheckForEEPROM();
         Log::Write(", EEPROM Present: ");
         Log::Write(hasEEPROM ? "true" : "false");
+
+        if(!hasEEPROM){
+            Log::Error("[i8254x] No EEPROM Present!");
+            return;
+        }
 
         int irqNum = device.header0.interruptLine;
         Log::Write(",IRQ: ");

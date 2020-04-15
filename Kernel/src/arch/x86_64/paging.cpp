@@ -51,24 +51,24 @@ namespace Memory{
 		memset(kernelPML4, 0, sizeof(pml4_t));
 		memset(kernelPDPT, 0, sizeof(pdpt_t));
 		memset(kernelHeapDir, 0, sizeof(page_dir_t));
-		/*for(int i = 0; i < 512; i++){
-			kernelPML4[i] = 0x2;
-			kernelPDPT[i] = 0x2;
-			kernelHeapDir[i] = 0x2;
-		}*/
+		
 		SetPageFrame(&(kernelPML4[PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)]),((uint64_t)kernelPDPT - KERNEL_VIRTUAL_BASE));
 		kernelPML4[PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)] |= 0x3;
 		Log::Info((PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)), false);
 		kernelPML4[0] = kernelPML4[PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)];
+
 		kernelPDPT[PDPT_GET_INDEX(KERNEL_VIRTUAL_BASE)] = 0x83;
 		kernelPDPT[0] = 0x83;
+		
 		kernelPDPT[KERNEL_HEAP_PDPT_INDEX] = 0x3;
 		SetPageFrame(&(kernelPDPT[KERNEL_HEAP_PDPT_INDEX]), (uint64_t)kernelHeapDir - KERNEL_VIRTUAL_BASE);
-		Log::Info(kernelPDPT[KERNEL_HEAP_PDPT_INDEX]);
+
+		for(int i = PDPT_GET_INDEX(IO_VIRTUAL_BASE); i < PDPT_GET_INDEX(IO_VIRTUAL_BASE) + 4; i++){
+			kernelPDPT[i] = (PAGE_SIZE_1G * i) | 0x83;
+		}
 
 		for(int i = 0; i < TABLES_PER_DIR; i++){
 			memset(&(kernelHeapDirTables[i]),0,sizeof(page_t)*PAGES_PER_TABLE);
-			//kernelHeapDir[i] = (uint64_t)(&kernelHeapDirTables[i]) - KERNEL_VIRTUAL_BASE | 0x3;
 		}
 		
 		kernelPML4Phys = (uint64_t)kernelPML4 - KERNEL_VIRTUAL_BASE;
@@ -286,7 +286,9 @@ namespace Memory{
 		/* Attempt 2: Allocate Page Tables*/
 		for(int i = 0; i < TABLES_PER_DIR; i++){
 			if(!(kernelHeapDir[i] & 0x1)){
-				for(int j = 0; j < TABLES_PER_DIR; j++){
+				counter += 512;
+
+				if(counter >= amount){
 					address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (pageDirOffset * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
 					address |= 0xFFFF000000000000;
 					//kernelHeapDir[i] = (PAGE_FRAME & ((uintptr_t)&(kernelHeapDirTables[i]) - KERNEL_VIRTUAL_BASE)) | 0x3;
@@ -310,6 +312,10 @@ namespace Memory{
 				counter = 0;
 			}
 		}
+
+		Log::Error("Kernel Out of Virtual Memory");
+		const char* reasons[1] = {"Kernel Out of Virtual Memory!"};
+		KernelPanic(reasons, 1);
 	}
 
 	void* KernelAllocate2MPages(uint64_t amount){
@@ -338,7 +344,9 @@ namespace Memory{
 			}
 		}
 
-		*(int*)0xFFFDC0DEDEADBEEF = 0xDEADBEEF;
+		Log::Error("Kernel Out of Virtual Memory");
+		const char* reasons[1] = {"Kernel Out of Virtual Memory!"};
+		KernelPanic(reasons, 1);
 		for(;;);
 	}
 
@@ -412,6 +420,15 @@ namespace Memory{
 			phys += PAGE_SIZE_4K;
 			virt += PAGE_SIZE_4K; /* Go to next page */
 		}
+	}
+
+	uintptr_t GetIOMapping(uintptr_t addr){
+		if(addr > 0xffffffff){ // Typically most MMIO will not reside > 4GB, but check just in case
+			Log::Error("MMIO >4GB current unsupported");
+			return 0xffffffff;
+		}
+
+		return addr + IO_VIRTUAL_BASE;
 	}
 
 	void ChangeAddressSpace(address_space_t* addressSpace){

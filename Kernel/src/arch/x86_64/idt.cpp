@@ -120,14 +120,14 @@ void idt_flush();
 int errCode = 0;
 
 namespace IDT{
-	static void SetGate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags) {
+	static void SetGate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags, uint8_t ist = 0) {
 		idt[num].base_high = (base >> 32);
 		idt[num].base_med = (base >> 16) & 0xFFFF;
 		idt[num].base_low = base & 0xFFFF;
 
 		idt[num].sel = sel;
 		idt[num].null = 0;
-		idt[num].ist = 0;
+		idt[num].ist = ist & 0x7; // Interrupt Stack Table (IST)
 
 		idt[num].flags = flags;
 	}
@@ -150,7 +150,7 @@ namespace IDT{
 		SetGate(5, (uint64_t)isr5,0x08,0x8E);
 		SetGate(6, (uint64_t)isr6,0x08,0x8E);
 		SetGate(7, (uint64_t)isr7,0x08,0x8E);
-		SetGate(8, (uint64_t)isr8,0x08,0x8E);
+		SetGate(8, (uint64_t)isr8,0x08,0x8E, 2); // Double Fault
 		SetGate(9, (uint64_t)isr9,0x08,0x8E);
 		SetGate(10, (uint64_t)isr10,0x08,0x8E);
 		SetGate(11, (uint64_t)isr11,0x08,0x8E);
@@ -174,7 +174,7 @@ namespace IDT{
 		SetGate(29, (uint64_t)isr29,0x08,0x8E);
 		SetGate(30, (uint64_t)isr30,0x08,0x8E);
 		SetGate(31, (uint64_t)isr31,0x08,0x8E);
-		SetGate(0x69, (uint64_t)isr0x69, 0x08, 0xEE /* Allow syscalls to be called from user mode*/);
+		SetGate(0x69, (uint64_t)isr0x69, 0x08, 0xEE /* Allow syscalls to be called from user mode*/, 3); // Syscall
 
 		idt_flush();
 
@@ -280,6 +280,7 @@ extern "C"
 			handler = interrupt_handlers[int_num];
 			handler(regs);
 		} else {
-			Log::Warning("Unhandled IRQ!");
+			Log::Warning("Unhandled IRQ: ");
+			Log::Write(int_num);
 		}
 	}

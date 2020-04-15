@@ -23,15 +23,20 @@ namespace Memory{
 
         multiboot_memory_map_t* mem_map = mem_info->mem_map;
         multiboot_memory_map_t* mem_map_end = (multiboot_memory_map_t*)(mem_info->mem_map + mem_info->memory_map_len);
-        Log::Info("test");
 
         while (mem_map < mem_map_end)
         {
-            if (mem_map->type == 1)
+            if (mem_map->type == 1){
                 MarkMemoryRegionFree(mem_map->base, mem_map->length);
+                Log::Info("Free Memory Region: [");
+                Log::Write(mem_map->base);
+                Log::Write(" - ");
+                Log::Write(mem_map->base + mem_map->length);
+                Log::Write("]");
+            }
             mem_map = (multiboot_memory_map_t*)((uint64_t)mem_map + mem_map->size + sizeof(mem_map->size));
         }
-        Log::Info("test");
+
         maxPhysicalBlocks = mem_info->memory_high * 1024 / PHYSALLOC_BLOCK_SIZE;
         MarkMemoryRegionUsed(0, /*8192*4096/**/(uintptr_t)&_end - KERNEL_VIRTUAL_BASE/**/);
     }

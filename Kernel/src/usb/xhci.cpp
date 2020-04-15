@@ -28,7 +28,6 @@ namespace USB{
         }
 
         int Initialize(){
-
             xhciControllerPci = PCI::RegisterPCIDevice(xhciControllerPci);
 
             if(xhciControllerPci.vendorID == 0xFFFF || xhciControllerPci.header0.progIF != 0x30) {
@@ -39,9 +38,7 @@ namespace USB{
             PCI::Config_WriteWord(xhciControllerPci.bus, xhciControllerPci.slot, xhciControllerPci.func, 0x4, xhciControllerPci.header0.command | PCI_CMD_BUS_MASTER);
 
             xhciBaseAddress = (uint64_t)(xhciControllerPci.header0.baseAddress0 & 0xFFFFFFF0) | (((uint64_t)xhciControllerPci.header0.baseAddress1) << 32);
-            xhciVirtualAddress = (uintptr_t)Memory::KernelAllocate4KPages(0xF);
-            
-            Memory::KernelMapVirtualMemory4K(xhciBaseAddress, xhciVirtualAddress, 0xF);
+            xhciVirtualAddress = Memory::GetIOMapping(xhciBaseAddress);
 
             IDT::RegisterInterruptHandler(IRQ0 + 11, IRQHandler);
 

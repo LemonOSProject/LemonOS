@@ -10,6 +10,7 @@
 #include <pci.h>
 #include <acpi.h>
 #include <timer.h>
+#include <tss.h>
 
 namespace HAL{
     memory_info_t mem_info;
@@ -39,11 +40,6 @@ namespace HAL{
         mem_info.mem_map = memory_map;
         mem_info.memory_map_len = mb_info.mmapLength;
 
-        Log::Info((uint64_t)Memory::KernelAllocate4KPages(1));
-        Log::Info((uint64_t)Memory::KernelAllocate4KPages(1));
-        Log::Info((uint64_t)Memory::KernelAllocate4KPages(1));
-        Log::Info((uint64_t)Memory::KernelAllocate4KPages(1));
-
         uint64_t mbModsVirt = (uint64_t)Memory::KernelAllocate4KPages(1);
         Memory::KernelMapVirtualMemory4K(multibootInfo.modsAddr, mbModsVirt, 1);
 
@@ -51,7 +47,9 @@ namespace HAL{
 
         // Initialize Physical Memory Allocator
         Memory::InitializePhysicalAllocator(&mem_info);
-		Log::Info("aaa");
+
+        // Initialize Task State Segment (and Interrupt Stack Tables)
+        TSS::Initialize();
 
         Log::Info("Initializing System Timer...");
         Timer::Initialize(1500);

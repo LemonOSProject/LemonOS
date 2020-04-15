@@ -43,6 +43,9 @@ void* liballoc_alloc(int pages) {
 		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
 		Memory::KernelMapVirtualMemory4K(phys, (uint64_t)addr + i * PAGE_SIZE_4K, 1);
 	}
+
+	memset(addr, 0, pages * PAGE_SIZE_4K);
+
 	return addr;
 }
 

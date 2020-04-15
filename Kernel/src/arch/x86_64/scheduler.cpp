@@ -26,11 +26,7 @@ uintptr_t ReadRIP();
 extern "C"
 void IdleProc();
 
-extern "C"
-void LoadTSS(uint64_t address);
-
 namespace Scheduler{
-    tss_t tss __attribute__((aligned(16)));
 
     bool schedulerLock = true;
 
@@ -56,15 +52,7 @@ namespace Scheduler{
         Log::Write("OK");
         Memory::ChangeAddressSpace(currentProcess->addressSpace);
 
-        Log::Info("TSS: ");
-        Log::Write((uintptr_t)&tss);
-        LoadTSS((uintptr_t)&tss);// - KERNEL_VIRTUAL_BASE);
-
-        memset(&tss, 0, sizeof(tss_t));
-        
-        asm volatile("ltr %%ax" :: "a"(0x2B));
-
-        tss.rsp0 = (uintptr_t)currentProcess->threads[0].kernelStack;
+        TSS::SetKernelStack((uintptr_t)currentProcess->threads[0].kernelStack);
 
         schedulerLock = false;
         TaskSwitch(&currentProcess->threads[0].registers);
@@ -332,7 +320,7 @@ namespace Scheduler{
             
             asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");
 
-            tss.rsp0 = (uintptr_t)currentProcess->threads[0].kernelStack;
+            TSS::SetKernelStack((uintptr_t)currentProcess->threads[0].kernelStack);
             
             TaskSwitch(&currentProcess->threads[0].registers);
         }
@@ -360,7 +348,7 @@ namespace Scheduler{
         
         asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");
 
-        tss.rsp0 = (uintptr_t)currentProcess->threads[0].kernelStack;
+        TSS::SetKernelStack((uintptr_t)currentProcess->threads[0].kernelStack);
         
         TaskSwitch(&currentProcess->threads[0].registers);
         
