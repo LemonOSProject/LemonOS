@@ -16,6 +16,8 @@ void Widget::OnMouseDown(vector2i_t mousePos){
 void Widget::OnMouseUp(vector2i_t mousePos){
 }
 
+Widget::~Widget(){}
+
 //////////////////////////
 // Text Box
 //////////////////////////
@@ -220,6 +222,7 @@ ListItem::ListItem(char* _text){
 
 ListView::ListView(rect_t _bounds, int itemHeight){
     bounds = _bounds;
+    iBounds = bounds;
     this->itemHeight = itemHeight;
 }
 
@@ -229,11 +232,9 @@ ListView::~ListView(){
 void ListView::ResetScrollBar(){
     double iCount = contents.get_length();
     
-    scrollMax = floor((iCount * itemHeight - bounds.size.y) / 2);
-    scrollIncrementPixels = (bounds.size.y / 2) / floor((iCount * itemHeight - bounds.size.y) / 2);
-    scrollBarHeight = bounds.size.y - scrollMax;
-    //scrollMax
-    //scrollMaxPixels = bounds.size.y / 2;
+    scrollMax = floor((iCount * itemHeight - iBounds.size.y) / 2);
+    scrollIncrementPixels = (iBounds.size.y / 2) / floor((iCount * itemHeight - iBounds.size.y) / 2);
+    scrollBarHeight = iBounds.size.y - scrollMax;
 
     scrollPos = 0;
 }
@@ -243,25 +244,28 @@ void ListView::Paint(surface_t* surface){
 
     for(int i = 0; i < contents.get_length(); i++){
         ListItem* item = contents.get_at(i);
+
+        if(i*itemHeight + 2 - scrollPos < iBounds.pos.y) continue;
+
         if(selected == i){
-            DrawRect(bounds.pos.x + 2,bounds.pos.y + i*itemHeight + 2 - scrollPos, bounds.size.x - 24, itemHeight - 4, {165,/*24*/32,24}, surface);
+            DrawRect(iBounds.pos.x + 2,iBounds.pos.y + i*itemHeight + 2 - scrollPos, iBounds.size.x - 24, itemHeight - 4, {165,/*24*/32,24}, surface);
         }
-        DrawString(item->text, bounds.pos.x + 4, bounds.pos.y + i * itemHeight + (itemHeight / 2) - 6 - (scrollPos * scrollIncrementPixels * 2), 0, 0, 0, surface);
+        DrawString(item->text, iBounds.pos.x + 4, iBounds.pos.y + i * itemHeight + (itemHeight / 2) - 6 - (scrollPos * scrollIncrementPixels * 2), 0, 0, 0, surface);
     }
 
-    DrawRect(bounds.pos.x + bounds.size.x - 20, bounds.pos.y, 20, bounds.size.y, {120, 120, 110}, surface); 
+    DrawRect(iBounds.pos.x + iBounds.size.x - 20, iBounds.pos.y, 20, iBounds.size.y, {120, 120, 110}, surface); 
     
-    DrawGradientVertical(bounds.pos.x + 1 + bounds.size.x - 20, bounds.pos.y + 1 + scrollPos, 18, scrollBarHeight,{250,250,250,255},{235,235,230,255},surface);
+    DrawGradientVertical(iBounds.pos.x + 1 + iBounds.size.x - 20, iBounds.pos.y + 1 + scrollPos, 18, scrollBarHeight,{250,250,250,255},{235,235,230,255},surface);
 }
 
 void ListView::OnMouseDown(vector2i_t mousePos){
-    if(mousePos.x > bounds.pos.x + bounds.size.x - 20){
+    if(mousePos.x > iBounds.pos.x + iBounds.size.x - 20){
         drag = true;
         dragPos = mousePos;
 
         return;
     }
-    selected = floor(((double)mousePos.y + scrollPos - bounds.pos.y) / itemHeight);
+    selected = floor(((double)mousePos.y + scrollPos - iBounds.pos.y) / itemHeight);
 
     if(selected >= contents.get_length()) selected = contents.get_length();
 }
@@ -282,4 +286,33 @@ void ListItem::OnMouseDown(vector2i_t mousePos){
 
 void ListItem::OnMouseUp(vector2i_t mousePos){
     
+}
+
+//////////////////////////
+// FileView
+//////////////////////////
+FileView::FileView(rect_t _bounds) : ListView(_bounds){
+    bounds = _bounds;
+
+    bounds.pos.y += pathBoxHeight;
+    iBounds.size.y -= pathBoxHeight;
+}
+
+FileView::~FileView(){
+}
+
+void FileView::Paint(surface_t* surface){
+    ListView::Paint(surface);
+}
+
+void FileView::OnMouseDown(vector2i_t mousePos){
+    if(mousePos.y - bounds.pos.y > pathBoxHeight){
+        ListView::OnMouseDown(mousePos);
+    }
+}
+
+void FileView::OnMouseUp(vector2i_t mousePos){
+    if(mousePos.y - bounds.pos.y > pathBoxHeight){
+        FileView::OnMouseDown(mousePos);
+    }
 }

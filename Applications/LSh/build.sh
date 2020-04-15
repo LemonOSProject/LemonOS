@@ -1,1 +1,0 @@
-x86_64-lemon-gcc -o lsh.lef main.cpp -L../../LibLemon/bin -g -z max-page-size=0x1000 -fno-exceptions

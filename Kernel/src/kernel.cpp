@@ -152,10 +152,10 @@ void kmain(multiboot_info_t* mb_info){
 	Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	NVMe::Initialize();
-	Intel8254x::Initialize();
-	USB::XHCI::Initialize();
+	///Intel8254x::Initialize();
+	//USB::XHCI::Initialize();
 	ATA::Init();
-	AHCI::Init();
+	//AHCI::Init();
 
 	Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 

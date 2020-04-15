@@ -162,7 +162,7 @@ entry:
 
   mov eax, 0x83 ; 1 GB Pages
   mov dword [kernel_pdpt], eax
-
+  
   mov eax, 0x83 ; 1 GB Pages
   mov dword [kernel_pdpt2 + KERNEL_BASE_PDPT_INDEX * 8], eax
 
@@ -209,7 +209,6 @@ entry64:
   rep stosb
 
   mov rsp, stack_top
-  push rax
 
   lgdt [GDT64.Pointer64]
 
@@ -220,7 +219,6 @@ entry64:
   mov gs, ax
   mov ss, ax
 
-  push rax
   mov rax, cr0
 	and ax, 0xFFFB		; Clear coprocessor emulation
 	or ax, 0x2			; Set coprocessor monitoring

@@ -59,12 +59,13 @@ namespace Memory{
 
 		kernelPDPT[PDPT_GET_INDEX(KERNEL_VIRTUAL_BASE)] = 0x83;
 		kernelPDPT[0] = 0x83;
+		kernelPDPT[1] = 0xdeadbeef0083;
 		
 		kernelPDPT[KERNEL_HEAP_PDPT_INDEX] = 0x3;
 		SetPageFrame(&(kernelPDPT[KERNEL_HEAP_PDPT_INDEX]), (uint64_t)kernelHeapDir - KERNEL_VIRTUAL_BASE);
 
-		for(int i = PDPT_GET_INDEX(IO_VIRTUAL_BASE); i < PDPT_GET_INDEX(IO_VIRTUAL_BASE) + 4; i++){
-			kernelPDPT[i] = (PAGE_SIZE_1G * i) | 0x83;
+		for(int i = 0; i < 4; i++){
+			kernelPDPT[PDPT_GET_INDEX(IO_VIRTUAL_BASE) + i] = (PAGE_SIZE_1G * i) | 0x83;
 		}
 
 		for(int i = 0; i < TABLES_PER_DIR; i++){

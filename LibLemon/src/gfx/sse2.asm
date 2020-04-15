@@ -27,7 +27,6 @@ memcpy_sse2:
 	ret
 
 memcpy_sse2_unaligned:
-	;ret
 	push rbp    ; save the prior rbp value
     mov rbp, rsp
 

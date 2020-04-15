@@ -47,8 +47,7 @@ namespace AHCI{
 		PCI::Config_WriteWord(controllerDevice.bus, controllerDevice.slot, controllerDevice.func, 0x4, controllerDevice.header0.command | PCI_CMD_BUS_MASTER); // Enable Bus Mastering
 
 		ahciBaseAddress = controllerDevice.header0.baseAddress5 & 0xFFFFFFFFFFFFF000; // BAR 5 is the AHCI Base Address
-		ahciVirtualAddress = (uintptr_t)Memory::KernelAllocate4KPages(2);
-		Memory::KernelMapVirtualMemory4K(ahciBaseAddress, (uintptr_t)ahciVirtualAddress, 2); // Map the AHCI Base Address into virtual memory
+		ahciVirtualAddress = Memory::GetIOMapping(ahciBaseAddress);
 
 		ahciHBA = (hba_mem_t*)ahciVirtualAddress;
 

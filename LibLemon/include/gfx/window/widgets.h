@@ -13,6 +13,8 @@ public:
     virtual void Paint(surface_t* surface);
     virtual void OnMouseDown(vector2i_t mousePos);
     virtual void OnMouseUp(vector2i_t mousePos);
+
+    virtual ~Widget();
 };
 
 class ScrollView : public Widget {
@@ -51,6 +53,8 @@ protected:
     vector2i_t dragPos;
 
     surface_t buffer;
+
+    rect_t iBounds;
 public:
     int scrollPos;
     int selected = 0;
@@ -65,6 +69,19 @@ public:
     void OnMouseUp(vector2i_t mousePos);
 
     ~ListView();
+};
+
+class FileView : public ListView{
+protected:
+    int pathBoxHeight;
+public:
+    FileView(rect_t bounds);
+
+    void Paint(surface_t* surface);
+    void OnMouseDown(vector2i_t mousePos);
+    void OnMouseUp(vector2i_t mousePos);
+
+    ~FileView();
 };
 
 class TextBox : public Widget{
