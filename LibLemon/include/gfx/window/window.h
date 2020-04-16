@@ -40,7 +40,8 @@ struct Window{
 	surface_t surface;
 
 	int lastPressedWidget = -1;
-
+	vector2i_t mousePos;
+	
 	WindowPaintHandler OnPaint = NULL;
 };
 
@@ -54,5 +55,6 @@ void PaintWindow(Window* win);
 
 void HandleMouseDown(Window* win, vector2i_t mousePos);
 Widget* HandleMouseUp(Window* win, vector2i_t mousePos);
+void HandleMouseMovement(Window* win, vector2i_t mousePos);
 
 void AddWidget(Widget* widget, Window* win);

@@ -174,6 +174,16 @@ void AddNewWindows(){
 	}
 }
 
+bool PointInWindow(Window_s* win, vector2i_t point){
+	int windowHeight = (win->info.flags & WINDOW_FLAGS_NODECORATION) ? win->info.height : (win->info.height + 25); // Account for titlebar
+	return PointInRect({{win->pos},{win->info.width, windowHeight}}, point);
+}
+
+bool PointInWindowProper(Window_s* win, vector2i_t point){
+	int windowYOffset = (win->info.flags & WINDOW_FLAGS_NODECORATION) ? 0 : 25; // Account for titlebar
+	return PointInRect({{win->pos + (vector2i_t){0, windowYOffset}},{win->info.width, win->info.height}}, point);
+}
+
 void DrawWindow(Window_s* win){
 
 	if(win->info.flags & WINDOW_FLAGS_NODECORATION){
@@ -255,6 +265,9 @@ int main(){
 		if(mousePos.x < 0) mousePos.x = 0;
 		if(mousePos.y < 0) mousePos.y = 0;
 
+		if(mousePos.x >= renderBuffer.width) mousePos.x = renderBuffer.width;
+		if(mousePos.y >= renderBuffer.height) mousePos.y = renderBuffer.height;
+
 		if(drag){
 			redrawWindowDecorations = true;
 			active->pos.x = mousePos.x - dragOffset.x;
@@ -267,7 +280,7 @@ int main(){
 			mouseDown = true;
 			for(int i = windows.get_length()-1; i >= 0; i--){
 				Window_s* win = windows[i];
-				if(mousePos.x > win->pos.x && mousePos.x < win->pos.x + win->info.width && mousePos.y > win->pos.y && mousePos.y < win->pos.y + win->info.height){
+				if(PointInWindow(win, mousePos)){
 					windows.add_back(windows.remove_at(i));
 					active = win;
 					redrawWindowDecorations = true;
@@ -308,11 +321,9 @@ int main(){
 		if(mouseDown && !(mouseData[0] & 0x1)){
 			mouseDown = false;
 			drag = false;
-			if(active && mousePos.x > active->pos.x && mousePos.x < active->pos.x + active->info.width && mousePos.y > active->pos.y && mousePos.y < active->pos.y + active->info.height){
+			if(active && PointInWindowProper(active, mousePos)){
 				redrawWindowDecorations = true;
-				if(mousePos.y < active->pos.y + 25 && !(active->info.flags & WINDOW_FLAGS_NODECORATION)){
-					
-				} else if(active) {
+				if(active) {
 					ipc_message_t mouseEventMessage;
 					mouseEventMessage.msg = WINDOW_EVENT_MOUSEUP;
 					uint32_t mouseX;
@@ -329,6 +340,23 @@ int main(){
 					SendMessage(active->info.ownerPID, mouseEventMessage);
 				}
 			}
+		}
+
+		if(active && PointInWindowProper(active, mousePos)){
+			ipc_message_t mouseEventMessage;
+			mouseEventMessage.msg = WINDOW_EVENT_MOUSEMOVE;
+			uint32_t mouseX;
+			uint32_t mouseY;
+			if(active->info.flags & WINDOW_FLAGS_NODECORATION){
+				mouseX = mousePos.x - active->pos.x;
+				mouseY = mousePos.y - active->pos.y;
+			} else {
+				mouseX = mousePos.x - active->pos.x - 1; // Account for window border
+				mouseY = mousePos.y - active->pos.y - 25; // Account for border and title bar
+			}
+			mouseEventMessage.data = (((uint64_t)mouseX) << 32) | mouseY;
+			mouseEventMessage.data2 = (uintptr_t)active->info.handle;
+			SendMessage(active->info.ownerPID, mouseEventMessage);
 		}
 		
 		ipc_message_t msg;

@@ -26,6 +26,11 @@ int main(char argc, char** argv){
 
 	char* filePath = FileDialog("/");
 
+	if(!filePath){
+		MessageBox("Invalid filepath!", MESSAGEBOX_OK);
+		exit(1);
+	}
+
 	window = CreateWindow(&windowInfo);
 
 	TextBox* textBox = new TextBox({{0, 0}, {512, 256}});
@@ -35,7 +40,6 @@ int main(char argc, char** argv){
 	FILE* textFile = fopen(filePath, "r");
 
 	if(!textFile){
-		syscall(0, (uintptr_t)"error", 0x69, 0, 0, 0);
 		MessageBox("Failed to open file!", MESSAGEBOX_OK);
 		exit(1);
 	}
@@ -44,9 +48,10 @@ int main(char argc, char** argv){
 	size_t textFileSize = ftell(textFile);
 	fseek(textFile, 0, SEEK_SET);
 
-	char* textBuffer = (char*)malloc(textFileSize);
+	char* textBuffer = (char*)malloc(textFileSize + 1);
 
 	fread(textBuffer, textFileSize, 1, textFile);
+	textBuffer[textFileSize] = 0;
 
 	textBox->multiline = true;
 	textBox->editable = true;

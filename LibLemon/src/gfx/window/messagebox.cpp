@@ -4,7 +4,6 @@
 #include <gfx/window/messagebox.h>
 
 int MessageBox(char* messageString, int flags){
-	return 0;
 	win_info_t msgBoxWindowInfo;
 	msgBoxWindowInfo.x = 50;
 	msgBoxWindowInfo.y = 50;

@@ -16,6 +16,11 @@ void Widget::OnMouseDown(vector2i_t mousePos){
 void Widget::OnMouseUp(vector2i_t mousePos){
 }
 
+void Widget::OnHover(vector2i_t mousePos){
+}
+
+void Widget::OnMouseMove(vector2i_t mousePos) {}
+
 Widget::~Widget(){}
 
 //////////////////////////
@@ -31,6 +36,10 @@ void TextBox::Paint(surface_t* surface){
     int ypos = 0;
     for(size_t i = 0; i < lineCount; i++){
         for(size_t j = 0; j < strlen(contents[i]); j++){
+            if(contents[i][j] == '\t'){
+                xpos += 8 * 8;
+            }
+
             xpos += DrawChar(contents[i][j], bounds.pos.x + xpos, bounds.pos.y + ypos, textColour.r, textColour.g, textColour.b, surface);
 
             if((xpos > (bounds.size.x - 8 - 16))){
@@ -42,37 +51,39 @@ void TextBox::Paint(surface_t* surface){
         xpos = 0;
         if(ypos + 12 >= bounds.size.y) break;
     }
-
-    DrawRect(xpos + 1, ypos, 2, 12, 0, 0, 0, surface);
-
-    DrawRect(bounds.size.x - 16, 0, 16, bounds.size.y, 240, 240, 240, surface);
-
-    DrawRect(bounds.size.x - 14, 2, 12, 12, 128, 128, 192, surface);
-    DrawRect(bounds.size.x - 14, bounds.size.y - 14, 12, 12, 128, 128, 192, surface);
 }
 
 void TextBox::LoadText(char* text){
     char* text2 = text;
     int lineCount = 0;
-    int lineIndex = 0;
+    int lineNum = 0;
 
     while(*text2){
-        if(*text2++ == '\n') lineCount++;
+        if(*text2 == '\n') lineCount++;
+
         text2++;
     }
 
     contents = (char**)malloc(sizeof(char*) * lineCount);
 
-    char* line = strtok(text, "\n");
+    text2 = text;
+    for(int i = 0; i < lineCount; i++){
+        char* end = strchr(text2, '\n');
+        if(end){
+            int len = (uintptr_t)(end - text2);
+            if(len > strlen(text2)) break;
 
-    contents[lineIndex] = (char*)malloc(strlen(line) + 1);
-    memset(contents[lineIndex], 0, strlen(line) + 1);
-    strcpy(contents[lineIndex++], line);
+            contents[lineNum] = (char*)malloc(len + 1);
+            strncpy(contents[lineNum], text2, len);
+            contents[lineNum][len] = 0;
 
-    while (line = strtok(NULL, "\n"))
-    {
-        contents[lineIndex] = (char*)malloc(strlen(line) + 1);
-        strcpy(contents[lineIndex++], line);
+            text2 = end + 1;
+            lineNum++;
+        } else {
+            contents[lineNum] = (char*)malloc(strlen(text2) + 1);
+            strcpy(contents[lineNum], text2);
+            lineNum++;
+        }
     }
     
     this->lineCount = lineCount;
@@ -111,15 +122,12 @@ void Button::Paint(surface_t* surface){
     if(pressed){
         DrawRect(bounds.pos.x+1, bounds.pos.y+1, bounds.size.x-2, (bounds.size.y)/2 - 1, 224/1.1, 224/1.1, 219/1.1, surface);
         DrawRect(bounds.pos.x+1, bounds.pos.y + bounds.size.y / 2, bounds.size.x-2, bounds.size.y/2-1, 224/1.1, 224/1.1, 219/1.1, surface);
-        //DrawGradient(bounds.pos.x + 1, bounds.pos.y + 1, bounds.size.x - 2, bounds.size.y - 2,{250,250,250,255},{235,235,230,255},surface);
 
         DrawRect(bounds.pos.x+1, bounds.pos.y, bounds.size.x - 2, 1, 96, 96, 96, surface);
         DrawRect(bounds.pos.x+1, bounds.pos.y + bounds.size.y - 1, bounds.size.x - 2, 1, 96, 96, 96, surface);
         DrawRect(bounds.pos.x, bounds.pos.y + 1, 1, bounds.size.y - 2, 96, 96, 96, surface);
         DrawRect(bounds.pos.x + bounds.size.x - 1, bounds.pos.y + 1, 1, bounds.size.y-2, 96, 96, 96, surface);
     } else {
-        //DrawRect(bounds.pos.x+1, bounds.pos.y+1, bounds.size.x-2, (bounds.size.y)/2 - 1, 224, 224, 219, surface);
-        //DrawRect(bounds.pos.x+1, bounds.pos.y + bounds.size.y / 2, bounds.size.x-2, bounds.size.y/2-1, 224/1.1, 224/1.1, 219/1.1, surface);
         switch(style){
             case 1: // Blue
                 DrawGradientVertical(bounds.pos.x + 1, bounds.pos.y + 1, bounds.size.x - 2, bounds.size.y - 2,{50,50,150,255},{45,45,130,255},surface);
@@ -186,6 +194,42 @@ void Label::Paint(surface_t* surface){
 }
 
 //////////////////////////
+// Scroll Bar
+//////////////////////////
+void ScrollBar::ResetScrollBar(int displayHeight, int areaHeight){
+    double scrollDisplayRange = ((double)areaHeight) / displayHeight; // Essentially how many 'displayHeight's in areaHeight
+    scrollIncrement = ceil(scrollDisplayRange);
+    scrollBar.size.y = displayHeight / scrollDisplayRange;
+    scrollBar.pos.y = 0;
+    scrollPos = 0;
+    height = displayHeight;
+}
+
+void ScrollBar::Paint(surface_t* surface, vector2i_t offset, int width){
+    DrawRect(offset.x, offset.y, width, height, 128, 128, 128, surface);
+    if(pressed) 
+        DrawRect(offset.x, offset.y + scrollBar.pos.y, width, scrollBar.size.y, 224/1.1, 224/1.1, 219/1.1, surface);
+    else 
+        DrawGradientVertical(offset.x, offset.y + scrollBar.pos.y, width, scrollBar.size.y,{250,250,250,255},{235,235,230,255},surface);
+}
+
+void ScrollBar::OnMouseDownRelative(vector2i_t mousePos){
+    if(mousePos.y > scrollBar.pos.y && mousePos.y < scrollBar.pos.y + scrollBar.size.y){
+        pressed = true;
+        pressOffset = mousePos.y - scrollBar.pos.y;
+    }
+}
+
+void ScrollBar::OnMouseMoveRelative(vector2i_t relativePosition){
+    if(pressed){
+        scrollBar.pos.y = relativePosition.y - pressOffset;
+        if(scrollBar.pos.y + scrollBar.size.y > height) scrollBar.pos.y = height - scrollBar.size.y;
+        if(scrollBar.pos.y < 0) scrollBar.pos.y = 0;
+        scrollPos = scrollBar.pos.y * scrollIncrement;
+    }
+}
+
+//////////////////////////
 // Scroll View
 //////////////////////////
 ScrollView::ScrollView(rect_t _bounds){
@@ -231,54 +275,43 @@ ListView::~ListView(){
 
 void ListView::ResetScrollBar(){
     double iCount = contents.get_length();
-    
-    scrollMax = floor((iCount * itemHeight - iBounds.size.y) / 2);
-    scrollIncrementPixels = (iBounds.size.y / 2) / floor((iCount * itemHeight - iBounds.size.y) / 2);
-    scrollBarHeight = iBounds.size.y - scrollMax;
 
-    scrollPos = 0;
+    sBar.ResetScrollBar(iBounds.size.y, iCount * itemHeight);
 }
 
 void ListView::Paint(surface_t* surface){
-    //DrawRect(bounds.pos.x, bounds.pos.y, bounds.size.x - 20, bounds.size.y, {250, 250, 250,}, surface);
-
     for(int i = 0; i < contents.get_length(); i++){
         ListItem* item = contents.get_at(i);
 
-        if(i*itemHeight + 2 - scrollPos < iBounds.pos.y) continue;
+        if((i * itemHeight - sBar.scrollPos) < 0) continue;
 
         if(selected == i){
-            DrawRect(iBounds.pos.x + 2,iBounds.pos.y + i*itemHeight + 2 - scrollPos, iBounds.size.x - 24, itemHeight - 4, {165,/*24*/32,24}, surface);
+            DrawRect(iBounds.pos.x + 2,iBounds.pos.y + i * itemHeight + 2 - sBar.scrollPos, iBounds.size.x - 24, itemHeight - 4, {165,/*24*/32,24}, surface);
         }
-        DrawString(item->text, iBounds.pos.x + 4, iBounds.pos.y + i * itemHeight + (itemHeight / 2) - 6 - (scrollPos * scrollIncrementPixels * 2), 0, 0, 0, surface);
+        DrawString(item->text, iBounds.pos.x + 4, iBounds.pos.y + i * itemHeight + (itemHeight / 2) - 6 - sBar.scrollPos, 0, 0, 0, surface);
     }
 
-    DrawRect(iBounds.pos.x + iBounds.size.x - 20, iBounds.pos.y, 20, iBounds.size.y, {120, 120, 110}, surface); 
-    
-    DrawGradientVertical(iBounds.pos.x + 1 + iBounds.size.x - 20, iBounds.pos.y + 1 + scrollPos, 18, scrollBarHeight,{250,250,250,255},{235,235,230,255},surface);
+    sBar.Paint(surface, {iBounds.pos.x + iBounds.size.x - 16, iBounds.pos.y});
 }
 
 void ListView::OnMouseDown(vector2i_t mousePos){
-    if(mousePos.x > iBounds.pos.x + iBounds.size.x - 20){
-        drag = true;
-        dragPos = mousePos;
-
+    if(mousePos.x > iBounds.pos.x + iBounds.size.x - 16){
+        sBar.OnMouseDownRelative({mousePos.x - iBounds.pos.x + iBounds.size.x - 16, mousePos.y - iBounds.pos.y});
         return;
     }
-    selected = floor(((double)mousePos.y + scrollPos - iBounds.pos.y) / itemHeight);
+    selected = floor(((double)mousePos.y + sBar.scrollPos - iBounds.pos.y) / itemHeight);
 
     if(selected >= contents.get_length()) selected = contents.get_length();
 }
 
-void ListView::OnMouseUp(vector2i_t mousePos){
-    if(drag){
-        drag = false;
-        //scrollPos = mousePos.y;//+= mousePos.y - dragPos.y;
-        if(!scrollPos) scrollPos = scrollMax;
-        else scrollPos = 0;
-        if(scrollPos < 0) scrollPos = 0;
-        else if (scrollPos > scrollMax) scrollPos = scrollMax;
+void ListView::OnMouseMove(vector2i_t mousePos){
+    if(sBar.pressed){
+        sBar.OnMouseMoveRelative({0, mousePos.y - iBounds.pos.y});
     }
+}
+
+void ListView::OnMouseUp(vector2i_t mousePos){
+    sBar.pressed = false;
 }
 
 void ListItem::OnMouseDown(vector2i_t mousePos){
@@ -291,17 +324,62 @@ void ListItem::OnMouseUp(vector2i_t mousePos){
 //////////////////////////
 // FileView
 //////////////////////////
-FileView::FileView(rect_t _bounds) : ListView(_bounds){
-    bounds = _bounds;
 
-    bounds.pos.y += pathBoxHeight;
+#include <lemon/filesystem.h>
+#include <gfx/window/messagebox.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+FileView::FileView(rect_t _bounds, char* path, char** _filePointer, void(*_fileOpened)(char*, char**)) : ListView(_bounds){
+    bounds = _bounds;
+    filePointer = _filePointer;
+    OnFileOpened = _fileOpened;
+
+    iBounds.pos.y += pathBoxHeight;
     iBounds.size.y -= pathBoxHeight;
+    
+    currentPath = (char*)malloc(512);
+	strcpy(currentPath, path);
+
+	currentDir = open(currentPath, 666);
+	int i = 0;
+	lemon_dirent_t dirent;
+	while(lemon_readdir(currentDir, i++, &dirent)){
+		contents.add_back(new ListItem(dirent.name));
+	}
+
+    ResetScrollBar();
 }
 
 FileView::~FileView(){
 }
 
+void FileView::Refresh(){
+    close(currentDir);
+
+    currentDir = lemon_open(currentPath, 666);
+
+    if(!currentDir){
+        MessageBox("Failed to open directory!", MESSAGEBOX_OK);
+    }
+    
+    for(int i = contents.get_length() - 1; i >= 0; i--){
+        delete contents.get_at(i);
+    }
+    contents.clear();
+    
+    int i = 0;
+    lemon_dirent_t dirent;
+    while(lemon_readdir(currentDir, i++, &dirent)){
+        contents.add_back(new ListItem(dirent.name));
+    }
+    
+    ResetScrollBar();
+}
+
 void FileView::Paint(surface_t* surface){
+    DrawString(currentPath, bounds.pos.x + 4, bounds.pos.y + 4, 0, 0, 0, surface);
+
     ListView::Paint(surface);
 }
 
@@ -313,6 +391,46 @@ void FileView::OnMouseDown(vector2i_t mousePos){
 
 void FileView::OnMouseUp(vector2i_t mousePos){
     if(mousePos.y - bounds.pos.y > pathBoxHeight){
-        FileView::OnMouseDown(mousePos);
+        ListView::OnMouseUp(mousePos);
+    }
+}
+
+void FileView::OnSubmit(){
+    ListItem* item = contents.get_at(selected);
+    lemon_dirent_t dirent;
+    lemon_readdir(currentDir, selected, &dirent);
+    if(dirent.type & FS_NODE_DIRECTORY){
+        close(currentDir);
+
+        strcpy(currentPath + strlen(currentPath), "/");
+        strcpy(currentPath + strlen(currentPath), dirent.name);
+
+        currentDir = lemon_open(currentPath, 666);
+
+        if(!currentDir){
+            MessageBox("Failed to open directory!", MESSAGEBOX_OK);
+        }
+        
+        for(int i = contents.get_length() - 1; i >= 0; i--){
+            delete contents.get_at(i);
+        }
+        contents.clear();
+        
+        int i = 0;
+        while(lemon_readdir(currentDir, i++, &dirent)){
+            contents.add_back(new ListItem(dirent.name));
+        }
+
+        ResetScrollBar();
+    } else if(OnFileOpened) {
+        char* str = (char*)malloc(strlen(currentPath) + strlen(dirent.name) + 1 /*Separator*/ + 1 /*Null Terminator*/);
+
+        strcpy(str, currentPath);
+        strcpy(str + strlen(str), "/");
+        strcpy(str + strlen(str), dirent.name);
+
+        OnFileOpened(str, filePointer);
+
+        free(str);
     }
 }

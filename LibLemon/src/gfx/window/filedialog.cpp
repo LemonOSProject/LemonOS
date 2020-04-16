@@ -4,67 +4,25 @@
 #include <lemon/filesystem.h>
 #include <fcntl.h>
 
-struct FileButton : public Button{
-public:
-	bool executable;
-	lemon_dirent_t dirent;
-
-	int icon = 0;
-
-	char filepath[128];
-
-	bool* ret;
-	char* returnPath;
-
-	FileButton(char* label, rect_t bounds) : Button::Button(label, bounds){
-
-	}
-
-	void OnMouseUp(vector2i_t mousePos){
-		*ret = true;
-		memcpy(returnPath, filepath, 128);
-	}
-};
+void OnFileOpened(char* path, char** filePointer){
+	*filePointer = (char*)malloc(strlen(path) + 1);
+	strcpy(*filePointer, path);
+}
 
 char* FileDialog(char* directoryPath){
 	win_info_t dialogWindowInfo;
 	dialogWindowInfo.x = 10;
 	dialogWindowInfo.y = 10;
 	dialogWindowInfo.width = 300;
-	dialogWindowInfo.height = 284;
+	dialogWindowInfo.height = 280;
 	dialogWindowInfo.flags = 0;
 	strcpy(dialogWindowInfo.title, "Open...");
 	Window* dialogWindow = CreateWindow(&dialogWindowInfo);
 
-	char* returnPath = (char*)malloc(128);
-	bool ret = false;
+	char* filePointer = nullptr;
+	FileView* fv = new FileView({{0,0},{300,280}}, directoryPath, &filePointer, OnFileOpened);
 
-	lemon_dirent_t dirent;
-	uint32_t readdirReturn;
-	int fd = open(directoryPath,0);
-	if(!fd) return 0;
-	readdirReturn = lemon_readdir(fd, 0, &dirent);
-	int xpos = 0;
-	int ypos = 0;
-	int i = 0;
-	while(readdirReturn){
-		FileButton* btn = new FileButton(dirent.name, {{xpos + 2, ypos + 2},{96,24}});
-		strcpy(btn->filepath, directoryPath);
-		btn->ret = &ret;
-		btn->returnPath = returnPath;
-		strcat(btn->filepath, dirent.name);
-
-		AddWidget(btn, dialogWindow);
-
-		readdirReturn = lemon_readdir(fd, ++i, &dirent);
-
-		xpos += 100;
-		if(xpos + 100 > dialogWindowInfo.width){
-			ypos += 26;
-			xpos = 0;
-		}
-	}
-	lemon_close(fd);
+	AddWidget(fv, dialogWindow);
 
 	PaintWindow(dialogWindow);
 
@@ -77,23 +35,30 @@ char* FileDialog(char* directoryPath){
 				mouseX = msg.data >> 32;
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
 				HandleMouseUp(dialogWindow, {mouseX, mouseY});
-				PaintWindow(dialogWindow);
 			} else if (msg.msg == WINDOW_EVENT_MOUSEDOWN){
 				uint32_t mouseX = msg.data >> 32;
 				uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
 				HandleMouseDown(dialogWindow, {mouseX, mouseY});
-				PaintWindow(dialogWindow);
+			} else if (msg.msg == WINDOW_EVENT_KEY && msg.data == '\n') {
+				fv->OnSubmit();
+
+				if(filePointer) goto ret;
+			} else if (msg.msg == WINDOW_EVENT_MOUSEMOVE) {
+				uint32_t mouseX = msg.data >> 32;
+				uint32_t mouseY = msg.data & 0xFFFFFFFF;
+
+				HandleMouseMovement(dialogWindow, {mouseX, mouseY});
+			} else if (msg.msg == WINDOW_EVENT_CLOSE) {
+				DestroyWindow(dialogWindow);
+				return nullptr;
 			}
 		}
-
-		if(ret){
-			break;
-		}
+		PaintWindow(dialogWindow);
 	}
-
-	RefreshFonts();
-
+ret:
+	delete fv;
 	DestroyWindow(dialogWindow);
-	return returnPath;
+
+	return filePointer;
 }

@@ -67,7 +67,7 @@ void PaintWindow(Window* win){
 void HandleMouseDown(Window* win, vector2i_t mousePos){
 	for(int i = 0; i < win->widgets.get_length(); i++){
 		rect_t widgetBounds = win->widgets.get_at(i)->bounds;
-		if(widgetBounds.pos.x <= mousePos.x && widgetBounds.pos.y < mousePos.y && widgetBounds.pos.x + widgetBounds.size.x > mousePos.x && widgetBounds.pos.y + widgetBounds.size.y > mousePos.y){
+		if(PointInRect(widgetBounds, mousePos)){
 			win->widgets.get_at(i)->OnMouseDown(mousePos);
 			win->lastPressedWidget = i;
 			break;
@@ -82,6 +82,20 @@ Widget* HandleMouseUp(Window* win, vector2i_t mousePos){
 	}
 	win->lastPressedWidget = -1;
 	return NULL;
+}
+
+void HandleMouseMovement(Window* win, vector2i_t mousePos){
+	win->mousePos = mousePos;
+
+	if(win->lastPressedWidget >= 0){
+		win->widgets[win->lastPressedWidget]->OnMouseMove(mousePos);
+	}else for(int i = 0; i < win->widgets.get_length(); i++){
+		rect_t widgetBounds = win->widgets.get_at(i)->bounds;
+		if(PointInRect(widgetBounds, mousePos)){
+			win->widgets.get_at(i)->OnHover(mousePos);
+			break;
+		}
+	}
 }
 
 void AddWidget(Widget* widget, Window* win){

@@ -73,6 +73,9 @@ typedef struct {
 //  CreateFramebufferSurface (fbInfo, address) - Create a surface object from a framebuffer
 surface_t* CreateFramebufferSurface(fb_info_t fbInfo, void* address);
 
+// PointInRect (rect, point) - Check if a point lies inside a rectangle
+bool PointInRect(rect_t rect, vector2i_t point);
+
 // DrawRect (rect, colour, surface*) - Draw filled rectangle
 void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface);
 void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);

@@ -13,6 +13,10 @@
 #include <gfx/window/messagebox.h>
 #include <lemon/spawn.h>
 
+void OnFileOpened(char* path, char** filePointer){
+	
+}
+
 extern "C"
 int main(char argc, char** argv){
 	win_info_t windowInfo;
@@ -27,89 +31,39 @@ int main(char argc, char** argv){
 
 	window = CreateWindow(&windowInfo);
 
-	ListView* fileList = new ListView((rect_t){{0,20},{windowInfo.width,windowInfo.height - 20}},20);
-	
-	window->widgets.add_back(fileList);
+	char* filePointer = nullptr;
+	FileView* fv = new FileView({{0,0},{512,256}}, "/", &filePointer, OnFileOpened);
 
-	char* currentPath = (char*)malloc(512);
-	strcpy(currentPath, "/");
+	AddWidget(fv, window);
 
-	int currentDir = open(currentPath, 666);
-	int i = 0;
-	lemon_dirent_t dirent;
-	while(lemon_readdir(currentDir, i++, &dirent)){
-		fileList->contents.add_back(new ListItem(dirent.name));
-	}
-
-	Label* pathLabel = new Label(currentPath, {{4,4},{508, 24}});
-	window->widgets.add_back(pathLabel);
-
-	fileList->ResetScrollBar();
+	PaintWindow(window);
 
 	for(;;){
 		ipc_message_t msg;
 		while(ReceiveMessage(&msg)){
-			if (msg.msg == WINDOW_EVENT_CLOSE){
-				DestroyWindow(window);
-				exit(0);
-			} else if(msg.msg == WINDOW_EVENT_MOUSEDOWN){
-				uint32_t mouseX;
-				uint32_t mouseY;
-				mouseX = (msg.data >> 32);
-				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				HandleMouseDown(window, {(int)mouseX, (int)mouseY});
-			}
-			else if(msg.msg == WINDOW_EVENT_MOUSEUP){	
+			if (msg.msg == WINDOW_EVENT_MOUSEUP){	
 				uint32_t mouseX;
 				uint32_t mouseY;
 				mouseX = msg.data >> 32;
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				HandleMouseUp(window, {(int)mouseX, (int)mouseY});
-			} else if(msg.msg == WINDOW_EVENT_KEY){
-				if(msg.data == KEY_ARROW_DOWN){
-					fileList->selected++;
-					if(fileList->selected >= fileList->contents.get_length()){
-						fileList->selected = fileList->contents.get_length() - 1;
-					}
-				} else if(msg.data == KEY_ARROW_UP){
-					fileList->selected--;
-					if(fileList->selected < 0){
-						fileList->selected = 0;
-					}
-				} else if(msg.data == '\n'){
-					ListItem* item = fileList->contents.get_at(fileList->selected);
-					lemon_readdir(currentDir, fileList->selected, &dirent);
-					if(dirent.type & FS_NODE_DIRECTORY){
-						close(currentDir);
+				HandleMouseUp(window, {mouseX, mouseY});
+			} else if (msg.msg == WINDOW_EVENT_MOUSEDOWN){
+				uint32_t mouseX = msg.data >> 32;
+				uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
-						strcpy(currentPath + strlen(currentPath), "/");
-						strcpy(currentPath + strlen(currentPath), dirent.name);
+				HandleMouseDown(window, {mouseX, mouseY});
+			} else if (msg.msg == WINDOW_EVENT_KEY && msg.data == '\n') {
+				fv->OnSubmit();
+			} else if (msg.msg == WINDOW_EVENT_MOUSEMOVE) {
+				uint32_t mouseX = msg.data >> 32;
+				uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
-						currentDir = lemon_open(currentPath, 666);
-
-						if(!currentDir){
-							MessageBox("Failed to open directory!", MESSAGEBOX_OK);
-							return 1;
-						}
-						
-						for(int i = fileList->contents.get_length() - 1; i >= 0; i--){
-							delete fileList->contents.get_at(i);//fileList->contents.remove_at(i);
-						}
-						fileList->contents.clear();
-						
-						int i = 0;
-						while(lemon_readdir(currentDir, i++, &dirent)){
-							fileList->contents.add_back(new ListItem(dirent.name));
-						}
-
-						fileList->ResetScrollBar();
-					} else if (strcmp(dirent.name + strlen(dirent.name) - 4, ".lef") == 0){
-						lemon_spawn(dirent.name, 0, nullptr, 0);
-					}
-				}
+				HandleMouseMovement(window, {mouseX, mouseY});
+			} else if (msg.msg == WINDOW_EVENT_CLOSE) {
+				DestroyWindow(window);
+				exit(0);
 			}
 		}
-
 		PaintWindow(window);
 	}
 

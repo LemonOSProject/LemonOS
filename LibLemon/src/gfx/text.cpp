@@ -247,9 +247,6 @@ void DrawString(char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g,
     int xOffset = 0;
     while (*str != 0) {
         if(*str == '\n'){
-            /*if(y + 12 >= surface->height) break;
-            str++;
-            continue;*/
             break;
         } else if (!isprint(*str)) {
             str++;

@@ -122,6 +122,11 @@ surface_t* CreateFramebufferSurface(fb_info_t fbInfo, void* address){
     return surface;
 }
 
+// Check if a point lies inside a rectangle
+bool PointInRect(rect_t rect, vector2i_t point){
+    return (point.x >= rect.pos.x && point.x < rect.pos.x + rect.size.x && point.y >= rect.pos.y && point.y < rect.pos.y + rect.size.y);
+}
+
 int floor(double num) {
 	int x = (int)num;
 	return num < x ? x - 1 : x;

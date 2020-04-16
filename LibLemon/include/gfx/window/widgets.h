@@ -13,8 +13,29 @@ public:
     virtual void Paint(surface_t* surface);
     virtual void OnMouseDown(vector2i_t mousePos);
     virtual void OnMouseUp(vector2i_t mousePos);
+    virtual void OnHover(vector2i_t mousePos);
+    virtual void OnMouseMove(vector2i_t mousePos);
 
     virtual ~Widget();
+};
+
+class ScrollBar { /* Not a widget, but is to be used in widgets*/
+protected:
+    int scrollIncrement;
+    int pressOffset;
+    int height;
+public:
+    bool pressed;
+
+    rect_t scrollBar;
+
+    int scrollPos;
+
+    void ResetScrollBar(int displayHeight /* Region that can be displayed at one time */, int areaHeight /* Total Scroll Area*/);
+    void Paint(surface_t* surface, vector2i_t offset, int width = 16);
+
+    void OnMouseDownRelative(vector2i_t relativePosition); // Relative to the position of the scroll bar.
+    void OnMouseMoveRelative(vector2i_t relativePosition);
 };
 
 class ScrollView : public Widget {
@@ -43,20 +64,14 @@ public:
 
 class ListView : public Widget{
 protected:
+    ScrollBar sBar;
+
     int itemHeight;
-    int scrollMax;
-    int scrollIncrementPixels;
-    int scrollMaxPixels;
-    int scrollBarHeight;
-
-    bool drag = false;
-    vector2i_t dragPos;
-
+    
     surface_t buffer;
 
     rect_t iBounds;
 public:
-    int scrollPos;
     int selected = 0;
     List<ListItem*> contents;
 
@@ -67,19 +82,29 @@ public:
     void Paint(surface_t* surface);
     void OnMouseDown(vector2i_t mousePos);
     void OnMouseUp(vector2i_t mousePos);
+    void OnMouseMove(vector2i_t mousePos);
 
     ~ListView();
 };
 
 class FileView : public ListView{
 protected:
-    int pathBoxHeight;
+    int pathBoxHeight = 20;
+    int currentDir;
+    char* currentPath;
+    char** filePointer;
+
+    void Refresh();
+
+    void(*OnFileOpened)(char*, char**) = nullptr;
 public:
-    FileView(rect_t bounds);
+    FileView(rect_t bounds, char* path, char** filePointer, void(*OnFileOpened)(char*, char**));
 
     void Paint(surface_t* surface);
     void OnMouseDown(vector2i_t mousePos);
     void OnMouseUp(vector2i_t mousePos);
+
+    void OnSubmit();
 
     ~FileView();
 };
@@ -92,6 +117,7 @@ public:
     char** contents;
     int lineCount;
     size_t bufferSize;
+    vector2i_t cursorPos;
 
     TextBox(rect_t bounds);
 
