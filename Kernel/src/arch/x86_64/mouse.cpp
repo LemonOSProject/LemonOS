@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <filesystem.h>
 #include <string.h>
-#include <initrd.h>
 #include <system.h>
 #include <logging.h>
 
@@ -74,7 +73,7 @@ namespace Mouse{
 		mouseCharDev.flags = FS_NODE_CHARDEVICE;
 		mouseCharDev.read = ReadDevice;
 		strcpy(mouseCharDev.name, "mouse0");
-		Initrd::RegisterDevice(&mouseCharDev);
+		fs::RegisterDevice(&mouseCharDev);
 
 		Wait(1);
 		outportb(0x64, 0xA8);

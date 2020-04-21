@@ -17,8 +17,7 @@ asmg = generator(nasm,
 
 liblemon_cpp_args = ['-Wno-write-strings', '-Wno-pointer-arith', '-Wall', '-Wextra', '-Wno-address',
     '-m64',
-    '-fPIC',
-    '-O3',
+    '-O0',
     '-fno-exceptions', '-fno-rtti', '-std=c++14']
 
 add_project_arguments(liblemon_cpp_args, language : ['c', 'cpp'])
@@ -50,5 +49,5 @@ prefix = get_option('prefix')
 install_subdir('include', install_dir: prefix)
 
 static_library('lemon', [asmg.process(asm_files), cpp_files],
-    include_directories : liblemon_include_dirs, cpp_args : liblemon_cpp_args, link_args: liblemon_cpp_args,
+    include_directories : liblemon_include_dirs,
     install: true)

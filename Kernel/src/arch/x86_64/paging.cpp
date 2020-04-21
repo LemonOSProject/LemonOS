@@ -97,7 +97,7 @@ namespace Memory{
 		Memory::KernelMapVirtualMemory4K(pml4Phys, (uintptr_t)pml4,1);
 		memcpy(pml4, kernelPML4, 4096);
 
-		for(int i = 0; i < 64; i++){
+		for(int i = 0; i < 512; i++){
 			pageDirs[i] = (pd_entry_t*)KernelAllocate4KPages(1);
 			pageDirsPhys[i] = Memory::AllocatePhysicalMemoryBlock();
 			KernelMapVirtualMemory4K(pageDirsPhys[i],(uintptr_t)pageDirs[i],1);
@@ -126,6 +126,10 @@ namespace Memory{
 
 		asm("sti");
 		return addressSpace;
+	}
+
+	bool CheckRegion(uintptr_t addr, uint64_t len, address_space_t* addressSpace){
+		return addr < PDPT_SIZE || (addr + len) < PDPT_SIZE || !(PDPT_GET_INDEX(addr) & PDPT_USER) || !(PDPT_GET_INDEX(addr + len) & PDPT_USER);
 	}
 
 	page_table_t AllocatePageTable(){
@@ -159,7 +163,7 @@ namespace Memory{
 		uintptr_t address = 0;
 
 		uint64_t pml4Index = 0;
-		for(int d = 0; d < 64; d++){
+		for(int d = 0; d < 512; d++){
 			uint64_t pdptIndex = d;
 			if(!(addressSpace->pdpt[d] & 0x1)) break;
 			/* Attempt 1: Already Allocated Page Tables*/
@@ -409,7 +413,8 @@ namespace Memory{
 			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
 			pageIndex = PAGE_TABLE_GET_INDEX(virt);
 
-			if(pdptIndex > MAX_PDPT_INDEX || pml4Index) KernelPanic((const char**)(&("Process address space cannot be >64GB")),1);
+			const char* panic[1] = {"Process address space cannot be >512GB"};
+			if(pdptIndex > MAX_PDPT_INDEX || pml4Index) KernelPanic(panic,1);
 
 			if(!(addressSpace->pageDirs[pdptIndex][pageDirIndex] & 0x1)) CreatePageTable(pdptIndex,pageDirIndex,addressSpace); // If we don't have a page table at this address, create one.
 			
@@ -434,7 +439,6 @@ namespace Memory{
 
 	void ChangeAddressSpace(address_space_t* addressSpace){
 		currentAddressSpace = addressSpace;
-		//SetPageFrame(&(kernelPML4[0]), addressSpace->pdptPhys);
 	}
 
 	void PageFaultHandler(regs64_t* regs)

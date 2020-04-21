@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <filesystem.h>
+#include <fsvolume.h>
 
 #define LEMONINITFS_FILE        0x01
 #define LEMONINITFS_DIRECTORY   0x02
@@ -22,6 +23,18 @@ typedef struct {
 } __attribute__((packed)) lemoninitfs_node_t ;
 
 namespace Initrd{
+    class InitrdVolume : public fs::FsVolume {
+    public:
+        InitrdVolume();
+
+        size_t Read(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer);
+        size_t Write(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer);
+        void Open(struct fs_node* node, uint32_t flags);
+        void Close(struct fs_node* node);
+        struct fs_dirent* ReadDir(struct fs_node* node, uint32_t index);
+        fs_node* FindDir(struct fs_node* node, char* name);
+    };
+
     void Initialize(uintptr_t address, uint32_t size);
 
     lemoninitfs_node_t* List();
@@ -31,7 +44,4 @@ namespace Initrd{
 
     lemoninitfs_node_t GetNode(char* filename);
     uint8_t* Read(lemoninitfs_node_t node, uint8_t* buffer);
-    fs_node_t* GetRoot();
-    
-	void RegisterDevice(fs_node_t* device);
 }

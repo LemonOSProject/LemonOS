@@ -67,8 +67,6 @@ int main(char argc, char** argv){
 	int masterPTYFd;
 	syscall(SYS_GRANT_PTY, (uintptr_t)&masterPTYFd, 0, 0, 0, 0);
 
-	//char* _argv[2] = {"/lsh.lef", "test arg"};
-	//lemon_spawn("/lsh.lef", 0, nullptr, 0);
 	syscall(SYS_EXEC, (uintptr_t)"/lsh.lef", 0, 0, 1, 0);
 	
 	window->OnPaint = OnPaint;

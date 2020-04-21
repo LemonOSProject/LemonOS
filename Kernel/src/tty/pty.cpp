@@ -2,7 +2,6 @@
 #include <string.h>
 #include <pty.h>
 #include <list.h>
-#include <initrd.h>
 #include <types.h>
 #include <logging.h>
 
@@ -77,7 +76,7 @@ PTY::PTY(){
 	masterFile.inode = ptys->get_length();
 	Log::Warning("test");
 
-	Initrd::RegisterDevice(&slaveFile);
+	fs::RegisterDevice(&slaveFile);
 
 	ptys->add_back(this);
 }

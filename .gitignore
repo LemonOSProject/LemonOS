@@ -5,6 +5,8 @@ Disks/Lemon.vhd
 *.gbc
 *.o
 *.lef
+*.so
+*.so.*
 *.a
 LibC
 serial.log

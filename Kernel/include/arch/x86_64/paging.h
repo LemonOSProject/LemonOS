@@ -44,7 +44,7 @@
 #define DIRS_PER_PDPT 512
 #define PDPTS_PER_PML4 512
 
-#define MAX_PDPT_INDEX 63
+#define MAX_PDPT_INDEX 511
 
 typedef uint64_t page_t;
 typedef uint64_t pd_entry_t;
@@ -101,6 +101,7 @@ namespace Memory{
 
     address_space_t* CreateAddressSpace();
     void ChangeAddressSpace(address_space_t*);
+    bool CheckRegion(uintptr_t addr, uint64_t len, address_space_t* addressSpace);
 
     void SwitchPageDirectory(uint64_t phys);
     

@@ -1,0 +1,13 @@
+diff -Naur freetype-2.10.1/builds/unix/config.sub lemon-freetype/builds/unix/config.sub
+--- freetype-2.10.1/builds/unix/config.sub	2019-07-02 01:55:38.000000000 +1000
++++ lemon-freetype/builds/unix/config.sub	2020-04-21 10:51:12.425180200 +1000
+@@ -1368,7 +1368,8 @@
+ 	     | powermax* | dnix* | nx6 | nx7 | sei* | dragonfly* \
+ 	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
+ 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
+-	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi*)
++	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
++		 | lemon* )
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	qnx*)

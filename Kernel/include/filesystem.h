@@ -57,6 +57,9 @@ namespace fs{
 	extern List<FsVolume*>* volumes;
 
     void Initialize();
+    fs_node_t* GetRoot();
+    void RegisterDevice(fs_node_t* device);
+
 
     size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
     size_t Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);

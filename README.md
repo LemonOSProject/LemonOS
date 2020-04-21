@@ -7,6 +7,7 @@ The Lemon Operating System
 - Freetype Port
 - ATA Driver
 - GnuBoy Port (not incl)
+- Dynamic Linking
 
 ### Work In Progess
 - FAT32 Filesystem support
@@ -22,7 +23,7 @@ The Lemon Operating System
 - UNIX-like system (e.g. Linux or Windows under WSL)
 - GNU binutils, make and GCC (yet to provide patch files)
 - meson and ninja
-- Freetype (yet to provide patch)
+- Freetype
 - [mlibc](https://github.com/managarm/mlibc) C Library (crossfile provided)
 
 ## Repo Structure
@@ -33,7 +34,9 @@ The Lemon Operating System
 | InitrdWriter/ | Ramdisk creation tool  |
 | Kernel/       | Lemon Kernel           |
 | LibLemon/     | LibLemon (Lemon API)   |
+| Patches/      | Patch files            |
 | Scripts/      | Build Scripts          |
 | Screenshots/  | Screenshots            |
 
+![Lemon OS Screenshot](Screenshots/image2.png)
 ![Lemon OS Screenshot](Screenshots/image.png)

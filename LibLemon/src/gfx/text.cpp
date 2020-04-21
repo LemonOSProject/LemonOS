@@ -156,7 +156,12 @@ void InitializeFonts(){
         return;
 	}
 
-	FILE* fontFile = fopen("/montserrat.ttf", "r");
+	FILE* fontFile = fopen("/initrd/montserrat.ttf", "r");
+    
+	if(!fontFile){
+		syscall(0,(uintptr_t)"Error loading font /initrd/montserrat.ttf",0,0,0,0);
+        return;
+	}
 
 	fseek(fontFile, 0, SEEK_END);
 	size_t fontSize = ftell(fontFile);
@@ -166,8 +171,8 @@ void InitializeFonts(){
 
     fclose(fontFile);
 
-	if(int err = /*FT_New_Face(library, "/montserrat.ttf", 0, &mainFont)){//*/FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &mainFont)){
-		syscall(0,(uintptr_t)"Error loading font from memory /montserrat.ttf",err,0,0,0);
+	if(int err = FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &mainFont)){
+		syscall(0,(uintptr_t)"Error loading font from memory /initrd/montserrat.ttf",err,0,0,0);
         return;
 	}
 

@@ -1,7 +1,9 @@
-global memcpy_sse2
-global memset32_sse2
-global memset64_sse2
-global memcpy_sse2_unaligned
+global memcpy_sse2:function
+global memset32_sse2:function
+global memset64_sse2:function
+global memcpy_sse2_unaligned:function
+
+section .text
 
 memcpy_sse2:
 	push rbp    ; save the prior rbp value
@@ -57,7 +59,7 @@ memset32_sse2:
 	jle .ret ; Avoid 0s
 	
 	movq xmm1, rsi
-	movdqa xmm0, [bigzero]
+	pxor xmm0, xmm0
 
 	paddq xmm0, xmm1
 	pslldq xmm0, 4
@@ -91,7 +93,7 @@ memset64_sse2:
 	jle .ret ; Avoid 0s
 	
 	movq xmm1, rbx
-	movdqa xmm0, [bigzero]
+	pxor xmm0, xmm0
 
 	paddq xmm0, xmm1
 	pslldq xmm0, 8
@@ -108,7 +110,3 @@ memset64_sse2:
 	pop rbp
 
 	ret
-
-align 0x10
-bigzero: dq 0
-dq 0

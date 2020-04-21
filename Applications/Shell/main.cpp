@@ -58,7 +58,11 @@ void OnMenuPaint(surface_t* surface){
 }
 
 void LoadConfig(){
-	FILE* menuConfig = fopen("/menu.cfg","r");
+	FILE* menuConfig = fopen("/initrd/menu.cfg","r");
+
+	if(!menuConfig){
+		return;
+	}
 
 	fseek(menuConfig, 0, SEEK_END);
 	size_t configSize = ftell(menuConfig);

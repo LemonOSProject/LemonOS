@@ -11,6 +11,8 @@
 #include <logging.h>
 #include <elf.h>
 #include <tss.h>
+#include <filesystem.h>
+#include <abi.h>
 
 #define INITIAL_HANDLE_TABLE_SIZE 0xFFFF
 
@@ -223,17 +225,9 @@ namespace Scheduler{
         return proc;
     }
 
-    process_t* LoadELF(void* elf) {
+    process_t* CreateELFProcess(void* elf) {
 
-        elf64_header_t elfHdr = *(elf64_header_t*)elf;
-
-        char id[4];
-        strncpy(id, (char*)elfHdr.id + 1, 3);
-        if(strncmp("ELF", id, 3)){
-            Log::Warning("Invalid ELF Header: ");
-            Log::Write(id);
-            return nullptr;
-        }
+        if(!VerifyELF(elf)) return nullptr;
 
         bool schedulerState = schedulerLock; // Get current value for scheduker lock
         schedulerLock = true; // Lock Scheduler
@@ -244,48 +238,105 @@ namespace Scheduler{
         thread->registers.cs = 0x1B; // We want user mode so use user mode segments, make sure RPL is 3
         thread->registers.ss = 0x23;
 
+        Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),0,1,proc->addressSpace);
+
         asm("cli");
 
         asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
 
-        for(int i = 0; i < elfHdr.phNum; i++){
-            elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
-
-            if(elfPHdr.memSize == 0) continue;
-            for(int j = 0; j < (((elfPHdr.memSize + (elfPHdr.vaddr & (PAGE_SIZE_4K-1))) / PAGE_SIZE_4K)) + 1; j++){
-                uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
-                Memory::MapVirtualMemory4K(phys,elfPHdr.vaddr /* - (elfPHdr.vaddr & (PAGE_SIZE_4K-1))*/ + j * PAGE_SIZE_4K, 1, proc->addressSpace);
-            }
-        }
-
-        Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),0,1,proc->addressSpace);
-
-        for(int i = 0; i < elfHdr.phNum; i++){
-            elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
-
-            if(elfPHdr.memSize == 0 || elfPHdr.type != PT_LOAD) continue;
-
-            memset((void*)elfPHdr.vaddr,0,elfPHdr.memSize);
-
-            memcpy((void*)elfPHdr.vaddr,(void*)(elf + elfPHdr.offset),elfPHdr.fileSize);
-
-            Memory::ChangeAddressSpace(currentProcess->addressSpace);
-        }
+        elf_info_t elfInfo = LoadELFSegments(proc, elf, 0);
         
-        Log::Info(elfHdr.entry);
+        thread->registers.rip = elfInfo.entry;
+
+        if(elfInfo.linkerPath){
+            char* linkPath = elfInfo.linkerPath;
+            uintptr_t linkerBaseAddress = 0x7FC0000000; // Linker base address
+
+            char temp[32];
+            strcpy(temp, "/initrd/ld.so");
+            char* file = strtok(/*linkPath*/temp,"/");
+            fs_node_t* node;
+            fs_node_t* current_node = fs::GetRoot();
+            while(file != NULL){
+                node = current_node->findDir(current_node,file);
+                if(!node) {
+                    Log::Warning("Could not not find dynamic linker: ");
+                    Log::Write(linkPath);
+                    linkPath = nullptr;
+                    continue;
+                }
+                if(node->flags & FS_NODE_DIRECTORY){
+                    current_node = node;
+                    file = strtok(NULL, "/");
+                    Log::Warning(file);
+                    continue;
+                }
+                break;
+            }
+            
+            Log::Info("Dynamic Linker: ");
+            Log::Write(node->name);
+
+            void* linkerElf = kmalloc(node->size);
+            fs::Read(node, 0, node->size, (uint8_t*)linkerElf); // Load Dynamic Linker
+            
+            if(!VerifyELF(linkerElf)){
+                Log::Warning("Invalid Dynamic Linker ELF");
+                return nullptr;
+            }
+
+            elf_info_t linkerELFInfo = LoadELFSegments(proc, linkerElf, linkerBaseAddress);
+
+            thread->registers.rip = linkerELFInfo.entry;
+        }
+
+        void* _stack = (void*)Memory::Allocate4KPages(32, proc->addressSpace);
+        for(int i = 0; i < 32; i++){
+            Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)_stack + PAGE_SIZE_4K * i, 1, proc->addressSpace);
+        }
+
+        thread->stack = _stack + PAGE_SIZE_4K * 32; // 128KB stack size
+        thread->registers.rsp = (uintptr_t)thread->stack;
+        thread->registers.rbp = (uintptr_t)thread->stack;
+
+        // ABI Stuff
+        uint64_t* stack = (uint64_t*)thread->registers.rsp;
+
+        *stack--;
+        *stack = 0; // AT_NULL
+
+        stack -= sizeof(auxv_t)/sizeof(*stack);
+        *((auxv_t*)stack) = {.a_type = AT_PHDR, .a_val = elfInfo.pHdrSegment}; // AT_PHDR
+        
+        stack -= sizeof(auxv_t)/sizeof(*stack);
+        *((auxv_t*)stack) = {.a_type = AT_PHENT, .a_val = elfInfo.phEntrySize}; // AT_PHENT
+        
+        stack -= sizeof(auxv_t)/sizeof(*stack);
+        *((auxv_t*)stack) = {.a_type = AT_PHNUM, .a_val = elfInfo.phNum}; // AT_PHNUM
+
+        stack -= sizeof(auxv_t)/sizeof(*stack);
+        *((auxv_t*)stack) = {.a_type = AT_ENTRY, .a_val = elfInfo.entry}; // AT_ENTRY
+
+        stack--;
+        *stack = 0; // null
+
+        // envp will be here
+
+        stack--;
+        *stack = 0; // null
+
+        // argv will be here
+
+        stack--;
+        *stack = 0; // argc
+
+        thread->registers.rsp = (uintptr_t) stack;
+        thread->registers.rbp = (uintptr_t) stack;
+        
+        Log::Info(thread->registers.rip);
         Log::Write(" entry");
         
         asm volatile("mov %%rax, %%cr3" :: "a"(currentProcess->addressSpace->pml4Phys));
-
-        void* stack = (void*)Memory::Allocate4KPages(32, proc->addressSpace);
-        for(int i = 0; i < 32; i++){
-            Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)stack + PAGE_SIZE_4K * i, 1, proc->addressSpace);
-        }
-
-        thread->stack = stack + PAGE_SIZE_4K * 32; // 128KB stack size
-        thread->registers.rsp = (uintptr_t)thread->stack;
-        thread->registers.rbp = (uintptr_t)thread->stack;
-        thread->registers.rip = (uintptr_t)elfHdr.entry;
 
         InsertProcessIntoQueue(proc);
         asm("sti");
@@ -335,8 +386,6 @@ namespace Scheduler{
         if(schedulerLock) return;
 
         currentProcess->timeSlice = currentProcess->timeSliceDefault;
-
-        uint64_t currentRIP = ReadRIP();
 
         asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");
 

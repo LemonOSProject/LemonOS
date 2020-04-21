@@ -65,12 +65,13 @@ int SysExec(regs64_t* r){
 	char** argv = (char**)r->rdx;
 	uint64_t flags = r->rsi;
 	
-	fs_node_t* root = Initrd::GetRoot();
+	fs_node_t* root = fs::GetRoot();
 	fs_node_t* current_node = root;
-	char* file = strtok(filepath,"/");
-
+	
 	Log::Info("Executing: ");
 	Log::Write(filepath);
+
+	char* file = strtok(filepath,"/");
 
 	while(file != NULL){ // Iterate through the directories to find the file
 		fs_node_t* node = current_node->findDir(current_node,file);
@@ -91,35 +92,11 @@ int SysExec(regs64_t* r){
 	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
 	uint64_t a = current_node->read(current_node, 0, current_node->size, buffer);
 
-	process_t* proc = Scheduler::LoadELF((void*)buffer);
+	process_t* proc = Scheduler::CreateELFProcess((void*)buffer);
+	
+	kfree(buffer);
 
 	if(!proc) return 1;
-
-	if(argc && argv){
-		char** _argv = (char**)Memory::KernelAllocate4KPages(1);
-		uintptr_t newargv = (uintptr_t)Memory::Allocate4KPages(1, proc->addressSpace);
-		char* _args = (char*)Memory::KernelAllocate4KPages(1);
-		uintptr_t args = (uintptr_t)Memory::Allocate4KPages(1, proc->addressSpace);
-
-		proc->threads->registers.rdi = argc; // argc
-		proc->threads->registers.rsi = newargv; // argv
-
-		uintptr_t phys = Memory::AllocatePhysicalMemoryBlock();
-		Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)_argv, 1);
-		Memory::MapVirtualMemory4K(phys, newargv, 1, proc->addressSpace);
-
-		phys = Memory::AllocatePhysicalMemoryBlock();
-		Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)_args, 1);
-		Memory::MapVirtualMemory4K(phys, args, 1, proc->addressSpace);
-
-		for(int i = 0; i < argc; i++){
-			_argv[i] = (char*)args;
-			strcpy(_args, argv[i]);
-
-			args += strlen(argv[i]) + 1; // Account for null terminator
-			_args += strlen(argv[i]) + 1;
-		}
-	}
 
 	if(flags & EXEC_FLAG_DUP_FD){
 		proc->fileDescriptors.replace_at(0, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));
@@ -127,7 +104,6 @@ int SysExec(regs64_t* r){
 		proc->fileDescriptors.replace_at(2, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2));
 	}
 
-	kfree(buffer);
 	return 0;
 }
 
@@ -171,7 +147,7 @@ int SysWrite(regs64_t* r){
 int SysOpen(regs64_t* r){
 	char* filepath = (char*)kmalloc(strlen((char*)r->rbx) + 1);
 	strcpy(filepath, (char*)r->rbx);
-	fs_node_t* root = Initrd::GetRoot();
+	fs_node_t* root = fs::GetRoot();
 	fs_node_t* current_node = root;
 	Log::Info("Opening: ");
 	Log::Write(filepath);
@@ -259,6 +235,10 @@ int SysMapFB(regs64_t *r){
 
 	*((uintptr_t*)r->rbx) = fbVirt;
 	*((fb_info_t*)r->rcx) = fbInfo;
+
+	Log::Info(r->rbx);
+	Log::Info(r->rcx);
+	Log::Info(*((uint64_t*)r->rbx));
 
 	return 0;
 }
@@ -556,7 +536,24 @@ int SysMmap(regs64_t* r){
 	size_t count = r->rcx;
 	uintptr_t hint = r->rdx;
 
-	
+	uintptr_t _address;
+	if(hint){
+		if(Memory::CheckRegion(hint, count * PAGE_SIZE_4K, Scheduler::GetCurrentProcess()->addressSpace) /*Check availibilty of the requested map*/){
+			_address = hint;
+		} else {
+			*address = 0;
+			return 1;
+		}
+	} else _address = (uintptr_t)Memory::Allocate4KPages(count, Scheduler::GetCurrentProcess()->addressSpace);
+
+	for(int i = 0; i < count; i++){
+		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), _address + i * PAGE_SIZE_4K, 1, Scheduler::currentProcess->addressSpace);
+		memset((void*)(_address + i * PAGE_SIZE_4K), 0, PAGE_SIZE_4K);
+	}
+
+	*address = _address;
+
+	return 0;
 }
 
 int SysGrantPTY(regs64_t* r){
@@ -624,6 +621,8 @@ void SyscallHandler(regs64_t* regs) {
 		return;
 		
 	Scheduler::schedulerLock = true;
+	//Log::Info("Syscall: "); Log::Write(regs->rax);
+
 	int ret = syscalls[regs->rax](regs); // Call syscall
 	regs->rax = ret;
 	Scheduler::schedulerLock = false;

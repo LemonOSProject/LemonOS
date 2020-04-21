@@ -84,7 +84,7 @@ bool redrawWindowDecorations = true;
 
 char lastKey;
 
-#define ENABLE_FRAMERATE_COUNTER
+//#define ENABLE_FRAMERATE_COUNTER
 #ifdef ENABLE_FRAMERATE_COUNTER
 
 size_t frameCounter;
@@ -220,21 +220,25 @@ int main(){
 
 	syscall(SYS_CREATE_DESKTOP,0,0,0,0,0); // Get Kernel to create Desktop
 
-	FILE* closeButtonFile = fopen("close.bmp", "r");
+	FILE* closeButtonFile = fopen("/initrd/close.bmp", "r");
+
+	if(!closeButtonFile) {
+		return 1;
+	}
+
 	fseek(closeButtonFile, 0, SEEK_END);
 	uint64_t closeButtonLength = ftell(closeButtonFile);
 	fseek(closeButtonFile, 0, SEEK_SET);
 
 	uint8_t* closeButtonBuffer = (uint8_t*)malloc(closeButtonLength + (closeButtonLength));
 	fread(closeButtonBuffer, closeButtonLength, 1, closeButtonFile);
-
-	bitmap_info_header_t* closeInfoHeader = ((bitmap_info_header_t*)closeButtonBuffer + ((bitmap_file_header_t*)closeButtonBuffer)->size);
-	closeButtonSurface.width = 19;//closeInfoHeader->width;
-	closeButtonSurface.height = 19;//closeInfoHeader->height;
+	bitmap_info_header_t* closeInfoHeader = ((bitmap_info_header_t*)(closeButtonBuffer + sizeof(bitmap_file_header_t)));
+	closeButtonSurface.width = closeInfoHeader->width;
+	closeButtonSurface.height = closeInfoHeader->height;
 	closeButtonSurface.buffer = (uint8_t*)malloc(19*19*4);//closeButtonBuffer ;//+ 54;//((bitmap_file_header_t*)closeButtonBuffer)->offset;
 	DrawBitmapImage(0, 0, closeButtonSurface.width, closeButtonSurface.height, closeButtonBuffer, &closeButtonSurface);
 
-	syscall(SYS_EXEC, (uintptr_t)"/shell.lef", 0, 0, 0, 0);
+	syscall(SYS_EXEC, (uintptr_t)"/initrd/shell.lef", 0, 0, 0, 0);
 
 	int mouseDevice = lemon_open("/dev/mouse0", 0);
 	lemon_read(mouseDevice, mouseData, 3);

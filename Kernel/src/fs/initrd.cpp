@@ -24,20 +24,11 @@ namespace Initrd{
 	lemoninitfs_node_t* nodes;
 	fs_node_t* fsNodes;
 
-	void* initrd_address;
-
-	fs_node_t root;
-	fs_dirent_t rootDirent;
-
-	fs_node_t dev;
-	fs_dirent_t devDirent;
-
-	fs_node_t null;
-
 	fs_dirent_t dirent;
 
-	fs_node_t* devices[64];
-	uint32_t deviceCount = 0;
+	void* initrd_address;
+
+	InitrdVolume* vol;
 
 	void Initialize(uintptr_t address, uint32_t size) {
 		#ifdef Lemon32
@@ -57,29 +48,6 @@ namespace Initrd{
 		Log::Write("files\r\n");
 		initrdHeader = *(lemoninitfs_header_t*)initrd_address;
 		nodes = (lemoninitfs_node_t*)(initrd_address + sizeof(lemoninitfs_header_t));
-		
-		strcpy(root.name,"");
-		root.flags = FS_NODE_DIRECTORY;
-		root.inode = 0;
-		strcpy(rootDirent.name, "dev");
-
-		root.readDir = Initrd::ReadDir;
-		root.findDir = Initrd::FindDir;
-
-		strcpy(dev.name,"dev");
-		dev.flags = FS_NODE_DIRECTORY;
-		dev.inode = 0;
-		strcpy(devDirent.name, "dev");
-		devDirent.type = FS_NODE_DIRECTORY;
-
-		dev.readDir = Initrd::ReadDir;
-		dev.findDir = Initrd::FindDir;
-
-		strcpy(null.name,"null");
-		null.flags = FS_NODE_FILE;
-		null.inode = 0;
-
-		null.read = ReadNull;
 		fsNodes = (fs_node_t*)kmalloc(sizeof(fs_node_t)*initrdHeader.fileCount);
 
 		for(int i = 0; i < initrdHeader.fileCount; i++){
@@ -93,6 +61,16 @@ namespace Initrd{
 			node->close = Initrd::Close;
 			node->size = nodes[i].size;
 		}
+
+		vol = new InitrdVolume();
+
+		fs::volumes->add_back(vol);
+		
+		InitrdVolume* vol2 = new InitrdVolume(); // Very Cheap Workaround
+		strcpy(vol2->mountPoint.name, "lib");
+		strcpy(vol2->mountPointDirent.name, "lib");
+
+		fs::volumes->add_back(vol2);
 	}
 
 	size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
@@ -104,13 +82,6 @@ namespace Initrd{
 		if(!size) return 0;
 
 		memcpy(buffer, (void*)((uintptr_t)inode.offset + (uintptr_t)initrd_address + offset), size);
-		return size;
-	}
-
-	size_t ReadNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-		// /if(offset > inode.length || offset + size > inode.length) return 0;
-
-		memset(buffer, -1, size);
 		return size;
 	}
 
@@ -127,48 +98,20 @@ namespace Initrd{
 	}
 
 	fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index){
-			Log::Info(index);
-		if(node == &root && index == 0){
-			return &devDirent;
-		} else if (node == &root && index < fs::volumes->get_length() + 1){
-			return &(fs::volumes->get_at(index - 1)->mountPointDirent);
-		} else if(node == &dev){
-			if(index >= deviceCount) return NULL;
-			memset(dirent.name,0,128); // Zero the string
-			strcpy(dirent.name,devices[index]->name);
-			dirent.inode = index;
-			dirent.type = 0;
-			Log::Info(dirent.name);
-			return &dirent;
-		} else if (index >= initrdHeader.fileCount + 1 + fs::volumes->get_length()){ // All files in initrd + /dev + volumes
-			return NULL;
-		}
+		if(index >= initrdHeader.fileCount) return nullptr;
+
 		memset(dirent.name,0,128); // Zero the string
-		strcpy(dirent.name,nodes[index-1-fs::volumes->get_length()].filename);
+		strcpy(dirent.name,nodes[index].filename);
 		dirent.inode = index-1;
 		dirent.type = 0;
 
 		return &dirent;
 	}
 
-	fs_node_t* FindDir(fs_node_t* node, char* name){
-		if(node == &root){
-			if(strcmp(name,dev.name) == 0) return &dev;
-
-			for(int i = 0; i < fs::volumes->get_length(); i++){
-				if(strcmp(fs::volumes->get_at(i)->mountPoint.name,name) == 0) return &(fs::volumes->get_at(i)->mountPoint);
-			}
-			
-			Log::Info(initrdHeader.fileCount, false);
-			for(int i = 0; i < initrdHeader.fileCount;i++){
-				if(strcmp(fsNodes[i].name,name) == 0) return &(fsNodes[i]);
-			}
-		} else if(node == &dev){
-			for(int i = 0; i < deviceCount; i++)
-				if(strcmp(devices[i]->name, name) == 0) return devices[i];
-		} else {
-			const char* pr[] = {"could not find dir"};
-			KernelPanic(pr,1);
+	fs_node_t* FindDir(fs_node_t* node, char* name) {
+		Log::Info(initrdHeader.fileCount, false);
+		for(int i = 0; i < initrdHeader.fileCount;i++){
+			if(strcmp(fsNodes[i].name,name) == 0) return &(fsNodes[i]);
 		}
 		return NULL;
 	}
@@ -199,21 +142,42 @@ namespace Initrd{
 		return 0;
 	}
 
-	/*lemoninitfs_node_t GetNode(char* filename) {
-		for (uint32_t i = 0; i < initrdHeader.fileCount; i++) {
-			if (nodes[i].filename == filename)
-				return nodes[i];
-		}
-		return nodes[0];
-	}*/
+	InitrdVolume::InitrdVolume(){
+		strcpy(mountPoint.name, "initrd");
+		mountPoint.flags = FS_NODE_DIRECTORY | FS_NODE_MOUNTPOINT;
 
-	fs_node_t* GetRoot(){
-		return &root;
+		mountPoint.read = Initrd::Read;
+		mountPoint.write = Initrd::Write;
+		mountPoint.open = Initrd::Open;
+		mountPoint.close = Initrd::Close;
+		mountPoint.readDir = Initrd::ReadDir;
+		mountPoint.findDir = Initrd::FindDir;
+
+		strcpy(mountPointDirent.name, "initrd");
+		mountPointDirent.type = FS_NODE_DIRECTORY;
 	}
 
-	void RegisterDevice(fs_node_t* device){
-		Log::Info("Device Registered: ");
-		Log::Write(device->name);
-		devices[deviceCount++] = device;
+	size_t InitrdVolume::Read(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer){
+		return Initrd::Read(node, offset, size, buffer);
+	}
+	
+	size_t InitrdVolume::Write(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer){
+		return Initrd::Write(node, offset, size, buffer);
+	}
+	
+	void InitrdVolume::Open(struct fs_node* node, uint32_t flags){
+		Initrd::Open(node, flags);
+	}
+
+	void InitrdVolume::Close(struct fs_node* node){
+		Initrd::Close(node);
+	}
+
+	struct fs_dirent* InitrdVolume::ReadDir(struct fs_node* node, uint32_t index){
+		return Initrd::ReadDir(node, index);
+	}
+
+	fs_node* InitrdVolume::FindDir(struct fs_node* node, char* name){
+		return Initrd::FindDir(node, name);
 	}
 }

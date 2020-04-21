@@ -5,7 +5,6 @@
 #include <system.h>
 #include <list.h>
 #include <filesystem.h>
-//#include <elf.h>
 
 #define PROCESS_STATE_SUSPENDED 0
 #define PROCESS_STATE_ACTIVE 1
@@ -61,7 +60,7 @@ namespace Scheduler{
 	extern process_t* currentProcess;
 
     process_t* CreateProcess(void* entry);
-    process_t* LoadELF(void* entry);
+	process_t* CreateELFProcess(void* elf);
 
 	process_t* GetCurrentProcess();
 

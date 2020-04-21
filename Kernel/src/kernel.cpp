@@ -31,7 +31,8 @@ void IdleProcess(){
 	Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Loading Init Process...");
-	fs_node_t* initFsNode = fs::FindDir(Initrd::GetRoot(),"init.lef");
+	fs_node_t* initrd = fs::FindDir(fs::GetRoot(), "initrd");
+	fs_node_t* initFsNode = fs::FindDir(initrd,"init.lef");
 	if(!initFsNode){
 		const char* panicReasons[]{
 			"Failed to load init task (init.lef)!"
@@ -43,7 +44,7 @@ void IdleProcess(){
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 	asm("cli");
 
-	Scheduler::LoadELF(initElf);
+	Scheduler::CreateELFProcess(initElf);
 
 	Log::Write("OK");
 
@@ -97,7 +98,7 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Info("Ramdisk Contents:\n");
 
 	fs_dirent_t* dirent;
-	fs_node_t* root = Initrd::GetRoot();
+	fs_node_t* root = fs::GetRoot();
 	int i = 0;
 	while((dirent = fs::ReadDir(root,i++))){ // Read until no more dirents
 		fs_node_t* node = fs::FindDir(root, dirent->name);
@@ -111,15 +112,17 @@ void kmain(multiboot_info_t* mb_info){
 		Log::Write("\n");
 	}
 
+	fs_node_t* initrd = fs::FindDir(fs::GetRoot(), "initrd");
+
 	fs_node_t* splashFile;
-	if(splashFile = fs::FindDir(Initrd::GetRoot(),"splash.bmp")){
+	if(splashFile = fs::FindDir(initrd,"splash.bmp")){
 		uint32_t size = splashFile->size;
 		uint8_t* buffer = (uint8_t*)kmalloc(size);
 		if(fs::Read(splashFile, 0, size, buffer))
 			Video::DrawBitmapImage(videoMode.width/2 - 484/2, videoMode.height/2 - 292/2, 484, 292, buffer);
 	} else Log::Warning("Could not load splash image");
 
-	if(splashFile = fs::FindDir(Initrd::GetRoot(),"pbar.bmp")){
+	if(splashFile = fs::FindDir(initrd,"pbar.bmp")){
 		uint32_t size = splashFile->size;
 		progressBuffer = (uint8_t*)kmalloc(size);
 		if(fs::Read(splashFile, 0, size, progressBuffer)){
