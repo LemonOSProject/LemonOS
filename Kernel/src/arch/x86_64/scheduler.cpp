@@ -152,7 +152,7 @@ namespace Scheduler{
 
         proc->fileDescriptors.clear();
 
-        // Reserve 3 file descriptors for when stdin, out and err are implemented
+        // Reserve 3 file descriptors for stdin, out and err
         proc->fileDescriptors.add_back(NULL);
         proc->fileDescriptors.add_back(NULL);
         proc->fileDescriptors.add_back(NULL);
@@ -384,7 +384,7 @@ namespace Scheduler{
             return;
         }
         if(schedulerLock) return;
-
+        
         currentProcess->timeSlice = currentProcess->timeSliceDefault;
 
         asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");

@@ -17,6 +17,8 @@ int is_transmit_empty() {
 	return inportb(PORT + 5) & 0x20;
 }
 
+bool lock = false;
+
 void write_serial(const char c) {
 	while (is_transmit_empty() == 0);
 

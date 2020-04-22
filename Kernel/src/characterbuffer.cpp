@@ -6,36 +6,40 @@
 
 CharacterBuffer::CharacterBuffer(){
     buffer = (char*)kmalloc(bufferSize);
+    bufferPos = 0;
 }
 
 size_t CharacterBuffer::Write(char* _buffer, size_t size){
     if((bufferPos + size) > bufferSize) {
-        krealloc(buffer, bufferPos + size + 32);
         bufferSize = bufferPos + size + 32;
+        krealloc(buffer, bufferSize);
     }
 
-    memcpy((buffer + bufferPos), _buffer, size);
-    bufferPos += size;
+    for(int i = 0; i < size; i++){
+        buffer[bufferPos + i] = _buffer[i];
+    }
 
-    Log::Warning("buffer pos:");
-    Log::Info(bufferPos, false);
+    bufferPos += size;
 
     return size;
 }
 
 size_t CharacterBuffer::Read(char* _buffer, size_t count){
-    if(count > bufferPos) count = bufferPos;
+    if(count > bufferPos) {
+        count = bufferPos;
+    }
  
     if(count <= 0) return 0;
 
-    memcpy(_buffer, buffer, count);
+    for(int i = 0; i < count; i++){
+        _buffer[i] = buffer[i];
+    }
 
-    memcpy(buffer, buffer + count, bufferSize - count);
+    for(int i = 0; i < bufferSize - count; i++){
+        buffer[i] = buffer[count + i];
+    }
 
     bufferPos -= count;
-
-    Log::Warning("buffer pos:");
-    Log::Info(bufferPos, false);
 
     return count;
 }

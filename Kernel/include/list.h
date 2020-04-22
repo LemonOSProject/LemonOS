@@ -87,13 +87,14 @@ public:
 	}
 
 	void replace_at(unsigned pos, T obj) {
-		if (num < 0 || pos >= num) return ;
+		if (num < 0 || pos >= num) return;
 
 		ListNode<T>* current = front;
 
 		for (unsigned int i = 0; i < pos; i++) current = current->next;
 
-		current->obj = obj;
+		if(current)
+			current->obj = obj;
 	}
 
 	int get_length() {

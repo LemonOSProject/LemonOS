@@ -174,7 +174,7 @@ namespace IDT{
 		SetGate(29, (uint64_t)isr29,0x08,0x8E);
 		SetGate(30, (uint64_t)isr30,0x08,0x8E);
 		SetGate(31, (uint64_t)isr31,0x08,0x8E);
-		SetGate(0x69, (uint64_t)isr0x69, 0x08, 0xEE /* Allow syscalls to be called from user mode*/, 3); // Syscall
+		SetGate(0x69, (uint64_t)isr0x69, 0x08, 0xEE /* Allow syscalls to be called from user mode*/, 0); // Syscall
 
 		idt_flush();
 

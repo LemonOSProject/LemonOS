@@ -99,7 +99,7 @@ int SysExec(regs64_t* r){
 	if(!proc) return 1;
 
 	if(flags & EXEC_FLAG_DUP_FD){
-		proc->fileDescriptors.replace_at(0, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));
+		proc->fileDescriptors.replace_at(0, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));;
 		proc->fileDescriptors.replace_at(1, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1));
 		proc->fileDescriptors.replace_at(2, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2));
 	}
@@ -109,7 +109,10 @@ int SysExec(regs64_t* r){
 
 int SysRead(regs64_t* r){
 	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx);
-	if(!node){ Log::Warning("read failed! file descriptor: "); Log::Info(r->rbx, false); return 1; }
+	if(!node){ 
+		Log::Warning("read failed! file descriptor: "); Log::Write(r->rbx, false); 
+		return 1; 
+	}
 	uint8_t* buffer = (uint8_t*)r->rcx;
 	if(!buffer) { return 1; }
 	uint64_t count = r->rdx;
@@ -125,17 +128,14 @@ int SysWrite(regs64_t* r){
 	}
 	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
 	if(!node){
-		Log::Warning("Invalid File Descriptor");
-		Log::Warning(r->rbx);
+		Log::Warning("Invalid File Descriptor: ");
+		Log::Write(r->rbx);
 		return 2;
 	}
 
 	if(!(r->rcx && r->rdx)) return 1;
 
-	uint8_t* buffer = (uint8_t*)kmalloc(r->rdx);
-	memcpy(buffer, (uint8_t*)r->rcx, r->rdx);
-
-	int ret = fs::Write(node, 0, r->rdx, buffer);
+	int ret = fs::Write(node, 0, r->rdx, (uint8_t*)r->rcx);
 
 	if(r->rsi){
 		*((int*)r->rsi) = ret;
@@ -178,6 +178,7 @@ int SysOpen(regs64_t* r){
 	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(node);
 	fs::Open(node, 0);
 
+	Log::Write(fd);
 	Log::Write(", success!");
 
 	*((uint32_t*)r->rcx) = fd;
@@ -185,7 +186,7 @@ int SysOpen(regs64_t* r){
 }
 
 int SysClose(regs64_t* r){
-	int fd = *((int*)r->rbx);
+	int fd = r->rbx;
 	fs_node_t* node;
 	if(node = Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
 		fs::Close(node);
@@ -466,8 +467,10 @@ int SysUptime(regs64_t* r){
 }
 
 int SysDebug(regs64_t* r){
+	asm("cli");
 	Log::Info((char*)r->rbx);
 	Log::Info(r->rcx);
+	asm("sti");
 	return 0;
 }
 
@@ -564,12 +567,12 @@ int SysGrantPTY(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	*((int*)r->rbx) = currentProcess->fileDescriptors.get_length();
-
-	currentProcess->fileDescriptors.add_back(&pty->masterFile);
-
+	
 	currentProcess->fileDescriptors.replace_at(0, &pty->slaveFile); // Stdin
 	currentProcess->fileDescriptors.replace_at(1, &pty->slaveFile); // Stdout
 	currentProcess->fileDescriptors.replace_at(2, &pty->slaveFile); // Stderr
+
+	currentProcess->fileDescriptors.add_back(&pty->masterFile);
 
 	return 0;
 }
@@ -620,12 +623,15 @@ void SyscallHandler(regs64_t* regs) {
 	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
 		return;
 		
-	Scheduler::schedulerLock = true;
+	asm("sti");
+	//Scheduler::schedulerLock = true;
 	//Log::Info("Syscall: "); Log::Write(regs->rax);
 
 	int ret = syscalls[regs->rax](regs); // Call syscall
 	regs->rax = ret;
-	Scheduler::schedulerLock = false;
+	
+	//Log::Info("Syscall Exit");
+	//Scheduler::schedulerLock = false;
 }
 
 void InitializeSyscalls() {

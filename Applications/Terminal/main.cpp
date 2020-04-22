@@ -10,6 +10,7 @@
 #include <list.h>
 #include <lemon/filesystem.h>
 #include <lemon/spawn.h>
+#include <ctype.h>
 
 #define TASKBAR_COLOUR_R 128
 #define TASKBAR_COLOUR_G 128
@@ -44,10 +45,41 @@ void OnPaint(surface_t* surface){
 			DrawChar(buffer[_currentLine + i][j], j * 8, i * 12, 255, 255, 255, surface);
 		}
 	}
+}
 
-	//char temp[10];
-	//DrawString(itoa(bufferPos, temp, 10), 0, 0, 255, 0, 0, surface);
-	//DrawString(itoa(currentLine, temp, 10), 0, 16, 255, 0, 0, surface);
+void PrintChar(char ch){
+	switch (ch)
+	{
+	case '\n':
+		currentLine++;
+		bufferPos = 0;
+		break;
+	case '\b':
+		if(bufferPos > 0) bufferPos--;
+		else if(currentLine > 0) {
+			currentLine--;
+			bufferPos = 79;
+		}
+		
+		buffer[currentLine][bufferPos] = 0;
+		break;
+	case ' ':
+		if(bufferPos >= 80){
+			currentLine++;
+			bufferPos = 0;
+		}
+		buffer[currentLine][bufferPos++] = ' ';
+		break;
+	default:
+		if(!(isgraph(ch))) break;
+
+		if(bufferPos >= 80){
+			currentLine++;
+			bufferPos = 0;
+		}
+		buffer[currentLine][bufferPos++] = ch;
+		break;
+	}
 }
 
 extern "C"
@@ -59,6 +91,7 @@ int main(char argc, char** argv){
 	windowInfo.x = 0;
 	windowInfo.y = 0;
 	windowInfo.flags = 0;
+	strcpy(windowInfo.title, "Terminal");
 	window = CreateWindow(&windowInfo);
 	window->background = {0,0,0,255};
 
@@ -67,33 +100,35 @@ int main(char argc, char** argv){
 	int masterPTYFd;
 	syscall(SYS_GRANT_PTY, (uintptr_t)&masterPTYFd, 0, 0, 0, 0);
 
-	syscall(SYS_EXEC, (uintptr_t)"/lsh.lef", 0, 0, 1, 0);
+	syscall(SYS_EXEC, (uintptr_t)"/initrd/lsh.lef", 0, 0, 1 /* Duplicate File Descriptors */, 0);
 	
 	window->OnPaint = OnPaint;
+
+	char* _buf = (char*)malloc(512);
+
+	LoadFont("/initrd/sourcecodepro.ttf");
 
 	for(;;){
 		ipc_message_t msg;
 		while(ReceiveMessage(&msg)){
 			if(msg.msg == WINDOW_EVENT_KEY){
-				if(msg.data < 256){
+				if(msg.data < 128){
 					char key = (char)msg.data;
-					//lemon_write(masterPTYFd, &key, 1);
+					char b[] = {key, key,key, 0};
+					lemon_write(masterPTYFd, b, 1);
+					PrintChar(key);
 				}
 			} else if (msg.msg == WINDOW_EVENT_CLOSE){
 				DestroyWindow(window);
 				return 0;
 			}
 		}
-		int num = lemon_read(masterPTYFd, &buffer[currentLine][bufferPos], 1);
-		do{
-		if(num){
-			bufferPos++;
-			if(buffer[currentLine][bufferPos-1] == '\n' || bufferPos >= 80){
-				bufferPos = 0;
-				currentLine++;
+
+		while(int len = lemon_read(masterPTYFd, _buf, 512)){
+			for(int i = 0; i < len; i++){
+				PrintChar(_buf[i]);
 			}
 		}
-		} while (num = lemon_read(masterPTYFd, &buffer[currentLine][bufferPos], 1));
 		
 		PaintWindow(window);
 	}

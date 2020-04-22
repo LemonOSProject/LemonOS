@@ -32,10 +32,6 @@ size_t FS_Slave_Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffe
 size_t FS_Master_Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 	PTY* pty = (*ptys)[node->inode];
 	size_t ret = pty->Master_Read((char*)buffer,size);
-	if(ret > 0){
-		Log::Info("Returning with:");
-		Log::Info(ret,false);
-	}
 	return ret;
 }
 	
@@ -45,8 +41,12 @@ size_t FS_Slave_Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buff
 }
 
 size_t FS_Master_Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
+	Log::Info("Master Write");
 	PTY* pty = (*ptys)[node->inode];
-	return pty->Master_Write((char*)buffer,size);
+	Log::Info("write: ");
+	Log::Error((char*)(buffer + 1));
+	Log::Info(*(buffer + 1),true);
+	return pty->Master_Write((char*)(buffer + 1),size);
 }
 
 PTY::PTY(){
@@ -74,7 +74,6 @@ PTY::PTY(){
 	masterFile.open = nullptr;
 	masterFile.close = nullptr;
 	masterFile.inode = ptys->get_length();
-	Log::Warning("test");
 
 	fs::RegisterDevice(&slaveFile);
 
@@ -86,6 +85,10 @@ size_t PTY::Master_Read(char* buffer, size_t count){
 }
 
 size_t PTY::Slave_Read(char* buffer, size_t count){
+	while(slave.bufferPos < count) ;//Log::Write("waiting");
+
+	Log::Info("reading from slave");
+
 	return slave.Read(buffer, count);
 }
 

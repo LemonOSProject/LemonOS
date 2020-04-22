@@ -181,7 +181,41 @@ void InitializeFonts(){
         return;
 	}
 
-    //free(fontBuffer);
+    fontState = 1;
+}
+
+void LoadFont(char* path){
+    fontState = -1;
+
+	if(FT_Init_FreeType(&library)){
+		syscall(0,(uintptr_t)"Error initializing freetype",0,0,0,0);
+        return;
+	}
+
+	FILE* fontFile = fopen(path, "r");
+    
+	if(!fontFile){
+		syscall(0,(uintptr_t)"Error loading custom font",0,0,0,0);
+        return;
+	}
+
+	fseek(fontFile, 0, SEEK_END);
+	size_t fontSize = ftell(fontFile);
+	fseek(fontFile, 0, SEEK_SET);
+	uint8_t* fontBuffer = (uint8_t*)malloc(fontSize);
+	fread(fontBuffer, fontSize, 1, fontFile);
+
+    fclose(fontFile);
+
+	if(int err = FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &mainFont)){
+		syscall(0,(uintptr_t)"Error loading custom font from memory",err,0,0,0);
+        return;
+	}
+
+	if(int err = FT_Set_Pixel_Sizes(mainFont, 0, 12)){
+		syscall(0,(uintptr_t)"Error Setting Font Size", err, 0, 0, 0);
+        return;
+	}
 
     fontState = 1;
 }
