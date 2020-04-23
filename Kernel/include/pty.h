@@ -11,7 +11,12 @@ public:
     fs_node_t masterFile;
     fs_node_t slaveFile;
 
+    bool canonical = true;
+    bool echo = true;
+
     PTY();
+    
+    void UpdateLineCount();
 
     size_t Master_Read(char* buffer, size_t count);
     size_t Slave_Read(char* buffer, size_t count);

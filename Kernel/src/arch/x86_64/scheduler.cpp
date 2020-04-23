@@ -37,7 +37,6 @@ namespace Scheduler{
 
     uint64_t nextPID = 0;
 
-    //List<handle_index_t>* handles;
     handle_t handles[INITIAL_HANDLE_TABLE_SIZE];
     uint32_t handleCount = 1; // We don't want null handles
     uint32_t handleTableSize = INITIAL_HANDLE_TABLE_SIZE;
@@ -196,6 +195,8 @@ namespace Scheduler{
         ((fx_state_t*)proc->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
         ((fx_state_t*)proc->fxState)->mxcsrMask = 0xffbf;
         ((fx_state_t*)proc->fxState)->fcw = 0x33f; // Default FPU Control Word State
+
+        strcpy(proc->workingDir, "/"); // set root as default working dir
 
         return proc;
     }

@@ -5,6 +5,7 @@
 
 #include <list.h>
 
+#define PATH_MAX 4096
 
 #define FS_NODE_FILE 0x1
 #define FS_NODE_DIRECTORY 0x2
@@ -60,6 +61,7 @@ namespace fs{
     fs_node_t* GetRoot();
     void RegisterDevice(fs_node_t* device);
 
+    fs_node_t* ResolvePath(char* path, char* workingDir = nullptr);
 
     size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
     size_t Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);

@@ -46,8 +46,9 @@
 #define SYS_SET_FS_BASE 34
 #define SYS_MMAP 35
 #define SYS_GRANT_PTY 36
+#define SYS_GET_CWD 37
 
-#define NUM_SYSCALLS 37
+#define NUM_SYSCALLS 38
 
 #define EXEC_FLAG_DUP_FD 1
 
@@ -65,29 +66,10 @@ int SysExec(regs64_t* r){
 	char** argv = (char**)r->rdx;
 	uint64_t flags = r->rsi;
 	
-	fs_node_t* root = fs::GetRoot();
-	fs_node_t* current_node = root;
-	
 	Log::Info("Executing: ");
 	Log::Write(filepath);
 
-	char* file = strtok(filepath,"/");
-
-	while(file != NULL){ // Iterate through the directories to find the file
-		fs_node_t* node = current_node->findDir(current_node,file);
-		if(!node) {
-			Log::Warning(filepath);
-			Log::Write(" not found!");
-			return 1;
-		}
-		if(node->flags & FS_NODE_DIRECTORY){
-			current_node = node;
-			file = strtok(NULL, "/");
-			continue;
-		}
-		current_node = node;
-		break;
-	}
+	fs_node_t* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
 
 	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
 	uint64_t a = current_node->read(current_node, 0, current_node->size, buffer);
@@ -103,6 +85,8 @@ int SysExec(regs64_t* r){
 		proc->fileDescriptors.replace_at(1, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1));
 		proc->fileDescriptors.replace_at(2, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2));
 	}
+
+	strncpy(proc->workingDir, Scheduler::GetCurrentProcess()->workingDir, PATH_MAX);
 
 	return 0;
 }
@@ -159,21 +143,14 @@ int SysOpen(regs64_t* r){
 		return 0;
 	}
 
-	char* file = strtok(filepath,"/");
-	fs_node_t* node;
-	while(file != NULL){
-		node = current_node->findDir(current_node,file);
-		if(!node) {
-			*((uint32_t*)r->rcx) = 0;
-			return 1;
-		}
-		if(node->flags & FS_NODE_DIRECTORY){
-			current_node = node;
-			file = strtok(NULL, "/");
-			continue;
-		}
-		break;
+	fs_node_t* node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
+
+	if(!node){
+		Log::Warning("Failed to open file!");
+		*((uint32_t*)r->rcx) = 0;
+		return 1;
 	}
+
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(node);
 	fs::Open(node, 0);
@@ -212,6 +189,13 @@ int SysUnlink(regs64_t* r){
 }
 
 int SysChdir(regs64_t* r){
+	if(r->rbx){
+		if(((char*)r->rbx)[0] != '/') {
+			strcpy(Scheduler::GetCurrentProcess()->workingDir + strlen(Scheduler::GetCurrentProcess()->workingDir), (char*)r->rbx);
+		} else {
+			strncpy(Scheduler::GetCurrentProcess()->workingDir, (char*)r->rbx, PATH_MAX);
+		}
+	} else Log::Warning("chdir: Invalid path string");
 	return 0;
 }
 
@@ -577,6 +561,20 @@ int SysGrantPTY(regs64_t* r){
 	return 0;
 }
 
+int SysGetCWD(regs64_t* r){
+	char* buf = (char*)r->rbx;
+	size_t sz = r->rcx;
+	int* ret = (int*)r->rdx;
+
+	char* workingDir = Scheduler::GetCurrentProcess()->workingDir;
+	if(strlen(workingDir) > sz) {
+		*ret = 1;
+	} else {
+		strcpy(buf, workingDir);
+		*ret = 0;
+	}
+}
+
 syscall_t syscalls[]{
 	/*nullptr*/SysDebug,
 	SysExit,					// 1
@@ -613,8 +611,9 @@ syscall_t syscalls[]{
 	SysUName,
 	SysReadDir,
 	SysSetFsBase,
-	SysMmap,
+	SysMmap,					// 35
 	SysGrantPTY,
+	SysGetCWD,
 };
 
 namespace Scheduler{extern bool schedulerLock;};

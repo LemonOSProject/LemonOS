@@ -91,6 +91,7 @@ asm_files_x86_64 = [
     'src/arch/x86_64/scheduler.asm',
     'src/arch/x86_64/sse2.asm',
     'src/arch/x86_64/tss.asm',
+    'src/arch/x86_64/lock.asm',
 ]
 
 kernel_link_args = [

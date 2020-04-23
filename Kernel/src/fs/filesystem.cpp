@@ -59,6 +59,42 @@ namespace fs{
         return &root;
     }
 
+	fs_node_t* ResolvePath(char* path, char* workingDir){
+		char* tempPath;
+		if(workingDir && path[0] != '/'){
+			tempPath = (char*)kmalloc(strlen(path) + strlen(workingDir) + 2);
+			strcpy(tempPath, workingDir);
+			strcpy(tempPath + strlen(tempPath), "/");
+			strcpy(tempPath + strlen(tempPath), path);
+		} else {
+			tempPath = (char*)kmalloc(strlen(path) + 1);
+			strcpy(tempPath, path);
+		}
+
+		fs_node_t* root = fs::GetRoot();
+		fs_node_t* current_node = root;
+
+		char* file = strtok(tempPath,"/");
+
+		while(file != NULL){ // Iterate through the directories to find the file
+			fs_node_t* node = current_node->findDir(current_node,file);
+			if(!node) {
+				Log::Warning(tempPath);
+				Log::Write(" not found!");
+				return nullptr;
+			}
+			if(node->flags & FS_NODE_DIRECTORY){
+				current_node = node;
+				file = strtok(NULL, "/");
+				continue;
+			}
+			current_node = node;
+			break;
+		}
+
+		return current_node;
+	}
+
 	void RegisterDevice(fs_node_t* device){
 		Log::Info("Device Registered: ");
 		Log::Write(device->name);

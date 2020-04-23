@@ -114,13 +114,14 @@ int main(char argc, char** argv){
 			if(msg.msg == WINDOW_EVENT_KEY){
 				if(msg.data < 128){
 					char key = (char)msg.data;
-					char b[] = {key, key,key, 0};
+					char b[] = {key, key, 0};
 					lemon_write(masterPTYFd, b, 1);
-					PrintChar(key);
+					//PrintChar(key);
 				}
 			} else if (msg.msg == WINDOW_EVENT_CLOSE){
 				DestroyWindow(window);
-				return 0;
+				free(_buf);
+				exit(0);
 			}
 		}
 

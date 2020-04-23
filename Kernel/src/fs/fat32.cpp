@@ -202,14 +202,17 @@ namespace fs::FAT32{
 
         fat_lfn_entry_t** lfnEntries;
 
-        for(int i = 1; i < clusterCount * clusterSizeBytes; i++){
+        for(int i = 0; i < clusterCount * clusterSizeBytes; i++){
             if(dirEntries[i].filename[0] == 0) return nullptr; // No Directory Entry at index
             else if (dirEntries[i].filename[0] == 0xE5) {
                 lfnCount = 0;
                 continue; // Unused Entry
             }
             else if (dirEntries[i].attributes == 0x0F) lfnCount++; // Long File Name Entry
-            else {
+            else if (dirEntries[i].attributes & 0x08 /*Volume ID*/){
+                lfnCount = 0;
+                continue;
+            } else {
                 if(entryCount == index){
                     dirEntry = &dirEntries[i];
                     dirEntryIndex = i;
@@ -236,8 +239,11 @@ namespace fs::FAT32{
             GetLongFilename(dirent->name, lfnEntries, lfnCount);
         } else {
             strncpy(dirent->name, (char*)dirEntry->filename, 8);
-            strncpy(dirent->name + 8, ".", 1);
-            strncpy(dirent->name + 9, (char*)dirEntry->ext, 3);
+            while(strchr(dirent->name, ' ')) *strchr(dirent->name, ' ') = 0; // Remove Spaces
+            if(strchr((char*)dirEntry->ext, ' ') != (char*)dirEntry->ext){
+                strncpy(dirent->name + strlen(dirent->name), ".", 1);
+                strncpy(dirent->name + strlen(dirent->name), (char*)dirEntry->ext, 3);
+            }
         }
 
         if(dirEntry->attributes & FAT_ATTR_DIRECTORY) dirent->type = FS_NODE_DIRECTORY;
@@ -263,14 +269,17 @@ namespace fs::FAT32{
         fat_lfn_entry_t** lfnEntries;
         fs_node_t* _node = nullptr;
 
-        for(int i = 1; i < clusterCount * clusterSizeBytes; i++){
+        for(int i = 0; i < clusterCount * clusterSizeBytes; i++){
             if(dirEntries[i].filename[0] == 0) return nullptr; // No Directory Entry at index
             else if (dirEntries[i].filename[0] == 0xE5) {
                 lfnCount = 0;
                 continue; // Unused Entry
             }
             else if (dirEntries[i].attributes == 0x0F) lfnCount++; // Long File Name Entry
-            else {
+            else if (dirEntries[i].attributes & 0x08 /*Volume ID*/){
+                lfnCount = 0;
+                continue;
+            } else {
                 char* _name = (char*)kmalloc(128);
                 if(lfnCount){
                     lfnEntries = (fat_lfn_entry_t**)kmalloc(sizeof(fat_lfn_entry_t*) * lfnCount);
@@ -285,9 +294,12 @@ namespace fs::FAT32{
 
                     kfree(lfnEntries);
                 } else {
-                    strncpy(_name, (char*)dirEntries[i].filename,8);
-                    strncpy(_name + 8, ".", 1);
-                    strncpy(_name + 9, (char*)dirEntries[i].ext, 3);
+                    strncpy(_name, (char*)dirEntries[i].filename, 8);
+                    while(strchr(_name, ' ')) *strchr(_name, ' ') = 0; // Remove Spaces
+                    if(strchr((char*)dirEntries[i].ext, ' ') != (char*)dirEntries[i].ext){
+                        strncpy(_name + strlen(_name), ".", 1);
+                        strncpy(_name + strlen(_name), (char*)dirEntries[i].ext, 3);
+                    }
                 }
 
                 Log::Warning(_name);

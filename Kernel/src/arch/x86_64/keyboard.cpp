@@ -54,7 +54,6 @@ namespace Keyboard{
     // Interrupt handler
     void Handler(regs64_t* r)
     {
-        asm("cli");
         // Read from the keyboard's data buffer
         key = inportb(0x60);
 		
@@ -66,10 +65,9 @@ namespace Keyboard{
             wmKeyMessage.recieverPID = 1; // Should be the Window Manager
             wmKeyMessage.msg = 0x1BEEF; // Desktop Event - Key Press
             wmKeyMessage.data = key; // The key that was pressed
+			wmKeyMessage.data2 = caps;
             Scheduler::SendMessage(wmKeyMessage);
         }
-
-        asm("sti");
     }
 
     // Register interrupt handler
