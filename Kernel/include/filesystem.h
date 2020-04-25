@@ -56,9 +56,9 @@ typedef struct fs_node{
     char name[128]; // Filename
     uint32_t flags; // Flags
     uint32_t pmask; // Permission mask
-    uint32_t uid; // User id
-    uint32_t inode; // Inode number
-    uint32_t size; // Node size
+    uid_t uid; // User id
+    ino_t inode; // Inode number
+    size_t size; // Node size
 
     read_type_t read; // Read callback
     write_type_t write; // Write callback
@@ -69,8 +69,6 @@ typedef struct fs_node{
 
     void* vol; // Some Fs Drivers may use this
 
-    off_t offset = 0;
-
     fs_node* ptr;
 } fs_node_t;
 
@@ -79,6 +77,12 @@ typedef struct fs_dirent {
 	char name[128]; // Filename
     uint32_t type;
 } fs_dirent_t;
+
+typedef struct fs_fd{
+    fs_node_t* node;
+    off_t pos;
+    mode_t mode;
+} fs_fd_t;
 
 namespace fs{
     class FsVolume;
@@ -93,8 +97,14 @@ namespace fs{
 
     size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
     size_t Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
-    void Open(fs_node_t* node, uint32_t flags);
+    fs_fd_t* Open(fs_node_t* node, uint32_t flags = 0);
     void Close(fs_node_t* node);
+    void Close(fs_fd_t* handle);
     fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index);
     fs_node_t* FindDir(fs_node_t* node, char* name);
+    
+    size_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer);
+    size_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer);
+    fs_dirent_t* ReadDir(fs_fd_t* handle, uint32_t index);
+    fs_node_t* FindDir(fs_fd_t* handle, char* name);
 }

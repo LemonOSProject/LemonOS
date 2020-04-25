@@ -186,7 +186,7 @@ int main(){
 	path.add_back("/initrd");
 
 	for(;;) {
-		printf("$ Lemon %s>", currentDir);
+		printf("\n$ Lemon %s>", currentDir);
 
 		ReadLine();
 		ParseLine();

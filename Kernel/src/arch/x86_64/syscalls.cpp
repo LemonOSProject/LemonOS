@@ -113,7 +113,7 @@ int SysExec(regs64_t* r){
 	if(flags & EXEC_CHILD){
 		Scheduler::GetCurrentProcess()->children.add_back(proc);
 
-		proc->fileDescriptors.replace_at(0, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));;
+		proc->fileDescriptors.replace_at(0, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));
 		proc->fileDescriptors.replace_at(1, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1));
 		proc->fileDescriptors.replace_at(2, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2));
 	}
@@ -126,15 +126,15 @@ int SysExec(regs64_t* r){
 }
 
 int SysRead(regs64_t* r){
-	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx);
-	if(!node){ 
+	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx);
+	if(!handle){ 
 		Log::Warning("read failed! file descriptor: "); Log::Write(r->rbx, false); 
 		return 1; 
 	}
 	uint8_t* buffer = (uint8_t*)r->rcx;
 	if(!buffer) { return 1; }
 	uint64_t count = r->rdx;
-	int ret = node->read(node, node->offset, count, buffer);
+	int ret = fs::Read(handle, count, buffer);
 	*(int*)r->rsi = ret;
 	return 0;
 }
@@ -144,8 +144,8 @@ int SysWrite(regs64_t* r){
 		*((int*)r->rsi) = -1; // Return -1
 		return -1;
 	}
-	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
-	if(!node){
+	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
+	if(!handle){
 		Log::Warning("Invalid File Descriptor: ");
 		Log::Write(r->rbx);
 		return 2;
@@ -153,7 +153,7 @@ int SysWrite(regs64_t* r){
 
 	if(!(r->rcx && r->rdx)) return 1;
 
-	int ret = fs::Write(node, 0, r->rdx, (uint8_t*)r->rcx);
+	int ret = fs::Write(handle, r->rdx, (uint8_t*)r->rcx);
 
 	if(r->rsi){
 		*((int*)r->rsi) = ret;
@@ -172,7 +172,7 @@ int SysOpen(regs64_t* r){
 	uint32_t fd;
 	if(strcmp(filepath,"/") == 0){
 		fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
-		Scheduler::GetCurrentProcess()->fileDescriptors.add_back(root);
+		Scheduler::GetCurrentProcess()->fileDescriptors.add_back(fs::Open(root, 0));
 		*((uint32_t*)r->rcx) = fd;
 		return 0;
 	}
@@ -186,7 +186,7 @@ int SysOpen(regs64_t* r){
 	}
 
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
-	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(node);
+	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(fs::Open(node, 0));
 	fs::Open(node, 0);
 
 	Log::Write(fd);
@@ -198,9 +198,9 @@ int SysOpen(regs64_t* r){
 
 int SysClose(regs64_t* r){
 	int fd = r->rbx;
-	fs_node_t* node;
-	if(node = Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
-		fs::Close(node);
+	fs_fd_t* handle;
+	if(handle = Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
+		fs::Close(handle);
 	}
 	Scheduler::GetCurrentProcess()->fileDescriptors.replace_at(fd, NULL);
 	return 0;
@@ -284,7 +284,7 @@ int SysStat(regs64_t* r){
 	int fd = r->rcx;
 	int* ret = (int*)r->rdx;
 
-	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(fd);
+	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(fd)->node;
 	if(!node){
 		Log::Warning("sys_stat: Invalid File Descriptor, ");
 		Log::Write(fd);
@@ -332,20 +332,20 @@ int SysLSeek(regs64_t* r){
 
 	switch(r->rdx){
 	case 0: // SEEK_SET
-		*ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->offset = r->rcx;
+		*ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->pos = r->rcx;
 		return 0;
 		break;
 	case 1: // SEEK_CUR
-		*ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->offset;
+		*ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->pos;
 		return 0;
 		break;
 	case 2: // SEEK_END
-		*ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->offset = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->size;
+		*ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->pos = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->size;
 		return 0;
 		break;
 	default:
 		Log::Info("Invalid seek: ");
-		Log::Write(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->name);
+		Log::Write(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->name);
 		Log::Write(", ");
 		Log::Write(r->rdx);
 		return 3; // Invalid seek mode
@@ -561,7 +561,7 @@ int SysReadDir(regs64_t* r){
 
 	unsigned int count = r->rdx;
 
-	if(!(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->flags & FS_NODE_DIRECTORY)){
+	if(!(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->flags & FS_NODE_DIRECTORY)){
 		if(r->rsi) *((uint64_t*)r->rsi) = 0;
 		return 2;
 	}
@@ -620,11 +620,11 @@ int SysGrantPTY(regs64_t* r){
 
 	*((int*)r->rbx) = currentProcess->fileDescriptors.get_length();
 	
-	currentProcess->fileDescriptors.replace_at(0, &pty->slaveFile); // Stdin
-	currentProcess->fileDescriptors.replace_at(1, &pty->slaveFile); // Stdout
-	currentProcess->fileDescriptors.replace_at(2, &pty->slaveFile); // Stderr
+	currentProcess->fileDescriptors.replace_at(0, fs::Open(&pty->slaveFile)); // Stdin
+	currentProcess->fileDescriptors.replace_at(1, fs::Open(&pty->slaveFile)); // Stdout
+	currentProcess->fileDescriptors.replace_at(2, fs::Open(&pty->slaveFile)); // Stderr
 
-	currentProcess->fileDescriptors.add_back(&pty->masterFile);
+	currentProcess->fileDescriptors.add_back(fs::Open(&pty->masterFile));
 
 	return 0;
 }
@@ -662,9 +662,13 @@ int SysNanoSleep(regs64_t* r){
 }
 
 int SysPRead(regs64_t* r){
-	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx);
-	if(!node){ 
-		Log::Warning("read failed! file descriptor: "); Log::Write(r->rbx, false); 
+	if(r->rbx > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+		*((int*)r->rsi) = -1; // Return -1
+		return -1;
+	}
+	fs_node_t* node;
+	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx)->node)){ 
+		Log::Warning("sys_pread: Invalid file descriptor: "); Log::Write(r->rbx, false); 
 		return 1; 
 	}
 	uint8_t* buffer = (uint8_t*)r->rcx;
@@ -681,11 +685,10 @@ int SysPWrite(regs64_t* r){
 		*((int*)r->rsi) = -1; // Return -1
 		return -1;
 	}
-	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
-	if(!node){
-		Log::Warning("Invalid File Descriptor: ");
-		Log::Write(r->rbx);
-		return 2;
+	fs_node_t* node;
+	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx)->node)){ 
+		Log::Warning("sys_pwrite: Invalid file descriptor: "); Log::Write(r->rbx, false); 
+		return 1; 
 	}
 
 	if(!(r->rcx)) {
@@ -754,17 +757,10 @@ void SyscallHandler(regs64_t* regs) {
 	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
 		return;
 		
-
-	//Log::Info("syscall:");
-	//Log::Write(regs->rax);
-	//Log::Write(", proc:");
-	//Log::Write(Scheduler::GetCurrentProcess()->pid);
 	asm("sti");
 
 	int ret = syscalls[regs->rax](regs); // Call syscall
 	regs->rax = ret;
-	
-	//Log::Info("syscall exit");
 }
 
 void InitializeSyscalls() {

@@ -40,7 +40,7 @@ void OnPaint(surface_t* surface){
 	int i = 0;
 	
 	for(int i = 0; i < 25 && i <= currentLine; i++){
-		int _currentLine = (currentLine < 25) ? 0 : currentLine - 25;
+		int _currentLine = (currentLine < 25) ? 0 : (currentLine - 24);
 		for(int j = 0; j < 80; j++){
 			DrawChar(buffer[_currentLine + i][j], j * 8, i * 12, 255, 255, 255, surface);
 		}

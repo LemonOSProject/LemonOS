@@ -54,7 +54,7 @@ typedef struct process {
 
 	void* fxState; // State of the extended registers
 
-	List<fs_node_t*> fileDescriptors;
+	List<fs_fd_t*> fileDescriptors;
 	List<message_t> messageQueue;
 } process_t;
 

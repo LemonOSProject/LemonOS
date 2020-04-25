@@ -371,7 +371,7 @@ int main(){
 					if(active && (msg.data & 0x7F) < 128 /*Values above 128 would exceed the length of the keymap*/){
 						ipc_message_t keyMsg;
 
-						char key = keymap_us[msg.data & 0x7F];
+						int key = keymap_us[msg.data & 0x7F];
 						if(msg.data2 /*caps*/ && isalpha(key)) key = toupper(key);
 						if((msg.data >> 7) && (msg.data & 0x7F)) {
 							keyMsg.msg = WINDOW_EVENT_KEYRELEASED;

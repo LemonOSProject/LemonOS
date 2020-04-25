@@ -156,9 +156,9 @@ namespace Scheduler{
 
         // Reserve 3 file descriptors for stdin, out and err
         fs_node_t* nullDev = fs::ResolvePath("/dev/null");
-        proc->fileDescriptors.add_back(nullDev);  //(NULL);
-        proc->fileDescriptors.add_back(nullDev);  //(NULL);
-        proc->fileDescriptors.add_back(nullDev);  //(NULL);
+        proc->fileDescriptors.add_back(fs::Open(nullDev));  //(NULL);
+        proc->fileDescriptors.add_back(fs::Open(nullDev));  //(NULL);
+        proc->fileDescriptors.add_back(fs::Open(nullDev));  //(NULL);
 
         proc->pid = nextPID++; // Set Process ID to the next availiable
         proc->priority = 1;

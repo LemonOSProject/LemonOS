@@ -1,6 +1,6 @@
 [binaries]
 c = 'x86_64-lemon-gcc'
-cpp = 'x86_64-lemon-gcc'
+cpp = 'x86_64-lemon-g++'
 ar = 'x86_64-lemon-ar'
 strip = 'x86_64-lemon-strip'
 ld = 'ld'

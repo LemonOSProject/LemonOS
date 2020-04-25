@@ -30,6 +30,10 @@ textedit_src = [
     'TextEdit/main.cpp',
 ]
 
+sdltest_src = [
+    'SDLTest/main.cpp',
+]
+
 application_cpp_args = [
     '-fno-exceptions',
 ]
@@ -41,3 +45,4 @@ executable('shell.lef', shell_src, cpp_args : application_cpp_args, link_args : 
 executable('snake.lef', snake_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype'], install : true, install_dir : meson.current_source_dir() + '/../InitrdWriter/Contents')
 executable('terminal.lef', terminal_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype'], install : true, install_dir : meson.current_source_dir() + '/../InitrdWriter/Contents')
 executable('textedit.lef', textedit_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype'], install : true, install_dir : meson.current_source_dir() + '/../InitrdWriter/Contents')
+executable('sdltest.lef', sdltest_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lSDL2'], install : true, install_dir : meson.current_source_dir() + '/../InitrdWriter/Contents')

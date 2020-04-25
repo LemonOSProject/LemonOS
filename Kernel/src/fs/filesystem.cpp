@@ -167,18 +167,35 @@ namespace fs{
         else return 0;
     }
 
-    void Open(fs_node_t* node, uint32_t flags){
+    fs_fd_t* Open(fs_node_t* node, uint32_t flags){
         if(node->open){
-            node->offset = 0;
-            return node->open(node,flags);
+            node->open(node,flags);
         }
+
+		fs_fd_t* fd = new fs_fd_t;
+		Log::Info("Opening Node: ");
+		Log::Write(node->name);
+		fd->pos = 0;
+		fd->node = node;
+		fd->mode = flags;
+
+		return fd;
     }
 
     void Close(fs_node_t* node){
         if(node->close){
-            node->offset = 0;
             return node->close(node);
         }
+    }
+
+    void Close(fs_fd_t* fd){
+		if(!fd) return;
+
+        if(fd->node->close){
+            fd->node->close(fd->node);
+        }
+
+		delete fd;
     }
 
     fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index){
@@ -190,6 +207,35 @@ namespace fs{
     fs_node_t* FindDir(fs_node_t* node, char* name){
         if(node->findDir)
             return node->findDir(node,name);
+        else return 0;
+    }
+	
+    size_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer){
+        if(handle->node){
+            off_t ret = Read(handle->node,handle->pos,size,buffer);
+			handle->pos += ret;
+			return ret;
+		}
+        else return 0;
+    }
+
+    size_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer){
+        if(handle->node){
+            off_t ret = Write(handle->node,handle->pos,size,buffer);
+			handle->pos += ret;
+			return ret;
+		} else return 0;
+    }
+
+    fs_dirent_t* ReadDir(fs_fd_t* handle, uint32_t index){
+        if(handle->node)
+            return handle->node->readDir(handle->node,index);
+        else return 0;
+    }
+
+    fs_node_t* FindDir(fs_fd_t* handle, char* name){
+        if(handle->node)
+            return handle->node->findDir(handle->node,name);
         else return 0;
     }
 }
