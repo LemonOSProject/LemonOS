@@ -154,8 +154,11 @@ void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t
         /*for(int j = 0; j < width && (x + j) < surface->width; j++){
             buffer[yOffset + (j + x)] = colour_i;
         }*/
+
+        int _width = ((x + width) < surface->width) ? width : (surface->width - x);
           
-        memset32_optimized((void*)(buffer + (yOffset + x)), colour_i, ((x + width) < surface->width) ? width : (surface->width - x));
+        if(_width > 0)
+            memset32_optimized((void*)(buffer + (yOffset + x)), colour_i, _width);
     }
 }
 

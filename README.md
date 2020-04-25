@@ -8,6 +8,7 @@ The Lemon Operating System
 - ATA Driver
 - GnuBoy Port (not incl)
 - Dynamic Linking
+- Pseudoterminals and Terminal Emulator
 
 ### Work In Progess
 - FAT32 Filesystem support
@@ -22,9 +23,9 @@ The Lemon Operating System
 ### Build Requirements
 - UNIX-like system (e.g. Linux or Windows under WSL)
 - GNU binutils, make and GCC (yet to provide patch files)
-- meson and ninja
+- meson (see crossfile in Scripts) and ninja
 - Freetype
-- [mlibc](https://github.com/managarm/mlibc) C Library (crossfile provided)
+- [mlibc](https://github.com/managarm/mlibc) C Library
 
 ## Repo Structure
 

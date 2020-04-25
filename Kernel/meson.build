@@ -2,6 +2,7 @@ project('Lemon Kernel')
 
 kernel_include_dirs = [
     include_directories('include'),
+    include_directories('subprojects/lai/include'),
     include_directories('include/arch/x86_64'),
 ]
 
@@ -69,7 +70,6 @@ cpp_files_x86_64 = [
     'src/arch/x86_64/hal.cpp',
     'src/arch/x86_64/idt.cpp',
     'src/arch/x86_64/keyboard.cpp',
-    'src/arch/x86_64/lai.cpp',
     'src/arch/x86_64/mouse.cpp',
     'src/arch/x86_64/paging.cpp',
     'src/arch/x86_64/pci.cpp',
@@ -94,6 +94,8 @@ asm_files_x86_64 = [
     'src/arch/x86_64/lock.asm',
 ]
 
+lai = subproject('lai')
+
 kernel_link_args = [
     '-m64',
     '-T', meson.current_source_dir() + '/linkscript-x86_64.ld'
@@ -101,4 +103,8 @@ kernel_link_args = [
 
 kernel_link_args += kernel_cpp_args
 
-executable('kernel.sys', [asmg.process(asm_files_x86_64), cpp_files, cpp_files_x86_64], objects : 'initrd.o', include_directories : kernel_include_dirs, cpp_args : kernel_cpp_args, link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')
+executable('kernel.sys',
+    [asmg.process(asm_files_x86_64), cpp_files, cpp_files_x86_64, lai.get_variable('sources')], objects : 'initrd.o',
+    #dependencies : lai.get_variable('dependency'),
+    include_directories : [kernel_include_dirs],
+    cpp_args : kernel_cpp_args, link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')

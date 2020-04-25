@@ -20,11 +20,24 @@ struct RSDTHeader {
   uint32_t oemRevision;
   uint32_t creatorID;
   uint32_t creatorRevision;
-};
+  uint32_t sdtPointers[128];
+} __attribute__ ((packed));
+
+struct SDTHeader {
+  char signature[4];
+  uint32_t length;
+  uint8_t revision;
+  uint8_t checksum;
+  char oemID[6];
+  char oemTableID[8];
+  uint32_t oemRevision;
+  uint32_t creatorID;
+  uint32_t creatorRevision;
+} __attribute__ ((packed));
 
 namespace ACPI{
 	extern RSDPDescriptor desc;
-	extern RSDTHeader header;
+	extern RSDTHeader rsdtHeader;
 
 	void Init();
   void Reset();

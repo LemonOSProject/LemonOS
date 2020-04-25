@@ -13,6 +13,7 @@
 #include <tss.h>
 #include <filesystem.h>
 #include <abi.h>
+#include <lock.h>
 
 #define INITIAL_HANDLE_TABLE_SIZE 0xFFFF
 
@@ -29,7 +30,7 @@ extern "C"
 void IdleProc();
 
 namespace Scheduler{
-
+    int lock;
     bool schedulerLock = true;
 
     process_t* processQueueStart = 0;
@@ -133,11 +134,13 @@ namespace Scheduler{
     void RemoveProcessFromQueue(process_t* proc){
         process_t* _proc = proc->next;
         process_t* nextProc = proc->next;
+
         while(_proc->next && _proc != proc){
             if(_proc->next == proc){
                 _proc->next = nextProc;
                 break;
             }
+
             _proc = _proc->next;
         }
     }
@@ -152,9 +155,10 @@ namespace Scheduler{
         proc->fileDescriptors.clear();
 
         // Reserve 3 file descriptors for stdin, out and err
-        proc->fileDescriptors.add_back(NULL);
-        proc->fileDescriptors.add_back(NULL);
-        proc->fileDescriptors.add_back(NULL);
+        fs_node_t* nullDev = fs::ResolvePath("/dev/null");
+        proc->fileDescriptors.add_back(nullDev);  //(NULL);
+        proc->fileDescriptors.add_back(nullDev);  //(NULL);
+        proc->fileDescriptors.add_back(nullDev);  //(NULL);
 
         proc->pid = nextPID++; // Set Process ID to the next availiable
         proc->priority = 1;
@@ -202,6 +206,7 @@ namespace Scheduler{
     }
 
     process_t* CreateProcess(void* entry) {
+        acquireLock(&lock);
 
         bool schedulerState = schedulerLock; // Get current value for scheduker lock
         schedulerLock = true; // Lock Scheduler
@@ -223,15 +228,18 @@ namespace Scheduler{
 
         schedulerLock = schedulerState; // Restore previous lock state
 
+        releaseLock(&lock);
+
         return proc;
     }
 
-    process_t* CreateELFProcess(void* elf) {
-
+    process_t* CreateELFProcess(void* elf, int argc, char** argv) {
         if(!VerifyELF(elf)) return nullptr;
 
         bool schedulerState = schedulerLock; // Get current value for scheduker lock
         schedulerLock = true; // Lock Scheduler
+        
+        acquireLock(&lock);
 
         // Create process structure
         process_t* proc = InitializeProcessStructure();
@@ -283,6 +291,7 @@ namespace Scheduler{
             
             if(!VerifyELF(linkerElf)){
                 Log::Warning("Invalid Dynamic Linker ELF");
+                releaseLock(&lock);
                 return nullptr;
             }
 
@@ -302,6 +311,18 @@ namespace Scheduler{
 
         // ABI Stuff
         uint64_t* stack = (uint64_t*)thread->registers.rsp;
+
+        char** tempArgv = (char**)kmalloc(argc * sizeof(char*));
+
+        char* stackStr = (char*)stack;
+        for(int i = 0; i < argc; i++){
+            stackStr -= strlen(argv[i]) + 1;
+            tempArgv[i] = stackStr;
+            strcpy((char*)stackStr, argv[i]);
+        }
+
+        stackStr -= (uintptr_t)stackStr & 0xf; // align the stack
+        stack = (uint64_t*)stackStr;
 
         *stack--;
         *stack = 0; // AT_NULL
@@ -326,10 +347,13 @@ namespace Scheduler{
         stack--;
         *stack = 0; // null
 
-        // argv will be here
+        stack -= argc;
+        for(int i = 0; i < argc; i++){
+            *(stack + i) = (uint64_t)tempArgv[i];
+        }
 
         stack--;
-        *stack = 0; // argc
+        *stack = argc; // argc
 
         thread->registers.rsp = (uintptr_t) stack;
         thread->registers.rbp = (uintptr_t) stack;
@@ -344,10 +368,18 @@ namespace Scheduler{
 
         schedulerLock = schedulerState; // Restore previous lock state
 
+        releaseLock(&lock);
+
         return proc;
     }
 
     void EndProcess(process_t* process){
+        for(int i = 0; i < process->children.get_length(); i++){
+            EndProcess(process->children.get_at(i));
+        }
+        asm("cli");
+        acquireLock(&lock);
+
         RemoveProcessFromQueue(process);
 
         /*for(int i = 0; i < process->fileDescriptors.get_length(); i++){
@@ -373,10 +405,13 @@ namespace Scheduler{
             asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");
 
             TSS::SetKernelStack((uintptr_t)currentProcess->threads[0].kernelStack);
+
+            releaseLock(&lock);
             
             TaskSwitch(&currentProcess->threads[0].registers);
         }
         kfree(process);
+        releaseLock(&lock);
     }
 
     void Tick(regs64_t* r){
@@ -394,8 +429,10 @@ namespace Scheduler{
 
         currentProcess = currentProcess->next;
 
+        if(!currentProcess) currentProcess = processQueueStart;
+
         processPML4 = currentProcess->addressSpace->pml4Phys;
-        
+
         asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)currentProcess->fxState) : "memory");
 
         TSS::SetKernelStack((uintptr_t)currentProcess->threads[0].kernelStack);

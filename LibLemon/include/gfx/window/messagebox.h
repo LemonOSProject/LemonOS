@@ -8,4 +8,4 @@
 #define MESSAGEBOX_RETURN_CANCELEXIT 1
 #define MESSAGEBOX_RETURN_RETRY 2
 
-int MessageBox(char* message, int flags);
+int MessageBox(const char* message, int flags);

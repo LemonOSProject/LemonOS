@@ -3,7 +3,7 @@
 #include <gfx/window/widgets.h>
 #include <gfx/window/messagebox.h>
 
-int MessageBox(char* messageString, int flags){
+int MessageBox(const char* messageString, int flags){
 	win_info_t msgBoxWindowInfo;
 	msgBoxWindowInfo.x = 50;
 	msgBoxWindowInfo.y = 50;

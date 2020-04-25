@@ -55,13 +55,6 @@ namespace HAL{
         Timer::Initialize(1500);
         Log::Write("OK");
 
-        Log::Info("Initializing PCI...");
-        PCI::Init();
-        Log::Write("OK");
-
-        Log::Info("Initializing ACPI...");
-        //ACPI::Init();
-        Log::Write("OK");
     } 
 
     void InitVideo(){
@@ -84,6 +77,13 @@ namespace HAL{
     }
 
     void InitExtra(){
+        Log::Info("Initializing PCI...");
+        PCI::Init();
+        Log::Write("OK");
+
+        Log::Info("Initializing ACPI...");
+        ACPI::Init();
+        Log::Write("OK");
     }
 
     void Init(multiboot_info_t mb_info){

@@ -1,0 +1,4 @@
+[wrap-git]
+directory = lai
+url = https://github.com/qword-os/lai.git
+revision = master

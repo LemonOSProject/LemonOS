@@ -4,15 +4,18 @@
 #include <serial.h>
 #include <string.h>
 #include <stddef.h>
+#include <lock.h>
 	
+int liballocLock;
+
 extern "C" {
 int liballoc_lock() {
-	asm("cli");
+	acquireLock(&liballocLock);
 	return 0;
 }
 
 int liballoc_unlock() {
-	asm("sti");
+	releaseLock(&liballocLock);
 	return 0;
 }
 

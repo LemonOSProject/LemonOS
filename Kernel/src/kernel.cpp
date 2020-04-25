@@ -44,7 +44,8 @@ void IdleProcess(){
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 	asm("cli");
 
-	Scheduler::CreateELFProcess(initElf);
+	process_t* initProc = Scheduler::CreateELFProcess(initElf);
+	strcpy(initProc->workingDir, "/initrd");
 
 	Log::Write("OK");
 

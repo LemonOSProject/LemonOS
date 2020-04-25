@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <lemon/syscall.h>
 
 size_t bufSz = 512;
 char* ln = nullptr;
@@ -19,6 +20,8 @@ typedef struct {
 } builtin_t;
 
 char currentDir[PATH_MAX];
+
+List<char*> path;
 
 List<builtin_t> builtins;
 
@@ -123,13 +126,48 @@ void ParseLine(){
 		int i = 0;
 		while (lemon_readdir(fd, i++, &dirent)){
 			if(strcmp(argv[0], dirent.name) == 0){
-				lemon_spawn(dirent.name, argc, argv, 1);
+				pid_t pid = lemon_spawn(dirent.name, argc, argv, 1);
+
+				syscall(SYS_WAIT_PID, pid, 0, 0, 0, 0);
+
+				close(fd);
+				return;
 			}
 		}
 
 		close(fd);
 	}
 	
+	for(int j = 0; j < path.get_length(); j++){
+		if(fd = lemon_open(path.get_at(j), O_RDONLY | O_DIRECTORY)){
+			lemon_dirent_t dirent;
+
+			int i = 0;
+			while (lemon_readdir(fd, i++, &dirent)){
+				// Check exact filenames and try omitting extension of .lef files
+				if(strcmp(argv[0], dirent.name) == 0 || (strcmp(dirent.name + strlen(dirent.name) - 4, ".lef") == 0 && strncmp(argv[0], dirent.name, strlen(dirent.name) - 4) == 0)){
+					char* tempPath = (char*)malloc(strlen(path.get_at(j)) + strlen(dirent.name) + 2);
+					strcpy(tempPath, path.get_at(j));
+					strcat(tempPath, "/");
+					strcat(tempPath, dirent.name);
+					
+					pid_t pid = lemon_spawn(tempPath, argc, argv, 1);
+
+					if(pid){
+						syscall(SYS_WAIT_PID, pid, 0, 0, 0, 0);
+					} else {
+						printf("Error executing %s\n", dirent.name);
+					}
+
+					close(fd);
+					free(tempPath);
+					return;
+				}
+			}
+
+			close(fd);
+		}
+	}
 
 	printf("Unknown Command: %s\n", argv[0]);
 }
@@ -144,6 +182,8 @@ int main(){
 	builtins.add_back(builtinLs);
 	builtins.add_back(builtinCd);
 	builtins.add_back(builtinPwd);
+
+	path.add_back("/initrd");
 
 	for(;;) {
 		printf("$ Lemon %s>", currentDir);

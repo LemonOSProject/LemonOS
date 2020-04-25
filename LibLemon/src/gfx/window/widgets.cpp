@@ -96,7 +96,7 @@ void TextBox::OnMouseDown(vector2i_t mousePos){
 //////////////////////////
 // Button
 //////////////////////////
-Button::Button(char* _label, rect_t _bounds){
+Button::Button(const char* _label, rect_t _bounds){
     labelLength = strlen(_label);
     strcpy(label, _label);
 
@@ -181,7 +181,7 @@ void Bitmap::Paint(surface_t* surface){
 //////////////////////////
 // Label
 //////////////////////////
-Label::Label(char* _label, rect_t _bounds){
+Label::Label(const char* _label, rect_t _bounds){
     labelLength = strlen(_label) + 1;
     label = (char*)malloc(labelLength);
     strcpy(label, _label);

@@ -140,7 +140,7 @@ public:
 
     bool state;
 
-    Button(char* _label, rect_t _bounds);
+    Button(const char* _label, rect_t _bounds);
 
     void Paint(surface_t* surface);
     void OnMouseDown(vector2i_t mousePos);
@@ -152,7 +152,7 @@ class BitmapButton : public Button{
 public:
     surface_t surface;
 
-    BitmapButton(char* _label, rect_t _bounds);
+    BitmapButton(const char* _label, rect_t _bounds);
     void Paint(surface_t* surface);
 };
 
@@ -168,7 +168,7 @@ class Label : public Widget{
 public:
     char* label;
     int labelLength;
-    Label(char* _label, rect_t _bounds);
+    Label(const char* _label, rect_t _bounds);
 
     void Paint(surface_t* surface);
 };

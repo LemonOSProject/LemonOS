@@ -26,23 +26,30 @@ PTY* GrantPTY(uint64_t pid){
 
 size_t FS_Slave_Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 	PTY* pty = (*ptys)[node->inode];
-	return pty->Slave_Read((char*)buffer,size);
+	if(pty)
+		return pty->Slave_Read((char*)buffer,size);
+	else return 0;
 }
 
 size_t FS_Master_Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 	PTY* pty = (*ptys)[node->inode];
-	size_t ret = pty->Master_Read((char*)buffer,size);
-	return ret;
+	if(pty)
+		return pty->Master_Read((char*)buffer,size);
+	else return 0;
 }
 	
 size_t FS_Slave_Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 	PTY* pty = (*ptys)[node->inode];
-	return pty->Slave_Write((char*)buffer,size);
+	if(pty)
+		return pty->Slave_Write((char*)buffer,size);
+	else return 0;
 }
 
 size_t FS_Master_Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 	PTY* pty = (*ptys)[node->inode];
-	return pty->Master_Write((char*)(buffer + 1),size);
+	if(pty)
+		return pty->Master_Write((char*)(buffer + 1),size);
+	else return 0;
 }
 
 PTY::PTY(){
@@ -54,6 +61,7 @@ PTY::PTY(){
 
 	master.ignoreBackspace = true;
 	slave.ignoreBackspace = false;
+	canonical = true;
 
 	slaveFile.read = FS_Slave_Read;
 	slaveFile.write = FS_Slave_Write;

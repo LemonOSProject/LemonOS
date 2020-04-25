@@ -48,6 +48,8 @@ typedef struct process {
 	uint32_t timeSliceDefault;
 	process* next;
 
+	List<process*> children;
+
 	char workingDir[PATH_MAX];
 
 	void* fxState; // State of the extended registers
@@ -58,9 +60,10 @@ typedef struct process {
 
 namespace Scheduler{
 	extern process_t* currentProcess;
+	extern int lock;
 
     process_t* CreateProcess(void* entry);
-	process_t* CreateELFProcess(void* elf);
+	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr);
 
 	process_t* GetCurrentProcess();
 

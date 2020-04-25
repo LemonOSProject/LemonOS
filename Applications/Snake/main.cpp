@@ -232,7 +232,7 @@ int main(char argc, char** argv){
 
 			snake->add_back({0,0});
 		}
-		//syscall(SYS_UPDATE_WINDOW, (uint64_t)window->handle, (uint64_t)&window->surface,0,0,0);
+		
 		_PaintWindow(window->handle, &window->surface);
 	}
 

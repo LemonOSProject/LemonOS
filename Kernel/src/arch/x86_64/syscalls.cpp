@@ -26,8 +26,9 @@
 #define SYS_TIME 13
 #define SYS_MAP_FB 14
 #define SYS_ALLOC 15
+#define SYS_CHMOD 16
 #define SYS_CREATE_DESKTOP 17
-
+#define SYS_STAT 18
 #define SYS_LSEEK 19
 #define SYS_GETPID 20
 #define SYS_MOUNT 21
@@ -47,14 +48,25 @@
 #define SYS_MMAP 35
 #define SYS_GRANT_PTY 36
 #define SYS_GET_CWD 37
+#define SYS_WAIT_PID 38
+#define SYS_NANO_SLEEP 39
+#define SYS_PREAD 40
+#define SYS_PWRITE 41
 
-#define NUM_SYSCALLS 38
+#define NUM_SYSCALLS 42
 
-#define EXEC_FLAG_DUP_FD 1
+#define EXEC_CHILD 1
 
 typedef int(*syscall_t)(regs64_t*);
 
 int SysExit(regs64_t* r){
+	int64_t code = r->rbx;
+
+	Log::Info("Process ");
+	Log::Write(Scheduler::GetCurrentProcess()->pid);
+	Log::Write(" exiting with code ");
+	Log::Write(code);
+
 	Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 	return 0;
 }
@@ -65,28 +77,50 @@ int SysExec(regs64_t* r){
 	int argc = r->rcx;
 	char** argv = (char**)r->rdx;
 	uint64_t flags = r->rsi;
+	uint64_t* pid = (uint64_t*)r->rdi;
+
+	*pid = 0;
 	
 	Log::Info("Executing: ");
 	Log::Write(filepath);
 
 	fs_node_t* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
 
+	if(!current_node){
+		return 1;
+	}
+
 	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
 	uint64_t a = current_node->read(current_node, 0, current_node->size, buffer);
 
-	process_t* proc = Scheduler::CreateELFProcess((void*)buffer);
+	char** kernelArgv = (char**)kmalloc(argc * sizeof(char*));
+	for(int i = 0; i < argc; i++){
+		kernelArgv[i] = (char*)kmalloc(strlen(argv[i] + 1));
+		strcpy(kernelArgv[i], argv[i]);
+	}
+
+	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv);
+
+	for(int i = 0; i < argc; i++){
+		kfree(kernelArgv[i]);
+	}
 	
+	kfree(kernelArgv);
 	kfree(buffer);
 
 	if(!proc) return 1;
 
-	if(flags & EXEC_FLAG_DUP_FD){
+	if(flags & EXEC_CHILD){
+		Scheduler::GetCurrentProcess()->children.add_back(proc);
+
 		proc->fileDescriptors.replace_at(0, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));;
 		proc->fileDescriptors.replace_at(1, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1));
 		proc->fileDescriptors.replace_at(2, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2));
 	}
 
 	strncpy(proc->workingDir, Scheduler::GetCurrentProcess()->workingDir, PATH_MAX);
+
+	*pid = proc->pid;
 
 	return 0;
 }
@@ -246,11 +280,43 @@ int SysChmod(regs64_t* r){
 }
 
 int SysStat(regs64_t* r){
+	stat_t* stat = (stat_t*)r->rbx;
+	int fd = r->rcx;
+	int* ret = (int*)r->rdx;
+
+	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(fd);
+	if(!node){
+		Log::Warning("sys_stat: Invalid File Descriptor, ");
+		Log::Write(fd);
+		*ret = 1;
+		return 1;
+	}
+
+	stat->st_dev = 0;
+	stat->st_ino = node->inode;
+	
+	if(node->flags & FS_NODE_DIRECTORY) stat->st_mode = S_IFDIR;
+	if(node->flags & FS_NODE_FILE) stat->st_mode = S_IFREG;
+	if(node->flags & FS_NODE_BLKDEVICE) stat->st_mode = S_IFBLK;
+	if(node->flags & FS_NODE_CHARDEVICE) stat->st_mode = S_IFCHR;
+	if(node->flags & FS_NODE_SYMLINK) stat->st_mode = S_IFLNK;
+
+	stat->st_nlink = 0;
+	stat->st_uid = node->uid;
+	stat->st_gid = 0;
+	stat->st_rdev = 0;
+	stat->st_size = node->size;
+	stat->st_blksize = 0;
+	stat->st_blocks = 0;
+
+	*ret = 0;
+
 	return 0;
 }
 
 int SysLSeek(regs64_t* r){
 	if(!(r->rsi)){
+		Log::Warning("sys_lseek: Invalid Return Address");
 		return 1;
 	}
 
@@ -258,6 +324,8 @@ int SysLSeek(regs64_t* r){
 	int fd = r->rbx;
 
 	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length() || !Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
+		Log::Warning("sys_lseek: Invalid File Descriptor, ");
+		Log::Write(fd);
 		*ret = -1;
 		return 1;
 	}
@@ -575,6 +643,66 @@ int SysGetCWD(regs64_t* r){
 	}
 }
 
+int SysWaitPID(regs64_t* r){
+	uint64_t pid = r->rbx;
+
+	while(Scheduler::FindProcessByPID(pid)) asm("hlt");
+
+	return 0;
+}
+
+int SysNanoSleep(regs64_t* r){
+	uint64_t nanoseconds = r->rbx;
+
+	uint64_t seconds = Timer::GetSystemUptime();
+	uint64_t ticks = seconds * Timer::GetFrequency() + Timer::GetTicks();
+	uint64_t ticksEnd = ticks + (int)(nanoseconds / (1000000000.0 / Timer::GetFrequency()));
+
+	while((Timer::GetSystemUptime() * Timer::GetFrequency() + Timer::GetTicks()) < ticksEnd) asm("pause");
+}
+
+int SysPRead(regs64_t* r){
+	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx);
+	if(!node){ 
+		Log::Warning("read failed! file descriptor: "); Log::Write(r->rbx, false); 
+		return 1; 
+	}
+	uint8_t* buffer = (uint8_t*)r->rcx;
+	if(!buffer) { return 1; }
+	uint64_t count = r->rdx;
+	uint64_t off = r->rdi;
+	int ret = node->read(node, off, count, buffer);
+	*(int*)r->rsi = ret;
+	return 0;
+}
+
+int SysPWrite(regs64_t* r){
+	if(r->rbx > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+		*((int*)r->rsi) = -1; // Return -1
+		return -1;
+	}
+	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
+	if(!node){
+		Log::Warning("Invalid File Descriptor: ");
+		Log::Write(r->rbx);
+		return 2;
+	}
+
+	if(!(r->rcx)) {
+		*((int*)r->rsi) = -1;
+		return 1;
+	}
+	uint64_t off = r->rdi;
+
+	int ret = fs::Write(node, off, r->rdx, (uint8_t*)r->rcx);
+
+	if(r->rsi){
+		*((int*)r->rsi) = ret;
+	}
+
+	return 0;
+}
+
 syscall_t syscalls[]{
 	/*nullptr*/SysDebug,
 	SysExit,					// 1
@@ -614,6 +742,10 @@ syscall_t syscalls[]{
 	SysMmap,					// 35
 	SysGrantPTY,
 	SysGetCWD,
+	SysWaitPID,
+	SysNanoSleep,
+	SysPRead,					// 40
+	SysPWrite,
 };
 
 namespace Scheduler{extern bool schedulerLock;};
@@ -622,15 +754,17 @@ void SyscallHandler(regs64_t* regs) {
 	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
 		return;
 		
+
+	//Log::Info("syscall:");
+	//Log::Write(regs->rax);
+	//Log::Write(", proc:");
+	//Log::Write(Scheduler::GetCurrentProcess()->pid);
 	asm("sti");
-	//Scheduler::schedulerLock = true;
-	//Log::Info("Syscall: "); Log::Write(regs->rax);
 
 	int ret = syscalls[regs->rax](regs); // Call syscall
 	regs->rax = ret;
 	
-	//Log::Info("Syscall Exit");
-	//Scheduler::schedulerLock = false;
+	//Log::Info("syscall exit");
 }
 
 void InitializeSyscalls() {

@@ -5,6 +5,7 @@
 
 namespace fs{
     size_t ReadNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
+	size_t WriteNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
 
     fs_dirent_t* RootReadDir(fs_node_t* node, uint32_t index);
     fs_node_t* RootFindDir(fs_node_t* node, char* name);
@@ -47,10 +48,12 @@ namespace fs{
 		dev.findDir = DevFindDir;
 
 		strcpy(null.name,"null");
-		null.flags = FS_NODE_FILE;
+		null.flags = FS_NODE_CHARDEVICE;
 		null.inode = 0;
+		null.size = 1;
 
 		null.read = ReadNull;
+		null.write = WriteNull;
 
         RegisterDevice(&null);
     }
@@ -143,9 +146,12 @@ namespace fs{
 	}
 
 	size_t ReadNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-		// /if(offset > inode.length || offset + size > inode.length) return 0;
 
 		memset(buffer, -1, size);
+		return size;
+	}
+	
+	size_t WriteNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 		return size;
 	}
 

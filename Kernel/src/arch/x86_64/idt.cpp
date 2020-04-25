@@ -250,6 +250,17 @@ extern "C"
 			Log::Write(", bp:");
 			Log::Write(regs->rbp);
 
+			Log::Info("Stack Trace:");
+			
+			uint64_t* stack = (uint64_t*)regs->rbp;
+			
+			while(stack){
+				uint64_t* rbp = (uint64_t*)(*stack);
+				uint64_t rip = *(stack + 1);
+				Log::Info(rip);
+				stack = rbp;
+			}
+
 			char temp[16];
 			char temp2[16];
 			char temp3[16];

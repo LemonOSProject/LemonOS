@@ -14,6 +14,35 @@
 #define FS_NODE_SYMLINK 0x20
 #define FS_NODE_CHARDEVICE 0x40
 
+#define S_IFMT 0x0F000
+#define S_IFBLK 0x06000
+#define S_IFCHR 0x02000
+#define S_IFIFO 0x01000
+#define S_IFREG 0x08000
+#define S_IFDIR 0x04000
+#define S_IFLNK 0x0A000
+#define S_IFSOCK 0x0C000
+
+typedef int64_t ino_t;
+typedef uint64_t dev_t;
+typedef int32_t uid_t;
+typedef int64_t off_t;
+typedef int32_t mode_t;
+typedef int32_t nlink_t;
+
+typedef struct {
+	dev_t st_dev;
+	ino_t st_ino;
+	mode_t st_mode;
+	nlink_t st_nlink;
+	uid_t st_uid;
+	uid_t st_gid;
+	dev_t st_rdev;
+	off_t st_size;
+	int64_t st_blksize;
+	int64_t st_blocks;
+} stat_t;
+
 struct fs_node;
 
 typedef size_t (*read_type_t) (struct fs_node *, size_t, size_t, uint8_t *);
@@ -22,7 +51,6 @@ typedef void (*open_type_t) (struct fs_node*, uint32_t flags);
 typedef void (*close_type_t) (struct fs_node*);
 typedef struct fs_dirent *(*readdir_type_t) (struct fs_node*, uint32_t);
 typedef struct fs_node*(*finddir_type_t) (struct fs_node*, char *name);
-typedef uint64_t off_t;
 
 typedef struct fs_node{
     char name[128]; // Filename

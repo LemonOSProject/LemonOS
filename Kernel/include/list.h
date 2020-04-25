@@ -77,7 +77,11 @@ public:
 	}
 
 	T get_at(unsigned pos) {
-		if (num <= 0 || pos >= num || front == NULL) return front->obj; // Need to do something when item not in list
+		if (num <= 0 || pos >= num || front == NULL) {
+			T obj; // Need to do something when item not in list
+			memset(&obj, 0, sizeof(T));
+			return obj;
+		}
 
 		ListNode<T>* current = front;
 
