@@ -11,6 +11,7 @@
 #include <gui.h>
 #include <timer.h>
 #include <pty.h>
+#include <lock.h>
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -358,6 +359,7 @@ int SysCreateDesktop(regs64_t* r){
 
 	desktop->windows = new List<window_t*>();
 	desktop->pid = Scheduler::GetCurrentProcess()->pid;
+	desktop->lock = 0;
 
 	SetDesktop(desktop);
 
@@ -374,23 +376,24 @@ int SysCreateWindow(regs64_t* r){
 
 	surface_t surface;
 	//win->buffer = (uint8_t*)kmalloc(info->width * info->height * 4);
-	win->primaryBuffer = (uint8_t*)Memory::KernelAllocate4KPages((info->width * info->height * 4) / PAGE_SIZE_4K + 1);
+	win->bufferPageCount = (info->width * info->height * 4) / PAGE_SIZE_4K + 1;
+	win->primaryBuffer = (uint8_t*)Memory::KernelAllocate4KPages(win->bufferPageCount);
 	if(r->rcx){
-		*((uint64_t*)r->rcx) = (uint64_t)Memory::Allocate4KPages((info->width * info->height * 4) / PAGE_SIZE_4K + 1, Scheduler::GetCurrentProcess()->addressSpace);
+		*((uint64_t*)r->rcx) = (uint64_t)Memory::Allocate4KPages(win->bufferPageCount, Scheduler::GetCurrentProcess()->addressSpace);
 	}
 	
-	for(int i = 0; i < (info->width * info->height * 4) / PAGE_SIZE_4K + 1; i++){
+	for(int i = 0; i < win->bufferPageCount; i++){
 		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
 		Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)win->primaryBuffer + i * PAGE_SIZE_4K, 1);
 		if(r->rcx) Memory::MapVirtualMemory4K(phys, (*((uintptr_t*)r->rcx)) + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
 	}
 
-	win->secondaryBuffer = (uint8_t*)Memory::KernelAllocate4KPages((info->width * info->height * 4) / PAGE_SIZE_4K + 1);
+	win->secondaryBuffer = (uint8_t*)Memory::KernelAllocate4KPages(win->bufferPageCount);
 	if(r->rdx){
-		*((uint64_t*)r->rdx) = (uint64_t)Memory::Allocate4KPages((info->width * info->height * 4) / PAGE_SIZE_4K + 1, Scheduler::GetCurrentProcess()->addressSpace);
+		*((uint64_t*)r->rdx) = (uint64_t)Memory::Allocate4KPages(win->bufferPageCount, Scheduler::GetCurrentProcess()->addressSpace);
 	}
 	
-	for(int i = 0; i < (info->width * info->height * 4) / PAGE_SIZE_4K + 1; i++){
+	for(int i = 0; i < win->bufferPageCount; i++){
 		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
 		Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)win->secondaryBuffer + i * PAGE_SIZE_4K, 1);
 		if(r->rdx) Memory::MapVirtualMemory4K(phys, (*((uintptr_t*)r->rdx)) + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
@@ -399,6 +402,7 @@ int SysCreateWindow(regs64_t* r){
 	win->surface = surface;
 	win->surface.buffer = win->primaryBuffer;
 
+	acquireLock(&GetDesktop()->lock);
 
 	GetDesktop()->windows->add_back(win);
 
@@ -408,6 +412,8 @@ int SysCreateWindow(regs64_t* r){
 	createMessage.recieverPID = GetDesktop()->pid;
 	createMessage.senderPID = 0;
 	Scheduler::SendMessage(createMessage);
+	
+	releaseLock(&GetDesktop()->lock);
 
 	return 0;
 }
@@ -417,9 +423,22 @@ int SysDestroyWindow(regs64_t* r){
 
 	window_t* win;
 	if(win = (window_t*)Scheduler::FindHandle(handle)){
+		acquireLock(&GetDesktop()->lock);
+		
 		for(int i = 0; i < GetDesktop()->windows->get_length(); i++){
 			if(GetDesktop()->windows->get_at(i) == win){
 				GetDesktop()->windows->remove_at(i);
+
+				uintptr_t buffer = (uintptr_t)win->primaryBuffer;
+
+				for(int buf = 0; buf < 2; buf++){
+					for(int i = 0; i < win->bufferPageCount; i++){
+						uintptr_t phys = Memory::VirtualToPhysicalAddress(buffer + i * PAGE_SIZE_4K);
+						Memory::FreePhysicalMemoryBlock(phys);
+					}
+					buffer = (uintptr_t)win->secondaryBuffer;
+				}
+
 				message_t destroyMessage;
 				destroyMessage.msg = 0xBEEF; // Desktop Event
 				destroyMessage.data = 1; // Subevent - Window Destroyed
@@ -429,6 +448,8 @@ int SysDestroyWindow(regs64_t* r){
 				break;
 			}
 		}
+
+		releaseLock(&GetDesktop()->lock);
 	} else return 2;
 
 	return 0;
@@ -437,7 +458,11 @@ int SysDestroyWindow(regs64_t* r){
 int SysDesktopGetWindow(regs64_t* r){
 	win_info_t* winInfo = (win_info_t*)r->rbx;
 
+	acquireLock(&GetDesktop()->lock);
+
 	*winInfo = GetDesktop()->windows->get_at(r->rcx)->info;
+
+	releaseLock(&GetDesktop()->lock);
 
 	return 0;
 }
@@ -453,6 +478,7 @@ int SysUpdateWindow(regs64_t* r){
 	handle_t handle = (handle_t*)r->rbx;
 	int buffer = r->rcx;
 	win_info_t* info = (win_info_t*)r->rdx;
+
 	Window* window = (Window*)Scheduler::FindHandle(handle);
 	if(!window) return 2;
 
@@ -498,8 +524,23 @@ int SysRenderWindow(regs64_t* r){
 	else offset = *((vector2i_t*)r->rdx);
 
 	handle_t handle = (handle_t)r->rcx;
-	window_t* window;
-	if(!(window = (window_t*)Scheduler::FindHandle(handle))) return 2;
+	window_t* window = nullptr;
+
+	desktop_t* desktop = GetDesktop();
+	acquireLock(&desktop->lock); // Ensure that windows do not get destroyed while rendering
+
+	for(int i = 0; i < desktop->windows->get_length(); i++){ // Search the window list as opposed to handle list in case a destroyed window is requested
+		if(desktop->windows->get_at(i)->info.handle == handle){
+			window = desktop->windows->get_at(i);
+			break;
+		}
+	}
+
+	//if(!(window = (window_t*)Scheduler::FindHandle(handle))) return 2;
+	if(!window) {
+		releaseLock(&desktop->lock);
+		return 2;
+	}
 
 	rect_t windowRegion;
 	if(!r->rsi) windowRegion = {{0,0},{window->info.width,window->info.height}};
@@ -509,12 +550,18 @@ int SysRenderWindow(regs64_t* r){
 
 	int rowSize = ((dest->width - offset.x) > windowRegion.size.x) ? windowRegion.size.x : (dest->width - offset.x);
 
-	if(rowSize <= 0) return 0;
+	if(rowSize <= 0) {
+		releaseLock(&desktop->lock);
+		return 0;
+	}
 
 	for(int i = windowRegion.pos.y; i < windowRegion.size.y && i < dest->height - offset.y; i++){
 		uint8_t* bufferAddress = dest->buffer + (i + offset.y) * (dest->width * 4) + offset.x * 4;
 		memcpy_optimized(bufferAddress, window->surface.buffer + i * (window->info.width * 4) + windowRegion.pos.x * 4, rowSize * 4);
 	}
+
+	releaseLock(&desktop->lock);
+
 	return 0;
 }
 
@@ -794,12 +841,14 @@ syscall_t syscalls[]{
 
 namespace Scheduler{extern bool schedulerLock;};
 
+int lastSyscall = 0;
 void SyscallHandler(regs64_t* regs) {
 	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
 		return;
 		
 	asm("sti");
 
+	lastSyscall = regs->rax;
 	int ret = syscalls[regs->rax](regs); // Call syscall
 	regs->rax = ret;
 }

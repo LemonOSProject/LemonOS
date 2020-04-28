@@ -17,6 +17,7 @@
 address_space_t* currentAddressSpace;
 
 uint64_t kernelPML4Phys;
+extern int lastSyscall;
 
 namespace Memory{
 	pml4_t kernelPML4 __attribute__((aligned(4096)));
@@ -528,7 +529,19 @@ namespace Memory{
 			Log::Write(regs->rip);
 			Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 			return;
+		};
+
+		Log::Info("Last syscall: %d", lastSyscall);
+			
+		uint64_t* stack = (uint64_t*)regs->rbp;
+		
+		while(stack){
+			uint64_t* rbp = (uint64_t*)(*stack);
+			uint64_t rip = *(stack + 1);
+			Log::Info(rip);
+			stack = rbp;
 		}
+
 		char temp[16];
 		char temp2[16];
 		char temp3[16];

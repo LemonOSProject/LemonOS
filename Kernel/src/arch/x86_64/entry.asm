@@ -229,6 +229,8 @@ entry64:
 	or ax, 3 << 9		; Set flags for SSE
 	mov cr4, rax
 
+  mov rbp, 0
+
   mov rdi, qword[mb_addr] ; Pass multiboot info struct
   add rdi, KERNEL_VIRTUAL_BASE
   call kmain

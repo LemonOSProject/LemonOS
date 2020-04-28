@@ -36,7 +36,7 @@ namespace Memory{
     uint64_t AllocateLargePhysicalMemoryBlock();
 
     // Frees a block of physical memory
-    void FreePhysicalMemoryBlock(uint32_t addr);
+    void FreePhysicalMemoryBlock(uint64_t addr);
 
     // Used Blocks of Memory
     extern uint64_t usedPhysicalBlocks;

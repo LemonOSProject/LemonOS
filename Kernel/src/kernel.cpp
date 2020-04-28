@@ -20,6 +20,7 @@
 #include <ata.h>
 #include <xhci.h>
 #include <devicemanager.h>
+#include <gui.h>
 
 uint8_t* progressBuffer;
 video_mode_t videoMode;
@@ -49,8 +50,39 @@ void IdleProcess(){
 
 	Log::Write("OK");
 
-	for(;;){
-		asm("hlt");
+	for(;;){ // Use the idle task to clean up the windows of dead processes
+		int oldUptime = Timer::GetSystemUptime();
+		while(Timer::GetSystemUptime() < oldUptime + 1) asm("hlt");
+
+		if(!GetDesktop()) continue;
+
+		for(int i = 0; i < GetDesktop()->windows->get_length(); i++){
+			Window* win = GetDesktop()->windows->get_at(i);
+			if(!Scheduler::FindProcessByPID(win->info.ownerPID)){
+				acquireLock(&GetDesktop()->lock);
+
+				GetDesktop()->windows->remove_at(i);
+
+				uintptr_t buffer = (uintptr_t)win->primaryBuffer;
+
+				for(int buf = 0; buf < 2; buf++){
+					for(int i = 0; i < win->bufferPageCount; i++){
+						uintptr_t phys = Memory::VirtualToPhysicalAddress(buffer + i * PAGE_SIZE_4K);
+						Memory::FreePhysicalMemoryBlock(phys);
+					}
+					buffer = (uintptr_t)win->secondaryBuffer;
+				}
+
+				message_t destroyMessage;
+				destroyMessage.msg = 0xBEEF; // Desktop Event
+				destroyMessage.data = 1; // Subevent - Window Destroyed
+				destroyMessage.recieverPID = GetDesktop()->pid;
+				destroyMessage.senderPID = 0;
+				Scheduler::SendMessage(destroyMessage);
+
+				releaseLock(&GetDesktop()->lock);
+			}
+		}
 	}
 }
 

@@ -168,7 +168,8 @@ int main(){
 					if(mouseY > 42 && mouseY < (menuItemCount*MENU_ITEM_HEIGHT + 42)){
 						syscall(SYS_EXEC,(uintptr_t)menuItems[(int)floor((double)(mouseY - 42) / MENU_ITEM_HEIGHT)].path,0,0,0,0);
 						showMenu = false;
-						_DestroyWindow(menu->handle);
+						menu->info.flags |= WINDOW_FLAGS_MINIMIZED;
+						UpdateWindow(menu);
 					}
 				}
 				break;

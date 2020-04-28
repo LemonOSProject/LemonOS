@@ -58,6 +58,7 @@ typedef struct Window{
 	surface_t surface;
 	uint8_t* primaryBuffer;
 	uint8_t* secondaryBuffer;
+	uint64_t bufferPageCount;
 
 	Desktop* desktop;
 } window_t;
@@ -68,6 +69,8 @@ typedef struct Desktop{
 	surface_t surface;
 
 	uint64_t pid;
+
+	int lock = 0;
 } __attribute__((packed)) desktop_t;
 
 void SetDesktop(desktop_t* desktop);

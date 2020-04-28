@@ -57,7 +57,6 @@ char* FileDialog(char* directoryPath){
 		PaintWindow(dialogWindow);
 	}
 ret:
-	delete fv;
 	DestroyWindow(dialogWindow);
 
 	return filePointer;

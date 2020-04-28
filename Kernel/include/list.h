@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory.h>
+#include <lock.h>
 
 template<typename T>
 class ListNode
@@ -13,12 +14,14 @@ public:
 
 template<typename T>
 class List {
+	int lock = 0;
 public:
 	List()
 	{
 		front = NULL;
 		back = NULL;
 		num = 0;
+		lock = 0;
 	}
 
 	~List() {
@@ -29,6 +32,8 @@ public:
 	}
 
 	void clear() {
+		acquireLock(&lock);
+
 		ListNode<T>* node = front;
 		while (node && node->next) {
 			ListNode<T>* n = node->next;
@@ -38,9 +43,13 @@ public:
 		front = NULL;
 		back = NULL;
 		num = 0;
+
+		releaseLock(&lock);
 	}
 
 	void add_back(T obj) {
+		acquireLock(&lock);
+
 		ListNode<T>* node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
 		*node = ListNode<T>();
 		node->obj = obj;
@@ -54,9 +63,13 @@ public:
 		}
 		back = node;
 		num++;
+		
+		releaseLock(&lock);
 	}
 
 	void add_front(T obj) {
+		acquireLock(&lock);
+
 		ListNode<T>* node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
 		*node = ListNode<T>();
 		node->obj = obj;
@@ -70,6 +83,8 @@ public:
 		}
 		front = node;
 		num++;
+
+		releaseLock(&lock);
 	}
 
 	T operator[](unsigned pos) {
@@ -77,21 +92,28 @@ public:
 	}
 
 	T get_at(unsigned pos) {
+
 		if (num <= 0 || pos >= num || front == NULL) {
 			T obj; // Need to do something when item not in list
 			memset(&obj, 0, sizeof(T));
 			return obj;
 		}
 
+		acquireLock(&lock);
+
 		ListNode<T>* current = front;
 
 		for (unsigned int i = 0; i < pos && i < num && current->next; i++) current = current->next;
+
+		releaseLock(&lock);
 
 		return current->obj;
 	}
 
 	void replace_at(unsigned pos, T obj) {
 		if (num < 0 || pos >= num) return;
+		
+		acquireLock(&lock);
 
 		ListNode<T>* current = front;
 
@@ -99,6 +121,8 @@ public:
 
 		if(current)
 			current->obj = obj;
+		
+		releaseLock(&lock);
 	}
 
 	int get_length() {
@@ -111,12 +135,15 @@ public:
 			return t;
 		}
 
+		acquireLock(&lock);
+
 		ListNode<T>* current = front;
 
 		for (unsigned int i = 0; i < pos && current; i++) current = current->next;
 
 		if(!current){
 			T t;
+			releaseLock(&lock);
 			return t;
 		}
 
@@ -128,6 +155,8 @@ public:
 		if (pos == --num) back = current->prev;
 
 		kfree(current);
+		releaseLock(&lock);
+
 		return obj;
 	}
 
