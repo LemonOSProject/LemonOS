@@ -32,14 +32,10 @@ namespace GPT{
         }
 
         for(int i = 0; i < partNum; i++){
-            Log::Info("GPT Partition: ");
             gpt_entry_t entry = partitionTable[i];
-            Log::Write("LBA Start: ");
-            Log::Write((entry.startLBA));
-            Log::Write(", LBA End: ");
-            Log::Write((entry.endLBA));
-            Log::Write(", Size: ");
-            Log::Write((entry.endLBA - entry.startLBA)*512);
+            
+            Log::Info("Found GPT Partition of size %d MB", (entry.endLBA - entry.startLBA) * 512 / 1024 / 1024);
+
             if((entry.endLBA - entry.startLBA)){
                 PartitionDevice* part = new PartitionDevice(entry.startLBA, entry.endLBA, disk);
                 disk->partitions.add_back(part);

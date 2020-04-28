@@ -14,7 +14,12 @@
 #include <lemon/spawn.h>
 
 void OnFileOpened(char* path, char** filePointer){
-	
+	if(strncmp(path + strlen(path) - 4, ".lef", 4) == 0){
+		lemon_spawn(path, 1, &path);
+	} else if(strncmp(path + strlen(path) - 4, ".txt", 4) == 0 || strncmp(path + strlen(path) - 4, ".cfg", 4) == 0){
+		char* argv[] = {"/initrd/textedit.lef", path};
+		lemon_spawn("/initrd/textedit.lef", 2, argv);
+	}
 }
 
 extern "C"

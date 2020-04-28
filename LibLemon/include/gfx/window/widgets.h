@@ -38,6 +38,25 @@ public:
     void OnMouseMoveRelative(vector2i_t relativePosition);
 };
 
+class ScrollBarHorizontal { /* Not a widget, but is to be used in widgets*/
+protected:
+    int scrollIncrement;
+    int pressOffset;
+    int width;
+public:
+    bool pressed;
+
+    rect_t scrollBar;
+
+    int scrollPos;
+
+    void ResetScrollBar(int displayWidth /* Region that can be displayed at one time */, int areaWidth /* Total Scroll Area*/);
+    void Paint(surface_t* surface, vector2i_t offset, int height = 16);
+
+    void OnMouseDownRelative(vector2i_t relativePosition); // Relative to the position of the scroll bar.
+    void OnMouseMoveRelative(vector2i_t relativePosition);
+};
+
 class ScrollView : public Widget {
 public:
     int scrollPos;
@@ -110,6 +129,8 @@ public:
 };
 
 class TextBox : public Widget{
+protected:
+    ScrollBar sBar;
 public:
     bool editable;
     bool multiline;
@@ -125,7 +146,11 @@ public:
     void LoadText(char* text);
 
     void OnMouseDown(vector2i_t mousePos);
+    void OnMouseUp(vector2i_t mousePos);
+    void OnMouseMove(vector2i_t mousePos);
     void OnKeyDown(char c);
+
+    void ResetScrollBar();
 
     rgba_colour_t textColour = {0,0,0,255};
 };
@@ -146,6 +171,8 @@ public:
     void OnMouseDown(vector2i_t mousePos);
     void OnMouseUp(vector2i_t mousePos);
     void DrawButtonBorders(surface_t* surface, bool white);
+
+    void (*OnPress)();
 };
 
 class BitmapButton : public Button{
@@ -160,6 +187,7 @@ class Bitmap : public Widget{
 public:
     surface_t surface;
 
+    Bitmap();
     Bitmap(rect_t _bounds);
     void Paint(surface_t* surface);
 };

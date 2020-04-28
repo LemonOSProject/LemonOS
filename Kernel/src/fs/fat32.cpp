@@ -50,21 +50,7 @@ namespace fs::FAT32{
 
         this->bootRecord = bootRecord;
 
-        Log::Info("FAT version: ");
-        Log::Write(bootRecord->ebr.fatVersion);
-
-        Log::Info("Signature: ");
-        Log::Write(bootRecord->ebr.signature);
-
-        Log::Info("volume label string: ");
-        Log::Write((char*)bootRecord->ebr.volumeLabelString);
-
-        Log::Info("oem id: ");
-        Log::Write((char*)bootRecord->bpb.oem);
-
-        Log::Info("volume size: ");
-        Log::Write(bootRecord->bpb.largeSectorCount * 512 / 1024 / 1024, false);
-        Log::Write(" MB");
+        Log::Info("[FAT32] Initializing Volume\tSignature: %d, OEM ID: %s, Size: %d MB", bootRecord->ebr.signature, (char*)bootRecord->bpb.oem, bootRecord->bpb.largeSectorCount * 512 / 1024 / 1024);
 
         clusterSizeBytes = bootRecord->bpb.sectorsPerCluster * part->parentDisk->blocksize;
 

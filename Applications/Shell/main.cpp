@@ -158,10 +158,12 @@ int main(){
 					showMenu = !showMenu;
 
 					if(!showMenu){
-						_DestroyWindow(menu->handle);
+						menu->info.flags |= WINDOW_FLAGS_MINIMIZED;
 					} else {
-						menu->handle = _CreateWindow(&menu->info);
+						menu->info.flags &= ~((typeof(menu->info.flags))WINDOW_FLAGS_MINIMIZED);
 					}
+
+					UpdateWindow(menu);
 				} else if ((handle_t)msg.data2 == menu->handle){
 					if(mouseY > 42 && mouseY < (menuItemCount*MENU_ITEM_HEIGHT + 42)){
 						syscall(SYS_EXEC,(uintptr_t)menuItems[(int)floor((double)(mouseY - 42) / MENU_ITEM_HEIGHT)].path,0,0,0,0);

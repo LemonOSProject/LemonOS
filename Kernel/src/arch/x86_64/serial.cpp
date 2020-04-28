@@ -31,3 +31,11 @@ void write_serial(const char* s) {
 		outportb(PORT, *s++);
 	}
 }
+
+void write_serial_n(const char* s, unsigned long long n) {
+	int i = 0;
+	while (i++ < n){
+		while(is_transmit_empty() == 0);
+		outportb(PORT, *s++);
+	}
+}

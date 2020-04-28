@@ -234,6 +234,15 @@ void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset){
 	}
 }
 
+void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion){
+    int srcWidth = (srcRegion.pos.x + srcRegion.size.x) > src->width ? (src->width - srcRegion.pos.x) : srcRegion.size.x;
+    int srcHeight = (srcRegion.pos.y + srcRegion.size.y) > src->height ? (src->height - srcRegion.pos.y) : srcRegion.size.y;
+    int rowSize = ((offset.x + srcWidth) > dest->width) ? dest->width - offset.x : srcWidth;
+	for(int i = 0; i < srcHeight && i < dest->height - offset.y; i++){
+        memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4) + offset.x*4), src->buffer + (i + srcRegion.pos.y)*src->width * 4 + srcRegion.pos.x * 4, rowSize*4);
+	}
+}
+
 void surfacecpyTransparent(surface_t* dest, surface_t* src, vector2i_t offset){
 	uint32_t* srcBuffer = (uint32_t*)src->buffer;
 	uint32_t* destBuffer = (uint32_t*)dest->buffer;

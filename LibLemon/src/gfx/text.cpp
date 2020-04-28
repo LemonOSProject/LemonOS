@@ -250,8 +250,11 @@ int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surf
     }
     
     for(int i = 0; i < mainFont->glyph->bitmap.rows; i++){
+        if(y + i < 0) continue;
+
         uint32_t yOffset = (i + y + (12/*mainFont->glyph->bitmap.rows*/ - mainFont->glyph->bitmap_top)) * (surface->width);
         for(int j = 0; j < mainFont->glyph->bitmap.width; j++){
+            if(x + j < 0) continue;
             if(mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j] == 255)
                 buffer[yOffset + (j + x)] = colour_i;
             else if( mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j]){
@@ -311,7 +314,7 @@ void DrawString(char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g,
                     int oldB = oldColour & 0xFF;
                     int oldG = (oldColour >> 8) & 0xFF;
                     int oldR = (oldColour >> 16) & 0xFF;
-                    uint32_t newColour = (int)(b * val + oldB * (1 - val)) | (((int)(b * val + oldB * (1 - val)) << 8)) | (((int)(b * val + oldB * (1 - val)) << 16));
+                    uint32_t newColour = (int)(b * val + oldB * (1 - val)) | (((int)(g * val + oldG * (1 - val)) << 8)) | (((int)(r * val + oldR * (1 - val)) << 16));
                     buffer[yOffset + (j + x + xOffset)] = newColour;
                 }
             }

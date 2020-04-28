@@ -18,7 +18,7 @@ asmg = generator(nasm,
 liblemon_cpp_args = ['-Wno-write-strings', '-Wno-pointer-arith', '-Wall', '-Wextra', '-Wno-address',
     '-m64',
     '-O0',
-    '-fno-exceptions', '-fno-rtti', '-std=c++14']
+    '-fno-exceptions', '-std=c++14']
 
 add_project_arguments(liblemon_cpp_args, language : ['c', 'cpp'])
 

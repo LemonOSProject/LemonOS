@@ -2,7 +2,7 @@
 
 #define WINDOW_FLAGS_NODECORATION 0x1
 #define WINDOW_FLAGS_SNAP_TO_BOTTOM 0x2
-//#define WINDOW_FLAGS_NOBACKGROUND 0x4
+#define WINDOW_FLAGS_MINIMIZED 0x4
 
 #include <stdint.h>
 #include <lemon/types.h>
@@ -38,6 +38,8 @@ struct Window{
 	rgba_colour_t background = {192,192,190,255};
 
 	surface_t surface;
+	uint8_t* primaryBuffer;
+	uint8_t* secondaryBuffer;
 
 	int lastPressedWidget = -1;
 	vector2i_t mousePos;
@@ -45,13 +47,17 @@ struct Window{
 	WindowPaintHandler OnPaint = NULL;
 };
 
-handle_t _CreateWindow(win_info_t* wininfo);
+//handle_t _CreateWindow(win_info_t* wininfo);
+handle_t _CreateWindow(win_info_t* wininfo, void** primaryBuffer, void** secondaryBuffer);
 void _DestroyWindow(handle_t window);
-void _PaintWindow(handle_t window, surface_t* surface);
+void _PaintWindow(handle_t window);//, surface_t* surface);
+void SwapWindowBuffers(Window* win);
 
 Window* CreateWindow(win_info_t* info);
 void DestroyWindow(Window* win);
+void ResizeWindow(Window* win, vector2i_t size);
 void PaintWindow(Window* win);
+void UpdateWindow(Window* win);
 
 void HandleMouseDown(Window* win, vector2i_t mousePos);
 Widget* HandleMouseUp(Window* win, vector2i_t mousePos);

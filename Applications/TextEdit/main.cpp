@@ -24,11 +24,17 @@ int main(char argc, char** argv){
 	windowInfo.flags = 0;
 	strcpy(windowInfo.title, "TextEdit");
 
-	char* filePath = FileDialog("/");
+	char* filePath;
 
-	if(!filePath){
-		MessageBox("Invalid filepath!", MESSAGEBOX_OK);
-		exit(1);
+	if(argc > 1){
+		filePath = argv[1];
+	} else {
+		filePath = FileDialog("/");
+
+		if(!filePath){
+			MessageBox("Invalid filepath!", MESSAGEBOX_OK);
+			exit(1);
+		}
 	}
 
 	window = CreateWindow(&windowInfo);
@@ -62,10 +68,7 @@ int main(char argc, char** argv){
 	for(;;){
 		ipc_message_t msg;
 		while(ReceiveMessage(&msg)){
-			if (msg.msg == WINDOW_EVENT_CLOSE){
-				DestroyWindow(window);
-				exit(0);
-			} else if(msg.msg == WINDOW_EVENT_MOUSEDOWN){
+			if(msg.msg == WINDOW_EVENT_MOUSEDOWN){
 				uint32_t mouseX;
 				uint32_t mouseY;
 				mouseX = (msg.data >> 32);
@@ -78,6 +81,14 @@ int main(char argc, char** argv){
 				mouseX = msg.data >> 32;
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
 				HandleMouseUp(window, {(int)mouseX, (int)mouseY});
+			} else if (msg.msg == WINDOW_EVENT_MOUSEMOVE) {
+				uint32_t mouseX = msg.data >> 32;
+				uint32_t mouseY = msg.data & 0xFFFFFFFF;
+
+				HandleMouseMovement(window, {mouseX, mouseY});
+			} else if (msg.msg == WINDOW_EVENT_CLOSE) {
+				DestroyWindow(window);
+				exit(0);
 			}
 		}
 

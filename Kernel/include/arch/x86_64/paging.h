@@ -102,6 +102,7 @@ namespace Memory{
     address_space_t* CreateAddressSpace();
     void ChangeAddressSpace(address_space_t*);
     bool CheckRegion(uintptr_t addr, uint64_t len, address_space_t* addressSpace);
+    uint64_t VirtualToPhysicalAddress(uint64_t addr, address_space_t* addressSpace);
 
     void SwitchPageDirectory(uint64_t phys);
     

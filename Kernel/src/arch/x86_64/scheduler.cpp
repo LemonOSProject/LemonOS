@@ -243,6 +243,10 @@ namespace Scheduler{
 
         // Create process structure
         process_t* proc = InitializeProcessStructure();
+
+        proc->timeSliceDefault = 4;
+        proc->timeSlice = proc->timeSliceDefault;
+
         thread_t* thread = &proc->threads[0];
         thread->registers.cs = 0x1B; // We want user mode so use user mode segments, make sure RPL is 3
         thread->registers.ss = 0x23;

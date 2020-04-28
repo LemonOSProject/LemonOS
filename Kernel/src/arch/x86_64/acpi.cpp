@@ -15,19 +15,27 @@
 namespace ACPI{
 	const char* signature = "RSD PTR ";
 
-	RSDPDescriptor desc;
-	RSDTHeader rsdtHeader;
+	acpi_rsdp_t* desc;
+	acpi_rsdt_t* rsdtHeader;
+	acpi_xsdt_t* xsdtHeader;
+	acpi_fadt_t* fadt;
 
 	char oem[7];
 
-	void *FindSDT(const char* signature, int index)
+	void* FindSDT(const char* signature, int index)
 	{
-		int entries = (rsdtHeader.length - sizeof(RSDTHeader)) / 4;
+		int entries = (rsdtHeader->header.length - sizeof(acpi_header_t)) / 4;
+		uint32_t* sdtPointers = rsdtHeader->tables;//(uint32_t*)(((uintptr_t)rsdtHeader) + sizeof(RSDTHeader));
 		int _index = 0;
+
+		Log::Info("Finding: ");
+		Log::Write(signature);
+
+		if(memcmp("DSDT", signature, 4) == 0) return (void*)Memory::GetIOMapping(fadt->dsdt);
 	
 		for (int i = 0; i < entries; i++)
 		{
-			SDTHeader* h = (SDTHeader*)Memory::GetIOMapping(rsdtHeader.sdtPointers[i]);
+			acpi_header_t* h = (acpi_header_t*)Memory::GetIOMapping(sdtPointers[i]);
 			if (memcmp(h->signature, signature, 4) == 0 && _index++ == index)
 				return h;
 		}
@@ -36,18 +44,65 @@ namespace ACPI{
 		return NULL;
 	}
 
+	int ReadMADT(){
+		void* madt = FindSDT("APIC", 0);
+
+		if(!madt){
+			Log::Error("Could Not Find MADT");
+			return 1;
+		}
+
+		int processorCount = 0;
+
+		acpi_madt_t* madtHeader = (acpi_madt_t*)madt;
+		void* madtEnd = madt + madtHeader->header.length;
+
+		void* madtEntry = madt + sizeof(acpi_madt_t);
+
+		while(madtEntry < madtEnd){
+			acpi_madt_entry_t* entry = (acpi_madt_entry_t*)madtEntry;
+
+			switch(entry->type){
+			case 0:
+				//apic_local_t* localAPIC = (apic_local_t*)entry;
+
+				if(((apic_local_t*)entry)->flags & 0x3) processorCount++;
+				break;
+			case 1:
+				//apic_iso_t* ioAPIC = (apic_iso_t*)entry;
+				break;
+			case 2:
+				//apic_io_t* interruptSourceOverride = (apic_io_t*)entry;
+				break;
+			case 4:
+				//apic_nmi_t* nonMaskableInterrupt = (apic_nmi_t*)entry;
+				break;
+			case 5:
+				//apic_local_address_override_t* addressOverride = (apic_local_address_override_t*)entry;
+				break;
+			default:
+				Log::Error("Invalid MADT Entry, Type: %d", entry->type);
+				break;
+			}
+
+			madtEntry += entry->length;
+		}
+
+		Log::Info("[ACPI] System Contains %d Processors", processorCount);
+	}
+
 	void Init(){
-		for(int i = 0; i <= 0x400; i++){ // Search first KB for RSDP
-			if(memcmp((void*)i,signature,8) == 0){
-				desc = *((RSDPDescriptor*)Memory::GetIOMapping(i));
+		for(int i = 0; i <= 0x1000; i++){ // Search first KB for RSDP
+			if(memcmp((void*)Memory::GetIOMapping(i),signature,8) == 0){
+				desc =  ((acpi_rsdp_t*)Memory::GetIOMapping(i));
 
 				goto success;
 			}
 		}
 
 		for(int i = 0xE0000; i <= 0xFFFFF; i++){ // Search further for RSDP
-			if(memcmp((void*)i,signature,8) == 0){
-				desc = *((RSDPDescriptor*)Memory::GetIOMapping(i));
+			if(memcmp((void*)Memory::GetIOMapping(i),signature,8) == 0){
+				desc = ((acpi_rsdp_t*)Memory::GetIOMapping(i));
 
 				goto success;
 			}
@@ -60,19 +115,24 @@ namespace ACPI{
 
 		success:
 
-		rsdtHeader = *((RSDTHeader*)desc.rsdtAddress);
+		rsdtHeader = ((acpi_rsdt_t*)Memory::GetIOMapping(desc->rsdt));
 
-		memcpy(oem,rsdtHeader.oemID,6);
+		memcpy(oem,rsdtHeader->header.oem,6);
 		oem[6] = 0; // Zero OEM String
 
-		Log::Info("ACPI Revision: ");
-		Log::Info(rsdtHeader.revision, false);
-		Log::Info("OEM ID: ");
-		Log::Write(oem);
+		Log::Info("[ACPI] Revision: %d", rsdtHeader->header.revision);
+		Log::Info("[ACPI] OEM ID: %s", oem);
 
-		lai_set_acpi_revision(rsdtHeader.revision);
-		//lai_create_namespace();
-		//lai_enable_acpi(0);
+		fadt = (acpi_fadt_t*)FindSDT("FACP", 0);
+
+		asm("cli");
+
+		lai_set_acpi_revision(rsdtHeader->header.revision);
+		lai_create_namespace();
+
+		ReadMADT();
+
+		asm("sti");
 	}
 
 	void Reset(){

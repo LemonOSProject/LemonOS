@@ -12,6 +12,11 @@ inline vector2i_t operator+ (const vector2i_t& l, const vector2i_t& r){
     return {l.x + r.x, l.y + r.y};
 }
 
+
+inline vector2i_t operator- (const vector2i_t& l, const vector2i_t& r){
+    return {l.x - r.x, l.y - r.y};
+}
+
 typedef struct Rect{
     vector2i_t pos;
     vector2i_t size;
@@ -19,7 +24,7 @@ typedef struct Rect{
 
 typedef struct RGBAColour{
     uint8_t r, g, b, a; /* Red, Green, Blue, Alpha (Transparency) Respectively*/
-} rgba_colour_t;
+} __attribute__ ((packed)) rgba_colour_t;
 
 typedef struct{
     uint32_t width; // Resolution width
@@ -94,4 +99,5 @@ void DrawGradientVertical(rect_t rect, rgba_colour_t c1, rgba_colour_t c2, surfa
 void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
 
 void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset = {0,0});
+void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion);
 void surfacecpyTransparent(surface_t* dest, surface_t* src, vector2i_t offset = {0,0});

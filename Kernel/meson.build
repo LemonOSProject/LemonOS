@@ -67,6 +67,8 @@ cpp_files = [
 
 cpp_files_x86_64 = [
     'src/arch/x86_64/acpi.cpp',
+    'src/arch/x86_64/apic.cpp',
+    'src/arch/x86_64/cpuid.cpp',
     'src/arch/x86_64/hal.cpp',
     'src/arch/x86_64/idt.cpp',
     'src/arch/x86_64/keyboard.cpp',
@@ -98,7 +100,8 @@ lai = subproject('lai')
 
 kernel_link_args = [
     '-m64',
-    '-T', meson.current_source_dir() + '/linkscript-x86_64.ld'
+    '-T', meson.current_source_dir() + '/linkscript-x86_64.ld',
+    '-lgcc'
 ]
 
 kernel_link_args += kernel_cpp_args

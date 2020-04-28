@@ -62,10 +62,7 @@ typedef int(*syscall_t)(regs64_t*);
 int SysExit(regs64_t* r){
 	int64_t code = r->rbx;
 
-	Log::Info("Process ");
-	Log::Write(Scheduler::GetCurrentProcess()->pid);
-	Log::Write(" exiting with code ");
-	Log::Write(code);
+	Log::Info("Process %d exiting with code %d", Scheduler::GetCurrentProcess()->pid, code);
 
 	Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 	return 0;
@@ -81,14 +78,14 @@ int SysExec(regs64_t* r){
 
 	*pid = 0;
 	
-	Log::Info("Executing: ");
-	Log::Write(filepath);
 
 	fs_node_t* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
 
 	if(!current_node){
 		return 1;
 	}
+
+	Log::Info("Executing: %s", current_node->name);
 
 	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
 	uint64_t a = current_node->read(current_node, 0, current_node->size, buffer);
@@ -128,7 +125,7 @@ int SysExec(regs64_t* r){
 int SysRead(regs64_t* r){
 	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx);
 	if(!handle){ 
-		Log::Warning("read failed! file descriptor: "); Log::Write(r->rbx, false); 
+		Log::Warning("read failed! file descriptor: %d", r->rbx);
 		return 1; 
 	}
 	uint8_t* buffer = (uint8_t*)r->rcx;
@@ -146,8 +143,7 @@ int SysWrite(regs64_t* r){
 	}
 	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
 	if(!handle){
-		Log::Warning("Invalid File Descriptor: ");
-		Log::Write(r->rbx);
+		Log::Warning("Invalid File Descriptor: %d", r->rbx);
 		return 2;
 	}
 
@@ -167,8 +163,7 @@ int SysOpen(regs64_t* r){
 	strcpy(filepath, (char*)r->rbx);
 	fs_node_t* root = fs::GetRoot();
 	fs_node_t* current_node = root;
-	Log::Info("Opening: ");
-	Log::Write(filepath);
+	Log::Info("Opening: %s", filepath);
 	uint32_t fd;
 	if(strcmp(filepath,"/") == 0){
 		fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
@@ -188,9 +183,6 @@ int SysOpen(regs64_t* r){
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(fs::Open(node, 0));
 	fs::Open(node, 0);
-
-	Log::Write(fd);
-	Log::Write(", success!");
 
 	*((uint32_t*)r->rcx) = fd;
 	return 0;
@@ -286,8 +278,7 @@ int SysStat(regs64_t* r){
 
 	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(fd)->node;
 	if(!node){
-		Log::Warning("sys_stat: Invalid File Descriptor, ");
-		Log::Write(fd);
+		Log::Warning("sys_stat: Invalid File Descriptor, %d", fd);
 		*ret = 1;
 		return 1;
 	}
@@ -324,8 +315,7 @@ int SysLSeek(regs64_t* r){
 	int fd = r->rbx;
 
 	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length() || !Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
-		Log::Warning("sys_lseek: Invalid File Descriptor, ");
-		Log::Write(fd);
+		Log::Warning("sys_lseek: Invalid File Descriptor, %d", fd);
 		*ret = -1;
 		return 1;
 	}
@@ -344,10 +334,7 @@ int SysLSeek(regs64_t* r){
 		return 0;
 		break;
 	default:
-		Log::Info("Invalid seek: ");
-		Log::Write(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->name);
-		Log::Write(", ");
-		Log::Write(r->rdx);
+		Log::Info("Invalid seek: %s, mode: %d", Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->name, r->rdx);
 		return 3; // Invalid seek mode
 		break;
 	}
@@ -386,9 +373,32 @@ int SysCreateWindow(regs64_t* r){
 	win->desktop = GetDesktop();
 
 	surface_t surface;
-	surface.buffer = (uint8_t*)kmalloc(info->width * info->height * 4);
+	//win->buffer = (uint8_t*)kmalloc(info->width * info->height * 4);
+	win->primaryBuffer = (uint8_t*)Memory::KernelAllocate4KPages((info->width * info->height * 4) / PAGE_SIZE_4K + 1);
+	if(r->rcx){
+		*((uint64_t*)r->rcx) = (uint64_t)Memory::Allocate4KPages((info->width * info->height * 4) / PAGE_SIZE_4K + 1, Scheduler::GetCurrentProcess()->addressSpace);
+	}
+	
+	for(int i = 0; i < (info->width * info->height * 4) / PAGE_SIZE_4K + 1; i++){
+		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
+		Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)win->primaryBuffer + i * PAGE_SIZE_4K, 1);
+		if(r->rcx) Memory::MapVirtualMemory4K(phys, (*((uintptr_t*)r->rcx)) + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
+	}
+
+	win->secondaryBuffer = (uint8_t*)Memory::KernelAllocate4KPages((info->width * info->height * 4) / PAGE_SIZE_4K + 1);
+	if(r->rdx){
+		*((uint64_t*)r->rdx) = (uint64_t)Memory::Allocate4KPages((info->width * info->height * 4) / PAGE_SIZE_4K + 1, Scheduler::GetCurrentProcess()->addressSpace);
+	}
+	
+	for(int i = 0; i < (info->width * info->height * 4) / PAGE_SIZE_4K + 1; i++){
+		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
+		Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)win->secondaryBuffer + i * PAGE_SIZE_4K, 1);
+		if(r->rdx) Memory::MapVirtualMemory4K(phys, (*((uintptr_t*)r->rdx)) + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
+	}
 
 	win->surface = surface;
+	win->surface.buffer = win->primaryBuffer;
+
 
 	GetDesktop()->windows->add_back(win);
 
@@ -441,12 +451,43 @@ int SysDesktopGetWindowCount(regs64_t* r){
 
 int SysUpdateWindow(regs64_t* r){
 	handle_t handle = (handle_t*)r->rbx;
+	int buffer = r->rcx;
+	win_info_t* info = (win_info_t*)r->rdx;
 	Window* window = (Window*)Scheduler::FindHandle(handle);
 	if(!window) return 2;
-	surface_t* surface = (surface_t*)r->rcx;
 
-	memcpy_optimized(window->surface.buffer,surface->buffer,(window->info.width * 4)*window->info.height);
-	return 0;
+	if(info){ // Update Window Info
+		win_info_t oldInfo = window->info;
+		window->info = *info;
+
+		if(oldInfo.width != info->width || oldInfo.height != info->height){
+			// TODO: Ensure that enough memory is allocated in the case of a resized window
+			Log::Warning("sys_update_window: Window has been resized");
+		}
+
+		message_t updateMessage;
+		updateMessage.msg = 0xBEEF; // Desktop Event
+		updateMessage.data = 2; // Subevent - Window Created
+		updateMessage.recieverPID = GetDesktop()->pid;
+		updateMessage.senderPID = 0;
+		Scheduler::SendMessage(updateMessage); // Notify the window manager that windows have been updated
+
+		return 0;
+	} else { // Swap Window Buffers
+		switch(buffer){
+		case 1:
+			window->surface.buffer = window->primaryBuffer;
+			break;
+		case 2:
+			window->surface.buffer = window->secondaryBuffer;
+			break;
+		default:
+			window->surface.buffer = (window->surface.buffer == window->primaryBuffer) ? window->secondaryBuffer : window->primaryBuffer;
+			break;
+		}
+	}
+
+	return 1;
 }
 
 // SysRenderWindow(surface_t* dest, handle_t win, vector2i_t* offset, rect_t* region)
@@ -668,7 +709,7 @@ int SysPRead(regs64_t* r){
 	}
 	fs_node_t* node;
 	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx)->node)){ 
-		Log::Warning("sys_pread: Invalid file descriptor: "); Log::Write(r->rbx, false); 
+		Log::Warning("sys_pread: Invalid file descriptor: %d", r->rbx);
 		return 1; 
 	}
 	uint8_t* buffer = (uint8_t*)r->rcx;
@@ -687,7 +728,7 @@ int SysPWrite(regs64_t* r){
 	}
 	fs_node_t* node;
 	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx)->node)){ 
-		Log::Warning("sys_pwrite: Invalid file descriptor: "); Log::Write(r->rbx, false); 
+		Log::Warning("sys_pwrite: Invalid file descriptor: %d", r->rbx);
 		return 1; 
 	}
 

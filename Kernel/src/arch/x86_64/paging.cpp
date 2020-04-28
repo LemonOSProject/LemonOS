@@ -26,7 +26,7 @@ namespace Memory{
 	page_t kernelHeapDirTables[TABLES_PER_DIR][PAGES_PER_TABLE] __attribute__((aligned(4096)));
 
 	uint64_t VirtualToPhysicalAddress(uint64_t addr) {
-		uint64_t address;
+		uint64_t address = 0;
 
 		uint32_t pml4Index = PML4_GET_INDEX(addr);
 		uint32_t pdptIndex = PDPT_GET_INDEX(addr);
@@ -44,6 +44,29 @@ namespace Memory{
 		}
 		return address;
 	}
+
+	uint64_t VirtualToPhysicalAddress(uint64_t addr, address_space_t* addressSpace) {
+		uint64_t address = 0;
+
+		uint32_t pml4Index = PML4_GET_INDEX(addr);
+		uint32_t pdptIndex = PDPT_GET_INDEX(addr);
+		uint32_t pageDirIndex = PAGE_DIR_GET_INDEX(addr);
+		uint32_t pageTableIndex = PAGE_TABLE_GET_INDEX(addr);
+
+		if(pml4Index == 0){ // From Process Address Space
+			if((addressSpace->pageDirs[pdptIndex][pageDirIndex] & 0x1) && addressSpace->pageTables[pdptIndex][pageDirIndex])
+				return addressSpace->pageTables[pdptIndex][pageDirIndex][pageTableIndex] & PAGE_FRAME;
+			else return 0;		
+		} else { // From Kernel Address Space
+			if(kernelHeapDir[pageDirIndex] & 0x80){
+				address = (GetPageFrame(kernelHeapDir[pageDirIndex])) << 12;
+			} else {
+				address = (GetPageFrame(kernelHeapDirTables[pageDirIndex][pageTableIndex])) << 12;
+			}
+		}
+		return address;
+	}
+
 
 	void InitializeVirtualMemory()
 	{

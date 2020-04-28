@@ -45,7 +45,7 @@ namespace USB{
             Log::Info(xhciVirtualAddress);
 
             capRegs = (xhci_cap_regs_t*)xhciVirtualAddress;
-            opRegs = (xhci_op_regs_t*)xhciVirtualAddress + capRegs->capLength;
+            opRegs = (xhci_op_regs_t*)(xhciVirtualAddress + capRegs->capLength);
 
             int timer = 0xFFFF;
 

@@ -2,6 +2,7 @@
 
 #include <lemon/types.h>
 #include <gfx/window/window.h>
+#include <stdlib.h>
 
 //#include <runtime.h>
 
@@ -16,18 +17,28 @@ handle_t _CreateWindow(win_info_t* wininfo){
 	return h;
 }
 
+handle_t _CreateWindow(win_info_t* wininfo, void** primaryBuffer, void** secondaryBuffer){
+	handle_t h;
+	syscall(SYS_CREATE_WINDOW,(uintptr_t)wininfo, primaryBuffer,secondaryBuffer,0,0);
+
+	h = wininfo->handle;
+
+	return h;
+}
+
 void _DestroyWindow(handle_t window){
 	syscall(SYS_DESTROY_WINDOW, (uintptr_t)window, 0, 0, 0, 0);
 }
 
-void _PaintWindow(handle_t window, surface_t* surface){
-	syscall(SYS_UPDATE_WINDOW, (uintptr_t)window, (uintptr_t)surface, 0, 0, 0);
+void _PaintWindow(handle_t window, int buffer){
+	syscall(SYS_UPDATE_WINDOW, (uintptr_t)window, buffer, 0, 0, 0);
 }
 
 Window* CreateWindow(win_info_t* info){
-	handle_t handle = _CreateWindow(info);
 
 	Window* win = new Window();
+
+	handle_t handle = _CreateWindow(info, (void**)&win->primaryBuffer, (void**)&win->secondaryBuffer);
 	win->handle = handle;
 	memcpy(&win->info,info,sizeof(win_info_t));
 
@@ -35,7 +46,7 @@ Window* CreateWindow(win_info_t* info){
 	surface.width = info->width;
 	surface.height = info->height;
 
-	surface.buffer = (uint8_t*)malloc((surface.width * 4) * info->height);
+	surface.buffer = (uint8_t*)win->primaryBuffer;//(uint8_t*)malloc((surface.width * 4) * info->height);
 
 	surface.linePadding = 0;
 
@@ -47,6 +58,20 @@ Window* CreateWindow(win_info_t* info){
 void DestroyWindow(Window* win){
 	_DestroyWindow(win->handle);
 	delete win;
+}
+
+void UpdateWindow(Window* win){
+	syscall(SYS_UPDATE_WINDOW, win->handle, 0, &win->info, 0, 0);
+}
+
+void SwapWindowBuffers(Window* win){
+	if(win->surface.buffer == win->primaryBuffer){
+		win->surface.buffer = win->secondaryBuffer;
+		_PaintWindow(win->handle, 1);
+	} else {
+		win->surface.buffer = win->primaryBuffer;
+		_PaintWindow(win->handle, 2);
+	}
 }
 
 void PaintWindow(Window* win){
@@ -61,7 +86,7 @@ void PaintWindow(Window* win){
 		win->OnPaint(&win->surface);
 	}
 
-	_PaintWindow(win->handle, &win->surface);
+	SwapWindowBuffers(win);
 }
 
 void HandleMouseDown(Window* win, vector2i_t mousePos){

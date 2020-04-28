@@ -56,6 +56,8 @@ typedef struct Window{
 	win_info_t info;
 
 	surface_t surface;
+	uint8_t* primaryBuffer;
+	uint8_t* secondaryBuffer;
 
 	Desktop* desktop;
 } window_t;

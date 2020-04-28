@@ -14,7 +14,7 @@ namespace AHCI{
 	Port::Port(int num, hba_port_t* portStructure){
         registers = portStructure;
 
-        stopCMD(registers);
+        //stopCMD(registers);
 
         uintptr_t phys;
         
@@ -52,14 +52,14 @@ namespace AHCI{
             memset(commandTables[i],1,PAGE_SIZE_4K);
         }
 
-        startCMD(registers);
+        //startCMD(registers);
 
         registers->is = 0;
         registers->ie = 0xFFFFFFFF;
     }
 
     int Port::Read(uint32_t startl, uint32_t starth, uint32_t count, uint16_t *buf){
-
+        
     }
 
     int Port::FindCmdSlot(){

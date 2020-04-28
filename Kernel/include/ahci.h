@@ -46,7 +46,7 @@ typedef struct tagFIS_REG_H2D
  
 	// DWORD 4
 	uint8_t  rsv1[4];	// Reserved
-} fis_reg_h2d_t;
+} __attribute__((packed)) fis_reg_h2d_t;
 
 typedef struct tagFIS_REG_D2H
 {
@@ -80,7 +80,7 @@ typedef struct tagFIS_REG_D2H
  
 	// DWORD 4
 	uint8_t  rsv4[4];     // Reserved
-} fis_reg_d2h_t;
+} __attribute__((packed)) fis_reg_d2h_t;
 
 typedef struct tagFIS_DATA
 {
@@ -94,7 +94,7 @@ typedef struct tagFIS_DATA
  
 	// DWORD 1 ~ N
 	uint32_t data[1];	// Payload
-} fis_data;
+} __attribute__((packed)) fis_data;
 
 typedef struct tagFIS_PIO_SETUP
 {
@@ -131,7 +131,7 @@ typedef struct tagFIS_PIO_SETUP
 	// DWORD 4
 	uint16_t tc;		// Transfer count
 	uint8_t  rsv4[2];	// Reserved
-} fis_pio_setup_t;
+} __attribute__((packed)) fis_pio_setup_t;
 
 typedef struct tagFIS_DMA_SETUP
 {
@@ -162,7 +162,7 @@ typedef struct tagFIS_DMA_SETUP
         //DWORD 6
         uint32_t resvd;          //Reserved
  
-} fis_dma_setup_t;
+} __attribute__((packed)) fis_dma_setup_t;
 
 typedef volatile struct tagHBA_PORT
 {
@@ -185,7 +185,7 @@ typedef volatile struct tagHBA_PORT
 	uint32_t fbs;		// 0x40, FIS-based switch control
 	uint32_t rsv1[11];	// 0x44 ~ 0x6F, Reserved
 	uint32_t vendor[4];	// 0x70 ~ 0x7F, vendor specific
-} hba_port_t;
+} __attribute__((packed)) hba_port_t;
 
 typedef volatile struct tagHBA_MEM
 {
@@ -210,7 +210,7 @@ typedef volatile struct tagHBA_MEM
  
 	// 0x100 - 0x10FF, Port control registers
 	hba_port_t	ports[32];	// 1 ~ 32
-} hba_mem_t;
+} __attribute__((packed)) hba_mem_t;
  
 typedef volatile struct tagHBA_FIS
 {
@@ -234,7 +234,7 @@ typedef volatile struct tagHBA_FIS
  
 	// 0xA0
 	uint8_t   	rsv[0x100-0xA0];
-} hba_fis_t;
+} __attribute__((packed)) hba_fis_t;
 
 typedef struct tagHBA_CMD_HEADER
 {
@@ -262,7 +262,7 @@ typedef struct tagHBA_CMD_HEADER
  
 	// DW4 - 7
 	uint32_t rsv1[4];	// Reserved
-} hba_cmd_header_t;
+} __attribute__((packed)) hba_cmd_header_t;
  
 typedef struct tagHBA_PRDT_ENTRY
 {
@@ -274,7 +274,7 @@ typedef struct tagHBA_PRDT_ENTRY
 	uint32_t dbc:22;		// Byte count, 4M max
 	uint32_t rsv1:9;		// Reserved
 	uint32_t i:1;		// Interrupt on completion
-} hba_prdt_entry_t;
+} __attribute__((packed)) hba_prdt_entry_t;
 
 typedef struct tagHBA_CMD_TBL
 {
@@ -289,7 +289,7 @@ typedef struct tagHBA_CMD_TBL
  
 	// 0x80
 	hba_prdt_entry_t	prdt_entry[1];	// Physical region descriptor table entries, 0 ~ 65535
-} hba_cmd_tbl_t;
+} __attribute__((packed)) hba_cmd_tbl_t;
 
 #define	SATA_SIG_SATA	0x00000101	// SATA drive
 #define	SATA_SIG_ATAPI	0xEB140101	// SATAPI drive

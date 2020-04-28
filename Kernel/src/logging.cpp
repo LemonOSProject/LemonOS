@@ -2,6 +2,9 @@
 #include <string.h>
 #include <videoconsole.h>
 
+#include <stdarg.h>
+#include <string.h>
+
 namespace Log{
 
 	VideoConsole* console = nullptr;
@@ -44,6 +47,84 @@ namespace Log{
 		itoa(num, (char*)(buf + (hex ? 2 : 0)), hex ? 16 : 10);
 		Write(buf);
 	}
+
+	void WriteF(const char* __restrict format, va_list args){
+	
+		while (*format != '\0') {
+			if (format[0] != '%' || format[1] == '%') {
+				if (format[0] == '%')
+					format++;
+				size_t amount = 1;
+				while (format[amount] && format[amount] != '%')
+					amount++;
+				write_serial_n(format, amount);
+				format += amount;
+				continue;
+			}
+	
+			const char* format_begun_at = format++;
+
+			bool hex = true;
+			switch(*format){
+				case 'c': {
+					format++;
+					auto arg = (char) va_arg(args, int /* char promotes to int */);
+					write_serial_n(&arg, 1);
+					break;
+				} case 's': {
+					format++;
+					auto arg = va_arg(args, const char*);
+					size_t len = strlen(arg);
+					write_serial_n(arg, len);
+					break;
+				} case 'd': {
+					hex = false;
+				} case 'x': {
+					format++;
+					auto arg = va_arg(args, unsigned long long);
+					Write(arg, hex);
+					break;
+				} default:
+					format = format_begun_at;
+					size_t len = strlen(format);
+					write_serial_n(format, len);
+					format += len;
+			}
+		}
+	}
+
+	void Warning(const char* __restrict fmt, ...){
+		Write("\r\n");
+		Write("[");
+		Write("WARN", 255, 255, 0);
+		Write("]    ");
+		va_list args;
+		va_start(args, fmt);
+		WriteF(fmt, args);
+		va_end(args);
+    }
+
+    void Error(const char* __restrict fmt, ...){
+		Write("\r\n");
+		Write("[");
+		Write("ERROR", 255, 0, 0);
+		Write("]   ");
+		va_list args;
+		va_start(args, fmt);
+		WriteF(fmt, args);
+		va_end(args);
+    }
+
+    void Info(const char* __restrict fmt, ...){
+		Write("\r\n");
+		Write("[");
+		Write("INFO");
+		Write("]    ");
+		va_list args;
+		va_start(args, fmt);
+		WriteF(fmt, args);
+		va_end(args);
+    }
 
     void Warning(const char* str){
 		Write("\r\n");

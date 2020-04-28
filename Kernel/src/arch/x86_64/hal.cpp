@@ -11,6 +11,7 @@
 #include <acpi.h>
 #include <timer.h>
 #include <tss.h>
+#include <apic.h>
 
 namespace HAL{
     memory_info_t mem_info;
@@ -54,7 +55,6 @@ namespace HAL{
         Log::Info("Initializing System Timer...");
         Timer::Initialize(1500);
         Log::Write("OK");
-
     } 
 
     void InitVideo(){
@@ -83,6 +83,10 @@ namespace HAL{
 
         Log::Info("Initializing ACPI...");
         ACPI::Init();
+        Log::Write("OK");
+        
+        Log::Info("Initializing Local and I/O APIC...");
+        APIC::Initialize();
         Log::Write("OK");
     }
 

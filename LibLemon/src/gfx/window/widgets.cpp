@@ -40,7 +40,7 @@ void TextBox::Paint(surface_t* surface){
                 xpos += 8 * 8;
             }
 
-            xpos += DrawChar(contents[i][j], bounds.pos.x + xpos, bounds.pos.y + ypos, textColour.r, textColour.g, textColour.b, surface);
+            xpos += DrawChar(contents[i][j], bounds.pos.x + xpos, bounds.pos.y + ypos - sBar.scrollPos, textColour.r, textColour.g, textColour.b, surface);
 
             if((xpos > (bounds.size.x - 8 - 16))){
                 xpos = 0;
@@ -49,8 +49,10 @@ void TextBox::Paint(surface_t* surface){
         }
         ypos += 13;
         xpos = 0;
-        if(ypos + 12 >= bounds.size.y) break;
+        if(ypos - sBar.scrollPos + 12 >= bounds.size.y) break;
     }
+
+    sBar.Paint(surface, {bounds.pos.x + bounds.size.x - 16, bounds.pos.y});
 }
 
 void TextBox::LoadText(char* text){
@@ -87,12 +89,31 @@ void TextBox::LoadText(char* text){
     }
     
     this->lineCount = lineCount;
+    ResetScrollBar();
 }
 
 void TextBox::OnMouseDown(vector2i_t mousePos){
+    if(mousePos.x > bounds.pos.x + bounds.size.x - 16){
+        sBar.OnMouseDownRelative({mousePos.x - bounds.pos.x + bounds.size.x - 16, mousePos.y - bounds.pos.y});
+        return;
+    }
     active = true;
 }
 
+void TextBox::OnMouseMove(vector2i_t mousePos){
+    if(sBar.pressed){
+        sBar.OnMouseMoveRelative({0, mousePos.y - bounds.pos.y});
+    }
+}
+
+void TextBox::OnMouseUp(vector2i_t mousePos){
+    sBar.pressed = false;
+}
+
+
+void TextBox::ResetScrollBar(){
+    sBar.ResetScrollBar(bounds.size.y, lineCount * 12);
+}
 //////////////////////////
 // Button
 //////////////////////////
@@ -159,12 +180,16 @@ void Button::OnMouseDown(vector2i_t mousePos){
 }
 
 void Button::OnMouseUp(vector2i_t mousePos){
+    if(OnPress) OnPress();
+
     pressed = false;
 }
 
 //////////////////////////
 // Bitmap
 //////////////////////////
+Bitmap::Bitmap(){}
+
 Bitmap::Bitmap(rect_t _bounds){
     bounds = _bounds;
     surface.buffer = (uint8_t*)malloc(bounds.size.x*bounds.size.y*4);
@@ -226,6 +251,39 @@ void ScrollBar::OnMouseMoveRelative(vector2i_t relativePosition){
         if(scrollBar.pos.y + scrollBar.size.y > height) scrollBar.pos.y = height - scrollBar.size.y;
         if(scrollBar.pos.y < 0) scrollBar.pos.y = 0;
         scrollPos = scrollBar.pos.y * scrollIncrement;
+    }
+}
+
+void ScrollBarHorizontal::ResetScrollBar(int displayWidth, int areaWidth){
+    double scrollDisplayRange = ((double)areaWidth) / displayWidth; // Essentially how many 'displayHeight's in areaHeight
+    scrollIncrement = ceil(scrollDisplayRange);
+    scrollBar.size.x = displayWidth / scrollDisplayRange;
+    scrollBar.pos.x = 0;
+    scrollPos = 0;
+    width = displayWidth;
+}
+
+void ScrollBarHorizontal::Paint(surface_t* surface, vector2i_t offset, int height){
+    DrawRect(offset.x, offset.y, width, height, 128, 128, 128, surface);
+    if(pressed) 
+        DrawRect(offset.x + scrollBar.pos.x, offset.y, scrollBar.size.x, height, 224/1.1, 224/1.1, 219/1.1, surface);
+    else 
+        DrawGradient(offset.x + scrollBar.pos.x, offset.y, scrollBar.size.x, height,{250,250,250,255},{235,235,230,255},surface);
+}
+
+void ScrollBarHorizontal::OnMouseDownRelative(vector2i_t mousePos){
+    if(mousePos.x > scrollBar.pos.x && mousePos.x < scrollBar.pos.x + scrollBar.size.x){
+        pressed = true;
+        pressOffset = mousePos.x - scrollBar.pos.x;
+    }
+}
+
+void ScrollBarHorizontal::OnMouseMoveRelative(vector2i_t relativePosition){
+    if(pressed){
+        scrollBar.pos.x = relativePosition.x - pressOffset;
+        if(scrollBar.pos.x + scrollBar.size.x > width) scrollBar.pos.x = width - scrollBar.size.x;
+        if(scrollBar.pos.x < 0) scrollBar.pos.x = 0;
+        scrollPos = scrollBar.pos.x * scrollIncrement;
     }
 }
 

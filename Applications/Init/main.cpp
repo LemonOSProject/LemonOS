@@ -24,6 +24,47 @@
 #define WINDOW_BORDER_COLOUR {32,32,32}
 #define WINDOW_TITLEBAR_HEIGHT 24
 
+#define c0 {0, 0, 0, 0}
+#define c1 {255, 255, 255, 255}
+#define c2 {0, 0, 0, 255}
+#define c3 {33, 33, 33, 255}
+#define c4 {66, 66, 66, 255}
+
+rgba_colour_t mouse[] = {
+	c2,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,
+	c2,c2,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,
+	c2,c1,c2,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,
+	c2,c1,c1,c2,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,
+	c2,c1,c1,c1,c2,c0,c0,c0,c0,c0,c0,c0,c0,c0,c0,
+	c2,c1,c1,c1,c1,c2,c0,c0,c0,c0,c0,c0,c0,c0,c0,
+	c2,c1,c1,c1,c1,c1,c2,c0,c0,c0,c0,c0,c0,c0,c0,
+	c2,c1,c1,c1,c1,c1,c1,c2,c0,c0,c0,c0,c0,c0,c0,
+	c2,c1,c1,c1,c1,c1,c1,c1,c2,c0,c0,c0,c0,c0,c0,
+	c2,c1,c1,c1,c1,c1,c1,c1,c1,c2,c0,c0,c0,c0,c0,
+	c2,c1,c1,c1,c1,c1,c1,c1,c1,c1,c2,c0,c0,c0,c0,
+	c2,c1,c1,c1,c1,c1,c1,c1,c1,c1,c1,c2,c0,c0,c0,
+	c2,c1,c1,c1,c1,c1,c1,c1,c1,c1,c1,c1,c2,c0,c0,
+	c2,c1,c1,c1,c1,c1,c1,c1,c1,c1,c1,c1,c1,c2,c0,
+	c2,c1,c1,c1,c1,c1,c1,c1,c3,c3,c3,c3,c3,c3,c2,
+	c2,c1,c1,c1,c1,c3,c1,c1,c2,c2,c2,c2,c2,c2,c2,
+	c2,c1,c1,c1,c3,c2,c3,c1,c2,c0,c0,c0,c0,c0,c0,
+	c2,c1,c1,c3,c2,c0,c2,c4,c1,c2,c0,c0,c0,c0,c0,
+	c2,c1,c3,c2,c0,c0,c2,c3,c1,c2,c0,c0,c0,c0,c0,
+	c2,c3,c2,c0,c0,c0,c0,c2,c4,c1,c2,c0,c0,c0,c0,
+	c2,c2,c0,c0,c0,c0,c0,c2,c3,c1,c2,c0,c0,c0,c0,
+	c2,c0,c0,c0,c0,c0,c0,c0,c2,c4,c1,c2,c0,c0,c0,
+	c0,c0,c0,c0,c0,c0,c0,c0,c2,c3,c1,c2,c0,c0,c0,
+	c0,c0,c0,c0,c0,c0,c0,c0,c0,c2,c2,c0,c0,c0,c0,
+};
+
+surface_t mouseSurface = {
+	.x = 0,
+	.y = 0,
+	.width = 15,
+	.height = 24,
+	.buffer = (uint8_t*)mouse,
+};
+
 int keymap_us[128] =
 {
 	0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
@@ -158,6 +199,7 @@ void AddNewWindows(){
 
 		for(int i = 0; i < windows.get_length(); i++){
 			if(windows[i]->handle == windowHandle){ // We already know about this window
+				windows[i]->info = windowInfo;
 				windowFound = true;
 				break;
 			}
@@ -169,10 +211,10 @@ void AddNewWindows(){
 			win->handle = windowHandle;
 			win->pos = {win->info.x, win->info.y};
 			windows.add_back(win);
-
-			redrawWindowDecorations = true;
 		}
 	}
+	
+	redrawWindowDecorations = true;
 }
 
 bool PointInWindow(Window_s* win, vector2i_t point){
@@ -186,6 +228,9 @@ bool PointInWindowProper(Window_s* win, vector2i_t point){
 }
 
 void DrawWindow(Window_s* win){
+	if(win->info.flags & WINDOW_FLAGS_MINIMIZED){
+		return;
+	}
 
 	if(win->info.flags & WINDOW_FLAGS_NODECORATION){
 		syscall(SYS_RENDER_WINDOW, (uintptr_t)&renderBuffer, (uintptr_t)win->handle,(uintptr_t)&win->pos,0,0);
@@ -403,11 +448,12 @@ int main(){
 		DrawString(temp,0,0,255,255,255,&renderBuffer);
 		#endif
 
-		DrawRect(mousePos.x, mousePos.y, 5, 5, 255, 0, 0, &renderBuffer);
+		//DrawRect(mousePos.x, mousePos.y, 5, 5, 255, 0, 0, &renderBuffer);
+		surfacecpyTransparent(&renderBuffer, &mouseSurface, {mousePos.x, mousePos.y});
 
 		memcpy_optimized(fbSurface->buffer, renderBuffer.buffer, fbInfo.width * fbInfo.height * 4);//surfacecpy(fbSurface,&renderBuffer); // Render our buffer
 
-		DrawRect(mousePos.x, mousePos.y, 5, 5, backgroundColor, &renderBuffer);
+		DrawRect(mousePos.x, mousePos.y, mouseSurface.width, mouseSurface.height, backgroundColor, &renderBuffer);
 	}
 
 	for(;;);

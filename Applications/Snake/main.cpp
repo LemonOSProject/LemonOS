@@ -207,7 +207,7 @@ int main(char argc, char** argv){
 		if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_SNAKE || snake->get_at(0).y < 0 || snake->get_at(0).x < 0 || snake->get_at(0).y >= 16 || snake->get_at(0).x >= 16){
 			gameOver = true;
 			DrawString("Game Over, Press any key to Reset", 0, 0, 255, 255, 255, &window->surface);
-			_PaintWindow(window->handle, &window->surface);
+			SwapWindowBuffers(window);
 			continue;
 		} else if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_APPLE){
 			snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] = SNAKE_CELL_EMPTY;
@@ -233,7 +233,7 @@ int main(char argc, char** argv){
 			snake->add_back({0,0});
 		}
 		
-		_PaintWindow(window->handle, &window->surface);
+		SwapWindowBuffers(window);
 	}
 
 	for(;;);

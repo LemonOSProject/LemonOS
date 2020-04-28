@@ -69,34 +69,23 @@ void kmain(multiboot_info_t* mb_info){
 
 	Video::DrawRect(0, 0, videoMode.width, videoMode.height, 0, 0, 0);
 
-	char* stringBuffer = (char*)kmalloc(16);
-	Log::Info("Video Resolution:");
-	Log::Info(videoMode.width, false);
-	Log::Write("x");
-	Log::Write(itoa(videoMode.height, stringBuffer, 10));
-	Log::Write("x");
-	Log::Write(itoa(videoMode.bpp, stringBuffer, 10));
-	kfree(stringBuffer);
+	Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
 
 	if(videoMode.height < 600)
 		Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");
 	if(videoMode.bpp != 32)
 		Log::Warning("Unsupported Colour Depth expect issues.");
 
-	stringBuffer = (char*)kmalloc(16);
-	Log::Info("RAM: ");
-	Log::Write(itoa((mb_info->memoryHi + mb_info->memoryLo) / 1024, stringBuffer, 10));
-	Log::Write("MB");
+	Log::Info("RAM: %d MB", (mb_info->memoryHi + mb_info->memoryLo) / 1024);
 
-	Log::Info("Multiboot Module Count: ");
-	Log::Info(HAL::multibootInfo.modsCount, false);
+	Log::Info("Multiboot Module Count: %d", HAL::multibootInfo.modsCount);
 	
 	Log::Info("Initializing Ramdisk...");
 	fs::Initialize();
 	Initrd::Initialize(initrd_start,initrd_end - initrd_start); // Initialize Initrd
 	Log::Write("OK");
 	
-	Log::Info("Ramdisk Contents:\n");
+	Log::Info("Filesystem Root:");
 
 	fs_dirent_t* dirent;
 	fs_node_t* root = fs::GetRoot();
