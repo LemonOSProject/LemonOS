@@ -15,3 +15,4 @@ Applications/build
 LibLemon/build
 Scripts/build-win/mount.cfg
 Kernel/subprojects/lai
+InitrdWriter/Contents

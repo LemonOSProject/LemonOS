@@ -7,16 +7,15 @@ int MessageBox(const char* messageString, int flags){
 	win_info_t msgBoxWindowInfo;
 	msgBoxWindowInfo.x = 50;
 	msgBoxWindowInfo.y = 50;
-	if(strlen(messageString)*8 < 400)
-		msgBoxWindowInfo.width = 400;
-	else
-		msgBoxWindowInfo.width = strlen(messageString)*8 + 100;
-	msgBoxWindowInfo.height = 100;
+	int messageLen = GetTextLength(messageString);
+	
+	msgBoxWindowInfo.width = messageLen + 80;
+	msgBoxWindowInfo.height = 64;
 	msgBoxWindowInfo.flags = 0;
 
 	Window* win = CreateWindow(&msgBoxWindowInfo);
 
-	Label* message = new Label(messageString, {{msgBoxWindowInfo.width / 2 - strlen(messageString) * 8 / 2,50},{strlen(messageString)*8,12}});
+	Label* message = new Label(messageString, {{msgBoxWindowInfo.width / 2 - messageLen / 2,8},{strlen(messageString)*8,12}});
 
 	Button* btn1;
 	Button* btn2;

@@ -1,1 +1,1 @@
-./a.out initrd-x86_64.img Contents/*.lef Contents/*.bmp Contents/menu.cfg Contents/montserrat.ttf Contents/montserratlicense.txt Contents/sourcecodepro.ttf Contents/sourcecodeprolicense.txt Contents/*.so
+./a.out initrd-x86_64.img Contents/*.lef Contents/*.bmp Contents/menu.cfg Contents/montserrat.ttf Contents/montserratlicense.txt Contents/sourcecodepro.ttf Contents/sourcecodeprolicense.txt Contents/*.so Contents/*.so.*

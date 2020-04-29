@@ -184,7 +184,7 @@ void InitializeFonts(){
     fontState = 1;
 }
 
-void LoadFont(char* path){
+void LoadFont(const char* path){
     fontState = -1;
 
 	if(FT_Init_FreeType(&library)){
@@ -271,7 +271,7 @@ int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surf
     return mainFont->glyph->advance.x >> 6;
 }
 
-void DrawString(char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface) {
+void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface) {
     if(fontState == 0 || !mainFont || !library) InitializeFonts();
     if(fontState == -1){
         int xOffset = 0;
@@ -322,4 +322,32 @@ void DrawString(char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g,
         xOffset += mainFont->glyph->advance.x >> 6;
         str++;
     }
+}
+
+int GetTextLength(const char* str){
+    if(fontState == 0 || !mainFont || !library) InitializeFonts();
+    if(fontState == -1){
+        return strlen(str) * 8;
+    }
+
+    size_t len = 0;
+    while (*str != 0) {
+        if(*str == '\n'){
+            break;
+        } else if (!isprint(*str)) {
+            str++;
+            continue;
+        }
+
+        if(int err = FT_Load_Char(mainFont, *str, FT_LOAD_RENDER)) {
+            syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
+            fontState = 0;
+            return 0;
+        }
+
+        len += mainFont->glyph->advance.x >> 6;
+        str++;
+    }
+
+    return len;
 }

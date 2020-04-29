@@ -72,13 +72,13 @@ int keymap_us[128] =
 	'\t',			/* Tab */
 	'q', 'w', 'e', 'r',	/* 19 */
 	't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */
-	0,			/* 29   - Control */
+	KEY_CONTROL,			/* 29   - Control */
 	'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */
-	'\'', '`',   0,		/* Left shift */
+	'\'', '`',   KEY_SHIFT,		/* Left shift */
 	'\\', 'z', 'x', 'c', 'v', 'b', 'n',			/* 49 */
 	'm', ',', '.', '/',   0,				/* Right shift */
 	'*',
-	0,	/* Alt */
+	KEY_ALT,	/* Alt */
 	' ',	/* Space bar */
 	0,	/* Caps lock */
 	KEY_F1,	/* 59 - F1 key ... > */
@@ -111,6 +111,12 @@ struct Window_s{
 	vector2i_t pos;
 	bool active = false;
 };
+
+struct KeyboardState{
+	bool caps, control, shift, alt;
+};
+
+KeyboardState keyboardState;
 
 uint8_t* fb = 0;
 fb_info_t fbInfo;
@@ -417,14 +423,33 @@ int main(){
 						ipc_message_t keyMsg;
 
 						int key = keymap_us[msg.data & 0x7F];
-						if(msg.data2 /*caps*/ && isalpha(key)) key = toupper(key);
+
+						switch(key){
+							case KEY_SHIFT:
+								keyboardState.shift = !(msg.data >> 7);
+								break;
+							case KEY_CONTROL:
+								keyboardState.control = !(msg.data >> 7);
+								break;
+							case KEY_ALT:
+								keyboardState.alt = !(msg.data >> 7);
+								break;
+						}
+
+						keyMsg.data2 = 0;
+
+						if(keyboardState.shift) keyMsg.data2 |= KEY_STATE_SHIFT;
+						if(keyboardState.control) keyMsg.data2 |= KEY_STATE_CONTROL;
+						if(keyboardState.alt) keyMsg.data2 |= KEY_STATE_ALT;
+
+						if((msg.data2 /*caps*/ || keyboardState.shift) && isalpha(key)) key = toupper(key);
+
 						if((msg.data >> 7) && (msg.data & 0x7F)) {
 							keyMsg.msg = WINDOW_EVENT_KEYRELEASED;
-							keyMsg.data = key;
 						} else {
 							keyMsg.msg = WINDOW_EVENT_KEY;
-							keyMsg.data = key;
 						}
+						keyMsg.data = key;
 						keyMsg.data2 = (uintptr_t)active->info.handle;
 						SendMessage(active->info.ownerPID, keyMsg);
 					}

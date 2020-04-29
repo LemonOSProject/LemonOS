@@ -82,11 +82,11 @@ namespace HAL{
         Log::Write("OK");
 
         Log::Info("Initializing ACPI...");
-        ACPI::Init();
+        //ACPI::Init();
         Log::Write("OK");
         
         Log::Info("Initializing Local and I/O APIC...");
-        APIC::Initialize();
+        //APIC::Initialize();
         Log::Write("OK");
     }
 

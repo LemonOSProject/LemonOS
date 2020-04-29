@@ -37,6 +37,7 @@ The Lemon Operating System
 | Kernel/       | Lemon Kernel           |
 | LibLemon/     | LibLemon (Lemon API)   |
 | Patches/      | Patch files            |
+| Resources/    | Images, fonts, etc.    |
 | Scripts/      | Build Scripts          |
 | Screenshots/  | Screenshots            |
 

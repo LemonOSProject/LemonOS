@@ -1,1 +1,1 @@
-ninja -C LibC/build -j7 && ninja install -C LibC/build && ninja -C LibLemon/build -j7 && ninja -C LibLemon/build install && cp -r ~/.local/share/lemon/sysroot/usr/lib/* InitrdWriter/Contents/ && Scripts/buildinitrd.sh && ninja -C Kernel/build -j7 && cmd.exe /c Scripts\\build-win\\copytodisk.bat
+ninja -C LibC/build -j7 && ninja install -C LibC/build && ninja -C LibLemon/build -j7 && ninja -C LibLemon/build install && Scripts/buildinitrd.sh && ninja -C Kernel/build -j7 && cmd.exe /c Scripts\\build-win\\copytodisk.bat

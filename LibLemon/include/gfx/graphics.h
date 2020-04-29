@@ -87,10 +87,12 @@ void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t
 void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface);
 
 int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
-void DrawString(char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
+void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
+int GetTextLength(const char* str);
+
 void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface);
 void RefreshFonts();
-void LoadFont(char* path);
+void LoadFont(const char* path);
 
 video_mode_t GetVideoMode();
 

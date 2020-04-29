@@ -18,3 +18,12 @@
 #define KEY_ARROW_LEFT 267
 #define KEY_ARROW_RIGHT 268
 #define KEY_ARROW_DOWN 269
+
+#define KEY_SHIFT 270
+#define KEY_ALT 271
+#define KEY_CONTROL 272
+
+#define KEY_STATE_CAPS 1
+#define KEY_STATE_SHIFT 2
+#define KEY_STATE_ALT 4
+#define KEY_STATE_CONTROL 8
