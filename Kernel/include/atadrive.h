@@ -8,7 +8,7 @@ namespace ATA{
     class ATADiskDevice : public DiskDevice{
     public:
         ATADiskDevice(int port, int drive); // Constructor
-        int Read(uint64_t lba, uint16_t count, void* buffer); // Read bytes
+        int Read(uint64_t lba, uint32_t count, void* buffer); // Read bytes
 
         uint32_t prdBufferPhys;
         uint8_t* prdBuffer;

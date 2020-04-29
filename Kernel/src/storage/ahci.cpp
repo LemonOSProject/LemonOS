@@ -72,10 +72,13 @@ namespace AHCI{
 					Log::Info(ahciHBA->ports[i].sig);
 
 					ports[i] = new Port(i, &ahciHBA->ports[i]);
+
+					uint8_t buf[512];
+					ports[i]->Read(0, 512, buf);
+					
+					DeviceManager::devices->add_back(ports[i]);
 				}
 			}
 		}
-
-		for(;;);
 	}
 }

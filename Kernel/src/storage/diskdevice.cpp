@@ -14,6 +14,6 @@ int DiskDevice::InitializePartitions(){
     return 0;
 }
 
-int DiskDevice::Read(uint64_t lba, uint16_t count, void* buffer){
+int DiskDevice::Read(uint64_t lba, uint32_t count, void* buffer){
     
 }

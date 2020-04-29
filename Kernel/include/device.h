@@ -22,7 +22,7 @@ class PartitionDevice;
 class DiskDevice : public Device{
 public:
     int InitializePartitions();
-    virtual int Read(uint64_t lba, uint16_t count, void* buffer);
+    virtual int Read(uint64_t lba, uint32_t count, void* buffer);
     
     List<PartitionDevice*> partitions;
     int blocksize = 512;
@@ -33,7 +33,7 @@ private:
 class PartitionDevice : public Device{
 public:
     PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk);
-    virtual int Read(uint64_t lba, uint16_t count, void* buffer);
+    virtual int Read(uint64_t lba, uint32_t count, void* buffer);
     
     DiskDevice* parentDisk;
 private:

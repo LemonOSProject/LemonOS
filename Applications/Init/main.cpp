@@ -442,7 +442,7 @@ int main(){
 						if(keyboardState.control) keyMsg.data2 |= KEY_STATE_CONTROL;
 						if(keyboardState.alt) keyMsg.data2 |= KEY_STATE_ALT;
 
-						if((msg.data2 /*caps*/ || keyboardState.shift) && isalpha(key)) key = toupper(key);
+						if((/*msg.data2 /*caps* / ||*/ keyboardState.shift) && isalpha(key)) key = toupper(key);
 
 						if((msg.data >> 7) && (msg.data & 0x7F)) {
 							keyMsg.msg = WINDOW_EVENT_KEYRELEASED;

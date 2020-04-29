@@ -304,26 +304,39 @@ typedef struct tagHBA_CMD_TBL
 #define HBA_PORT_IPM_ACTIVE 1
 #define HBA_PORT_DET_PRESENT 3
 
+#include <devicemanager.h>
+
 namespace AHCI{
-	class Port{
+	class Port : public DiskDevice{
 	public:
 		Port(int num, hba_port_t* portStructure);
-		int Read(uint32_t startl, uint32_t starth, uint32_t count, uint16_t *buf);
-		int FindCmdSlot();
-		int test();
+
+		int Read(uint64_t lba, uint32_t count, void* buffer);
+
+        int blocksize = 512;
 	private:
+		int FindCmdSlot();
+		int InternalRead(uint64_t lba, uint32_t count);
+
 		hba_port_t* registers;
 
 		hba_cmd_header_t* commandList; // Address Mapping of the Command List
 		void* fis; // Address Mapping of the FIS
 
 		hba_cmd_tbl_t* commandTables[8];
+
+		uint64_t bufPhys;
+		void* bufVirt;
+
+        char* name = "Generic AHCI Disk Device";
 	};
 
 	int Init();
 
 	inline void startCMD(hba_port_t *port)
 	{
+    	port->cmd &= ~HBA_PxCMD_ST;
+
 		// Wait until CR (bit15) is cleared
 		while (port->cmd & HBA_PxCMD_CR);
 

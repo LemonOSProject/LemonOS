@@ -5,19 +5,18 @@ The Lemon Operating System
 ### Features
 - Window Management
 - Freetype Port
-- ATA Driver
-- GnuBoy Port (not incl)
+- ATA and SATA Driver
+- [GnuBoy Port](https://github.com/fido2020/lemon-gnuboy)
 - Dynamic Linking
 - Pseudoterminals and Terminal Emulator
 - [DOOM Port](https://github.com/fido2020/LemonDOOM)
 
 ### Work In Progess
-- FAT32 Filesystem support
+- FAT32 Filesystem support (read only)
 - Intel 8254x Driver
-- AHCI Driver
 
 ### System requirements
-- 128 MB RAM
+- 256 MB RAM
 - x86_64 Processor
 - VESA VBE support
 
