@@ -39,6 +39,7 @@ namespace AHCI{
 		controllerDevice = PCI::RegisterPCIDevice(controllerDevice);
 
 		if(controllerDevice.vendorID == 0xFFFF){
+			Log::Warning("No AHCI Controller Found");
 			return true; // No AHCI Controller Found
 		}
 

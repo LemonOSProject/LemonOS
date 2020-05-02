@@ -548,7 +548,7 @@ int SysRenderWindow(regs64_t* r){
 
 	surface_t* dest = (surface_t*)r->rbx;
 
-	int rowSize = ((dest->width - offset.x) > windowRegion.size.x) ? windowRegion.size.x : (dest->width - offset.x);
+	int rowSize = (((windowRegion.size.x + offset.x) >= dest->width) ? (dest->width - offset.x) : windowRegion.size.x);
 
 	if(rowSize <= 0) {
 		releaseLock(&desktop->lock);

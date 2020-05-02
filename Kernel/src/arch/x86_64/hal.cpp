@@ -31,6 +31,7 @@ namespace HAL{
 
         // Initialize Paging/Virtual Memory Manager
         Memory::InitializeVirtualMemory();
+
         Log::Info(mb_info.mmapAddr);
 
         multiboot_memory_map_t* memory_map = (multiboot_memory_map_t*)(mb_info.mmapAddr + KERNEL_VIRTUAL_BASE);
@@ -82,11 +83,11 @@ namespace HAL{
         Log::Write("OK");
 
         Log::Info("Initializing ACPI...");
-        //ACPI::Init();
+        ACPI::Init();
         Log::Write("OK");
         
         Log::Info("Initializing Local and I/O APIC...");
-        //APIC::Initialize();
+        APIC::Initialize();
         Log::Write("OK");
     }
 

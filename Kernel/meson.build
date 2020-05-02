@@ -78,6 +78,7 @@ cpp_files_x86_64 = [
     'src/arch/x86_64/physicalallocator.cpp',
     'src/arch/x86_64/scheduler.cpp',
     'src/arch/x86_64/serial.cpp',
+    'src/arch/x86_64/smp.cpp',
     'src/arch/x86_64/sse2.cpp',
     'src/arch/x86_64/ssp.cpp',
     'src/arch/x86_64/syscalls.cpp',
@@ -108,6 +109,5 @@ kernel_link_args += kernel_cpp_args
 
 executable('kernel.sys',
     [asmg.process(asm_files_x86_64), cpp_files, cpp_files_x86_64, lai.get_variable('sources')], objects : 'initrd.o',
-    #dependencies : lai.get_variable('dependency'),
     include_directories : [kernel_include_dirs],
     cpp_args : kernel_cpp_args, link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')

@@ -3,6 +3,7 @@
 #include <lemon/syscall.h>
 #include <lemon/fb.h>
 
+#include <math.h>
 #include <string.h>
 #include <stdlib.h>
 
@@ -127,10 +128,10 @@ bool PointInRect(rect_t rect, vector2i_t point){
     return (point.x >= rect.pos.x && point.x < rect.pos.x + rect.size.x && point.y >= rect.pos.y && point.y < rect.pos.y + rect.size.y);
 }
 
-int floor(double num) {
+/*int floor(double num) {
 	int x = (int)num;
 	return num < x ? x - 1 : x;
-}
+}*/
 
 void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface){
     DrawRect(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour, surface);
@@ -166,7 +167,7 @@ void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface
     DrawRect(x,y,width,height,colour.r,colour.g,colour.b,surface);
 }
 
-void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface) {
+/*void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface) {
     bitmap_file_header_t bmpHeader = *(bitmap_file_header_t*)data;
     data += bmpHeader.offset;
 
@@ -186,6 +187,60 @@ void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surfa
 		}
 		bmp_offset -= rowSize;
 		bmp_buffer_offset += w * pixelSize;
+	}
+}*/
+uint32_t Interpolate(double q11, double q21, double q12, double q22, double x, double y){
+    double val1 = q11;
+    double val2 = q21;
+    double x1 = (val1 + (val2 - val1) * (x - ((int)x)));
+
+    val1 = q12;
+    val2 = q22;
+    double x2 = (val1 + (val2 - val1) * (x - ((int)x)));
+
+    double val = (x1 + (x2 - x1) * (y - ((int)y)));
+    return (uint32_t)val;
+}
+
+void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface, bool preserveAspectRatio) {
+    bitmap_file_header_t bmpHeader = *(bitmap_file_header_t*)data;
+    bitmap_info_header_t bmpInfoHeader = *(bitmap_info_header_t*)(data + sizeof(bitmap_file_header_t));
+    data += bmpHeader.offset;
+
+    int originalWidth = bmpInfoHeader.width;
+    int originalHeight = bmpInfoHeader.height;
+
+    double xScale = ((double)w) / originalWidth;
+    double yScale = (((double)h) / originalHeight);
+    double xOffset = 0;
+
+    if(preserveAspectRatio){
+        xScale = ((double)h * (((double)originalWidth) / originalHeight)) / originalWidth;
+       // if((xScale * originalWidth) < originalWidth) xOffset = (originalWidth - (xScale * originalWidth)) / 2;
+    }
+
+
+	uint8_t bmpBpp = 24;
+    uint32_t rowSize = (int)floor((bmpBpp*bmpInfoHeader.width + 31) / 32) * 4;
+	uint32_t bmp_offset = rowSize * (originalHeight - 1);
+
+	uint32_t pixelSize = 4;
+	for (int i = 0; i < h && i + y < surface->height; i++) {
+        double _yval = ((double)i) / yScale;
+        if(ceil(_yval) >= originalHeight) break;
+		for (int j = 0; j < w && j + x < surface->width; j++) {
+            double _xval = xOffset + ((double) + j) / xScale;
+            if(ceil(_xval) >= originalWidth) break;
+
+            uint8_t r = Interpolate(data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 0], data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 0], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 0], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 0], _xval, _yval);
+            uint8_t g = Interpolate(data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 1], data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 1], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 1], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 1], _xval, _yval);
+            uint8_t b = Interpolate(data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 2], data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 2], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 2], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 2], _xval, _yval);
+            
+			uint32_t offset = (y + i)*(surface->width*pixelSize) + (x + j) * pixelSize;
+			surface->buffer[offset] = r;
+			surface->buffer[offset + 1] = g;
+			surface->buffer[offset + 2] = b;
+		}
 	}
 }
 
@@ -230,6 +285,9 @@ void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1,
 void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset){
 	for(int i = 0; i < src->height && i < dest->height - offset.y; i++){
         int rowSize = ((offset.x + src->width) > dest->width) ? dest->width - offset.x : src->width;
+
+        if(rowSize <= 0) return;
+
         memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4) + offset.x*4), src->buffer + i*src->width*4, rowSize*4);
 	}
 }
@@ -238,6 +296,9 @@ void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRe
     int srcWidth = (srcRegion.pos.x + srcRegion.size.x) > src->width ? (src->width - srcRegion.pos.x) : srcRegion.size.x;
     int srcHeight = (srcRegion.pos.y + srcRegion.size.y) > src->height ? (src->height - srcRegion.pos.y) : srcRegion.size.y;
     int rowSize = ((offset.x + srcWidth) > dest->width) ? dest->width - offset.x : srcWidth;
+
+    if(rowSize <= 0) return;
+
 	for(int i = 0; i < srcHeight && i < dest->height - offset.y; i++){
         memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4) + offset.x*4), src->buffer + (i + srcRegion.pos.y)*src->width * 4 + srcRegion.pos.x * 4, rowSize*4);
 	}

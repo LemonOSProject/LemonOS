@@ -213,6 +213,12 @@ namespace IDT{
 	void RegisterInterruptHandler(uint8_t interrupt, isr_t handler) {
 		interrupt_handlers[interrupt] = handler;
 	}
+
+	void DisablePIC(){
+		outportb(0x21, 0xFF);
+		outportb(0xA1, 0xFF);
+	}
+
 	int GetErrCode(){
 		return errCode;
 	}

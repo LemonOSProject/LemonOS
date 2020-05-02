@@ -25,5 +25,7 @@ namespace IDT{
 	void Initialize();
 	void RegisterInterruptHandler(uint8_t interrupt, isr_t handler);
 	
+	void DisablePIC();
+
 	int GetErrCode();
 }

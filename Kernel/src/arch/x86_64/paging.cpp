@@ -83,7 +83,6 @@ namespace Memory{
 
 		kernelPDPT[PDPT_GET_INDEX(KERNEL_VIRTUAL_BASE)] = 0x83;
 		kernelPDPT[0] = 0x83;
-		kernelPDPT[1] = 0xdeadbeef0083;
 		
 		kernelPDPT[KERNEL_HEAP_PDPT_INDEX] = 0x3;
 		SetPageFrame(&(kernelPDPT[KERNEL_HEAP_PDPT_INDEX]), (uint64_t)kernelHeapDir - KERNEL_VIRTUAL_BASE);

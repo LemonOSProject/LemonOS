@@ -13,6 +13,9 @@
 #include <lai/helpers/sci.h>
 
 namespace ACPI{
+	uint8_t processors[256];
+	int processorCount = 0;
+
 	const char* signature = "RSD PTR ";
 
 	acpi_rsdp_t* desc;
@@ -52,8 +55,6 @@ namespace ACPI{
 			return 1;
 		}
 
-		int processorCount = 0;
-
 		acpi_madt_t* madtHeader = (acpi_madt_t*)madt;
 		void* madtEnd = madt + madtHeader->header.length;
 
@@ -64,15 +65,23 @@ namespace ACPI{
 
 			switch(entry->type){
 			case 0:
-				//apic_local_t* localAPIC = (apic_local_t*)entry;
+				{
+					apic_local_t* localAPIC = (apic_local_t*)entry;
 
-				if(((apic_local_t*)entry)->flags & 0x3) processorCount++;
+					if(((apic_local_t*)entry)->flags & 0x3) {
+						processors[processorCount++];
+						Log::Info("[ACPI] Found Processor, APIC ID: %d, Enabled: %d", localAPIC->apicID, localAPIC->flags & 0x2);
+					}
+				}
 				break;
 			case 1:
-				//apic_iso_t* ioAPIC = (apic_iso_t*)entry;
+				//apic_io_t* ioAPIC = (apic_io_t*)entry;
 				break;
 			case 2:
-				//apic_io_t* interruptSourceOverride = (apic_io_t*)entry;
+				{
+					apic_iso_t* interruptSourceOverride = (apic_iso_t*)entry;
+					Log::Info("[ACPI] Interrupt Source Override, IRQ: %d, GSI: %d", interruptSourceOverride->irqSource, interruptSourceOverride->gSI);
+				}
 				break;
 			case 4:
 				//apic_nmi_t* nonMaskableInterrupt = (apic_nmi_t*)entry;
@@ -92,7 +101,7 @@ namespace ACPI{
 	}
 
 	void Init(){
-		for(int i = 0; i <= 0x1000; i++){ // Search first KB for RSDP
+		for(int i = 0; i <= 0x1000; i += 16){ // Search first KB for RSDP, the RSDP is aligned on a 16 byte boundary
 			if(memcmp((void*)Memory::GetIOMapping(i),signature,8) == 0){
 				desc =  ((acpi_rsdp_t*)Memory::GetIOMapping(i));
 
@@ -100,7 +109,15 @@ namespace ACPI{
 			}
 		}
 
-		for(int i = 0xE0000; i <= 0xFFFFF; i++){ // Search further for RSDP
+		for(int i = 0x80000; i <= 0x9FFFF; i += 16){ // Search further for RSDP
+			if(memcmp((void*)Memory::GetIOMapping(i),signature,8) == 0){
+				desc = ((acpi_rsdp_t*)Memory::GetIOMapping(i));
+
+				goto success;
+			}
+		}
+
+		for(int i = 0xE0000; i <= 0xFFFFF; i += 16){ // Search further for RSDP
 			if(memcmp((void*)Memory::GetIOMapping(i),signature,8) == 0){
 				desc = ((acpi_rsdp_t*)Memory::GetIOMapping(i));
 

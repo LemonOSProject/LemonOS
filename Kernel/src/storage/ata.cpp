@@ -17,8 +17,6 @@ namespace ATA{
 	int port1 = 0x170;
 	int controlPort0 = 0x3f6;
 	int controlPort1 = 0x376;
-	int master = 0xa0;
-	int slave = 0xb0;
 
 	ATADiskDevice* drives[4];
 
@@ -39,10 +37,6 @@ namespace ATA{
 		true, // Is a generic driver
 	};
 
-    inline void SendCommand(uint8_t drive, uint8_t command){
-        outportb((drive % 2) ? slave : master,command);
-    }
-
 	inline void WriteRegister(uint8_t port, uint8_t reg, uint8_t value){
 		outportb((port ? port1 : port0 ) + reg, value);
 	}
@@ -61,13 +55,18 @@ namespace ATA{
 
 
 	int DetectDrive(int port, int drive){
-		WriteRegister(port, ATA_REGISTER_DRIVE_HEAD, (drive ? slave : master)); // Drive
-		WriteRegister(port, ATA_REGISTER_COMMAND, 0xec); // Identify
+		WriteRegister(port, ATA_REGISTER_DRIVE_HEAD, 0xa0 | (drive << 4)); // Drive
+
+		for(int i = 0; i < 4; i++) inportb(0x3f6);
 
 		WriteRegister(port, ATA_REGISTER_SECTOR_COUNT, 0);
 		WriteRegister(port, ATA_REGISTER_LBA_LOW, 0);
 		WriteRegister(port, ATA_REGISTER_LBA_MID, 0);
 		WriteRegister(port, ATA_REGISTER_LBA_HIGH, 0);
+
+		WriteRegister(port, ATA_REGISTER_COMMAND, 0xec); // Identify
+
+		while(ReadRegister(port, ATA_REGISTER_STATUS) & 0x80);
 
 		if(!ReadRegister(port, ATA_REGISTER_STATUS)){
 			return 0;
@@ -108,6 +107,12 @@ namespace ATA{
 		IDT::RegisterInterruptHandler(IRQ0 + 14, IRQHandler);
 
 		for(int i = 0; i < 2; i++){ // Port
+			WriteControlRegister(i, 0, ReadControlRegister(i, 0) | 4); // Software Reset
+			
+			for(int z = 0; z < 4; z++) inportb(0x3f6);
+
+			WriteControlRegister(i, 0, 0);
+
 			for(int j = 0; j < 2; j++){ // Drive (master/slave)
 				if(DetectDrive(i, j)){
 					Log::Info("Found ATA Drive: Port: ");

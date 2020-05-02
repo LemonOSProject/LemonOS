@@ -31,11 +31,13 @@ times 512 dq 0
 
 align 4096
 kernel_pdpt:
-times 512 dq 0
+dq 0x83 ; 1GB Page
+times 511 dq 0
 
 align 4096
 kernel_pdpt2:
-times 512 dq 0
+times KERNEL_BASE_PDPT_INDEX dq 0
+dq 0x83 ; 1GB Page
 
 align 16
 GDT64:                           ; Global Descriptor Table (64-bit).
@@ -160,12 +162,6 @@ entry:
   or eax, 3
   mov dword [kernel_pml4 + KERNEL_BASE_PML4_INDEX * 8], eax
 
-  mov eax, 0x83 ; 1 GB Pages
-  mov dword [kernel_pdpt], eax
-  
-  mov eax, 0x83 ; 1 GB Pages
-  mov dword [kernel_pdpt2 + KERNEL_BASE_PDPT_INDEX * 8], eax
-
   mov eax, kernel_pml4
   mov cr3, eax
 
@@ -179,7 +175,7 @@ entry:
   mov cr0, eax
 
   lgdt [GDT64.Pointer]
-  jmp GDT64.Code:entry64 - KERNEL_VIRTUAL_BASE
+  jmp 0x8:entry64 - KERNEL_VIRTUAL_BASE
 BITS 64
 
   cli
@@ -202,13 +198,6 @@ extern _bss_end
 BITS 64
 section .text
 entry64:
-  mov rdi, _bss
-  mov rcx, _bss_end
-  sub rcx, _bss
-  mov rax, 0
-  rep stosb
-
-  mov rsp, stack_top
 
   lgdt [GDT64.Pointer64]
 
@@ -218,6 +207,14 @@ entry64:
   mov fs, ax
   mov gs, ax
   mov ss, ax
+
+  mov rdi, _bss
+  mov rcx, _bss_end
+  sub rcx, _bss
+  xor rax, rax
+  rep stosb
+
+  mov rsp, stack_top
 
   mov rax, cr0
 	and ax, 0xFFFB		; Clear coprocessor emulation
@@ -229,8 +226,7 @@ entry64:
 	or ax, 3 << 9		; Set flags for SSE
 	mov cr4, rax
 
-  mov rbp, 0
-
+  xor rbp, rbp
   mov rdi, qword[mb_addr] ; Pass multiboot info struct
   add rdi, KERNEL_VIRTUAL_BASE
   call kmain

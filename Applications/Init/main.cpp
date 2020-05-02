@@ -132,7 +132,9 @@ bool redrawWindowDecorations = true;
 
 char lastKey;
 
-//#define ENABLE_FRAMERATE_COUNTER
+#define ENABLE_BACKGROUND_IMAGE
+
+#define ENABLE_FRAMERATE_COUNTER
 #ifdef ENABLE_FRAMERATE_COUNTER
 
 size_t frameCounter;
@@ -159,6 +161,7 @@ void UpdateFrameRate(){
 
 rgba_colour_t backgroundColor = {64, 128, 128};
 surface_t closeButtonSurface;
+surface_t backgroundImageSurface;
 	
 int windowCount; // Window Count
 List<Window_s*> windows;
@@ -184,7 +187,8 @@ void RemoveDestroyedWindows(){
 			}
 
 			if(!windowFound) {
-				windows.remove_at(i);
+				Window_s* w = windows.remove_at(i);
+				delete w;
 				redrawWindowDecorations = true;
 			}
 		}
@@ -257,7 +261,6 @@ void DrawWindow(Window_s* win){
 	//}
 
 	vector2i_t renderPos = win->pos + (vector2i_t){1, WINDOW_TITLEBAR_HEIGHT + 1};
-
 	syscall(SYS_RENDER_WINDOW, (uintptr_t)&renderBuffer, (uintptr_t)win->handle,(uintptr_t)&renderPos,0,0);
 }
 
@@ -287,8 +290,29 @@ int main(){
 	bitmap_info_header_t* closeInfoHeader = ((bitmap_info_header_t*)(closeButtonBuffer + sizeof(bitmap_file_header_t)));
 	closeButtonSurface.width = closeInfoHeader->width;
 	closeButtonSurface.height = closeInfoHeader->height;
-	closeButtonSurface.buffer = (uint8_t*)malloc(19*19*4);//closeButtonBuffer ;//+ 54;//((bitmap_file_header_t*)closeButtonBuffer)->offset;
+	closeButtonSurface.buffer = (uint8_t*)malloc(19*19*4);
 	DrawBitmapImage(0, 0, closeButtonSurface.width, closeButtonSurface.height, closeButtonBuffer, &closeButtonSurface);
+	free(closeButtonBuffer);
+
+	#ifdef ENABLE_BACKGROUND_IMAGE
+	FILE* backgroundImageFile = fopen("/initrd/bg2.bmp", "r");
+
+	if(!backgroundImageFile) {
+		return 1;
+	}
+
+	fseek(backgroundImageFile, 0, SEEK_END);
+	uint64_t backgroundImageLength = ftell(backgroundImageFile);
+	fseek(backgroundImageFile, 0, SEEK_SET);
+	
+	uint8_t* backgroundImageBuffer = (uint8_t*)malloc(backgroundImageLength);
+	fread(backgroundImageBuffer, backgroundImageLength, 1, backgroundImageFile);
+	bitmap_info_header_t* bgInfoHeader = ((bitmap_info_header_t*)(backgroundImageBuffer + sizeof(bitmap_file_header_t)));
+	backgroundImageSurface.width = renderBuffer.width;
+	backgroundImageSurface.height = renderBuffer.height;
+	backgroundImageSurface.buffer = (uint8_t*)malloc(backgroundImageSurface.width * backgroundImageSurface.height * 4);
+	DrawBitmapImage(0, 0, backgroundImageSurface.width, backgroundImageSurface.height, backgroundImageBuffer, &backgroundImageSurface, true /*Preserve Aspect Ratio*/);
+	#endif
 
 	syscall(SYS_EXEC, (uintptr_t)"/initrd/shell.lef", 0, 0, 0, 0);
 
@@ -303,8 +327,13 @@ int main(){
 		UpdateFrameRate();
 		#endif
 
-		if(redrawWindowDecorations)
+		if(redrawWindowDecorations){
+			#ifdef ENABLE_BACKGROUND_IMAGE
+			surfacecpy(&renderBuffer, &backgroundImageSurface);
+			#else
 			DrawRect(0, 0, renderBuffer.width, renderBuffer.height, backgroundColor, &renderBuffer);
+			#endif
+		}
 		
 		for(int i = 0; i < windowCount; i++){ // Draw all our windows
 			Window_s* win = windows[i];
@@ -478,7 +507,11 @@ int main(){
 
 		memcpy_optimized(fbSurface->buffer, renderBuffer.buffer, fbInfo.width * fbInfo.height * 4);//surfacecpy(fbSurface,&renderBuffer); // Render our buffer
 
+		#ifdef ENABLE_BACKGROUND_IMAGE
+		surfacecpy(&renderBuffer, &backgroundImageSurface, mousePos, {mousePos, {mouseSurface.width, mouseSurface.height}});
+		#else
 		DrawRect(mousePos.x, mousePos.y, mouseSurface.width, mouseSurface.height, backgroundColor, &renderBuffer);
+		#endif
 	}
 
 	for(;;);

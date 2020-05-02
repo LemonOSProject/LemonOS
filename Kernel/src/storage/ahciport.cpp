@@ -107,7 +107,7 @@ namespace AHCI{
 
         int slot = FindCmdSlot();
         if(slot == -1){
-            Log::Warning("AHCI: Could not find command slot!");
+            Log::Warning("[SATA] Could not find command slot!");
             return 2;
         }
 

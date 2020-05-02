@@ -51,6 +51,9 @@ typedef struct LocalAPICAddressOverride { // Local APIC Address Override - Type 
 } __attribute__ ((packed)) apic_local_address_override_t;
 
 namespace ACPI{
+  extern uint8_t processors[];
+  extern int processorCount;
+
 	extern acpi_rsdp_t* desc;
 	extern acpi_rsdt_t* rsdtHeader;
 
