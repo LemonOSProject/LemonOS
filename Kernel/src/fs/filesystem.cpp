@@ -95,7 +95,64 @@ namespace fs{
 			break;
 		}
 
+		kfree(tempPath);
 		return current_node;
+	}
+
+	char* CanonicalizePath(char* path, char* workingDir){
+		char* tempPath;
+		if(workingDir && path[0] != '/'){
+			tempPath = (char*)kmalloc(strlen(path) + strlen(workingDir) + 2);
+			strcpy(tempPath, workingDir);
+			strcpy(tempPath + strlen(tempPath), "/");
+			strcpy(tempPath + strlen(tempPath), path);
+		} else {
+			tempPath = (char*)kmalloc(strlen(path) + 1);
+			strcpy(tempPath, path);
+		}
+
+		char* file = strtok(tempPath,"/");
+		List<char*>* tokens = new List<char*>();
+
+		while(file != NULL){
+			tokens->add_back(file);
+			file = strtok(NULL, "/");
+		}
+
+		int newLength = 2; // Separator and null terminator
+		newLength += strlen(path) + strlen(workingDir);
+		for(int i = 0; i < tokens->get_length(); i++){
+			if(strlen(tokens->get_at(i)) == 0){
+				tokens->remove_at(i--);
+				continue;
+			} if(strcmp(tokens->get_at(i), ".") == 0){
+				tokens->remove_at(i--);
+				continue;
+			} else if(strcmp(tokens->get_at(i), "..") == 0){
+				if(i){
+					tokens->remove_at(i);
+					tokens->remove_at(i - 1);
+					i -= 2;
+				} else tokens->remove_at(i);
+				continue;
+			}
+
+			newLength += strlen(tokens->get_at(i)) + 1; // Name and separator
+		}
+
+		char* outPath = (char*)kmalloc(newLength);
+		outPath[0] = 0;
+
+		if(!tokens->get_length()) strcpy(outPath + strlen(outPath), "/");
+		else for(int i = 0; i < tokens->get_length(); i++){
+			strcpy(outPath + strlen(outPath), "/");
+			strcpy(outPath + strlen(outPath), tokens->get_at(i));
+		}
+
+		kfree(tempPath);
+		delete tokens;
+
+		return outPath;
 	}
 
 	void RegisterDevice(fs_node_t* device){

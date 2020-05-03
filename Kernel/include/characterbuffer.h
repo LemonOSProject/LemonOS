@@ -1,6 +1,6 @@
 #pragma once
 
-#define CHARBUFFER_START_SIZE 512
+#define CHARBUFFER_START_SIZE 1024
 
 #include <stddef.h>
 

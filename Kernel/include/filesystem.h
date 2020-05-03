@@ -94,6 +94,7 @@ namespace fs{
     void RegisterDevice(fs_node_t* device);
 
     fs_node_t* ResolvePath(char* path, char* workingDir = nullptr);
+    char* CanonicalizePath(char* path, char* workingDir);
 
     size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
     size_t Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);

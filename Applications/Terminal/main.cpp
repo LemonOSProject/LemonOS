@@ -27,7 +27,7 @@ typedef struct fs_dirent {
 surface_t menuSurface;
 surface_t windowSurface;
 
-char buffer[1000][80];
+char buffer[8000][80];
 int currentLine = 0;
 int bufferPos = 0;
 

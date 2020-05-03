@@ -127,7 +127,8 @@ namespace ACPI{
 
 		{
 		const char* panicReasons[]{"System not ACPI Complaiant."};
-		KernelPanic(panicReasons,1);
+		//KernelPanic(panicReasons,1);
+		return;
 		}
 
 		success:

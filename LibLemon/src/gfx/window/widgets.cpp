@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include <math.h>
+#include <ctype.h>
 
 #define BUTTON_COLOUR_OUTLINE_DEFAULT
 
@@ -38,7 +39,12 @@ void TextBox::Paint(surface_t* surface){
         for(size_t j = 0; j < strlen(contents[i]); j++){
             if(contents[i][j] == '\t'){
                 xpos += 8 * 8;
+                continue;
+            } else if (isspace(contents[i][j])) {
+                xpos += 8;
+                continue;
             }
+            else if (!isgraph(contents[i][j])) continue;
 
             xpos += DrawChar(contents[i][j], bounds.pos.x + xpos, bounds.pos.y + ypos - sBar.scrollPos, textColour.r, textColour.g, textColour.b, surface);
 
@@ -57,12 +63,11 @@ void TextBox::Paint(surface_t* surface){
 
 void TextBox::LoadText(char* text){
     char* text2 = text;
-    int lineCount = 0;
+    int lineCount = 1;
     int lineNum = 0;
 
     while(*text2){
         if(*text2 == '\n') lineCount++;
-
         text2++;
     }
 
@@ -460,8 +465,8 @@ void FileView::OnSubmit(){
     if(dirent.type & FS_NODE_DIRECTORY){
         close(currentDir);
 
-        strcpy(currentPath + strlen(currentPath), "/");
         strcpy(currentPath + strlen(currentPath), dirent.name);
+        strcpy(currentPath + strlen(currentPath), "/");
 
         currentDir = lemon_open(currentPath, 666);
 

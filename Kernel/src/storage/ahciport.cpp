@@ -172,6 +172,9 @@ namespace AHCI{
             Log::Warning("[SATA] Disk Error");
             return 1;
         }
+
+        stopCMD(registers);
+
         return 0;
     }
 

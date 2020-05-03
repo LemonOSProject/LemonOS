@@ -14,8 +14,9 @@ public:
 
 template<typename T>
 class List {
-	int lock = 0;
 public:
+	int lock = 0;
+	
 	List()
 	{
 		front = NULL;

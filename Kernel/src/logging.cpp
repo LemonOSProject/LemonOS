@@ -1,17 +1,38 @@
+#include <logging.h>
+
 #include <serial.h>
 #include <string.h>
 #include <videoconsole.h>
-
+#include <liballoc.h>
 #include <stdarg.h>
 #include <string.h>
+#include <filesystem.h>
 
 namespace Log{
 
 	VideoConsole* console = nullptr;
 
-	char* logBuffer[256];
+	char* logBuffer = nullptr;
+	size_t logBufferPos = 0;
+	size_t logBufferSize = 0;
 
-	bool buffered = false;
+    size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
+		if(size + offset > logBufferPos) size = logBufferPos - offset;
+		memcpy(buffer, logBuffer + offset, size);
+		return size;
+	}
+
+	fs_node_t logDevice = {
+		{.name = "kernellog"},
+		.flags = FS_NODE_FILE,
+		
+		.read = Read,
+		.write = nullptr,
+		.open = nullptr,
+		.close = nullptr,
+		.readDir = nullptr,
+		.findDir = nullptr,
+	};
 
     void Initialize(){
 		initialize_serial();
@@ -22,30 +43,44 @@ namespace Log{
 	}
 
 	void EnableBuffer(){
-		buffered = true;
+		logBufferSize = 4096;
+		logBuffer = (char*)kmalloc(logBufferSize);
+		logBufferPos = 0;
+
+		fs::RegisterDevice(&logDevice);
 	}
 
-	void SetLogFile(char* path){
+	void WriteN(const char* str, int n){
+		write_serial_n(str, n);
 
-	}
+		if(logBuffer){
+			if(n + logBufferPos > logBufferSize){
+				logBufferSize += 4096;
+				char* oldBuf = logBuffer;
+				logBuffer = (char*)kmalloc(logBufferSize);
+				memcpy(logBuffer, oldBuf, logBufferPos);
+				kfree(oldBuf);
+			}
 
-	void Write(const char* str, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255){
-		write_serial(str);
-		return;
-		if(console){
-			//console->Print(str, r, g, b);
-			console->Update();
+			memcpy(logBuffer + logBufferPos, str, n);
+			logBufferPos += n;
+
+			logDevice.size = logBufferPos;
 		}
 	}
 
-	void Write(unsigned long long num, bool hex, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255){
+	void Write(const char* str, uint8_t r, uint8_t g, uint8_t b){
+		WriteN(str, strlen(str));
+	}
+
+	void Write(unsigned long long num, bool hex, uint8_t r, uint8_t g, uint8_t b){
 		char buf[32];
 		if(hex){
 			buf[0] = '0';
 			buf[1] = 'x';
 		}
 		itoa(num, (char*)(buf + (hex ? 2 : 0)), hex ? 16 : 10);
-		Write(buf);
+		WriteN(buf, strlen(buf));
 	}
 
 	void WriteF(const char* __restrict format, va_list args){
@@ -57,7 +92,7 @@ namespace Log{
 				size_t amount = 1;
 				while (format[amount] && format[amount] != '%')
 					amount++;
-				write_serial_n(format, amount);
+				WriteN(format, amount);
 				format += amount;
 				continue;
 			}
@@ -69,13 +104,13 @@ namespace Log{
 				case 'c': {
 					format++;
 					auto arg = (char) va_arg(args, int /* char promotes to int */);
-					write_serial_n(&arg, 1);
+					WriteN(&arg, 1);
 					break;
 				} case 's': {
 					format++;
 					auto arg = va_arg(args, const char*);
 					size_t len = strlen(arg);
-					write_serial_n(arg, len);
+					WriteN(arg, len);
 					break;
 				} case 'd': {
 					hex = false;
@@ -87,7 +122,7 @@ namespace Log{
 				} default:
 					format = format_begun_at;
 					size_t len = strlen(format);
-					write_serial_n(format, len);
+					WriteN(format, len);
 					format += len;
 			}
 		}

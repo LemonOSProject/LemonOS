@@ -57,7 +57,9 @@ int main(char argc, char** argv){
 	char* textBuffer = (char*)malloc(textFileSize + 1);
 
 	fread(textBuffer, textFileSize, 1, textFile);
+	for(int i = 0; i < textFileSize; i++){ if(textBuffer[i] == 0) textBuffer[i] = ' ';}
 	textBuffer[textFileSize] = 0;
+
 
 	textBox->multiline = true;
 	textBox->editable = true;

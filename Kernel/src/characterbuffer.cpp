@@ -16,8 +16,11 @@ size_t CharacterBuffer::Write(char* _buffer, size_t size){
     acquireLock(&(this->lock));
 
     if((bufferPos + size) > bufferSize) {
-        bufferSize = bufferPos + size + 32;
-        krealloc(buffer, bufferSize);
+        char* oldBuf = buffer;
+        buffer = (char*)kmalloc(bufferPos + size + 128);
+        memcpy(buffer, oldBuf, bufferSize);
+        bufferSize = bufferPos + size + 128;
+        kfree(oldBuf);
     }
 
     for(int i = 0; i < size; i++){

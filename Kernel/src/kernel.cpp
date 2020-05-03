@@ -99,6 +99,9 @@ void kmain(multiboot_info_t* mb_info){
 
 	Log::SetVideoConsole(NULL);
 
+	fs::Initialize();
+	Log::EnableBuffer();
+
 	Video::DrawRect(0, 0, videoMode.width, videoMode.height, 0, 0, 0);
 
 	Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
@@ -113,7 +116,6 @@ void kmain(multiboot_info_t* mb_info){
 	Log::Info("Multiboot Module Count: %d", HAL::multibootInfo.modsCount);
 	
 	Log::Info("Initializing Ramdisk...");
-	fs::Initialize();
 	Initrd::Initialize(initrd_start,initrd_end - initrd_start); // Initialize Initrd
 	Log::Write("OK");
 	

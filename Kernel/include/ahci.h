@@ -354,8 +354,6 @@ namespace AHCI{
 		// Wait until FR (bit14), CR (bit15) are cleared
 		while(1)
 		{
-			if (port->cmd & HBA_PxCMD_FR)
-				continue;
 			if (port->cmd & HBA_PxCMD_CR)
 				continue;
 			break;

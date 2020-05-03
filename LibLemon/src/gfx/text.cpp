@@ -249,15 +249,15 @@ int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surf
         return 0;
     }
     
-    for(int i = 0; i < mainFont->glyph->bitmap.rows; i++){
+    for(int i = 0; i < mainFont->glyph->bitmap.rows && y + i < surface->height; i++){
         if(y + i < 0) continue;
 
         uint32_t yOffset = (i + y + (12/*mainFont->glyph->bitmap.rows*/ - mainFont->glyph->bitmap_top)) * (surface->width);
-        for(int j = 0; j < mainFont->glyph->bitmap.width; j++){
+        for(int j = 0; j < mainFont->glyph->bitmap.width && j + x < surface->width; j++){
             if(x + j < 0) continue;
             if(mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j] == 255)
                 buffer[yOffset + (j + x)] = colour_i;
-            else if( mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j]){
+            else if(mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j] > 0){
                 double val = mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j] * 1.0 / 255;
                 uint32_t oldColour = buffer[yOffset + (j + x)];
                 int oldB = oldColour & 0xFF;

@@ -217,11 +217,12 @@ int SysUnlink(regs64_t* r){
 
 int SysChdir(regs64_t* r){
 	if(r->rbx){
-		if(((char*)r->rbx)[0] != '/') {
-			strcpy(Scheduler::GetCurrentProcess()->workingDir + strlen(Scheduler::GetCurrentProcess()->workingDir), (char*)r->rbx);
-		} else {
-			strncpy(Scheduler::GetCurrentProcess()->workingDir, (char*)r->rbx, PATH_MAX);
+		char* path =  fs::CanonicalizePath((char*)r->rbx, Scheduler::GetCurrentProcess()->workingDir);
+		if(!fs::ResolvePath(path)) {
+			Log::Warning("chdir: Could not find %s", path);
+			return -1;
 		}
+		strcpy(Scheduler::GetCurrentProcess()->workingDir, path);
 	} else Log::Warning("chdir: Invalid path string");
 	return 0;
 }
@@ -724,11 +725,13 @@ int SysGetCWD(regs64_t* r){
 
 	char* workingDir = Scheduler::GetCurrentProcess()->workingDir;
 	if(strlen(workingDir) > sz) {
-		*ret = 1;
+		return 1;
 	} else {
 		strcpy(buf, workingDir);
-		*ret = 0;
+		return 0;
 	}
+
+	return 0;
 }
 
 int SysWaitPID(regs64_t* r){

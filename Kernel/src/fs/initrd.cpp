@@ -24,7 +24,7 @@ namespace Initrd{
 	lemoninitfs_node_t* nodes;
 	fs_node_t* fsNodes;
 
-	fs_dirent_t dirent;
+	//fs_dirent_t dirent;
 
 	void* initrd_address;
 
@@ -98,21 +98,39 @@ namespace Initrd{
 	}
 
 	fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index){
-		if(index >= initrdHeader.fileCount) return nullptr;
+		if(index >= initrdHeader.fileCount + 2) return nullptr;
 
-		memset(dirent.name,0,128); // Zero the string
-		strcpy(dirent.name,nodes[index].filename);
-		dirent.inode = index-1;
-		dirent.type = 0;
+		fs_dirent_t* dirent = new fs_dirent_t;
 
-		return &dirent;
+		if(index == 0) {
+			memset(dirent->name,0,128); // Zero the string
+			strcpy(dirent->name,".");
+			dirent->inode = 0;
+			dirent->type = FS_NODE_DIRECTORY;
+			return dirent;
+		} else if (index == 1){
+			memset(dirent->name,0,128); // Zero the string
+			strcpy(dirent->name,"..");
+			dirent->inode = 2;
+			dirent->type = FS_NODE_DIRECTORY;
+			return dirent;
+		}
+		memset(dirent->name,0,128); // Zero the string
+		strcpy(dirent->name,nodes[index - 2].filename);
+		dirent->inode = index - 3;
+		dirent->type = 0;
+
+		return dirent;
 	}
 
 	fs_node_t* FindDir(fs_node_t* node, char* name) {
-		Log::Info(initrdHeader.fileCount, false);
 		for(int i = 0; i < initrdHeader.fileCount;i++){
 			if(strcmp(fsNodes[i].name,name) == 0) return &(fsNodes[i]);
 		}
+
+		if(strcmp(".", name) == 0) return node;
+		if(strcmp("..", name) == 0) return fs::GetRoot();
+
 		return NULL;
 	}
 
