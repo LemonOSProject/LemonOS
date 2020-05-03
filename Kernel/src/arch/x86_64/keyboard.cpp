@@ -2,6 +2,7 @@
 #include <system.h>
 #include <idt.h>
 #include <logging.h>
+#include <gui.h>
 
 uint8_t key = 0;
 bool caps = false;
@@ -59,10 +60,10 @@ namespace Keyboard{
 		
 		if(key == 0x3A){
             caps = !caps;
-        } else {
+        } else if(GetDesktop()) {
 			message_t wmKeyMessage;
             wmKeyMessage.senderPID = 0;
-            wmKeyMessage.recieverPID = 1; // Should be the Window Manager
+            wmKeyMessage.recieverPID = GetDesktop()->pid; // Window Manager
             wmKeyMessage.msg = 0x1BEEF; // Desktop Event - Key Press
             wmKeyMessage.data = key; // The key that was pressed
 			wmKeyMessage.data2 = caps;
