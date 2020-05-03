@@ -304,7 +304,7 @@ void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint
         for(int i = 0; i < mainFont->glyph->bitmap.rows && (i + y + 12 - mainFont->glyph->bitmap_top) < surface->height; i++){
             uint32_t yOffset = (i + y + (12/*mainFont->glyph->bitmap.rows*/ - mainFont->glyph->bitmap_top)) * (surface->width);
             
-            for(int j = 0; j < mainFont->glyph->bitmap.width /*&& (x + xOffset + j) < surface->width*/; j++){
+            for(int j = 0; j < mainFont->glyph->bitmap.width && (x + xOffset + j) < surface->width; j++){
                 
                 if(mainFont->glyph->bitmap.buffer[i * mainFont->glyph->bitmap.width + j] == 255)
                     buffer[yOffset + (j + x + xOffset)] = colour_i;

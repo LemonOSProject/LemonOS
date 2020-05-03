@@ -502,7 +502,6 @@ int main(){
 		DrawString(temp,0,0,255,255,255,&renderBuffer);
 		#endif
 
-		//DrawRect(mousePos.x, mousePos.y, 5, 5, 255, 0, 0, &renderBuffer);
 		surfacecpyTransparent(&renderBuffer, &mouseSurface, {mousePos.x, mousePos.y});
 
 		memcpy_optimized(fbSurface->buffer, renderBuffer.buffer, fbInfo.width * fbInfo.height * 4);//surfacecpy(fbSurface,&renderBuffer); // Render our buffer

@@ -4,17 +4,15 @@ memcpy_sse2:
 	push rbp    ; save the prior EBP value
     mov rbp, rsp
 
-	mov rax, rdi
-	mov rbx, rsi
 	mov rcx, rdx
 .loop:
 
-	movdqa xmm0, [rbx]
+	movdqa xmm0, [rsi]
 
-	movdqa [rax], xmm0
+	movdqa [rdi], xmm0
 
-	add rax, 0x10
-	add rbx, 0x10
+	add rsi, 0x10
+	add rdi, 0x10
 	loop .loop
 
 	mov rsp, rbp
@@ -27,17 +25,15 @@ memcpy_sse2_unaligned:
 	push rbp    ; save the prior EBP value
     mov rbp, rsp
 
-	mov rax, rdi
-	mov rbx, rsi
 	mov rcx, rdx
 .loop:
 
-	movdqu xmm0, [rbx]
+	movdqu xmm0, [rsi]
 
-	movdqu [rax], xmm0
+	movdqu [rdi], xmm0
 
-	add rax, 0x10
-	add rbx, 0x10
+	add rsi, 0x10
+	add rdi, 0x10
 	loop .loop
 
 	mov rsp, rbp

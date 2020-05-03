@@ -79,7 +79,7 @@ void *memcpy(void* dest, const void* src, size_t count) {
 		count -= 4;
 	}
 	for (size_t i = count; i > 0; i = count){
-		dp[i] = sp[i];
+		*(dp++) = *(sp++);
 		count--;
 	} 
 	return dest;

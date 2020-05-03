@@ -48,9 +48,6 @@ char keymap_us[128] =
 };
 
 namespace Keyboard{
-    //message_t wmKeyMessage;
-
-    char test[2];
 
     // Interrupt handler
     void Handler(regs64_t* r)

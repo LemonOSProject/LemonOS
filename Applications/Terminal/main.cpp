@@ -87,7 +87,7 @@ int main(char argc, char** argv){
 	Window* window;
 
 	windowInfo.width = 640;
-	windowInfo.height = 300;
+	windowInfo.height = 312;
 	windowInfo.x = 0;
 	windowInfo.y = 0;
 	windowInfo.flags = 0;
