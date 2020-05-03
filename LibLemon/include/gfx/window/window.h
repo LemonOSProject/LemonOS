@@ -11,8 +11,6 @@
 #include <gfx/window/widgets.h>
 #include <list.h>
 
-typedef void(*WindowPaintHandler)(surface_t*);
-
 typedef struct {
 	uint16_t x = 0;
 	uint16_t y = 0;
@@ -29,38 +27,43 @@ typedef struct {
 	handle_t handle;
 } __attribute__((packed)) win_info_t;
 
-struct Window{
-	List<Widget*> widgets;
+namespace Lemon::GUI{
+	typedef void(*WindowPaintHandler)(surface_t*);
 
-	handle_t handle = (handle_t)0;
-	win_info_t info;
 
-	rgba_colour_t background = {192,192,190,255};
+	struct Window{
+		List<Widget*> widgets;
 
-	surface_t surface;
-	uint8_t* primaryBuffer;
-	uint8_t* secondaryBuffer;
+		handle_t handle = (handle_t)0;
+		win_info_t info;
 
-	int lastPressedWidget = -1;
-	vector2i_t mousePos;
-	
-	WindowPaintHandler OnPaint = NULL;
-};
+		rgba_colour_t background = {192,192,190,255};
 
-//handle_t _CreateWindow(win_info_t* wininfo);
-handle_t _CreateWindow(win_info_t* wininfo, void** primaryBuffer, void** secondaryBuffer);
-void _DestroyWindow(handle_t window);
-void _PaintWindow(handle_t window);//, surface_t* surface);
-void SwapWindowBuffers(Window* win);
+		surface_t surface;
+		uint8_t* primaryBuffer;
+		uint8_t* secondaryBuffer;
 
-Window* CreateWindow(win_info_t* info);
-void DestroyWindow(Window* win);
-void ResizeWindow(Window* win, vector2i_t size);
-void PaintWindow(Window* win);
-void UpdateWindow(Window* win);
+		int lastPressedWidget = -1;
+		vector2i_t mousePos;
+		
+		WindowPaintHandler OnPaint = NULL;
+	};
 
-void HandleMouseDown(Window* win, vector2i_t mousePos);
-Widget* HandleMouseUp(Window* win, vector2i_t mousePos);
-void HandleMouseMovement(Window* win, vector2i_t mousePos);
+	//handle_t _CreateWindow(win_info_t* wininfo);
+	handle_t _CreateWindow(win_info_t* wininfo, void** primaryBuffer, void** secondaryBuffer);
+	void _DestroyWindow(handle_t window);
+	void _PaintWindow(handle_t window);//, surface_t* surface);
+	void SwapWindowBuffers(Window* win);
 
-void AddWidget(Widget* widget, Window* win);
+	Window* CreateWindow(win_info_t* info);
+	void DestroyWindow(Window* win);
+	void ResizeWindow(Window* win, vector2i_t size);
+	void PaintWindow(Window* win);
+	void UpdateWindow(Window* win);
+
+	void HandleMouseDown(Window* win, vector2i_t mousePos);
+	Widget* HandleMouseUp(Window* win, vector2i_t mousePos);
+	void HandleMouseMovement(Window* win, vector2i_t mousePos);
+
+	void AddWidget(Widget* widget, Window* win);
+}

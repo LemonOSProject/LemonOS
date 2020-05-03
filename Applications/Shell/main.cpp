@@ -19,8 +19,8 @@
 #define MENU_ITEM_HEIGHT 24
 
 fb_info_t videoInfo;
-Window* taskbar;
-Window* menu;
+Lemon::GUI::Window* taskbar;
+Lemon::GUI::Window* menu;
 
 bool showMenu = true;
 
@@ -35,25 +35,25 @@ MenuItem menuItems[32];
 int menuItemCount = 0;
 
 void OnTaskbarPaint(surface_t* surface){
-	DrawGradientVertical(100,0,surface->width - 100, /*surface->height*/24, {96, 96, 96}, {42, 50, 64},surface);
-	DrawRect(100,24,surface->width - 100, surface->height - 24, {42,50,64},surface);
+	Lemon::Graphics::DrawGradientVertical(100,0,surface->width - 100, /*surface->height*/24, {96, 96, 96}, {42, 50, 64},surface);
+	Lemon::Graphics::DrawRect(100,24,surface->width - 100, surface->height - 24, {42,50,64},surface);
 
 	if(showMenu){
-		DrawGradientVertical(0,0,100, 24, {120,12,12}, {/*160*/60, /*16*/6, /*16*/6},surface);
-		DrawRect(0,24,100, surface->height - 24, {/*160*/60, /*16*/6, /*16*/6},surface);
+		Lemon::Graphics::DrawGradientVertical(0,0,100, 24, {120,12,12}, {/*160*/60, /*16*/6, /*16*/6},surface);
+		Lemon::Graphics::DrawRect(0,24,100, surface->height - 24, {/*160*/60, /*16*/6, /*16*/6},surface);
 	} else {
-		DrawGradientVertical(0,0,100, 24, {220,/*24*/48,30}, {/*160*/120, /*16*/12, /*16*/12},surface);
-		DrawRect(0,24,100, surface->height - 24, {/*160*/120, /*16*/12, /*16*/12},surface);
+		Lemon::Graphics::DrawGradientVertical(0,0,100, 24, {220,/*24*/48,30}, {/*160*/120, /*16*/12, /*16*/12},surface);
+		Lemon::Graphics::DrawRect(0,24,100, surface->height - 24, {/*160*/120, /*16*/12, /*16*/12},surface);
 	}
 }
 
 void OnMenuPaint(surface_t* surface){
-	DrawRect(0,32,surface->width, surface->height - 32, {64,64,64}, surface);
-	DrawGradientVertical(0,0,surface->width, 32, {220,/*24*/48,30}, {/*160*/120, /*16*/12, /*16*/12},surface);
-	DrawString(versionString,5,MENU_ITEM_HEIGHT / 2 - 6,255,255,255,surface);
+	Lemon::Graphics::DrawRect(0,32,surface->width, surface->height - 32, {64,64,64}, surface);
+	Lemon::Graphics::DrawGradientVertical(0,0,surface->width, 32, {220,/*24*/48,30}, {/*160*/120, /*16*/12, /*16*/12},surface);
+	Lemon::Graphics::DrawString(versionString,5,MENU_ITEM_HEIGHT / 2 - 6,255,255,255,surface);
 
 	for(int i = 0; i < menuItemCount; i++){
-		DrawString(menuItems[i].name, 5, 42 + i * MENU_ITEM_HEIGHT /* 2 pixels padding */, 255, 255, 255, surface);
+		Lemon::Graphics::DrawString(menuItems[i].name, 5, 42 + i * MENU_ITEM_HEIGHT /* 2 pixels padding */, 255, 255, 255, surface);
 	}
 }
 
@@ -130,23 +130,23 @@ int main(){
 	menuInfo.y = videoInfo.height - menuInfo.height - taskbarInfo.height;
 	menuInfo.flags = WINDOW_FLAGS_NODECORATION;
 
-	taskbar = CreateWindow(&taskbarInfo);
+	taskbar = Lemon::GUI::CreateWindow(&taskbarInfo);
 	taskbar->OnPaint = OnTaskbarPaint;
 
-	menu = CreateWindow(&menuInfo);
+	menu = Lemon::GUI::CreateWindow(&menuInfo);
 	menu->OnPaint = OnMenuPaint;
 
 	LoadConfig();
 
 	for(;;){
-		PaintWindow(taskbar);
+		Lemon::GUI::PaintWindow(taskbar);
 
 		if(showMenu){
-			PaintWindow(menu);
+			Lemon::GUI::PaintWindow(menu);
 		}
 
 		ipc_message_t msg;
-		while(ReceiveMessage(&msg)){
+		while(Lemon::ReceiveMessage(&msg)){
 			switch (msg.msg)
 			{
 			case WINDOW_EVENT_MOUSEUP:
@@ -163,13 +163,13 @@ int main(){
 						menu->info.flags &= ~((typeof(menu->info.flags))WINDOW_FLAGS_MINIMIZED);
 					}
 
-					UpdateWindow(menu);
+					Lemon::GUI::UpdateWindow(menu);
 				} else if ((handle_t)msg.data2 == menu->handle){
 					if(mouseY > 42 && mouseY < (menuItemCount*MENU_ITEM_HEIGHT + 42)){
 						syscall(SYS_EXEC,(uintptr_t)menuItems[(int)floor((double)(mouseY - 42) / MENU_ITEM_HEIGHT)].path,0,0,0,0);
 						showMenu = false;
 						menu->info.flags |= WINDOW_FLAGS_MINIMIZED;
-						UpdateWindow(menu);
+						Lemon::GUI::UpdateWindow(menu);
 					}
 				}
 				break;

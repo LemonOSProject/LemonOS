@@ -25,7 +25,7 @@ void OnFileOpened(char* path, char** filePointer){
 extern "C"
 int main(char argc, char** argv){
 	win_info_t windowInfo;
-	Window* window;
+	Lemon::GUI::Window* window;
 
 	windowInfo.width = 512;
 	windowInfo.height = 256;
@@ -34,10 +34,10 @@ int main(char argc, char** argv){
 	windowInfo.flags = 0;
 	strcpy(windowInfo.title, "FileMan");
 
-	window = CreateWindow(&windowInfo);
+	window = Lemon::GUI::CreateWindow(&windowInfo);
 
 	char* filePointer = nullptr;
-	FileView* fv = new FileView({{0,0},{512,256}}, "/", &filePointer, OnFileOpened);
+	Lemon::GUI::FileView* fv = new Lemon::GUI::FileView({{0,0},{512,256}}, "/", &filePointer, OnFileOpened);
 
 	AddWidget(fv, window);
 
@@ -45,7 +45,7 @@ int main(char argc, char** argv){
 
 	for(;;){
 		ipc_message_t msg;
-		while(ReceiveMessage(&msg)){
+		while(Lemon::ReceiveMessage(&msg)){
 			if (msg.msg == WINDOW_EVENT_MOUSEUP){	
 				uint32_t mouseX;
 				uint32_t mouseY;
@@ -69,7 +69,7 @@ int main(char argc, char** argv){
 				exit(0);
 			}
 		}
-		PaintWindow(window);
+		Lemon::GUI::PaintWindow(window);
 	}
 
 	for(;;);

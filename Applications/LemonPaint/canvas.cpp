@@ -93,7 +93,7 @@ void Canvas::OnMouseMove(vector2i_t mousePos){
 }
 
 void Canvas::Paint(surface_t* surface){
-    surfacecpy(surface, &this->surface, bounds.pos, {{sBarHor.scrollPos, sBarVert.scrollPos},{bounds.size - (vector2i_t){16, 16}}});
+    Lemon::Graphics::surfacecpy(surface, &this->surface, bounds.pos, {{sBarHor.scrollPos, sBarVert.scrollPos},{bounds.size - (vector2i_t){16, 16}}});
     sBarVert.Paint(surface, {bounds.pos + (vector2i_t){bounds.size.x - 16, 0}});
     sBarHor.Paint(surface, {bounds.pos + (vector2i_t){0, bounds.size.y - 16}});
 }

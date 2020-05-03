@@ -12,14 +12,14 @@ public:
     void Paint(int x, int y, uint8_t r, uint8_t g, uint8_t b, double scale, class Canvas* canvas);
 };
 
-class Canvas : public Bitmap{
+class Canvas : public Lemon::GUI::Bitmap{
 protected:
     vector2i_t lastMousePos;
 
     void DragBrush(vector2i_t a, vector2i_t b);
 
-    ScrollBar sBarVert;
-    ScrollBarHorizontal sBarHor;
+    Lemon::GUI::ScrollBar sBarVert;
+    Lemon::GUI::ScrollBarHorizontal sBarHor;
 public:
     Brush* currentBrush;
 
@@ -40,7 +40,7 @@ public:
     void ResetScrollbars();
 };
 
-class Colour : public Widget {
+class Colour : public Lemon::GUI::Widget {
     public:
         rgba_colour_t colour;
         Colour(rect_t rect){

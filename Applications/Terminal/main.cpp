@@ -42,7 +42,7 @@ void OnPaint(surface_t* surface){
 	for(int i = 0; i < 25 && i <= currentLine; i++){
 		int _currentLine = (currentLine < 25) ? 0 : (currentLine - 24);
 		for(int j = 0; j < 80; j++){
-			DrawChar(buffer[_currentLine + i][j], j * 8, i * 12, 255, 255, 255, surface);
+			Lemon::Graphics::DrawChar(buffer[_currentLine + i][j], j * 8, i * 12, 255, 255, 255, surface);
 		}
 	}
 }
@@ -84,7 +84,7 @@ void PrintChar(char ch){
 
 extern "C"
 int main(char argc, char** argv){
-	Window* window;
+	Lemon::GUI::Window* window;
 
 	windowInfo.width = 640;
 	windowInfo.height = 312;
@@ -92,7 +92,7 @@ int main(char argc, char** argv){
 	windowInfo.y = 0;
 	windowInfo.flags = 0;
 	strcpy(windowInfo.title, "Terminal");
-	window = CreateWindow(&windowInfo);
+	window = Lemon::GUI::CreateWindow(&windowInfo);
 	window->background = {0,0,0,255};
 
 	charactersPerLine = 80;
@@ -106,11 +106,11 @@ int main(char argc, char** argv){
 
 	char* _buf = (char*)malloc(512);
 
-	LoadFont("/initrd/sourcecodepro.ttf");
+	Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf");
 
 	for(;;){
 		ipc_message_t msg;
-		while(ReceiveMessage(&msg)){
+		while(Lemon::ReceiveMessage(&msg)){
 			if(msg.msg == WINDOW_EVENT_KEY){
 				if(msg.data < 128){
 					char key = (char)msg.data;
@@ -119,7 +119,7 @@ int main(char argc, char** argv){
 					//PrintChar(key);
 				}
 			} else if (msg.msg == WINDOW_EVENT_CLOSE){
-				DestroyWindow(window);
+				Lemon::GUI::DestroyWindow(window);
 				free(_buf);
 				exit(0);
 			}
@@ -131,7 +131,7 @@ int main(char argc, char** argv){
 			}
 		}
 		
-		PaintWindow(window);
+		Lemon::GUI::PaintWindow(window);
 	}
 	for(;;);
 }

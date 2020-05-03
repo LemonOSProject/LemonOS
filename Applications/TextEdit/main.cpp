@@ -15,7 +15,7 @@
 extern "C"
 int main(char argc, char** argv){
 	win_info_t windowInfo;
-	Window* window;
+	Lemon::GUI::Window* window;
 
 	windowInfo.width = 512;
 	windowInfo.height = 256;
@@ -29,24 +29,24 @@ int main(char argc, char** argv){
 	if(argc > 1){
 		filePath = argv[1];
 	} else {
-		filePath = FileDialog("/");
+		filePath = Lemon::GUI::FileDialog("/");
 
 		if(!filePath){
-			MessageBox("Invalid filepath!", MESSAGEBOX_OK);
+			Lemon::GUI::MessageBox("Invalid filepath!", MESSAGEBOX_OK);
 			exit(1);
 		}
 	}
 
-	window = CreateWindow(&windowInfo);
+	window = Lemon::GUI::CreateWindow(&windowInfo);
 
-	TextBox* textBox = new TextBox({{0, 0}, {512, 256}});
+	Lemon::GUI::TextBox* textBox = new Lemon::GUI::TextBox({{0, 0}, {512, 256}});
 
 	window->widgets.add_back(textBox);
 
 	FILE* textFile = fopen(filePath, "r");
 
 	if(!textFile){
-		MessageBox("Failed to open file!", MESSAGEBOX_OK);
+		Lemon::GUI::MessageBox("Failed to open file!", MESSAGEBOX_OK);
 		exit(1);
 	}
 
@@ -69,32 +69,32 @@ int main(char argc, char** argv){
 
 	for(;;){
 		ipc_message_t msg;
-		while(ReceiveMessage(&msg)){
+		while(Lemon::ReceiveMessage(&msg)){
 			if(msg.msg == WINDOW_EVENT_MOUSEDOWN){
 				uint32_t mouseX;
 				uint32_t mouseY;
 				mouseX = (msg.data >> 32);
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				HandleMouseDown(window, {(int)mouseX, (int)mouseY});
+				Lemon::GUI::HandleMouseDown(window, {(int)mouseX, (int)mouseY});
 			}
 			else if(msg.msg == WINDOW_EVENT_MOUSEUP){	
 				uint32_t mouseX;
 				uint32_t mouseY;
 				mouseX = msg.data >> 32;
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				HandleMouseUp(window, {(int)mouseX, (int)mouseY});
+				Lemon::GUI::HandleMouseUp(window, {(int)mouseX, (int)mouseY});
 			} else if (msg.msg == WINDOW_EVENT_MOUSEMOVE) {
 				uint32_t mouseX = msg.data >> 32;
 				uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
-				HandleMouseMovement(window, {mouseX, mouseY});
+				Lemon::GUI::HandleMouseMovement(window, {mouseX, mouseY});
 			} else if (msg.msg == WINDOW_EVENT_CLOSE) {
-				DestroyWindow(window);
+				Lemon::GUI::DestroyWindow(window);
 				exit(0);
 			}
 		}
 
-		PaintWindow(window);
+		Lemon::GUI::PaintWindow(window);
 	}
 
 	for(;;);

@@ -1,3 +1,5 @@
 #pragma once
 
-char* FileDialog(char* directoryPath);
+namespace Lemon::GUI{
+    char* FileDialog(char* directoryPath);
+}

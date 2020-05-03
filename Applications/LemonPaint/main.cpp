@@ -18,12 +18,12 @@ win_info_t winInfo{
     .flags = 0,
 };
 
-Window* window;
+Lemon::GUI::Window* window;
 Canvas* canvas;
 List<Brush*> brushes;
 
 void Colour::Paint(surface_t* surface){
-    DrawRect(bounds, colour, surface);
+    Lemon::Graphics::DrawRect(bounds, colour, surface);
 }
 
 void Colour::OnMouseDown(vector2i_t mousePos){
@@ -76,14 +76,14 @@ rgba_colour_t defaultColours[DEFAULT_COLOUR_COUNT]{
 
 void LoadImage(char* path){
     if(!path){
-        MessageBox("Invalid Filepath", MESSAGEBOX_OK);
+        Lemon::GUI::MessageBox("Invalid Filepath", MESSAGEBOX_OK);
         return;
     }
 
     FILE* image = fopen(path, "r");
 
     if(!image){
-        MessageBox("Failed to open image!", MESSAGEBOX_OK);
+        Lemon::GUI::MessageBox("Failed to open image!", MESSAGEBOX_OK);
         return;
     }
 
@@ -104,7 +104,7 @@ void LoadImage(char* path){
     canvas->surface.width = infoHeader->width;
     canvas->surface.height = infoHeader->height;
 
-	DrawBitmapImage(0, 0, infoHeader->width, infoHeader->height, imageBuffer, &canvas->surface);
+	Lemon::Graphics::DrawBitmapImage(0, 0, infoHeader->width, infoHeader->height, imageBuffer, &canvas->surface);
     
     canvas->ResetScrollbars();
 
@@ -113,13 +113,13 @@ void LoadImage(char* path){
 }
 
 void OnOpen(){
-    LoadImage(FileDialog("/initrd"));
+    LoadImage(Lemon::GUI::FileDialog("/initrd"));
 }
 
 
 int main(int argc, char** argv){
     strcpy(winInfo.title, "LemonPaint");
-    window = CreateWindow(&winInfo);
+    window = Lemon::GUI::CreateWindow(&winInfo);
 
     canvas = new Canvas({{80,0},{656, 496}}, {640, 480});
     memset(canvas->surface.buffer, 255, 640*480*4);
@@ -148,73 +148,73 @@ int main(int argc, char** argv){
         yPos += 18;
     }
 
-    Button* openButton = new Button("Open...", {{2, yPos}, {76, 24}});
+    Lemon::GUI::Button* openButton = new Lemon::GUI::Button("Open...", {{2, yPos}, {76, 24}});
     openButton->OnPress = OnOpen;
 
     window->widgets.add_back(openButton);
 
     yPos += 26;
-    Button* brush0Button = new Button("Brush 0", {{2, yPos}, {76, 24}});
+    Lemon::GUI::Button* brush0Button = new Lemon::GUI::Button("Brush 0", {{2, yPos}, {76, 24}});
     brush0Button->OnPress = OnPressBrush0;
     window->widgets.add_back(brush0Button);
 
     yPos += 26;
-    Button* brush1Button = new Button("Brush 1", {{2, yPos}, {76, 24}});
+    Lemon::GUI::Button* brush1Button = new Lemon::GUI::Button("Brush 1", {{2, yPos}, {76, 24}});
     brush1Button->OnPress = OnPressBrush1;
     window->widgets.add_back(brush1Button);
     
     yPos += 26;
-    Button* scaleButton1 = new Button("Scale 25%", {{2, yPos}, {76, 24}});
+    Lemon::GUI::Button* scaleButton1 = new Lemon::GUI::Button("Scale 25%", {{2, yPos}, {76, 24}});
     scaleButton1->OnPress = OnPressBrushScale25;
     window->widgets.add_back(scaleButton1);
     
     yPos += 26;
-    Button* scaleButton2 = new Button("Scale 50%", {{2, yPos}, {76, 24}});
+    Lemon::GUI::Button* scaleButton2 = new Lemon::GUI::Button("Scale 50%", {{2, yPos}, {76, 24}});
     scaleButton2->OnPress = OnPressBrushScale50;
     window->widgets.add_back(scaleButton2);
     
     yPos += 26;
-    Button* scaleButton3 = new Button("Scale 100%", {{2, yPos}, {76, 24}});
+    Lemon::GUI::Button* scaleButton3 = new Lemon::GUI::Button("Scale 100%", {{2, yPos}, {76, 24}});
     scaleButton3->OnPress = OnPressBrushScale100;
     window->widgets.add_back(scaleButton3);
     
     yPos += 26;
-    Button* scaleButton4 = new Button("Scale 150%", {{2, yPos}, {76, 24}});
+    Lemon::GUI::Button* scaleButton4 = new Lemon::GUI::Button("Scale 150%", {{2, yPos}, {76, 24}});
     scaleButton4->OnPress = OnPressBrushScale150;
     window->widgets.add_back(scaleButton4);
     
     yPos += 26;
-    Button* scaleButton5 = new Button("Scale 200%", {{2, yPos}, {76, 24}});
+    Lemon::GUI::Button* scaleButton5 = new Lemon::GUI::Button("Scale 200%", {{2, yPos}, {76, 24}});
     scaleButton5->OnPress = OnPressBrushScale200;
     window->widgets.add_back(scaleButton5);
     
 	for(;;){
 		ipc_message_t msg;
-		while(ReceiveMessage(&msg)){
+		while(Lemon::ReceiveMessage(&msg)){
 			if(msg.msg == WINDOW_EVENT_MOUSEDOWN){
 				uint32_t mouseX;
 				uint32_t mouseY;
 				mouseX = (msg.data >> 32);
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				HandleMouseDown(window, {(int)mouseX, (int)mouseY});
+				Lemon::GUI::HandleMouseDown(window, {(int)mouseX, (int)mouseY});
 			}
 			else if(msg.msg == WINDOW_EVENT_MOUSEUP){	
 				uint32_t mouseX;
 				uint32_t mouseY;
 				mouseX = msg.data >> 32;
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				HandleMouseUp(window, {(int)mouseX, (int)mouseY});
+				Lemon::GUI::HandleMouseUp(window, {(int)mouseX, (int)mouseY});
 			} else if (msg.msg == WINDOW_EVENT_MOUSEMOVE) {
 				uint32_t mouseX = msg.data >> 32;
 				uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
-				HandleMouseMovement(window, {mouseX, mouseY});
+				Lemon::GUI::HandleMouseMovement(window, {mouseX, mouseY});
 			} else if (msg.msg == WINDOW_EVENT_CLOSE) {
-				DestroyWindow(window);
+				Lemon::GUI::DestroyWindow(window);
 				exit(0);
 			}
 		}
 
-		PaintWindow(window);
+		Lemon::GUI::PaintWindow(window);
 	}
 }

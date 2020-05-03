@@ -24,7 +24,9 @@ typedef struct {
 	uint64_t data2;
 } __attribute__((packed)) ipc_message_t;
 
-void SendMessage(uint64_t pid, ipc_message_t msg);
-uint64_t ReceiveMessage(ipc_message_t* msg);
+namespace Lemon{
+	void SendMessage(uint64_t pid, ipc_message_t msg);
+	uint64_t ReceiveMessage(ipc_message_t* msg);
+}
 
 #endif 

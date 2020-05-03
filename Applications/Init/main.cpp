@@ -229,12 +229,12 @@ void AddNewWindows(){
 
 bool PointInWindow(Window_s* win, vector2i_t point){
 	int windowHeight = (win->info.flags & WINDOW_FLAGS_NODECORATION) ? win->info.height : (win->info.height + 25); // Account for titlebar
-	return PointInRect({{win->pos},{win->info.width, windowHeight}}, point);
+	return Lemon::Graphics::PointInRect({{win->pos},{win->info.width, windowHeight}}, point);
 }
 
 bool PointInWindowProper(Window_s* win, vector2i_t point){
 	int windowYOffset = (win->info.flags & WINDOW_FLAGS_NODECORATION) ? 0 : 25; // Account for titlebar
-	return PointInRect({{win->pos + (vector2i_t){0, windowYOffset}},{win->info.width, win->info.height}}, point);
+	return Lemon::Graphics::PointInRect({{win->pos + (vector2i_t){0, windowYOffset}},{win->info.width, win->info.height}}, point);
 }
 
 void DrawWindow(Window_s* win){
@@ -248,16 +248,16 @@ void DrawWindow(Window_s* win){
 	}
 
 	//if(redrawWindowDecorations){
-		DrawRect({win->pos + (vector2i_t){1,0}, {win->info.width,1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Top Border
-		DrawRect({win->pos + (vector2i_t){0,1}, {1, win->info.height + WINDOW_TITLEBAR_HEIGHT}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Left border
-		DrawRect({win->pos + (vector2i_t){0, win->info.height + WINDOW_TITLEBAR_HEIGHT + 1}, {win->info.width + 1, 1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Bottom border
-		DrawRect({win->pos + (vector2i_t){win->info.width + 1, 1}, {1,win->info.height + WINDOW_TITLEBAR_HEIGHT + 1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Right border
+		Lemon::Graphics::DrawRect({win->pos + (vector2i_t){1,0}, {win->info.width,1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Top Border
+		Lemon::Graphics::DrawRect({win->pos + (vector2i_t){0,1}, {1, win->info.height + WINDOW_TITLEBAR_HEIGHT}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Left border
+		Lemon::Graphics::DrawRect({win->pos + (vector2i_t){0, win->info.height + WINDOW_TITLEBAR_HEIGHT + 1}, {win->info.width + 1, 1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Bottom border
+		Lemon::Graphics::DrawRect({win->pos + (vector2i_t){win->info.width + 1, 1}, {1,win->info.height + WINDOW_TITLEBAR_HEIGHT + 1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Right border
 
-		DrawGradientVertical({win->pos + (vector2i_t){1,1}, {win->info.width, WINDOW_TITLEBAR_HEIGHT}}, {96, 96, 96}, {42, 50, 64}, &renderBuffer);
+		Lemon::Graphics::DrawGradientVertical({win->pos + (vector2i_t){1,1}, {win->info.width, WINDOW_TITLEBAR_HEIGHT}}, {96, 96, 96}, {42, 50, 64}, &renderBuffer);
 
-		surfacecpy(&renderBuffer, &closeButtonSurface, {win->pos.x + win->info.width - 21, win->pos.y + 3});
+		Lemon::Graphics::surfacecpy(&renderBuffer, &closeButtonSurface, {win->pos.x + win->info.width - 21, win->pos.y + 3});
 
-		DrawString(win->info.title, win->pos.x + 6, win->pos.y + 6, 255, 255, 255, &renderBuffer);
+		Lemon::Graphics::DrawString(win->info.title, win->pos.x + 6, win->pos.y + 6, 255, 255, 255, &renderBuffer);
 	//}
 
 	vector2i_t renderPos = win->pos + (vector2i_t){1, WINDOW_TITLEBAR_HEIGHT + 1};
@@ -267,11 +267,11 @@ void DrawWindow(Window_s* win){
 void memcpy_optimized(void* dest, void* src, size_t count);
 int main(){
 	fb = lemon_map_fb(&fbInfo); // Request framebuffer mapping from kernel
-	surface_t* fbSurface = CreateFramebufferSurface(fbInfo,fb); // Create surface object for framebuffer
+	surface_t* fbSurface = Lemon::Graphics::CreateFramebufferSurface(fbInfo,fb); // Create surface object for framebuffer
 	renderBuffer = *fbSurface;
 	renderBuffer.buffer = (uint8_t*)malloc(renderBuffer.pitch * renderBuffer.height); // Render buffer/Double buffer
 
-	DrawRect(0,0,fbSurface->width,fbSurface->height,255,0,128, fbSurface);
+	Lemon::Graphics::DrawRect(0,0,fbSurface->width,fbSurface->height,255,0,128, fbSurface);
 
 	syscall(SYS_CREATE_DESKTOP,0,0,0,0,0); // Get Kernel to create Desktop
 
@@ -291,7 +291,7 @@ int main(){
 	closeButtonSurface.width = closeInfoHeader->width;
 	closeButtonSurface.height = closeInfoHeader->height;
 	closeButtonSurface.buffer = (uint8_t*)malloc(19*19*4);
-	DrawBitmapImage(0, 0, closeButtonSurface.width, closeButtonSurface.height, closeButtonBuffer, &closeButtonSurface);
+	Lemon::Graphics::DrawBitmapImage(0, 0, closeButtonSurface.width, closeButtonSurface.height, closeButtonBuffer, &closeButtonSurface);
 	free(closeButtonBuffer);
 
 	#ifdef ENABLE_BACKGROUND_IMAGE
@@ -311,7 +311,7 @@ int main(){
 	backgroundImageSurface.width = renderBuffer.width;
 	backgroundImageSurface.height = renderBuffer.height;
 	backgroundImageSurface.buffer = (uint8_t*)malloc(backgroundImageSurface.width * backgroundImageSurface.height * 4);
-	DrawBitmapImage(0, 0, backgroundImageSurface.width, backgroundImageSurface.height, backgroundImageBuffer, &backgroundImageSurface, true /*Preserve Aspect Ratio*/);
+	Lemon::Graphics::DrawBitmapImage(0, 0, backgroundImageSurface.width, backgroundImageSurface.height, backgroundImageBuffer, &backgroundImageSurface, true /*Preserve Aspect Ratio*/);
 	#endif
 
 	syscall(SYS_EXEC, (uintptr_t)"/initrd/shell.lef", 0, 0, 0, 0);
@@ -319,7 +319,7 @@ int main(){
 	int mouseDevice = lemon_open("/dev/mouse0", 0);
 	lemon_read(mouseDevice, mouseData, 3);
 
-	DrawRect(0, 0, renderBuffer.width, renderBuffer.height, backgroundColor, &renderBuffer);
+	Lemon::Graphics::DrawRect(0, 0, renderBuffer.width, renderBuffer.height, backgroundColor, &renderBuffer);
 
 	for(;;){
 		#ifdef ENABLE_FRAMERATE_COUNTER
@@ -329,7 +329,7 @@ int main(){
 
 		if(redrawWindowDecorations){
 			#ifdef ENABLE_BACKGROUND_IMAGE
-			surfacecpy(&renderBuffer, &backgroundImageSurface);
+			Lemon::Graphics::surfacecpy(&renderBuffer, &backgroundImageSurface);
 			#else
 			DrawRect(0, 0, renderBuffer.width, renderBuffer.height, backgroundColor, &renderBuffer);
 			#endif
@@ -373,7 +373,7 @@ int main(){
 						if(mousePos.x > win->pos.x + win->info.width - 21 && mousePos.y > win->pos.y + 3 && mousePos.x < win->pos.x + win->info.width - (21 - 19)){
 							ipc_message_t closeMsg;
 							closeMsg.msg = WINDOW_EVENT_CLOSE;
-							SendMessage(win->info.ownerPID, closeMsg);
+							Lemon::SendMessage(win->info.ownerPID, closeMsg);
 						} else {
 							dragOffset = {mousePos.x - win->pos.x, mousePos.y - win->pos.y};
 							drag = true;
@@ -392,7 +392,7 @@ int main(){
 						}
 						mouseEventMessage.data = (((uint64_t)mouseX) << 32) | mouseY;
 						mouseEventMessage.data2 = (uintptr_t)win->info.handle;
-						SendMessage(win->info.ownerPID, mouseEventMessage);
+						Lemon::SendMessage(win->info.ownerPID, mouseEventMessage);
 					}
 					break;
 				}
@@ -422,7 +422,7 @@ int main(){
 					}
 					mouseEventMessage.data = (((uint64_t)mouseX) << 32) | mouseY;
 					mouseEventMessage.data2 = (uintptr_t)active->info.handle;
-					SendMessage(active->info.ownerPID, mouseEventMessage);
+					Lemon::SendMessage(active->info.ownerPID, mouseEventMessage);
 				}
 			}
 		}
@@ -441,11 +441,11 @@ int main(){
 			}
 			mouseEventMessage.data = (((uint64_t)mouseX) << 32) | mouseY;
 			mouseEventMessage.data2 = (uintptr_t)active->info.handle;
-			SendMessage(active->info.ownerPID, mouseEventMessage);
+			Lemon::SendMessage(active->info.ownerPID, mouseEventMessage);
 		}
 		
 		ipc_message_t msg;
-		while(ReceiveMessage(&msg)){
+		while(Lemon::ReceiveMessage(&msg)){
 			switch(msg.msg){
 				case DESKTOP_EVENT_KEY:
 					if(active && (msg.data & 0x7F) < 128 /*Values above 128 would exceed the length of the keymap*/){
@@ -480,7 +480,7 @@ int main(){
 						}
 						keyMsg.data = key;
 						keyMsg.data2 = (uintptr_t)active->info.handle;
-						SendMessage(active->info.ownerPID, keyMsg);
+						Lemon::SendMessage(active->info.ownerPID, keyMsg);
 					}
 
 					break;
@@ -495,21 +495,21 @@ int main(){
 		}
 
 		#ifdef ENABLE_FRAMERATE_COUNTER
-		DrawRect(0,0,8*3,12,0,0,0,&renderBuffer);
+		Lemon::Graphics::DrawRect(0,0,8*3,12,0,0,0,&renderBuffer);
 		char temp[5];
 		memset(temp,5,0);
 		itoa(frameRate, temp, 10);
-		DrawString(temp,0,0,255,255,255,&renderBuffer);
+		Lemon::Graphics::DrawString(temp,0,0,255,255,255,&renderBuffer);
 		#endif
 
-		surfacecpyTransparent(&renderBuffer, &mouseSurface, {mousePos.x, mousePos.y});
+		Lemon::Graphics::surfacecpyTransparent(&renderBuffer, &mouseSurface, {mousePos.x, mousePos.y});
 
 		memcpy_optimized(fbSurface->buffer, renderBuffer.buffer, fbInfo.width * fbInfo.height * 4);//surfacecpy(fbSurface,&renderBuffer); // Render our buffer
 
 		#ifdef ENABLE_BACKGROUND_IMAGE
-		surfacecpy(&renderBuffer, &backgroundImageSurface, mousePos, {mousePos, {mouseSurface.width, mouseSurface.height}});
+		Lemon::Graphics::surfacecpy(&renderBuffer, &backgroundImageSurface, mousePos, {mousePos, {mouseSurface.width, mouseSurface.height}});
 		#else
-		DrawRect(mousePos.x, mousePos.y, mouseSurface.width, mouseSurface.height, backgroundColor, &renderBuffer);
+		Lemon::Graphics::DrawRect(mousePos.x, mousePos.y, mouseSurface.width, mouseSurface.height, backgroundColor, &renderBuffer);
 		#endif
 	}
 
