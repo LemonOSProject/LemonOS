@@ -186,7 +186,7 @@ int main(){
 	path.add_back("/initrd");
 
 	for(;;) {
-		printf("\n$ Lemon %s>", currentDir);
+		printf("\n\033[33mLemon \033[31m%s\033[m>", currentDir);
 
 		ReadLine();
 		ParseLine();

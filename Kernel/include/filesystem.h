@@ -51,6 +51,7 @@ typedef void (*open_type_t) (struct fs_node*, uint32_t flags);
 typedef void (*close_type_t) (struct fs_node*);
 typedef struct fs_dirent *(*readdir_type_t) (struct fs_node*, uint32_t);
 typedef struct fs_node*(*finddir_type_t) (struct fs_node*, char *name);
+typedef int (*ioctl_type_t) (struct fs_node*, uint64_t cmd, uint64_t arg);
 
 typedef struct fs_node{
     char name[128]; // Filename
@@ -66,6 +67,7 @@ typedef struct fs_node{
     close_type_t close; // Close callback
     readdir_type_t readDir; // Read callback
     finddir_type_t findDir; // Find callback
+    ioctl_type_t ioctl; // Ioctl Callback
 
     void* vol; // Some Fs Drivers may use this
 
@@ -108,4 +110,6 @@ namespace fs{
     size_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer);
     fs_dirent_t* ReadDir(fs_fd_t* handle, uint32_t index);
     fs_node_t* FindDir(fs_fd_t* handle, char* name);
+
+    int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg);
 }

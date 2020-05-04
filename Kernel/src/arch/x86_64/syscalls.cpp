@@ -53,8 +53,9 @@
 #define SYS_NANO_SLEEP 39
 #define SYS_PREAD 40
 #define SYS_PWRITE 41
+#define SYS_IOCTL 42
 
-#define NUM_SYSCALLS 42
+#define NUM_SYSCALLS 43
 
 #define EXEC_CHILD 1
 
@@ -75,7 +76,7 @@ int SysExec(regs64_t* r){
 	int argc = r->rcx;
 	char** argv = (char**)r->rdx;
 	uint64_t flags = r->rsi;
-	
+	char** envp = (char**)r->rdi;
 
 	fs_node_t* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
 
@@ -100,6 +101,9 @@ int SysExec(regs64_t* r){
 		kfree(kernelArgv[i]);
 	}
 	
+	for(int i = 0; i < argc; i++){
+		kfree(kernelArgv[i]);
+	}
 	kfree(kernelArgv);
 	kfree(buffer);
 
@@ -134,7 +138,7 @@ int SysRead(regs64_t* r){
 
 int SysWrite(regs64_t* r){
 	if(r->rbx > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
-		*((int*)r->rsi) = -1; // Return -1
+		if(r->rsi) *((int*)r->rsi) = -1; // Return -1
 		return -1;
 	}
 	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
@@ -151,7 +155,7 @@ int SysWrite(regs64_t* r){
 		*((int*)r->rsi) = ret;
 	}
 
-	return 0;
+	return ret;
 }
 
 int SysOpen(regs64_t* r){
@@ -792,6 +796,26 @@ int SysPWrite(regs64_t* r){
 	return 0;
 }
 
+int SysIoctl(regs64_t* r){
+	int fd = r->rbx;
+	uint64_t request = r->rcx;
+	uint64_t arg = r->rdx;
+	int* result = (int*)r->rsi;
+
+	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+		return -1;
+	}
+	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
+	if(!handle){
+		Log::Warning("sys_fcntl: Invalid File Descriptor: %d", r->rbx);
+		return -2;
+	}
+
+	*result = fs::Ioctl(handle, request, arg);
+
+	return 0;
+}
+
 syscall_t syscalls[]{
 	/*nullptr*/SysDebug,
 	SysExit,					// 1
@@ -835,6 +859,7 @@ syscall_t syscalls[]{
 	SysNanoSleep,
 	SysPRead,					// 40
 	SysPWrite,
+	SysIoctl,
 };
 
 namespace Scheduler{extern bool schedulerLock;};

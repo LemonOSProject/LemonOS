@@ -205,6 +205,10 @@ namespace Scheduler{
         return proc;
     }
 
+    void Yield(){
+        currentProcess->timeSlice = 0;
+    }
+
     process_t* CreateProcess(void* entry) {
         acquireLock(&lock);
 

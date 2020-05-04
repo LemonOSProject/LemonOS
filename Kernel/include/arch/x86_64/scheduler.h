@@ -67,6 +67,8 @@ namespace Scheduler{
 
 	process_t* GetCurrentProcess();
 
+	void Yield();
+
 	handle_t RegisterHandle(void* handle);
 	void* FindHandle(handle_t handle);
 

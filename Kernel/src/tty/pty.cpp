@@ -52,6 +52,25 @@ size_t FS_Master_Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buf
 	else return 0;
 }
 
+int FS_Ioctl(fs_node_t* node, uint64_t cmd, uint64_t arg){
+	PTY* pty = (*ptys)[node->inode];
+
+	if(!pty) return -1;
+
+	switch(cmd){
+		case TIOCGWINSZ:
+			*((winsz*)arg) = pty->wSz;
+			break;
+		case TIOCSWINSZ:
+			pty->wSz = *((winsz*)arg);
+			break;
+		default:
+			return -1;
+	}
+
+	return 0;
+}
+
 PTY::PTY(){
 	slaveFile.flags = FS_NODE_CHARDEVICE;
 	strcpy(slaveFile.name, "pty");
@@ -70,6 +89,7 @@ PTY::PTY(){
 	slaveFile.open = nullptr;
 	slaveFile.close = nullptr;
 	slaveFile.inode = ptys->get_length();
+	slaveFile.ioctl = FS_Ioctl;
 
 	masterFile.read = FS_Master_Read;
 	masterFile.write = FS_Master_Write;
@@ -78,6 +98,7 @@ PTY::PTY(){
 	masterFile.open = nullptr;
 	masterFile.close = nullptr;
 	masterFile.inode = ptys->get_length();
+	masterFile.ioctl = FS_Ioctl;
 
 	fs::RegisterDevice(&slaveFile);
 

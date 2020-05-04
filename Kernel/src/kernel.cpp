@@ -52,7 +52,10 @@ void IdleProcess(){
 
 	for(;;){ // Use the idle task to clean up the windows of dead processes
 		int oldUptime = Timer::GetSystemUptime();
-		while(Timer::GetSystemUptime() < oldUptime + 1) asm("hlt");
+		while(Timer::GetSystemUptime() < oldUptime + 1) {
+			Scheduler::Yield();
+			asm("hlt");
+		}
 
 		if(!GetDesktop()) continue;
 

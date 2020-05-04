@@ -264,7 +264,7 @@ namespace Lemon::Graphics{
                     int oldB = oldColour & 0xFF;
                     int oldG = (oldColour >> 8) & 0xFF;
                     int oldR = (oldColour >> 16) & 0xFF;
-                    uint32_t newColour = (int)(b * val + oldB * (1 - val)) | (((int)(b * val + oldB * (1 - val)) << 8)) | (((int)(b * val + oldB * (1 - val)) << 16));
+                    uint32_t newColour = (int)(b * val + oldB * (1 - val)) | (((int)(g * val + oldG * (1 - val)) << 8)) | (((int)(r * val + oldR * (1 - val)) << 16));
                     buffer[yOffset + (j + x)] = newColour;
                 }
             }

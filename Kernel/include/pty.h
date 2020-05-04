@@ -3,6 +3,16 @@
 #include <characterbuffer.h>
 #include <types.h>
 
+#define TIOCGWINSZ 0x5413
+#define TIOCSWINSZ 0x5414
+
+struct winsz {
+	unsigned short rowCount; // Rows (in characters)
+	unsigned short colCount; // Columns (in characters)
+	unsigned short width; // Width (in pixels)
+	unsigned short height; // Height (in pixels)
+};
+
 class PTY{
 public:
     CharacterBuffer master;
@@ -10,6 +20,8 @@ public:
 
     fs_node_t masterFile;
     fs_node_t slaveFile;
+
+    winsz wSz;
 
     bool canonical = true;
     bool echo = true;

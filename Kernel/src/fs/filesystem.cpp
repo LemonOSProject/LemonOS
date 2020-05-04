@@ -295,4 +295,9 @@ namespace fs{
             return handle->node->findDir(handle->node,name);
         else return 0;
     }
+
+	int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg){
+		if(handle->node && handle->node->ioctl) return handle->node->ioctl(handle->node, cmd, arg);
+		else return -1;
+	}
 }
