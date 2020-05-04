@@ -295,23 +295,11 @@ int main(){
 	free(closeButtonBuffer);
 
 	#ifdef ENABLE_BACKGROUND_IMAGE
-	FILE* backgroundImageFile = fopen("/initrd/bg2.bmp", "r");
-
-	if(!backgroundImageFile) {
-		return 1;
-	}
-
-	fseek(backgroundImageFile, 0, SEEK_END);
-	uint64_t backgroundImageLength = ftell(backgroundImageFile);
-	fseek(backgroundImageFile, 0, SEEK_SET);
-	
-	uint8_t* backgroundImageBuffer = (uint8_t*)malloc(backgroundImageLength);
-	fread(backgroundImageBuffer, backgroundImageLength, 1, backgroundImageFile);
-	bitmap_info_header_t* bgInfoHeader = ((bitmap_info_header_t*)(backgroundImageBuffer + sizeof(bitmap_file_header_t)));
 	backgroundImageSurface.width = renderBuffer.width;
 	backgroundImageSurface.height = renderBuffer.height;
 	backgroundImageSurface.buffer = (uint8_t*)malloc(backgroundImageSurface.width * backgroundImageSurface.height * 4);
-	Lemon::Graphics::DrawBitmapImage(0, 0, backgroundImageSurface.width, backgroundImageSurface.height, backgroundImageBuffer, &backgroundImageSurface, true /*Preserve Aspect Ratio*/);
+	int e = Lemon::Graphics::LoadImage("/initrd/bg2.png", 0, 0, backgroundImageSurface.width, backgroundImageSurface.height, &backgroundImageSurface, true);
+	syscall(0, "e: ", e, 0, 0, 0);
 	#endif
 
 	syscall(SYS_EXEC, (uintptr_t)"/initrd/shell.lef", 0, 0, 0, 0);

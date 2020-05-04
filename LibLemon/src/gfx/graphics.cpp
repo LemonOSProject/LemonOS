@@ -168,28 +168,6 @@ namespace Lemon::Graphics{
         DrawRect(x,y,width,height,colour.r,colour.g,colour.b,surface);
     }
 
-    /*void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface) {
-        bitmap_file_header_t bmpHeader = *(bitmap_file_header_t*)data;
-        data += bmpHeader.offset;
-
-        uint8_t bmpBpp = 24;
-        uint32_t rowSize = floor((bmpBpp*w + 31) / 32) * 4;
-        uint32_t bmp_offset = rowSize * (h - 1);
-        uint32_t bmp_buffer_offset = 0;
-
-        uint32_t pixelSize = 4;
-        for (int i = 0; i < h && i + y < surface->height; i++) {
-            for (int j = 0; j < w && j + x < surface->width; j++) {
-                if(data[bmp_offset + j * (bmpBpp / 8)] == 1 && data[bmp_offset + j * (bmpBpp / 8) + 1] == 1 && data[bmp_offset + j * (bmpBpp / 8) + 2] == 1) continue;
-                uint32_t offset = (y + i)*(surface->width*pixelSize) + (x + j) * pixelSize;
-                surface->buffer[offset] = data[bmp_offset + j * (bmpBpp / 8)];
-                surface->buffer[offset + 1] = data[bmp_offset + j * (bmpBpp / 8) + 1];
-                surface->buffer[offset + 2] = data[bmp_offset + j * (bmpBpp / 8) + 2];
-            }
-            bmp_offset -= rowSize;
-            bmp_buffer_offset += w * pixelSize;
-        }
-    }*/
     uint32_t Interpolate(double q11, double q21, double q12, double q22, double x, double y){
         double val1 = q11;
         double val2 = q21;
@@ -201,48 +179,6 @@ namespace Lemon::Graphics{
 
         double val = (x1 + (x2 - x1) * (y - ((int)y)));
         return (uint32_t)val;
-    }
-
-    void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface, bool preserveAspectRatio) {
-        bitmap_file_header_t bmpHeader = *(bitmap_file_header_t*)data;
-        bitmap_info_header_t bmpInfoHeader = *(bitmap_info_header_t*)(data + sizeof(bitmap_file_header_t));
-        data += bmpHeader.offset;
-
-        int originalWidth = bmpInfoHeader.width;
-        int originalHeight = bmpInfoHeader.height;
-
-        double xScale = ((double)w) / originalWidth;
-        double yScale = (((double)h) / originalHeight);
-        double xOffset = 0;
-
-        if(preserveAspectRatio){
-            xScale = ((double)h * (((double)originalWidth) / originalHeight)) / originalWidth;
-        // if((xScale * originalWidth) < originalWidth) xOffset = (originalWidth - (xScale * originalWidth)) / 2;
-        }
-
-
-        uint8_t bmpBpp = 24;
-        uint32_t rowSize = (int)floor((bmpBpp*bmpInfoHeader.width + 31) / 32) * 4;
-        uint32_t bmp_offset = rowSize * (originalHeight - 1);
-
-        uint32_t pixelSize = 4;
-        for (int i = 0; i < h && i + y < surface->height; i++) {
-            double _yval = ((double)i) / yScale;
-            if(ceil(_yval) >= originalHeight) break;
-            for (int j = 0; j < w && j + x < surface->width; j++) {
-                double _xval = xOffset + ((double) + j) / xScale;
-                if(ceil(_xval) >= originalWidth) break;
-
-                uint8_t r = Interpolate(data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 0], data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 0], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 0], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 0], _xval, _yval);
-                uint8_t g = Interpolate(data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 1], data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 1], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 1], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 1], _xval, _yval);
-                uint8_t b = Interpolate(data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 2], data[bmp_offset - ((int)floor(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 2], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)floor(_xval) * (bmpBpp / 8) + 2], data[bmp_offset - ((int)ceil(_yval) * rowSize) + (int)ceil(_xval) * (bmpBpp / 8) + 2], _xval, _yval);
-                
-                uint32_t offset = (y + i)*(surface->width*pixelSize) + (x + j) * pixelSize;
-                surface->buffer[offset] = r;
-                surface->buffer[offset + 1] = g;
-                surface->buffer[offset + 2] = b;
-            }
-        }
     }
 
     void DrawGradient(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface){
@@ -312,6 +248,24 @@ namespace Lemon::Graphics{
             for(int j = 0; j < src->width && j < dest->width - offset.x; j++){
                 if((srcBuffer[i*src->width + j] >> 24) < 255) continue;
                 destBuffer[(i+offset.y)*dest->width + j + offset.x] = srcBuffer[i*src->width + j];
+            }
+        }
+    }
+    
+    void surfacecpyTransparent(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion){
+        int srcWidth = (srcRegion.pos.x + srcRegion.size.x) > src->width ? (src->width - srcRegion.pos.x) : srcRegion.size.x;
+        int srcHeight = (srcRegion.pos.y + srcRegion.size.y) > src->height ? (src->height - srcRegion.pos.y) : srcRegion.size.y;
+        int rowSize = ((offset.x + srcWidth) > dest->width) ? dest->width - offset.x : srcWidth;
+
+        if(rowSize <= 0) return;
+
+        uint32_t* srcBuffer = (uint32_t*)src->buffer;
+        uint32_t* destBuffer = (uint32_t*)dest->buffer;
+
+        for(int i = 0; i < srcHeight && i < dest->height - offset.y; i++){
+            for(int j = 0; j < srcWidth && j < dest->width - offset.x; j++){
+                if((srcBuffer[i*src->width + j] >> 24) < 255) continue;
+                destBuffer[((i+offset.y)*(dest->width) + offset.x) + j] = srcBuffer[(i + srcRegion.pos.y)*src->width + srcRegion.pos.x + j];
             }
         }
     }

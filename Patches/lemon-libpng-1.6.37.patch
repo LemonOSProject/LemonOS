@@ -1,0 +1,12 @@
+diff -ruN libpng-1.6.37/config.sub lemon-libpng/config.sub
+--- libpng-1.6.37/config.sub	2019-04-15 04:10:32.000000000 +1000
++++ lemon-libpng/config.sub	2020-05-03 13:59:50.924663900 +1000
+@@ -1390,7 +1390,7 @@
+ 	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
+ 	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es* \
+ 	      | -onefs* | -tirtos* | -phoenix* | -fuchsia* | -redox* | -bme* \
+-	      | -midnightbsd*)
++	      | -midnightbsd* | -lemon*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+ 	-qnx*)

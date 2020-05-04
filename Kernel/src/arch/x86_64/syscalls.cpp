@@ -75,9 +75,6 @@ int SysExec(regs64_t* r){
 	int argc = r->rcx;
 	char** argv = (char**)r->rdx;
 	uint64_t flags = r->rsi;
-	uint64_t* pid = (uint64_t*)r->rdi;
-
-	*pid = 0;
 	
 
 	fs_node_t* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
@@ -118,9 +115,7 @@ int SysExec(regs64_t* r){
 
 	strncpy(proc->workingDir, Scheduler::GetCurrentProcess()->workingDir, PATH_MAX);
 
-	*pid = proc->pid;
-
-	return 0;
+	return proc->pid;
 }
 
 int SysRead(regs64_t* r){
@@ -134,7 +129,7 @@ int SysRead(regs64_t* r){
 	uint64_t count = r->rdx;
 	int ret = fs::Read(handle, count, buffer);
 	*(int*)r->rsi = ret;
-	return 0;
+	return ret;
 }
 
 int SysWrite(regs64_t* r){

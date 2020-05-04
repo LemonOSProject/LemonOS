@@ -4,7 +4,7 @@ The Lemon Operating System
 
 ### Features
 - Window Management
-- Freetype Port
+- Freetype and Libpng Port
 - ATA and SATA Driver
 - [GnuBoy Port](https://github.com/fido2020/lemon-gnuboy)
 - Dynamic Linking
@@ -24,7 +24,9 @@ The Lemon Operating System
 - UNIX-like system (e.g. Linux or Windows under WSL)
 - GNU binutils, make and GCC (yet to provide patch files)
 - meson (see crossfile in Scripts) and ninja
-- Freetype
+- Freetype 2.10.1 (patch in Patches)
+- Libpng 1.6.37 (patch in Patches)
+- zLib (no patch needed)
 - [mlibc](https://github.com/managarm/mlibc) C Library
 
 ## Repo Structure

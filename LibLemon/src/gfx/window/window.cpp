@@ -91,11 +91,14 @@ namespace Lemon::GUI{
 	}
 
 	void HandleMouseDown(Window* win, vector2i_t mousePos){
+		win->activeWidget = -1;
+
 		for(int i = 0; i < win->widgets.get_length(); i++){
 			rect_t widgetBounds = win->widgets.get_at(i)->bounds;
 			if(Graphics::PointInRect(widgetBounds, mousePos)){
 				win->widgets.get_at(i)->OnMouseDown(mousePos);
 				win->lastPressedWidget = i;
+				win->activeWidget = i;
 				break;
 			}
 		}
@@ -108,6 +111,12 @@ namespace Lemon::GUI{
 		}
 		win->lastPressedWidget = -1;
 		return NULL;
+	}
+
+	void HandleKeyPress(Window* win, int key){
+		if(win->activeWidget > -1){
+			win->widgets[win->activeWidget]->OnKeyPress(key);
+		}
 	}
 
 	void HandleMouseMovement(Window* win, vector2i_t mousePos){

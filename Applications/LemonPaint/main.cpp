@@ -1,14 +1,15 @@
 #include "paint.h"
 
 #include <gfx/window/window.h>
+#include <gfx/window/widgets.h>
 #include <gfx/window/messagebox.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <lemon/ipc.h>
 #include <gfx/window/filedialog.h>
 
-#define BRUSH_CALLBACK(x) void OnPressBrush ## x () { canvas->currentBrush = brushes[x]; }
-#define SCALE_CALLBACK(x) void OnPressBrushScale ## x () { canvas->brushScale = 0.01 * x; }
+#define BRUSH_CALLBACK(x) void OnPressBrush ## x (Lemon::GUI::Button* button)
+#define SCALE_CALLBACK(x) void OnPressBrushScale ## x (Lemon::GUI::Button* button)
 
 win_info_t winInfo{
     .x = 0,
@@ -45,14 +46,14 @@ uint8_t brush1[] = {
     0,80,156,190,190,156,80,0,
 };
 
-BRUSH_CALLBACK(0)
-BRUSH_CALLBACK(1)
+BRUSH_CALLBACK(0) { canvas->currentBrush = brushes[0]; }
+BRUSH_CALLBACK(1) { canvas->currentBrush = brushes[1]; }
 
-SCALE_CALLBACK(25)
-SCALE_CALLBACK(50)
-SCALE_CALLBACK(100)
-SCALE_CALLBACK(150)
-SCALE_CALLBACK(200)
+SCALE_CALLBACK(25) { canvas->brushScale = 0.01 * 25; }
+SCALE_CALLBACK(50) { canvas->brushScale = 0.01 * 50; }
+SCALE_CALLBACK(100) { canvas->brushScale = 0.01 * 100; }
+SCALE_CALLBACK(150) { canvas->brushScale = 0.01 * 150; }
+SCALE_CALLBACK(200) { canvas->brushScale = 0.01 * 200; }
 
 #define DEFAULT_COLOUR_COUNT 16
 rgba_colour_t defaultColours[DEFAULT_COLOUR_COUNT]{
@@ -112,7 +113,7 @@ void LoadImage(char* path){
     fclose(image);
 }
 
-void OnOpen(){
+void OnOpen(Lemon::GUI::Button* btn){
     LoadImage(Lemon::GUI::FileDialog("/initrd"));
 }
 

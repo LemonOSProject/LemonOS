@@ -419,7 +419,7 @@ namespace Scheduler{
     }
 
     void Tick(regs64_t* r){
-        if(currentProcess->timeSlice > 0) {
+        if(currentProcess && currentProcess->timeSlice > 0) {
             currentProcess->timeSlice--;
             return;
         }

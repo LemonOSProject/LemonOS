@@ -129,6 +129,7 @@ namespace fs::FAT32{
     }
 
     void* Fat32Volume::ReadClusterChain(uint32_t cluster, int* clusterCount){
+        if(cluster == 0) cluster = bootRecord->ebr.rootClusterNum;
         List<uint32_t>* clusterChain = GetClusterChain(cluster);
 
         if(!clusterChain) return nullptr;
@@ -291,11 +292,11 @@ namespace fs::FAT32{
                 Log::Warning(_name);
 
                 if(strcmp(_name, name) == 0){
-                    Log::Warning(name);
-                    Log::Write(" found!");
+                    if((((uint32_t)dirEntries[i].highClusterNum) << 16) | dirEntries[i].lowClusterNum == bootRecord->ebr.rootClusterNum || (((uint32_t)dirEntries[i].highClusterNum) << 16) | dirEntries[i].lowClusterNum == 0) 
+                        return &mountPoint; // Root Directory
                     _node = (fs_node_t*)kmalloc(sizeof(fs_node_t));
                     _node->size = dirEntries[i].fileSize;
-                    _node->inode = dirEntries[i].lowClusterNum | (dirEntries[i].highClusterNum << 16);
+                    _node->inode = (((uint32_t)dirEntries[i].highClusterNum) << 16) | dirEntries[i].lowClusterNum;
                     if(dirEntries[i].attributes & FAT_ATTR_DIRECTORY) _node->flags = FS_NODE_DIRECTORY;
                     else _node->flags = FS_NODE_FILE;
                     strcpy(_node->name, _name);

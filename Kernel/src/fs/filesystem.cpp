@@ -125,7 +125,7 @@ namespace fs{
 			if(strlen(tokens->get_at(i)) == 0){
 				tokens->remove_at(i--);
 				continue;
-			} if(strcmp(tokens->get_at(i), ".") == 0){
+			} else if(strcmp(tokens->get_at(i), ".") == 0){
 				tokens->remove_at(i--);
 				continue;
 			} else if(strcmp(tokens->get_at(i), "..") == 0){

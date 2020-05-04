@@ -33,12 +33,14 @@ cpp_files = [
 
     'src/gfx/font.cpp',
     'src/gfx/graphics.cpp',
+    'src/gfx/image.cpp',
     'src/gfx/surface.cpp',
     'src/gfx/text.cpp',
 
     'src/gfx/window/filedialog.cpp',
     'src/gfx/window/messagebox.cpp',
     'src/gfx/window/widgets.cpp',
+    'src/gfx/window/fileview.cpp',
     'src/gfx/window/window.cpp',
 ]
 
@@ -51,5 +53,5 @@ install_subdir('include', install_dir: prefix)
 
 static_library('lemon', [asmg.process(asm_files), cpp_files],
     include_directories : liblemon_include_dirs,
-    link_args: ['-lfreetype', '-lstdc++'],
+    link_args: ['-lfreetype', '-lstdc++', '-lz', '-lpng'],
     install: true)

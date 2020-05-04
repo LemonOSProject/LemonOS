@@ -44,6 +44,7 @@ namespace Lemon::GUI{
 		uint8_t* secondaryBuffer;
 
 		int lastPressedWidget = -1;
+		int activeWidget = -1;
 		vector2i_t mousePos;
 		
 		WindowPaintHandler OnPaint = NULL;
@@ -64,6 +65,7 @@ namespace Lemon::GUI{
 	void HandleMouseDown(Window* win, vector2i_t mousePos);
 	Widget* HandleMouseUp(Window* win, vector2i_t mousePos);
 	void HandleMouseMovement(Window* win, vector2i_t mousePos);
+	void HandleKeyPress(Window* win, int key);
 
 	void AddWidget(Widget* widget, Window* win);
 }

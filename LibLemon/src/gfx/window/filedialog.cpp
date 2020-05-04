@@ -14,14 +14,14 @@ namespace Lemon::GUI {
 		win_info_t dialogWindowInfo;
 		dialogWindowInfo.x = 10;
 		dialogWindowInfo.y = 10;
-		dialogWindowInfo.width = 300;
+		dialogWindowInfo.width = 400;
 		dialogWindowInfo.height = 280;
 		dialogWindowInfo.flags = 0;
 		strcpy(dialogWindowInfo.title, "Open...");
 		Window* dialogWindow = CreateWindow(&dialogWindowInfo);
 
 		char* filePointer = nullptr;
-		FileView* fv = new FileView({{0,0},{300,280}}, directoryPath, &filePointer, OnFileOpened);
+		FileView* fv = new FileView({{0,0},{dialogWindowInfo.width,dialogWindowInfo.height}}, directoryPath, &filePointer, OnFileOpened);
 
 		AddWidget(fv, dialogWindow);
 
@@ -50,6 +50,8 @@ namespace Lemon::GUI {
 					uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
 					HandleMouseMovement(dialogWindow, {mouseX, mouseY});
+				} else if (msg.msg == WINDOW_EVENT_KEY) {
+					HandleKeyPress(dialogWindow, msg.data);
 				} else if (msg.msg == WINDOW_EVENT_CLOSE) {
 					DestroyWindow(dialogWindow);
 					return nullptr;

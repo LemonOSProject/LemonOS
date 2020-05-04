@@ -8,6 +8,8 @@
 
 namespace Lemon::GUI{
     class Widget {
+    protected:
+        List<Widget*> children;
     public:
         rect_t bounds;
 
@@ -16,6 +18,7 @@ namespace Lemon::GUI{
         virtual void OnMouseUp(vector2i_t mousePos);
         virtual void OnHover(vector2i_t mousePos);
         virtual void OnMouseMove(vector2i_t mousePos);
+        virtual void OnKeyPress(int key);
 
         virtual ~Widget();
     };
@@ -59,19 +62,22 @@ namespace Lemon::GUI{
     };
 
     class ScrollView : public Widget {
+    private:
+        vector2i_t limits = {0, 0};
+        void ResetScrollBar();
+        int activeWidget = -1;
+		int lastPressedWidget = -1;
     public:
-        int scrollPos;
-        int scrollMax;
-
-        int scrollBarHeight;
-
-        List<Widget*> contents;
+        ScrollBar sBarVert;
+        ScrollBarHorizontal sBarHor;
 
         ScrollView(rect_t bounds);
 
+        void AddWidget(Widget* w);
         void Paint(surface_t* surface);
         void OnMouseDown(vector2i_t mousePos);
         void OnMouseUp(vector2i_t mousePos);
+        void OnMouseMove(vector2i_t mousePos);
     };
 
     class ListItem : public Widget {
@@ -103,6 +109,7 @@ namespace Lemon::GUI{
         void OnMouseDown(vector2i_t mousePos);
         void OnMouseUp(vector2i_t mousePos);
         void OnMouseMove(vector2i_t mousePos);
+        void OnKeyPress(int key);
 
         ~ListView();
     };
@@ -111,13 +118,13 @@ namespace Lemon::GUI{
     protected:
         int pathBoxHeight = 20;
         int currentDir;
-        char* currentPath;
         char** filePointer;
 
         void Refresh();
 
         void(*OnFileOpened)(char*, char**) = nullptr;
     public:
+        char* currentPath;
         FileView(rect_t bounds, char* path, char** filePointer, void(*OnFileOpened)(char*, char**));
 
         void Paint(surface_t* surface);
@@ -125,6 +132,7 @@ namespace Lemon::GUI{
         void OnMouseUp(vector2i_t mousePos);
 
         void OnSubmit();
+        void Reload();
 
         ~FileView();
     };
@@ -157,6 +165,8 @@ namespace Lemon::GUI{
     };
 
     class Button : public Widget{
+    protected:
+        bool drawText = true;
     public:
         bool active;
         bool pressed;
@@ -173,7 +183,7 @@ namespace Lemon::GUI{
         void OnMouseUp(vector2i_t mousePos);
         void DrawButtonBorders(surface_t* surface, bool white);
 
-        void (*OnPress)();
+        void (*OnPress)(Button*);
     };
 
     class BitmapButton : public Button{
@@ -190,6 +200,7 @@ namespace Lemon::GUI{
 
         Bitmap();
         Bitmap(rect_t _bounds);
+        Bitmap(rect_t _bounds, surface_t* surf);
         void Paint(surface_t* surface);
     };
 

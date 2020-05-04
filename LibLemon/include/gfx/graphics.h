@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <gfx/surface.h>
 #include <lemon/fb.h>
+#include <png.h>
+#include <string.h>
 
 typedef struct Vector2i{
     int x, y;
@@ -76,6 +78,31 @@ uint32_t        alphaMask;
 } __attribute__((packed)) bitmap_info_headerv4_t;
 
 namespace Lemon::Graphics{
+    enum ImageType {
+        Image_Unknown,
+        Image_BMP,
+        Image_PNG,
+    };
+
+    // Check for BMP signature
+    static inline bool IsBMP(const void* data){
+        return (strncmp(((bitmap_file_header_t*)data)->magic,"BM", 2) == 0);
+    }
+
+    // Check for PNG signature
+    bool IsPNG(const void* data);
+
+    static inline int IdentifyImage(const void* data){
+        int type = 0;
+
+        if(IsBMP(data)){
+            type = Image_BMP;
+        } else if (IsPNG(data)){
+            type = Image_PNG;
+        } else type = Image_Unknown;
+
+        return type;
+    }
 
     //  CreateFramebufferSurface (fbInfo, address) - Create a surface object from a framebuffer
     surface_t* CreateFramebufferSurface(fb_info_t fbInfo, void* address);
@@ -92,7 +119,19 @@ namespace Lemon::Graphics{
     void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
     int GetTextLength(const char* str);
 
-    void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface, bool preserveAspectRatio = false);
+    uint32_t Interpolate(double q11, double q21, double q12, double q22, double x, double y);
+
+    // LoadImage (const char*, int, int, int, int, surface_t*, bool) - Load image, scale to dimensions (w, h) and copy to surface at offset (x, y)
+    int LoadImage(const char* path, int x, int y, int w, int h, surface_t* surface, bool preserveAspectRatio);
+    // LoadImage (FILE* f, surface_t* surface) - Load image from open file and create a new surface
+    int LoadImage(FILE* f, surface_t* surface);
+    // LoadImage (const char* path, surface_t* surface) - Attempt to load image at path and create a new surface
+    int LoadImage(const char* path, surface_t* surface);
+    int LoadPNGImage(FILE* f, surface_t* surface);
+    int LoadBitmapImage(FILE* f, surface_t* surface);
+    int DrawImage(int x, int y, int w, int h, uint8_t *data, size_t dataSz, surface_t* surface, bool preserveAspectRatio);
+    int DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface, bool preserveAspectRatio = false);
+
     void RefreshFonts();
     void LoadFont(const char* path);
 
@@ -105,4 +144,5 @@ namespace Lemon::Graphics{
     void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset = {0,0});
     void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion);
     void surfacecpyTransparent(surface_t* dest, surface_t* src, vector2i_t offset = {0,0});
+    void surfacecpyTransparent(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion);
 }

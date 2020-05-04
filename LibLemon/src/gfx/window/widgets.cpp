@@ -1,5 +1,6 @@
 #include <gfx/window/widgets.h>
 #include <gfx/window/messagebox.h>
+#include <lemon/keyboard.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -7,27 +8,20 @@
 #include <math.h>
 #include <ctype.h>
 
-#include <lemon/filesystem.h>
-#include <gfx/window/messagebox.h>
-#include <unistd.h>
-#include <fcntl.h>
-
 #define BUTTON_COLOUR_OUTLINE_DEFAULT
 
 namespace Lemon::GUI{
-    void Widget::Paint(surface_t* surface){
-    }
+    void Widget::Paint(surface_t* surface){}
 
-    void Widget::OnMouseDown(vector2i_t mousePos){
-    }
+    void Widget::OnMouseDown(vector2i_t mousePos){}
 
-    void Widget::OnMouseUp(vector2i_t mousePos){
-    }
+    void Widget::OnMouseUp(vector2i_t mousePos){}
 
-    void Widget::OnHover(vector2i_t mousePos){
-    }
+    void Widget::OnHover(vector2i_t mousePos){}
 
     void Widget::OnMouseMove(vector2i_t mousePos) {}
+
+    void Widget::OnKeyPress(int key) {}
 
     Widget::~Widget(){}
 
@@ -130,7 +124,7 @@ namespace Lemon::GUI{
     // Button
     //////////////////////////
     Button::Button(const char* _label, rect_t _bounds){
-        labelLength = strlen(_label);
+        labelLength = Graphics::GetTextLength(label);
         strcpy(label, _label);
 
         bounds = _bounds;
@@ -165,22 +159,22 @@ namespace Lemon::GUI{
                 case 1: // Blue
                     Graphics::DrawGradientVertical(bounds.pos.x + 1, bounds.pos.y + 1, bounds.size.x - 2, bounds.size.y - 2,{50,50,150,255},{45,45,130,255},surface);
                     DrawButtonBorders(surface, true);
-                    Graphics::DrawString(label, bounds.pos.x + bounds.size.x / 2 - (labelLength*8)/2, bounds.pos.y + bounds.size.y / 2 - 8, 250, 250, 250, surface);
+                    if(drawText) Graphics::DrawString(label, bounds.pos.x + bounds.size.x / 2 - labelLength/2, bounds.pos.y + bounds.size.y / 2 - 8, 250, 250, 250, surface);
                     break;
                 case 2: // Red
                     Graphics::DrawGradientVertical(bounds.pos.x + 1, bounds.pos.y + 1, bounds.size.x - 2, bounds.size.y - 2,{180,60,60,255},{160,55,55,255},surface);
                     DrawButtonBorders(surface, true);
-                    Graphics::DrawString(label, bounds.pos.x + bounds.size.x / 2 - (labelLength*8)/2, bounds.pos.y + bounds.size.y / 2 - 8, 250, 250, 250, surface);
+                    if(drawText) Graphics::DrawString(label, bounds.pos.x + bounds.size.x / 2 - labelLength/2, bounds.pos.y + bounds.size.y / 2 - 8, 250, 250, 250, surface);
                     break;
                 case 3: // Yellow
                     Graphics::DrawGradientVertical(bounds.pos.x + 1, bounds.pos.y + 1, bounds.size.x - 2, bounds.size.y - 2,{200,160,50,255},{180,140,45,255},surface);
                     DrawButtonBorders(surface, true);
-                    Graphics::DrawString(label, bounds.pos.x + bounds.size.x / 2 - (labelLength*8)/2, bounds.pos.y + bounds.size.y / 2 - 8, 250, 250, 250, surface);
+                    if(drawText) Graphics::DrawString(label, bounds.pos.x + bounds.size.x / 2 - labelLength/2, bounds.pos.y + bounds.size.y / 2 - 8, 250, 250, 250, surface);
                     break;
                 default:
                     Graphics::DrawGradientVertical(bounds.pos.x + 1, bounds.pos.y + 1, bounds.size.x - 2, bounds.size.y - 2,{250,250,250,255},{235,235,230,255},surface);
                     DrawButtonBorders(surface, false);
-                    Graphics::DrawString(label, bounds.pos.x + bounds.size.x / 2 - (labelLength*8)/2, bounds.pos.y + bounds.size.y / 2 - 8, 0, 0, 0, surface);
+                    if(drawText) Graphics::DrawString(label, bounds.pos.x + bounds.size.x / 2 - labelLength/2, bounds.pos.y + bounds.size.y / 2 - 8, 0, 0, 0, surface);
                     break;
             }
             
@@ -192,7 +186,7 @@ namespace Lemon::GUI{
     }
 
     void Button::OnMouseUp(vector2i_t mousePos){
-        if(OnPress) OnPress();
+        if(OnPress) OnPress(this);
 
         pressed = false;
     }
@@ -208,11 +202,14 @@ namespace Lemon::GUI{
         surface.width = bounds.size.x;
         surface.height = bounds.size.y;
     }
+    
+    Bitmap::Bitmap(rect_t _bounds, surface_t* surf){
+        bounds = {bounds.pos, (vector2i_t){surf->width, surf->height}};
+        surface = *surf;
+    }
 
     void Bitmap::Paint(surface_t* surface){
-        for(int i = 0; i < this->surface.height; i++){
-            memcpy(surface->buffer + (i + bounds.pos.y) * surface->width * 4 + bounds.pos.x * 4, this->surface.buffer + bounds.size.x * i * 4, bounds.size.x * 4);
-        }
+        Graphics::surfacecpy(surface, &this->surface, bounds.pos);
     }
 
     //////////////////////////
@@ -306,24 +303,88 @@ namespace Lemon::GUI{
         bounds = _bounds;
     }
 
-    void ScrollView::Paint(surface_t* surface){
-        for(int i = 0; i < contents.get_length(); i++){
-            rect_t _bounds = contents[i]->bounds;
-            contents[i]->bounds = {_bounds.pos + _bounds.pos, _bounds.size};
+    void ScrollView::ResetScrollBar(){
+        sBarVert.ResetScrollBar(bounds.size.y - 16, limits.y);
+        sBarHor.ResetScrollBar(bounds.size.x - 16, limits.x);
+    }
 
-            contents[i]->Paint(surface);
-            contents[i]->bounds = _bounds;
+    void ScrollView::AddWidget(Widget* w){
+        children.add_back(w);
+
+        vector2i_t wLimits = w->bounds.pos + w->bounds.size;
+        if(wLimits.x > limits.x) limits.x = wLimits.x;
+        if(wLimits.y > limits.y) limits.y = wLimits.y;
+
+        ResetScrollBar();
+    }
+
+    void ScrollView::Paint(surface_t* surface){
+        for(int i = 0; i < children.get_length(); i++){
+            rect_t _bounds = children[i]->bounds;
+            children[i]->bounds = {_bounds.pos + bounds.pos - (vector2i_t){sBarHor.scrollPos, sBarVert.scrollPos}, _bounds.size};
+
+            children[i]->Paint(surface);
+            children[i]->bounds = _bounds;
         }
 
-        Graphics::DrawRect(bounds.pos.x + bounds.size.x - 24, bounds.pos.y, 24, bounds.size.y, {120, 120, 110, 255}, surface);
+        sBarVert.Paint(surface, {bounds.pos + (vector2i_t){bounds.size.x - 16, 0}});
+        sBarHor.Paint(surface, {bounds.pos + (vector2i_t){0, bounds.size.y - 16}});
     }
 
     void ScrollView::OnMouseDown(vector2i_t mousePos){
+        activeWidget = -1;
 
+        mousePos.x -= bounds.pos.x;
+        mousePos.y -= bounds.pos.y;
+
+        if(mousePos.y > bounds.size.y - 16){
+            sBarHor.OnMouseDownRelative({mousePos.y - bounds.size.y + 16, mousePos.x});
+            return;
+        }
+        
+        if(mousePos.x > bounds.size.x - 16){
+            sBarVert.OnMouseDownRelative({mousePos.y, mousePos.x - bounds.size.x + 16});
+            return;
+        }
+
+        for(int i = 0; i < children.get_length(); i++){
+            Widget* child = children[i];
+            if(Graphics::PointInRect(child->bounds, mousePos)){
+                child->OnMouseDown(mousePos);
+                activeWidget = i;
+                break;
+            }
+        }
     }
 
     void ScrollView::OnMouseUp(vector2i_t mousePos){
-        
+        mousePos.x -= bounds.pos.x;
+        mousePos.y -= bounds.pos.y;
+
+        sBarVert.pressed = false;
+        sBarHor.pressed = false;
+
+		if(lastPressedWidget >= 0){
+			children[lastPressedWidget]->OnMouseUp(mousePos);
+		}
+		lastPressedWidget = -1;
+    }
+
+    void ScrollView::OnMouseMove(vector2i_t mousePos){
+        mousePos.x -= bounds.pos.x;
+        mousePos.y -= bounds.pos.y;
+            
+        if(sBarVert.pressed){
+            sBarVert.OnMouseMoveRelative(mousePos);
+            return;
+        } else if(sBarHor.pressed){
+            sBarHor.OnMouseMoveRelative(mousePos);
+            return;
+        }
+
+		if(lastPressedWidget >= 0){
+			children[lastPressedWidget]->OnMouseMove(mousePos);
+		}
     }
 
     //////////////////////////
@@ -372,6 +433,7 @@ namespace Lemon::GUI{
         selected = floor(((double)mousePos.y + sBar.scrollPos - iBounds.pos.y) / itemHeight);
 
         if(selected >= contents.get_length()) selected = contents.get_length();
+        if(selected < 0) selected = 0;
     }
 
     void ListView::OnMouseMove(vector2i_t mousePos){
@@ -384,119 +446,23 @@ namespace Lemon::GUI{
         sBar.pressed = false;
     }
 
+    void ListView::OnKeyPress(int key){
+        if(key == KEY_ARROW_DOWN) selected++;
+        else if (key == KEY_ARROW_UP) selected--;
+        else return;
+
+        if(selected >= contents.get_length()) selected = contents.get_length();
+        if(selected < 0) selected = 0;
+
+        // Make sure the selection is within view
+        if((selected * itemHeight - sBar.scrollPos) < 0) sBar.scrollPos = selected * itemHeight;
+        else if(((selected + 1) * itemHeight - sBar.scrollPos) > iBounds.size.y) sBar.scrollPos = selected * itemHeight - iBounds.size.y + itemHeight; // Add 1 to selected to check if bottom is visible
+    }
+
     void ListItem::OnMouseDown(vector2i_t mousePos){
     }
 
     void ListItem::OnMouseUp(vector2i_t mousePos){
         
-    }
-
-    //////////////////////////
-    // FileView
-    //////////////////////////
-
-    FileView::FileView(rect_t _bounds, char* path, char** _filePointer, void(*_fileOpened)(char*, char**)) : ListView(_bounds){
-        bounds = _bounds;
-        filePointer = _filePointer;
-        OnFileOpened = _fileOpened;
-
-        iBounds.pos.y += pathBoxHeight;
-        iBounds.size.y -= pathBoxHeight;
-        
-        currentPath = (char*)malloc(512);
-        strcpy(currentPath, path);
-
-        currentDir = open(currentPath, 666);
-        int i = 0;
-        lemon_dirent_t dirent;
-        while(lemon_readdir(currentDir, i++, &dirent)){
-            contents.add_back(new ListItem(dirent.name));
-        }
-
-        ResetScrollBar();
-    }
-
-    FileView::~FileView(){
-    }
-
-    void FileView::Refresh(){
-        close(currentDir);
-
-        currentDir = lemon_open(currentPath, 666);
-
-        if(!currentDir){
-            MessageBox("Failed to open directory!", MESSAGEBOX_OK);
-        }
-        
-        for(int i = contents.get_length() - 1; i >= 0; i--){
-            delete contents.get_at(i);
-        }
-        contents.clear();
-        
-        int i = 0;
-        lemon_dirent_t dirent;
-        while(lemon_readdir(currentDir, i++, &dirent)){
-            contents.add_back(new ListItem(dirent.name));
-        }
-        
-        ResetScrollBar();
-    }
-
-    void FileView::Paint(surface_t* surface){
-        Graphics::DrawString(currentPath, bounds.pos.x + 4, bounds.pos.y + 4, 0, 0, 0, surface);
-
-        ListView::Paint(surface);
-    }
-
-    void FileView::OnMouseDown(vector2i_t mousePos){
-        if(mousePos.y - bounds.pos.y > pathBoxHeight){
-            ListView::OnMouseDown(mousePos);
-        }
-    }
-
-    void FileView::OnMouseUp(vector2i_t mousePos){
-        if(mousePos.y - bounds.pos.y > pathBoxHeight){
-            ListView::OnMouseUp(mousePos);
-        }
-    }
-
-    void FileView::OnSubmit(){
-        ListItem* item = contents.get_at(selected);
-        lemon_dirent_t dirent;
-        lemon_readdir(currentDir, selected, &dirent);
-        if(dirent.type & FS_NODE_DIRECTORY){
-            close(currentDir);
-
-            strcpy(currentPath + strlen(currentPath), dirent.name);
-            strcpy(currentPath + strlen(currentPath), "/");
-
-            currentDir = lemon_open(currentPath, 666);
-
-            if(!currentDir){
-                MessageBox("Failed to open directory!", MESSAGEBOX_OK);
-            }
-            
-            for(int i = contents.get_length() - 1; i >= 0; i--){
-                delete contents.get_at(i);
-            }
-            contents.clear();
-            
-            int i = 0;
-            while(lemon_readdir(currentDir, i++, &dirent)){
-                contents.add_back(new ListItem(dirent.name));
-            }
-
-            ResetScrollBar();
-        } else if(OnFileOpened) {
-            char* str = (char*)malloc(strlen(currentPath) + strlen(dirent.name) + 1 /*Separator*/ + 1 /*Null Terminator*/);
-
-            strcpy(str, currentPath);
-            strcpy(str + strlen(str), "/");
-            strcpy(str + strlen(str), dirent.name);
-
-            OnFileOpened(str, filePointer);
-
-            free(str);
-        }
     }
 }

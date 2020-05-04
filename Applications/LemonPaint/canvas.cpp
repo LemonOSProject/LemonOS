@@ -80,9 +80,9 @@ void Canvas::OnMouseMove(vector2i_t mousePos){
     mousePos.y -= bounds.pos.y;
 
     if(sBarVert.pressed){
-        sBarVert.OnMouseMoveRelative({0, mousePos.y});
-    } else if(sBarVert.pressed){
-        sBarHor.OnMouseMoveRelative({0, mousePos.y});
+        sBarVert.OnMouseMoveRelative(mousePos);
+    } else if(sBarHor.pressed){
+        sBarHor.OnMouseMoveRelative(mousePos);
     } else if(pressed){
         DragBrush(lastMousePos, mousePos);
 

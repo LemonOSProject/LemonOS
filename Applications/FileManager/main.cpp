@@ -19,11 +19,14 @@ void OnFileOpened(char* path, char** filePointer){
 	} else if(strncmp(path + strlen(path) - 4, ".txt", 4) == 0 || strncmp(path + strlen(path) - 4, ".cfg", 4) == 0){
 		char* argv[] = {"/initrd/textedit.lef", path};
 		lemon_spawn("/initrd/textedit.lef", 2, argv);
+	} else if(strncmp(path + strlen(path) - 4, ".png", 4) == 0 || strncmp(path + strlen(path) - 4, ".bmp", 4) == 0){
+		char* argv[] = {"/initrd/imgview.lef", path};
+		lemon_spawn("/initrd/imgview.lef", 2, argv);
 	}
 }
 
 extern "C"
-int main(char argc, char** argv){
+int main(int argc, char** argv){
 	win_info_t windowInfo;
 	Lemon::GUI::Window* window;
 
@@ -51,19 +54,21 @@ int main(char argc, char** argv){
 				uint32_t mouseY;
 				mouseX = msg.data >> 32;
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				HandleMouseUp(window, {mouseX, mouseY});
+				Lemon::GUI::HandleMouseUp(window, {mouseX, mouseY});
 			} else if (msg.msg == WINDOW_EVENT_MOUSEDOWN){
 				uint32_t mouseX = msg.data >> 32;
 				uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
-				HandleMouseDown(window, {mouseX, mouseY});
+				Lemon::GUI::HandleMouseDown(window, {mouseX, mouseY});
 			} else if (msg.msg == WINDOW_EVENT_KEY && msg.data == '\n') {
 				fv->OnSubmit();
 			} else if (msg.msg == WINDOW_EVENT_MOUSEMOVE) {
 				uint32_t mouseX = msg.data >> 32;
 				uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
-				HandleMouseMovement(window, {mouseX, mouseY});
+				Lemon::GUI::HandleMouseMovement(window, {mouseX, mouseY});
+			} else if (msg.msg == WINDOW_EVENT_KEY) {
+				Lemon::GUI::HandleKeyPress(window, msg.data);
 			} else if (msg.msg == WINDOW_EVENT_CLOSE) {
 				DestroyWindow(window);
 				exit(0);
