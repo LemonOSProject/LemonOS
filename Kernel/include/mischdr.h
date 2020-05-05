@@ -70,3 +70,8 @@ typedef struct {
 	multiboot_memory_map_t* mem_map;
 	uintptr_t memory_map_len;
 } memory_info_t;
+
+typedef struct {
+	uintptr_t base;
+	uintptr_t size;
+} boot_module_t;

@@ -15,6 +15,8 @@ namespace fs{
 
         fs_node_t mountPoint;
         fs_dirent_t mountPointDirent;
+
+        fs_node_t* volumeParent;
     };    
 
 }

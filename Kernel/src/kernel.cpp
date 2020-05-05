@@ -21,6 +21,7 @@
 #include <xhci.h>
 #include <devicemanager.h>
 #include <gui.h>
+#include <tar.h>
 
 uint8_t* progressBuffer;
 video_mode_t videoMode;
@@ -89,11 +90,6 @@ void IdleProcess(){
 	}
 }
 
-extern uint64_t _initrd_end;
-extern uint64_t _initrd_start;
-uint64_t initrd_end = (uint64_t)&_initrd_end;
-uint64_t initrd_start = (uint64_t)&_initrd_start;
-
 extern "C"
 void kmain(multiboot_info_t* mb_info){
 	HAL::Init(*mb_info);
@@ -115,26 +111,29 @@ void kmain(multiboot_info_t* mb_info){
 		Log::Warning("Unsupported Colour Depth expect issues.");
 
 	Log::Info("RAM: %d MB", (mb_info->memoryHi + mb_info->memoryLo) / 1024);
-
-	Log::Info("Multiboot Module Count: %d", HAL::multibootInfo.modsCount);
 	
 	Log::Info("Initializing Ramdisk...");
-	Initrd::Initialize(initrd_start,initrd_end - initrd_start); // Initialize Initrd
+	//Initrd::Initialize(initrd_start,initrd_end - initrd_start); // Initialize Initrd
+	fs::tar::TarVolume* tar = new fs::tar::TarVolume(HAL::bootModules[0].base, HAL::bootModules[0].size, "initrd");
+	fs::volumes->add_back(tar);
+	tar = new fs::tar::TarVolume(HAL::bootModules[0].base, HAL::bootModules[0].size, "lib");
+	fs::volumes->add_back(tar);
 	Log::Write("OK");
+
 	
 	Log::Info("Filesystem Root:");
 
-	fs_dirent_t* dirent;
+	fs_dirent_t dirent;
 	fs_node_t* root = fs::GetRoot();
 	int i = 0;
-	while((dirent = fs::ReadDir(root,i++))){ // Read until no more dirents
-		fs_node_t* node = fs::FindDir(root, dirent->name);
+	while((fs::ReadDir(root,&dirent,i++))){ // Read until no more dirents
+		fs_node_t* node = fs::FindDir(root, dirent.name);
 		if(!node) continue;
 		Log::Write("    ");
 		if(node->flags & FS_NODE_DIRECTORY){
-			Log::Write(dirent->name, 0, 255, 0);
+			Log::Write(dirent.name, 0, 255, 0);
 		} else {
-			Log::Write(dirent->name);
+			Log::Write(dirent.name);
 		}
 		Log::Write("\n");
 	}

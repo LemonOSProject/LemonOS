@@ -101,9 +101,6 @@ int SysExec(regs64_t* r){
 		kfree(kernelArgv[i]);
 	}
 	
-	for(int i = 0; i < argc; i++){
-		kfree(kernelArgv[i]);
-	}
 	kfree(kernelArgv);
 	kfree(buffer);
 
@@ -111,6 +108,7 @@ int SysExec(regs64_t* r){
 
 	if(flags & EXEC_CHILD){
 		Scheduler::GetCurrentProcess()->children.add_back(proc);
+		proc->parent = Scheduler::GetCurrentProcess();
 
 		proc->fileDescriptors.replace_at(0, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));
 		proc->fileDescriptors.replace_at(1, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1));
@@ -641,7 +639,7 @@ int SysReadDir(regs64_t* r){
 	unsigned int fd = r->rbx;
 
 	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
-		if(r->rsi) *((uint64_t*)r->rsi) = 0;
+		if(r->rsi) *((int*)r->rsi) = 0;
 		return 2;
 	} 
 	
@@ -650,23 +648,14 @@ int SysReadDir(regs64_t* r){
 	unsigned int count = r->rdx;
 
 	if(!(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->flags & FS_NODE_DIRECTORY)){
-		if(r->rsi) *((uint64_t*)r->rsi) = 0;
+		if(r->rsi) *((int*)r->rsi) = 0;
 		return 2;
 	}
 
-	fs_dirent_t* dirent = fs::ReadDir(Scheduler::GetCurrentProcess()->fileDescriptors[fd],count);
+	int ret = fs::ReadDir(Scheduler::GetCurrentProcess()->fileDescriptors[fd], direntPointer, count);
 
-	if(!dirent) {
-		if(r->rsi) *((uint64_t*)r->rsi) = 0;
-		return 2;
-	}
-
-	direntPointer->inode = dirent->inode;
-	direntPointer->type = dirent->type;
-	strcpy(direntPointer->name,dirent->name);
-	direntPointer->name[strlen(dirent->name)] = 0;
-	if(r->rsi) *((uint64_t*)r->rsi) = 1;
-	return 0;
+	if(r->rsi) *((int*)r->rsi) = ret;
+	return ret;
 }
 
 int SysSetFsBase(regs64_t* r){

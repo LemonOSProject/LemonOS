@@ -31,7 +31,9 @@ off_t lemon_seek(int fd, off_t offset, int whence){
 }
 
 int lemon_readdir(int fd, uint64_t count, lemon_dirent_t* dirent){
-    uint64_t ret;
+    int ret;
     syscall(SYS_READDIR, fd, (uintptr_t)dirent, count, (uintptr_t)&ret, 0);
-    return ret;
+    if(ret < 0)
+        return 0;
+    else return 1;
 } 

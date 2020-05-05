@@ -1,3 +1,9 @@
+/*
+ *
+ * Old Initrd Format, no longer used
+ * 
+ */
+
 #include <initrd.h>
 
 #include <filesystem.h>
@@ -9,7 +15,7 @@
 #include <fsvolume.h>
 
 namespace Initrd{
-	fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index);
+	int ReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index);
 	fs_node_t* FindDir(fs_node_t* node, char* name);
 
 	size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
@@ -97,30 +103,28 @@ namespace Initrd{
 		
 	}
 
-	fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index){
-		if(index >= initrdHeader.fileCount + 2) return nullptr;
-
-		fs_dirent_t* dirent = new fs_dirent_t;
+	int ReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index){
+		if(index >= initrdHeader.fileCount + 2) return -1;
 
 		if(index == 0) {
 			memset(dirent->name,0,128); // Zero the string
 			strcpy(dirent->name,".");
 			dirent->inode = 0;
 			dirent->type = FS_NODE_DIRECTORY;
-			return dirent;
+			return 0;
 		} else if (index == 1){
 			memset(dirent->name,0,128); // Zero the string
 			strcpy(dirent->name,"..");
 			dirent->inode = 2;
 			dirent->type = FS_NODE_DIRECTORY;
-			return dirent;
+			return 0;
 		}
 		memset(dirent->name,0,128); // Zero the string
 		strcpy(dirent->name,nodes[index - 2].filename);
 		dirent->inode = index - 3;
 		dirent->type = 0;
 
-		return dirent;
+		return 0;
 	}
 
 	fs_node_t* FindDir(fs_node_t* node, char* name) {
@@ -191,8 +195,8 @@ namespace Initrd{
 		Initrd::Close(node);
 	}
 
-	struct fs_dirent* InitrdVolume::ReadDir(struct fs_node* node, uint32_t index){
-		return Initrd::ReadDir(node, index);
+	int InitrdVolume::ReadDir(struct fs_node* node, fs_dirent_t* dirent, uint32_t index){
+		return Initrd::ReadDir(node, dirent, index);
 	}
 
 	fs_node* InitrdVolume::FindDir(struct fs_node* node, char* name){

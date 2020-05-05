@@ -10,7 +10,7 @@ namespace fs::FAT32{
     size_t Write(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer);
     void Open(struct fs_node* node, uint32_t flags);
     void Close(struct fs_node* node);
-    struct fs_dirent* ReadDir(struct fs_node* node, uint32_t index);
+    int ReadDir(struct fs_node* node, struct fs_dirent* dirent, uint32_t index);
     fs_node* FindDir(struct fs_node* node, char* name);
 
     int Identify(PartitionDevice* part){
@@ -73,7 +73,6 @@ namespace fs::FAT32{
         
         strcpy(mountPointDirent.name, name);
         
-        mountPoint.readDir(&mountPoint, 0);
     }
 
     List<uint32_t>* Fat32Volume::GetClusterChain(uint32_t cluster){
@@ -175,7 +174,7 @@ namespace fs::FAT32{
 
     }
 
-    fs_dirent_t* Fat32Volume::ReadDir(fs_node_t* node, uint32_t index){
+    int Fat32Volume::ReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index){
         int lfnCount = 0;
         int entryCount = 0;
 
@@ -190,7 +189,7 @@ namespace fs::FAT32{
         fat_lfn_entry_t** lfnEntries;
 
         for(int i = 0; i < clusterCount * clusterSizeBytes; i++){
-            if(dirEntries[i].filename[0] == 0) return nullptr; // No Directory Entry at index
+            if(dirEntries[i].filename[0] == 0) return -1; // No Directory Entry at index
             else if (dirEntries[i].filename[0] == 0xE5) {
                 lfnCount = 0;
                 continue; // Unused Entry
@@ -219,7 +218,6 @@ namespace fs::FAT32{
             lfnEntries[i] = lfnEntry; 
         }
 
-        fs_dirent_t* dirent = (fs_dirent_t*)kmalloc(sizeof(fs_dirent_t));
         dirent->inode = dirEntry->lowClusterNum | (dirEntry->highClusterNum << 16);
 
         if(lfnCount){
@@ -236,7 +234,7 @@ namespace fs::FAT32{
         if(dirEntry->attributes & FAT_ATTR_DIRECTORY) dirent->type = FS_NODE_DIRECTORY;
         else dirent->type = FS_NODE_FILE;
 
-        return dirent;
+        return 0;
     }
 
     fs_node_t* Fat32Volume::FindDir(fs_node_t* node, char* name){
@@ -335,8 +333,8 @@ namespace fs::FAT32{
         ((Fat32Volume*)node->vol)->Close(node);
     }
 
-    struct fs_dirent* ReadDir(struct fs_node* node, uint32_t index){
-        ((Fat32Volume*)node->vol)->ReadDir(node, index);
+    int ReadDir(struct fs_node* node, fs_dirent_t* dirent, uint32_t index){
+        return ((Fat32Volume*)node->vol)->ReadDir(node, dirent, index);
     }
 
     fs_node* FindDir(struct fs_node* node, char* name){

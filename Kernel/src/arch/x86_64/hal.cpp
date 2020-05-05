@@ -12,12 +12,15 @@
 #include <timer.h>
 #include <tss.h>
 #include <apic.h>
+#include <liballoc.h>
 
 namespace HAL{
     memory_info_t mem_info;
     video_mode_t videoMode;
     multiboot_info_t multibootInfo;
     uintptr_t multibootModulesAddress;
+    boot_module_t bootModules[32];
+    int bootModuleCount;
 
     void InitCore(multiboot_info_t mb_info){ // ALWAYS call this first
         multibootInfo = mb_info;
@@ -41,14 +44,30 @@ namespace HAL{
         mem_info.memory_low = mb_info.memoryLo;
         mem_info.mem_map = memory_map;
         mem_info.memory_map_len = mb_info.mmapLength;
-
-        uint64_t mbModsVirt = (uint64_t)Memory::KernelAllocate4KPages(1);
-        Memory::KernelMapVirtualMemory4K(multibootInfo.modsAddr, mbModsVirt, 1);
-
-        multibootModulesAddress = mbModsVirt;
+        
+        multibootModulesAddress = Memory::GetIOMapping(multibootInfo.modsAddr); // Grub loads the kernel as 32-bit so modules will be <4GB
+        
+        asm("cli");
 
         // Initialize Physical Memory Allocator
         Memory::InitializePhysicalAllocator(&mem_info);
+
+        asm("sti");
+
+        // Manage Multiboot Modules
+	    Log::Info("Multiboot Module Count: %d", multibootInfo.modsCount);
+        bootModuleCount = multibootInfo.modsCount;
+
+        for(int i = 0; i < multibootInfo.modsCount; i++){
+            multiboot_module_t mod = *((multiboot_module_t*)multibootModulesAddress + i * sizeof(multiboot_module_t));
+            Log::Info("    Multiboot Module %d [Start: %x, End: %x, Cmdline: %s]", i, mod.mod_start, mod.mod_end, (char*)Memory::GetIOMapping(mod.string));
+            Memory::MarkMemoryRegionUsed(mod.mod_start, mod.mod_end);
+            bootModules[i] = {
+                .base = Memory::GetIOMapping(mod.mod_start),
+                .size = mod.mod_end - mod.mod_start,
+            };
+            
+        }
 
         // Initialize Task State Segment (and Interrupt Stack Tables)
         TSS::Initialize();

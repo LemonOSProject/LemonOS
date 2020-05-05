@@ -48,6 +48,7 @@ typedef struct process {
 	uint32_t timeSliceDefault;
 	process* next;
 
+	process* parent;
 	List<process*> children;
 
 	char workingDir[PATH_MAX];

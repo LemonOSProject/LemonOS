@@ -31,7 +31,7 @@ namespace Initrd{
         size_t Write(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer);
         void Open(struct fs_node* node, uint32_t flags);
         void Close(struct fs_node* node);
-        struct fs_dirent* ReadDir(struct fs_node* node, uint32_t index);
+        int ReadDir(struct fs_node* node, struct fs_dirent* dirent, uint32_t index);
         fs_node* FindDir(struct fs_node* node, char* name);
     };
 

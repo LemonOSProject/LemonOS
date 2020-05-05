@@ -9,6 +9,8 @@ namespace HAL{
     extern video_mode_t videoMode;
     extern multiboot_info_t multibootInfo;
     extern uintptr_t multibootModulesAddress;
+    extern int bootModuleCount;
+    extern boot_module_t bootModules[];
 
     void InitCore(multiboot_info_t mb_info);
 

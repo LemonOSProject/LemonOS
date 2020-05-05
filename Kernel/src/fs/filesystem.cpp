@@ -7,9 +7,9 @@ namespace fs{
     size_t ReadNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
 	size_t WriteNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
 
-    fs_dirent_t* RootReadDir(fs_node_t* node, uint32_t index);
+    int RootReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index);
     fs_node_t* RootFindDir(fs_node_t* node, char* name);
-    fs_dirent_t* DevReadDir(fs_node_t* node, uint32_t index);
+    int DevReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index);
     fs_node_t* DevFindDir(fs_node_t* node, char* name);
 
     fs_node_t root;
@@ -161,12 +161,14 @@ namespace fs{
 		devices[deviceCount++] = device;
 	}
     
-	fs_dirent_t* RootReadDir(fs_node_t* node, uint32_t index){
+	int RootReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index){
 		if(node == &root && index == 0){
-			return &devDirent;
+			*dirent = devDirent;
+			return 0;
 		} else if (node == &root && index < fs::volumes->get_length() + 1){
-			return &(volumes->get_at(index - 1)->mountPointDirent);
-		} else return nullptr;
+			*dirent = (volumes->get_at(index - 1)->mountPointDirent);
+			return 0;
+		} else return -1;
 	}
 
     fs_node_t* RootFindDir(fs_node_t* node, char* name){
@@ -182,15 +184,15 @@ namespace fs{
         return NULL;
 	}
     
-	fs_dirent_t* DevReadDir(fs_node_t* node, uint32_t index){
+	int DevReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index){
 		if(node == &dev){
-			if(index >= deviceCount) return nullptr;
-			memset(dirent.name,0,128); // Zero the string
-			strcpy(dirent.name,devices[index]->name);
-			dirent.inode = index;
-			dirent.type = 0;
-			return &dirent;
-		} else return nullptr;
+			if(index >= deviceCount) return -1;
+			memset(dirent->name,0,128); // Zero the string
+			strcpy(dirent->name,devices[index]->name);
+			dirent->inode = index;
+			dirent->type = 0;
+			return 0;
+		} else return -2;
 	}
 
     fs_node_t* DevFindDir(fs_node_t* node, char* name){
@@ -255,9 +257,9 @@ namespace fs{
 		delete fd;
     }
 
-    fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index){
+    int ReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index){
         if(node->readDir)
-            return node->readDir(node,index);
+            return node->readDir(node, dirent, index);
         else return 0;
     }
 
@@ -284,9 +286,9 @@ namespace fs{
 		} else return 0;
     }
 
-    fs_dirent_t* ReadDir(fs_fd_t* handle, uint32_t index){
+    int ReadDir(fs_fd_t* handle, fs_dirent_t* dirent, uint32_t index){
         if(handle->node)
-            return handle->node->readDir(handle->node,index);
+            return handle->node->readDir(handle->node, dirent, index);
         else return 0;
     }
 

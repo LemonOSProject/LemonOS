@@ -43,9 +43,10 @@ cpp_files = [
     'src/videoconsole.cpp',
 
     'src/fs/fat32.cpp',
-    'src/fs/initrd.cpp',
+    #'src/fs/initrd.cpp',
     'src/fs/filesystem.cpp',
     'src/fs/fsvolume.cpp',
+    'src/fs/tar.cpp',
 
     'src/liballoc/_liballoc.cpp',
     'src/liballoc/liballoc.c',
@@ -108,6 +109,6 @@ kernel_link_args = [
 kernel_link_args += kernel_cpp_args
 
 executable('kernel.sys',
-    [asmg.process(asm_files_x86_64), cpp_files, cpp_files_x86_64, lai.get_variable('sources')], objects : 'initrd.o',
+    [asmg.process(asm_files_x86_64), cpp_files, cpp_files_x86_64, lai.get_variable('sources')],
     include_directories : [kernel_include_dirs],
     cpp_args : kernel_cpp_args, link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')

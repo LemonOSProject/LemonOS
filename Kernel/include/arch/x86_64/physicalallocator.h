@@ -21,13 +21,13 @@ namespace Memory{
     void InitializePhysicalAllocator(memory_info_t* mem_info);
 
     // Finds the first free block in physical memory
-    uint32_t GetFirstFreeMemoryBlock();
+    uint64_t GetFirstFreeMemoryBlock();
 
     // Marks a region in physical memory as being used
-    void MarkMemoryRegionUsed(uint32_t base, size_t size);
+    void MarkMemoryRegionUsed(uint64_t base, size_t size);
 
     // Marks a region in physical memory as being free
-    void MarkMemoryRegionFree(uint32_t base, size_t size) ;
+    void MarkMemoryRegionFree(uint64_t base, size_t size) ;
 
     // Allocates a block of physical memory
     uint64_t AllocatePhysicalMemoryBlock();

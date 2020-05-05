@@ -12,29 +12,25 @@ namespace Memory{
 
     uint32_t physicalMemoryBitmap[PHYSALLOC_BITMAP_SIZE_DWORDS];
 
-    uint64_t usedPhysicalBlocks = 0;
+    uint64_t usedPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS * 32;
     uint64_t maxPhysicalBlocks = 0;
 
     // Initialize the physical page allocator
     void InitializePhysicalAllocator(memory_info_t* mem_info)
     {
-        Log::Info("test");
-        memset(physicalMemoryBitmap, 0xFFFFFFFF, PHYSALLOC_BITMAP_SIZE_DWORDS * 4);
-
+        memset(physicalMemoryBitmap, 0xFFFFFFFF, PHYSALLOC_BITMAP_SIZE_DWORDS * sizeof(uint32_t));
+        
         multiboot_memory_map_t* mem_map = mem_info->mem_map;
         multiboot_memory_map_t* mem_map_end = (multiboot_memory_map_t*)(mem_info->mem_map + mem_info->memory_map_len);
 
         while (mem_map < mem_map_end)
         {
+            Log::Info("Memory Region: [%x - %x] (Type %d)", mem_map->base, mem_map->base + mem_map->length, mem_map->type);
+
             if (mem_map->type == 1){
                 MarkMemoryRegionFree(mem_map->base, mem_map->length);
-                Log::Info("Free Memory Region: [");
-                Log::Write(mem_map->base);
-                Log::Write(" - ");
-                Log::Write(mem_map->base + mem_map->length);
-                Log::Write("]");
-            }
-            mem_map = (multiboot_memory_map_t*)((uint64_t)mem_map + mem_map->size + sizeof(mem_map->size));
+            } else if (!mem_map->type) break;
+            mem_map = (multiboot_memory_map_t*)(((uint64_t)mem_map) + mem_map->size + sizeof(mem_map->size));
         }
 
         maxPhysicalBlocks = mem_info->memory_high * 1024 / PHYSALLOC_BLOCK_SIZE;
@@ -57,7 +53,7 @@ namespace Memory{
     }
 
     // Finds the first free block in physical memory
-    uint32_t GetFirstFreeMemoryBlock() {
+    uint64_t GetFirstFreeMemoryBlock() {
         for (uint32_t i = 0; i < PHYSALLOC_BITMAP_SIZE_DWORDS; i++)
             if (physicalMemoryBitmap[i] != 0xffffffff) // If all 32 bits at the index are used then ignore them
                 for (uint32_t j = 0; j < 32; j++) // Test each bit in the dword
@@ -69,14 +65,14 @@ namespace Memory{
     }
 
     // Marks a region in physical memory as being used
-    void MarkMemoryRegionUsed(uint32_t base, size_t size) {
-        for (uint32_t blocks = size / PHYSALLOC_BLOCK_SIZE + 1, align = base / PHYSALLOC_BLOCK_SIZE; blocks > 0; blocks--, usedPhysicalBlocks++)
+    void MarkMemoryRegionUsed(uint64_t base, size_t size) {
+        for (uint32_t blocks = size / PHYSALLOC_BLOCK_SIZE, align = base / PHYSALLOC_BLOCK_SIZE; blocks > 0; blocks--, usedPhysicalBlocks++)
             bit_set(align++);
     }
 
     // Marks a region in physical memory as being free
-    void MarkMemoryRegionFree(uint32_t base, size_t size) {
-        for (uint32_t blocks = size / PHYSALLOC_BLOCK_SIZE + 1, align = base / PHYSALLOC_BLOCK_SIZE; blocks > 0; blocks--, usedPhysicalBlocks++)
+    void MarkMemoryRegionFree(uint64_t base, size_t size) {
+        for (uint32_t blocks = size / PHYSALLOC_BLOCK_SIZE, align = base / PHYSALLOC_BLOCK_SIZE; blocks > 0; blocks--, usedPhysicalBlocks--)
             bit_clear(align++);
     }
 

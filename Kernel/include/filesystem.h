@@ -49,7 +49,7 @@ typedef size_t (*read_type_t) (struct fs_node *, size_t, size_t, uint8_t *);
 typedef size_t (*write_type_t) (struct fs_node *, size_t, size_t, uint8_t *);
 typedef void (*open_type_t) (struct fs_node*, uint32_t flags);
 typedef void (*close_type_t) (struct fs_node*);
-typedef struct fs_dirent *(*readdir_type_t) (struct fs_node*, uint32_t);
+typedef int (*readdir_type_t) (struct fs_node*, struct fs_dirent*, uint32_t);
 typedef struct fs_node*(*finddir_type_t) (struct fs_node*, char *name);
 typedef int (*ioctl_type_t) (struct fs_node*, uint64_t cmd, uint64_t arg);
 
@@ -103,12 +103,12 @@ namespace fs{
     fs_fd_t* Open(fs_node_t* node, uint32_t flags = 0);
     void Close(fs_node_t* node);
     void Close(fs_fd_t* handle);
-    fs_dirent_t* ReadDir(fs_node_t* node, uint32_t index);
+    int ReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index);
     fs_node_t* FindDir(fs_node_t* node, char* name);
     
     size_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer);
     size_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer);
-    fs_dirent_t* ReadDir(fs_fd_t* handle, uint32_t index);
+    int ReadDir(fs_fd_t* handle, fs_dirent_t* dirent, uint32_t index);
     fs_node_t* FindDir(fs_fd_t* handle, char* name);
 
     int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg);

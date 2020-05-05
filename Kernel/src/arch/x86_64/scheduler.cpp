@@ -388,11 +388,21 @@ namespace Scheduler{
         asm("cli");
         acquireLock(&lock);
 
+        if(process->parent){
+            for(int i = 0; i < process->parent->children.get_length(); i++){
+                if(process->parent->children[i] == process){
+                    process->parent->children.remove_at(i);
+                    break;
+                }
+            }
+        }
+
         RemoveProcessFromQueue(process);
 
         /*for(int i = 0; i < process->fileDescriptors.get_length(); i++){
-            if(process->fileDescriptors[i])
-                process->fileDescriptors[i]->close(process->fileDescriptors[i]);
+            if(process->fileDescriptors[i]){
+                fs::Close(process->fileDescriptors[i]);
+            }
         }
 
         process->fileDescriptors.clear();
@@ -419,6 +429,7 @@ namespace Scheduler{
             TaskSwitch(&currentProcess->threads[0].registers);
         }
         kfree(process);
+        asm("sti");
         releaseLock(&lock);
     }
 
