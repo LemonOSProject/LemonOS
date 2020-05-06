@@ -237,7 +237,7 @@ namespace Scheduler{
         return proc;
     }
 
-    process_t* CreateELFProcess(void* elf, int argc, char** argv) {
+    process_t* CreateELFProcess(void* elf, int argc, char** argv, int envc, char** envp) {
         if(!VerifyELF(elf)) return nullptr;
 
         bool schedulerState = schedulerLock; // Get current value for scheduker lock
@@ -329,11 +329,20 @@ namespace Scheduler{
             strcpy((char*)stackStr, argv[i]);
         }
 
+        char** tempEnvp = (char**)kmalloc((envc) * sizeof(char*));
+        if(envp){
+            for(int i = 0; i < envc; i++){
+                stackStr -= strlen(envp[i]) + 1;
+                tempEnvp[i] = stackStr;
+                strcpy((char*)stackStr, envp[i]);
+            }
+        }
+
         stackStr -= (uintptr_t)stackStr & 0xf; // align the stack
 
         stack = (uint64_t*)stackStr;
 
-        stack -= (argc % 2); // If argc is odd then the stack will be misaligned
+        stack -= ((argc + envc) % 2); // If argc + envCount is odd then the stack will be misaligned
 
         *stack--;
         *stack = 0; // AT_NULL
@@ -353,7 +362,10 @@ namespace Scheduler{
         stack--;
         *stack = 0; // null
 
-        // envp will be here
+        stack -= envc;
+        for(int i = 0; i < envc; i++){
+            *(stack + i) = (uint64_t)tempEnvp[i];
+        }
 
         stack--;
         *stack = 0; // null

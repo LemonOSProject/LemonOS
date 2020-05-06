@@ -64,7 +64,7 @@ namespace Scheduler{
 	extern int lock;
 
     process_t* CreateProcess(void* entry);
-	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr);
+	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr, int envc = 0, char** envp = nullptr);
 
 	process_t* GetCurrentProcess();
 

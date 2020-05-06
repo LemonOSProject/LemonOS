@@ -25,16 +25,16 @@
 #define MENU_HEIGHT 300
 
 struct TermState{
-	bool bold ;//: 1;
-	bool italic ;//: 1;
-	bool faint ;//: 1;
-	bool underline ;//: 1;
-	bool blink ;//: 1;
-	bool reverse ;//: 1;
-	bool strikethrough ;//: 1;
+	bool bold : 1;
+	bool italic : 1;
+	bool faint : 1;
+	bool underline : 1;
+	bool blink : 1;
+	bool reverse : 1;
+	bool strikethrough: 1;
 
-	char fgColour;
-	char bgColour;
+	uint8_t fgColour;
+	uint8_t bgColour;
 };
 
 TermState defaultState {
@@ -147,12 +147,12 @@ void DoAnsiSGR(){
 	} else if (r >= ANSI_CSI_SGR_BG_BLACK_BRIGHT && r <= ANSI_CSI_SGR_BG_WHITE_BRIGHT){ // Background Colour (Bright)
 		state.bgColour = r - ANSI_CSI_SGR_BG_BLACK_BRIGHT + 8;
 	} else if (r == ANSI_CSI_SGR_FG){
-		if(strchr(escBuf, ';')){
-			state.fgColour = atoi(strchr(escBuf, ';') + 1); // Get argument
+		if(strchr(escBuf, ';') && *(strchr(escBuf, ';') + 1) == '5' && strchr(strchr(escBuf, ';') + 1, ';')/* Check if 2 arguments are given */){ // Next argument should be '5' for 256 colours
+			state.fgColour = atoi(strchr(strchr(escBuf, ';') + 1, ';') + 1); // Get argument
 		}
 	} else if (r == ANSI_CSI_SGR_BG){
-		if(strchr(escBuf, ';')){
-			state.bgColour = atoi(strchr(escBuf, ';') + 1); // Get argument
+		if(strchr(escBuf, ';') && *(strchr(escBuf, ';') + 1) == '5' && strchr(strchr(escBuf, ';') + 1, ';')/* Check if 2 arguments are given */){ // Next argument should be '5' for 256 colours
+			state.bgColour = atoi(strchr(strchr(escBuf, ';') + 1, ';') + 1); // Get argument
 		}
 	}
 }
@@ -292,7 +292,10 @@ int main(char argc, char** argv){
 	int masterPTYFd;
 	syscall(SYS_GRANT_PTY, (uintptr_t)&masterPTYFd, 0, 0, 0, 0);
 
-	syscall(SYS_EXEC, (uintptr_t)"/initrd/lsh.lef", 0, 0, 1 /* Duplicate File Descriptors */, 0);
+	setenv("TERM", "xterm", 1); // the Lemon OS terminal is (fairly) xterm compatible (256 colour, etc.)
+
+	char* _argv[] = {"/initrd/lsh.lef"};
+	lemon_spawn("/initrd/lsh.lef", 1, _argv, 1);
 	
 	window->OnPaint = OnPaint;
 

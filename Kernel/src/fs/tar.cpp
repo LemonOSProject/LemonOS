@@ -199,8 +199,6 @@ namespace fs::tar{
 
 		if(!size) return 0;
 
-        Log::Info("[TAR] Reading %s", node->name);
-
 		memcpy(buffer, (void*)(((uintptr_t)tarNode->header) + 512 + offset), size);
 		return size;
     }

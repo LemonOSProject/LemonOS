@@ -98,8 +98,24 @@ int SysExec(regs64_t* r){
 		kernelArgv[i] = (char*)kmalloc(strlen(argv[i] + 1));
 		strcpy(kernelArgv[i], argv[i]);
 	}
+	
+	int envCount = 0;
+	char** kernelEnvp = nullptr;
 
-	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv);
+	if(envp){
+		int i = 0;
+        for(; envp[i]; i++);
+		envCount = i;
+
+		kernelEnvp = (char**)kmalloc(envCount * sizeof(char*));
+		for(int i = 0; i < envCount; i++){
+			kernelEnvp[i] = (char*)kmalloc(strlen(envp[i] + 1));
+			strcpy(kernelEnvp[i], envp[i]);
+			Log::Info("Environment Variable %s", envp[i]);
+		}
+	}
+
+	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp);
 
 	for(int i = 0; i < argc; i++){
 		kfree(kernelArgv[i]);
@@ -565,7 +581,7 @@ int SysRenderWindow(regs64_t* r){
 	}
 
     asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)Scheduler::GetCurrentProcess()->fxState) : "memory");
-	
+
 	releaseLock(&desktop->lock);
 
 	return 0;
