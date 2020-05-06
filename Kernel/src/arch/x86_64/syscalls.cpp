@@ -78,16 +78,20 @@ int SysExec(regs64_t* r){
 	uint64_t flags = r->rsi;
 	char** envp = (char**)r->rdi;
 
+	Log::Info("Executing: %s", (char*)r->rbx);
+
 	fs_node_t* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
 
 	if(!current_node){
 		return 1;
 	}
 
-	Log::Info("Executing: %s", current_node->name);
-
 	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
-	uint64_t a = current_node->read(current_node, 0, current_node->size, buffer);
+	size_t read = current_node->read(current_node, 0, current_node->size, buffer);
+	if(!read){
+		Log::Warning("Could not read file: %s", current_node->name);
+		return 0;
+	}
 
 	char** kernelArgv = (char**)kmalloc(argc * sizeof(char*));
 	for(int i = 0; i < argc; i++){
@@ -104,7 +108,7 @@ int SysExec(regs64_t* r){
 	kfree(kernelArgv);
 	kfree(buffer);
 
-	if(!proc) return 1;
+	if(!proc) return 0;
 
 	if(flags & EXEC_CHILD){
 		Scheduler::GetCurrentProcess()->children.add_back(proc);
@@ -553,11 +557,15 @@ int SysRenderWindow(regs64_t* r){
 		return 0;
 	}
 
+    asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)Scheduler::GetCurrentProcess()->fxState) : "memory");
+
 	for(int i = windowRegion.pos.y; i < windowRegion.size.y && i < dest->height - offset.y; i++){
 		uint8_t* bufferAddress = dest->buffer + (i + offset.y) * (dest->width * 4) + offset.x * 4;
 		memcpy_optimized(bufferAddress, window->surface.buffer + i * (window->info.width * 4) + windowRegion.pos.x * 4, rowSize * 4);
 	}
 
+    asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)Scheduler::GetCurrentProcess()->fxState) : "memory");
+	
 	releaseLock(&desktop->lock);
 
 	return 0;

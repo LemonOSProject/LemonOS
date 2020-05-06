@@ -101,6 +101,7 @@ namespace fs::tar{
         tar_header_t* dirHeader = &blocks[blockIndex];
         tar_node_t* dirNode = &nodes[dirInode];
         MakeNode(dirHeader, dirNode, dirInode, parent);
+        dirNode->node.read = dirNode->node.write = nullptr; // Is a directory
         dirNode->entryCount = 0;
 
         int i = blockIndex + GetBlockCount(dirHeader->ustar.size) + 1; // Next block
@@ -152,8 +153,8 @@ namespace fs::tar{
                 .flags = FS_NODE_DIRECTORY | FS_NODE_MOUNTPOINT,
                 .inode = 0,
                 .size = size,
-                .read = fs::tar::Read,
-                .write = fs::tar::Write,
+                .read = nullptr,
+                .write = nullptr,
                 .open = fs::tar::Open,
                 .close = fs::tar::Close,
                 .readDir = fs::tar::ReadDir,
@@ -169,8 +170,8 @@ namespace fs::tar{
 
         volumeNode->children = (ino_t*)kmalloc(sizeof(ino_t) * entryCount);
         volumeNode->entryCount = entryCount;
-
-        for(int i = 0, e = 0; i < blockCount; e++){
+        int e = 0;
+        for(int i = 0; i < blockCount; e++){
             tar_header_t header = blocks[i];
 
             if(header.ustar.type == TAR_TYPE_DIRECTORY){
@@ -187,6 +188,7 @@ namespace fs::tar{
             i += GetBlockCount(header.ustar.size);
             i++;
         }
+        volumeNode->entryCount = e;
     }
 
     size_t TarVolume::Read(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer){
@@ -196,6 +198,8 @@ namespace fs::tar{
 		else if(offset + size > node->size || size > node->size) size = node->size - offset;
 
 		if(!size) return 0;
+
+        Log::Info("[TAR] Reading %s", node->name);
 
 		memcpy(buffer, (void*)(((uintptr_t)tarNode->header) + 512 + offset), size);
 		return size;
@@ -231,8 +235,6 @@ namespace fs::tar{
         }
 
         tar_node_t* dir = &nodes[tarNode->children[index - 2]];
-
-        Log::Error(dir->header->ustar.name);
 
         strcpy(dirent->name, dir->node.name);
         dirent->type = dir->node.flags;

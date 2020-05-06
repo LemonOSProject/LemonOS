@@ -15,6 +15,7 @@
 #include <sys/ioctl.h>
 
 #include "escape.h"
+#include "colours.h"
 
 #define TASKBAR_COLOUR_R 128
 #define TASKBAR_COLOUR_G 128
@@ -22,25 +23,6 @@
 
 #define MENU_WIDTH 200
 #define MENU_HEIGHT 300
-
-rgba_colour_t colours[] = {
-	{0	, 0	 , 0  , 255}, // Black
-	{180, 20 , 10 , 255}, // Dark Red
-	{10	, 200, 10 , 255}, // Dark Green
-	{200, 180, 10 , 255}, // Dark Yellow
-	{0	, 0  , 180, 255}, // Dark Blue
-	{200, 0  , 180, 255}, // Dark Magenta
-	{0  , 180, 180, 255}, // Dark Cyan
-	{210, 210, 210, 255}, // Gray
-	{128, 128, 128, 255}, // Black
-	{255, 0  , 0  , 255}, // Red
-	{0 	, 255, 0  , 255}, // Green
-	{255, 255, 0  , 255}, // Yellow
-	{0	, 0  , 255, 255}, // Blue
-	{255, 0  , 255, 255}, // Magenta
-	{0  , 255, 255, 255}, // Cyan
-	{255, 255, 255, 255}, // White
-};
 
 struct TermState{
 	bool bold ;//: 1;
@@ -161,9 +143,17 @@ void DoAnsiSGR(){
 	} else if (r >= ANSI_CSI_SGR_BG_BLACK && r <= ANSI_CSI_SGR_BG_WHITE){ // Background Colour
 		state.bgColour = r - ANSI_CSI_SGR_BG_BLACK;
 	} else if (r >= ANSI_CSI_SGR_FG_BLACK_BRIGHT && r <= ANSI_CSI_SGR_FG_WHITE_BRIGHT){ // Foreground Colour (Bright)
-		state.fgColour = r - ANSI_CSI_SGR_FG_BLACK + 8;
+		state.fgColour = r - ANSI_CSI_SGR_FG_BLACK_BRIGHT + 8;
 	} else if (r >= ANSI_CSI_SGR_BG_BLACK_BRIGHT && r <= ANSI_CSI_SGR_BG_WHITE_BRIGHT){ // Background Colour (Bright)
-		state.bgColour = r - ANSI_CSI_SGR_BG_BLACK + 8;
+		state.bgColour = r - ANSI_CSI_SGR_BG_BLACK_BRIGHT + 8;
+	} else if (r == ANSI_CSI_SGR_FG){
+		if(strchr(escBuf, ';')){
+			state.fgColour = atoi(strchr(escBuf, ';') + 1); // Get argument
+		}
+	} else if (r == ANSI_CSI_SGR_BG){
+		if(strchr(escBuf, ';')){
+			state.bgColour = atoi(strchr(escBuf, ';') + 1); // Get argument
+		}
 	}
 }
 

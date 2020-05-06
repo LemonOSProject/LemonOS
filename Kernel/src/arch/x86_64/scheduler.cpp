@@ -330,7 +330,10 @@ namespace Scheduler{
         }
 
         stackStr -= (uintptr_t)stackStr & 0xf; // align the stack
+
         stack = (uint64_t*)stackStr;
+
+        stack -= (argc % 2); // If argc is odd then the stack will be misaligned
 
         *stack--;
         *stack = 0; // AT_NULL
@@ -366,8 +369,7 @@ namespace Scheduler{
         thread->registers.rsp = (uintptr_t) stack;
         thread->registers.rbp = (uintptr_t) stack;
         
-        Log::Info(thread->registers.rip);
-        Log::Write(" entry");
+        Log::Info("Entry: %x, Stack: %x", thread->registers.rip, stack);
         
         asm volatile("mov %%rax, %%cr3" :: "a"(currentProcess->addressSpace->pml4Phys));
 
