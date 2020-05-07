@@ -327,7 +327,7 @@ int SysStat(regs64_t* r){
 int SysLSeek(regs64_t* r){
 	if(!(r->rsi)){
 		Log::Warning("sys_lseek: Invalid Return Address");
-		return 1;
+		return -2;
 	}
 
 	int64_t* ret = (int64_t*)r->rsi;
@@ -336,7 +336,7 @@ int SysLSeek(regs64_t* r){
 	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length() || !Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
 		Log::Warning("sys_lseek: Invalid File Descriptor, %d", fd);
 		*ret = -1;
-		return 1;
+		return -1;
 	}
 
 	switch(r->rdx){
@@ -630,8 +630,7 @@ int SysUptime(regs64_t* r){
 
 int SysDebug(regs64_t* r){
 	asm("cli");
-	Log::Info((char*)r->rbx);
-	Log::Info(r->rcx);
+	Log::Info("%s, %d", (char*)r->rbx, r->rcx);
 	asm("sti");
 	return 0;
 }

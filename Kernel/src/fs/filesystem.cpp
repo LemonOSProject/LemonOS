@@ -215,13 +215,13 @@ namespace fs{
 	}
 
     size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-        if(node->read)
+        if(node && node->read)
             return node->read(node,offset,size,buffer);
         else return 0;
     }
 
     size_t Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-        if(node->write)
+        if(node && node->write)
             return node->write(node,offset,size,buffer);
         else return 0;
     }

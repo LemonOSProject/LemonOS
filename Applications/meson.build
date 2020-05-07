@@ -62,4 +62,4 @@ executable('textedit.lef', textedit_src, cpp_args : application_cpp_args, link_a
 executable('lemonpaint.lef', lemonpaint_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')
 executable('imgview.lef', imgview_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')
 executable('sdltest.lef', sdltest_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lSDL2', '-lz', '-lpng'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')
-executable('solitaire.lef', lsh_src, cpp_args : application_cpp_args, link_args : ['-llemon'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')
+executable('solitaire.lef', solitaire_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')

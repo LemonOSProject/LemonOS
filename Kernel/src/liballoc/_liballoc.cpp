@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <lock.h>
+#include <logging.h>
 	
 int liballocLock;
 
@@ -17,6 +18,13 @@ int liballoc_lock() {
 int liballoc_unlock() {
 	releaseLock(&liballocLock);
 	return 0;
+}
+
+void liballoc_kprintf(const char* __restrict fmt, ...){
+	va_list args;
+	va_start(args, fmt);
+	Log::WriteF(fmt, args);
+	va_end(args);
 }
 
 #ifdef Lemon32

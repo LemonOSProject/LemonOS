@@ -149,15 +149,11 @@ namespace Lemon::Graphics{
             y = 0;
         }
         
+        int _width = ((x + width) < surface->width) ? width : (surface->width - x);
         uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
         uint32_t* buffer = (uint32_t*)surface->buffer; // Convert byte array into an array of 32-bit unsigned integers as the supported colour depth is 32 bit
         for(int i = 0; i < height && (i + y) < surface->height; i++){
             uint32_t yOffset = (i + y) * (surface->width);
-            /*for(int j = 0; j < width && (x + j) < surface->width; j++){
-                buffer[yOffset + (j + x)] = colour_i;
-            }*/
-
-            int _width = ((x + width) < surface->width) ? width : (surface->width - x);
             
             if(_width > 0)
                 memset32_optimized((void*)(buffer + (yOffset + x)), colour_i, _width);

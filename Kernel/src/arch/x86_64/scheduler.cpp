@@ -300,6 +300,7 @@ namespace Scheduler{
             if(!VerifyELF(linkerElf)){
                 Log::Warning("Invalid Dynamic Linker ELF");
                 releaseLock(&lock);
+                asm("sti");
                 return nullptr;
             }
 

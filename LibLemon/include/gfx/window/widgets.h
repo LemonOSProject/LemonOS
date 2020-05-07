@@ -5,6 +5,9 @@
 #include <string.h>
 #include <stddef.h>
 #include <list.h>
+#include <string>
+#include <vector>
+#include <gfx/font.h>
 
 namespace Lemon::GUI{
     class Widget {
@@ -144,10 +147,12 @@ namespace Lemon::GUI{
         bool editable;
         bool multiline;
         bool active;
-        char** contents;
+        std::vector<std::string> contents;
         int lineCount;
+        int lineSpacing = 3;
         size_t bufferSize;
         vector2i_t cursorPos;
+        Graphics::Font* font;
 
         TextBox(rect_t bounds);
 
@@ -157,7 +162,7 @@ namespace Lemon::GUI{
         void OnMouseDown(vector2i_t mousePos);
         void OnMouseUp(vector2i_t mousePos);
         void OnMouseMove(vector2i_t mousePos);
-        void OnKeyDown(char c);
+        void OnKeyPress(int key);
 
         void ResetScrollBar();
 

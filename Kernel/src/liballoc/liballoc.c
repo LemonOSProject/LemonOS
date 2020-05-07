@@ -8,6 +8,7 @@
 #define ALIGN_TYPE		char ///unsigned char[16] /// unsigned short
 #define ALIGN_INFO		sizeof(ALIGN_TYPE)*16	///< Alignment information is stored right before the pointer. This is the number of bytes of information stored there.
 
+#define kprintf liballoc_kprintf
 
 #define USE_CASE1
 #define USE_CASE2
@@ -47,6 +48,9 @@
 
 #define LIBALLOC_MAGIC	0xc001c0de
 #define LIBALLOC_DEAD	0xdeaddead
+
+#define INFO
+#define halt() asm("hlt");
 
 #if defined DEBUG || defined INFO
 
@@ -169,7 +173,7 @@ static struct liballoc_major *allocate_new_page(unsigned int size)
 	{
 		l_warningCount += 1;
 #if defined DEBUG || defined INFO
-		write_serial_string("liballoc: WARNING: liballoc_alloc( %i ) return NULL\n");
+		kprintf("liballoc: WARNING: liballoc_alloc( %i ) return NULL\n");
 		FLUSH();
 #endif
 		return NULL;	// uh oh, we ran out of memory.
@@ -186,9 +190,9 @@ static struct liballoc_major *allocate_new_page(unsigned int size)
 
 
 #ifdef DEBUG
-	write_serial_string("liballoc: Resource allocated %x of %i pages (%i bytes) for %i size.\n", maj, st, maj->size, size);
+	kprintf("liballoc: Resource allocated %x of %i pages (%i bytes) for %i size.\n", maj, st, maj->size, size);
 
-	write_serial_string("liballoc: Total memory usage = %i KB\n", (int)((l_allocated / (1024))));
+	kprintf("liballoc: Total memory usage = %i KB\n", (int)((l_allocated / (1024))));
 	FLUSH();
 #endif
 
@@ -222,7 +226,7 @@ void *PREFIX(malloc)(size_t req_size)
 	{
 		l_warningCount += 1;
 #if defined DEBUG || defined INFO
-		write_serial_string("liballoc: WARNING: alloc( 0 ) called from %x\n");
+		kprintf("liballoc: WARNING: alloc( 0 ) called from %x\n");
 		FLUSH();
 #endif
 		liballoc_unlock();
@@ -244,21 +248,21 @@ void *PREFIX(malloc)(size_t req_size)
 		{
 			liballoc_unlock();
 #ifdef DEBUG
-			write_serial_string("liballoc: initial l_memRoot at %p initialization failed\n", p);
+			kprintf("liballoc: initial l_memRoot at %p initialization failed\n", p);
 			FLUSH();
 #endif
 			return NULL;
 		}
 
 #ifdef DEBUG
-		write_serial_string("liballoc: set up first memory major %x\n", l_memRoot);
+		kprintf("liballoc: set up first memory major %x\n", l_memRoot);
 		FLUSH();
 #endif
 	}
 
 
 #ifdef DEBUG
-	write_serial_string("liballoc: %x PREFIX(malloc)( %i ): ",
+	kprintf("liballoc: %x PREFIX(malloc)( %i ): ",
 		__builtin_return_address(0),
 		size);
 	FLUSH();
@@ -529,7 +533,7 @@ void *PREFIX(malloc)(size_t req_size)
 	liballoc_unlock();		// release the lock
 
 #ifdef DEBUG
-	write_serial_string("All cases exhausted. No memory available.\n");
+	kprintf("All cases exhausted. No memory available.\n");
 	FLUSH();
 #endif
 #if defined DEBUG || defined INFO

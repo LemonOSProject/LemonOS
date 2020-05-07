@@ -47,6 +47,8 @@ struct TerminalChar {
 	char c;
 };
 
+Lemon::Graphics::Font* terminalFont;
+
 TermState state = defaultState;
 
 bool escapeSequence = false;
@@ -73,15 +75,16 @@ void OnPaint(surface_t* surface){
 
 	int line = 0;
 	int i = 0;
-	
+	int fontHeight = terminalFont->height;
+
 	for(int i = 0; i < 25 && i <= curPos.y; i++){
 		int _currentLine = (curPos.y < 25) ? 0 : (curPos.y - 24);
 		for(int j = 0; j < bufferLineSize[_currentLine + i]; j++){
 			TerminalChar ch = buffer[_currentLine + i][j];
 			rgba_colour_t fg = colours[ch.s.fgColour];
 			rgba_colour_t bg = colours[ch.s.bgColour];
-			Lemon::Graphics::DrawRect(j * 8, i * 12, 8, 12, bg.r, bg.g, bg.b, surface);
-			Lemon::Graphics::DrawChar(ch.c, j * 8, i * 12, fg.r, fg.g, fg.b, surface);
+			Lemon::Graphics::DrawRect(j * 8, i * fontHeight, 8, fontHeight, bg.r, bg.g, bg.b, surface);
+			Lemon::Graphics::DrawChar(ch.c, j * 8, i * fontHeight, fg.r, fg.g, fg.b, surface, terminalFont);
 		}
 	}
 }
@@ -246,7 +249,6 @@ void PrintChar(char ch){
 			
 			buffer[curPos.y][curPos.x].s = state;
 			buffer[curPos.y][curPos.x].c = 0;
-			curPos.x++;
 			break;
 		case ' ':
 			if(curPos.x >= COLUMN_COUNT){
@@ -301,7 +303,10 @@ int main(char argc, char** argv){
 
 	char* _buf = (char*)malloc(512);
 
-	Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf");
+	terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
+	if(!terminalFont){
+		terminalFont = Lemon::Graphics::GetFont("default");
+	}
 
 	winsize wSz = {
 		.ws_row = 25,

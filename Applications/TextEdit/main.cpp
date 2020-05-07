@@ -60,7 +60,7 @@ int main(char argc, char** argv){
 	for(int i = 0; i < textFileSize; i++){ if(textBuffer[i] == 0) textBuffer[i] = ' ';}
 	textBuffer[textFileSize] = 0;
 
-
+	textBox->font = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "monospace", 12);
 	textBox->multiline = true;
 	textBox->editable = true;
 	textBox->LoadText(textBuffer);
@@ -88,6 +88,8 @@ int main(char argc, char** argv){
 				uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
 				Lemon::GUI::HandleMouseMovement(window, {mouseX, mouseY});
+			}  else if (msg.msg == WINDOW_EVENT_KEY) {
+				Lemon::GUI::HandleKeyPress(window, msg.data);
 			} else if (msg.msg == WINDOW_EVENT_CLOSE) {
 				Lemon::GUI::DestroyWindow(window);
 				exit(0);

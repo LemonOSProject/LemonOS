@@ -30,14 +30,15 @@ namespace Lemon::GUI{
     //////////////////////////
     TextBox::TextBox(rect_t bounds){
         this->bounds = bounds;
+        font = Graphics::GetFont("default");
     }
 
     void TextBox::Paint(surface_t* surface){
         Graphics::DrawRect(bounds.pos.x, bounds.pos.y, bounds.size.x, bounds.size.y, 255, 255, 255, surface);
         int xpos = 0;
         int ypos = 0;
-        for(size_t i = 0; i < lineCount; i++){
-            for(size_t j = 0; j < strlen(contents[i]); j++){
+        for(size_t i = 0; i < contents.size(); i++){
+            for(size_t j = 0; j < contents[i].length(); j++){
                 if(contents[i][j] == '\t'){
                     xpos += 8 * 8;
                     continue;
@@ -47,17 +48,19 @@ namespace Lemon::GUI{
                 }
                 else if (!isgraph(contents[i][j])) continue;
 
-                xpos += Graphics::DrawChar(contents[i][j], bounds.pos.x + xpos, bounds.pos.y + ypos - sBar.scrollPos, textColour.r, textColour.g, textColour.b, surface);
+                xpos += Graphics::DrawChar(contents[i][j], bounds.pos.x + xpos, bounds.pos.y + ypos - sBar.scrollPos, textColour.r, textColour.g, textColour.b, surface, font);
 
                 if((xpos > (bounds.size.x - 8 - 16))){
                     xpos = 0;
-                    ypos += 13;
+                    ypos += font->height + lineSpacing;
                 }
             }
-            ypos += 13;
+            ypos += font->height + lineSpacing;
             xpos = 0;
-            if(ypos - sBar.scrollPos + 12 >= bounds.size.y) break;
+            if(ypos - sBar.scrollPos + font->height + lineSpacing >= bounds.size.y) break;
         }
+
+        Graphics::DrawRect(Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font), cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos, 2, font->height + 2, 0, 0, 0, surface);
 
         sBar.Paint(surface, {bounds.pos.x + bounds.size.x - 16, bounds.pos.y});
     }
@@ -72,8 +75,6 @@ namespace Lemon::GUI{
             text2++;
         }
 
-        contents = (char**)malloc(sizeof(char*) * lineCount);
-
         text2 = text;
         for(int i = 0; i < lineCount; i++){
             char* end = strchr(text2, '\n');
@@ -81,29 +82,39 @@ namespace Lemon::GUI{
                 int len = (uintptr_t)(end - text2);
                 if(len > strlen(text2)) break;
 
-                contents[lineNum] = (char*)malloc(len + 1);
-                strncpy(contents[lineNum], text2, len);
-                contents[lineNum][len] = 0;
+                contents.push_back(std::string(text2, len));
 
                 text2 = end + 1;
                 lineNum++;
             } else {
-                contents[lineNum] = (char*)malloc(strlen(text2) + 1);
-                strcpy(contents[lineNum], text2);
+                contents.push_back(std::string(text2));
                 lineNum++;
             }
         }
         
-        this->lineCount = lineCount;
+        this->lineCount = contents.size();
         ResetScrollBar();
     }
 
     void TextBox::OnMouseDown(vector2i_t mousePos){
-        if(mousePos.x > bounds.pos.x + bounds.size.x - 16){
-            sBar.OnMouseDownRelative({mousePos.x - bounds.pos.x + bounds.size.x - 16, mousePos.y - bounds.pos.y});
+        mousePos.x -= bounds.pos.x;
+        mousePos.y -= bounds.pos.y;
+
+        if(mousePos.x > bounds.size.x - 16){
+            sBar.OnMouseDownRelative({mousePos.x + bounds.size.x - 16, mousePos.y});
             return;
         }
-        active = true;
+
+        cursorPos.y = (sBar.scrollPos + mousePos.y) / (font->height + lineSpacing);
+        if(cursorPos.y >= contents.size()) cursorPos.y = contents.size() - 1;
+
+        int dist = 0;
+        for(cursorPos.x = 0; cursorPos.x < contents[cursorPos.y].length(); cursorPos.x++){
+            dist += Graphics::GetCharWidth(contents[cursorPos.y][cursorPos.x], font);
+            if(dist >= mousePos.x){
+                break;
+            }
+        }
     }
 
     void TextBox::OnMouseMove(vector2i_t mousePos){
@@ -118,8 +129,59 @@ namespace Lemon::GUI{
 
 
     void TextBox::ResetScrollBar(){
-        sBar.ResetScrollBar(bounds.size.y, lineCount * 12);
+        sBar.ResetScrollBar(bounds.size.y, contents.size() * (font->height + lineSpacing));
     }
+
+    void TextBox::OnKeyPress(int key){
+        if(isprint(key)){
+            contents[cursorPos.y].insert(cursorPos.x++, 1, key);
+        } else if(key == '\b'){
+            if(cursorPos.x) {
+                contents[cursorPos.y].erase(--cursorPos.x, 1);
+            } else if(cursorPos.y) { // Delete line if not at start of file
+                cursorPos.x = contents[cursorPos.y - 1].length(); // Move cursor horizontally to end of previous line
+                contents[cursorPos.y - 1] += contents[cursorPos.y]; // Append contents of current line to previous
+                contents.erase(contents.begin() + cursorPos.y--); // Remove line and move to previous line
+
+                ResetScrollBar();
+            }
+        } else if(key == '\n'){
+            std::string s = contents[cursorPos.y].substr(cursorPos.x); // Grab the contents of the line after the cursor
+            contents[cursorPos.y].erase(cursorPos.x); // Erase all that was after the cursor
+            contents.insert(contents.begin() + (++cursorPos.y), s); // Insert new line after cursor and move to that line
+            cursorPos.x = 0;
+            ResetScrollBar();
+        } else if (key == KEY_ARROW_LEFT){ // Move cursor left
+            cursorPos.x--;
+            if(cursorPos.x < 0){
+                if(cursorPos.y){
+                    cursorPos.x = contents[--cursorPos.y].length();
+                } else cursorPos.x = 0;
+            }
+        } else if (key == KEY_ARROW_RIGHT){ // Move cursor right
+            cursorPos.x++;
+            if(cursorPos.x > contents[cursorPos.x].length()){
+                if(cursorPos.y < contents.size()){
+                    cursorPos.x = contents[++cursorPos.y].length();
+                } else cursorPos.x = contents[cursorPos.y].length();
+            }
+        } else if (key == KEY_ARROW_UP){ // Move cursor up
+            if(cursorPos.y){
+                cursorPos.y--;
+                if(cursorPos.x > contents[cursorPos.y].length()){
+                    cursorPos.x = contents[cursorPos.y].length();
+                }
+            } else cursorPos.x = 0;
+        } else if (key == KEY_ARROW_DOWN){ // Move cursor down
+            if(cursorPos.y < contents.size()){
+                cursorPos.y++;
+                if(cursorPos.x > contents[cursorPos.y].length()){
+                    cursorPos.x = contents[cursorPos.y].length();
+                }
+            } else cursorPos.x = contents[cursorPos.y].length();;
+        }
+    }
+
     //////////////////////////
     // Button
     //////////////////////////

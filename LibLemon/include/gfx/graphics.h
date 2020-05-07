@@ -5,6 +5,7 @@
 #include <lemon/fb.h>
 #include <png.h>
 #include <string.h>
+#include <gfx/font.h>
 
 typedef struct Vector2i{
     int x, y;
@@ -116,8 +117,15 @@ namespace Lemon::Graphics{
     void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface);
 
     int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
+    int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font);
     void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
+    void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font);
+    int GetTextLength(const char* str, Font* font);
+    int GetTextLength(const char* str, size_t n, Font* font);
     int GetTextLength(const char* str);
+    int GetTextLength(const char* str, size_t n);
+    int GetCharWidth(char c, Font* font);
+    int GetCharWidth(char c);
 
     uint32_t Interpolate(double q11, double q21, double q12, double q22, double x, double y);
 
@@ -133,7 +141,8 @@ namespace Lemon::Graphics{
     int DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface, bool preserveAspectRatio = false);
 
     void RefreshFonts();
-    void LoadFont(const char* path);
+    Font* LoadFont(const char* path, const char* id = nullptr, int sz = 12);
+    Font* GetFont(const char* id);
 
     video_mode_t GetVideoMode();
 

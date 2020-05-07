@@ -67,6 +67,8 @@ void IdleProcess(){
 
 				GetDesktop()->windows->remove_at(i);
 
+				releaseLock(&GetDesktop()->lock);
+
 				uintptr_t buffer = (uintptr_t)win->primaryBuffer;
 
 				for(int buf = 0; buf < 2; buf++){
@@ -83,8 +85,6 @@ void IdleProcess(){
 				destroyMessage.recieverPID = GetDesktop()->pid;
 				destroyMessage.senderPID = 0;
 				Scheduler::SendMessage(destroyMessage);
-
-				releaseLock(&GetDesktop()->lock);
 			}
 		}
 	}

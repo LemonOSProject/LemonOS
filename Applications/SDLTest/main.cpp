@@ -2,6 +2,7 @@
 #include <SDL2/SDL_main.h>
 
 #include <stdio.h>
+#include <math.h>
 
 int main(int argc, char * argv[])
 {
@@ -16,6 +17,16 @@ int main(int argc, char * argv[])
 	{
 		printf("Error creating window: %s", SDL_GetError());
 		return 1;
+	}
+
+	SDL_Surface* windowSurface = SDL_GetWindowSurface(window);
+	for(;;){
+
+		SDL_FillRect(windowSurface, NULL, SDL_MapRGB( windowSurface->format, rand() % 255, rand() % 255, rand() % 255 ) );
+		
+		SDL_UpdateWindowSurface(window);
+
+		SDL_Delay(1000);
 	}
 
     for(;;);
