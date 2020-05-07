@@ -9,14 +9,14 @@ memcpy_sse2:
 	push rbp    ; save the prior rbp value
     mov rbp, rsp
 
+	xor rax, rax
 	mov rcx, rdx
 .loop:
-	movdqa xmm0, [rsi]
+	movdqa xmm0, [rsi + rax]
 
-	movdqa [rdi], xmm0
+	movdqa [rdi + rax], xmm0
 
-	add rdi, 0x10
-	add rsi, 0x10
+	add rax, 0x10
 	loop .loop
 
 	mov rsp, rbp

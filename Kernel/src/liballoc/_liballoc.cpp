@@ -7,16 +7,16 @@
 #include <lock.h>
 #include <logging.h>
 	
-int liballocLock;
+volatile int liballocLock;
 
 extern "C" {
 int liballoc_lock() {
-	acquireLock(&liballocLock);
+	asm("cli");// TODO: Fix Deadlock here acquireLock(&liballocLock);
 	return 0;
 }
 
 int liballoc_unlock() {
-	releaseLock(&liballocLock);
+	asm("sti");//releaseLock(&liballocLock);
 	return 0;
 }
 

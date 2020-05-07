@@ -12,6 +12,7 @@
 #include <timer.h>
 #include <pty.h>
 #include <lock.h>
+#include <lemon.h>
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -54,8 +55,9 @@
 #define SYS_PREAD 40
 #define SYS_PWRITE 41
 #define SYS_IOCTL 42
+#define SYS_INFO 43
 
-#define NUM_SYSCALLS 43
+#define NUM_SYSCALLS 44
 
 #define EXEC_CHILD 1
 
@@ -648,7 +650,6 @@ int SysGetVideoMode(regs64_t* r){
 	return 0;
 }
 
-namespace Lemon { extern char* versionString; };
 int SysUName(regs64_t* r){
 	char* str = (char*)r->rbx;
 	strcpy(str, Lemon::versionString);
@@ -828,6 +829,17 @@ int SysIoctl(regs64_t* r){
 	return 0;
 }
 
+int SysInfo(regs64_t* r){
+	lemon_sysinfo_t* s = (lemon_sysinfo_t*)r->rbx;
+
+	if(!s){
+		return -1;
+	}
+
+	s->usedMem = Memory::usedPhysicalBlocks * 4;
+	s->totalMem = HAL::mem_info.memory_high + HAL::mem_info.memory_low;
+}
+
 syscall_t syscalls[]{
 	/*nullptr*/SysDebug,
 	SysExit,					// 1
@@ -872,6 +884,7 @@ syscall_t syscalls[]{
 	SysPRead,					// 40
 	SysPWrite,
 	SysIoctl,
+	SysInfo,
 };
 
 namespace Scheduler{extern bool schedulerLock;};

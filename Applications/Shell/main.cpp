@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <lemon/spawn.h>
+#include <lemon/info.h>
 
 #define MENU_ITEM_HEIGHT 24
 
@@ -34,6 +35,8 @@ struct MenuItem{
 
 MenuItem menuItems[32];
 int menuItemCount = 0;
+lemon_sysinfo_t sysInfo;
+char memString[128];
 
 void OnTaskbarPaint(surface_t* surface){
 	Lemon::Graphics::DrawGradientVertical(100,0,surface->width - 100, /*surface->height*/24, {96, 96, 96}, {42, 50, 64},surface);
@@ -46,6 +49,11 @@ void OnTaskbarPaint(surface_t* surface){
 		Lemon::Graphics::DrawGradientVertical(0,0,100, 24, {220,/*24*/48,30}, {/*160*/120, /*16*/12, /*16*/12},surface);
 		Lemon::Graphics::DrawRect(0,24,100, surface->height - 24, {/*160*/120, /*16*/12, /*16*/12},surface);
 	}
+
+	syscall(SYS_INFO, &sysInfo, 0, 0, 0, 0);
+
+	sprintf(memString, "Used Memory: %d/%d KB", sysInfo.usedMem, sysInfo.totalMem);
+	Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255, 255, surface);
 }
 
 void OnMenuPaint(surface_t* surface){

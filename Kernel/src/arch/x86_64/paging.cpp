@@ -22,9 +22,10 @@ extern int lastSyscall;
 namespace Memory{
 	pml4_t kernelPML4 __attribute__((aligned(4096)));
 	pdpt_t kernelPDPT __attribute__((aligned(4096))); // Kernel itself will reside here (0xFFFFFFFF80000000)
-	//uint64_t* kernelHeapPDPT = kernel_pdpt; // We will reserve 1 GB of virtual memory for the kernel heap
+	page_dir_t kernelDir __attribute__((aligned(4096)));
 	page_dir_t kernelHeapDir __attribute__((aligned(4096)));
 	page_t kernelHeapDirTables[TABLES_PER_DIR][PAGES_PER_TABLE] __attribute__((aligned(4096)));
+	page_dir_t ioDirs[4] __attribute__((aligned(4096)));
 
 	uint64_t VirtualToPhysicalAddress(uint64_t addr) {
 		uint64_t address = 0;
@@ -81,14 +82,21 @@ namespace Memory{
 		Log::Info((PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)), false);
 		kernelPML4[0] = kernelPML4[PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)];
 
-		kernelPDPT[PDPT_GET_INDEX(KERNEL_VIRTUAL_BASE)] = 0x83;
+		kernelPDPT[PDPT_GET_INDEX(KERNEL_VIRTUAL_BASE)] = ((uint64_t)kernelDir - KERNEL_VIRTUAL_BASE) | 0x3;
+		for(int j = 0; j < TABLES_PER_DIR; j++){
+			kernelDir[j] = (PAGE_SIZE_2M * j) | 0x83;
+		}
+
 		kernelPDPT[0] = 0x83;
 		
 		kernelPDPT[KERNEL_HEAP_PDPT_INDEX] = 0x3;
 		SetPageFrame(&(kernelPDPT[KERNEL_HEAP_PDPT_INDEX]), (uint64_t)kernelHeapDir - KERNEL_VIRTUAL_BASE);
 
 		for(int i = 0; i < 4; i++){
-			kernelPDPT[PDPT_GET_INDEX(IO_VIRTUAL_BASE) + i] = (PAGE_SIZE_1G * i) | 0x83;
+			kernelPDPT[PDPT_GET_INDEX(IO_VIRTUAL_BASE) + i] = ((uint64_t)ioDirs[i] - KERNEL_VIRTUAL_BASE) | 0x3;//(PAGE_SIZE_1G * i) | 0x83;
+			for(int j = 0; j < TABLES_PER_DIR; j++){
+				ioDirs[i][j] = (PAGE_SIZE_1G * i + PAGE_SIZE_2M * j) | 0x83;
+			}
 		}
 
 		for(int i = 0; i < TABLES_PER_DIR; i++){

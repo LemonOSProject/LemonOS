@@ -23,6 +23,9 @@ namespace Memory{
         multiboot_memory_map_t* mem_map = mem_info->mem_map;
         multiboot_memory_map_t* mem_map_end = (multiboot_memory_map_t*)(mem_info->mem_map + mem_info->memory_map_len);
 
+        maxPhysicalBlocks = mem_info->memory_high * 1024 / PHYSALLOC_BLOCK_SIZE;
+        usedPhysicalBlocks = maxPhysicalBlocks;
+
         while (mem_map < mem_map_end)
         {
             Log::Info("Memory Region: [%x - %x] (Type %d)", mem_map->base, mem_map->base + mem_map->length, mem_map->type);
@@ -33,7 +36,6 @@ namespace Memory{
             mem_map = (multiboot_memory_map_t*)(((uint64_t)mem_map) + mem_map->size + sizeof(mem_map->size));
         }
 
-        maxPhysicalBlocks = mem_info->memory_high * 1024 / PHYSALLOC_BLOCK_SIZE;
         MarkMemoryRegionUsed(0, /*8192*4096/**/(uintptr_t)&_end - KERNEL_VIRTUAL_BASE/**/);
     }
 

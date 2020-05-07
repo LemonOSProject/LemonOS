@@ -215,23 +215,24 @@ namespace Lemon::Graphics{
             }
 
             for(int i = 0; i < font->face->glyph->bitmap.rows && (i + y + 12 - font->face->glyph->bitmap_top) < surface->height; i++){
-                uint32_t yOffset = (i + y + (12/*font->glyph->bitmap.rows*/ - font->face->glyph->bitmap_top)) * (surface->width);
+                uint32_t yOffset = (i + y + (font->height - font->face->glyph->bitmap_top)) * (surface->width);
                 
                 for(int j = 0; j < font->face->glyph->bitmap.width && (x + xOffset + j) < surface->width; j++){
-                    
+                    unsigned off = yOffset + (j + x + xOffset);
                     if(font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] == 255)
-                        buffer[yOffset + (j + x + xOffset)] = colour_i;
+                        buffer[off] = colour_i;
                     else if( font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j]){
                         double val = font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] * 1.0 / 255;
-                        uint32_t oldColour = buffer[yOffset + (j + x + xOffset)];
+                        uint32_t oldColour = buffer[off];
                         int oldB = oldColour & 0xFF;
                         int oldG = (oldColour >> 8) & 0xFF;
                         int oldR = (oldColour >> 16) & 0xFF;
                         uint32_t newColour = (int)(b * val + oldB * (1 - val)) | (((int)(g * val + oldG * (1 - val)) << 8)) | (((int)(r * val + oldR * (1 - val)) << 16));
-                        buffer[yOffset + (j + x + xOffset)] = newColour;
+                        buffer[off] = newColour;
                     }
                 }
             }
+            
             xOffset += font->face->glyph->advance.x >> 6;
             str++;
         }

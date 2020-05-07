@@ -73,7 +73,7 @@ namespace HAL{
         TSS::Initialize();
 
         Log::Info("Initializing System Timer...");
-        Timer::Initialize(1500);
+        Timer::Initialize(1000);
         Log::Write("OK");
     } 
 

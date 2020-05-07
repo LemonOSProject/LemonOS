@@ -132,7 +132,7 @@ bool redrawWindowDecorations = true;
 
 char lastKey;
 
-#define ENABLE_BACKGROUND_IMAGE
+//#define ENABLE_BACKGROUND_IMAGE
 
 #define ENABLE_FRAMERATE_COUNTER
 #ifdef ENABLE_FRAMERATE_COUNTER
@@ -319,7 +319,7 @@ int main(){
 			#ifdef ENABLE_BACKGROUND_IMAGE
 			Lemon::Graphics::surfacecpy(&renderBuffer, &backgroundImageSurface);
 			#else
-			DrawRect(0, 0, renderBuffer.width, renderBuffer.height, backgroundColor, &renderBuffer);
+			Lemon::Graphics::DrawRect(0, 0, renderBuffer.width, renderBuffer.height, backgroundColor, &renderBuffer);
 			#endif
 		}
 		
@@ -327,7 +327,6 @@ int main(){
 			Window_s* win = windows[i];
 			DrawWindow(win);
 		}
-
 		redrawWindowDecorations = false;
 
 		lemon_read(mouseDevice, mouseData, 3);
@@ -431,7 +430,6 @@ int main(){
 			mouseEventMessage.data2 = (uintptr_t)active->info.handle;
 			Lemon::SendMessage(active->info.ownerPID, mouseEventMessage);
 		}
-		
 		ipc_message_t msg;
 		while(Lemon::ReceiveMessage(&msg)){
 			switch(msg.msg){
@@ -481,7 +479,6 @@ int main(){
 					break;
 			}
 		}
-
 		#ifdef ENABLE_FRAMERATE_COUNTER
 		Lemon::Graphics::DrawRect(0,0,8*3,12,0,0,0,&renderBuffer);
 		char temp[5];
@@ -491,8 +488,8 @@ int main(){
 		#endif
 
 		Lemon::Graphics::surfacecpyTransparent(&renderBuffer, &mouseSurface, {mousePos.x, mousePos.y});
-
-		memcpy_optimized(fbSurface->buffer, renderBuffer.buffer, fbInfo.width * fbInfo.height * 4);//surfacecpy(fbSurface,&renderBuffer); // Render our buffer
+		
+		memcpy_optimized(fbSurface->buffer, renderBuffer.buffer, fbInfo.width * fbInfo.height << 2); // Render our buffer
 
 		#ifdef ENABLE_BACKGROUND_IMAGE
 		Lemon::Graphics::surfacecpy(&renderBuffer, &backgroundImageSurface, mousePos, {mousePos, {mouseSurface.width, mouseSurface.height}});

@@ -70,7 +70,7 @@ typedef struct Desktop{
 
 	uint64_t pid;
 
-	int lock = 0;
+	volatile int lock = 0;
 } __attribute__((packed)) desktop_t;
 
 void SetDesktop(desktop_t* desktop);

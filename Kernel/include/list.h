@@ -1,7 +1,9 @@
 #pragma once
 
 #include <memory.h>
-#include <lock.h>
+//#include <lock.h>
+#define acquireLock(l)
+#define releaseLock(l)
 
 template<typename T>
 class ListNode
@@ -15,7 +17,7 @@ public:
 template<typename T>
 class List {
 public:
-	int lock = 0;
+	volatile int lock = 0;
 	
 	List()
 	{
