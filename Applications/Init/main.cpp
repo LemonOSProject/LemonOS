@@ -21,6 +21,8 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include "clip.h"
+
 #define WINDOW_BORDER_COLOUR {32,32,32}
 #define WINDOW_TITLEBAR_HEIGHT 24
 
@@ -163,9 +165,28 @@ rgba_colour_t backgroundColor = {64, 128, 128};
 surface_t closeButtonSurface;
 surface_t backgroundImageSurface;
 	
+List<rect_t> clipRects;
+
 int windowCount; // Window Count
 List<Window_s*> windows;
 Window_s* active; // Active Window
+
+void AddClip(rect_t rect){
+retry:
+	for(int i = 0; i < clipRects.get_length(); i++){
+		rect_t clip = clipRects[i];
+		if(!(GET_LEFT(clip) <= GET_RIGHT(rect) && GET_RIGHT(clip) >= GET_LEFT(rect) && GET_TOP(clip) <= GET_BOTTOM(rect) && GET_BOTTOM(clip) >= GET_TOP(rect)))
+		{	
+			continue;
+		}
+
+		SplitRect(rect, clip, &clipRects);
+		clipRects.remove_at(i);
+		goto retry;
+	}
+
+	clipRects.add_back(rect);
+}
 
 void RemoveDestroyedWindows(){
 	int _windowCount; // Updated Window Count
@@ -479,6 +500,26 @@ int main(){
 					break;
 			}
 		}
+
+		/*clipRects.clear();
+		for(int i = windows.get_length() - 1; i >= 0; i--){
+			Window_s* win = windows[i];
+			rect_t rect = {win->pos, {win->info.width, win->info.height}};
+
+			AddClip(rect);
+		}
+
+		for(int i = 0; i < clipRects.get_length(); i++){
+			rect_t rect = clipRects[i];
+
+			if(rect.pos.x <= 0 && rect.pos.y <= 0 && rect.size.x <= 0 && rect.size.y <= 0) continue;
+
+			Lemon::Graphics::DrawRect(rect.pos.x, rect.pos.y, 1, rect.size.y, 255, 0, 0, &renderBuffer);
+			Lemon::Graphics::DrawRect(rect.pos.x, rect.pos.y, rect.size.x, 1, 255, 0, 0, &renderBuffer);
+			Lemon::Graphics::DrawRect(rect.pos.x + rect.size.x, rect.pos.y, 1, rect.size.y, 255, 0, 0, &renderBuffer);
+			Lemon::Graphics::DrawRect(rect.pos.x, rect.pos.y + rect.size.y, rect.size.x, 1, 255, 0, 0, &renderBuffer);
+		}*/
+
 		#ifdef ENABLE_FRAMERATE_COUNTER
 		Lemon::Graphics::DrawRect(0,0,8*3,12,0,0,0,&renderBuffer);
 		char temp[5];
