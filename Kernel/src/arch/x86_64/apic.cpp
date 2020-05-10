@@ -41,8 +41,7 @@ namespace APIC{
 
             //IDT::DisablePIC();
 
-            //Read(LOCAL_APIC_SIVR);
-            //Write(LOCAL_APIC_SIVR, Read(LOCAL_APIC_SIVR) |  0x1FF  /* Enable APIC, Vector 255*/);
+            Write(LOCAL_APIC_SIVR, Read(LOCAL_APIC_SIVR) |  0x1FF  /* Enable APIC, Vector 255*/);
         }
 
         volatile uint32_t Read(uint32_t off){
@@ -76,6 +75,6 @@ namespace APIC{
 
         Local::Initialize();
 
-        //CPU::InitializeCPU(1);
+        CPU::InitializeCPU(1);
     }
 }

@@ -71,6 +71,9 @@ typedef struct{ // Each process will have a maximum of 96GB of virtual memory.
 } __attribute__((packed)) address_space_t;
 
 namespace Memory{
+    extern pml4_t kernelPML4;
+    
+    void DestroyAddressSpace(address_space_t* addressSpace);
 
     void InitializeVirtualMemory();
 
@@ -79,11 +82,14 @@ namespace Memory{
 
     void FreeVirtualMemory(void* pointer, uint64_t size);
     void KernelFree2MPages(void* addr, uint64_t amount);
+	void KernelFree4KPages(void* addr, uint64_t amount);
 
     void* Allocate4KPages(uint64_t amount);
     void* Allocate4KPages(uint64_t amount, address_space_t* addressSpace);
     void* Allocate2MPages(uint64_t amount);
     void* Allocate1GPages(uint64_t amount);
+
+    void Free4KPages(void* addr, uint64_t amount, address_space_t* addressSpace);
 
     void* KernelAllocate4KPages(uint64_t amount);
     void* KernelAllocate2MPages(uint64_t amount);

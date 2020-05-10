@@ -256,6 +256,11 @@ int SysMapFB(regs64_t *r){
 	uintptr_t fbVirt = (uintptr_t)Memory::Allocate4KPages(vMode.height*vMode.pitch/PAGE_SIZE_4K + 2, Scheduler::currentProcess->addressSpace);
 	Memory::MapVirtualMemory4K(HAL::multibootInfo.framebufferAddr,fbVirt,vMode.height*vMode.pitch/PAGE_SIZE_4K + 2,Scheduler::currentProcess->addressSpace);
 
+	mem_region_t memR;
+	memR.base = fbVirt;
+	memR.pageCount = vMode.height*vMode.pitch/PAGE_SIZE_4K + 2;
+	Scheduler::currentProcess->sharedMemory.add_back(memR);
+
 	fb_info_t fbInfo;
 	fbInfo.width = vMode.width;
 	fbInfo.height = vMode.height;
@@ -399,18 +404,28 @@ int SysCreateWindow(regs64_t* r){
 	win->bufferPageCount = (info->width * info->height * 4) / PAGE_SIZE_4K + 1;
 	win->primaryBuffer = (uint8_t*)Memory::KernelAllocate4KPages(win->bufferPageCount);
 	if(r->rcx){
-		*((uint64_t*)r->rcx) = (uint64_t)Memory::Allocate4KPages(win->bufferPageCount, Scheduler::GetCurrentProcess()->addressSpace);
+		mem_region_t memR;
+		memR.pageCount = win->bufferPageCount;
+		memR.base = (uint64_t)Memory::Allocate4KPages(memR.pageCount, Scheduler::GetCurrentProcess()->addressSpace);
+		*((uint64_t*)r->rcx) = memR.base;
+		Scheduler::GetCurrentProcess()->sharedMemory.add_back(memR);
 	}
 	
 	for(int i = 0; i < win->bufferPageCount; i++){
 		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
 		Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)win->primaryBuffer + i * PAGE_SIZE_4K, 1);
-		if(r->rcx) Memory::MapVirtualMemory4K(phys, (*((uintptr_t*)r->rcx)) + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
+		if(r->rcx){
+			Memory::MapVirtualMemory4K(phys, (*((uintptr_t*)r->rcx)) + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
+		}
 	}
 
 	win->secondaryBuffer = (uint8_t*)Memory::KernelAllocate4KPages(win->bufferPageCount);
 	if(r->rdx){
-		*((uint64_t*)r->rdx) = (uint64_t)Memory::Allocate4KPages(win->bufferPageCount, Scheduler::GetCurrentProcess()->addressSpace);
+		mem_region_t memR;
+		memR.pageCount = win->bufferPageCount;
+		memR.base = (uint64_t)Memory::Allocate4KPages(memR.pageCount, Scheduler::GetCurrentProcess()->addressSpace);
+		*((uint64_t*)r->rdx) = memR.base;
+		Scheduler::GetCurrentProcess()->sharedMemory.add_back(memR);
 	}
 	
 	for(int i = 0; i < win->bufferPageCount; i++){

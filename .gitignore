@@ -17,3 +17,6 @@ Scripts/build-win/mount.cfg
 Kernel/subprojects/lai
 Initrd/*
 initrd.tar
+Ports/*
+!Ports/*.sh
+!Ports/*.patch

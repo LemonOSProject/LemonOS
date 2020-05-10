@@ -184,6 +184,7 @@ int main(){
 	builtins.add_back(builtinPwd);
 
 	path.add_back("/initrd");
+	path.add_back("/initrd/bin");
 
 	for(;;) {
 		printf("\n\033[33mLemon \033[31m%s\033[m>", currentDir);

@@ -96,6 +96,7 @@ namespace fs{
 		}
 
 		kfree(tempPath);
+		Log::Info("Returning: %s", current_node->name);
 		return current_node;
 	}
 

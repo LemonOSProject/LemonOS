@@ -57,14 +57,15 @@ namespace fs::FAT32{
         mountPoint.flags = FS_NODE_MOUNTPOINT | FS_NODE_DIRECTORY;
         mountPoint.inode = bootRecord->ebr.rootClusterNum;
 
-        mountPoint.read = FAT32::Read;
-        mountPoint.write = FAT32::Write;
+        mountPoint.read = nullptr;
+        mountPoint.write = nullptr;
         mountPoint.open = FAT32::Open;
         mountPoint.close = FAT32::Close;
         mountPoint.findDir = FAT32::FindDir;
         mountPoint.readDir = FAT32::ReadDir;
 
         mountPoint.vol = this;
+        mountPoint.size = 0;
 
         strcpy(mountPoint.name, name);
 
@@ -163,7 +164,10 @@ namespace fs::FAT32{
     }
 
     size_t Fat32Volume::Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-
+        List<uint32_t>* clusters = GetClusterChain(node->inode);
+        if(offset + size > clusters->get_length() * bootRecord->bpb.sectorsPerCluster){
+            // TODO: Allocate clusters
+        }
     }
 
     void Fat32Volume::Open(fs_node_t* node, uint32_t flags){
@@ -287,14 +291,14 @@ namespace fs::FAT32{
                     }
                 }
 
-                Log::Warning(_name);
-
                 if(strcmp(_name, name) == 0){
-                    if((((uint32_t)dirEntries[i].highClusterNum) << 16) | dirEntries[i].lowClusterNum == bootRecord->ebr.rootClusterNum || (((uint32_t)dirEntries[i].highClusterNum) << 16) | dirEntries[i].lowClusterNum == 0) 
+                    Log::Warning("Found %s", _name);
+                    uint64_t clusterNum = (((uint32_t)dirEntries[i].highClusterNum) << 16) | dirEntries[i].lowClusterNum;
+                    if(clusterNum == bootRecord->ebr.rootClusterNum || clusterNum == 0) 
                         return &mountPoint; // Root Directory
                     _node = (fs_node_t*)kmalloc(sizeof(fs_node_t));
                     _node->size = dirEntries[i].fileSize;
-                    _node->inode = (((uint32_t)dirEntries[i].highClusterNum) << 16) | dirEntries[i].lowClusterNum;
+                    _node->inode = clusterNum;
                     if(dirEntries[i].attributes & FAT_ATTR_DIRECTORY) _node->flags = FS_NODE_DIRECTORY;
                     else _node->flags = FS_NODE_FILE;
                     strcpy(_node->name, _name);

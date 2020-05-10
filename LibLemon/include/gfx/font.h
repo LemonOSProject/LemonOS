@@ -9,6 +9,7 @@ namespace Lemon::Graphics{
         FT_Face face;
         int height;
         int width;
+        int tabWidth = 4;
         char* id;
     };
 }

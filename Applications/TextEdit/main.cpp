@@ -12,10 +12,21 @@
 #include <gfx/window/messagebox.h>
 #include <stdio.h>
 
+Lemon::GUI::TextBox* textBox;
+	Lemon::GUI::Window* window;
+
+void OnWindowPaint(surface_t* surface){
+	Lemon::Graphics::DrawRect(0, window->info.height - 20, window->info.width, 20, 160, 160, 160, surface);
+
+	char buf[32];
+	sprintf(buf, "Line: %d    Col: %d", textBox->cursorPos.y + 1, textBox->cursorPos.x + 1); // lines and columns don't start at 0
+
+	Lemon::Graphics::DrawString(buf, 4, window->info.height - 20 + 4, 0, 0, 0, surface);
+}
+
 extern "C"
 int main(char argc, char** argv){
 	win_info_t windowInfo;
-	Lemon::GUI::Window* window;
 
 	windowInfo.width = 512;
 	windowInfo.height = 256;
@@ -38,8 +49,9 @@ int main(char argc, char** argv){
 	}
 
 	window = Lemon::GUI::CreateWindow(&windowInfo);
+	window->OnPaint = OnWindowPaint;
 
-	Lemon::GUI::TextBox* textBox = new Lemon::GUI::TextBox({{0, 0}, {512, 256}});
+	textBox = new Lemon::GUI::TextBox({{0, 0}, {windowInfo.width, windowInfo.height - 20}});
 
 	window->widgets.add_back(textBox);
 

@@ -40,10 +40,10 @@ namespace Lemon::GUI{
         for(size_t i = 0; i < contents.size(); i++){
             for(size_t j = 0; j < contents[i].length(); j++){
                 if(contents[i][j] == '\t'){
-                    xpos += 8 * 8;
+                    xpos += font->tabWidth * font->width;
                     continue;
                 } else if (isspace(contents[i][j])) {
-                    xpos += 8;
+                    xpos += font->width;
                     continue;
                 }
                 else if (!isgraph(contents[i][j])) continue;
@@ -51,8 +51,9 @@ namespace Lemon::GUI{
                 xpos += Graphics::DrawChar(contents[i][j], bounds.pos.x + xpos, bounds.pos.y + ypos - sBar.scrollPos, textColour.r, textColour.g, textColour.b, surface, font);
 
                 if((xpos > (bounds.size.x - 8 - 16))){
-                    xpos = 0;
-                    ypos += font->height + lineSpacing;
+                    //xpos = 0;
+                    //ypos += font->height + lineSpacing;
+                    break;
                 }
             }
             ypos += font->height + lineSpacing;
@@ -60,7 +61,7 @@ namespace Lemon::GUI{
             if(ypos - sBar.scrollPos + font->height + lineSpacing >= bounds.size.y) break;
         }
 
-        Graphics::DrawRect(Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font), cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos, 2, font->height + 2, 0, 0, 0, surface);
+        Graphics::DrawRect(bounds.pos.x + Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font), bounds.pos.y + cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos, 2, font->height + 2, 0, 0, 0, surface);
 
         sBar.Paint(surface, {bounds.pos.x + bounds.size.x - 16, bounds.pos.y});
     }

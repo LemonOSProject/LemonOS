@@ -58,6 +58,8 @@ namespace Lemon::Graphics{
 
         mainFont->id = new char[strlen("default") + 1];
         mainFont->height = 12;
+        mainFont->width = 8;
+        mainFont->tabWidth = 4;
         strcpy(mainFont->id, "default");
 
         fonts.add_back(mainFont);
@@ -114,6 +116,7 @@ namespace Lemon::Graphics{
         font->height = sz;
         font->monospace = FT_IS_FIXED_WIDTH(font->face);
         font->width = 8;
+        font->tabWidth = 4;
 
         fonts.add_back(font);
 
@@ -276,6 +279,14 @@ namespace Lemon::Graphics{
         while (*str && i++ < n) {
             if(*str == '\n'){
                 break;
+            } else if (*str == ' ') {
+                len += font->width;
+                str++;
+                continue;
+            }  else if (*str == '\t') {
+                len += font->tabWidth;
+                str++;
+                continue;
             } else if (!isprint(*str)) {
                 str++;
                 continue;

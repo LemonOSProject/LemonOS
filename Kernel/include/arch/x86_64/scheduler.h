@@ -40,6 +40,7 @@ typedef struct process {
 	uint64_t pid; // PID
 	uint8_t priority; // Process Priority
 	address_space_t* addressSpace; // Pointer to page directory and tables
+	List<mem_region_t> sharedMemory; // Used to ensure these memory regions don't get freed when a process is terminated
 	uint8_t state; // Process state
 	//thread_t* threads; // Array of threads
 	thread_t threads[1];

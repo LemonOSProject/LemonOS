@@ -414,6 +414,16 @@ namespace Scheduler{
 
         RemoveProcessFromQueue(process);
 
+        if(currentProcess == process){
+            asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE)); // If we are using the PML4 of the current process switch to the kernel's
+        }
+
+        for(int i = 0; i < process->sharedMemory.get_length(); i++){
+            Memory::Free4KPages((void*)process->sharedMemory[i].base, process->sharedMemory[i].pageCount, process->addressSpace); // Make sure the physical memory does not get freed
+        }
+
+        Memory::DestroyAddressSpace(process->addressSpace);
+
         /*for(int i = 0; i < process->fileDescriptors.get_length(); i++){
             if(process->fileDescriptors[i]){
                 fs::Close(process->fileDescriptors[i]);

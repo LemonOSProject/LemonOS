@@ -312,11 +312,12 @@ namespace AHCI{
 		Port(int num, hba_port_t* portStructure);
 
 		int Read(uint64_t lba, uint32_t count, void* buffer);
+		int Write(uint64_t lba, uint32_t count, void* buffer);
 
         int blocksize = 512;
 	private:
 		int FindCmdSlot();
-		int InternalRead(uint64_t lba, uint32_t count);
+		int Access(uint64_t lba, uint32_t count, int write);
 
 		hba_port_t* registers;
 

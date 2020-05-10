@@ -88,7 +88,7 @@ namespace AHCI{
 
             if(!size) continue;
 
-            if(InternalRead(lba, 1)){
+            if(Access(lba, 1, 0)){
                 return 1; // Error Reading Sectors
             }
 
@@ -100,7 +100,31 @@ namespace AHCI{
         return 0;
     }
 
-    int Port::InternalRead(uint64_t lba, uint32_t count){
+    
+    int Port::Write(uint64_t lba, uint32_t count, void* buffer){
+        uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
+
+        while(blockCount-- && count){
+            uint64_t size;
+            if(count < 512) size = count;
+            else size = 512;
+
+            if(!size) continue;
+
+            memcpy(bufVirt, buffer, size);
+
+            if(Access(lba, 1, 1)){
+                return 1; // Error Reading Sectors
+            }
+
+            buffer += size;
+            lba++;
+        }
+
+        return 0;
+    }
+
+    int Port::Access(uint64_t lba, uint32_t count, int write){
         registers->is = 0xffff; 
         int spin = 0;
 
@@ -115,9 +139,9 @@ namespace AHCI{
 
         commandHeader->cfl = sizeof(fis_reg_h2d_t) / 4;
         
-        commandHeader->w = 0;               // Read from device
-        commandHeader->c = 1;               // Read from device
-        commandHeader->p = 1;               // Read from device
+        commandHeader->w = write;
+        commandHeader->c = 1;
+        commandHeader->p = 1;
 
         hba_cmd_tbl_t* commandTable = commandTables[slot];
 

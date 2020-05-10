@@ -2,6 +2,8 @@
 
 The Lemon Operating System
 
+Lemon OS is a somewhat UNIX-like 64-bit monolithic kernel written in C++.
+
 ### Features
 - Window Management
 - Freetype and Libpng Port
@@ -16,31 +18,31 @@ The Lemon Operating System
 - Intel 8254x Driver
 
 ### System requirements
-- 256 MB RAM
+- 256 MB RAM (512 is more optimal)
 - x86_64 Processor
 - VESA VBE support
 
 ### Build Requirements
 - UNIX-like system (e.g. Linux or Windows under WSL)
-- GNU binutils, make and GCC (yet to provide patch files)
-- meson (see crossfile in Scripts) and ninja
-- Freetype 2.10.1 (patch in Patches)
-- Libpng 1.6.37 (patch in Patches)
-- zLib (no patch needed)
+- GNU binutils, make and GCC
+- git, meson (see crossfile in Scripts) and ninja
+- Freetype
+- Libpng
+- zLib
 - [mlibc](https://github.com/managarm/mlibc) C Library
 
 ## Repo Structure
 
-| Directory     | Description            |
-| ------------- | ---------------------- |
-| Applications/ | Userspace Applications |
-| InitrdWriter/ | Ramdisk creation tool  |
-| Kernel/       | Lemon Kernel           |
-| LibLemon/     | LibLemon (Lemon API)   |
-| Patches/      | Patch files            |
-| Resources/    | Images, fonts, etc.    |
-| Scripts/      | Build Scripts          |
-| Screenshots/  | Screenshots            |
+| Directory     | Description                        |
+| ------------- | ---------------------------------- |
+| Applications/ | Userspace Applications             |
+| Kernel/       | Lemon Kernel                       |
+| LibLemon/     | LibLemon (Lemon API)               |
+| Toolchain/    | Cross Compiler Patches             |
+| Ports/        | Build scripts and patches for ports|
+| Resources/    | Images, fonts, etc.                |
+| Scripts/      | Build Scripts                      |
+| Screenshots/  | Screenshots                        |
 
 ![Lemon OS Screenshot](Screenshots/image3.png)
 ![Lemon OS Screenshot](Screenshots/image2.png)

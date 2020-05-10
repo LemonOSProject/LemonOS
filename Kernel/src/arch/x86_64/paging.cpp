@@ -159,6 +159,33 @@ namespace Memory{
 		return addressSpace;
 	}
 
+	void DestroyAddressSpace(address_space_t* addressSpace){
+		for(int i = 0; i < DIRS_PER_PDPT; i++){
+			for(int j = 0; j < TABLES_PER_DIR; j++){
+				pd_entry_t dirEnt = addressSpace->pageDirs[i][j];
+				if(dirEnt & PAGE_PRESENT){
+					uint64_t phys = GetPageFrame(dirEnt);
+
+					for(int k = 0; k < PAGES_PER_TABLE; k++){
+						if(addressSpace->pageTables[i][j][k] & 0x1){
+							uint64_t pagePhys = GetPageFrame(addressSpace->pageTables[i][j][k]);
+							FreePhysicalMemoryBlock(pagePhys);
+						}
+					}
+
+					FreePhysicalMemoryBlock(phys);
+					addressSpace->pageDirs[i][j] = 0;
+					KernelFree4KPages(addressSpace->pageTables[i][j], 1);
+				}
+				addressSpace->pageDirs[i][j] = 0;
+			}
+
+			addressSpace->pdpt[i] = 0;
+			Memory::FreePhysicalMemoryBlock(addressSpace->pageDirsPhys[i]);
+			KernelFree4KPages(addressSpace->pageDirs[i], 1);
+		}
+	}
+
 	bool CheckRegion(uintptr_t addr, uint64_t len, address_space_t* addressSpace){
 		return addr < PDPT_SIZE || (addr + len) < PDPT_SIZE || !(PDPT_GET_INDEX(addr) & PDPT_USER) || !(PDPT_GET_INDEX(addr + len) & PDPT_USER);
 	}
@@ -385,12 +412,51 @@ namespace Memory{
 		KernelPanic(reasons, 1);
 		for(;;);
 	}
+	
+	void KernelFree4KPages(void* addr, uint64_t amount){
+		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
+		uint64_t virt = (uint64_t)addr;
+
+		while(amount--){
+			pml4Index = PML4_GET_INDEX(virt);
+			pdptIndex = PDPT_GET_INDEX(virt);
+			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
+			pageIndex = PAGE_TABLE_GET_INDEX(virt);
+			kernelHeapDirTables[pageDirIndex][pageIndex] = 0;
+			invlpg(virt);
+			virt += PAGE_SIZE_4K;
+		}
+	}
 
 	void KernelFree2MPages(void* addr, uint64_t amount){
 		while(amount--){
 			uint64_t pageDirIndex = PAGE_DIR_GET_INDEX((uint64_t)addr);
 			kernelHeapDir[pageDirIndex] = 0;
 			addr = (void*)((uint64_t)addr + 0x200000);
+		}
+	}
+
+	void Free4KPages(void* addr, uint64_t amount, address_space_t* addressSpace){
+		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
+
+		uint64_t virt = (uint64_t)addr;
+
+		while(amount--){
+			pml4Index = PML4_GET_INDEX(virt);
+			pdptIndex = PDPT_GET_INDEX(virt);
+			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
+			pageIndex = PAGE_TABLE_GET_INDEX(virt);
+
+			const char* panic[1] = {"Process address space cannot be >512GB"};
+			if(pdptIndex > MAX_PDPT_INDEX || pml4Index) KernelPanic(panic,1);
+
+			if(!(addressSpace->pageDirs[pdptIndex][pageDirIndex] & 0x1)) continue;
+			
+			addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] = 0;
+
+			invlpg(virt);
+
+			virt += PAGE_SIZE_4K; /* Go to next page */
 		}
 	}
 
