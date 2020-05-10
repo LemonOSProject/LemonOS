@@ -27,6 +27,7 @@ terminal_src = [
 ]
 
 textedit_src = [
+    'TextEdit/exttextbox.cpp',
     'TextEdit/main.cpp',
 ]
 

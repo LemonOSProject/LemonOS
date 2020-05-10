@@ -12,8 +12,10 @@
 #include <gfx/window/messagebox.h>
 #include <stdio.h>
 
-Lemon::GUI::TextBox* textBox;
-	Lemon::GUI::Window* window;
+#include "exttextbox.h"
+
+ExtendedTextBox* textBox;
+Lemon::GUI::Window* window;
 
 void OnWindowPaint(surface_t* surface){
 	Lemon::Graphics::DrawRect(0, window->info.height - 20, window->info.width, 20, 160, 160, 160, surface);
@@ -51,7 +53,7 @@ int main(char argc, char** argv){
 	window = Lemon::GUI::CreateWindow(&windowInfo);
 	window->OnPaint = OnWindowPaint;
 
-	textBox = new Lemon::GUI::TextBox({{0, 0}, {windowInfo.width, windowInfo.height - 20}});
+	textBox = new ExtendedTextBox({{0, 0}, {windowInfo.width, windowInfo.height - 20}});
 
 	window->widgets.add_back(textBox);
 

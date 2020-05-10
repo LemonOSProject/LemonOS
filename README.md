@@ -2,7 +2,9 @@
 
 The Lemon Operating System
 
-Lemon OS is a somewhat UNIX-like 64-bit monolithic kernel written in C++.
+Lemon OS is a 64-bit operating system written in C++.
+
+(https://lemonos.org)
 
 ### Features
 - Window Management
