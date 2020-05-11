@@ -22,6 +22,7 @@
 #include <devicemanager.h>
 #include <gui.h>
 #include <tar.h>
+#include <sharedmem.h>
 
 uint8_t* progressBuffer;
 video_mode_t videoMode;
@@ -97,6 +98,8 @@ void kmain(multiboot_info_t* mb_info){
 	videoMode = Video::GetVideoMode();
 
 	Log::SetVideoConsole(NULL);
+
+	Memory::InitializeSharedMemory();
 
 	fs::Initialize();
 	Log::EnableBuffer();
@@ -181,8 +184,8 @@ void kmain(multiboot_info_t* mb_info){
 	Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	NVMe::Initialize();
-	///Intel8254x::Initialize();
-	//USB::XHCI::Initialize();
+	Intel8254x::Initialize();
+	USB::XHCI::Initialize();
 	ATA::Init();
 	AHCI::Init();
 

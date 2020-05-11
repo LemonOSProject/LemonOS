@@ -45,6 +45,9 @@ typedef struct {
 
 	char title[96]; // Title of window
 
+	uint64_t primaryBufferKey;
+	uint64_t secondaryBufferKey;
+
 	uint64_t ownerPID;
 
 	handle_t handle;

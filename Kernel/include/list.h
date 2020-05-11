@@ -133,9 +133,10 @@ public:
 	}
 
 	T remove_at(unsigned pos) {
-		if (num <= 0 || pos >= num){
-			T t;
-			return t;
+		if (num <= 0 || pos >= num || front == NULL){
+			T obj; // Need to do something when item not in list
+			memset(&obj, 0, sizeof(T));
+			return obj;
 		}
 
 		acquireLock(&lock);
@@ -146,6 +147,7 @@ public:
 
 		if(!current){
 			T t;
+			memset(&t, 0, sizeof(T));
 			releaseLock(&lock);
 			return t;
 		}
@@ -175,5 +177,5 @@ public:
 public:
 	ListNode<T>* front;
 	ListNode<T>* back;
-	unsigned int num;
+	unsigned num;
 };

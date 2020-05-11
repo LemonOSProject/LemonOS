@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <lemon/spawn.h>
 #include <lemon/info.h>
+#include <lemon/sharedmem.h>
 
 #define MENU_ITEM_HEIGHT 24
 

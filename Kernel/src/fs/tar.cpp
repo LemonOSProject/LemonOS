@@ -178,7 +178,7 @@ namespace fs::tar{
                 volumeNode->children[e] = nextNode; // Directory will take next available node so add it to children
                 i = ReadDirectory(i, 0);
                 continue;
-            } else {
+            } else if(header.ustar.type == TAR_TYPE_FILE) {
                 ino_t inode = nextNode++;
                 tar_node_t* node = &nodes[inode];
                 MakeNode(&blocks[i], node, inode, 0);

@@ -41,9 +41,9 @@ cpp_files = [
     'src/string.cpp',
     'src/video.cpp',
     'src/videoconsole.cpp',
+    'src/sharedmem.cpp',
 
     'src/fs/fat32.cpp',
-    #'src/fs/initrd.cpp',
     'src/fs/filesystem.cpp',
     'src/fs/fsvolume.cpp',
     'src/fs/tar.cpp',

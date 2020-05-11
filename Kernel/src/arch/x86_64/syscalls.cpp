@@ -13,6 +13,7 @@
 #include <pty.h>
 #include <lock.h>
 #include <lemon.h>
+#include <sharedmem.h>
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -56,8 +57,12 @@
 #define SYS_PWRITE 41
 #define SYS_IOCTL 42
 #define SYS_INFO 43
+#define SYS_MUNMAP 44
+#define SYS_CREATE_SHARED_MEMORY 45
+#define SYS_MAP_SHARED_MEMORY 46
+#define SYS_DESTROY_SHARED_MEMORY 47
 
-#define NUM_SYSCALLS 44
+#define NUM_SYSCALLS 48
 
 #define EXEC_CHILD 1
 
@@ -717,7 +722,7 @@ int SysMmap(regs64_t* r){
 		}
 	} else _address = (uintptr_t)Memory::Allocate4KPages(count, Scheduler::GetCurrentProcess()->addressSpace);
 
-	for(int i = 0; i < count; i++){
+	for(size_t i = 0; i < count; i++){
 		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), _address + i * PAGE_SIZE_4K, 1, Scheduler::currentProcess->addressSpace);
 		memset((void*)(_address + i * PAGE_SIZE_4K), 0, PAGE_SIZE_4K);
 	}
@@ -853,6 +858,86 @@ int SysInfo(regs64_t* r){
 
 	s->usedMem = Memory::usedPhysicalBlocks * 4;
 	s->totalMem = HAL::mem_info.memory_high + HAL::mem_info.memory_low;
+
+	return 0;
+}
+
+/*
+ * SysMunmap - Unmap memory (addr, count)
+ * 
+ * On success - return 0
+ * On failure - return -1
+ */
+int SysMunmap(regs64_t* r){
+	uint64_t address = r->rbx;
+	size_t count = r->rcx;
+	
+	if(Memory::CheckRegion(address, count * PAGE_SIZE_4K, Scheduler::GetCurrentProcess()->addressSpace) /*Check availibilty of the requested map*/){
+		//Memory::Free4KPages((void*)address, count, Scheduler::GetCurrentProcess()->addressSpace);
+	} else {
+		return -1;
+	}
+
+	return 0;
+}
+
+/* 
+ * SysCreateSharedMemory (key, size, flags, recipient) - Create Shared Memory
+ * key - Pointer to memory key
+ * size - memory size
+ * flags - flags
+ * recipient - (if private flag) PID of the process that can access memory
+ *
+ * On Success - Return 0, key greater than 1
+ * On Failure - Return -1, key null
+ */
+int SysCreateSharedMemory(regs64_t* r){
+	uint64_t* key = (uint64_t*)r->rbx;
+	uint64_t size = r->rcx;
+	uint64_t flags = r->rdx;
+	uint64_t recipient = r->rsi;
+
+	*key = Memory::CreateSharedMemory(size, flags, Scheduler::GetCurrentProcess()->pid, recipient);
+
+	if(!*key) return -1; // Failed
+
+	return 0;
+}
+
+/* 
+ * SysMapSharedMemory (ptr, key, hint) - Map Shared Memory
+ * ptr - Pointer to pointer of mapped memory
+ * key - Memory key
+ * key - Address hint
+ *
+ * On Success - ptr > 0
+ * On Failure - ptr = 0
+ */
+int SysMapSharedMemory(regs64_t* r){
+	void** ptr = (void**)r->rbx;
+	uint64_t key = r->rcx;
+	uint64_t hint = r->rdx;
+
+	*ptr = Memory::MapSharedMemory(key,Scheduler::GetCurrentProcess(), hint);
+
+	return 0;
+}
+
+/* 
+ * SysDestroySharedMemory (key) - Destroy Shared Memory
+ * key - Memory key
+ *
+ * On Success - return 0
+ * On Failure - return -1
+ */
+int SysDestroySharedMemory(regs64_t* r){
+	uint64_t key = r->rbx;
+
+	if(Memory::CanModifySharedMemory(Scheduler::GetCurrentProcess()->pid, key)){
+		Memory::DestroySharedMemory(key);
+	} else return -1;
+
+	return 0;
 }
 
 syscall_t syscalls[]{
@@ -900,6 +985,10 @@ syscall_t syscalls[]{
 	SysPWrite,
 	SysIoctl,
 	SysInfo,
+	SysMunmap,
+	SysCreateSharedMemory,		// 45
+	SysMapSharedMemory,
+	SysDestroySharedMemory,
 };
 
 namespace Scheduler{extern bool schedulerLock;};

@@ -92,6 +92,7 @@ namespace fs::FAT32{
     
             if(block != lastBlock) {
                 if(part->Read(bootRecord->bpb.reservedSectors + block * (4096 / part->parentDisk->blocksize) /* Get Sector of Block */, 4096, buf)){
+                    delete list;
                     return nullptr;
                 }
 
@@ -165,8 +166,10 @@ namespace fs::FAT32{
 
     size_t Fat32Volume::Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
         List<uint32_t>* clusters = GetClusterChain(node->inode);
-        if(offset + size > clusters->get_length() * bootRecord->bpb.sectorsPerCluster){
+        if(offset + size > clusters->get_length() * bootRecord->bpb.sectorsPerCluster * part->parentDisk->blocksize){
             // TODO: Allocate clusters
+            Log::Info("[FAT32] Allocating Clusters for %s", node->name);
+            
         }
     }
 
@@ -188,7 +191,7 @@ namespace fs::FAT32{
         fat_entry_t* dirEntries = (fat_entry_t*)ReadClusterChain(cluster, &clusterCount);
 
         fat_entry_t* dirEntry;
-        int dirEntryIndex;
+        int dirEntryIndex = -1;
 
         fat_lfn_entry_t** lfnEntries;
 
@@ -212,6 +215,10 @@ namespace fs::FAT32{
                 entryCount++;
                 lfnCount = 0;
             }
+        }
+
+        if(dirEntryIndex == -1){
+            return -2;
         }
 
         lfnEntries = (fat_lfn_entry_t**)kmalloc(sizeof(fat_lfn_entry_t*) * lfnCount);

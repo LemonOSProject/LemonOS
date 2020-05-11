@@ -19,6 +19,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <ft2build.h>
+#include <lemon/sharedmem.h>
 #include FT_FREETYPE_H
 
 #include "clip.h"
@@ -180,9 +181,10 @@ retry:
 			continue;
 		}
 
-		SplitRect(rect, clip, &clipRects);
 		clipRects.remove_at(i);
+		SplitRect(clip, rect, &clipRects);
 		goto retry;
+		break;
 	}
 
 	clipRects.add_back(rect);
@@ -501,25 +503,6 @@ int main(){
 			}
 		}
 
-		/*clipRects.clear();
-		for(int i = windows.get_length() - 1; i >= 0; i--){
-			Window_s* win = windows[i];
-			rect_t rect = {win->pos, {win->info.width, win->info.height}};
-
-			AddClip(rect);
-		}
-
-		for(int i = 0; i < clipRects.get_length(); i++){
-			rect_t rect = clipRects[i];
-
-			if(rect.pos.x <= 0 && rect.pos.y <= 0 && rect.size.x <= 0 && rect.size.y <= 0) continue;
-
-			Lemon::Graphics::DrawRect(rect.pos.x, rect.pos.y, 1, rect.size.y, 255, 0, 0, &renderBuffer);
-			Lemon::Graphics::DrawRect(rect.pos.x, rect.pos.y, rect.size.x, 1, 255, 0, 0, &renderBuffer);
-			Lemon::Graphics::DrawRect(rect.pos.x + rect.size.x, rect.pos.y, 1, rect.size.y, 255, 0, 0, &renderBuffer);
-			Lemon::Graphics::DrawRect(rect.pos.x, rect.pos.y + rect.size.y, rect.size.x, 1, 255, 0, 0, &renderBuffer);
-		}*/
-
 		#ifdef ENABLE_FRAMERATE_COUNTER
 		Lemon::Graphics::DrawRect(0,0,8*3,12,0,0,0,&renderBuffer);
 		char temp[5];
@@ -527,7 +510,7 @@ int main(){
 		itoa(frameRate, temp, 10);
 		Lemon::Graphics::DrawString(temp,0,0,255,255,255,&renderBuffer);
 		#endif
-
+		
 		Lemon::Graphics::surfacecpyTransparent(&renderBuffer, &mouseSurface, {mousePos.x, mousePos.y});
 		
 		memcpy_optimized(fbSurface->buffer, renderBuffer.buffer, fbInfo.width * fbInfo.height << 2); // Render our buffer

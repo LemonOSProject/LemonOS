@@ -30,6 +30,8 @@ cpp_files = [
     'src/itoa.cpp',
     'src/runtime.cpp',
     'src/spawn.cpp',
+    'src/info.cpp',
+    'src/sharedmem.cpp',
 
     'src/gfx/font.cpp',
     'src/gfx/graphics.cpp',

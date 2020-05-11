@@ -7,6 +7,7 @@
 
 #include <math.h>
 #include <ctype.h>
+#include <time.h>
 
 #define BUTTON_COLOUR_OUTLINE_DEFAULT
 
@@ -61,7 +62,12 @@ namespace Lemon::GUI{
             if(ypos - sBar.scrollPos + font->height + lineSpacing >= bounds.size.y) break;
         }
 
-        Graphics::DrawRect(bounds.pos.x + Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font), bounds.pos.y + cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos, 2, font->height + 2, 0, 0, 0, surface);
+        timespec t;
+        clock_gettime(CLOCK_BOOTTIME, &t);
+
+        long msec = (t.tv_nsec / 1000000.0);
+        if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
+            Graphics::DrawRect(bounds.pos.x + Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font), bounds.pos.y + cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos, 2, font->height + 2, 0, 0, 0, surface);
 
         sBar.Paint(surface, {bounds.pos.x + bounds.size.x - 16, bounds.pos.y});
     }
@@ -279,15 +285,13 @@ namespace Lemon::GUI{
     // Label
     //////////////////////////
     Label::Label(const char* _label, rect_t _bounds){
-        labelLength = strlen(_label) + 1;
-        label = (char*)malloc(labelLength);
-        strcpy(label, _label);
+        label = _label;
 
         bounds = _bounds;
     }
 
     void Label::Paint(surface_t* surface){
-        Graphics::DrawString(label, bounds.pos.x, bounds.pos.y, 0, 0, 0, surface);
+        Graphics::DrawString(label.c_str(), bounds.pos.x, bounds.pos.y, 0, 0, 0, surface);
     }
 
     //////////////////////////

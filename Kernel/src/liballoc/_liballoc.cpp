@@ -59,8 +59,11 @@ void* liballoc_alloc(int pages) {
 }
 
 int liballoc_free(void* addr, size_t pages) {
-	#warning "liballoc_free is a stub"
-	//Memory::KernelFree4KPages(addr, pages);
+	for(int i = 0; i < pages; i++){
+		uint64_t phys = Memory::VirtualToPhysicalAddress((uintptr_t)addr + i);
+		Memory::FreePhysicalMemoryBlock(phys);
+	}
+	Memory::KernelFree4KPages(addr, pages);
 	return 0;
 }
 #endif

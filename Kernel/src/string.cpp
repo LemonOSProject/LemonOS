@@ -122,9 +122,9 @@ void strncpy(char* dest, const char* src, size_t n)
 	dest[i] = '\0';
 }
 
-int strlen(const char* str)
+size_t strlen(const char* str)
 {
-	int i = 0;
+	size_t i = 0;
 	while(str[i] != '\0') i++;
 	return i;
 }

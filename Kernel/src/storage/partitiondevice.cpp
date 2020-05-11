@@ -11,3 +11,7 @@ int PartitionDevice::Read(uint64_t lba, uint32_t count, void* buffer){
 
     return parentDisk->Read(lba + startLBA, count, buffer);
 }
+
+PartitionDevice::~PartitionDevice(){
+    
+}

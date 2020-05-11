@@ -5,12 +5,14 @@
 #include <system.h>
 #include <list.h>
 #include <filesystem.h>
+#include <memory.h>
 
 #define PROCESS_STATE_SUSPENDED 0
 #define PROCESS_STATE_ACTIVE 1
 struct process;
 
 typedef void* handle_t;
+typedef uint64_t pid_t;
 
 typedef struct HandleIndex {
 	uint32_t owner_pid;
@@ -37,7 +39,7 @@ typedef struct {
 } __attribute__((packed)) message_t;
 
 typedef struct process {
-	uint64_t pid; // PID
+	pid_t pid; // PID
 	uint8_t priority; // Process Priority
 	address_space_t* addressSpace; // Pointer to page directory and tables
 	List<mem_region_t> sharedMemory; // Used to ensure these memory regions don't get freed when a process is terminated

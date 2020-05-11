@@ -1,5 +1,3 @@
-#pragma once
-
 #include <ata.h>
 #include <atadrive.h>
 
@@ -125,6 +123,8 @@ namespace ATA{
 				}
 			}
 		}
+
+		return 0;
     }
 
 	int Read(ATADiskDevice* drive, uint64_t lba, uint16_t count, void* buffer){
@@ -133,7 +133,7 @@ namespace ATA{
 			return 1;
 		}
 		
-		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80 || !ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x40);
+		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80 || !(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x40));
 
 		outportb(busMasterPort + ATA_BMR_CMD, 0);
 		outportd(busMasterPort + ATA_BMR_PRDT_ADDRESS, drive->prdtPhys);
@@ -161,7 +161,7 @@ namespace ATA{
 		WriteRegister(drive->port, ATA_REGISTER_LBA_MID, (lba >> 8) & 0xFF);
 		WriteRegister(drive->port, ATA_REGISTER_LBA_HIGH, (lba >> 16) & 0xFF);
 
-		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80 || !ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x40);
+		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80 || !(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x40));
 
 		WriteRegister(drive->port, ATA_REGISTER_COMMAND, 0x25); // 48-bit read DMA
 

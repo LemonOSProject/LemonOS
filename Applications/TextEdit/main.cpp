@@ -26,8 +26,7 @@ void OnWindowPaint(surface_t* surface){
 	Lemon::Graphics::DrawString(buf, 4, window->info.height - 20 + 4, 0, 0, 0, surface);
 }
 
-extern "C"
-int main(char argc, char** argv){
+int main(int argc, char** argv){
 	win_info_t windowInfo;
 
 	windowInfo.width = 512;

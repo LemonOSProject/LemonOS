@@ -211,8 +211,7 @@ namespace Lemon::GUI{
 
     class Label : public Widget{
     public:
-        char* label;
-        int labelLength;
+        std::string label;
         Label(const char* _label, rect_t _bounds);
 
         void Paint(surface_t* surface);
