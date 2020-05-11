@@ -38,9 +38,9 @@
 #define SYS_CREATE_WINDOW 22
 #define SYS_DESTROY_WINDOW 23
 #define SYS_DESKTOP_GET_WINDOW 24
-#define SYS_DESKTOP_GET_WINDOW_COUNT 25
+
 #define SYS_UPDATE_WINDOW 26
-#define SYS_RENDER_WINDOW 27
+#define SYS_GET_DESKTOP_PID 27
 #define SYS_SEND_MESSAGE 28
 #define SYS_RECEIVE_MESSAGE 29
 #define SYS_UPTIME 30
@@ -60,9 +60,10 @@
 #define SYS_MUNMAP 44
 #define SYS_CREATE_SHARED_MEMORY 45
 #define SYS_MAP_SHARED_MEMORY 46
-#define SYS_DESTROY_SHARED_MEMORY 47
+#define SYS_UNMAP_SHARED_MEMORY 47
+#define SYS_DESTROY_SHARED_MEMORY 48
 
-#define NUM_SYSCALLS 48
+#define NUM_SYSCALLS 49
 
 #define EXEC_CHILD 1
 
@@ -187,7 +188,7 @@ int SysOpen(regs64_t* r){
 	char* filepath = (char*)kmalloc(strlen((char*)r->rbx) + 1);
 	strcpy(filepath, (char*)r->rbx);
 	fs_node_t* root = fs::GetRoot();
-	fs_node_t* current_node = root;
+
 	Log::Info("Opening: %s", filepath);
 	uint32_t fd;
 	if(strcmp(filepath,"/") == 0){
@@ -216,7 +217,7 @@ int SysOpen(regs64_t* r){
 int SysClose(regs64_t* r){
 	int fd = r->rbx;
 	fs_fd_t* handle;
-	if(handle = Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
+	if((handle = Scheduler::GetCurrentProcess()->fileDescriptors[fd])){
 		fs::Close(handle);
 	}
 	Scheduler::GetCurrentProcess()->fileDescriptors.replace_at(fd, NULL);
@@ -290,7 +291,7 @@ int SysAlloc(regs64_t* r){
 	uintptr_t* addressPointer = (uintptr_t*)r->rcx;
 
 	uintptr_t address = (uintptr_t)Memory::Allocate4KPages(pageCount, Scheduler::currentProcess->addressSpace);
-	for(int i = 0; i < pageCount; i++){
+	for(unsigned i = 0; i < pageCount; i++){
 		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),address + i * PAGE_SIZE_4K,1,Scheduler::currentProcess->addressSpace);
 		memset((void*)(address + i * PAGE_SIZE_4K), 0, PAGE_SIZE_4K);
 	}
@@ -385,11 +386,27 @@ int SysMount(regs64_t* r){
 }
 
 int SysCreateDesktop(regs64_t* r){
+	window_list_t** winList = (window_list_t**)r->rbx;
+
 	desktop_t* desktop = (desktop_t*)kmalloc(sizeof(desktop_t));
 
-	desktop->windows = new List<window_t*>();
+	uint64_t pageCount = (sizeof(window_list_t) + WINDOW_COUNT_MAX * sizeof(handle_t) + 0xFFF) >> 12;
+	window_list_t* kernelWindowList = (window_list_t*)Memory::KernelAllocate4KPages(pageCount);
+	window_list_t* userWindowList = (window_list_t*)Memory::Allocate4KPages(pageCount, Scheduler::GetCurrentProcess()->addressSpace);
+	for(unsigned i = 0; i < pageCount; i++){
+		uintptr_t phys = Memory::AllocatePhysicalMemoryBlock();
+		Memory::KernelMapVirtualMemory4K(phys, ((uintptr_t)kernelWindowList) + i * PAGE_SIZE_4K, 1);
+		Memory::MapVirtualMemory4K(phys, ((uintptr_t)userWindowList) + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
+	}
+
+	kernelWindowList->maxWindowCount = WINDOW_COUNT_MAX;
+	kernelWindowList->windowCount = 0;
+
+	desktop->windows = kernelWindowList;
 	desktop->pid = Scheduler::GetCurrentProcess()->pid;
 	desktop->lock = 0;
+
+	*winList = userWindowList;
 
 	SetDesktop(desktop);
 
@@ -399,59 +416,20 @@ int SysCreateDesktop(regs64_t* r){
 int SysCreateWindow(regs64_t* r){
 	win_info_t* info = (win_info_t*)r->rbx;
 	window_t* win = (window_t*)kmalloc(sizeof(window_t));
-	info->handle = Scheduler::RegisterHandle(win);
+	handle_t handle =  Scheduler::RegisterHandle(win);
+	info->handle = handle;
 	info->ownerPID = Scheduler::GetCurrentProcess()->pid;
 	win->info = *info;
 	win->desktop = GetDesktop();
-
-	surface_t surface;
-	//win->buffer = (uint8_t*)kmalloc(info->width * info->height * 4);
-	win->bufferPageCount = (info->width * info->height * 4) / PAGE_SIZE_4K + 1;
-	win->primaryBuffer = (uint8_t*)Memory::KernelAllocate4KPages(win->bufferPageCount);
-	if(r->rcx){
-		mem_region_t memR;
-		memR.pageCount = win->bufferPageCount;
-		memR.base = (uint64_t)Memory::Allocate4KPages(memR.pageCount, Scheduler::GetCurrentProcess()->addressSpace);
-		*((uint64_t*)r->rcx) = memR.base;
-		Scheduler::GetCurrentProcess()->sharedMemory.add_back(memR);
-	}
-	
-	for(int i = 0; i < win->bufferPageCount; i++){
-		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
-		Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)win->primaryBuffer + i * PAGE_SIZE_4K, 1);
-		if(r->rcx){
-			Memory::MapVirtualMemory4K(phys, (*((uintptr_t*)r->rcx)) + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
-		}
-	}
-
-	win->secondaryBuffer = (uint8_t*)Memory::KernelAllocate4KPages(win->bufferPageCount);
-	if(r->rdx){
-		mem_region_t memR;
-		memR.pageCount = win->bufferPageCount;
-		memR.base = (uint64_t)Memory::Allocate4KPages(memR.pageCount, Scheduler::GetCurrentProcess()->addressSpace);
-		*((uint64_t*)r->rdx) = memR.base;
-		Scheduler::GetCurrentProcess()->sharedMemory.add_back(memR);
-	}
-	
-	for(int i = 0; i < win->bufferPageCount; i++){
-		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
-		Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)win->secondaryBuffer + i * PAGE_SIZE_4K, 1);
-		if(r->rdx) Memory::MapVirtualMemory4K(phys, (*((uintptr_t*)r->rdx)) + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
-	}
-
-	win->surface = surface;
-	win->surface.buffer = win->primaryBuffer;
-
 	acquireLock(&GetDesktop()->lock);
+	
+	while(GetDesktop()->windows->dirty == 2);
 
-	GetDesktop()->windows->add_back(win);
+	window_list_t* windowList = GetDesktop()->windows;
+	if(windowList->windowCount < windowList->maxWindowCount)
+		windowList->windows[windowList->windowCount++] = info->handle;
 
-	message_t createMessage;
-	createMessage.msg = 0xBEEF; // Desktop Event
-	createMessage.data = 2; // Subevent - Window Created
-	createMessage.recieverPID = GetDesktop()->pid;
-	createMessage.senderPID = 0;
-	Scheduler::SendMessage(createMessage);
+	windowList->dirty = 1;
 	
 	releaseLock(&GetDesktop()->lock);
 
@@ -462,30 +440,17 @@ int SysDestroyWindow(regs64_t* r){
 	handle_t handle = (handle_t)r->rbx;
 
 	window_t* win;
-	if(win = (window_t*)Scheduler::FindHandle(handle)){
-		acquireLock(&GetDesktop()->lock);
+	if((win = (window_t*)Scheduler::FindHandle(handle))){
+		desktop_t* desktop = GetDesktop();
+		acquireLock(&desktop->lock);
+
 		
-		for(int i = 0; i < GetDesktop()->windows->get_length(); i++){
-			if(GetDesktop()->windows->get_at(i) == win){
-				GetDesktop()->windows->remove_at(i);
-
-				uintptr_t buffer = (uintptr_t)win->primaryBuffer;
-
-				for(int buf = 0; buf < 2; buf++){
-					for(int i = 0; i < win->bufferPageCount; i++){
-						uintptr_t phys = Memory::VirtualToPhysicalAddress(buffer + i * PAGE_SIZE_4K);
-						Memory::FreePhysicalMemoryBlock(phys);
-					}
-					buffer = (uintptr_t)win->secondaryBuffer;
-				}
-
-				message_t destroyMessage;
-				destroyMessage.msg = 0xBEEF; // Desktop Event
-				destroyMessage.data = 1; // Subevent - Window Destroyed
-				destroyMessage.recieverPID = GetDesktop()->pid;
-				destroyMessage.senderPID = 0;
-				Scheduler::SendMessage(destroyMessage);
-				break;
+		for(int i = 0; i < GetDesktop()->windows->windowCount; i++){
+			if(GetDesktop()->windows->windows[i] == win->info.handle){
+				while(desktop->windows->dirty == 2);
+				memcpy(&desktop->windows->windows[i], &desktop->windows->windows[i + 1], (desktop->windows->windowCount - i - 1));
+				desktop->windows->windowCount--;
+				desktop->windows->dirty = 1;
 			}
 		}
 
@@ -500,23 +465,23 @@ int SysDesktopGetWindow(regs64_t* r){
 
 	acquireLock(&GetDesktop()->lock);
 
-	*winInfo = GetDesktop()->windows->get_at(r->rcx)->info;
+	handle_t handle = (handle_t)r->rcx;
+	window_t* win = (window_t*)Scheduler::FindHandle(handle);
+
+	if(win) {
+		*winInfo = win->info;
+	} else {
+		releaseLock(&GetDesktop()->lock);
+		return -1;
+	}
 
 	releaseLock(&GetDesktop()->lock);
 
 	return 0;
 }
 
-int SysDesktopGetWindowCount(regs64_t* r){
-	uint64_t* count = (uint64_t*)r->rbx;
-	*count = GetDesktop()->windows->get_length();
-	
-	return 0;
-}
-
 int SysUpdateWindow(regs64_t* r){
 	handle_t handle = (handle_t*)r->rbx;
-	int buffer = r->rcx;
 	win_info_t* info = (win_info_t*)r->rdx;
 
 	Window* window = (Window*)Scheduler::FindHandle(handle);
@@ -526,87 +491,26 @@ int SysUpdateWindow(regs64_t* r){
 		win_info_t oldInfo = window->info;
 		window->info = *info;
 
+		if(window->info.handle != oldInfo.handle){
+			window->info.handle = oldInfo.handle; // Do not allow a change in handle
+			Log::Error("sys_update_window: Applications are NOT allowed to change window handles");
+		}
+
 		if(oldInfo.width != info->width || oldInfo.height != info->height){
 			// TODO: Ensure that enough memory is allocated in the case of a resized window
 			Log::Warning("sys_update_window: Window has been resized");
 		}
 
-		message_t updateMessage;
-		updateMessage.msg = 0xBEEF; // Desktop Event
-		updateMessage.data = 2; // Subevent - Window Created
-		updateMessage.recieverPID = GetDesktop()->pid;
-		updateMessage.senderPID = 0;
-		Scheduler::SendMessage(updateMessage); // Notify the window manager that windows have been updated
+		if(GetDesktop()->windows->dirty != 2) GetDesktop()->windows->dirty = 1; // Force the WM to refresh the background
 
 		return 0;
-	} else { // Swap Window Buffers
-		switch(buffer){
-		case 1:
-			window->surface.buffer = window->primaryBuffer;
-			break;
-		case 2:
-			window->surface.buffer = window->secondaryBuffer;
-			break;
-		default:
-			window->surface.buffer = (window->surface.buffer == window->primaryBuffer) ? window->secondaryBuffer : window->primaryBuffer;
-			break;
-		}
 	}
 
 	return 1;
 }
 
-// SysRenderWindow(surface_t* dest, handle_t win, vector2i_t* offset, rect_t* region)
-int SysRenderWindow(regs64_t* r){
-	if(!(r->rbx && r->rcx)) return 1; // We need at least the destination surface and the window handle
-	vector2i_t offset;
-	if(!r->rdx) offset = {0,0};
-	else offset = *((vector2i_t*)r->rdx);
-
-	handle_t handle = (handle_t)r->rcx;
-	window_t* window = nullptr;
-
-	desktop_t* desktop = GetDesktop();
-	acquireLock(&desktop->lock); // Ensure that windows do not get destroyed while rendering
-
-	for(int i = 0; i < desktop->windows->get_length(); i++){ // Search the window list as opposed to handle list in case a destroyed window is requested
-		if(desktop->windows->get_at(i)->info.handle == handle){
-			window = desktop->windows->get_at(i);
-			break;
-		}
-	}
-
-	//if(!(window = (window_t*)Scheduler::FindHandle(handle))) return 2;
-	if(!window) {
-		releaseLock(&desktop->lock);
-		return 2;
-	}
-
-	rect_t windowRegion;
-	if(!r->rsi) windowRegion = {{0,0},{window->info.width,window->info.height}};
-	else windowRegion = *((rect_t*)r->rsi);
-
-	surface_t* dest = (surface_t*)r->rbx;
-
-	int rowSize = (((windowRegion.size.x + offset.x) >= dest->width) ? (dest->width - offset.x) : windowRegion.size.x);
-
-	if(rowSize <= 0) {
-		releaseLock(&desktop->lock);
-		return 0;
-	}
-
-    asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)Scheduler::GetCurrentProcess()->fxState) : "memory");
-
-	for(int i = windowRegion.pos.y; i < windowRegion.size.y && i < dest->height - offset.y; i++){
-		uint8_t* bufferAddress = dest->buffer + (i + offset.y) * (dest->width * 4) + offset.x * 4;
-		memcpy_optimized(bufferAddress, window->surface.buffer + i * (window->info.width * 4) + windowRegion.pos.x * 4, rowSize * 4);
-	}
-
-    asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)Scheduler::GetCurrentProcess()->fxState) : "memory");
-
-	releaseLock(&desktop->lock);
-
-	return 0;
+int SysGetDesktopPID(regs64_t* r){
+	return GetDesktop()->pid;
 }
 
 // SendMessage(message_t* msg) - Sends an IPC message to a process
@@ -648,6 +552,7 @@ int SysUptime(regs64_t* r){
 	if(milliseconds){
 		*milliseconds = ((double)Timer::GetTicks())/(Timer::GetFrequency()/1000.0);
 	}
+	return 0;
 }
 
 int SysDebug(regs64_t* r){
@@ -753,7 +658,6 @@ int SysGrantPTY(regs64_t* r){
 int SysGetCWD(regs64_t* r){
 	char* buf = (char*)r->rbx;
 	size_t sz = r->rcx;
-	int* ret = (int*)r->rdx;
 
 	char* workingDir = Scheduler::GetCurrentProcess()->workingDir;
 	if(strlen(workingDir) > sz) {
@@ -782,6 +686,8 @@ int SysNanoSleep(regs64_t* r){
 	uint64_t ticksEnd = ticks + (int)(nanoseconds / (1000000000.0 / Timer::GetFrequency()));
 
 	while((Timer::GetSystemUptime() * Timer::GetFrequency() + Timer::GetTicks()) < ticksEnd) asm("pause");
+
+	return 0;
 }
 
 int SysPRead(regs64_t* r){
@@ -830,7 +736,7 @@ int SysPWrite(regs64_t* r){
 }
 
 int SysIoctl(regs64_t* r){
-	int fd = r->rbx;
+	uint64_t fd = r->rbx;
 	uint64_t request = r->rcx;
 	uint64_t arg = r->rdx;
 	int* result = (int*)r->rsi;
@@ -924,6 +830,29 @@ int SysMapSharedMemory(regs64_t* r){
 }
 
 /* 
+ * SysUnmapSharedMemory (address, key) - Map Shared Memory
+ * address - address of mapped memory
+ * key - Memory key
+ *
+ * On Success - return 0
+ * On Failure - return -1
+ */
+int SysUnmapSharedMemory(regs64_t* r){
+	uint64_t address = r->rbx;
+	uint64_t key = r->rcx;
+
+	shared_mem_t* sMem = Memory::GetSharedMemory(key);
+	if(!sMem) return -1;
+
+	if(!Memory::CheckRegion(address, sMem->pgCount * PAGE_SIZE_4K, Scheduler::GetCurrentProcess()->addressSpace)) // Make sure the process is not screwing with kernel memory
+		return -1;
+
+	Memory::Free4KPages((void*)address, sMem->pgCount, Scheduler::GetCurrentProcess()->addressSpace);
+
+	return 0;
+}
+
+/* 
  * SysDestroySharedMemory (key) - Destroy Shared Memory
  * key - Memory key
  *
@@ -966,9 +895,9 @@ syscall_t syscalls[]{
 	SysCreateWindow,
 	SysDestroyWindow,
 	SysDesktopGetWindow,
-	SysDesktopGetWindowCount,	// 25
+	nullptr,	// 25
 	SysUpdateWindow,
-	SysRenderWindow,
+	SysGetDesktopPID,
 	SysSendMessage,
 	SysReceiveMessage,
 	SysUptime,					// 30
@@ -988,6 +917,7 @@ syscall_t syscalls[]{
 	SysMunmap,
 	SysCreateSharedMemory,		// 45
 	SysMapSharedMemory,
+	SysUnmapSharedMemory,
 	SysDestroySharedMemory,
 };
 
@@ -1001,7 +931,10 @@ void SyscallHandler(regs64_t* regs) {
 	asm("sti");
 
 	lastSyscall = regs->rax;
-	int ret = syscalls[regs->rax](regs); // Call syscall
+
+	int ret;
+	if(syscalls[regs->rax])
+		ret = syscalls[regs->rax](regs); // Call syscall
 	regs->rax = ret;
 }
 

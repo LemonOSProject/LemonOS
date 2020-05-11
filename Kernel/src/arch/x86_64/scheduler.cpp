@@ -39,7 +39,7 @@ namespace Scheduler{
     uint64_t nextPID = 0;
 
     handle_t handles[INITIAL_HANDLE_TABLE_SIZE];
-    uint32_t handleCount = 1; // We don't want null handles
+    uint64_t handleCount = 1; // We don't want null handles
     uint32_t handleTableSize = INITIAL_HANDLE_TABLE_SIZE;
 
     void Initialize() {
@@ -64,17 +64,18 @@ namespace Scheduler{
     process_t* GetCurrentProcess(){ return currentProcess; }
 
     handle_t RegisterHandle(void* pointer){
-        handle_t handle = (handle_t)handleCount++;
+        handle_t handle = (handle_t)(handleCount++);
         handles[(uint64_t)handle] = pointer;
+
         return handle;
     }
 
     void* FindHandle(handle_t handle){
-        if((uintptr_t)handle < handleTableSize)
+        if((uintptr_t)handle < handleTableSize || !handle)
             return handles[(uint64_t)handle];
         else {
-            Log::Warning("Invalid Handle! Process:");
-            Log::Write((unsigned long)(currentProcess ? currentProcess->pid : -1));
+            Log::Warning("Invalid Handle: %x, Process: %d", (uintptr_t)handle, (unsigned long)(currentProcess ? currentProcess->pid : -1));
+            return nullptr;
         }
     }
 
@@ -271,7 +272,7 @@ namespace Scheduler{
 
             char temp[32];
             strcpy(temp, "/initrd/ld.so");
-            char* file = strtok(/*linkPath*/temp,"/");
+            char* file = strtok(temp,"/");
             fs_node_t* node;
             fs_node_t* current_node = fs::GetRoot();
             while(file != NULL){
@@ -345,7 +346,7 @@ namespace Scheduler{
 
         stack -= ((argc + envc) % 2); // If argc + envCount is odd then the stack will be misaligned
 
-        *stack--;
+        stack--;
         *stack = 0; // AT_NULL
 
         stack -= sizeof(auxv_t)/sizeof(*stack);
@@ -397,14 +398,14 @@ namespace Scheduler{
     }
 
     void EndProcess(process_t* process){
-        for(int i = 0; i < process->children.get_length(); i++){
+        for(unsigned i = 0; i < process->children.get_length(); i++){
             EndProcess(process->children.get_at(i));
         }
         asm("cli");
         acquireLock(&lock);
 
         if(process->parent){
-            for(int i = 0; i < process->parent->children.get_length(); i++){
+            for(unsigned i = 0; i < process->parent->children.get_length(); i++){
                 if(process->parent->children[i] == process){
                     process->parent->children.remove_at(i);
                     break;
@@ -418,7 +419,7 @@ namespace Scheduler{
             asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE)); // If we are using the PML4 of the current process switch to the kernel's
         }
 
-        for(int i = 0; i < process->sharedMemory.get_length(); i++){
+        for(unsigned i = 0; i < process->sharedMemory.get_length(); i++){
             Memory::Free4KPages((void*)process->sharedMemory[i].base, process->sharedMemory[i].pageCount, process->addressSpace); // Make sure the physical memory does not get freed
         }
 
@@ -430,16 +431,8 @@ namespace Scheduler{
             }
         }
 
-        process->fileDescriptors.clear();
+        process->fileDescriptors.clear();*/
 
-        /*for(int i = 0; i < process->programHeaders.get_length(); i++){
-            elf32_program_header_t programHeader = process->programHeaders[i];
-
-            for(int i = 0; i < ((programHeader.memSize / PAGE_SIZE) + 2); i++){
-                uint32_t address = Memory::VirtualToPhysicalAddress(programHeader.vaddr + i * PAGE_SIZE);
-                Memory::FreePhysicalMemoryBlock(address);
-            }
-        }*/
         if(currentProcess == process){
             currentProcess = process->next;
             kfree(process);

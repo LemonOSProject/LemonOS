@@ -11,7 +11,6 @@ enum DeviceType{
 
 class Device{
 public:
-    //Device();
 private:
     char* name;
     int type;

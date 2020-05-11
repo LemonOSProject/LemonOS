@@ -142,7 +142,16 @@ namespace Lemon::GUI{
     void TextBox::OnKeyPress(int key){
         if(isprint(key)){
             contents[cursorPos.y].insert(cursorPos.x++, 1, key);
-        } else if(key == '\b'){
+        } else if(key == '\b' || key == KEY_DELETE){
+            if(key == KEY_DELETE){ // Delete is essentially backspace but on the character in front so just increment the cursor pos.
+                cursorPos.x++;
+                if(cursorPos.x > contents[cursorPos.x].length()){
+                    if(cursorPos.y < contents.size()){
+                        cursorPos.x = contents[++cursorPos.y].length();
+                    } else cursorPos.x = contents[cursorPos.y].length();
+                }
+            }
+
             if(cursorPos.x) {
                 contents[cursorPos.y].erase(--cursorPos.x, 1);
             } else if(cursorPos.y) { // Delete line if not at start of file

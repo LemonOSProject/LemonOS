@@ -101,7 +101,7 @@ int keymap_us[128] =
 	KEY_ARROW_DOWN,	/* Down Arrow */
 	0,	/* Page Down */
 	0,	/* Insert Key */
-	0,	/* Delete Key */
+	KEY_DELETE,	/* Delete Key */
 	0,   0,   0,
 	0,	/* F11 Key */
 	0,	/* F12 Key */
@@ -112,6 +112,8 @@ struct Window_s{
 	handle_t handle;
 	win_info_t info;
 	vector2i_t pos;
+	uint8_t* primaryBuffer;
+	uint8_t* secondaryBuffer;
 	bool active = false;
 };
 
@@ -168,6 +170,8 @@ surface_t backgroundImageSurface;
 	
 List<rect_t> clipRects;
 
+window_list_t* windowList;
+
 int windowCount; // Window Count
 List<Window_s*> windows;
 Window_s* active; // Active Window
@@ -191,19 +195,11 @@ retry:
 }
 
 void RemoveDestroyedWindows(){
-	int _windowCount; // Updated Window Count
-	syscall(SYS_DESKTOP_GET_WINDOW_COUNT, (uintptr_t)(&_windowCount),0,0,0,0);
-	windowCount = _windowCount;
+	windowCount = windowList->windowCount;
 	for(int i = 0; i < windows.get_length(); i++){ // Remove any windows that no longer exist
 			bool windowFound = false;
 			for(int j = 0; j < windowCount; j++){
-				win_info_t windowInfo;
-				handle_t windowHandle;
-
-				syscall(SYS_DESKTOP_GET_WINDOW,(uintptr_t)&windowInfo,j,0,0,0);
-				windowHandle = windowInfo.handle;
-
-				if(windows[i]->handle == windowHandle){
+				if(windows[i]->handle == windowList->windows[j]){
 					windowFound = true;
 					break;
 				}
@@ -211,6 +207,8 @@ void RemoveDestroyedWindows(){
 
 			if(!windowFound) {
 				Window_s* w = windows.remove_at(i);
+				Lemon::UnmapSharedMemory(w->primaryBuffer, w->info.primaryBufferKey);
+				Lemon::UnmapSharedMemory(w->secondaryBuffer, w->info.secondaryBufferKey);
 				delete w;
 				redrawWindowDecorations = true;
 			}
@@ -218,17 +216,13 @@ void RemoveDestroyedWindows(){
 }
 
 void AddNewWindows(){
-	int _windowCount; // Updated Window Count
-	syscall(SYS_DESKTOP_GET_WINDOW_COUNT, (uintptr_t)(&_windowCount),0,0,0,0);
-	windowCount = _windowCount;
+	windowCount = windowList->windowCount;
 	
 	for(int j = 0; j < windowCount; j++){ // Loop through windows and match with what the kernel has
 		bool windowFound = false;
+		handle_t windowHandle = windowList->windows[j];
 		win_info_t windowInfo;
-		handle_t windowHandle;
-
-		syscall(SYS_DESKTOP_GET_WINDOW,(uintptr_t)&windowInfo,j,0,0,0);
-		windowHandle = windowInfo.handle;
+		syscall(SYS_DESKTOP_GET_WINDOW, &windowInfo, windowHandle, 0, 0, 0);
 
 		for(int i = 0; i < windows.get_length(); i++){
 			if(windows[i]->handle == windowHandle){ // We already know about this window
@@ -243,6 +237,8 @@ void AddNewWindows(){
 			win->info = windowInfo;
 			win->handle = windowHandle;
 			win->pos = {win->info.x, win->info.y};
+			win->primaryBuffer = (uint8_t*)Lemon::MapSharedMemory(win->info.primaryBufferKey);
+			win->secondaryBuffer = (uint8_t*)Lemon::MapSharedMemory(win->info.secondaryBufferKey);
 			windows.add_back(win);
 		}
 	}
@@ -266,25 +262,27 @@ void DrawWindow(Window_s* win){
 	}
 
 	if(win->info.flags & WINDOW_FLAGS_NODECORATION){
-		syscall(SYS_RENDER_WINDOW, (uintptr_t)&renderBuffer, (uintptr_t)win->handle,(uintptr_t)&win->pos,0,0);
+		syscall(SYS_DESKTOP_GET_WINDOW, &win->info, win->info.handle, 0, 0, 0); // Update the current window buffer
+		surface_t wSurface = {.width = win->info.width, .height = win->info.height, .buffer = (win->info.currentBuffer ? win->secondaryBuffer : win->primaryBuffer)};
+		Lemon::Graphics::surfacecpy(&renderBuffer, &wSurface, win->pos);
 		return;
 	}
 
-	//if(redrawWindowDecorations){
-		Lemon::Graphics::DrawRect({win->pos + (vector2i_t){1,0}, {win->info.width,1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Top Border
-		Lemon::Graphics::DrawRect({win->pos + (vector2i_t){0,1}, {1, win->info.height + WINDOW_TITLEBAR_HEIGHT}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Left border
-		Lemon::Graphics::DrawRect({win->pos + (vector2i_t){0, win->info.height + WINDOW_TITLEBAR_HEIGHT + 1}, {win->info.width + 1, 1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Bottom border
-		Lemon::Graphics::DrawRect({win->pos + (vector2i_t){win->info.width + 1, 1}, {1,win->info.height + WINDOW_TITLEBAR_HEIGHT + 1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Right border
+	Lemon::Graphics::DrawRect({win->pos + (vector2i_t){1,0}, {win->info.width,1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Top Border
+	Lemon::Graphics::DrawRect({win->pos + (vector2i_t){0,1}, {1, win->info.height + WINDOW_TITLEBAR_HEIGHT}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Left border
+	Lemon::Graphics::DrawRect({win->pos + (vector2i_t){0, win->info.height + WINDOW_TITLEBAR_HEIGHT + 1}, {win->info.width + 1, 1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Bottom border
+	Lemon::Graphics::DrawRect({win->pos + (vector2i_t){win->info.width + 1, 1}, {1,win->info.height + WINDOW_TITLEBAR_HEIGHT + 1}}, WINDOW_BORDER_COLOUR, &renderBuffer); // Right border
 
-		Lemon::Graphics::DrawGradientVertical({win->pos + (vector2i_t){1,1}, {win->info.width, WINDOW_TITLEBAR_HEIGHT}}, {96, 96, 96}, {42, 50, 64}, &renderBuffer);
+	Lemon::Graphics::DrawGradientVertical({win->pos + (vector2i_t){1,1}, {win->info.width, WINDOW_TITLEBAR_HEIGHT}}, {96, 96, 96}, {42, 50, 64}, &renderBuffer);
 
-		Lemon::Graphics::surfacecpy(&renderBuffer, &closeButtonSurface, {win->pos.x + win->info.width - 21, win->pos.y + 3});
+	Lemon::Graphics::surfacecpy(&renderBuffer, &closeButtonSurface, {win->pos.x + win->info.width - 21, win->pos.y + 3});
 
-		Lemon::Graphics::DrawString(win->info.title, win->pos.x + 6, win->pos.y + 6, 255, 255, 255, &renderBuffer);
-	//}
+	Lemon::Graphics::DrawString(win->info.title, win->pos.x + 6, win->pos.y + 6, 255, 255, 255, &renderBuffer);
 
 	vector2i_t renderPos = win->pos + (vector2i_t){1, WINDOW_TITLEBAR_HEIGHT + 1};
-	syscall(SYS_RENDER_WINDOW, (uintptr_t)&renderBuffer, (uintptr_t)win->handle,(uintptr_t)&renderPos,0,0);
+	syscall(SYS_DESKTOP_GET_WINDOW, &win->info, win->info.handle, 0, 0, 0);
+	surface_t wSurface = {.width = win->info.width, .height = win->info.height, .buffer = (win->info.currentBuffer ? win->secondaryBuffer : win->primaryBuffer)};
+	Lemon::Graphics::surfacecpy(&renderBuffer, &wSurface, renderPos);
 }
 
 void memcpy_optimized(void* dest, void* src, size_t count);
@@ -296,7 +294,7 @@ int main(){
 
 	Lemon::Graphics::DrawRect(0,0,fbSurface->width,fbSurface->height,255,0,128, fbSurface);
 
-	syscall(SYS_CREATE_DESKTOP,0,0,0,0,0); // Get Kernel to create Desktop
+	syscall(SYS_CREATE_DESKTOP,&windowList,0,0,0,0); // Get Kernel to create Desktop
 
 	FILE* closeButtonFile = fopen("/initrd/close.bmp", "r");
 
@@ -322,7 +320,6 @@ int main(){
 	backgroundImageSurface.height = renderBuffer.height;
 	backgroundImageSurface.buffer = (uint8_t*)malloc(backgroundImageSurface.width * backgroundImageSurface.height * 4);
 	int e = Lemon::Graphics::LoadImage("/initrd/bg2.png", 0, 0, backgroundImageSurface.width, backgroundImageSurface.height, &backgroundImageSurface, true);
-	syscall(0, "e: ", e, 0, 0, 0);
 	#endif
 
 	syscall(SYS_EXEC, (uintptr_t)"/initrd/shell.lef", 0, 0, 0, 0);
@@ -344,11 +341,6 @@ int main(){
 			#else
 			Lemon::Graphics::DrawRect(0, 0, renderBuffer.width, renderBuffer.height, backgroundColor, &renderBuffer);
 			#endif
-		}
-		
-		for(int i = 0; i < windowCount; i++){ // Draw all our windows
-			Window_s* win = windows[i];
-			DrawWindow(win);
 		}
 		redrawWindowDecorations = false;
 
@@ -494,13 +486,21 @@ int main(){
 
 					break;
 				case DESKTOP_EVENT:
-					if(msg.data == DESKTOP_SUBEVENT_WINDOW_DESTROYED){
-						RemoveDestroyedWindows();
-					} else if (msg.data == DESKTOP_SUBEVENT_WINDOW_CREATED){
-						AddNewWindows();
-					}
 					break;
 			}
+		}
+
+		if(windowList->dirty){
+			windowList->dirty = 2;
+			RemoveDestroyedWindows();
+			AddNewWindows();
+			windowList->dirty = 0;
+			redrawWindowDecorations = true;
+		}
+		
+		for(int i = 0; i < windowCount; i++){ // Draw all our windows
+			Window_s* win = windows[i];
+			DrawWindow(win);
 		}
 
 		#ifdef ENABLE_FRAMERATE_COUNTER

@@ -3,24 +3,17 @@
 #include <lemon/types.h>
 #include <gfx/window/window.h>
 #include <stdlib.h>
-
-//#include <runtime.h>
+#include <lemon/sharedmem.h>
+#include <unistd.h>
 
 struct Surface;
 
 namespace Lemon::GUI{
+
 	handle_t _CreateWindow(win_info_t* wininfo){
 		handle_t h;
-		syscall(SYS_CREATE_WINDOW,(uintptr_t)wininfo,0,0,0,0);
 
-		h = wininfo->handle;
-
-		return h;
-	}
-
-	handle_t _CreateWindow(win_info_t* wininfo, void** primaryBuffer, void** secondaryBuffer){
-		handle_t h;
-		syscall(SYS_CREATE_WINDOW,(uintptr_t)wininfo, primaryBuffer,secondaryBuffer,0,0);
+		syscall(SYS_CREATE_WINDOW,(uintptr_t)wininfo, 0,0,0,0);
 
 		h = wininfo->handle;
 
@@ -39,7 +32,13 @@ namespace Lemon::GUI{
 
 		Window* win = new Window();
 
-		handle_t handle = _CreateWindow(info, (void**)&win->primaryBuffer, (void**)&win->secondaryBuffer);
+		info->primaryBufferKey = Lemon::CreateSharedMemory((info->width * 4) * info->height, SMEM_FLAGS_PRIVATE, getpid(), syscall(SYS_GET_DESKTOP_PID, 0, 0 ,0, 0, 0));
+		info->secondaryBufferKey = Lemon::CreateSharedMemory((info->width * 4) * info->height, SMEM_FLAGS_PRIVATE, getpid(), syscall(SYS_GET_DESKTOP_PID, 0, 0 ,0, 0, 0));
+
+		win->primaryBuffer = (uint8_t*)Lemon::MapSharedMemory(info->primaryBufferKey);
+		win->secondaryBuffer = (uint8_t*)Lemon::MapSharedMemory(info->secondaryBufferKey);
+
+		handle_t handle = _CreateWindow(info);
 		win->handle = handle;
 		memcpy(&win->info,info,sizeof(win_info_t));
 
@@ -58,6 +57,11 @@ namespace Lemon::GUI{
 
 	void DestroyWindow(Window* win){
 		_DestroyWindow(win->handle);
+
+		Lemon::UnmapSharedMemory(win->primaryBuffer, win->info.primaryBufferKey);
+		Lemon::DestroySharedMemory(win->info.primaryBufferKey);
+		Lemon::UnmapSharedMemory(win->secondaryBuffer, win->info.secondaryBufferKey);
+		Lemon::DestroySharedMemory(win->info.secondaryBufferKey);
 		delete win;
 	}
 
@@ -68,11 +72,12 @@ namespace Lemon::GUI{
 	void SwapWindowBuffers(Window* win){
 		if(win->surface.buffer == win->primaryBuffer){
 			win->surface.buffer = win->secondaryBuffer;
-			_PaintWindow(win->handle, 1);
+			win->info.currentBuffer = 0;
 		} else {
 			win->surface.buffer = win->primaryBuffer;
-			_PaintWindow(win->handle, 2);
+			win->info.currentBuffer = 1;
 		}
+		UpdateWindow(win);
 	}
 
 	void PaintWindow(Window* win){

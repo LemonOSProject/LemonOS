@@ -2,8 +2,6 @@
 
 #include <mischdr.h>
 
-#define KERNEL_VIRTUAL_BASE 0xFFFFFFFF80000000
-
 namespace HAL{
     extern memory_info_t mem_info;
     extern video_mode_t videoMode;

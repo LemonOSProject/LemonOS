@@ -53,7 +53,7 @@ void IdleProcess(){
 	Log::Write("OK");
 
 	for(;;){ // Use the idle task to clean up the windows of dead processes
-		int oldUptime = Timer::GetSystemUptime();
+		unsigned oldUptime = Timer::GetSystemUptime();
 		while(Timer::GetSystemUptime() < oldUptime + 1) {
 			Scheduler::Yield();
 			asm("hlt");
@@ -61,31 +61,23 @@ void IdleProcess(){
 
 		if(!GetDesktop()) continue;
 
-		for(int i = 0; i < GetDesktop()->windows->get_length(); i++){
-			Window* win = GetDesktop()->windows->get_at(i);
+		desktop_t* desktop = GetDesktop();
+
+		for(int i = 0; i < desktop->windows->windowCount; i++){
+			handle_t handle = desktop->windows->windows[i];
+			Window* win = (Window*)Scheduler::FindHandle(handle);
 			if(!Scheduler::FindProcessByPID(win->info.ownerPID)){
-				acquireLock(&GetDesktop()->lock);
+				acquireLock(&desktop->lock);
 
-				GetDesktop()->windows->remove_at(i);
+				while(desktop->windows->dirty == 2);
+				memcpy(&desktop->windows->windows[i], &desktop->windows->windows[i + 1], (desktop->windows->windowCount - i - 1));
+				desktop->windows->windowCount--;
+				desktop->windows->dirty = 1;
 
-				releaseLock(&GetDesktop()->lock);
-
-				uintptr_t buffer = (uintptr_t)win->primaryBuffer;
-
-				for(int buf = 0; buf < 2; buf++){
-					for(int i = 0; i < win->bufferPageCount; i++){
-						uintptr_t phys = Memory::VirtualToPhysicalAddress(buffer + i * PAGE_SIZE_4K);
-						Memory::FreePhysicalMemoryBlock(phys);
-					}
-					buffer = (uintptr_t)win->secondaryBuffer;
-				}
-
-				message_t destroyMessage;
-				destroyMessage.msg = 0xBEEF; // Desktop Event
-				destroyMessage.data = 1; // Subevent - Window Destroyed
-				destroyMessage.recieverPID = GetDesktop()->pid;
-				destroyMessage.senderPID = 0;
-				Scheduler::SendMessage(destroyMessage);
+				releaseLock(&desktop->lock);
+				
+				Memory::DestroySharedMemory(win->info.primaryBufferKey);
+				Memory::DestroySharedMemory(win->info.secondaryBufferKey);
 			}
 		}
 	}
@@ -144,14 +136,14 @@ void kmain(multiboot_info_t* mb_info){
 	fs_node_t* initrd = fs::FindDir(fs::GetRoot(), "initrd");
 
 	fs_node_t* splashFile;
-	if(splashFile = fs::FindDir(initrd,"splash.bmp")){
+	if((splashFile = fs::FindDir(initrd,"splash.bmp"))){
 		uint32_t size = splashFile->size;
 		uint8_t* buffer = (uint8_t*)kmalloc(size);
 		if(fs::Read(splashFile, 0, size, buffer))
 			Video::DrawBitmapImage(videoMode.width/2 - 484/2, videoMode.height/2 - 292/2, 484, 292, buffer);
 	} else Log::Warning("Could not load splash image");
 
-	if(splashFile = fs::FindDir(initrd,"pbar.bmp")){
+	if((splashFile = fs::FindDir(initrd,"pbar.bmp"))){
 		uint32_t size = splashFile->size;
 		progressBuffer = (uint8_t*)kmalloc(size);
 		if(fs::Read(splashFile, 0, size, progressBuffer)){

@@ -23,6 +23,8 @@
 #define KEY_ALT 271
 #define KEY_CONTROL 272
 
+#define KEY_DELETE 273
+
 #define KEY_STATE_CAPS 1
 #define KEY_STATE_SHIFT 2
 #define KEY_STATE_ALT 4

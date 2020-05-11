@@ -58,7 +58,7 @@ namespace HAL{
 	    Log::Info("Multiboot Module Count: %d", multibootInfo.modsCount);
         bootModuleCount = multibootInfo.modsCount;
 
-        for(int i = 0; i < multibootInfo.modsCount; i++){
+        for(unsigned i = 0; i < multibootInfo.modsCount; i++){
             multiboot_module_t mod = *((multiboot_module_t*)multibootModulesAddress + i * sizeof(multiboot_module_t));
             Log::Info("    Multiboot Module %d [Start: %x, End: %x, Cmdline: %s]", i, mod.mod_start, mod.mod_end, (char*)Memory::GetIOMapping(mod.string));
             Memory::MarkMemoryRegionUsed(mod.mod_start, mod.mod_end);

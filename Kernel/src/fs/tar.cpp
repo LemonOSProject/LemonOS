@@ -167,6 +167,7 @@ namespace fs::tar{
         mountPoint = volumeNode->node;
         strcpy(mountPoint.name, volumeNode->node.name);
         strcpy(mountPointDirent.name, mountPoint.name);
+        mountPointDirent.type = FS_NODE_DIRECTORY;
 
         volumeNode->children = (ino_t*)kmalloc(sizeof(ino_t) * entryCount);
         volumeNode->entryCount = entryCount;

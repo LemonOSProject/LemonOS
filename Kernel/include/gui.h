@@ -4,9 +4,7 @@
 #include <list.h>
 #include <scheduler.h>
 
-#define WINDOW_FLAG_CONSOLE 0x1
-#define WINDOW_FLAG_NODECORTATION 0x2
-#define WINDOW_FLAG_TRANSPARENT 0x4
+#define WINDOW_COUNT_MAX 65535
 
 struct process;
 
@@ -47,6 +45,7 @@ typedef struct {
 
 	uint64_t primaryBufferKey;
 	uint64_t secondaryBufferKey;
+	uint8_t currentBuffer;
 
 	uint64_t ownerPID;
 
@@ -58,18 +57,19 @@ struct Desktop;
 typedef struct Window{
 	win_info_t info;
 
-	surface_t surface;
-	uint8_t* primaryBuffer;
-	uint8_t* secondaryBuffer;
-	uint64_t bufferPageCount;
-
 	Desktop* desktop;
 } window_t;
 
-typedef struct Desktop{
-	List<window_t*>* windows;
+typedef struct {
+	uint16_t windowCount;
+	uint16_t maxWindowCount = WINDOW_COUNT_MAX;
+	uint8_t dirty;
+	uint8_t reserved[3];
+	handle_t windows[];
+} __attribute__((packed)) window_list_t;
 
-	surface_t surface;
+typedef struct Desktop{
+	window_list_t* windows;
 
 	uint64_t pid;
 

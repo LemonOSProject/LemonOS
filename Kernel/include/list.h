@@ -128,7 +128,7 @@ public:
 		releaseLock(&lock);
 	}
 
-	int get_length() {
+	unsigned get_length() {
 		return num;
 	}
 

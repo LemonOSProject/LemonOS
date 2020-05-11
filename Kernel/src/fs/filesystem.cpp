@@ -233,8 +233,6 @@ namespace fs{
         }
 
 		fs_fd_t* fd = new fs_fd_t;
-		Log::Info("Opening Node: ");
-		Log::Write(node->name);
 		fd->pos = 0;
 		fd->node = node;
 		fd->mode = flags;

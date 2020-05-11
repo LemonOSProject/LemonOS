@@ -92,7 +92,7 @@ public:
 		current->obj = obj;
 	}
 
-	int get_length() {
+	unsigned get_length() {
 		return num;
 	}
 
@@ -130,5 +130,5 @@ public:
 public:
 	ListNode<T>* front;
 	ListNode<T>* back;
-	unsigned int num;
+	unsigned num;
 };

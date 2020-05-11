@@ -12,6 +12,14 @@
 #include <list.h>
 
 typedef struct {
+	uint16_t windowCount;
+	uint16_t maxWindowCount;
+	uint8_t dirty;
+	uint8_t reserved[3];
+	handle_t* windows[];
+} __attribute__((packed)) window_list_t;
+
+typedef struct {
 	uint16_t x = 0;
 	uint16_t y = 0;
 
@@ -24,6 +32,7 @@ typedef struct {
 
 	uint64_t primaryBufferKey;
 	uint64_t secondaryBufferKey;
+	uint8_t currentBuffer;
 
 	uint64_t ownerPID;
 
