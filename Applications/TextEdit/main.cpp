@@ -27,6 +27,8 @@ void OnWindowPaint(surface_t* surface){
 }
 
 int main(int argc, char** argv){
+	Lemon::Graphics::InitializeFonts();
+	
 	win_info_t windowInfo;
 
 	windowInfo.width = 512;

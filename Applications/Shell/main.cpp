@@ -123,6 +123,8 @@ void LoadConfig(){
 }
 
 int main(){
+	Lemon::Graphics::InitializeFonts();
+
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
 	syscall(SYS_UNAME, (uintptr_t)versionString,0,0,0,0);
 

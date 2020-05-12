@@ -71,7 +71,7 @@ typedef struct fs_node{
 
     void* vol; // Some Fs Drivers may use this
 
-    fs_node* ptr;
+    fs_node* link;
 } fs_node_t;
 
 typedef struct fs_dirent {

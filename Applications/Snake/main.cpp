@@ -94,6 +94,8 @@ vector2i_t applePos = {1,1};
 
 extern "C"
 int main(char argc, char** argv){
+	Lemon::Graphics::InitializeFonts();
+
 	win_info_t windowInfo;
 	Lemon::GUI::Window* window;
 

@@ -9,7 +9,7 @@ buildp(){
  	cd $BUILD_DIR
  	patch -p1 < ../lemon-freetype-2.10.1.patch
  	export CC=x86_64-lemon-gcc
- 	./configure --host=x86_64-lemon --prefix=$LEMON_SYSROOT --with-harfbuzz=no --with-bzip2=no --disable-mmap --without-zlib --without-png
+ 	./configure --host=x86_64-lemon --prefix=$LEMON_SYSROOT --with-harfbuzz=no --with-bzip2=no --disable-mmap --with-zlib=no --with-png=no
  	make -j$JOBCOUNT
  	make install
 }

@@ -139,7 +139,8 @@ namespace Lemon::Graphics{
     int LoadBitmapImage(FILE* f, surface_t* surface);
     int DrawImage(int x, int y, int w, int h, uint8_t *data, size_t dataSz, surface_t* surface, bool preserveAspectRatio);
     int DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface, bool preserveAspectRatio = false);
-
+    
+    void InitializeFonts();
     void RefreshFonts();
     Font* LoadFont(const char* path, const char* id = nullptr, int sz = 12);
     Font* GetFont(const char* id);

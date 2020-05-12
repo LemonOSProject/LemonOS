@@ -9,6 +9,7 @@ namespace HAL{
     extern uintptr_t multibootModulesAddress;
     extern int bootModuleCount;
     extern boot_module_t bootModules[];
+    extern bool debugMode;
 
     void InitCore(multiboot_info_t mb_info);
 

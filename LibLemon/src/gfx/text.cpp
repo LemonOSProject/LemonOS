@@ -13,11 +13,11 @@ extern uint8_t font_default[];
 namespace Lemon::Graphics{
     static int fontState = 0;
     static FT_Library library;
-    static Font* mainFont;
+    static Font* mainFont = nullptr;
     static List<Font*> fonts;
 
     void RefreshFonts(){
-        FT_Done_FreeType(library);
+        if(library) FT_Done_FreeType(library);
         fontState = 0;
     }
 
@@ -137,7 +137,7 @@ namespace Lemon::Graphics{
             return 0;
         }
         
-        if(fontState == 0) InitializeFonts();
+        if((fontState != 1 && fontState != -1) || !font->face) InitializeFonts();
         if(fontState == -1){ //
             character &= 0x7F;
 
@@ -188,7 +188,7 @@ namespace Lemon::Graphics{
     }
 
     void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font) {
-        if(fontState == 0 || !font || !library) InitializeFonts();
+        if((fontState != 1 && fontState != -1) || !font->face) InitializeFonts();
         if(fontState == -1){
             int xOffset = 0;
             while (*str != 0) {
@@ -246,7 +246,7 @@ namespace Lemon::Graphics{
     }
     
     int GetCharWidth(char c, Font* font){
-        if(fontState == 0 || !font || !library) InitializeFonts();
+        if((fontState != 1 && fontState != -1) || !font->face) InitializeFonts();
         if(fontState == -1){
             return 8;
         }
@@ -269,7 +269,7 @@ namespace Lemon::Graphics{
     }
 
     int GetTextLength(const char* str, size_t n, Font* font){
-        if(fontState == 0 || !font || !library) InitializeFonts();
+        if(fontState != 1 && fontState != -1) InitializeFonts();
         if(fontState == -1){
             return strlen(str) * 8;
         }

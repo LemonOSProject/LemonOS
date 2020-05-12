@@ -6,15 +6,6 @@
 #include <string.h>
 #include <video.h>
 
-#ifdef Lemon64
-void VideoConsole::Update(){}
-
-void VideoConsole::Print(char c, uint8_t r, uint8_t g, uint8_t b){}
-void VideoConsole::Print(char* str, uint8_t r, uint8_t g, uint8_t b){}
-#endif
-
-#ifdef Lemon32
-
 VideoConsole::VideoConsole(int x, int y, int width, int height){
     this->x = x;
     this->y = y;
@@ -24,17 +15,16 @@ VideoConsole::VideoConsole(int x, int y, int width, int height){
     cursorX = 0;
     cursorY = 0;
 
-    widthInCharacters = floor(width / 8);
-    heightInCharacters = floor(height / 8);
+    widthInCharacters = width / 8 - 1;
+    heightInCharacters = height / 8 - 1;
 
-    characterBuffer = (ConsoleCharacter*)kmalloc(widthInCharacters*heightInCharacters*4); // One ConsoleCharacter is 4 bytes (char, r, g, b)
-    memset(characterBuffer, 0, widthInCharacters*heightInCharacters*4);
+    characterBuffer = (ConsoleCharacter*)kmalloc(widthInCharacters*(heightInCharacters + 1)*sizeof(ConsoleCharacter)); // One ConsoleCharacter is 4 bytes (char, r, g, b)
+    memset(characterBuffer, 0, widthInCharacters*heightInCharacters*sizeof(ConsoleCharacter));
 
 }
 
 void VideoConsole::Update(){
-    video_mode_t videoMode = Video::GetVideoMode();
-    Video::DrawRect(0,0,videoMode.width, videoMode.height, 32, 32, 32);
+    Video::DrawRect(x,y,width, height, 32, 32, 32);
     for(int i = 0; i < heightInCharacters; i++){
         for(int j = 0; j < widthInCharacters; j++){
             ConsoleCharacter c = characterBuffer[i*widthInCharacters + j];
@@ -78,13 +68,22 @@ void VideoConsole::Clear(uint8_t r, uint8_t g, uint8_t b){
     cursorY = 0;
 }
 
-void VideoConsole::Print(char* str, uint8_t r, uint8_t g, uint8_t b){
+void VideoConsole::Print(const char* str, uint8_t r, uint8_t g, uint8_t b){
     while (*str != '\0'){
 		Print(*str++, r, g, b);
 	}
 }
 
-void VideoConsole::Scroll(){
-    memcpy(characterBuffer,(void*)(characterBuffer + widthInCharacters*sizeof(ConsoleCharacter)), widthInCharacters*(heightInCharacters-1)*sizeof(ConsoleCharacter));
+void VideoConsole::PrintN(const char* str, unsigned n, uint8_t r, uint8_t g, uint8_t b){
+    int i = 0;
+    while (*str && i < n){
+		Print(*str++, r, g, b);
+        i++;
+	}
 }
-#endif
+
+void VideoConsole::Scroll(){
+    memcpy(characterBuffer,(void*)(characterBuffer + widthInCharacters), widthInCharacters*(heightInCharacters-1)*sizeof(ConsoleCharacter));
+    cursorY--;
+    memset(characterBuffer + cursorY * widthInCharacters, 0, widthInCharacters * sizeof(ConsoleCharacter));
+}

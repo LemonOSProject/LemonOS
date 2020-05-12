@@ -26,6 +26,7 @@
 
 uint8_t* progressBuffer;
 video_mode_t videoMode;
+VideoConsole* con;
 
 extern "C"
 void IdleProcess(){
@@ -88,8 +89,12 @@ void kmain(multiboot_info_t* mb_info){
 	HAL::Init(*mb_info);
 
 	videoMode = Video::GetVideoMode();
-
 	Log::SetVideoConsole(NULL);
+
+	if(HAL::debugMode){
+		con = new VideoConsole(0, (videoMode.height / 3) * 2, videoMode.width, videoMode.height / 3);
+		Log::SetVideoConsole(con);
+	}
 
 	Memory::InitializeSharedMemory();
 
@@ -105,14 +110,14 @@ void kmain(multiboot_info_t* mb_info){
 	if(videoMode.bpp != 32)
 		Log::Warning("Unsupported Colour Depth expect issues.");
 
-	Log::Info("RAM: %d MB", (mb_info->memoryHi + mb_info->memoryLo) / 1024);
+	Log::Info("System RAM: %d MB", (HAL::multibootInfo.memoryHi + HAL::multibootInfo.memoryLo) / 1024);
+	Log::Info("Reserved RAM: %d MB", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);
 	
 	Log::Info("Initializing Ramdisk...");
 	//Initrd::Initialize(initrd_start,initrd_end - initrd_start); // Initialize Initrd
 	fs::tar::TarVolume* tar = new fs::tar::TarVolume(HAL::bootModules[0].base, HAL::bootModules[0].size, "initrd");
 	fs::volumes->add_back(tar);
-	tar = new fs::tar::TarVolume(HAL::bootModules[0].base, HAL::bootModules[0].size, "lib");
-	fs::volumes->add_back(tar);
+	fs::volumes->add_back(new fs::LinkVolume(tar, "lib"));
 	Log::Write("OK");
 
 	

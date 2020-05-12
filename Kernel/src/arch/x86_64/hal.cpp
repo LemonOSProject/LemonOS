@@ -21,6 +21,7 @@ namespace HAL{
     uintptr_t multibootModulesAddress;
     boot_module_t bootModules[32];
     int bootModuleCount;
+    bool debugMode = false;
 
     void InitCore(multiboot_info_t mb_info){ // ALWAYS call this first
         multibootInfo = mb_info;
@@ -46,6 +47,9 @@ namespace HAL{
         mem_info.memory_map_len = mb_info.mmapLength;
         
         multibootModulesAddress = Memory::GetIOMapping(multibootInfo.modsAddr); // Grub loads the kernel as 32-bit so modules will be <4GB
+
+        if(strcmp((char*)Memory::GetIOMapping(multibootInfo.cmdline), "debug") == 0) debugMode = true;
+        else Log::Info((char*)Memory::GetIOMapping(multibootInfo.cmdline));
         
         asm("cli");
 

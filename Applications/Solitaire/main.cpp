@@ -144,6 +144,8 @@ int main(int argc, char** argv){
 	win_info_t windowInfo;
 	Lemon::GUI::Window* window;
 
+	Lemon::Graphics::InitializeFonts();
+
 	windowInfo.width = (CARD_WIDTH + tableauCardGap) * 7 + 20;
 	windowInfo.height = 500;
 	windowInfo.x = 50;

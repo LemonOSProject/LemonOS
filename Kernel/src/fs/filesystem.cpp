@@ -80,7 +80,7 @@ namespace fs{
 		char* file = strtok(tempPath,"/");
 
 		while(file != NULL){ // Iterate through the directories to find the file
-			fs_node_t* node = current_node->findDir(current_node,file);
+			fs_node_t* node = fs::FindDir(current_node,file);
 			if(!node) {
 				Log::Warning(tempPath);
 				Log::Write(" not found!");
@@ -198,7 +198,7 @@ namespace fs{
 
     fs_node_t* DevFindDir(fs_node_t* node, char* name){
 		if(node == &dev){
-			for(int i = 0; i < deviceCount; i++)
+			for(unsigned i = 0; i < deviceCount; i++)
 				if(strcmp(devices[i]->name, name) == 0) return devices[i];
 		}
 
@@ -216,15 +216,23 @@ namespace fs{
 	}
 
     size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-        if(node && node->read)
+		if(!node) return 0;
+
+		if(node->flags & FS_NODE_SYMLINK) return Read(node->link, offset, size, buffer);
+
+        if(node->read)
             return node->read(node,offset,size,buffer);
-        else return 0;
+		else return 0;
     }
 
     size_t Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-        if(node && node->write)
+		if(!node) return 0;
+
+		if(node->flags & FS_NODE_SYMLINK) return Write(node->link, offset, size, buffer);
+
+        if(node->write)
             return node->write(node,offset,size,buffer);
-        else return 0;
+		else return 0;
     }
 
     fs_fd_t* Open(fs_node_t* node, uint32_t flags){
@@ -257,15 +265,23 @@ namespace fs{
     }
 
     int ReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index){
+		if(!node) return 0;
+
+		if(node->flags & FS_NODE_SYMLINK) return ReadDir(node->link, dirent, index);
+
         if(node->readDir)
             return node->readDir(node, dirent, index);
-        else return 0;
+		else return 0;
     }
 
     fs_node_t* FindDir(fs_node_t* node, char* name){
+		if(!node) return 0;
+
+		if(node->flags & FS_NODE_SYMLINK) return FindDir(node->link, name);
+
         if(node->findDir)
-            return node->findDir(node,name);
-        else return 0;
+            return node->findDir(node, name);
+		else return 0;
     }
 	
     size_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer){
@@ -287,13 +303,13 @@ namespace fs{
 
     int ReadDir(fs_fd_t* handle, fs_dirent_t* dirent, uint32_t index){
         if(handle->node)
-            return handle->node->readDir(handle->node, dirent, index);
+            return ReadDir(handle->node, dirent, index);
         else return 0;
     }
 
     fs_node_t* FindDir(fs_fd_t* handle, char* name){
         if(handle->node)
-            return handle->node->findDir(handle->node,name);
+            return FindDir(handle->node,name);
         else return 0;
     }
 

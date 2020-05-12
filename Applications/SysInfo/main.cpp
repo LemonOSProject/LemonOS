@@ -28,6 +28,7 @@ char versionString[80];
 lemon_sysinfo_t sysInfo;
 
 int main(int argc, char** argv){
+	Lemon::Graphics::InitializeFonts();
     strcpy(winInfo.title, "System Information");
 
     window = Lemon::GUI::CreateWindow(&winInfo);

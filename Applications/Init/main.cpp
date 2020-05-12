@@ -139,7 +139,7 @@ char lastKey;
 
 //#define ENABLE_BACKGROUND_IMAGE
 
-#define ENABLE_FRAMERATE_COUNTER
+//#define ENABLE_FRAMERATE_COUNTER
 #ifdef ENABLE_FRAMERATE_COUNTER
 
 size_t frameCounter;
@@ -295,6 +295,8 @@ int main(){
 	Lemon::Graphics::DrawRect(0,0,fbSurface->width,fbSurface->height,255,0,128, fbSurface);
 
 	syscall(SYS_CREATE_DESKTOP,&windowList,0,0,0,0); // Get Kernel to create Desktop
+	
+	Lemon::Graphics::InitializeFonts();
 
 	FILE* closeButtonFile = fopen("/initrd/close.bmp", "r");
 

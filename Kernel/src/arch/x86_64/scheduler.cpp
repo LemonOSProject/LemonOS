@@ -272,25 +272,7 @@ namespace Scheduler{
 
             char temp[32];
             strcpy(temp, "/initrd/ld.so");
-            char* file = strtok(temp,"/");
-            fs_node_t* node;
-            fs_node_t* current_node = fs::GetRoot();
-            while(file != NULL){
-                node = current_node->findDir(current_node,file);
-                if(!node) {
-                    Log::Warning("Could not not find dynamic linker: ");
-                    Log::Write(linkPath);
-                    linkPath = nullptr;
-                    continue;
-                }
-                if(node->flags & FS_NODE_DIRECTORY){
-                    current_node = node;
-                    file = strtok(NULL, "/");
-                    Log::Warning(file);
-                    continue;
-                }
-                break;
-            }
+            fs_node_t* node = fs::ResolvePath(temp);
             
             Log::Info("Dynamic Linker: ");
             Log::Write(node->name);
@@ -314,6 +296,7 @@ namespace Scheduler{
         for(int i = 0; i < 32; i++){
             Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)_stack + PAGE_SIZE_4K * i, 1, proc->addressSpace);
         }
+        memset(_stack, 0, PAGE_SIZE_4K * 32);
 
         thread->stack = _stack + PAGE_SIZE_4K * 32; // 128KB stack size
         thread->registers.rsp = (uintptr_t)thread->stack;

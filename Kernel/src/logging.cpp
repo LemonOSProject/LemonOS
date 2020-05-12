@@ -67,6 +67,11 @@ namespace Log{
 
 			logDevice.size = logBufferPos;
 		}
+		
+		if(console){
+			console->PrintN(str, n, 255, 255, 255);
+			console->Update();
+		}
 	}
 
 	void Write(const char* str, uint8_t r, uint8_t g, uint8_t b){

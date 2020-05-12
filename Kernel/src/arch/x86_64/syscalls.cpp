@@ -95,7 +95,7 @@ int SysExec(regs64_t* r){
 	}
 
 	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
-	size_t read = current_node->read(current_node, 0, current_node->size, buffer);
+	size_t read = fs::Read(current_node, 0, current_node->size, buffer);
 	if(!read){
 		Log::Warning("Could not read file: %s", current_node->name);
 		return 0;
@@ -272,6 +272,8 @@ int SysMapFB(regs64_t *r){
 	fbInfo.height = vMode.height;
 	fbInfo.bpp = vMode.bpp;
 	fbInfo.pitch = vMode.pitch;
+
+	if(HAL::debugMode) fbInfo.height = vMode.height / 3 * 2;
 
 	Log::Info("Mapping Framebuffer to:");
 	Log::Info(fbVirt);
@@ -567,6 +569,7 @@ int SysGetVideoMode(regs64_t* r){
 	fb_info_t fbInfo;
 	fbInfo.width = vMode.width;
 	fbInfo.height = vMode.height;
+	if(HAL::debugMode) fbInfo.height = vMode.height / 3 * 2;
 	fbInfo.bpp = vMode.bpp;
 	fbInfo.pitch = vMode.pitch;
 
@@ -704,7 +707,7 @@ int SysPRead(regs64_t* r){
 	if(!buffer) { return 1; }
 	uint64_t count = r->rdx;
 	uint64_t off = r->rdi;
-	int ret = node->read(node, off, count, buffer);
+	int ret = fs::Read(node, off, count, buffer);
 	*(int*)r->rsi = ret;
 	return 0;
 }

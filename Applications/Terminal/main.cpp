@@ -276,6 +276,8 @@ void PrintChar(char ch){
 
 extern "C"
 int main(char argc, char** argv){
+	Lemon::Graphics::InitializeFonts();
+	
 	Lemon::GUI::Window* window;
 
 	windowInfo.width = 640;
