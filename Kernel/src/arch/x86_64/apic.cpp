@@ -75,6 +75,6 @@ namespace APIC{
 
         Local::Initialize();
 
-        CPU::InitializeCPU(1);
+        CPU::InitializeSMP();
     }
 }

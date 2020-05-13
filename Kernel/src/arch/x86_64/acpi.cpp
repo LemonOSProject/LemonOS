@@ -69,8 +69,8 @@ namespace ACPI{
 					apic_local_t* localAPIC = (apic_local_t*)entry;
 
 					if(((apic_local_t*)entry)->flags & 0x3) {
-						processors[processorCount++];
-						Log::Info("[ACPI] Found Processor, APIC ID: %d, Enabled: %d", localAPIC->apicID, localAPIC->flags & 0x2);
+						processors[processorCount++] = localAPIC->apicID;
+						Log::Info("[ACPI] Found Processor, APIC ID: %d", localAPIC->apicID);
 					}
 				}
 				break;

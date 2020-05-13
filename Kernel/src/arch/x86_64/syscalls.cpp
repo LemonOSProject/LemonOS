@@ -872,6 +872,26 @@ int SysDestroySharedMemory(regs64_t* r){
 	return 0;
 }
 
+int SysSocket(regs64_t* r){
+
+}
+
+int SysBind(regs64_t* r){
+	
+}
+
+int SysListen(regs64_t* r){
+	
+}
+
+int SysAccept(regs64_t* r){
+	
+}
+
+int SysConnect(regs64_t* r){
+	
+}
+
 syscall_t syscalls[]{
 	/*nullptr*/SysDebug,
 	SysExit,					// 1
@@ -922,6 +942,11 @@ syscall_t syscalls[]{
 	SysMapSharedMemory,
 	SysUnmapSharedMemory,
 	SysDestroySharedMemory,
+	SysSocket,
+	SysBind,
+	SysListen,
+	SysAccept,
+	SysConnect,
 };
 
 namespace Scheduler{extern bool schedulerLock;};

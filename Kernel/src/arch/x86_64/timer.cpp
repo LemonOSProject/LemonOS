@@ -32,6 +32,8 @@ namespace Timer{
 
     // Initialize
     void Initialize(uint32_t freq) {
+        IDT::RegisterInterruptHandler(IRQ0, Handler);
+
         frequency = freq;
         uint32_t divisor = 1193182 / freq;
 
@@ -45,7 +47,5 @@ namespace Timer{
         // Send the frequency divisor.
         outportb(0x40, l);
         outportb(0x40, h);
-
-        IDT::RegisterInterruptHandler(IRQ0, Handler);
     }
 }

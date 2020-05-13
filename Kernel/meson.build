@@ -14,8 +14,15 @@ asmg = generator(nasm,
     arguments : [
         '-f', 'elf64',
         '-g', '-F', 'dwarf', '-w+gnu-elf-extensions',
+        '-i', meson.current_source_dir() + '/src/arch/x86_64/',
         '@INPUT@',
         '-o', '@OUTPUT@'])
+
+
+bintoelf = find_program('bintoelf.sh', './bintoelf.sh')
+bing = generator(bintoelf,
+output : '@BASENAME@.bin.o',
+arguments : ['@INPUT@','@OUTPUT@', meson.current_source_dir() + '/src/arch/x86_64/', '@BASENAME@'])
 
 kernel_cpp_args = ['-Wno-write-strings', '-Wno-pointer-arith',
     '-DLemon64',
@@ -98,6 +105,10 @@ asm_files_x86_64 = [
     'src/arch/x86_64/lock.asm',
 ]
 
+asm_bin_files_x86_64 = [
+    'src/arch/x86_64/smptrampoline.asm',
+]
+
 lai = subproject('lai')
 
 kernel_link_args = [
@@ -109,6 +120,6 @@ kernel_link_args = [
 kernel_link_args += kernel_cpp_args
 
 executable('kernel.sys',
-    [asmg.process(asm_files_x86_64), cpp_files, cpp_files_x86_64, lai.get_variable('sources')],
+    [asmg.process(asm_files_x86_64), bing.process(asm_bin_files_x86_64), cpp_files, cpp_files_x86_64, lai.get_variable('sources')],
     include_directories : [kernel_include_dirs],
     cpp_args : kernel_cpp_args, link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')
