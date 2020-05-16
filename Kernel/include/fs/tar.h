@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdint.h>
-#include <filesystem.h>
-#include <fsvolume.h>
+#include <fs/filesystem.h>
+#include <fs/fsvolume.h>
 
 #define TAR_TYPE_FILE '0'
 #define TAR_TYPE_LINK_HARD '1'

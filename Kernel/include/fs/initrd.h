@@ -1,8 +1,8 @@
 #pragma once
 
 #include <stdint.h>
-#include <filesystem.h>
-#include <fsvolume.h>
+#include <fs/filesystem.h>
+#include <fs/fsvolume.h>
 
 #define LEMONINITFS_FILE        0x01
 #define LEMONINITFS_DIRECTORY   0x02

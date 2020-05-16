@@ -4,7 +4,7 @@
  * 
  */
 
-#include <initrd.h>
+#include <fs/initrd.h>
 
 #include <filesystem.h>
 #include <string.h>
@@ -12,7 +12,7 @@
 #include <logging.h>
 #include <panic.h>
 #include <list.h>
-#include <fsvolume.h>
+#include <fs/fsvolume.h>
 
 namespace Initrd{
 	int ReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index);

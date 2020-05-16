@@ -5,6 +5,7 @@
 #include <hal.h>
 #include <panic.h>
 #include <scheduler.h>
+#include <apic.h>
 
 idt_entry_t idt[256];
 
@@ -113,6 +114,10 @@ void irq15();
 extern "C"
 void isr0x69();
 
+extern "C"
+void ipi0xFD(); // IPI_SCHEDULE
+extern "C"
+void ipi0xFE(); // IPI_HALT
 
 extern "C"
 void idt_flush();
@@ -120,6 +125,13 @@ void idt_flush();
 int errCode = 0;
 
 namespace IDT{
+	void IPIHalt(regs64_t* r){
+		Log::Warning("Received halt IPI, halting processor.");
+
+		asm("cli");
+		asm("hlt");
+	}
+
 	static void SetGate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags, uint8_t ist = 0) {
 		idt[num].base_high = (base >> 32);
 		idt[num].base_med = (base >> 16) & 0xFFFF;
@@ -175,6 +187,8 @@ namespace IDT{
 		SetGate(30, (uint64_t)isr30,0x08,0x8E);
 		SetGate(31, (uint64_t)isr31,0x08,0x8E);
 		SetGate(0x69, (uint64_t)isr0x69, 0x08, 0xEE /* Allow syscalls to be called from user mode*/, 0); // Syscall
+		SetGate(IPI_SCHEDULE, (uint64_t)ipi0xFD,0x08,0x8E);
+		SetGate(IPI_HALT, (uint64_t)ipi0xFE,0x08,0x8E);
 
 		idt_flush();
 
@@ -208,6 +222,8 @@ namespace IDT{
 
 		memset((uint8_t*)&interrupt_handlers, 0, sizeof(isr_t) * 256);
 		__asm__ __volatile__("sti");
+
+		RegisterInterruptHandler(IPI_HALT, IPIHalt);
 	}	
 
 	void RegisterInterruptHandler(uint8_t interrupt, isr_t handler) {
@@ -215,7 +231,16 @@ namespace IDT{
 	}
 
 	void DisablePIC(){
-		outportb(0x21, 0xFF);
+		outportb(0x20, 0x11);
+		outportb(0xA0, 0x11);
+		outportb(0x21, 0xF0); // Remap IRQs on both PICs to 0xF0-0xF8
+		outportb(0xA1, 0xF0);
+		outportb(0x21, 0x04);
+		outportb(0xA1, 0x02);
+		outportb(0x21, 0x01);
+		outportb(0xA1, 0x01);
+
+		outportb(0x21, 0xFF); // Mask all interrupts
 		outportb(0xA1, 0xFF);
 	}
 
@@ -231,8 +256,13 @@ extern "C"
 			interrupt_handlers[int_num](regs);
 		} else if(int_num == 0x69){
 			Log::Warning("\r\nEarly syscall");
-		}
-		else if(!(regs->ss & 0x3)){ // Check the CPL of the segment, caused by kernel?
+		}else if(int_num == IPI_SCHEDULE){
+			Log::Warning("\r\nEarly schedule");
+			LocalAPICEOI();
+		} else if(!(regs->ss & 0x3)){ // Check the CPL of the segment, caused by kernel?
+			// Kernel Panic so tell other processors to stop executing
+			APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_INIT, 0);
+
 			Log::Error("Fatal Exception: ");
 			Log::Info(int_num);
 			Log::Info("RIP: ");
@@ -286,11 +316,22 @@ extern "C"
 
 	extern "C"
 	void irq_handler(int int_num, regs64_t* regs) {
-		if (int_num >= 40) {
-			outportb(0xA0, 0x20);
+		
+		LocalAPICEOI();
+		
+		if (interrupt_handlers[int_num] != 0) {
+			isr_t handler;
+			handler = interrupt_handlers[int_num];
+			handler(regs);
+		} else {
+			// Do nothing for now
 		}
-
-		outportb(0x20, 0x20);
+	}
+	
+	extern "C"
+	void ipi_handler(int int_num, regs64_t* regs) {
+		
+		LocalAPICEOI();
 		
 		if (interrupt_handlers[int_num] != 0) {
 			isr_t handler;

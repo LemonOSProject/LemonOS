@@ -6,7 +6,7 @@
 #include <liballoc.h>
 #include <stdarg.h>
 #include <string.h>
-#include <filesystem.h>
+#include <fs/filesystem.h>
 
 namespace Log{
 
@@ -15,6 +15,8 @@ namespace Log{
 	char* logBuffer = nullptr;
 	size_t logBufferPos = 0;
 	size_t logBufferSize = 0;
+
+	int logLock = 0;
 
     size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 		if(size + offset > logBufferPos) size = logBufferPos - offset;
@@ -134,6 +136,7 @@ namespace Log{
 	}
 
 	void Warning(const char* __restrict fmt, ...){
+		//acquireLock(&logLock);
 		Write("\r\n");
 		Write("[");
 		Write("WARN", 255, 255, 0);
@@ -142,9 +145,11 @@ namespace Log{
 		va_start(args, fmt);
 		WriteF(fmt, args);
 		va_end(args);
+		//releaseLock(&logLock);
     }
 
     void Error(const char* __restrict fmt, ...){
+		releaseLock(&logLock);
 		Write("\r\n");
 		Write("[");
 		Write("ERROR", 255, 0, 0);
@@ -156,6 +161,7 @@ namespace Log{
     }
 
     void Info(const char* __restrict fmt, ...){
+		//acquireLock(&logLock);
 		Write("\r\n");
 		Write("[");
 		Write("INFO");
@@ -164,6 +170,7 @@ namespace Log{
 		va_start(args, fmt);
 		WriteF(fmt, args);
 		va_end(args);
+		//releaseLock(&logLock);
     }
 
     void Warning(const char* str){

@@ -1,5 +1,5 @@
 ;// Use some trickery here
-;/* // GCC will ignore the following code and NASM will ignore the comment start
+;/* GCC will ignore the following code and NASM will ignore the comment start
 SMP_TRAMPOLINE_ENTRY equ 0x2000
 SMP_TRAMPOLINE_DATA_ADDR equ 0x1000
 SMP_TRAMPOLINE_DATA_START_FLAG equ SMP_TRAMPOLINE_DATA_ADDR

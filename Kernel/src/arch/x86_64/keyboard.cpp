@@ -3,6 +3,7 @@
 #include <idt.h>
 #include <logging.h>
 #include <gui.h>
+#include <apic.h>
 
 uint8_t key = 0;
 bool caps = false;
@@ -71,5 +72,6 @@ namespace Keyboard{
     // Register interrupt handler
     void Install() {
         IDT::RegisterInterruptHandler(33, Handler);
+		APIC::IO::MapLegacyIRQ(33);
     }
 }

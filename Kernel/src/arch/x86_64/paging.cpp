@@ -8,6 +8,7 @@
 #include <scheduler.h>
 #include <physicalallocator.h>
 #include <panic.h>
+#include <apic.h>
 
 //extern uint32_t kernel_end;
 
@@ -602,6 +603,9 @@ namespace Memory{
 			Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 			return;
 		};
+
+		// Kernel Panic so tell other processors to stop executing
+		APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_INIT, 0);
 
 		Log::Info("Last syscall: %d", lastSyscall);
 			

@@ -2,6 +2,7 @@
 #include <idt.h>
 #include <scheduler.h>
 #include <system.h>
+#include <apic.h>
 
 namespace Timer{
     uint32_t frequency; // Timer frequency

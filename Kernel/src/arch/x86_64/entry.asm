@@ -13,6 +13,8 @@ global GDT64.TSS.mid
 global GDT64.TSS.high
 global GDT64.TSS.high32
 
+global GDT64Pointer64
+
 MBALIGN     equ 1<<0
 MEMINFO     equ 1<<1
 VIDINFO		equ 1<<2
@@ -90,11 +92,11 @@ GDT64:                           ; Global Descriptor Table (64-bit).
     .high32:
     dd 0                         ; High 32 bits
     dd 0                         ; Reserved
-    .Pointer:                    ; The GDT-pointer.
+GDT64Pointer:                    ; The GDT-pointer.
     dw $ - GDT64 - 1             ; Limit.
     dq GDT64                     ; Base.
-    .Pointer64:                    ; The GDT-pointer.
-    dw .Pointer - GDT64 - 1             ; Limit.
+GDT64Pointer64:                    ; The GDT-pointer.
+    dw GDT64Pointer - GDT64 - 1             ; Limit.
     dq GDT64 + KERNEL_VIRTUAL_BASE; Base.
 
 section .boot.text
@@ -174,7 +176,7 @@ entry:
   or eax, 1 << 31
   mov cr0, eax
 
-  lgdt [GDT64.Pointer]
+  lgdt [GDT64Pointer]
   jmp 0x8:entry64 - KERNEL_VIRTUAL_BASE
 BITS 64
 
@@ -199,7 +201,7 @@ BITS 64
 section .text
 entry64:
 
-  lgdt [GDT64.Pointer64]
+  lgdt [GDT64Pointer64]
 
   mov ax, 0x10
   mov ds, ax

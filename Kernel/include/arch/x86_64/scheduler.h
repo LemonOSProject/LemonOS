@@ -4,7 +4,7 @@
 #include <paging.h>
 #include <system.h>
 #include <list.h>
-#include <filesystem.h>
+#include <fs/filesystem.h>
 #include <memory.h>
 
 #define PROCESS_STATE_SUSPENDED 0
@@ -63,8 +63,6 @@ typedef struct process {
 } process_t;
 
 namespace Scheduler{
-	extern process_t* currentProcess;
-	extern int lock;
 
     process_t* CreateProcess(void* entry);
 	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr, int envc = 0, char** envp = nullptr);

@@ -7,7 +7,6 @@
 #include <liballoc.h>
 #include <timer.h>
 #include <math.h>
-#include <initrd.h>
 #include <mouse.h>
 #include <keyboard.h>
 #include <pci.h>
@@ -21,7 +20,7 @@
 #include <xhci.h>
 #include <devicemanager.h>
 #include <gui.h>
-#include <tar.h>
+#include <fs/tar.h>
 #include <sharedmem.h>
 
 uint8_t* progressBuffer;

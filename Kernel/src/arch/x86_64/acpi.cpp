@@ -7,6 +7,8 @@
 #include <pci.h>
 #include <liballoc.h>
 #include <timer.h>
+#include <apic.h>
+#include <list.h>
 
 #include <lai/core.h>
 #include <lai/helpers/pm.h>
@@ -17,6 +19,8 @@ namespace ACPI{
 	int processorCount = 0;
 
 	const char* signature = "RSD PTR ";
+
+	List<apic_iso_t*>* isos;
 
 	acpi_rsdp_t* desc;
 	acpi_rsdt_t* rsdtHeader;
@@ -75,16 +79,23 @@ namespace ACPI{
 				}
 				break;
 			case 1:
-				//apic_io_t* ioAPIC = (apic_io_t*)entry;
+				{
+					apic_io_t* ioAPIC = (apic_io_t*)entry;
+					Log::Info("[ACPI] Found I/O APIC, Address: %x", ioAPIC->address);
+					APIC::IO::SetBase(ioAPIC->address);
+				}
 				break;
 			case 2:
 				{
 					apic_iso_t* interruptSourceOverride = (apic_iso_t*)entry;
-					Log::Info("[ACPI] Interrupt Source Override, IRQ: %d, GSI: %d", interruptSourceOverride->irqSource, interruptSourceOverride->gSI);
+					isos->add_back(interruptSourceOverride);
 				}
 				break;
 			case 4:
-				//apic_nmi_t* nonMaskableInterrupt = (apic_nmi_t*)entry;
+				{
+					apic_nmi_t* nonMaskableInterrupt = (apic_nmi_t*)entry;
+					Log::Info("[ACPI] Found NMI, LINT #%d", nonMaskableInterrupt->lINT);
+				}
 				break;
 			case 5:
 				//apic_local_address_override_t* addressOverride = (apic_local_address_override_t*)entry;
@@ -132,6 +143,8 @@ namespace ACPI{
 		}
 
 		success:
+
+		isos = new List<apic_iso_t*>();
 
 		rsdtHeader = ((acpi_rsdt_t*)Memory::GetIOMapping(desc->rsdt));
 

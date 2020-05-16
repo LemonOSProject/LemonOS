@@ -1,6 +1,10 @@
 #include <stdint.h>
 
-namespace CPU{
+#include <cpu.h>
+
+namespace SMP{
+    extern CPU* cpus[];
+
     void InitializeCPU(uint16_t id);
-    void InitializeSMP();
+    void Initialize();
 }

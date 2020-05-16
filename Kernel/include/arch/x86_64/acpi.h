@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <acpispec/tables.h>
+#include <list.h>
 
 typedef struct MADT{
   acpi_header_t header;
@@ -53,6 +54,8 @@ typedef struct LocalAPICAddressOverride { // Local APIC Address Override - Type 
 namespace ACPI{
   extern uint8_t processors[];
   extern int processorCount;
+  
+	extern List<apic_iso_t*>* isos;
 
 	extern acpi_rsdp_t* desc;
 	extern acpi_rsdt_t* rsdtHeader;

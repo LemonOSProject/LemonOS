@@ -3,7 +3,6 @@
 #include <idt.h>
 #include <scheduler.h>
 #include <logging.h>
-#include <initrd.h>
 #include <video.h>
 #include <hal.h>
 #include <fb.h>
@@ -259,13 +258,13 @@ int SysTime(regs64_t* r){
 int SysMapFB(regs64_t *r){
 	video_mode_t vMode = Video::GetVideoMode();
 
-	uintptr_t fbVirt = (uintptr_t)Memory::Allocate4KPages(vMode.height*vMode.pitch/PAGE_SIZE_4K + 2, Scheduler::currentProcess->addressSpace);
-	Memory::MapVirtualMemory4K(HAL::multibootInfo.framebufferAddr,fbVirt,vMode.height*vMode.pitch/PAGE_SIZE_4K + 2,Scheduler::currentProcess->addressSpace);
+	uintptr_t fbVirt = (uintptr_t)Memory::Allocate4KPages(vMode.height*vMode.pitch/PAGE_SIZE_4K + 2, Scheduler::GetCurrentProcess()->addressSpace);
+	Memory::MapVirtualMemory4K(HAL::multibootInfo.framebufferAddr,fbVirt,vMode.height*vMode.pitch/PAGE_SIZE_4K + 2,Scheduler::GetCurrentProcess()->addressSpace);
 
 	mem_region_t memR;
 	memR.base = fbVirt;
 	memR.pageCount = vMode.height*vMode.pitch/PAGE_SIZE_4K + 2;
-	Scheduler::currentProcess->sharedMemory.add_back(memR);
+	Scheduler::GetCurrentProcess()->sharedMemory.add_back(memR);
 
 	fb_info_t fbInfo;
 	fbInfo.width = vMode.width;
@@ -292,9 +291,9 @@ int SysAlloc(regs64_t* r){
 	uint64_t pageCount = r->rbx;
 	uintptr_t* addressPointer = (uintptr_t*)r->rcx;
 
-	uintptr_t address = (uintptr_t)Memory::Allocate4KPages(pageCount, Scheduler::currentProcess->addressSpace);
+	uintptr_t address = (uintptr_t)Memory::Allocate4KPages(pageCount, Scheduler::GetCurrentProcess()->addressSpace);
 	for(unsigned i = 0; i < pageCount; i++){
-		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),address + i * PAGE_SIZE_4K,1,Scheduler::currentProcess->addressSpace);
+		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),address + i * PAGE_SIZE_4K,1,Scheduler::GetCurrentProcess()->addressSpace);
 		memset((void*)(address + i * PAGE_SIZE_4K), 0, PAGE_SIZE_4K);
 	}
 
@@ -611,7 +610,7 @@ int SysReadDir(regs64_t* r){
 }
 
 int SysSetFsBase(regs64_t* r){
-	asm("wrmsr" :: "a"(r->rbx & 0xFFFFFFFF) /*Value low*/, "b"((r->rbx >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
+	asm("wrmsr" :: "a"(r->rbx & 0xFFFFFFFF) /*Value low*/, "d"((r->rbx >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
 	return 0;
 }
 
@@ -631,7 +630,7 @@ int SysMmap(regs64_t* r){
 	} else _address = (uintptr_t)Memory::Allocate4KPages(count, Scheduler::GetCurrentProcess()->addressSpace);
 
 	for(size_t i = 0; i < count; i++){
-		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), _address + i * PAGE_SIZE_4K, 1, Scheduler::currentProcess->addressSpace);
+		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), _address + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
 		memset((void*)(_address + i * PAGE_SIZE_4K), 0, PAGE_SIZE_4K);
 	}
 
@@ -948,8 +947,6 @@ syscall_t syscalls[]{
 	SysAccept,
 	SysConnect,
 };
-
-namespace Scheduler{extern bool schedulerLock;};
 
 int lastSyscall = 0;
 void SyscallHandler(regs64_t* regs) {

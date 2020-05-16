@@ -2,6 +2,8 @@ BITS 64
 
 extern isr_handler
 extern irq_handler
+extern ipi_handler
+extern LocalAPICEOI
 
 global idt_flush
 
@@ -80,6 +82,19 @@ idt_flush:
         iretq
 %endmacro
 
+%macro IPI 1
+	global ipi%1
+	ipi%1:
+		cli
+        pushaq
+        mov rdi, %1
+        mov rsi, rsp
+        xor rdx, rdx
+        call ipi_handler
+        popaq
+        iretq
+%endmacro
+
 %macro IRQ 2
   global irq%1
   irq%1:
@@ -127,6 +142,8 @@ ISR_ERROR_CODE 30
 ISR_NO_ERROR_CODE 31
 ISR_NO_ERROR_CODE 32
 ISR_NO_ERROR_CODE 0x69 ; Syscall
+IPI 0xFD ; IPI_SCHEDULE
+IPI 0xFE ; IPI_HALT
 
 IRQ 0, 32
 IRQ 1, 33

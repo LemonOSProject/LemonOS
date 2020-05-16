@@ -5,6 +5,9 @@
 
 #define IRQ0 32
 
+#define IPI_HALT 0xFE
+#define IPI_SCHEDULE 0xFD
+
 typedef struct {
 	uint16_t base_low;
 	uint16_t sel;
@@ -21,6 +24,9 @@ typedef struct {
 } __attribute__((packed)) idt_ptr_t;
 
 typedef void(*isr_t)(regs64_t*);
+
+extern "C" void idt_flush();
+
 namespace IDT{
 	void Initialize();
 	void RegisterInterruptHandler(uint8_t interrupt, isr_t handler);

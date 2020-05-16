@@ -26,7 +26,7 @@ mov cr0, eax
 
 lgdt [SMP_TRAMPOLINE_GDT_PTR]
 
-jmp 0x08:smpentry64 + SMP_TRAMPOLINE_ENTRY
+jmp 0x08:(smpentry64 + SMP_TRAMPOLINE_ENTRY)
 
 hlt
 

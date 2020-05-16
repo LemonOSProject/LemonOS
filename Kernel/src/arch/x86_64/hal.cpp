@@ -13,6 +13,7 @@
 #include <tss.h>
 #include <apic.h>
 #include <liballoc.h>
+#include <smp.h>
 
 namespace HAL{
     memory_info_t mem_info;
@@ -73,9 +74,6 @@ namespace HAL{
             
         }
 
-        // Initialize Task State Segment (and Interrupt Stack Tables)
-        TSS::Initialize();
-
         Log::Info("Initializing System Timer...");
         Timer::Initialize(1000);
         Log::Write("OK");
@@ -111,6 +109,10 @@ namespace HAL{
         
         Log::Info("Initializing Local and I/O APIC...");
         APIC::Initialize();
+        Log::Write("OK");
+        
+        Log::Info("Initializing SMP...");
+        SMP::Initialize();
         Log::Write("OK");
     }
 

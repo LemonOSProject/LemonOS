@@ -40,19 +40,41 @@
 #define ICR_MESSAGE_TYPE_STARTUP (6 << 8)
 #define ICR_MESSAGE_TYPE_EXTERNAL (7 << 8)
 
+#define ICR_DSH_DEST 0          // Use destination field
+#define ICR_DSH_SELF (1 << 18)  // Send to self
+#define ICR_DSH_ALL (2 << 18)   // Send to ALL APICs
+#define ICR_DSH_OTHER (3 << 18) // Send to all OTHER APICs 
+
+#define IO_APIC_REGSEL 0x00 // I/O APIC Register Select Address Offset
+#define IO_APIC_WIN 0x10 // I/O APIC I/O Window Address offset
+
+#define IO_APIC_REGISTER_ID 0x0 // ID Register
+#define IO_APIC_REGISTER_VER 0x1 // Version Register
+#define IO_APIC_REGISTER_ARB 0x2 // I/O APIC Arbitration ID
+#define IO_APIC_RED_TABLE_START 0x10 // I/O APIC Redirection Table Start
+#define IO_APIC_RED_TABLE_ENT(x) (0x10 + 2 * x)
+
+#define IO_RED_TBL_VECTOR(x) (x & 0xFF)
+
 namespace APIC{
     namespace Local{
         int Initialize();
+        void Enable();
 
         volatile uint32_t Read(uint32_t off);
         void Write(uint32_t off, uint32_t val);
 
-        void SendIPI(uint8_t apicID, uint32_t type, uint8_t vector);
+        void SendIPI(uint8_t apicID, uint32_t dsh, uint32_t type, uint8_t vector);
     }
 
     namespace IO{
+        int Initialize();
 
+        void SetBase(uintptr_t newBase);
+        void MapLegacyIRQ(uint8_t irq);
     }
 
     int Initialize();
 }
+
+extern "C" void LocalAPICEOI();

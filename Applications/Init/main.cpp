@@ -106,6 +106,11 @@ int keymap_us[128] =
 	0,	/* F11 Key */
 	0,	/* F12 Key */
 	0,	/* All other keys are undefined */
+	0,
+	0,
+	0,  /* 90 */
+	0,  /* Left GUI key */
+	0,  /* Right GUI key */
 };
 
 struct Window_s{
@@ -139,7 +144,7 @@ char lastKey;
 
 //#define ENABLE_BACKGROUND_IMAGE
 
-//#define ENABLE_FRAMERATE_COUNTER
+#define ENABLE_FRAMERATE_COUNTER
 #ifdef ENABLE_FRAMERATE_COUNTER
 
 size_t frameCounter;

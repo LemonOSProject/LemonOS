@@ -1,5 +1,7 @@
 #include <system.h>
 #include <serial.h>
+#include <string.h>
+#include <lock.h>
 
 #define PORT 0x3F8 // COM 1
 
@@ -17,7 +19,7 @@ int is_transmit_empty() {
 	return inportb(PORT + 5) & 0x20;
 }
 
-bool lock = false;
+int lock = 0;
 
 void write_serial(const char c) {
 	while (is_transmit_empty() == 0);
@@ -26,16 +28,16 @@ void write_serial(const char c) {
 }
 
 void write_serial(const char* s) {
-	while (*s != '\0'){
-		while(is_transmit_empty() == 0);
-		outportb(PORT, *s++);
-	}
+	write_serial_n(s, strlen(s));
 }
 
 void write_serial_n(const char* s, unsigned long long n) {
 	int i = 0;
+
+	acquireLock(&lock); // Make the serial output readable
 	while (i++ < n){
 		while(is_transmit_empty() == 0);
 		outportb(PORT, *s++);
 	}
+	releaseLock(&lock);
 }

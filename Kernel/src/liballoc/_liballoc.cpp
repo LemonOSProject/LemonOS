@@ -11,12 +11,12 @@ volatile int liballocLock;
 
 extern "C" {
 int liballoc_lock() {
-	asm("cli");// TODO: Fix Deadlock here acquireLock(&liballocLock);
+	acquireLock(&liballocLock);
 	return 0;
 }
 
 int liballoc_unlock() {
-	asm("sti");//releaseLock(&liballocLock);
+	releaseLock(&liballocLock);
 	return 0;
 }
 

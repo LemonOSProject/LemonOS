@@ -2,10 +2,11 @@
 
 #include <idt.h>
 #include <stddef.h>
-#include <filesystem.h>
+#include <fs/filesystem.h>
 #include <string.h>
 #include <system.h>
 #include <logging.h>
+#include <apic.h>
 
 namespace Mouse{
 	int8_t mouseData[3];
@@ -95,6 +96,7 @@ namespace Mouse{
 		Read();
 
 		IDT::RegisterInterruptHandler(IRQ0 + 12, Handler);
+		APIC::IO::MapLegacyIRQ(IRQ0 + 12);
 	}
 
 	int8_t* GetData() {

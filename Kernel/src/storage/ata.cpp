@@ -8,6 +8,7 @@
 #include <memory.h>
 #include <idt.h>
 #include <devicemanager.h>
+#include <apic.h>
 
 namespace ATA{
 
@@ -103,6 +104,7 @@ namespace ATA{
 		Log::Write(busMasterPort);
 
 		IDT::RegisterInterruptHandler(IRQ0 + 14, IRQHandler);
+		APIC::IO::MapLegacyIRQ(IRQ0 + 14);
 
 		for(int i = 0; i < 2; i++){ // Port
 			WriteControlRegister(i, 0, ReadControlRegister(i, 0) | 4); // Software Reset

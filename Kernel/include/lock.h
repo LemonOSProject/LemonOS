@@ -7,29 +7,13 @@
 
 #define CHECK_DEADLOCK
 #ifdef CHECK_DEADLOCK
-#define acquireLock(lock) ({ asm volatile(" xor %%rax, %%rax; start%=:;\
-    lock btsl $0, %0; \
-    jnc exit%=; \
-    spin%=:; \
-    pause; \
-    inc %%rax; \
-    cmpq $0xFFFFFFF, %%rax; \
-    jg int%=; \
-    testl $1, %0; \
-    jnz spin%=; \
-    jmp start%=; \
-    int%=:; int $0x0; \
-    exit%=:; " : "+m"(*lock) : "a"(0): "memory"); })
+#define acquireLock(lock) ({ \
+    unsigned i = 0; \
+    while(__sync_lock_test_and_set(lock, 1) && ++i < 0xFFFFFFF); \
+    if( i >= 0xFFFFFFF) asm volatile("int $0x0"); \
+    })
 #else
-#define acquireLock(lock) ({ asm volatile(" start%=:;\
-    lock btsl $0, %0; \
-    jnc exit%=; \
-    spin%=:; \
-    pause; \
-    testl $1, %0; \
-    jnz spin%=; \
-    jmp start%=; \
-    exit%=:; " : "+m"(*lock) :: "memory"); })
+#define acquireLock(lock) ({while(__sync_lock_test_and_set(lock, 1));})
 #endif
 
-#define releaseLock(lock) (*lock) = 0;
+#define releaseLock(lock) ({ __sync_lock_release(lock); });

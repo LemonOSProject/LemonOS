@@ -95,18 +95,18 @@ diff -ruN gcc-8.2.0/gcc/config.gcc lemon-gcc/gcc/config.gcc
 diff -ruN gcc-8.2.0/libgcc/config.host lemon-gcc/libgcc/config.host
 --- gcc-8.2.0/libgcc/config.host	2020-04-28 22:27:24.210769500 +1000
 +++ lemon-gcc/libgcc/config.host	2018-04-07 06:04:17.000000000 +1000
-@@ -641,14 +641,6 @@
+@@ -641,6 +641,14 @@
  	;;
  x86_64-*-openbsd*)
  	;;
--i[34567]86-*-lemon*)
--	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
--	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
--	;;
--x86_64-*-lemon*)
--	extra_parts="$extra_parts crti.o crtbegin.o crtbeginS.o crtend.o crtendS.o crtn.o"
--	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic t-slibgcc t-slibgcc-gld t-slibgcc-elf-ver t-libgcc-pic"
--	;;
++i[34567]86-*-lemon*)
++	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
++	;;
++x86_64-*-lemon*)
++	extra_parts="$extra_parts crti.o crtbegin.o crtbeginS.o crtend.o crtendS.o crtn.o"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic t-slibgcc t-slibgcc-gld t-slibgcc-elf-ver t-libgcc-pic"
++	;;
  i[34567]86-*-linux*)
  	extra_parts="$extra_parts crtprec32.o crtprec64.o crtprec80.o crtfastmath.o"
  	tmake_file="${tmake_file} i386/t-crtpc t-crtfm i386/t-crtstuff t-dfprules"

@@ -1,9 +1,9 @@
 #include <device.h>
 
-#include <fat32.h>
+#include <fs/fat32.h>
 
 int DiskDevice::InitializePartitions(){
-    char letter = 'a';
+    static char letter = 'a';
     for(int i = 0; i < partitions.get_length(); i++){
         if(fs::FAT32::Identify(partitions.get_at(i))) {
             char name[] =  {'h', 'd', letter++, 0};
