@@ -132,6 +132,10 @@ namespace APIC{
 
         void MapLegacyIRQ(uint8_t irq){
             Log::Info("[APIC] Mapping Legacy IRQ, IRQ: %d", irq);
+            for(int i = 0; i < ACPI::isos->get_length(); i++){
+                apic_iso_t* iso = ACPI::isos->get_at(i);
+                if(iso->irqSource == irq) return; // We should have already redirected this IRQ
+            }
             Redirect(irq, irq + 0x20, 0);
         }
     }

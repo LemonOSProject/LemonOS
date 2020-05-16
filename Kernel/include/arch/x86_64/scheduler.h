@@ -20,15 +20,24 @@ typedef struct HandleIndex {
 	handle_t handle;
 } handle_index_t;
 
-typedef struct {
+typedef struct thread {
 	process* parent; // Parent Process
 	void* stack; // Pointer to the initial stack
 	void* stackLimit; // The limit of the stack
 	void* kernelStack; // Kernel Stack
+	uint32_t timeSlice;
+	uint32_t timeSliceDefault;
+	regs64_t registers;  // Registers
+	void* fxState; // State of the extended registers
+
+	thread* next; // Next thread in queue
+	thread* prev; // Previous thread in queue
+	
 	uint8_t priority; // Thread priority
 	uint8_t state; // Thread state
-	regs64_t registers;  // Registers
-} __attribute__((packed)) thread_t;
+
+	uint64_t fsBase;
+} thread_t;
 
 typedef struct {
 	uint64_t senderPID; // PID of Sender
@@ -36,27 +45,20 @@ typedef struct {
 	uint64_t msg; // ID of message
 	uint64_t data; // Message Data
 	uint64_t data2;
-} __attribute__((packed)) message_t;
+} message_t;
 
 typedef struct process {
 	pid_t pid; // PID
-	uint8_t priority; // Process Priority
 	address_space_t* addressSpace; // Pointer to page directory and tables
 	List<mem_region_t> sharedMemory; // Used to ensure these memory regions don't get freed when a process is terminated
 	uint8_t state; // Process state
-	//thread_t* threads; // Array of threads
-	thread_t threads[1];
-	uint32_t thread_count; // Amount of threads
-	uint32_t timeSlice;
-	uint32_t timeSliceDefault;
-	process* next;
+	thread_t* threads;
+	uint32_t threadCount; // Amount of threads
 
 	process* parent;
 	List<process*> children;
 
 	char workingDir[PATH_MAX];
-
-	void* fxState; // State of the extended registers
 
 	List<fs_fd_t*> fileDescriptors;
 	List<message_t> messageQueue;

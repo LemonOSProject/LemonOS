@@ -18,5 +18,5 @@ public:
     size_t Read(char* buffer, size_t count);
 
 private:
-    int lock = 0;
+    volatile int lock = 0;
 };

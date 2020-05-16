@@ -82,7 +82,8 @@ namespace ACPI{
 				{
 					apic_io_t* ioAPIC = (apic_io_t*)entry;
 					Log::Info("[ACPI] Found I/O APIC, Address: %x", ioAPIC->address);
-					APIC::IO::SetBase(ioAPIC->address);
+					if(!ioAPIC->gSIB)
+						APIC::IO::SetBase(ioAPIC->address);
 				}
 				break;
 			case 2:
@@ -112,7 +113,7 @@ namespace ACPI{
 	}
 
 	void Init(){
-		for(int i = 0; i <= 0x1000; i += 16){ // Search first KB for RSDP, the RSDP is aligned on a 16 byte boundary
+		for(int i = 0; i <= 0x7BFF; i += 16){ // Search first KB for RSDP, the RSDP is aligned on a 16 byte boundary
 			if(memcmp((void*)Memory::GetIOMapping(i),signature,8) == 0){
 				desc =  ((acpi_rsdp_t*)Memory::GetIOMapping(i));
 
@@ -138,8 +139,8 @@ namespace ACPI{
 
 		{
 		const char* panicReasons[]{"System not ACPI Complaiant."};
-		//KernelPanic(panicReasons,1);
-		return;
+		KernelPanic(panicReasons,1);
+		//return;
 		}
 
 		success:

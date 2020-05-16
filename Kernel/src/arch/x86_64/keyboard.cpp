@@ -71,7 +71,7 @@ namespace Keyboard{
 
     // Register interrupt handler
     void Install() {
-        IDT::RegisterInterruptHandler(33, Handler);
-		APIC::IO::MapLegacyIRQ(33);
+        IDT::RegisterInterruptHandler(IRQ0 + 1, Handler);
+		APIC::IO::MapLegacyIRQ(1);
     }
 }

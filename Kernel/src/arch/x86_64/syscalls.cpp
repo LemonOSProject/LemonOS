@@ -13,6 +13,7 @@
 #include <lock.h>
 #include <lemon.h>
 #include <sharedmem.h>
+#include <cpu.h>
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -610,7 +611,8 @@ int SysReadDir(regs64_t* r){
 }
 
 int SysSetFsBase(regs64_t* r){
-	asm("wrmsr" :: "a"(r->rbx & 0xFFFFFFFF) /*Value low*/, "d"((r->rbx >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
+	asm volatile ("wrmsr" :: "a"(r->rbx & 0xFFFFFFFF) /*Value low*/, "d"((r->rbx >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
+	GetCPULocal()->currentThread->fsBase = r->rbx;
 	return 0;
 }
 

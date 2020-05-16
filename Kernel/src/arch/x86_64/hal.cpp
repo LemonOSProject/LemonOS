@@ -14,6 +14,7 @@
 #include <apic.h>
 #include <liballoc.h>
 #include <smp.h>
+#include <videoconsole.h>
 
 namespace HAL{
     memory_info_t mem_info;
@@ -23,6 +24,7 @@ namespace HAL{
     boot_module_t bootModules[32];
     int bootModuleCount;
     bool debugMode = false;
+    VideoConsole* con;
 
     void InitCore(multiboot_info_t mb_info){ // ALWAYS call this first
         multibootInfo = mb_info;
@@ -96,6 +98,13 @@ namespace HAL{
 
         Video::Initialize(videoMode);
         Video::DrawString("Starting Lemon x64...", 0, 0, 255, 255, 255);
+
+        Log::SetVideoConsole(NULL);
+
+        if(debugMode){
+            con = new VideoConsole(0, (videoMode.height / 3) * 2, videoMode.width, videoMode.height / 3);
+            Log::SetVideoConsole(con);
+        }
     }
 
     void InitExtra(){

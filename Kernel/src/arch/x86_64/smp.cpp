@@ -36,7 +36,7 @@ namespace SMP{
         Log::Info("[SMP] Hello from CPU #%d", id);
 
         CPU* cpu = cpus[id];
-        cpu->currentProcess = nullptr;
+        cpu->currentThread = nullptr;
         SetCPULocal(cpu);
         
         cpu->gdt = Memory::KernelAllocate4KPages(1);//kmalloc(GDT64Pointer64.limit + 1); // Account for the 1 subtracted from limit
@@ -101,7 +101,7 @@ namespace SMP{
         cpus[0]->id = 0;
         cpus[0]->gdt = (void*)GDT64Pointer64.base;
         cpus[0]->gdtPtr = GDT64Pointer64;
-        cpus[0]->currentProcess = nullptr;
+        cpus[0]->currentThread = nullptr;
         SetCPULocal(cpus[0]);
 
         PrepareTrampoline();

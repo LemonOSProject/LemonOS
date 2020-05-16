@@ -3,7 +3,6 @@
 #include <string.h>
 #include <hal.h>
 #include <video.h>
-#include <videoconsole.h>
 #include <liballoc.h>
 #include <timer.h>
 #include <math.h>
@@ -25,10 +24,16 @@
 
 uint8_t* progressBuffer;
 video_mode_t videoMode;
-VideoConsole* con;
 
 extern "C"
 void IdleProcess(){
+	for(;;) {
+		Scheduler::Yield();
+		asm("hlt");
+	}
+}
+
+void KernelProcess(){
 	asm("sti");
 
 	Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
@@ -88,12 +93,6 @@ void kmain(multiboot_info_t* mb_info){
 	HAL::Init(*mb_info);
 
 	videoMode = Video::GetVideoMode();
-	Log::SetVideoConsole(NULL);
-
-	if(HAL::debugMode){
-		con = new VideoConsole(0, (videoMode.height / 3) * 2, videoMode.width, videoMode.height / 3);
-		Log::SetVideoConsole(con);
-	}
 
 	Memory::InitializeSharedMemory();
 

@@ -16,6 +16,7 @@
 #include <lock.h>
 #include <smp.h>
 #include <apic.h>
+#include <acpi.h>
 
 #define INITIAL_HANDLE_TABLE_SIZE 0xFFFF
 
@@ -24,55 +25,72 @@ uint64_t processPML4;
 extern "C" void TaskSwitch(regs64_t* r);
 
 extern "C"
-uintptr_t ReadRIP();
-
-extern "C"
 void IdleProc();
+
+void KernelProcess();
 
 namespace Scheduler{
     int schedulerLock = 0;
     bool schedulerReady = false;
 
-    process_t* processes;
+    List<process_t*>* processes;
     unsigned processTableSize = 512;
     uint64_t nextPID = 0;
 
-    process_t* readyQueue = nullptr;
-    thread_t* ranQueue = nullptr;
+    FastList<thread_t*>* readyQueue = nullptr;
+    FastList<thread_t*>* ranQueue = nullptr;
 
     handle_t handles[INITIAL_HANDLE_TABLE_SIZE];
     uint64_t handleCount = 1; // We don't want null handles
     uint32_t handleTableSize = INITIAL_HANDLE_TABLE_SIZE;
     
     void Schedule(regs64_t* r);
+    
+    inline void InsertThreadIntoQueue(thread_t* proc){
+        readyQueue->add_back(proc);
+    }
+
+    inline void RemoveThreadFromQueue(thread_t* proc){
+        readyQueue->remove(proc);
+    }
 
     void Initialize() {
         memset(handles, 0, handleTableSize);
 
-        processes = (process_t*)kmalloc(sizeof(process_t*));
+        processes = new List<process_t*>();
+
+        readyQueue = new FastList<thread_t*>();
+        ranQueue = new FastList<thread_t*>();
 
         CPU* cpu = GetCPULocal();
         Log::Info("CPU local: %x", cpu);
 
-        process_t* proc = CreateProcess((void*)IdleProc);
-        cpu->currentProcess = proc;
+        for(int i = 0; i < ACPI::processorCount; i++) CreateProcess((void*)IdleProc);
+
+        process_t* proc = CreateProcess((void*)KernelProcess);
+        cpu->currentThread = &proc->threads[0];
+
+        RemoveThreadFromQueue(cpu->currentThread);
         
-        processPML4 = cpu->currentProcess->addressSpace->pml4Phys;
-        asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)cpu->currentProcess->fxState) : "memory");
+        processPML4 = cpu->currentThread->parent->addressSpace->pml4Phys;
+        asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 
         asm("cli");
         IDT::RegisterInterruptHandler(IPI_SCHEDULE, Schedule);
 
-        TSS::SetKernelStack(&SMP::cpus[0]->tss, (uintptr_t)cpu->currentProcess->threads[0].kernelStack);
+        TSS::SetKernelStack(&SMP::cpus[0]->tss, (uintptr_t)cpu->currentThread->kernelStack);
 
         schedulerReady = true;
-        TaskSwitch(&cpu->currentProcess->threads[0].registers);
+        TaskSwitch(&cpu->currentThread->registers);
         for(;;);
     }
 
     process_t* GetCurrentProcess(){ 
         CPU* cpu = GetCPULocal();
-        return cpu->currentProcess;
+
+        if(cpu->currentThread)
+            return cpu->currentThread->parent;
+        else return nullptr;
     }
 
     handle_t RegisterHandle(void* pointer){
@@ -92,17 +110,11 @@ namespace Scheduler{
     }
 
     process_t* FindProcessByPID(uint64_t pid){
-        if(!readyQueue) return NULL;
-        
-        process_t* proc = readyQueue;
-        if(pid == proc->pid) return proc;
-        proc = proc->next;
-
-        while (proc != readyQueue && proc){
-            if(pid == proc->pid) return proc;
-            proc = proc->next;
+        for(unsigned i = 0; i < processes->get_length(); i++){
+            if(processes->get_at(i)->pid == pid) return processes->get_at(i);
         }
-        return NULL;
+
+        return nullptr;
     }
 
     int SendMessage(message_t msg){
@@ -129,36 +141,6 @@ namespace Scheduler{
         return proc->messageQueue.remove_at(0);
     }
 
-    void InsertProcessIntoQueue(process_t* proc){
-        CPU* cpu = GetCPULocal();
-        if(!readyQueue){ // If queue is empty, add the process and link to itself
-            readyQueue = proc;
-            proc->next = proc;
-            cpu->currentProcess = proc;
-        }
-        else if(readyQueue->next){ // More than 1 process in queue?
-            proc->next = readyQueue->next;
-            readyQueue->next = proc;
-        } else { // If here should only be one process in queue
-            readyQueue->next = proc;
-            proc->next = readyQueue;
-        }
-    }
-
-    void RemoveProcessFromQueue(process_t* proc){
-        process_t* _proc = proc->next;
-        process_t* nextProc = proc->next;
-
-        while(_proc->next && _proc != proc){
-            if(_proc->next == proc){
-                _proc->next = nextProc;
-                break;
-            }
-
-            _proc = _proc->next;
-        }
-    }
-
     process_t* InitializeProcessStructure(){
 
         // Create process structure
@@ -168,30 +150,31 @@ namespace Scheduler{
 
         proc->fileDescriptors.clear();
 
+        proc->threads = (thread_t*)kmalloc(sizeof(thread_t) * 1);
+
         // Reserve 3 file descriptors for stdin, out and err
         fs_node_t* nullDev = fs::ResolvePath("/dev/null");
         proc->fileDescriptors.add_back(fs::Open(nullDev));  //(NULL);
         proc->fileDescriptors.add_back(fs::Open(nullDev));  //(NULL);
         proc->fileDescriptors.add_back(fs::Open(nullDev));  //(NULL);
-
-        proc->pid = nextPID++; // Set Process ID to the next availiable
-        proc->priority = 1;
-        proc->thread_count = 1;
         proc->state = PROCESS_STATE_ACTIVE;
-        proc->thread_count = 1;
+        proc->threadCount = 1;
+        proc->parent = nullptr;
 
         proc->addressSpace = Memory::CreateAddressSpace();// So far this function is only used for idle task, we don't need an address space
-        proc->timeSliceDefault = 1;
-        proc->timeSlice = proc->timeSliceDefault;
-
-        proc->next = NULL;
+        proc->pid = nextPID++; // Set Process ID to the next availiable
 
         // Create structure for the main thread
         thread_t* thread = proc->threads;
 
         thread->stack = 0;
-        thread->parent = proc;
         thread->priority = 1;
+        thread->timeSliceDefault = 1;
+        thread->timeSlice = thread->timeSliceDefault;
+        thread->fsBase = 0;
+
+        thread->next = nullptr;
+        thread->prev = nullptr;
         thread->parent = proc;
 
         regs64_t* registers = &thread->registers;
@@ -200,9 +183,9 @@ namespace Scheduler{
         registers->cs = 0x08; // Kernel CS
         registers->ss = 0x10; // Kernel SS
 
-        proc->fxState = Memory::KernelAllocate4KPages(1); // Allocate Memory for the FPU/Extended Register State
-        Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)proc->fxState, 1);
-        memset(proc->fxState, 0, 1024);
+        thread->fxState = Memory::KernelAllocate4KPages(1); // Allocate Memory for the FPU/Extended Register State
+        Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)thread->fxState, 1);
+        memset(thread->fxState, 0, 1024);
 
         void* kernelStack = (void*)Memory::KernelAllocate4KPages(24); // Allocate Memory For Kernel Stack
         for(int i = 0; i < 24; i++){
@@ -210,9 +193,9 @@ namespace Scheduler{
         }
         thread->kernelStack = kernelStack + PAGE_SIZE_4K * 24;
 
-        ((fx_state_t*)proc->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
-        ((fx_state_t*)proc->fxState)->mxcsrMask = 0xffbf;
-        ((fx_state_t*)proc->fxState)->fcw = 0x33f; // Default FPU Control Word State
+        ((fx_state_t*)thread->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
+        ((fx_state_t*)thread->fxState)->mxcsrMask = 0xffbf;
+        ((fx_state_t*)thread->fxState)->fcw = 0x33f; // Default FPU Control Word State
 
         strcpy(proc->workingDir, "/"); // set root as default working dir
 
@@ -220,7 +203,9 @@ namespace Scheduler{
     }
 
     void Yield(){
-        //currentProcess->timeSlice = 0;
+        GetCPULocal()->currentThread->timeSlice = 0;
+        
+        APIC::Local::SendIPI(0, ICR_DSH_SELF, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE); // Send schedule IPI to self
     }
 
     process_t* CreateProcess(void* entry) {
@@ -239,7 +224,9 @@ namespace Scheduler{
         thread->registers.rbp = (uintptr_t)thread->stack;
         thread->registers.rip = (uintptr_t)entry;
 
-        InsertProcessIntoQueue(proc);
+        InsertThreadIntoQueue(&proc->threads[0]);
+
+        processes->add_back(proc);
 
         releaseLock(&schedulerLock);
 
@@ -262,10 +249,19 @@ namespace Scheduler{
             }
         }
 
-        RemoveProcessFromQueue(process);
+        for(int i = 0; i < process->threadCount; i++){
+            for(unsigned j = 0; j < readyQueue->get_length(); j++){
+                if(readyQueue->get_at(j) == &process->threads[i]) readyQueue->remove_at(j);
+            }
+        }
 
-        process_t* currentProc = SMP::cpus[0]->currentProcess;
-        if(SMP::cpus[0]->currentProcess == process){
+        for(unsigned i = 0; i < processes->get_length(); i++){
+            if(processes->get_at(i) == process)
+                processes->remove_at(i);
+        }
+
+        CPU* cpu = GetCPULocal();
+        if(cpu->currentThread->parent == process){
             asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE)); // If we are using the PML4 of the current process switch to the kernel's
         }
 
@@ -283,18 +279,14 @@ namespace Scheduler{
 
         process->fileDescriptors.clear();*/
 
-        if(currentProc == process){
-            currentProc = process->next;
+        if(cpu->currentThread->parent == process){
+            thread_t* orig = cpu->currentThread;
+            cpu->currentThread = nullptr; // Force reschedule
             kfree(process);
-            processPML4 = currentProc->addressSpace->pml4Phys;
-            
-            asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)currentProc->fxState) : "memory");
-
-            TSS::SetKernelStack(&SMP::cpus[0]->tss, (uintptr_t)currentProc->threads[0].kernelStack);
 
             releaseLock(&schedulerLock);
-            
-            TaskSwitch(&currentProc->threads[0].registers);
+
+            Schedule(nullptr);
         }
         kfree(process);
         asm("sti");
@@ -313,39 +305,37 @@ namespace Scheduler{
 
         CPU* cpu = GetCPULocal();
 
-        if(cpu->id != 0) return;
-
-        if(cpu->currentProcess && cpu->currentProcess->timeSlice > 0) {
-            cpu->currentProcess->timeSlice--;
+        if(cpu->currentThread && cpu->currentThread->timeSlice > 0) {
+            cpu->currentThread->timeSlice--;
             return;
         }
         
         acquireLock(&schedulerLock);
         
-        cpu->currentProcess->timeSlice = cpu->currentProcess->timeSliceDefault;
+        if(cpu->currentThread){
+            cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
 
-        asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)cpu->currentProcess->fxState) : "memory");
+            asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 
-        cpu->currentProcess->threads[0].registers = *r;
+            cpu->currentThread->registers = *r;
 
-
-        if(!cpu->currentProcess) {
-            cpu->currentProcess = readyQueue;
-        } else {
-            Log::Info("p: %x", cpu->currentProcess);
-            cpu->currentProcess = cpu->currentProcess->next;
+            readyQueue->add_back(cpu->currentThread);
         }
 
-        processPML4 = cpu->currentProcess->addressSpace->pml4Phys;
+        cpu->currentThread = readyQueue->remove_at(0);
 
-        asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)cpu->currentProcess->fxState) : "memory");
+        processPML4 = cpu->currentThread->parent->addressSpace->pml4Phys;
+
+        asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 
         releaseLock(&schedulerLock);
 
-        asm volatile("mov %%rax, %%cr8" :: "a"(cpu->currentProcess->priority)); // Set Task Priority Register
-        TSS::SetKernelStack(&cpu->tss, (uintptr_t)cpu->currentProcess->threads[0].kernelStack);
+        asm volatile("mov %%rax, %%cr8" :: "a"(cpu->currentThread->priority)); // Set Task Priority Register
+	    asm volatile ("wrmsr" :: "a"(cpu->currentThread->fsBase & 0xFFFFFFFF) /*Value low*/, "d"((cpu->currentThread->fsBase >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
         
-        TaskSwitch(&cpu->currentProcess->threads[0].registers);
+        TSS::SetKernelStack(&cpu->tss, (uintptr_t)cpu->currentThread->kernelStack);
+
+        TaskSwitch(&cpu->currentThread->registers);
         
         for(;;);
     }
@@ -356,12 +346,11 @@ namespace Scheduler{
         // Create process structure
         process_t* proc = InitializeProcessStructure();
 
-        proc->timeSliceDefault = 4;
-        proc->timeSlice = proc->timeSliceDefault;
-
         thread_t* thread = &proc->threads[0];
         thread->registers.cs = 0x1B; // We want user mode so use user mode segments, make sure RPL is 3
         thread->registers.ss = 0x23;
+        thread->timeSliceDefault = 7;
+        thread->timeSlice = thread->timeSliceDefault;
 
         Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),0,1,proc->addressSpace);
         
@@ -477,9 +466,11 @@ namespace Scheduler{
         
         asm volatile("mov %%rax, %%cr3" :: "a"(GetCurrentProcess()->addressSpace->pml4Phys));
 
+        processes->add_back(proc);
+
         acquireLock(&schedulerLock);
 
-        InsertProcessIntoQueue(proc);
+        InsertThreadIntoQueue(&proc->threads[0]);
 
         releaseLock(&schedulerLock);
         asm("sti");

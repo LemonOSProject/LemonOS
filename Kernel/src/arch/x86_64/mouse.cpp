@@ -69,7 +69,7 @@ namespace Mouse{
 
 	void Install()
 	{
-		uint8_t status;  //unsigned char
+		uint8_t status;
 
 		mouseCharDev.flags = FS_NODE_CHARDEVICE;
 		mouseCharDev.read = ReadDevice;
@@ -96,7 +96,7 @@ namespace Mouse{
 		Read();
 
 		IDT::RegisterInterruptHandler(IRQ0 + 12, Handler);
-		APIC::IO::MapLegacyIRQ(IRQ0 + 12);
+		APIC::IO::MapLegacyIRQ(12);
 	}
 
 	int8_t* GetData() {
@@ -109,8 +109,7 @@ namespace Mouse{
 			data_updated = false;
 		return updated;
 	}
-
-
+	
 	size_t ReadDevice(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
 		if(size < 3) return 0;
 

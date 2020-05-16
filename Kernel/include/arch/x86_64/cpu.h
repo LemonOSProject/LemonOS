@@ -15,8 +15,8 @@ struct CPU{
     uint64_t id; // APIC/CPU id
     void* gdt; // GDT
 	gdt_ptr_t gdtPtr;
-	process_t* currentProcess = nullptr;
-	uint64_t _;
+	thread_t* currentThread = nullptr;
+	thread_t* runQueue;
     tss_t tss __attribute__((aligned(16))); 
 } __attribute__((packed));
 
@@ -93,12 +93,11 @@ cpuid_info_t CPUID();
 static inline void SetCPULocal(CPU* val){
 	val->self = val;
 	asm volatile("wrmsr" :: "a"((uintptr_t)val & 0xFFFFFFFF) /*Value low*/, "d"(((uintptr_t)val >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000102) /*Set Kernel GS Base*/);
+	asm volatile("wrmsr" :: "a"((uintptr_t)val & 0xFFFFFFFF) /*Value low*/, "d"(((uintptr_t)val >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000101) /*Set Kernel GS Base*/);
 }
 
 static inline CPU* GetCPULocal(){
 	CPU* ret;
-	asm volatile("swapgs");
-    asm volatile("movq %%gs:0, %0" : "=r"(ret)); // CPU info is 16-byte aligned as per liballoc alignment
-	asm volatile("swapgs");
+    asm volatile("swapgs; movq %%gs:0, %0; swapgs;" : "=r"(ret)); // CPU info is 16-byte aligned as per liballoc alignment
 	return ret;
 }
