@@ -3,9 +3,9 @@
 #include <stdint.h>
 #include <paging.h>
 #include <system.h>
+#include <memory.h>
 #include <list.h>
 #include <fs/filesystem.h>
-#include <memory.h>
 
 #define PROCESS_STATE_SUSPENDED 0
 #define PROCESS_STATE_ACTIVE 1

@@ -32,10 +32,6 @@ section .text
     ; Dont pop rax yet
 %endmacro
 
-ReadRIP:
-    mov rax, [rsp]
-    ret
-
 TaskSwitch:
     mov rsp, rdi ; Set the stack pointer to the location of our register context
     popaq ; Load register context (we don't load RAX yet)

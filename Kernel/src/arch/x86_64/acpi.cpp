@@ -16,7 +16,7 @@
 
 namespace ACPI{
 	uint8_t processors[256];
-	int processorCount = 0;
+	int processorCount = 1;
 
 	const char* signature = "RSD PTR ";
 
@@ -73,6 +73,8 @@ namespace ACPI{
 					apic_local_t* localAPIC = (apic_local_t*)entry;
 
 					if(((apic_local_t*)entry)->flags & 0x3) {
+						if(localAPIC->apicID == 0) break; // Found the BSP
+						
 						processors[processorCount++] = localAPIC->apicID;
 						Log::Info("[ACPI] Found Processor, APIC ID: %d", localAPIC->apicID);
 					}

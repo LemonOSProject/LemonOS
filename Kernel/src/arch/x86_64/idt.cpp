@@ -256,12 +256,9 @@ extern "C"
 			interrupt_handlers[int_num](regs);
 		} else if(int_num == 0x69){
 			Log::Warning("\r\nEarly syscall");
-		}else if(int_num == IPI_SCHEDULE){
-			Log::Warning("\r\nEarly schedule");
-			LocalAPICEOI();
 		} else if(!(regs->ss & 0x3)){ // Check the CPL of the segment, caused by kernel?
 			// Kernel Panic so tell other processors to stop executing
-			APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_INIT, 0);
+			APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
 
 			Log::Error("Fatal Exception: ");
 			Log::Info(int_num);
@@ -316,21 +313,6 @@ extern "C"
 
 	extern "C"
 	void irq_handler(int int_num, regs64_t* regs) {
-		
-		LocalAPICEOI();
-		
-		if (interrupt_handlers[int_num] != 0) {
-			isr_t handler;
-			handler = interrupt_handlers[int_num];
-			handler(regs);
-		} else {
-			// Do nothing for now
-		}
-	}
-	
-	extern "C"
-	void ipi_handler(int int_num, regs64_t* regs) {
-		
 		LocalAPICEOI();
 		
 		if (interrupt_handlers[int_num] != 0) {
@@ -339,6 +321,20 @@ extern "C"
 			handler(regs);
 		} else {
 			Log::Warning("Unhandled IRQ: ");
+			Log::Write(int_num);
+		}
+	}
+	
+	extern "C"
+	void ipi_handler(int int_num, regs64_t* regs) {
+		LocalAPICEOI();
+		
+		if (interrupt_handlers[int_num] != 0) {
+			isr_t handler;
+			handler = interrupt_handlers[int_num];
+			handler(regs);
+		} else {
+			Log::Warning("Unhandled IPI: ");
 			Log::Write(int_num);
 		}
 	}

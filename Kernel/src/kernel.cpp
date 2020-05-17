@@ -28,6 +28,7 @@ video_mode_t videoMode;
 extern "C"
 void IdleProcess(){
 	for(;;) {
+		asm("sti");
 		Scheduler::Yield();
 		asm("hlt");
 	}
@@ -50,9 +51,9 @@ void KernelProcess(){
 
 	void* initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
-	asm("cli");
 
 	process_t* initProc = Scheduler::CreateELFProcess(initElf);
+	initProc->threads[0].priority = 8;
 	strcpy(initProc->workingDir, "/initrd");
 
 	Log::Write("OK");
@@ -60,9 +61,10 @@ void KernelProcess(){
 	for(;;){ // Use the idle task to clean up the windows of dead processes
 		unsigned oldUptime = Timer::GetSystemUptime();
 		while(Timer::GetSystemUptime() < oldUptime + 1) {
-			Scheduler::Yield();
+			//Scheduler::Yield();
 			asm("hlt");
 		}
+		continue;
 
 		if(!GetDesktop()) continue;
 
@@ -97,7 +99,7 @@ void kmain(multiboot_info_t* mb_info){
 	Memory::InitializeSharedMemory();
 
 	fs::Initialize();
-	Log::EnableBuffer();
+	//Log::EnableBuffer();
 
 	Video::DrawRect(0, 0, videoMode.width, videoMode.height, 0, 0, 0);
 

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <tss.h>
 #include <scheduler.h>
+#include <list.h>
 
 typedef struct {
 	uint16_t limit;
@@ -16,9 +17,10 @@ struct CPU{
     void* gdt; // GDT
 	gdt_ptr_t gdtPtr;
 	thread_t* currentThread = nullptr;
-	thread_t* runQueue;
+	volatile int runQueueLock = 0;
+	FastList<thread_t*>* runQueue;
     tss_t tss __attribute__((aligned(16))); 
-} __attribute__((packed));
+};
 
 enum {
 	CPUID_ECX_SSE3 = 1 << 0,
@@ -100,4 +102,13 @@ static inline CPU* GetCPULocal(){
 	CPU* ret;
     asm volatile("swapgs; movq %%gs:0, %0; swapgs;" : "=r"(ret)); // CPU info is 16-byte aligned as per liballoc alignment
 	return ret;
+}
+
+static inline bool CheckInterrupts()
+{
+    unsigned long flags;
+    asm volatile ( "pushf\n\t"
+                   "pop %0"
+                   : "=g"(flags) );
+    return flags & (1 << 9);
 }

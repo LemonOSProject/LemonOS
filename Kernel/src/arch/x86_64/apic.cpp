@@ -120,7 +120,7 @@ namespace APIC{
             for(int i = 0; i < ACPI::isos->get_length(); i++){
                 apic_iso_t* iso = ACPI::isos->get_at(i);
 				Log::Info("[APIC] Interrupt Source Override, IRQ: %d, GSI: %d", iso->irqSource, iso->gSI);
-                Redirect(iso->gSI, iso->irqSource + 0x20, 0);
+                Redirect(iso->gSI, iso->irqSource + 0x20, ICR_MESSAGE_TYPE_LOW_PRIORITY);
             }
 
             return 0;
@@ -136,7 +136,7 @@ namespace APIC{
                 apic_iso_t* iso = ACPI::isos->get_at(i);
                 if(iso->irqSource == irq) return; // We should have already redirected this IRQ
             }
-            Redirect(irq, irq + 0x20, 0);
+            Redirect(irq, irq + 0x20, ICR_MESSAGE_TYPE_LOW_PRIORITY);
         }
     }
 

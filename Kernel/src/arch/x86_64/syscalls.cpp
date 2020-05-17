@@ -259,12 +259,13 @@ int SysTime(regs64_t* r){
 int SysMapFB(regs64_t *r){
 	video_mode_t vMode = Video::GetVideoMode();
 
-	uintptr_t fbVirt = (uintptr_t)Memory::Allocate4KPages(vMode.height*vMode.pitch/PAGE_SIZE_4K + 2, Scheduler::GetCurrentProcess()->addressSpace);
-	Memory::MapVirtualMemory4K(HAL::multibootInfo.framebufferAddr,fbVirt,vMode.height*vMode.pitch/PAGE_SIZE_4K + 2,Scheduler::GetCurrentProcess()->addressSpace);
+	uint64_t pageCount = (vMode.height * vMode.pitch + 0xFFF) >> 12;
+	uintptr_t fbVirt = (uintptr_t)Memory::Allocate4KPages(pageCount, Scheduler::GetCurrentProcess()->addressSpace);
+	Memory::MapVirtualMemory4K(HAL::multibootInfo.framebufferAddr,fbVirt,pageCount,Scheduler::GetCurrentProcess()->addressSpace);
 
 	mem_region_t memR;
 	memR.base = fbVirt;
-	memR.pageCount = vMode.height*vMode.pitch/PAGE_SIZE_4K + 2;
+	memR.pageCount = pageCount;
 	Scheduler::GetCurrentProcess()->sharedMemory.add_back(memR);
 
 	fb_info_t fbInfo;
@@ -558,9 +559,7 @@ int SysUptime(regs64_t* r){
 }
 
 int SysDebug(regs64_t* r){
-	asm("cli");
 	Log::Info("%s, %d", (char*)r->rbx, r->rcx);
-	asm("sti");
 	return 0;
 }
 
@@ -677,7 +676,7 @@ int SysGetCWD(regs64_t* r){
 int SysWaitPID(regs64_t* r){
 	uint64_t pid = r->rbx;
 
-	while(Scheduler::FindProcessByPID(pid)) asm("hlt");
+	while(Scheduler::FindProcessByPID(pid)) { asm("hlt"); Scheduler::Yield(); }
 
 	return 0;
 }
@@ -689,7 +688,7 @@ int SysNanoSleep(regs64_t* r){
 	uint64_t ticks = seconds * Timer::GetFrequency() + Timer::GetTicks();
 	uint64_t ticksEnd = ticks + (int)(nanoseconds / (1000000000.0 / Timer::GetFrequency()));
 
-	while((Timer::GetSystemUptime() * Timer::GetFrequency() + Timer::GetTicks()) < ticksEnd) asm("pause");
+	while((Timer::GetSystemUptime() * Timer::GetFrequency() + Timer::GetTicks()) < ticksEnd) { Scheduler::Yield(); }
 
 	return 0;
 }
@@ -956,8 +955,6 @@ void SyscallHandler(regs64_t* regs) {
 		return;
 		
 	asm("sti");
-
-	lastSyscall = regs->rax;
 
 	int ret;
 	if(syscalls[regs->rax])

@@ -72,7 +72,6 @@ namespace Log{
 		
 		if(console){
 			console->PrintN(str, n, 255, 255, 255);
-			console->Update();
 		}
 	}
 
@@ -133,14 +132,14 @@ namespace Log{
 					format += len;
 			}
 		}
+
+		if(console) 
+			console->Update();
 	}
 
 	void Warning(const char* __restrict fmt, ...){
 		//acquireLock(&logLock);
-		Write("\r\n");
-		Write("[");
-		Write("WARN", 255, 255, 0);
-		Write("]    ");
+		Write("\r\n[WARN]    ", 255, 255, 0);
 		va_list args;
 		va_start(args, fmt);
 		WriteF(fmt, args);
@@ -149,11 +148,8 @@ namespace Log{
     }
 
     void Error(const char* __restrict fmt, ...){
-		releaseLock(&logLock);
-		Write("\r\n");
-		Write("[");
-		Write("ERROR", 255, 0, 0);
-		Write("]   ");
+		unlockSerial();
+		Write("\r\n[ERROR]   ", 255, 0, 0);
 		va_list args;
 		va_start(args, fmt);
 		WriteF(fmt, args);
@@ -162,10 +158,7 @@ namespace Log{
 
     void Info(const char* __restrict fmt, ...){
 		//acquireLock(&logLock);
-		Write("\r\n");
-		Write("[");
-		Write("INFO");
-		Write("]    ");
+		Write("\r\n[INFO]    ");
 		va_list args;
 		va_start(args, fmt);
 		WriteF(fmt, args);
@@ -174,34 +167,24 @@ namespace Log{
     }
 
     void Warning(const char* str){
-		Write("\r\n");
-		Write("[");
-		Write("WARN", 255, 255, 0);
-		Write("]    ");
+		Write("\r\n[WARN]    ", 255, 255, 0);
 		Write(str);
     }
 
     void Warning(unsigned long long num){
-		Write("\r\n");
-		Write("[");
-		Write("WARN", 255, 255, 0);
-		Write("]    ");
+		Write("\r\n[WARN]    ", 255, 255, 0);
 		//Write(str);
     }
 
     void Error(const char* str){
-		Write("\r\n");
-		Write("[");
-		Write("ERROR", 255, 0, 0);
-		Write("]   ");
+		Write("\r\n[ERROR]   ", 255, 0, 0);
 		Write(str);
     }
 
     void Error(unsigned long long num, bool hex){
-		Write("\r\n");
-		Write("[");
-		Write("ERROR", 255, 0, 0);
-		Write("]   ");char buf[32];
+		Write("\r\n[ERROR]   ", 255, 0, 0);
+		char buf[32];
+		
 		if(hex){
 			buf[0] = '0';
 			buf[1] = 'x';
@@ -211,10 +194,7 @@ namespace Log{
     }
 
     void Info(const char* str){
-		Write("\r\n");
-		Write("[");
-		Write("INFO");
-		Write("]    ");
+		Write("\r\n[INFO]    ");
 		Write(str);
     }
 

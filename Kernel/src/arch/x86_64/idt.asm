@@ -78,6 +78,7 @@ idt_flush:
         mov rdi, %1
         mov rsi, rsp
         xor rdx, rdx
+        xor rbp, rbp
         call isr_handler
         popaq
         iretq
@@ -91,6 +92,7 @@ idt_flush:
         mov rdi, %1
         mov rsi, rsp
         xor rdx, rdx
+        xor rbp, rbp
         call ipi_handler
         popaq
         iretq

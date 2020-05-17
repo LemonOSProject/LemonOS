@@ -2,6 +2,7 @@
 #include <serial.h>
 #include <string.h>
 #include <lock.h>
+#include <cpu.h>
 
 #define PORT 0x3F8 // COM 1
 
@@ -19,7 +20,11 @@ int is_transmit_empty() {
 	return inportb(PORT + 5) & 0x20;
 }
 
-int lock = 0;
+volatile int lock = 0;
+
+void unlockSerial(){
+	lock = 0;
+}
 
 void write_serial(const char c) {
 	while (is_transmit_empty() == 0);

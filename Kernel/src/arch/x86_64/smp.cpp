@@ -37,6 +37,7 @@ namespace SMP{
 
         CPU* cpu = cpus[id];
         cpu->currentThread = nullptr;
+        cpu->runQueueLock = 0;
         SetCPULocal(cpu);
         
         cpu->gdt = Memory::KernelAllocate4KPages(1);//kmalloc(GDT64Pointer64.limit + 1); // Account for the 1 subtracted from limit
@@ -51,6 +52,8 @@ namespace SMP{
         TSS::InitializeTSS(&cpu->tss, cpu->gdt);
 
         APIC::Local::Enable();
+
+        cpu->runQueue = new FastList<thread_t*>();
 
         asm("sti");
 
@@ -80,12 +83,12 @@ namespace SMP{
 
         APIC::Local::SendIPI(id, ICR_DSH_DEST, ICR_MESSAGE_TYPE_INIT, 0);
 
-        wait(20);
+        wait(40);
 
         if((*smpMagic) != 0xB33F){ // Check if the trampoline code set the flag to let us know it has started
             APIC::Local::SendIPI(id, ICR_DSH_DEST, ICR_MESSAGE_TYPE_STARTUP, (SMP_TRAMPOLINE_ENTRY >> 12));
 
-            wait(200);
+            wait(250);
         }
 
         if((*smpMagic) != 0xB33F){
@@ -102,6 +105,8 @@ namespace SMP{
         cpus[0]->gdt = (void*)GDT64Pointer64.base;
         cpus[0]->gdtPtr = GDT64Pointer64;
         cpus[0]->currentThread = nullptr;
+        cpus[0]->runQueueLock = 0;
+        cpus[0]->runQueue = new FastList<thread_t*>();
         SetCPULocal(cpus[0]);
 
         PrepareTrampoline();

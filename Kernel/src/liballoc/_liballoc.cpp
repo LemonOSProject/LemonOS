@@ -6,12 +6,19 @@
 #include <stddef.h>
 #include <lock.h>
 #include <logging.h>
+#include <scheduler.h>
+#include <cpu.h>
 	
-volatile int liballocLock;
+volatile int liballocLock = 0;
+volatile int exclusiveLock = 0;
 
 extern "C" {
 int liballoc_lock() {
-	acquireLock(&liballocLock);
+	//acquireLock(&liballocLock);
+	if(!CheckInterrupts()) {
+		Log::Warning("liballoc: interrupts disabled");
+	}
+	while(acquireTestLock(&liballocLock)) { asm("sti"); Scheduler::Yield(); } // If for some reason liballoc is locked before the scheduler starts something probably went horribly wrong
 	return 0;
 }
 
@@ -27,27 +34,9 @@ void liballoc_kprintf(const char* __restrict fmt, ...){
 	va_end(args);
 }
 
-#ifdef Lemon32
-	void* liballoc_alloc(int pages) {
-		void* addr = (void*)Memory::KernelAllocateVirtualPages(pages);
-		for (int i = 0; i < pages; i++)
-		{
-			uint32_t phys = Memory::AllocatePhysicalMemoryBlock();
-			Memory::MapVirtualPages(phys, (uint32_t)addr + i * PAGE_SIZE, 1);
-		}
-		return addr;
-	}
-
-	int liballoc_free(void* addr, size_t pages) {
-		Memory::FreeVirtualPages((uint32_t)addr, pages);
-		return 0;
-	}
-#endif
-
-#ifdef Lemon64
-void* liballoc_alloc(int pages) {
+void* liballoc_alloc(size_t pages) {
 	void* addr = (void*)Memory::KernelAllocate4KPages(pages);
-	for (int i = 0; i < pages; i++)
+	for (size_t i = 0; i < pages; i++)
 	{
 		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
 		Memory::KernelMapVirtualMemory4K(phys, (uint64_t)addr + i * PAGE_SIZE_4K, 1);
@@ -66,5 +55,20 @@ int liballoc_free(void* addr, size_t pages) {
 	Memory::KernelFree4KPages(addr, pages);
 	return 0;
 }
-#endif
+
+void* kmalloc(size_t sz){
+	return _kmalloc(sz);
+}
+
+void* krealloc(void* ptr, size_t sz){
+	return _krealloc(ptr, sz);
+}
+
+void* kcalloc(size_t sz, size_t v){
+	return _kcalloc(sz, v);
+}
+
+void kfree(void* ptr){
+	_kfree(ptr);
+}
 }

@@ -108,9 +108,10 @@ namespace Memory{
 	}
 
 	address_space_t* CreateAddressSpace(){
-		asm("cli");
 		address_space_t* addressSpace = (address_space_t*)kmalloc(sizeof(address_space_t));
 
+		asm("cli");
+		
 		pdpt_entry_t* pdpt = (pdpt_entry_t*)Memory::KernelAllocate4KPages(1); // PDPT;
 		uintptr_t pdptPhys = Memory::AllocatePhysicalMemoryBlock();
 		Memory::KernelMapVirtualMemory4K(pdptPhys, (uintptr_t)pdpt,1);
@@ -605,16 +606,18 @@ namespace Memory{
 		};
 
 		// Kernel Panic so tell other processors to stop executing
-		APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_INIT, 0);
+			APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
 
 		Log::Info("Last syscall: %d", lastSyscall);
 			
 		uint64_t* stack = (uint64_t*)regs->rbp;
 		
+		uint64_t* rbp = (uint64_t*)regs->rbp;
+		uint64_t rip = 0;
 		while(stack){
-			uint64_t* rbp = (uint64_t*)(*stack);
-			uint64_t rip = *(stack + 1);
+			rip = *(stack + 1);
 			Log::Info(rip);
+			rbp = (uint64_t*)(*stack);
 			stack = rbp;
 		}
 
