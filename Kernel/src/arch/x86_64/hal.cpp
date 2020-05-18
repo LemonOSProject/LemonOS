@@ -24,6 +24,7 @@ namespace HAL{
     boot_module_t bootModules[32];
     int bootModuleCount;
     bool debugMode = false;
+    bool disableSMP = false;
     VideoConsole* con;
 
     void InitCore(multiboot_info_t mb_info){ // ALWAYS call this first
@@ -51,8 +52,12 @@ namespace HAL{
         
         multibootModulesAddress = Memory::GetIOMapping(multibootInfo.modsAddr); // Grub loads the kernel as 32-bit so modules will be <4GB
 
-        if(strcmp((char*)Memory::GetIOMapping(multibootInfo.cmdline), "debug") == 0) debugMode = true;
-        else Log::Info((char*)Memory::GetIOMapping(multibootInfo.cmdline));
+        char* cmdLine = strtok((char*)Memory::GetIOMapping(multibootInfo.cmdline), " ");
+        while(cmdLine){
+            if(strcmp(cmdLine, "debug") == 0) debugMode = true;
+            else if(strcmp(cmdLine, "nosmp") == 0) disableSMP = true;
+            cmdLine = strtok(NULL, " ");
+        }
         
         asm("cli");
 

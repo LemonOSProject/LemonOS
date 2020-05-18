@@ -61,7 +61,7 @@ void KernelProcess(){
 	for(;;){ // Use the idle task to clean up the windows of dead processes
 		unsigned oldUptime = Timer::GetSystemUptime();
 		while(Timer::GetSystemUptime() < oldUptime + 1) {
-			//Scheduler::Yield();
+			Scheduler::Yield();
 			asm("hlt");
 		}
 		continue;
@@ -91,7 +91,7 @@ void KernelProcess(){
 }
 
 extern "C"
-void kmain(multiboot_info_t* mb_info){
+[[noreturn]] void kmain(multiboot_info_t* mb_info){
 	HAL::Init(*mb_info);
 
 	videoMode = Video::GetVideoMode();

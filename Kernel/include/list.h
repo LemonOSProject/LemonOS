@@ -2,6 +2,7 @@
 
 #include <memory.h>
 #include <lock.h>
+#include <assert.h>
 
 template<typename T>
 class ListNode
@@ -49,12 +50,12 @@ public:
 	}
 
 	void add_back(T obj) {
-		acquireLock(&lock);
-
 		ListNode<T>* node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
 		*node = ListNode<T>();
 		node->obj = obj;
 		
+		acquireLock(&lock);
+
 		if (!front) {
 			front = node;
 		}
@@ -69,11 +70,11 @@ public:
 	}
 
 	void add_front(T obj) {
-		acquireLock(&lock);
-
 		ListNode<T>* node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
 		*node = ListNode<T>();
 		node->obj = obj;
+
+		acquireLock(&lock);
 
 		if (!back) {
 			back = node;
@@ -93,26 +94,28 @@ public:
 	}
 
 	T get_at(unsigned pos) {
-
-		if (num <= 0 || pos >= num || front == NULL) {
+		assert(num > 0 && pos < num && front != nullptr);
+		/*if (num <= 0 || pos >= num || front == NULL) {
 			T obj; // Need to do something when item not in list
 			memset(&obj, 0, sizeof(T));
 			return obj;
-		}
+		}*/
 
-		acquireLock(&lock);
 
 		ListNode<T>* current = front;
 
+		//acquireLock(&lock);
+
 		for (unsigned int i = 0; i < pos && i < num && current->next; i++) current = current->next;
 
-		releaseLock(&lock);
+		//releaseLock(&lock);
 
 		return current->obj;
 	}
 
 	void replace_at(unsigned pos, T obj) {
-		if (num < 0 || pos >= num) return;
+		assert(num > 0 && pos < num);
+		//if (num < 0 || pos >= num) return;
 		
 		acquireLock(&lock);
 
@@ -131,11 +134,12 @@ public:
 	}
 
 	T remove_at(unsigned pos) {
-		if (num <= 0 || pos >= num || front == NULL){
+		assert(num > 0 && pos < num || front != nullptr);
+		/*if (num <= 0 || pos >= num || front == NULL){
 			T obj; // Need to do something when item not in list
 			memset(&obj, 0, sizeof(T));
 			return obj;
-		}
+		}*/
 
 		acquireLock(&lock);
 
@@ -143,12 +147,13 @@ public:
 
 		for (unsigned int i = 0; i < pos && current; i++) current = current->next;
 
-		if(!current){
+		assert(current);
+		/*if(!current){
 			T t;
 			memset(&t, 0, sizeof(T));
 			releaseLock(&lock);
 			return t;
-		}
+		}*/
 
 		T obj = current->obj;
 
@@ -157,8 +162,9 @@ public:
 		if (pos == 0) front = current->next;
 		if (pos == --num) back = current->prev;
 
-		kfree(current);
 		releaseLock(&lock);
+
+		kfree(current);
 
 		return obj;
 	}
@@ -208,6 +214,7 @@ public:
 			obj->prev = back;
 		}
 		back = obj;
+		obj->next = nullptr;
 		num++;
 	}
 
@@ -228,10 +235,10 @@ public:
 	}
 
 	T get_at(unsigned pos) {
-
-		if (num <= 0 || pos >= num || front == NULL) {
+		assert(num > 0 && pos < num && front);
+		/*if (num <= 0 || pos >= num || front == NULL) {
 			return nullptr;
-		}
+		}*/
 
 		T current = front;
 
@@ -241,7 +248,8 @@ public:
 	}
 
 	void replace_at(unsigned pos, T obj) {
-		if (num <= 0 || pos >= num) return;
+		assert(num > 0 && pos < num);
+		//if (num <= 0 || pos >= num) return;
 
 		T current = front;
 
@@ -256,22 +264,28 @@ public:
 	}
 
 	T remove_at(unsigned pos) {
-		if (num <= 0 || pos >= num || front == NULL){
+		assert(num > 0 && pos < num && front);
+		/*if (num <= 0 || pos >= num || front == NULL){
 			return nullptr;
-		}
+		}*/
 
 		T current = front;
 
 		for (unsigned int i = 0; i < pos && current; i++) current = current->next;
 
-		if(!current){
+		/*if(!current){
 			return nullptr;
-		}
+		}*/
+		assert(current);
 
 		if (current->next) current->next->prev = current->prev;
 		if (current->prev) current->prev->next = current->next;
 		if (pos == 0) front = current->next;
 		if (pos == --num) back = current->prev;
+
+		if(!num) front = back = nullptr;
+
+		current->next = current->prev = nullptr;
 
 		return current;
 	}

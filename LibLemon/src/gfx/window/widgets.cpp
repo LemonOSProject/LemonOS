@@ -176,7 +176,7 @@ namespace Lemon::GUI{
             }
         } else if (key == KEY_ARROW_RIGHT){ // Move cursor right
             cursorPos.x++;
-            if(cursorPos.x > contents[cursorPos.x].length()){
+            if(cursorPos.x > contents[cursorPos.y].length()){
                 if(cursorPos.y < contents.size()){
                     cursorPos.x = contents[++cursorPos.y].length();
                 } else cursorPos.x = contents[cursorPos.y].length();

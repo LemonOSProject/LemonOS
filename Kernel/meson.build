@@ -49,6 +49,7 @@ cpp_files = [
     'src/video.cpp',
     'src/videoconsole.cpp',
     'src/sharedmem.cpp',
+    'src/assert.cpp',
 
     'src/fs/fat32.cpp',
     'src/fs/filesystem.cpp',

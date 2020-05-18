@@ -294,6 +294,9 @@ int SysAlloc(regs64_t* r){
 	uintptr_t* addressPointer = (uintptr_t*)r->rcx;
 
 	uintptr_t address = (uintptr_t)Memory::Allocate4KPages(pageCount, Scheduler::GetCurrentProcess()->addressSpace);
+
+	assert(address);
+
 	for(unsigned i = 0; i < pageCount; i++){
 		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),address + i * PAGE_SIZE_4K,1,Scheduler::GetCurrentProcess()->addressSpace);
 		memset((void*)(address + i * PAGE_SIZE_4K), 0, PAGE_SIZE_4K);
@@ -625,6 +628,7 @@ int SysMmap(regs64_t* r){
 		if(Memory::CheckRegion(hint, count * PAGE_SIZE_4K, Scheduler::GetCurrentProcess()->addressSpace) /*Check availibilty of the requested map*/){
 			_address = hint;
 		} else {
+			Log::Warning("sys_mmap: Could not map to address %x", hint);
 			*address = 0;
 			return 1;
 		}
@@ -893,7 +897,7 @@ int SysConnect(regs64_t* r){
 }
 
 syscall_t syscalls[]{
-	/*nullptr*/SysDebug,
+	SysDebug,
 	SysExit,					// 1
 	SysExec,
 	SysRead,
@@ -918,7 +922,7 @@ syscall_t syscalls[]{
 	SysCreateWindow,
 	SysDestroyWindow,
 	SysDesktopGetWindow,
-	nullptr,	// 25
+	nullptr,					// 25
 	SysUpdateWindow,
 	SysGetDesktopPID,
 	SysSendMessage,
@@ -943,7 +947,7 @@ syscall_t syscalls[]{
 	SysUnmapSharedMemory,
 	SysDestroySharedMemory,
 	SysSocket,
-	SysBind,
+	SysBind,					// 50
 	SysListen,
 	SysAccept,
 	SysConnect,

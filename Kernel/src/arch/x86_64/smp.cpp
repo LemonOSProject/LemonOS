@@ -8,6 +8,7 @@
 #include <acpi.h>
 #include <tss.h>
 #include <idt.h>
+#include <hal.h>
 
 #include "smpdefines.inc"
 
@@ -30,6 +31,7 @@ extern gdt_ptr_t GDT64Pointer64;
 
 namespace SMP{
     CPU* cpus[256];
+    unsigned processorCount = 1;
     tss_t tss1 __attribute__((aligned(16)));
 
     void SMPEntry(uint16_t id){
@@ -108,6 +110,20 @@ namespace SMP{
         cpus[0]->runQueueLock = 0;
         cpus[0]->runQueue = new FastList<thread_t*>();
         SetCPULocal(cpus[0]);
+
+        if(HAL::disableSMP) {
+            TSS::InitializeTSS(&cpus[0]->tss, cpus[0]->gdt);
+            ACPI::processorCount = 1;
+            processorCount = 1;
+            return;
+        }
+        
+        if(ACPI::processorCount > 2) {
+            ACPI::processorCount = 2;
+            Log::Warning("[SMP] Unfortunately we only support 2 processors for now due to stability concerns");
+        }
+
+        processorCount = ACPI::processorCount;
 
         PrepareTrampoline();
 

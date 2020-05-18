@@ -50,7 +50,6 @@ idt_flush:
 	ret
     iretq
 
-
 %macro ISR_ERROR_CODE 1
 	global isr%1
 	isr%1:

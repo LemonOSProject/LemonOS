@@ -1,13 +1,6 @@
 [BITS 64]
 
-extern processStack
-extern processBase
-extern processEntryPoint
-extern processPML4
-extern processFxStatePtr
-
 global TaskSwitch
-global ReadRIP
 global IdleProc
 
 extern IdleProcess
@@ -34,9 +27,9 @@ section .text
 
 TaskSwitch:
     mov rsp, rdi ; Set the stack pointer to the location of our register context
+    mov rax, rsi ; PML4
     popaq ; Load register context (we don't load RAX yet)
 
-    mov rax, [processPML4]
     mov cr3, rax ; Set CR3
 
     pop rax ; Now pop RAX

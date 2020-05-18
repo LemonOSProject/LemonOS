@@ -5,6 +5,7 @@
 #include <string.h>
 #include <logging.h>
 #include <panic.h>
+#include <lock.h>
 
 extern void* _end;
 
@@ -14,6 +15,8 @@ namespace Memory{
 
     uint64_t usedPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS * 32;
     uint64_t maxPhysicalBlocks = 0;
+
+    lock_t allocatorLock = 0;
 
     // Initialize the physical page allocator
     void InitializePhysicalAllocator(memory_info_t* mem_info)
@@ -80,6 +83,8 @@ namespace Memory{
 
     // Allocates a block of physical memory
     uint64_t AllocatePhysicalMemoryBlock() {
+        acquireLock(&allocatorLock);
+
         uint64_t index = GetFirstFreeMemoryBlock();
         if (index == 0){
             Log::Error("Out of memory!");
@@ -90,6 +95,8 @@ namespace Memory{
 
         bit_set(index);
         usedPhysicalBlocks++;
+
+        releaseLock(&allocatorLock);
 
         return index * PHYSALLOC_BLOCK_SIZE;
     }

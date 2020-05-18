@@ -16,13 +16,10 @@
 #include <lock.h>
 #include <smp.h>
 #include <apic.h>
-#include <acpi.h>
 
 #define INITIAL_HANDLE_TABLE_SIZE 0xFFFF
 
-uint64_t processPML4;
-
-extern "C" void TaskSwitch(regs64_t* r);
+extern "C" void TaskSwitch(regs64_t* r, uint64_t pml4);
 
 extern "C"
 void IdleProc();
@@ -58,8 +55,11 @@ namespace Scheduler{
     
     inline void InsertNewThreadIntoQueue(thread_t* thread){
         uint8_t cpu = 0;
-        for(int i = 0; i < ACPI::processorCount; i++){
-            if(SMP::cpus[i]->runQueue->get_length() < SMP::cpus[cpu]->runQueue->get_length()) cpu = i;
+        for(int i = 0; i < SMP::processorCount; i++){
+                Log::Info("CPU %d has %d threads", i, SMP::cpus[i]->runQueue->get_length());
+            if(SMP::cpus[i]->runQueue->get_length() < SMP::cpus[cpu]->runQueue->get_length()) {
+                cpu = i;
+            }
         }
 
         asm("cli");
@@ -76,35 +76,31 @@ namespace Scheduler{
 
         CPU* cpu = GetCPULocal();
 
-        //idleProcess = CreateProcess((void*)IdleProc);
+        idleProcess = CreateProcess((void*)IdleProc);
 
-        for(unsigned i = 0; i < ACPI::processorCount; i++) SMP::cpus[i]->runQueue->clear();
-        for(unsigned i = 0; i < ACPI::processorCount; i++) CreateProcess((void*)IdleProc);
-
-        process_t* proc = CreateProcess((void*)KernelProcess);
-        cpu->currentThread = &proc->threads[0];
-
-        RemoveThreadFromQueue(cpu->currentThread);
+        for(unsigned i = 0; i < SMP::processorCount; i++) SMP::cpus[i]->runQueue->clear();
         
-        processPML4 = cpu->currentThread->parent->addressSpace->pml4Phys;
-        asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
-
-        asm("cli");
         IDT::RegisterInterruptHandler(IPI_SCHEDULE, Schedule);
 
-        TSS::SetKernelStack(&SMP::cpus[0]->tss, (uintptr_t)cpu->currentThread->kernelStack);
+        process_t* proc = CreateProcess((void*)KernelProcess);
 
+        cpu->currentThread = nullptr;
         schedulerReady = true;
-        TaskSwitch(&cpu->currentThread->registers);
+        asm("sti");
         for(;;);
     }
 
     process_t* GetCurrentProcess(){ 
+        asm("cli");
         CPU* cpu = GetCPULocal();
 
+        process_t* ret = nullptr;
+
         if(cpu->currentThread)
-            return cpu->currentThread->parent;
-        else return nullptr;
+            ret = cpu->currentThread->parent;
+
+        asm("sti");
+        return ret;
     }
 
     handle_t RegisterHandle(void* pointer){
@@ -296,6 +292,7 @@ namespace Scheduler{
         if(cpu->currentThread->parent == process){
             thread_t* orig = cpu->currentThread;
             cpu->currentThread = nullptr; // Force reschedule
+            kfree(process->threads);
             kfree(process);
 
             releaseLock(&schedulerLock);
@@ -328,12 +325,12 @@ namespace Scheduler{
             cpu->currentThread->timeSlice--;
             return;
         }
-        
+
         while(acquireTestLock(&cpu->runQueueLock)) {
             return;
         }
         
-        if(cpu->currentThread){
+        if(cpu->currentThread && cpu->currentThread->parent != idleProcess){
             cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
 
             asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
@@ -350,8 +347,6 @@ namespace Scheduler{
         }
         releaseLock(&cpu->runQueueLock);
 
-        processPML4 = cpu->currentThread->parent->addressSpace->pml4Phys;
-
         asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 
         //asm volatile("mov %%rax, %%cr8" :: "a"(cpu->currentThread->priority)); // Set Task Priority Register
@@ -359,7 +354,7 @@ namespace Scheduler{
         
         TSS::SetKernelStack(&cpu->tss, (uintptr_t)cpu->currentThread->kernelStack);
 
-        TaskSwitch(&cpu->currentThread->registers);
+        TaskSwitch(&cpu->currentThread->registers, cpu->currentThread->parent->addressSpace->pml4Phys);
         
         for(;;);
     }
@@ -492,6 +487,8 @@ namespace Scheduler{
         thread->registers.rsp = (uintptr_t) stack;
         thread->registers.rbp = (uintptr_t) stack;
         
+        assert(!(thread->registers.rsp & 0xF));
+
         Log::Info("Entry: %x, Stack: %x", thread->registers.rip, stack);
 
         processes->add_back(proc);

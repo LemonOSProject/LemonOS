@@ -14,10 +14,6 @@ volatile int exclusiveLock = 0;
 
 extern "C" {
 int liballoc_lock() {
-	//acquireLock(&liballocLock);
-	if(!CheckInterrupts()) {
-		Log::Warning("liballoc: interrupts disabled");
-	}
 	while(acquireTestLock(&liballocLock)) { asm("sti"); Scheduler::Yield(); } // If for some reason liballoc is locked before the scheduler starts something probably went horribly wrong
 	return 0;
 }
