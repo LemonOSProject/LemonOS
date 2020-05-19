@@ -40,6 +40,7 @@ int main(int argc, char** argv){
 	window = Lemon::GUI::CreateWindow(&windowInfo);
 
 	char* filePointer = nullptr;
+	
 	Lemon::GUI::FileView* fv = new Lemon::GUI::FileView({{0,0},{512,256}}, "/", &filePointer, OnFileOpened);
 
 	AddWidget(fv, window);

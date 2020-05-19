@@ -91,16 +91,30 @@ typedef struct
 } __attribute__((packed)) fat_lfn_entry_t; // Long File Name
 
 namespace fs::FAT32{
+    class Fat32Volume;
+
+    class Fat32Node : public FsNode {
+    public:
+        size_t Read(size_t, size_t, uint8_t *);
+        size_t Write(size_t, size_t, uint8_t *);
+        //fs_fd_t* Open(size_t flags);
+        //void Close();
+        int ReadDir(struct fs_dirent*, uint32_t);
+        FsNode* FindDir(char* name);
+
+        Fat32Volume* vol;
+    };
+
     class Fat32Volume : public FsVolume {
     public:
         Fat32Volume(PartitionDevice* part, char* name);
 
-        size_t Read(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer);
-        size_t Write(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer);
-        void Open(struct fs_node* node, uint32_t flags);
-        void Close(struct fs_node* node);
-        int ReadDir(struct fs_node* node, struct fs_dirent* dirent, uint32_t index);
-        fs_node* FindDir(struct fs_node* node, char* name);
+        size_t Read(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer);
+        size_t Write(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer);
+        void Open(Fat32Node* node, uint32_t flags);
+        void Close(Fat32Node* node);
+        int ReadDir(Fat32Node* node, struct fs_dirent* dirent, uint32_t index);
+        FsNode* FindDir(Fat32Node* node, char* name);
 
     private:
         uint64_t ClusterToLBA(uint32_t cluster);
@@ -115,6 +129,7 @@ namespace fs::FAT32{
         uint32_t fatEntryCount;
 
         int clusterSizeBytes;
+        Fat32Node fat32MountPoint;
     };
 
     int Identify(PartitionDevice* part);

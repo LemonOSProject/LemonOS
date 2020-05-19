@@ -40,8 +40,8 @@ void KernelProcess(){
 	Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Loading Init Process...");
-	fs_node_t* initrd = fs::FindDir(fs::GetRoot(), "initrd");
-	fs_node_t* initFsNode = fs::FindDir(initrd,"init.lef");
+	FsNode* initrd = fs::FindDir(fs::GetRoot(), "initrd");
+	FsNode* initFsNode = fs::FindDir(initrd,"init.lef");
 	if(!initFsNode){
 		const char* panicReasons[]{
 			"Failed to load init task (init.lef)!"
@@ -90,9 +90,25 @@ void KernelProcess(){
 	}
 }
 
+typedef void (*ctor_t)(void);
+extern ctor_t _ctors_start[0];
+extern ctor_t _ctors_end[0];
+
+void InitializeConstructors(){
+	unsigned ctorCount = ((uint64_t)&_ctors_end - (uint64_t)&_ctors_start) / sizeof(void*);
+
+	Log::Info("[Constructors] Start: %x, End: %x, Count: %d", _ctors_start, _ctors_end, ctorCount);
+
+	for(unsigned i = 0; i < ctorCount; i++){
+		_ctors_start[i]();
+	}
+}
+
 extern "C"
 [[noreturn]] void kmain(multiboot_info_t* mb_info){
 	HAL::Init(*mb_info);
+
+	InitializeConstructors(); // Call global constructors
 
 	videoMode = Video::GetVideoMode();
 
@@ -114,7 +130,7 @@ extern "C"
 	Log::Info("Reserved RAM: %d MB", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);
 	
 	Log::Info("Initializing Ramdisk...");
-	//Initrd::Initialize(initrd_start,initrd_end - initrd_start); // Initialize Initrd
+	
 	fs::tar::TarVolume* tar = new fs::tar::TarVolume(HAL::bootModules[0].base, HAL::bootModules[0].size, "initrd");
 	fs::volumes->add_back(tar);
 	fs::volumes->add_back(new fs::LinkVolume(tar, "lib"));
@@ -124,23 +140,21 @@ extern "C"
 	Log::Info("Filesystem Root:");
 
 	fs_dirent_t dirent;
-	fs_node_t* root = fs::GetRoot();
+	FsNode* root = fs::GetRoot();
 	int i = 0;
-	while((fs::ReadDir(root,&dirent,i++))){ // Read until no more dirents
-		fs_node_t* node = fs::FindDir(root, dirent.name);
+	while((fs::ReadDir(root,&dirent,i++)) != -1){ // Read until no more dirents
+		FsNode* node = fs::FindDir(root, dirent.name);
 		if(!node) continue;
-		Log::Write("    ");
 		if(node->flags & FS_NODE_DIRECTORY){
-			Log::Write(dirent.name, 0, 255, 0);
+			Log::Info("%s/", dirent.name);
 		} else {
-			Log::Write(dirent.name);
+			Log::Info(dirent.name);
 		}
-		Log::Write("\n");
 	}
 
-	fs_node_t* initrd = fs::FindDir(fs::GetRoot(), "initrd");
+	FsNode* initrd = fs::FindDir(fs::GetRoot(), "initrd");
 
-	fs_node_t* splashFile;
+	FsNode* splashFile;
 	if((splashFile = fs::FindDir(initrd,"splash.bmp"))){
 		uint32_t size = splashFile->size;
 		uint8_t* buffer = (uint8_t*)kmalloc(size);

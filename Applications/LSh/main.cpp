@@ -90,6 +90,7 @@ char* ReadLine(){
 		}
 
 		char ch = getchar();
+
 		if(ch == '\n' || ch == EOF){
 			ln[i] = 0;
 			break;
@@ -185,9 +186,12 @@ int main(){
 
 	path.add_back("/initrd");
 	path.add_back("/initrd/bin");
+	
+	fflush(stdin);
 
 	for(;;) {
-		printf("\n\033[33mLemon \033[31m%s\033[m>", currentDir);
+		printf("\n\033[33mLemon \033[91m%s\033[m$ ", currentDir);
+		fflush(stdout);
 
 		ReadLine();
 		ParseLine();

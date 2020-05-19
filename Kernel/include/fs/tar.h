@@ -53,18 +53,26 @@ typedef struct {
     };  
 } __attribute__ ((packed)) tar_header_t;
 
-struct tar_node;
-
-typedef struct tar_node {
-    tar_header_t* header;
-    fs_node_t node;
-
-    ino_t parent;
-    int entryCount; // For Directories - Amount of child nodes
-    ino_t* children; // For Directories - Inodes of children
-} tar_node_t;
-
 namespace fs::tar {
+    class TarVolume;
+
+    class TarNode : public FsNode {
+    public:
+        tar_header_t* header;
+
+        ino_t parentInode;
+        int entryCount; // For Directories - Amount of child nodes
+        ino_t* children; // For Directories - Inodes of children
+        
+        size_t Read(size_t, size_t, uint8_t *);
+        size_t Write(size_t, size_t, uint8_t *);
+        void Close();
+        int ReadDir(struct fs_dirent*, uint32_t);
+        FsNode* FindDir(char* name);
+
+        TarVolume* vol;
+    };
+
     class TarVolume : public FsVolume {
         tar_header_t* blocks;
         uint64_t blockCount = 0;
@@ -74,19 +82,18 @@ namespace fs::tar {
         ino_t nextNode = 1;
 
         int ReadDirectory(int index, ino_t parent);
-        void MakeNode(tar_header_t* header, tar_node_t* n, ino_t inode, ino_t parent, tar_header_t* dirHeader = nullptr);
+        void MakeNode(tar_header_t* header, TarNode* n, ino_t inode, ino_t parent, tar_header_t* dirHeader = nullptr);
 
     public:
-        tar_node_t* nodes;
+        TarNode* nodes;
 
         TarVolume(uintptr_t base, size_t size, char* name);
             
-        size_t Read(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer);
-        size_t Write(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer);
-        void Open(struct fs_node* node, uint32_t flags);
-        void Close(struct fs_node* node);
-        int ReadDir(struct fs_node* node, struct fs_dirent* dirent, uint32_t index);
-        fs_node* FindDir(struct fs_node* node, char* name);
-
+        size_t Read(TarNode* node, size_t offset, size_t size, uint8_t *buffer);
+        size_t Write(TarNode* node, size_t offset, size_t size, uint8_t *buffer);
+        void Open(TarNode* node, uint32_t flags);
+        void Close(TarNode* node);
+        int ReadDir(TarNode* node, struct fs_dirent* dirent, uint32_t index);
+        FsNode* FindDir(TarNode* node, char* name);
     };
 };

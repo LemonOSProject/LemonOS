@@ -55,6 +55,7 @@ cpp_files = [
     'src/fs/filesystem.cpp',
     'src/fs/fsvolume.cpp',
     'src/fs/tar.cpp',
+    'src/fs/fsnodestubs.cpp',
 
     'src/liballoc/_liballoc.cpp',
     'src/liballoc/liballoc.c',

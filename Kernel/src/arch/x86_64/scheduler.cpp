@@ -163,7 +163,7 @@ namespace Scheduler{
         proc->threads = (thread_t*)kmalloc(sizeof(thread_t) * 1);
 
         // Reserve 3 file descriptors for stdin, out and err
-        fs_node_t* nullDev = fs::ResolvePath("/dev/null");
+        FsNode* nullDev = fs::ResolvePath("/dev/null");
         proc->fileDescriptors.add_back(fs::Open(nullDev));  //(NULL);
         proc->fileDescriptors.add_back(fs::Open(nullDev));  //(NULL);
         proc->fileDescriptors.add_back(fs::Open(nullDev));  //(NULL);
@@ -410,7 +410,7 @@ namespace Scheduler{
 
             char temp[32];
             strcpy(temp, "/initrd/ld.so");
-            fs_node_t* node = fs::ResolvePath(temp);
+            FsNode* node = fs::ResolvePath(temp);
             
             Log::Info("Dynamic Linker: ");
             Log::Write(node->name);

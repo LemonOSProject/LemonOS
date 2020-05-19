@@ -43,36 +43,34 @@ typedef struct {
 	int64_t st_blocks;
 } stat_t;
 
-struct fs_node;
+class FsNode;
 
-typedef size_t (*read_type_t) (struct fs_node *, size_t, size_t, uint8_t *);
-typedef size_t (*write_type_t) (struct fs_node *, size_t, size_t, uint8_t *);
-typedef void (*open_type_t) (struct fs_node*, uint32_t flags);
-typedef void (*close_type_t) (struct fs_node*);
-typedef int (*readdir_type_t) (struct fs_node*, struct fs_dirent*, uint32_t);
-typedef struct fs_node*(*finddir_type_t) (struct fs_node*, char *name);
-typedef int (*ioctl_type_t) (struct fs_node*, uint64_t cmd, uint64_t arg);
+typedef struct fs_fd{
+    FsNode* node;
+    off_t pos;
+    mode_t mode;
+} fs_fd_t;
 
-typedef struct fs_node{
+class FsNode{
+public:
     char name[128]; // Filename
-    uint32_t flags; // Flags
-    uint32_t pmask; // Permission mask
-    uid_t uid; // User id
-    ino_t inode; // Inode number
-    size_t size; // Node size
+    uint32_t flags = 0; // Flags
+    uint32_t pmask = 0; // Permission mask
+    uid_t uid = 0; // User id
+    ino_t inode = 0; // Inode number
+    size_t size = 0; // Node size
 
-    read_type_t read; // Read callback
-    write_type_t write; // Write callback
-    open_type_t open; // Open callback
-    close_type_t close; // Close callback
-    readdir_type_t readDir; // Read callback
-    finddir_type_t findDir; // Find callback
-    ioctl_type_t ioctl; // Ioctl Callback
+    virtual size_t Read(size_t, size_t, uint8_t *);
+    virtual size_t Write(size_t, size_t, uint8_t *);
+    virtual fs_fd_t* Open(size_t flags);
+    virtual void Close();
+    virtual int ReadDir(struct fs_dirent*, uint32_t);
+    virtual FsNode* FindDir(char* name);
+    virtual int Ioctl(uint64_t cmd, uint64_t arg);
 
-    void* vol; // Some Fs Drivers may use this
-
-    fs_node* link;
-} fs_node_t;
+    FsNode* link;
+    FsNode* parent;
+};
 
 typedef struct fs_dirent {
 	uint32_t inode; // Inode number
@@ -80,36 +78,30 @@ typedef struct fs_dirent {
     uint32_t type;
 } fs_dirent_t;
 
-typedef struct fs_fd{
-    fs_node_t* node;
-    off_t pos;
-    mode_t mode;
-} fs_fd_t;
-
 namespace fs{
     class FsVolume;
 
 	extern List<FsVolume*>* volumes;
 
     void Initialize();
-    fs_node_t* GetRoot();
-    void RegisterDevice(fs_node_t* device);
+    FsNode* GetRoot();
+    void RegisterDevice(FsNode* device);
 
-    fs_node_t* ResolvePath(char* path, char* workingDir = nullptr);
+    FsNode* ResolvePath(char* path, char* workingDir = nullptr);
     char* CanonicalizePath(char* path, char* workingDir);
 
-    size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
-    size_t Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
-    fs_fd_t* Open(fs_node_t* node, uint32_t flags = 0);
-    void Close(fs_node_t* node);
+    size_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer);
+    size_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer);
+    fs_fd_t* Open(FsNode* node, uint32_t flags = 0);
+    void Close(FsNode* node);
     void Close(fs_fd_t* handle);
-    int ReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index);
-    fs_node_t* FindDir(fs_node_t* node, char* name);
+    int ReadDir(FsNode* node, fs_dirent_t* dirent, uint32_t index);
+    FsNode* FindDir(FsNode* node, char* name);
     
     size_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer);
     size_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer);
     int ReadDir(fs_fd_t* handle, fs_dirent_t* dirent, uint32_t index);
-    fs_node_t* FindDir(fs_fd_t* handle, char* name);
+    FsNode* FindDir(fs_fd_t* handle, char* name);
 
     int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg);
 }

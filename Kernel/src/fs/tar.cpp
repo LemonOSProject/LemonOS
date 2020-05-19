@@ -33,58 +33,42 @@ inline static uint32_t TarTypeToFilesystemFlags(char type){
 }
 
 namespace fs::tar{
-    size_t Read(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer){
-        if(node->vol){
-            return ((TarVolume*)node->vol)->Read(node, offset, size, buffer);
+    size_t TarNode::Read(size_t offset, size_t size, uint8_t *buffer){
+        if(vol){
+            return vol->Read(this, offset, size, buffer);
         } else return 0;
     }
 
-    size_t Write(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer){
-        if(node->vol){
-            return ((TarVolume*)node->vol)->Write(node, offset, size, buffer);
+    size_t TarNode::Write(size_t offset, size_t size, uint8_t *buffer){
+        if(vol){
+            return vol->Write(this, offset, size, buffer);
         } else return 0;
     }
 
-    void Open(struct fs_node* node, uint32_t flags){
-        if(node->vol){
-            ((TarVolume*)node->vol)->Open(node, flags);
+    void TarNode::Close(){
+        if(vol){
+            vol->Close(this);
         }
     }
-
-    void Close(struct fs_node* node){
-        if(node->vol){
-            ((TarVolume*)node->vol)->Close(node);
-        }
-    }
-    int ReadDir(struct fs_node* node, struct fs_dirent* dirent, uint32_t index){
-        if(node->vol){
-            return ((TarVolume*)node->vol)->ReadDir(node, dirent, index);
+    int TarNode::ReadDir(struct fs_dirent* dirent, uint32_t index){
+        if(vol){
+            return vol->ReadDir(this, dirent, index);
         } else return -10;
     }
-    fs_node* FindDir(struct fs_node* node, char* name){
-        if(node->vol){
-            return ((TarVolume*)node->vol)->FindDir(node, name);
+    FsNode* TarNode::FindDir(char* name){
+        if(vol){
+            return vol->FindDir(this, name);
         } else return nullptr;
     }
 
-    fs_node_t nodeTemplate = {
-        .read = tar::Read,
-        .write = tar::Write,
-        .open = tar::Open,
-        .close = tar::Close,
-        .readDir = tar::ReadDir,
-        .findDir = tar::FindDir,
-    };
-
-    void TarVolume::MakeNode(tar_header_t* header, tar_node_t* n, ino_t inode, ino_t parent, tar_header_t* dirHeader){
-        n->parent = parent;
+    void TarVolume::MakeNode(tar_header_t* header, TarNode* n, ino_t inode, ino_t parent, tar_header_t* dirHeader){
+        n->parentInode = parent;
         n->header = header;
 
-        n->node = nodeTemplate;
-        n->node.inode = inode;
-        n->node.uid = OctToDec(header->ustar.uid, 8);
-        n->node.flags = TarTypeToFilesystemFlags(header->ustar.type);
-        n->node.vol = this;
+        n->inode = inode;
+        n->uid = OctToDec(header->ustar.uid, 8);
+        n->flags = TarTypeToFilesystemFlags(header->ustar.type);
+        n->vol = this;
 
         char* name = header->ustar.name;
         char* _name = strtok(header->ustar.name, "/");
@@ -92,16 +76,15 @@ namespace fs::tar{
             name = _name;
             _name = strtok(NULL, "/");
         }
-        strcpy(n->node.name, name);
-        n->node.size = GetSize(header->ustar.size);
+        strcpy(n->name, name);
+        n->size = GetSize(header->ustar.size);
     }
 
     int TarVolume::ReadDirectory(int blockIndex, ino_t parent){
         ino_t dirInode = nextNode++;
         tar_header_t* dirHeader = &blocks[blockIndex];
-        tar_node_t* dirNode = &nodes[dirInode];
+        TarNode* dirNode = &nodes[dirInode];
         MakeNode(dirHeader, dirNode, dirInode, parent);
-        dirNode->node.read = dirNode->node.write = nullptr; // Is a directory
         dirNode->entryCount = 0;
 
         int i = blockIndex + GetBlockCount(dirHeader->ustar.size) + 1; // Next block
@@ -117,7 +100,7 @@ namespace fs::tar{
         i = blockIndex + GetBlockCount(dirHeader->ustar.size) + 1;
         for(int e = 0; i < blockCount && e < dirNode->entryCount; e++){ // Iterate through directory
             ino_t inode = nextNode++;
-            tar_node_t* n = &nodes[inode];
+            TarNode* n = &nodes[inode];
             MakeNode(&blocks[i], n, inode, dirInode, dirHeader);
             dirNode->children[e] = inode;
             //Log::Info("[TAR] Found File: %s, ", blocks[i].ustar.name);
@@ -143,30 +126,19 @@ namespace fs::tar{
             i += GetBlockCount(header.ustar.size);
         }
 
-        nodes = (tar_node_t*)kmalloc(nodeCount * sizeof(tar_node_t));
-        memset(nodes, 0, nodeCount * sizeof(tar_node_t));
+        nodes = new TarNode[nodeCount];
 
-        tar_node_t* volumeNode = &nodes[0];
-        nodes[0] = (tar_node_t){
-            .header = nullptr,
-            .node = {
-                .flags = FS_NODE_DIRECTORY | FS_NODE_MOUNTPOINT,
-                .inode = 0,
-                .size = size,
-                .read = nullptr,
-                .write = nullptr,
-                .open = fs::tar::Open,
-                .close = fs::tar::Close,
-                .readDir = fs::tar::ReadDir,
-                .findDir = fs::tar::FindDir,
-                .vol = this,
-            },
-            .parent = 0,
-        };
-        strcpy(nodes[0].node.name,name);
-        mountPoint = volumeNode->node;
-        strcpy(mountPoint.name, volumeNode->node.name);
-        strcpy(mountPointDirent.name, mountPoint.name);
+        TarNode* volumeNode = &nodes[0];
+        volumeNode->header = nullptr;
+        volumeNode->flags = FS_NODE_DIRECTORY | FS_NODE_MOUNTPOINT;
+        volumeNode->inode = 0;
+        volumeNode->size = size;
+        volumeNode->vol = this;
+        volumeNode->parent = 0;
+
+        mountPoint = volumeNode;
+        strcpy(volumeNode->name,name);
+        strcpy(mountPointDirent.name, volumeNode->name);
         mountPointDirent.type = FS_NODE_DIRECTORY;
 
         volumeNode->children = (ino_t*)kmalloc(sizeof(ino_t) * entryCount);
@@ -181,7 +153,7 @@ namespace fs::tar{
                 continue;
             } else if(header.ustar.type == TAR_TYPE_FILE) {
                 ino_t inode = nextNode++;
-                tar_node_t* node = &nodes[inode];
+                TarNode* node = &nodes[inode];
                 MakeNode(&blocks[i], node, inode, 0);
                 volumeNode->children[e] = inode;
             }
@@ -192,8 +164,8 @@ namespace fs::tar{
         volumeNode->entryCount = e;
     }
 
-    size_t TarVolume::Read(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer){
-        tar_node_t* tarNode = &nodes[node->inode];
+    size_t TarVolume::Read(TarNode* node, size_t offset, size_t size, uint8_t *buffer){
+        TarNode* tarNode = &nodes[node->inode];
 
 		if(offset > node->size) return 0;
 		else if(offset + size > node->size || size > node->size) size = node->size - offset;
@@ -204,22 +176,22 @@ namespace fs::tar{
 		return size;
     }
 
-    size_t TarVolume::Write(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer){
-        tar_node_t* tarNode = &nodes[node->inode];
+    size_t TarVolume::Write(TarNode* node, size_t offset, size_t size, uint8_t *buffer){
+        TarNode* tarNode = &nodes[node->inode];
 
         return 0;
     }
 
-    void TarVolume::Open(struct fs_node* node, uint32_t flags){
-        tar_node_t* tarNode = &nodes[node->inode];
+    void TarVolume::Open(TarNode* node, uint32_t flags){
+        TarNode* tarNode = &nodes[node->inode];
     }
 
-    void TarVolume::Close(struct fs_node* node){
-        tar_node_t* tarNode = &nodes[node->inode];
+    void TarVolume::Close(TarNode* node){
+        TarNode* tarNode = &nodes[node->inode];
     }
 
-    int TarVolume::ReadDir(struct fs_node* node, struct fs_dirent* dirent, uint32_t index){
-        tar_node_t* tarNode = &nodes[node->inode];
+    int TarVolume::ReadDir(TarNode* node, struct fs_dirent* dirent, uint32_t index){
+        TarNode* tarNode = &nodes[node->inode];
         
         if(!(node->flags & FS_NODE_DIRECTORY)) return -1;
 
@@ -233,28 +205,28 @@ namespace fs::tar{
             return 0;
         }
 
-        tar_node_t* dir = &nodes[tarNode->children[index - 2]];
+        TarNode* dir = &nodes[tarNode->children[index - 2]];
 
-        strcpy(dirent->name, dir->node.name);
-        dirent->type = dir->node.flags;
-        dirent->inode = dir->node.inode;
+        strcpy(dirent->name, dir->name);
+        dirent->type = dir->flags;
+        dirent->inode = dir->inode;
 
         return 0;
     }
 
-    fs_node* TarVolume::FindDir(struct fs_node* node, char* name){
-        tar_node_t* tarNode = &nodes[node->inode];
+    FsNode* TarVolume::FindDir(TarNode* node, char* name){
+        TarNode* tarNode = &nodes[node->inode];
         
         if(!(node->flags & FS_NODE_DIRECTORY)) return nullptr;
 
         if(strcmp(".", name) == 0) return node;
         if(strcmp("..", name) == 0){
             if(node->inode == 0) return fs::GetRoot();
-            else return &nodes[tarNode->parent].node;
+            else return &nodes[tarNode->parentInode];
         }
 
         for(int i = 0; i < tarNode->entryCount; i++){
-            if(strcmp(nodes[tarNode->children[i]].node.name, name) == 0) return &nodes[tarNode->children[i]].node;
+            if(strcmp(nodes[tarNode->children[i]].name, name) == 0) return &nodes[tarNode->children[i]];
         }
 
         return nullptr;

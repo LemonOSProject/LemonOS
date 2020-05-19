@@ -20,6 +20,10 @@ SECTIONS
         _code = .;
         *(.text)
         *(.rodata)
+        . = ALIGN(8);
+        _ctors_start = .;
+        *(.ctors)
+        _ctors_end = .;
         . = ALIGN(4096);
     }
 
@@ -55,5 +59,6 @@ SECTIONS
    /DISCARD/ :
    {
         *(.comment)
+        *(.eh_frame)
    }
 }

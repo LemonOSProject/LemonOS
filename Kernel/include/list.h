@@ -27,10 +27,7 @@ public:
 	}
 
 	~List() {
-		ListNode<T>* node = front;
-		while (node->next) {
-			kfree(node);
-		}
+		clear();
 	}
 
 	void clear() {

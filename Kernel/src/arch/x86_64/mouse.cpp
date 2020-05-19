@@ -12,7 +12,7 @@ namespace Mouse{
 	int8_t mouseData[3];
 	uint8_t mouseCycle;
 
-	bool data_updated = false;
+	bool dataUpdated = false;
 
 	void Handler(regs64_t* regs) {
 		switch (mouseCycle)
@@ -20,17 +20,17 @@ namespace Mouse{
 		case 0:
 			mouseData[0] = inportb(0x60);
 			mouseCycle++;
-			data_updated = true;
+			dataUpdated = true;
 			break;
 		case 1:
 			mouseData[1] = inportb(0x60);
 			mouseCycle++;
-			data_updated = true;
+			dataUpdated = true;
 			break;
 		case 2:
 			mouseData[2] = inportb(0x60);
 			mouseCycle = 0;
-			data_updated = true;
+			dataUpdated = true;
 			break;
 		}
 	}
@@ -64,17 +64,44 @@ namespace Mouse{
 		return inportb(0x60);
 	}
 
-	fs_node_t mouseCharDev;
-	size_t ReadDevice(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
+	bool DataUpdated() {
+		bool updated = dataUpdated;
+		if(dataUpdated)
+			dataUpdated = false;
+		return updated;
+	}
+
+	class MouseDevice : public FsNode{
+	public:
+		MouseDevice(char* name){
+			strcpy(this->name, name);
+		}
+		uint32_t flags = FS_NODE_CHARDEVICE;
+
+		size_t Read(size_t offset, size_t size, uint8_t *buffer){
+			if(size < 3) return 0;
+
+			Log::Info("Reading mouse dev");
+
+			if(DataUpdated())
+				memcpy(buffer,mouseData, 3);
+			else {
+				buffer[0] = mouseData[0];
+				buffer[1] = 0;
+				buffer[2] = 0;
+			}
+			
+			return 3;
+		}
+	};
+
+	MouseDevice mouseDev("mouse0");
 
 	void Install()
 	{
 		uint8_t status;
 
-		mouseCharDev.flags = FS_NODE_CHARDEVICE;
-		mouseCharDev.read = ReadDevice;
-		strcpy(mouseCharDev.name, "mouse0");
-		fs::RegisterDevice(&mouseCharDev);
+		fs::RegisterDevice(&mouseDev);
 
 		Wait(1);
 		outportb(0x64, 0xA8);
@@ -101,26 +128,5 @@ namespace Mouse{
 
 	int8_t* GetData() {
 		return mouseData;
-	}
-
-	bool DataUpdated() {
-		bool updated = data_updated;
-		if(data_updated)
-			data_updated = false;
-		return updated;
-	}
-	
-	size_t ReadDevice(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-		if(size < 3) return 0;
-
-		if(DataUpdated())
-			memcpy(buffer,mouseData, 3);
-		else {
-			buffer[0] = mouseData[0];
-			buffer[1] = 0;
-			buffer[2] = 0;
-		}
-		
-		return 3;
 	}
 }

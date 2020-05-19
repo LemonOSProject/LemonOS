@@ -66,10 +66,11 @@
 #define SYS_BIND 50
 #define SYS_LISTEN 51
 #define SYS_ACCEPT 52
-#define SYS_GETUID 53
-#define SYS_SETUID 54
+#define SYS_CONNECT 53
+#define SYS_GETUID 54
+#define SYS_SETUID 55
 
-#define NUM_SYSCALLS 55
+#define NUM_SYSCALLS 56
 
 #define EXEC_CHILD 1
 
@@ -94,7 +95,7 @@ int SysExec(regs64_t* r){
 
 	Log::Info("Executing: %s", (char*)r->rbx);
 
-	fs_node_t* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
+	FsNode* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
 
 	if(!current_node){
 		return 1;
@@ -193,7 +194,7 @@ int SysWrite(regs64_t* r){
 int SysOpen(regs64_t* r){
 	char* filepath = (char*)kmalloc(strlen((char*)r->rbx) + 1);
 	strcpy(filepath, (char*)r->rbx);
-	fs_node_t* root = fs::GetRoot();
+	FsNode* root = fs::GetRoot();
 
 	Log::Info("Opening: %s", filepath);
 	uint32_t fd;
@@ -204,7 +205,7 @@ int SysOpen(regs64_t* r){
 		return 0;
 	}
 
-	fs_node_t* node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
+	FsNode* node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
 
 	if(!node){
 		Log::Warning("Failed to open file!");
@@ -320,7 +321,7 @@ int SysStat(regs64_t* r){
 	int fd = r->rcx;
 	int* ret = (int*)r->rdx;
 
-	fs_node_t* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(fd)->node;
+	FsNode* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(fd)->node;
 	if(!node){
 		Log::Warning("sys_stat: Invalid File Descriptor, %d", fd);
 		*ret = 1;
@@ -708,7 +709,7 @@ int SysPRead(regs64_t* r){
 		*((int*)r->rsi) = -1; // Return -1
 		return -1;
 	}
-	fs_node_t* node;
+	FsNode* node;
 	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx)->node)){ 
 		Log::Warning("sys_pread: Invalid file descriptor: %d", r->rbx);
 		return 1; 
@@ -727,7 +728,7 @@ int SysPWrite(regs64_t* r){
 		*((int*)r->rsi) = -1; // Return -1
 		return -1;
 	}
-	fs_node_t* node;
+	FsNode* node;
 	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx)->node)){ 
 		Log::Warning("sys_pwrite: Invalid file descriptor: %d", r->rbx);
 		return 1; 
@@ -759,13 +760,15 @@ int SysIoctl(regs64_t* r){
 	}
 	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
 	if(!handle){
-		Log::Warning("sys_fcntl: Invalid File Descriptor: %d", r->rbx);
+		Log::Warning("sys_ioctl: Invalid File Descriptor: %d", r->rbx);
 		return -2;
 	}
 
-	*result = fs::Ioctl(handle, request, arg);
+	int ret = fs::Ioctl(handle, request, arg);
 
-	return 0;
+	if(result) *result = ret;
+
+	return ret;
 }
 
 int SysInfo(regs64_t* r){
@@ -882,26 +885,76 @@ int SysDestroySharedMemory(regs64_t* r){
 	return 0;
 }
 
+/* 
+ * SysSocket (domain, type, protocol) - Create socket
+ * domain - socket domain
+ * type - socket type
+ * protcol - socket protocol
+ *
+ * On Success - return file descriptor
+ * On Failure - return -1
+ */
 int SysSocket(regs64_t* r){
 
 }
 
+/* 
+ * SysBind (sockfd, addr, addrlen) - Bind address to socket
+ * sockfd - Socket file descriptor
+ * addr - sockaddr structure
+ * addrlen - size of addr
+ *
+ * On Success - return 0
+ * On Failure - return -1
+ */
 int SysBind(regs64_t* r){
 	
 }
 
+/* 
+ * SysListen (sockfd, backlog) - Marks socket as passive
+ * sockfd - socket file descriptor
+ * backlog - maximum amount of pending connections
+ *
+ * On Success - return 0
+ * On Failure - return -1
+ */
 int SysListen(regs64_t* r){
 	
 }
 
+/* 
+ * SysAccept (sockfd, addr, addrlen) - Accept socket connection
+ * sockfd - Socket file descriptor
+ * addr - sockaddr structure
+ * addrlen - size of addr
+ *
+ * On Success - return file descriptor of accepted socket
+ * On Failure - return -1
+ */
 int SysAccept(regs64_t* r){
 	
 }
 
+/* 
+ * SysConnect (sockfd, addr, addrlen) - Initiate socket connection
+ * sockfd - Socket file descriptor
+ * addr - sockaddr structure
+ * addrlen - size of addr
+ *
+ * On Success - return 0
+ * On Failure - return -1
+ */
 int SysConnect(regs64_t* r){
 	
 }
 
+/* 
+ * SetGetUID () - Get Process UID
+ * 
+ * On Success - Return process UID
+ * On Failure - Does not fail
+ */
 int SysGetUID(regs64_t* r){
 	return Scheduler::GetCurrentProcess()->uid;
 }
@@ -966,7 +1019,7 @@ syscall_t syscalls[]{
 	SysAccept,
 	SysConnect,
 	SysGetUID,
-	SysSetUID,
+	SysSetUID,					// 55
 };
 
 int lastSyscall = 0;

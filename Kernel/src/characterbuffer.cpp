@@ -30,7 +30,7 @@ size_t CharacterBuffer::Write(char* _buffer, size_t size){
             buffer[bufferPos++] = _buffer[i];
         }
 
-        if(_buffer[i] == '\n') lines++;
+        if(_buffer[i] == '\n' || _buffer[i] == '\0') lines++;
     }
 
     releaseLock(&(this->lock));
@@ -51,6 +51,11 @@ size_t CharacterBuffer::Read(char* _buffer, size_t count){
     }
 
     for(int i = 0; i < count; i++){
+        if(buffer[i] == '\0') {
+            lines--;
+            continue;
+        }
+
         _buffer[i] = buffer[i];
 
         if(buffer[i] == '\n') lines--;
@@ -65,4 +70,13 @@ size_t CharacterBuffer::Read(char* _buffer, size_t count){
     releaseLock(&(this->lock));
 
     return count;
+}
+
+void CharacterBuffer::Flush(){
+    acquireLock(&(this->lock));
+
+    bufferPos = 0;
+    lines = 0;
+    
+    releaseLock(&(this->lock));
 }

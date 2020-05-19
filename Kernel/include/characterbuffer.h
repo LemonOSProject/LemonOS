@@ -17,6 +17,7 @@ public:
     size_t Write(char* buffer, size_t size);
     size_t Read(char* buffer, size_t count);
 
+    void Flush();
 private:
     volatile int lock = 0;
 };

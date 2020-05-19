@@ -3,28 +3,46 @@
 #include <fs/fsvolume.h>
 #include <logging.h>
 
+
 namespace fs{
-    size_t ReadNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
-	size_t WriteNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer);
+	
+	class Root : public FsNode {
+	public:
+		Root() { flags = FS_NODE_DIRECTORY; }
 
-    int RootReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index);
-    fs_node_t* RootFindDir(fs_node_t* node, char* name);
-    int DevReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index);
-    fs_node_t* DevFindDir(fs_node_t* node, char* name);
+		int ReadDir(struct fs_dirent*, uint32_t);
+		FsNode* FindDir(char* name);
+	};
+	
+	class Dev : public FsNode {
+	public:
+		Dev() { flags = FS_NODE_DIRECTORY; }
 
-    fs_node_t root;
+		int ReadDir(struct fs_dirent*, uint32_t);
+		FsNode* FindDir(char* name);
+	};
+	
+	class Null : public FsNode {
+	public:
+		uint32_t flags = FS_NODE_FILE;
+
+		size_t Read(size_t, size_t, uint8_t *);
+		size_t Write(size_t, size_t, uint8_t *);
+	};
+
+    Root root;
 	fs_dirent_t rootDirent;
 
-	fs_node_t dev;
+	Dev dev;
 	fs_dirent_t devDirent;
 
-	fs_node_t null;
+	Null null;
     
 	fs_dirent_t dirent;
 
 	List<FsVolume*>* volumes;
     
-	fs_node_t* devices[64];
+	FsNode* devices[64];
 	uint32_t deviceCount = 0;
 
     void Initialize(){
@@ -35,34 +53,30 @@ namespace fs{
 		root.inode = 0;
 		strcpy(rootDirent.name, "");
 
-		root.readDir = RootReadDir;
-		root.findDir = RootFindDir;
-
 		strcpy(dev.name,"dev");
 		dev.flags = FS_NODE_DIRECTORY;
 		dev.inode = 0;
 		strcpy(devDirent.name, "dev");
 		devDirent.type = FS_NODE_DIRECTORY;
 
-		dev.readDir = DevReadDir;
-		dev.findDir = DevFindDir;
-
 		strcpy(null.name,"null");
 		null.flags = FS_NODE_CHARDEVICE;
 		null.inode = 0;
 		null.size = 1;
 
-		null.read = ReadNull;
-		null.write = WriteNull;
-
         RegisterDevice(&null);
     }
 
-    fs_node_t* GetRoot(){
+	void RegisterVolume(FsVolume* vol){
+		vol->mountPoint->parent = &root;
+		volumes->add_back(vol);
+	}
+
+    FsNode* GetRoot(){
         return &root;
     }
 
-	fs_node_t* ResolvePath(char* path, char* workingDir){
+	FsNode* ResolvePath(char* path, char* workingDir){
 		char* tempPath;
 		if(workingDir && path[0] != '/'){
 			tempPath = (char*)kmalloc(strlen(path) + strlen(workingDir) + 2);
@@ -74,13 +88,13 @@ namespace fs{
 			strcpy(tempPath, path);
 		}
 
-		fs_node_t* root = fs::GetRoot();
-		fs_node_t* current_node = root;
+		FsNode* root = fs::GetRoot();
+		FsNode* current_node = root;
 
 		char* file = strtok(tempPath,"/");
 
 		while(file != NULL){ // Iterate through the directories to find the file
-			fs_node_t* node = fs::FindDir(current_node,file);
+			FsNode* node = fs::FindDir(current_node,file);
 			if(!node) {
 				Log::Warning(tempPath);
 				Log::Write(" not found!");
@@ -91,6 +105,12 @@ namespace fs{
 				file = strtok(NULL, "/");
 				continue;
 			}
+
+			if(file = strtok(NULL, "/")){
+				Log::Warning("Found file %s in the path however we were not finished", node->name);
+				return nullptr;
+			}
+
 			current_node = node;
 			break;
 		}
@@ -156,132 +176,105 @@ namespace fs{
 		return outPath;
 	}
 
-	void RegisterDevice(fs_node_t* device){
+	void RegisterDevice(FsNode* device){
 		Log::Info("Device Registered: ");
 		Log::Write(device->name);
 		devices[deviceCount++] = device;
 	}
     
-	int RootReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index){
-		if(node == &root && index == 0){
+	int Dev::ReadDir(fs_dirent_t* dirent, uint32_t index){
+		Log::Info("readdir %d", index);
+		if(index >= deviceCount) return -1;
+		memset(dirent->name,0,128); // Zero the string
+		strcpy(dirent->name,devices[index]->name);
+		dirent->inode = index;
+		dirent->type = 0;
+		return 0;
+	}
+
+    FsNode* Dev::FindDir(char* name){
+		for(unsigned i = 0; i < deviceCount; i++)
+			if(strcmp(devices[i]->name, name) == 0) return devices[i];
+
+        return NULL;
+	}
+
+	int Root::ReadDir(fs_dirent_t* dirent, uint32_t index){
+		if(index == 0){
 			*dirent = devDirent;
 			return 0;
-		} else if (node == &root && index < fs::volumes->get_length() + 1){
+		} else if (index < fs::volumes->get_length() + 1){
 			*dirent = (volumes->get_at(index - 1)->mountPointDirent);
 			return 0;
 		} else return -1;
 	}
 
-    fs_node_t* RootFindDir(fs_node_t* node, char* name){
-		if(node == &root){
-			if(strcmp(name,dev.name) == 0) return &dev;
+    FsNode* Root::FindDir(char* name){
+		if(strcmp(name,dev.name) == 0) return &dev;
 
-			for(int i = 0; i < fs::volumes->get_length(); i++){
-				if(strcmp(fs::volumes->get_at(i)->mountPoint.name,name) == 0) return &(fs::volumes->get_at(i)->mountPoint);
-			}
-			
-		}
-
-        return NULL;
-	}
-    
-	int DevReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index){
-		if(node == &dev){
-			if(index >= deviceCount) return -1;
-			memset(dirent->name,0,128); // Zero the string
-			strcpy(dirent->name,devices[index]->name);
-			dirent->inode = index;
-			dirent->type = 0;
-			return 0;
-		} else return -2;
-	}
-
-    fs_node_t* DevFindDir(fs_node_t* node, char* name){
-		if(node == &dev){
-			for(unsigned i = 0; i < deviceCount; i++)
-				if(strcmp(devices[i]->name, name) == 0) return devices[i];
+		for(int i = 0; i < fs::volumes->get_length(); i++){
+			if(strcmp(fs::volumes->get_at(i)->mountPoint->name,name) == 0) return (fs::volumes->get_at(i)->mountPoint);
 		}
 
         return NULL;
 	}
 
-	size_t ReadNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
+	size_t Null::Read(size_t offset, size_t size, uint8_t *buffer){
 
 		memset(buffer, -1, size);
 		return size;
 	}
 	
-	size_t WriteNull(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
+	size_t Null::Write(size_t offset, size_t size, uint8_t *buffer){
 		return size;
 	}
 
-    size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-		if(!node) return 0;
+    size_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
+		assert(node);
 
 		if(node->flags & FS_NODE_SYMLINK) return Read(node->link, offset, size, buffer);
 
-        if(node->read)
-            return node->read(node,offset,size,buffer);
-		else return 0;
+        return node->Read(offset,size,buffer);
     }
 
-    size_t Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-		if(!node) return 0;
+    size_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
+		assert(node);
 
 		if(node->flags & FS_NODE_SYMLINK) return Write(node->link, offset, size, buffer);
 
-        if(node->write)
-            return node->write(node,offset,size,buffer);
-		else return 0;
+        return node->Write(offset,size,buffer);
     }
 
-    fs_fd_t* Open(fs_node_t* node, uint32_t flags){
-        if(node->open){
-            node->open(node,flags);
-        }
-
-		fs_fd_t* fd = new fs_fd_t;
-		fd->pos = 0;
-		fd->node = node;
-		fd->mode = flags;
-
-		return fd;
+    fs_fd_t* Open(FsNode* node, uint32_t flags){
+        return node->Open(flags);
     }
 
-    void Close(fs_node_t* node){
-        if(node->close){
-            return node->close(node);
-        }
+    void Close(FsNode* node){
+        return node->Close();
     }
 
     void Close(fs_fd_t* fd){
 		if(!fd) return;
 
-        if(fd->node->close){
-            fd->node->close(fd->node);
-        }
+        fd->node->Close();
 
 		delete fd;
     }
 
-    int ReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index){
-		if(!node) return 0;
+    int ReadDir(FsNode* node, fs_dirent_t* dirent, uint32_t index){
+		assert(node);
 
 		if(node->flags & FS_NODE_SYMLINK) return ReadDir(node->link, dirent, index);
 
-        if(node->readDir)
-            return node->readDir(node, dirent, index);
-		else return 0;
+        return node->ReadDir( dirent, index);
     }
 
-    fs_node_t* FindDir(fs_node_t* node, char* name){
-		if(!node) return 0;
+    FsNode* FindDir(FsNode* node, char* name){
+		assert(node);
 
 		if(node->flags & FS_NODE_SYMLINK) return FindDir(node->link, name);
-
-        if(node->findDir)
-            return node->findDir(node, name);
-		else return 0;
+            
+		return node->FindDir(name);
     }
 	
     size_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer){
@@ -307,14 +300,14 @@ namespace fs{
         else return 0;
     }
 
-    fs_node_t* FindDir(fs_fd_t* handle, char* name){
+    FsNode* FindDir(fs_fd_t* handle, char* name){
         if(handle->node)
             return FindDir(handle->node,name);
         else return 0;
     }
 
 	int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg){
-		if(handle->node && handle->node->ioctl) return handle->node->ioctl(handle->node, cmd, arg);
+		if(handle->node) return handle->node->Ioctl(cmd, arg);
 		else return -1;
 	}
 }

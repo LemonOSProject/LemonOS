@@ -236,8 +236,15 @@ entry64:
   cli
   hlt
 
+global __cxa_atexit
+__cxa_atexit:
+  ret
+
 section .bss
 align 64
 stack_bottom:
 resb 16384
 stack_top:
+
+global __dso_handle
+__dso_handle: resq 1

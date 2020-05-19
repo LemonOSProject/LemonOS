@@ -588,6 +588,7 @@ void PREFIX(free)(void *ptr)
 		{
 #if defined DEBUG || defined INFO
 			kprintf("liballoc: ERROR: multiple PREFIX(free)() attempt \n");
+			asm("int $0x1");
 			halt();
 			FLUSH();
 #endif

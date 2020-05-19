@@ -18,23 +18,21 @@ namespace Log{
 
 	int logLock = 0;
 
-    size_t Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-		if(size + offset > logBufferPos) size = logBufferPos - offset;
-		memcpy(buffer, logBuffer + offset, size);
-		return size;
-	}
+	class LogDevice : public FsNode{
+	public:
+		LogDevice(char* name){
+			strcpy(this->name, name);
+		}
+		uint32_t flags = FS_NODE_FILE;
 
-	fs_node_t logDevice = {
-		{.name = "kernellog"},
-		.flags = FS_NODE_FILE,
-		
-		.read = Read,
-		.write = nullptr,
-		.open = nullptr,
-		.close = nullptr,
-		.readDir = nullptr,
-		.findDir = nullptr,
+		size_t Read(size_t offset, size_t size, uint8_t *buffer){
+			if(size + offset > logBufferPos) size = logBufferPos - offset;
+			memcpy(buffer, logBuffer + offset, size);
+			return size;
+		}
 	};
+
+	LogDevice* logDevice;
 
     void Initialize(){
 		initialize_serial();
@@ -45,11 +43,13 @@ namespace Log{
 	}
 
 	void EnableBuffer(){
+		logDevice = new LogDevice("kernellog");
+
 		logBufferSize = 4096;
 		logBuffer = (char*)kmalloc(logBufferSize);
 		logBufferPos = 0;
 
-		fs::RegisterDevice(&logDevice);
+		fs::RegisterDevice(logDevice);
 	}
 
 	void WriteN(const char* str, int n){
@@ -67,7 +67,7 @@ namespace Log{
 			memcpy(logBuffer + logBufferPos, str, n);
 			logBufferPos += n;
 
-			logDevice.size = logBufferPos;
+			logDevice->size = logBufferPos;
 		}
 		
 		if(console){

@@ -6,12 +6,6 @@
 #include <string.h>
 
 namespace fs::FAT32{
-    size_t Read(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer);
-    size_t Write(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer);
-    void Open(struct fs_node* node, uint32_t flags);
-    void Close(struct fs_node* node);
-    int ReadDir(struct fs_node* node, struct fs_dirent* dirent, uint32_t index);
-    fs_node* FindDir(struct fs_node* node, char* name);
 
     int Identify(PartitionDevice* part){
         fat32_boot_record_t* bootRecord = (fat32_boot_record_t*)kmalloc(512);
@@ -54,20 +48,15 @@ namespace fs::FAT32{
 
         clusterSizeBytes = bootRecord->bpb.sectorsPerCluster * part->parentDisk->blocksize;
 
-        mountPoint.flags = FS_NODE_MOUNTPOINT | FS_NODE_DIRECTORY;
-        mountPoint.inode = bootRecord->ebr.rootClusterNum;
+        fat32MountPoint.flags = FS_NODE_MOUNTPOINT | FS_NODE_DIRECTORY;
+        fat32MountPoint.inode = bootRecord->ebr.rootClusterNum;
 
-        mountPoint.read = nullptr;
-        mountPoint.write = nullptr;
-        mountPoint.open = FAT32::Open;
-        mountPoint.close = FAT32::Close;
-        mountPoint.findDir = FAT32::FindDir;
-        mountPoint.readDir = FAT32::ReadDir;
+        fat32MountPoint.vol = this;
+        fat32MountPoint.size = 0;
 
-        mountPoint.vol = this;
-        mountPoint.size = 0;
+        strcpy(fat32MountPoint.name, name);
 
-        strcpy(mountPoint.name, name);
+        mountPoint = &fat32MountPoint;
 
         mountPointDirent.inode = bootRecord->ebr.rootClusterNum;
         mountPointDirent.type = FS_NODE_DIRECTORY;
@@ -152,7 +141,7 @@ namespace fs::FAT32{
         return _buf;
     }
 
-    size_t Fat32Volume::Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
+    size_t Fat32Volume::Read(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer){
         if(!node->inode || node->flags & FS_NODE_DIRECTORY) return 0;
 
         int count;
@@ -164,7 +153,7 @@ namespace fs::FAT32{
         return size;
     }
 
-    size_t Fat32Volume::Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
+    size_t Fat32Volume::Write(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer){
         List<uint32_t>* clusters = GetClusterChain(node->inode);
         if(offset + size > clusters->get_length() * bootRecord->bpb.sectorsPerCluster * part->parentDisk->blocksize){
             // TODO: Allocate clusters
@@ -173,15 +162,15 @@ namespace fs::FAT32{
         }
     }
 
-    void Fat32Volume::Open(fs_node_t* node, uint32_t flags){
+    void Fat32Volume::Open(Fat32Node* node, uint32_t flags){
         
     }
     
-    void Fat32Volume::Close(fs_node_t* node){
+    void Fat32Volume::Close(Fat32Node* node){
 
     }
 
-    int Fat32Volume::ReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index){
+    int Fat32Volume::ReadDir(Fat32Node* node, fs_dirent_t* dirent, uint32_t index){
         int lfnCount = 0;
         int entryCount = 0;
 
@@ -248,7 +237,7 @@ namespace fs::FAT32{
         return 0;
     }
 
-    fs_node_t* Fat32Volume::FindDir(fs_node_t* node, char* name){
+    FsNode* Fat32Volume::FindDir(Fat32Node* node, char* name){
         int lfnCount = 0;
         int entryCount = 0;
 
@@ -263,7 +252,7 @@ namespace fs::FAT32{
         List<int> foundEntriesLfnCount;
 
         fat_lfn_entry_t** lfnEntries;
-        fs_node_t* _node = nullptr;
+        Fat32Node* _node = nullptr;
 
         for(int i = 0; i < clusterCount * clusterSizeBytes; i++){
             if(dirEntries[i].filename[0] == 0) return nullptr; // No Directory Entry at index
@@ -302,8 +291,8 @@ namespace fs::FAT32{
                     Log::Warning("Found %s", _name);
                     uint64_t clusterNum = (((uint32_t)dirEntries[i].highClusterNum) << 16) | dirEntries[i].lowClusterNum;
                     if(clusterNum == bootRecord->ebr.rootClusterNum || clusterNum == 0) 
-                        return &mountPoint; // Root Directory
-                    _node = (fs_node_t*)kmalloc(sizeof(fs_node_t));
+                        return mountPoint; // Root Directory
+                    _node = new Fat32Node();
                     _node->size = dirEntries[i].fileSize;
                     _node->inode = clusterNum;
                     if(dirEntries[i].attributes & FAT_ATTR_DIRECTORY) _node->flags = FS_NODE_DIRECTORY;
@@ -317,38 +306,32 @@ namespace fs::FAT32{
 
         if(_node){
             _node->vol = this;
-            _node->read = FAT32::Read;
-            _node->write = FAT32::Write;
-            _node->open = FAT32::Open;
-            _node->close = FAT32::Close;
-            _node->findDir = FAT32::FindDir;
-            _node->readDir = FAT32::ReadDir;
         }
 
         return _node;
     }
 
-    size_t Read(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer){
-        ((Fat32Volume*)node->vol)->Read(node, offset, size, buffer);
+    size_t Fat32Node::Read(size_t offset, size_t size, uint8_t *buffer){
+        return vol->Read(this, offset, size, buffer);
     }
 
-    size_t Write(struct fs_node* node, size_t offset, size_t size, uint8_t *buffer){
-        ((Fat32Volume*)node->vol)->Write(node, offset, size, buffer);
+    size_t Fat32Node::Write(size_t offset, size_t size, uint8_t *buffer){
+        return vol->Write(this, offset, size, buffer);
     }
 
-    void Open(struct fs_node* node, uint32_t flags){
-        ((Fat32Volume*)node->vol)->Open(node, flags);
+    /*fs_fd_t* Fat32Node::Open(uint32_t flags){
+        vol->Open(this, flags);
     }
 
-    void Close(struct fs_node* node){
-        ((Fat32Volume*)node->vol)->Close(node);
+    void Fat32Node::Close(){
+        vol->Close(this);
+    }*/
+
+    int Fat32Node::ReadDir(fs_dirent_t* dirent, uint32_t index){
+        return vol->ReadDir(this, dirent, index);
     }
 
-    int ReadDir(struct fs_node* node, fs_dirent_t* dirent, uint32_t index){
-        return ((Fat32Volume*)node->vol)->ReadDir(node, dirent, index);
-    }
-
-    fs_node* FindDir(struct fs_node* node, char* name){
-        ((Fat32Volume*)node->vol)->FindDir(node, name);
+    FsNode* Fat32Node::FindDir(char* name){
+        return vol->FindDir(this, name);
     }
 }

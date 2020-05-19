@@ -4,6 +4,22 @@
 #include <list.h>
 #include <types.h>
 #include <logging.h>
+#include <scheduler.h>
+#include <assert.h>
+
+cc_t c_cc_default[NCCS]{
+	4,			// VEOF
+	'\n',		// VEOL
+	'\b',			// VERASE
+	0,			// VINTR
+	0,			// VKILL
+	0,			// VMIN
+	0,			// VQUIT
+	0,			// VSTART
+	0,			// VSTOP
+	0,			// VSUSP
+	0,			// VTIME
+};
 
 char nextPTY = '0';
 
@@ -24,38 +40,30 @@ PTY* GrantPTY(uint64_t pid){
 	return pty;
 }
 
-size_t FS_Slave_Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-	PTY* pty = (*ptys)[node->inode];
-	if(pty)
-		return pty->Slave_Read((char*)buffer,size);
-	else return 0;
-}
+size_t PTYDevice::Read(size_t offset, size_t size, uint8_t *buffer){
+	assert(pty);
+	assert(device == PTYSlaveDevice || device == PTYMasterDevice);
 
-size_t FS_Master_Read(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-	PTY* pty = (*ptys)[node->inode];
-	if(pty)
+	if(pty && device == PTYSlaveDevice)
+		return pty->Slave_Read((char*)buffer,size);
+	else if(pty && device == PTYMasterDevice){
 		return pty->Master_Read((char*)buffer,size);
-	else return 0;
+	}
 }
 	
-size_t FS_Slave_Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-	PTY* pty = (*ptys)[node->inode];
-	if(pty)
+size_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
+	assert(pty);
+	assert(device == PTYSlaveDevice || device == PTYMasterDevice);
+
+	if(pty && device == PTYSlaveDevice)
 		return pty->Slave_Write((char*)buffer,size);
-	else return 0;
+	else if(pty && device == PTYMasterDevice){
+		return pty->Master_Write((char*)buffer,size);
+	}
 }
 
-size_t FS_Master_Write(fs_node_t* node, size_t offset, size_t size, uint8_t *buffer){
-	PTY* pty = (*ptys)[node->inode];
-	if(pty)
-		return pty->Master_Write((char*)(buffer + 1),size);
-	else return 0;
-}
-
-int FS_Ioctl(fs_node_t* node, uint64_t cmd, uint64_t arg){
-	PTY* pty = (*ptys)[node->inode];
-
-	if(!pty) return -1;
+int PTYDevice::Ioctl(uint64_t cmd, uint64_t arg){
+	assert(pty);
 
 	switch(cmd){
 		case TIOCGWINSZ:
@@ -63,6 +71,20 @@ int FS_Ioctl(fs_node_t* node, uint64_t cmd, uint64_t arg){
 			break;
 		case TIOCSWINSZ:
 			pty->wSz = *((winsz*)arg);
+			break;
+		case TIOCGATTR:
+			*((termios*)arg) = pty->tios;
+			break;
+		case TIOCSATTR:
+			pty->tios = *((termios*)arg);
+			break;
+		case TIOCFLUSH:
+			if(arg == TCIFLUSH || arg == TCIOFLUSH){
+				pty->slave.Flush();
+			}
+			if(arg == TCOFLUSH || arg == TCIOFLUSH){
+				pty->master.Flush();
+			}
 			break;
 		default:
 			return -1;
@@ -80,25 +102,17 @@ PTY::PTY(){
 
 	master.ignoreBackspace = true;
 	slave.ignoreBackspace = false;
+	master.Flush();
+	slave.Flush();
 	canonical = true;
 
-	slaveFile.read = FS_Slave_Read;
-	slaveFile.write = FS_Slave_Write;
-	slaveFile.findDir = nullptr;
-	slaveFile.readDir = nullptr;
-	slaveFile.open = nullptr;
-	slaveFile.close = nullptr;
-	slaveFile.inode = ptys->get_length();
-	slaveFile.ioctl = FS_Ioctl;
+	masterFile.pty = this;
+	masterFile.device = PTYMasterDevice;
 
-	masterFile.read = FS_Master_Read;
-	masterFile.write = FS_Master_Write;
-	masterFile.findDir = nullptr;
-	masterFile.readDir = nullptr;
-	masterFile.open = nullptr;
-	masterFile.close = nullptr;
-	masterFile.inode = ptys->get_length();
-	masterFile.ioctl = FS_Ioctl;
+	slaveFile.pty = this;
+	slaveFile.device = PTYSlaveDevice;
+
+	for(int i = 0; i < NCCS; i++) tios.c_cc[i] = c_cc_default[i];
 
 	fs::RegisterDevice(&slaveFile);
 
@@ -110,9 +124,7 @@ size_t PTY::Master_Read(char* buffer, size_t count){
 }
 
 size_t PTY::Slave_Read(char* buffer, size_t count){
-	while(slave.bufferPos < count) ;
-
-	while(canonical && !slave.lines);
+	while(canonical && !slave.lines) Scheduler::Yield();
 
 	return slave.Read(buffer, count);
 }
