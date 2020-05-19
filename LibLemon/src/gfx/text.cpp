@@ -21,6 +21,7 @@ namespace Lemon::Graphics{
         fontState = 0;
     }
 
+    __attribute__((constructor))
     void InitializeFonts(){
         fontState = -1;
 

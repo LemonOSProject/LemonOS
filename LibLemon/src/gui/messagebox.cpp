@@ -1,7 +1,7 @@
-#include <gfx/window/window.h>
+#include <gui/window.h>
 #include <lemon/ipc.h>
-#include <gfx/window/widgets.h>
-#include <gfx/window/messagebox.h>
+#include <gui/widgets.h>
+#include <gui/messagebox.h>
 
 namespace Lemon::GUI{
 	int MessageBox(const char* messageString, int flags){

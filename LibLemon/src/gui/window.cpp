@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 #include <lemon/types.h>
-#include <gfx/window/window.h>
+#include <gui/window.h>
 #include <stdlib.h>
 #include <lemon/sharedmem.h>
 #include <unistd.h>

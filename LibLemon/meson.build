@@ -39,11 +39,11 @@ cpp_files = [
     'src/gfx/surface.cpp',
     'src/gfx/text.cpp',
 
-    'src/gfx/window/filedialog.cpp',
-    'src/gfx/window/messagebox.cpp',
-    'src/gfx/window/widgets.cpp',
-    'src/gfx/window/fileview.cpp',
-    'src/gfx/window/window.cpp',
+    'src/gui/filedialog.cpp',
+    'src/gui/messagebox.cpp',
+    'src/gui/widgets.cpp',
+    'src/gui/fileview.cpp',
+    'src/gui/window.cpp',
 ]
 
 asm_files = [

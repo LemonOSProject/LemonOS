@@ -22,8 +22,16 @@
 #define KEY_SHIFT 270
 #define KEY_ALT 271
 #define KEY_CONTROL 272
+#define KEY_CAPS 273
 
-#define KEY_DELETE 273
+#define KEY_DELETE 274
+#define KEY_END 275
+#define KEY_HOME 276
+#define KEY_PGUP 277
+#define KEY_PGDN 278
+#define KEY_INS 279
+
+#define KEY_GUI 280
 
 #define KEY_STATE_CAPS 1
 #define KEY_STATE_SHIFT 2

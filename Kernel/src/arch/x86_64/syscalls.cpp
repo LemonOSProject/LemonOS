@@ -62,8 +62,14 @@
 #define SYS_MAP_SHARED_MEMORY 46
 #define SYS_UNMAP_SHARED_MEMORY 47
 #define SYS_DESTROY_SHARED_MEMORY 48
+#define SYS_SOCKET 49
+#define SYS_BIND 50
+#define SYS_LISTEN 51
+#define SYS_ACCEPT 52
+#define SYS_GETUID 53
+#define SYS_SETUID 54
 
-#define NUM_SYSCALLS 49
+#define NUM_SYSCALLS 55
 
 #define EXEC_CHILD 1
 
@@ -896,6 +902,14 @@ int SysConnect(regs64_t* r){
 	
 }
 
+int SysGetUID(regs64_t* r){
+	return Scheduler::GetCurrentProcess()->uid;
+}
+
+int SysSetUID(regs64_t* r){
+	
+}
+
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -951,6 +965,8 @@ syscall_t syscalls[]{
 	SysListen,
 	SysAccept,
 	SysConnect,
+	SysGetUID,
+	SysSetUID,
 };
 
 int lastSyscall = 0;

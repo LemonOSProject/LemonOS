@@ -1,7 +1,7 @@
-#include <gfx/window/widgets.h>
+#include <gui/widgets.h>
 
 #include <lemon/filesystem.h>
-#include <gfx/window/messagebox.h>
+#include <gui/messagebox.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>

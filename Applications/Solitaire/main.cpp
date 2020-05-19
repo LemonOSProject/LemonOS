@@ -2,7 +2,7 @@
 #include <lemon/syscall.h>
 #include <gfx/surface.h>
 #include <gfx/graphics.h>
-#include <gfx/window/window.h>
+#include <gui/window.h>
 #include <lemon/keyboard.h>
 #include <lemon/ipc.h>
 #include <stdlib.h>
@@ -143,8 +143,6 @@ void MouseUp(vector2i_t mousePos){
 int main(int argc, char** argv){
 	win_info_t windowInfo;
 	Lemon::GUI::Window* window;
-
-	Lemon::Graphics::InitializeFonts();
 
 	windowInfo.width = (CARD_WIDTH + tableauCardGap) * 7 + 20;
 	windowInfo.height = 500;

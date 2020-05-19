@@ -15,6 +15,9 @@ inline vector2i_t operator+ (const vector2i_t& l, const vector2i_t& r){
     return {l.x + r.x, l.y + r.y};
 }
 
+inline void operator+= (vector2i_t& l, const vector2i_t& r){
+    l = l + r;
+}
 
 inline vector2i_t operator- (const vector2i_t& l, const vector2i_t& r){
     return {l.x - r.x, l.y - r.y};
@@ -115,6 +118,10 @@ namespace Lemon::Graphics{
     void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface);
     void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
     void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface);
+
+    void DrawRectOutline(rect_t rect, rgba_colour_t colour, surface_t* surface);
+    void DrawRectOutline(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
+    void DrawRectOutline(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface);
 
     int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
     int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font);

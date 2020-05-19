@@ -1,5 +1,5 @@
 #include <gfx/graphics.h>
-#include <gfx/window/window.h>
+#include <gui/window.h>
 #include <lemon/ipc.h>
 #include <lemon/filesystem.h>
 #include <fcntl.h>

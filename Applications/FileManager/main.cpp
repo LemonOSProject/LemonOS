@@ -2,7 +2,7 @@
 #include <lemon/syscall.h>
 #include <gfx/surface.h>
 #include <gfx/graphics.h>
-#include <gfx/window/window.h>
+#include <gui/window.h>
 #include <lemon/keyboard.h>
 #include <lemon/ipc.h>
 #include <stdlib.h>
@@ -10,7 +10,7 @@
 #include <lemon/filesystem.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <gfx/window/messagebox.h>
+#include <gui/messagebox.h>
 #include <lemon/spawn.h>
 
 void OnFileOpened(char* path, char** filePointer){
@@ -43,8 +43,8 @@ int main(int argc, char** argv){
 	Lemon::GUI::FileView* fv = new Lemon::GUI::FileView({{0,0},{512,256}}, "/", &filePointer, OnFileOpened);
 
 	AddWidget(fv, window);
-
-	PaintWindow(window);
+	
+	bool repaint = true;
 
 	for(;;){
 		ipc_message_t msg;
@@ -55,11 +55,13 @@ int main(int argc, char** argv){
 				mouseX = msg.data >> 32;
 				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
 				Lemon::GUI::HandleMouseUp(window, {mouseX, mouseY});
+				repaint = true;
 			} else if (msg.msg == WINDOW_EVENT_MOUSEDOWN){
 				uint32_t mouseX = msg.data >> 32;
 				uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
 				Lemon::GUI::HandleMouseDown(window, {mouseX, mouseY});
+				repaint = true;
 			} else if (msg.msg == WINDOW_EVENT_KEY && msg.data == '\n') {
 				fv->OnSubmit();
 			} else if (msg.msg == WINDOW_EVENT_MOUSEMOVE) {
@@ -67,14 +69,19 @@ int main(int argc, char** argv){
 				uint32_t mouseY = msg.data & 0xFFFFFFFF;
 
 				Lemon::GUI::HandleMouseMovement(window, {mouseX, mouseY});
+				repaint = true;
 			} else if (msg.msg == WINDOW_EVENT_KEY) {
 				Lemon::GUI::HandleKeyPress(window, msg.data);
+
+				repaint = true;
 			} else if (msg.msg == WINDOW_EVENT_CLOSE) {
 				DestroyWindow(window);
 				exit(0);
 			}
 		}
-		Lemon::GUI::PaintWindow(window);
+
+		if(repaint)
+			Lemon::GUI::PaintWindow(window);
 	}
 
 	for(;;);

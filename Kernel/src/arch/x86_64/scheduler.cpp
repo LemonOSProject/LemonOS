@@ -170,6 +170,8 @@ namespace Scheduler{
         proc->state = PROCESS_STATE_ACTIVE;
         proc->threadCount = 1;
         proc->parent = nullptr;
+        proc->uid = 0;
+        proc->sharedMemory.clear();
 
         proc->addressSpace = Memory::CreateAddressSpace();
         proc->pid = nextPID++; // Set Process ID to the next availiable
@@ -288,6 +290,29 @@ namespace Scheduler{
         }
 
         process->fileDescriptors.clear();*/
+        
+        for(int i = 0; i < SMP::processorCount; i++){
+            if(i == cpu->id) continue; // Is current processor?
+
+            acquireLock(&SMP::cpus[i]->runQueueLock);
+
+            if(SMP::cpus[i]->currentThread->parent == process){
+                SMP::cpus[i]->currentThread = nullptr;
+                APIC::Local::SendIPI(i, 0, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
+            }
+            
+            for(int j = 0; j < SMP::cpus[i]->runQueue->get_length(); j++){
+                thread_t* thread = SMP::cpus[i]->runQueue->get_at(j);
+
+                assert(thread);
+
+                if(thread->parent == process){
+                    SMP::cpus[i]->runQueue->remove(thread);
+                }
+            }
+            
+            releaseLock(&SMP::cpus[i]->runQueueLock);
+        }
 
         if(cpu->currentThread->parent == process){
             thread_t* orig = cpu->currentThread;
@@ -305,6 +330,7 @@ namespace Scheduler{
                 Yield();
             }
         }
+
         kfree(process);
         asm("sti");
         releaseLock(&schedulerLock);

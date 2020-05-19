@@ -120,6 +120,21 @@ namespace Lemon::Graphics{
         DrawRect(x,y,width,height,colour.r,colour.g,colour.b,surface);
     }
 
+    void DrawRectOutline(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface){
+        DrawRect(x, y, width, 1, r, g, b, surface);
+        DrawRect(x, y + 1, 1, height - 1, r, g, b, surface);
+        DrawRect(x, y + height - 1, width, 1, r, g, b, surface);
+        DrawRect(x + width - 1, y + 1, 1, height - 1, r, g, b, surface);
+    }
+    
+    void DrawRectOutline(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface){
+        DrawRectOutline(x,y,width,height,colour.r,colour.g,colour.b,surface);
+    }
+    
+    void DrawRectOutline(rect_t rect, rgba_colour_t colour, surface_t* surface){
+        DrawRectOutline(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour, surface);
+    }
+
     uint32_t Interpolate(double q11, double q21, double q12, double q22, double x, double y){
         double val1 = q11;
         double val2 = q21;
@@ -188,8 +203,11 @@ namespace Lemon::Graphics{
 
         if(rowSize <= 0) return;
 
+        unsigned destPitch = dest->width << 2;
+        unsigned srcPitch = src->width << 2;
+
         for(int i = 0; i < srcHeight && i < dest->height - offset.y; i++){
-            memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4) + offset.x*4), src->buffer + (i + srcRegion.pos.y)*src->width * 4 + srcRegion.pos.x * 4, rowSize*4);
+            memcpy_optimized(dest->buffer + ((i+offset.y)*destPitch + offset.x*4), src->buffer + (i + srcRegion.pos.y)*srcPitch + srcRegion.pos.x * 4, rowSize*4);
         }
     }
 

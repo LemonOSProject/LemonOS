@@ -54,7 +54,7 @@ namespace APIC{
         }
         
         void Write(uint32_t off, uint32_t val){
-            *((uint32_t*)(virtualBase + off)) = val;
+            *((volatile uint32_t*)(virtualBase + off)) = val;
         }
 
         void SendIPI(uint8_t destination, uint32_t dsh /* Destination Shorthand*/, uint32_t type, uint8_t vector){

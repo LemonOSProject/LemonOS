@@ -56,15 +56,13 @@ namespace Keyboard{
         // Read from the keyboard's data buffer
         key = inportb(0x60);
 		
-		if(key == 0x3A){
-            caps = !caps;
-        } else if(GetDesktop()) {
+		if(GetDesktop()) {
 			message_t wmKeyMessage;
             wmKeyMessage.senderPID = 0;
             wmKeyMessage.recieverPID = GetDesktop()->pid; // Window Manager
             wmKeyMessage.msg = 0x1BEEF; // Desktop Event - Key Press
             wmKeyMessage.data = key; // The key that was pressed
-			wmKeyMessage.data2 = caps;
+			wmKeyMessage.data2 = 0;
 			asm("sti");
             Scheduler::SendMessage(wmKeyMessage);
         }

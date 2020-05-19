@@ -1,10 +1,10 @@
-#include <gfx/window/window.h>
-#include <gfx/window/widgets.h>
-#include <gfx/window/messagebox.h>
+#include <gui/window.h>
+#include <gui/widgets.h>
+#include <gui/messagebox.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <lemon/ipc.h>
-#include <gfx/window/filedialog.h>
+#include <gui/filedialog.h>
 #include <lemon/info.h>
 #include <unistd.h>
 
@@ -28,7 +28,6 @@ char versionString[80];
 lemon_sysinfo_t sysInfo;
 
 int main(int argc, char** argv){
-	Lemon::Graphics::InitializeFonts();
     strcpy(winInfo.title, "System Information");
 
     window = Lemon::GUI::CreateWindow(&winInfo);
@@ -93,7 +92,7 @@ int main(int argc, char** argv){
 
         lemon_sysinfo_t _sysInfo = lemon_sysinfo();
 
-        if(_sysInfo.usedMem != _sysInfo.totalMem){
+        if(_sysInfo.usedMem != sysInfo.usedMem){
             sprintf(buf, "Used System Memory: %d MB (%d KB)", sysInfo.usedMem / 1024, sysInfo.usedMem);
             usedMem->label = buf;
         } sysInfo = _sysInfo;

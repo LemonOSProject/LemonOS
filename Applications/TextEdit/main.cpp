@@ -2,14 +2,14 @@
 #include <lemon/syscall.h>
 #include <gfx/surface.h>
 #include <gfx/graphics.h>
-#include <gfx/window/window.h>
-#include <gfx/window/widgets.h>
+#include <gui/window.h>
+#include <gui/widgets.h>
 #include <lemon/keyboard.h>
 #include <lemon/ipc.h>
 #include <stdlib.h>
 #include <list.h>
-#include <gfx/window/filedialog.h>
-#include <gfx/window/messagebox.h>
+#include <gui/filedialog.h>
+#include <gui/messagebox.h>
 #include <stdio.h>
 
 #include "exttextbox.h"
@@ -27,7 +27,6 @@ void OnWindowPaint(surface_t* surface){
 }
 
 int main(int argc, char** argv){
-	Lemon::Graphics::InitializeFonts();
 	
 	win_info_t windowInfo;
 

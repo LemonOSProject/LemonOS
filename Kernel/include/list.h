@@ -59,7 +59,7 @@ public:
 		if (!front) {
 			front = node;
 		}
-		else {
+		else if (back){
 			back->next = node;
 			node->prev = back;
 		}
@@ -73,13 +73,14 @@ public:
 		ListNode<T>* node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
 		*node = ListNode<T>();
 		node->obj = obj;
+		node->back = node->front = nullptr;
 
 		acquireLock(&lock);
 
 		if (!back) {
 			back = node;
 		}
-		else {
+		else if (front) {
 			front->prev = node;
 			node->next = front;
 		}
@@ -134,7 +135,7 @@ public:
 	}
 
 	T remove_at(unsigned pos) {
-		assert(num > 0 && pos < num || front != nullptr);
+		assert(num > 0 && pos < num && front != nullptr);
 		/*if (num <= 0 || pos >= num || front == NULL){
 			T obj; // Need to do something when item not in list
 			memset(&obj, 0, sizeof(T));
@@ -209,7 +210,7 @@ public:
 		if (!front) {
 			front = obj;
 		}
-		else {
+		else if (back) {
 			back->next = obj;
 			obj->prev = back;
 		}
@@ -245,18 +246,6 @@ public:
 		for (unsigned int i = 0; i < pos && i < num && current->next; i++) current = current->next;
 
 		return current;
-	}
-
-	void replace_at(unsigned pos, T obj) {
-		assert(num > 0 && pos < num);
-		//if (num <= 0 || pos >= num) return;
-
-		T current = front;
-
-		for (unsigned int i = 0; i < pos; i++) current = current->next;
-
-		if(current)
-			current->obj = obj;
 	}
 
 	unsigned get_length() {

@@ -2,7 +2,7 @@
 #include <lemon/syscall.h>
 #include <gfx/surface.h>
 #include <gfx/graphics.h>
-#include <gfx/window/window.h>
+#include <gui/window.h>
 #include <lemon/ipc.h>
 #include <lemon/keyboard.h>
 #include <stdlib.h>
@@ -13,6 +13,7 @@
 #include <ctype.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <vector>
 
 #include "escape.h"
 #include "colours.h"
@@ -57,10 +58,8 @@ int escapeType = 0;
 surface_t menuSurface;
 surface_t windowSurface;
 
-#define MAX_LINE_COUNT 10000
 #define COLUMN_COUNT 80
-TerminalChar* buffer[MAX_LINE_COUNT];
-uint8_t bufferLineSize[MAX_LINE_COUNT];
+std::vector<std::vector<TerminalChar>> buffer;
 
 vector2i_t curPos = {0, 0};
 
@@ -79,7 +78,7 @@ void OnPaint(surface_t* surface){
 
 	for(int i = 0; i < 25 && i <= curPos.y; i++){
 		int _currentLine = (curPos.y < 25) ? 0 : (curPos.y - 24);
-		for(int j = 0; j < bufferLineSize[_currentLine + i]; j++){
+		for(int j = 0; j < buffer[_currentLine + i].size(); j++){
 			TerminalChar ch = buffer[_currentLine + i][j];
 			rgba_colour_t fg = colours[ch.s.fgColour];
 			rgba_colour_t bg = colours[ch.s.bgColour];
@@ -223,11 +222,6 @@ void PrintChar(char ch){
 		escapeSequence = 0;
 		escapeType = 0;
 	} else {
-		if(!bufferLineSize[curPos.y]){
-			bufferLineSize[curPos.y] = COLUMN_COUNT;
-			buffer[curPos.y] = (TerminalChar*)malloc(COLUMN_COUNT * sizeof(TerminalChar));
-			memset(buffer[curPos.y], 0, bufferLineSize[curPos.y] * sizeof(TerminalChar));
-		}
 
 		switch (ch)
 		{
@@ -239,35 +233,30 @@ void PrintChar(char ch){
 		case '\n':
 			curPos.y++;
 			curPos.x = 0;
+			if(curPos.y >= buffer.size()) buffer.push_back(std::vector<TerminalChar>());
 			break;
 		case '\b':
 			if(curPos.x > 0) curPos.x--;
 			else if(curPos.y > 0) {
 				curPos.y--;
-				curPos.x = COLUMN_COUNT - 1;
+				curPos.x = buffer[curPos.y].size();
 			}
 			
-			buffer[curPos.y][curPos.x].s = state;
-			buffer[curPos.y][curPos.x].c = 0;
+			//buffer[curPos.y][curPos.x].s = state;
+			//buffer[curPos.y][curPos.x].c = 0;
+			buffer[curPos.y].pop_back();
 			break;
 		case ' ':
-			if(curPos.x >= COLUMN_COUNT){
-				curPos.y++;
-				curPos.x = 0;
-			}
-			buffer[curPos.y][curPos.x].s = state;
-			buffer[curPos.y][curPos.x].c = ' ';
-			curPos.x++;
-			break;
 		default:
-			if(!(isgraph(ch))) break;
+			if(!(isgraph(ch) || isspace(ch))) break;
 
 			if(curPos.x >= COLUMN_COUNT){
 				curPos.y++;
 				curPos.x = 0;
 			}
-			buffer[curPos.y][curPos.x].s = state;
-			buffer[curPos.y][curPos.x].c = ch;
+			
+			if(curPos.y >= buffer.size()) buffer.push_back(std::vector<TerminalChar>());
+			buffer[curPos.y].push_back({.s = state, .c = ch});
 			curPos.x++;
 			break;
 		}
@@ -276,7 +265,6 @@ void PrintChar(char ch){
 
 extern "C"
 int main(char argc, char** argv){
-	Lemon::Graphics::InitializeFonts();
 	
 	Lemon::GUI::Window* window;
 
@@ -288,9 +276,6 @@ int main(char argc, char** argv){
 	strcpy(windowInfo.title, "Terminal");
 	window = Lemon::GUI::CreateWindow(&windowInfo);
 	window->background = {0,0,0,255};
-
-	memset(buffer, 0, sizeof(TerminalChar*)*MAX_LINE_COUNT);
-	memset(bufferLineSize, 0, sizeof(int) * MAX_LINE_COUNT);
 	curPos = {0, 0};
 
 	int masterPTYFd;

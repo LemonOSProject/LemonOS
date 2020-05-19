@@ -2,7 +2,7 @@
 #include <lemon/syscall.h>
 #include <gfx/surface.h>
 #include <gfx/graphics.h>
-#include <gfx/window/window.h>
+#include <gui/window.h>
 #include <lemon/keyboard.h>
 #include <lemon/ipc.h>
 #include <stdlib.h>
@@ -94,8 +94,6 @@ vector2i_t applePos = {1,1};
 
 extern "C"
 int main(char argc, char** argv){
-	Lemon::Graphics::InitializeFonts();
-
 	win_info_t windowInfo;
 	Lemon::GUI::Window* window;
 
@@ -175,18 +173,6 @@ int main(char argc, char** argv){
 			}
 		}
 
-		snakeMapCells[applePos.x][applePos.y] = fruitType ? SNAKE_CELL_LEMON : SNAKE_CELL_APPLE;
-
-		for(int i = 0; i < snake->get_length();i++){
-			snakeMapCells[snake->get_at(i).x][snake->get_at(i).y] = SNAKE_CELL_SNAKE; 
-		}
-
-		for(int i = 0; i < 16; i++){
-			for(int j = 0; j < 16; j++){
-				Lemon::Graphics::DrawRect(i*16, j*16, 16, 16, snakeCellColours[snakeMapCells[i][j]].r, snakeCellColours[snakeMapCells[i][j]].g, snakeCellColours[snakeMapCells[i][j]].b, &window->surface);
-			}
-		}
-
 		switch(direction){
 			case 0:
 				snake->remove_at(snake->get_length()-1);
@@ -233,6 +219,18 @@ int main(char argc, char** argv){
 			else fruitType = 0;
 
 			snake->add_back({0,0});
+		}
+
+		snakeMapCells[applePos.x][applePos.y] = fruitType ? SNAKE_CELL_LEMON : SNAKE_CELL_APPLE;
+
+		for(int i = 0; i < snake->get_length();i++){
+			snakeMapCells[snake->get_at(i).x][snake->get_at(i).y] = SNAKE_CELL_SNAKE; 
+		}
+
+		for(int i = 0; i < 16; i++){
+			for(int j = 0; j < 16; j++){
+				Lemon::Graphics::DrawRect(i*16, j*16, 16, 16, snakeCellColours[snakeMapCells[i][j]].r, snakeCellColours[snakeMapCells[i][j]].g, snakeCellColours[snakeMapCells[i][j]].b, &window->surface);
+			}
 		}
 		
 		Lemon::GUI::SwapWindowBuffers(window);

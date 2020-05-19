@@ -1,5 +1,5 @@
-#include <gfx/window/widgets.h>
-#include <gfx/window/messagebox.h>
+#include <gui/widgets.h>
+#include <gui/messagebox.h>
 #include <lemon/keyboard.h>
 
 #include <string.h>

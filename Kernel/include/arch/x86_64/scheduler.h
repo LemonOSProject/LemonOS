@@ -54,6 +54,7 @@ typedef struct process {
 	uint8_t state; // Process state
 	thread_t* threads;
 	uint32_t threadCount; // Amount of threads
+	int32_t uid;
 
 	process* parent;
 	List<process*> children;

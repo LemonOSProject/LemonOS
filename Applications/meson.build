@@ -8,6 +8,8 @@ fileman_src = [
 
 init_src = [
     'Init/main.cpp',
+    'Init/input.cpp',
+    'Init/window.cpp',
 ]
 
 lsh_src = [
