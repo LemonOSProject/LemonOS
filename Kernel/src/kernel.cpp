@@ -12,7 +12,7 @@
 #include <panic.h>
 #include <scheduler.h>
 #include <syscalls.h>
-#include <8254x.h>
+#include <net/8254x.h>
 #include <nvme.h>
 #include <ahci.h>
 #include <ata.h>

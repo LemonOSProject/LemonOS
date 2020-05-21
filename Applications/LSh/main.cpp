@@ -47,7 +47,7 @@ void LShBuiltin_Ls(int argc, char** argv){
 	if(!dir) dir = currentDir;
 
 	int fd;
-	if(fd = lemon_open(dir, O_RDONLY | O_DIRECTORY)){
+	if(fd = open(dir, O_RDONLY | O_DIRECTORY)){
 		lemon_dirent_t dirent;
 
 		int i = 0;
@@ -121,7 +121,7 @@ void ParseLine(){
 	}
 
 	int fd;
-	if(fd = lemon_open(currentDir, O_RDONLY | O_DIRECTORY)){
+	if(fd = open(currentDir, O_RDONLY | O_DIRECTORY)){
 		lemon_dirent_t dirent;
 
 		int i = 0;
@@ -140,7 +140,7 @@ void ParseLine(){
 	}
 	
 	for(int j = 0; j < path.get_length(); j++){
-		if(fd = lemon_open(path.get_at(j), O_RDONLY | O_DIRECTORY)){
+		if(fd = open(path.get_at(j), O_RDONLY | O_DIRECTORY)){
 			lemon_dirent_t dirent;
 
 			int i = 0;

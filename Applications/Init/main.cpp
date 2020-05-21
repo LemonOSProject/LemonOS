@@ -244,8 +244,8 @@ int main(){
 	lemon_spawn("/initrd/shell.lef", 0, 0, 0);
 	lemon_spawn("/initrd/fileman.lef", 0, 0, 0);
 
-	int mouseDevice = lemon_open("/dev/mouse0", 0);
-	lemon_read(mouseDevice, mouseData, 3);
+	int mouseDevice = open("/dev/mouse0", 0);
+	read(mouseDevice, mouseData, 3);
 
 	Lemon::Graphics::DrawRect(0, 0, renderBuffer.width, renderBuffer.height, backgroundColor, &renderBuffer);
 
@@ -260,7 +260,7 @@ int main(){
 		}
 		redrawWindowDecorations = false;
 
-		lemon_read(mouseDevice, mouseData, 3);
+		read(mouseDevice, mouseData, 3);
 		
 		mousePos.x += mouseData[1] * 3;
 		mousePos.y -= mouseData[2] * 3;

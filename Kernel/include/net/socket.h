@@ -1,11 +1,123 @@
 #pragma once
 
 #include <stdint.h>
+#include <stddef.h>
+#include <fs/filesystem.h>
+#include <lock.h>
+#include <stream.h>
 
-typedef unsigned short sa_family_t;
+#define CONNECTION_BACKLOG 128
+
+typedef unsigned int sa_family_t;
 typedef uint32_t socklen_t;
 
 typedef struct sockaddr {
     sa_family_t family;
     char data[14];
 } sockaddr_t;
+
+struct sockaddr_un {
+    sa_family_t sun_family;               /* AF_UNIX */
+    char        sun_path[108];            /* Pathname */
+};
+
+class Socket;
+
+typedef struct SocketConnection {
+    Socket* socket;
+    int connectionType;
+};
+
+enum {
+    StreamSocket = 4,
+    DatagramSocket = 1,
+    SequencedSocket = 3,
+    RawSocket = 0x10000,
+    ReliableDatagramSocket = 0x20000,
+    // Packet is considered obsolete
+};
+
+enum {
+    InternetProtcol = 1,
+    InternetProtcol6 = 2,
+    UnixDomain = 3,
+    LocalDomain = 3,
+};
+
+enum {
+    ClientRole,
+    ServerRole,
+};
+
+class Socket : public FsNode {
+protected:
+    int type = 0; // Type (Stream, Datagram, etc.)
+    int domain = 0; // Domain (UNIX, INET, etc.)
+    semaphore_t pendingConnections; // Pending Connections semaphore
+    List<Socket*> pending; // Pending Connections
+
+    bool bound = false; // Has it been bound to an address>
+    bool passive = false; // Listening?
+    bool blocking = true;
+public:
+    bool connected = false; // Connected?
+    int role; // Server/Client
+    
+    static Socket* CreateSocket(int domain, int type, int protocol);
+
+    Socket(int type, int protocol);
+    ~Socket();
+    
+    virtual int ConnectTo(Socket* client);
+
+    virtual Socket* Accept(sockaddr* addr, socklen_t* addrlen);
+    virtual int Bind(const sockaddr* addr, socklen_t addrlen);
+    virtual int Connect(const sockaddr* addr, socklen_t addrlen);
+    virtual int Listen(int backlog);
+    
+    virtual int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
+    virtual int64_t Receive(void* buffer, size_t len, int flags);
+    virtual size_t Read(size_t offset, size_t size, uint8_t* buffer);
+    
+    virtual int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
+    virtual int64_t Send(void* buffer, size_t len, int flags);
+    virtual size_t Write(size_t offset, size_t size, uint8_t* buffer);
+    
+    virtual fs_fd_t* Open(size_t flags);
+    virtual void Close();
+
+    virtual int GetDomain() { return domain; }
+    virtual int IsListening() { return domain; }
+    virtual int IsBlocking() { return blocking; }
+};
+
+class LocalSocket : public Socket {
+public:
+    Stream* inbound = nullptr;
+    Stream* outbound = nullptr;
+
+    LocalSocket(int type, int protocol);
+
+    int ConnectTo(Socket* client);
+    
+    Socket* Accept(sockaddr* addr, socklen_t* addrlen);
+    int Bind(const sockaddr* addr, socklen_t addrlen);
+    int Connect(const sockaddr* addr, socklen_t addrlen);
+    int Listen(int backlog);
+    
+    fs_fd_t* Open(size_t flags);
+    
+    int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
+    int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
+};
+
+namespace SocketManager{
+    typedef struct SocketBinding{
+        char* address;
+        Socket* socket;
+    } sock_binding_t;
+
+    Socket* ResolveSocketAddress(const sockaddr* addr, socklen_t addrlen);
+    int BindSocket(Socket* sock, const sockaddr* addr, socklen_t addrlen);
+    void DestroySocket(Socket* sock);
+}

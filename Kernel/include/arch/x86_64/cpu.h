@@ -104,11 +104,11 @@ static inline CPU* GetCPULocal(){
 	return ret;
 }
 
-static inline bool CheckInterrupts()
+static inline int CheckInterrupts()
 {
     unsigned long flags;
-    asm volatile ( "pushf\n\t"
-                   "pop %0"
-                   : "=g"(flags) );
-    return flags & (1 << 9);
+    asm volatile ( "pushf;"
+                   "pop %%rax;"
+                   : "=a"(flags) :: "cc" );
+    return (flags & 0x200);
 }

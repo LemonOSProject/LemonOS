@@ -3,9 +3,7 @@
 #include <lemon/filesystem.h>
 
 int lemon_open(const char* filename, int flags){
-    int fd;
-    syscall(SYS_OPEN, (uintptr_t)filename, (uintptr_t)&fd, 0, 0, 0);
-    return fd;
+    return syscall(SYS_OPEN, (uintptr_t)filename, 0, 0, 0, 0);
 }
 
 void lemon_close(int fd){
@@ -13,21 +11,15 @@ void lemon_close(int fd){
 }
 
 int lemon_read(int fd, void* buffer, size_t count){
-    int ret;
-    syscall(SYS_READ, fd, (uintptr_t)buffer, count, (uintptr_t)&ret, 0);
-    return ret;
+    return syscall(SYS_READ, fd, (uintptr_t)buffer, count, 0, 0);
 }
 
 int lemon_write(int fd, const void* buffer, size_t count){
-    int ret;
-    syscall(SYS_WRITE, fd, (uintptr_t)buffer, count, (uintptr_t)&ret, 0);
-    return ret;
+    return syscall(SYS_WRITE, fd, (uintptr_t)buffer, count, 0, 0);
 }
 
 off_t lemon_seek(int fd, off_t offset, int whence){
-    uint64_t ret;
-    syscall(SYS_LSEEK, fd, offset, whence, (uintptr_t)&ret, 0);
-    return ret;
+    return syscall(SYS_LSEEK, fd, offset, whence, 0, 0);
 }
 
 int lemon_readdir(int fd, uint64_t count, lemon_dirent_t* dirent){

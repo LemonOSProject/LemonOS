@@ -50,6 +50,7 @@ cpp_files = [
     'src/videoconsole.cpp',
     'src/sharedmem.cpp',
     'src/assert.cpp',
+    'src/streams.cpp',
 
     'src/fs/fat32.cpp',
     'src/fs/filesystem.cpp',
@@ -61,6 +62,7 @@ cpp_files = [
     'src/liballoc/liballoc.c',
     
     'src/net/8254x.cpp',
+    'src/net/socket.cpp',
 
     'src/storage/ahci.cpp',
     'src/storage/ahciport.cpp',

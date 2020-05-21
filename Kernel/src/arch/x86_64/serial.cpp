@@ -39,10 +39,12 @@ void write_serial(const char* s) {
 void write_serial_n(const char* s, unsigned long long n) {
 	int i = 0;
 
-	acquireLock(&lock); // Make the serial output readable
+	if(CheckInterrupts())
+		acquireLock(&lock); // Make the serial output readable
 	while (i++ < n){
 		while(is_transmit_empty() == 0);
 		outportb(PORT, *s++);
 	}
-	releaseLock(&lock);
+	if(CheckInterrupts())
+		releaseLock(&lock);
 }

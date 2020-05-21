@@ -188,7 +188,27 @@ namespace Memory{
 	}
 
 	bool CheckRegion(uintptr_t addr, uint64_t len, address_space_t* addressSpace){
-		return addr < PDPT_SIZE || (addr + len) < PDPT_SIZE || !(PDPT_GET_INDEX(addr) & PDPT_USER) || !(PDPT_GET_INDEX(addr + len) & PDPT_USER);
+		return addr < PDPT_SIZE && (addr + len) < PDPT_SIZE && (addressSpace->pdpt[PDPT_GET_INDEX(addr)] & PDPT_USER) && (addressSpace->pdpt[PDPT_GET_INDEX(addr + len)] & PDPT_USER);
+	}
+
+	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, address_space_t* addressSpace){
+		if(!(addressSpace->pageDirs[PDPT_GET_INDEX(addr)][PAGE_DIR_GET_INDEX(addr)] & (PAGE_PRESENT))){
+			return 0;
+		}
+		
+		if(!(addressSpace->pageDirs[PDPT_GET_INDEX(addr + len)][PAGE_DIR_GET_INDEX(addr + len)] & (PAGE_PRESENT))){
+			return 0;
+		}
+
+		if(!((addressSpace->pageTables[PDPT_GET_INDEX(addr)][PAGE_DIR_GET_INDEX(addr)][PAGE_TABLE_GET_INDEX(addr)] & (PAGE_PRESENT)) && addressSpace->pageTables[PDPT_GET_INDEX(addr)][PAGE_DIR_GET_INDEX(addr)][PAGE_TABLE_GET_INDEX(addr)] & (PAGE_USER))){
+			return 0;
+		}
+		
+		if(!((addressSpace->pageTables[PDPT_GET_INDEX(addr + len)][PAGE_DIR_GET_INDEX(addr + len)][PAGE_TABLE_GET_INDEX(addr + len)] & (PAGE_PRESENT)) && addressSpace->pageTables[PDPT_GET_INDEX(addr + len)][PAGE_DIR_GET_INDEX(addr + len)][PAGE_TABLE_GET_INDEX(addr + len)] & (PAGE_USER))){
+			return 0;
+		}
+
+		return 1;
 	}
 
 	page_table_t AllocatePageTable(){

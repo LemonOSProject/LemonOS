@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory.h>
-#include <lock.h>
+#include <spin.h>
 #include <assert.h>
 
 template<typename T>
@@ -51,7 +51,7 @@ public:
 		*node = ListNode<T>();
 		node->obj = obj;
 		
-		acquireLock(&lock);
+		//acquireLock(&lock);
 
 		if (!front) {
 			front = node;
@@ -63,7 +63,7 @@ public:
 		back = node;
 		num++;
 		
-		releaseLock(&lock);
+		//releaseLock(&lock);
 	}
 
 	void add_front(T obj) {

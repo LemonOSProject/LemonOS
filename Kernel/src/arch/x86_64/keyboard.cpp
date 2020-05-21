@@ -63,7 +63,7 @@ namespace Keyboard{
             wmKeyMessage.msg = 0x1BEEF; // Desktop Event - Key Press
             wmKeyMessage.data = key; // The key that was pressed
 			wmKeyMessage.data2 = 0;
-			asm("sti");
+			
             Scheduler::SendMessage(wmKeyMessage);
         }
     }

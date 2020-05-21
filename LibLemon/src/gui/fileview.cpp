@@ -106,7 +106,7 @@ namespace Lemon::GUI{
     void FileView::Refresh(){
         close(currentDir);
 
-        currentDir = lemon_open(currentPath, 666);
+        currentDir = open(currentPath, 666);
 
         if(!currentDir){
             MessageBox("Failed to open directory!", MESSAGEBOX_OK);
@@ -189,7 +189,7 @@ namespace Lemon::GUI{
 
     void FileView::Reload(){
         close(currentDir);
-        currentDir = lemon_open(currentPath, 666);
+        currentDir = open(currentPath, 666);
 
         lemon_dirent_t dirent;
 

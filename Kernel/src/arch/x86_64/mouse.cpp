@@ -81,8 +81,6 @@ namespace Mouse{
 		size_t Read(size_t offset, size_t size, uint8_t *buffer){
 			if(size < 3) return 0;
 
-			Log::Info("Reading mouse dev");
-
 			if(DataUpdated())
 				memcpy(buffer,mouseData, 3);
 			else {

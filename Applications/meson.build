@@ -51,6 +51,18 @@ solitaire_src = [
     'Solitaire/main.cpp',
 ]
 
+socktest_client_src = [
+    'SocketTest/client.cpp',
+]
+
+socktest_server_src = [
+    'SocketTest/server.cpp',
+]
+
+solitaire_src = [
+    'Solitaire/main.cpp',
+]
+
 application_cpp_args = [
     '-fno-exceptions',
 ]
@@ -66,3 +78,5 @@ executable('lemonpaint.lef', lemonpaint_src, cpp_args : application_cpp_args, li
 executable('imgview.lef', imgview_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')
 executable('sysinfo.lef', sysinfo_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')
 executable('solitaire.lef', solitaire_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')
+executable('socktestclient.lef', socktest_client_src, cpp_args : application_cpp_args, install : true, install_dir : meson.current_source_dir() + '/../Initrd')
+executable('socktestserver.lef', socktest_server_src, cpp_args : application_cpp_args, install : true, install_dir : meson.current_source_dir() + '/../Initrd')

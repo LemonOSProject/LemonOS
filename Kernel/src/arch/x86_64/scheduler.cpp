@@ -36,9 +36,6 @@ namespace Scheduler{
 
     process_t* idleProcess;
 
-    //FastList<thread_t*>* readyQueue = nullptr;
-    //FastList<thread_t*>* ranQueue = nullptr;
-
     handle_t handles[INITIAL_HANDLE_TABLE_SIZE];
     uint64_t handleCount = 1; // We don't want null handles
     uint32_t handleTableSize = INITIAL_HANDLE_TABLE_SIZE;
@@ -250,7 +247,6 @@ namespace Scheduler{
             EndProcess(process->children.get_at(i));
         }
         asm("cli");
-        acquireLock(&schedulerLock);
 
         if(process->parent){
             for(unsigned i = 0; i < process->parent->children.get_length(); i++){
@@ -262,9 +258,11 @@ namespace Scheduler{
         }
 
         CPU* cpu = GetCPULocal();
+        acquireLock(&cpu->runQueueLock);
+
         for(int i = 0; i < process->threadCount; i++){
             for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
-                if(cpu->runQueue->get_at(j) == &process->threads[i]) cpu->runQueue->remove_at(j);
+                if(cpu->runQueue->get_at(j) == &process->threads[i]) cpu->runQueue->remove(&process->threads[i]);
             }
         }
 
@@ -272,16 +270,6 @@ namespace Scheduler{
             if(processes->get_at(i) == process)
                 processes->remove_at(i);
         }
-
-        if(cpu->currentThread->parent == process){
-            asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE)); // If we are using the PML4 of the current process switch to the kernel's
-        }
-
-        for(unsigned i = 0; i < process->sharedMemory.get_length(); i++){
-            Memory::Free4KPages((void*)process->sharedMemory[i].base, process->sharedMemory[i].pageCount, process->addressSpace); // Make sure the physical memory does not get freed
-        }
-
-        Memory::DestroyAddressSpace(process->addressSpace);
 
         /*for(int i = 0; i < process->fileDescriptors.get_length(); i++){
             if(process->fileDescriptors[i]){
@@ -315,19 +303,28 @@ namespace Scheduler{
         }
 
         if(cpu->currentThread->parent == process){
+            asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE)); // If we are using the PML4 of the current process switch to the kernel's
+        }
+
+        for(unsigned i = 0; i < process->sharedMemory.get_length(); i++){
+            Memory::Free4KPages((void*)process->sharedMemory[i].base, process->sharedMemory[i].pageCount, process->addressSpace); // Make sure the physical memory does not get freed
+        }
+
+        Memory::DestroyAddressSpace(process->addressSpace);
+
+        if(cpu->currentThread->parent == process){
             thread_t* orig = cpu->currentThread;
             cpu->currentThread = nullptr; // Force reschedule
             kfree(process->threads);
             kfree(process);
-
-            releaseLock(&schedulerLock);
+            releaseLock(&cpu->runQueueLock);
 
             Schedule(nullptr);
 
             asm("sti");
             for(;;) {
                 asm("hlt");
-                Yield();
+                Schedule(nullptr);
             }
         }
 
