@@ -179,6 +179,7 @@ long SysRead(regs64_t* r){
 	uint64_t count = r->rdx;
 
 	if(!Memory::CheckUsermodePointer(r->rcx, count, proc->addressSpace)){
+		Log::Warning("Invalid Memory Buffer: %x", r->rcx);
 		return -3;
 	}
 

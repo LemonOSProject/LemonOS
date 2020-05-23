@@ -21,6 +21,7 @@
 #include <gui.h>
 #include <fs/tar.h>
 #include <sharedmem.h>
+#include <net/net.h>
 
 uint8_t* progressBuffer;
 video_mode_t videoMode;
@@ -194,8 +195,9 @@ extern "C"
 
 	Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
+	Network::InitializeDrivers();
+	Network::InitializeConnections();
 	NVMe::Initialize();
-	Intel8254x::Initialize();
 	USB::XHCI::Initialize();
 	ATA::Init();
 	AHCI::Init();

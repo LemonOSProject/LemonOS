@@ -61,8 +61,10 @@ cpp_files = [
     'src/liballoc/_liballoc.cpp',
     'src/liballoc/liballoc.c',
     
+    'src/net/networkadapter.cpp',
     'src/net/8254x.cpp',
     'src/net/socket.cpp',
+    'src/net/net.cpp',
 
     'src/storage/ahci.cpp',
     'src/storage/ahciport.cpp',
