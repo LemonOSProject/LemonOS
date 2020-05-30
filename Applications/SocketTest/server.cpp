@@ -4,11 +4,14 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <list.h>
 
 #include "defines.h"
 
 char* socketAddress = SOCKET_TEST_ADDR;
 int socketAddressLength = 0;
+
+List<int> fds;
 
 int main(int argc, char** argv){
     char* data;
@@ -42,7 +45,7 @@ int main(int argc, char** argv){
         return 4;
     }
 
-    char buf[100];
+    char buf[101];
     while(1){
         int client = accept(sock, 0, 0);
         if(client < 0){
@@ -51,8 +54,10 @@ int main(int argc, char** argv){
         }
 
         int count;
-        while(count = read(client, buf, 100)){
-            printf("Read %x bytes\n", count); 
+        if(count = read(client, buf, 100)){
+            printf("reading\n");
+            buf[count] = 0;
+            printf("Read %x bytes: %s\n", count, buf); 
         }
         
         if(!count)

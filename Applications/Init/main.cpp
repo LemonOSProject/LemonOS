@@ -108,7 +108,7 @@ void UpdateFrameRate(){
 }
 #endif
 
-int frameLen = 1000000000 / 120;
+int frameLen = 1000000 / 120;
 
 timespec timer;
 
@@ -379,9 +379,10 @@ int main(){
 			windowList->dirty = 0;
 		}
 		
-		//timespec newTime;
-		//clock_gettime(CLOCK_MONOTONIC, &newTime);
-		{//if(((newTime.tv_sec - timer.tv_sec) * 1000000000 + (newTime.tv_nsec - timer.tv_nsec)) >= frameLen){
+		/*timespec newTime;
+		clock_gettime(CLOCK_MONOTONIC, &newTime);
+		if(((newTime.tv_sec - timer.tv_sec) * 1000000 + (newTime.tv_nsec - timer.tv_nsec) / 1000) >= frameLen)*/
+		{
 			//timer = newTime;
 			for(int i = 0; i < windowCount; i++){ // Draw all our windows
 				Window* win = windows[i];

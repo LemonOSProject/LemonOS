@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <gfx/surface.h>
-#include <gfx/window/widgets.h>
+#include <gui/widgets.h>
 
 
 class Brush{

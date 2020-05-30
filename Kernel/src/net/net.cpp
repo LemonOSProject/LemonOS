@@ -16,7 +16,5 @@ namespace Network {
             Log::Info("No network adapter found!");
             return;
         }
-
-        
     }
 }

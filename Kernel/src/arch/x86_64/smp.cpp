@@ -13,19 +13,21 @@
 #include "smpdefines.inc"
 
 static inline void wait(uint64_t ms){
-    uint64_t timeMs = Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * (1000.0 / Timer::GetFrequency()));
-    while((Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * (1000.0 / Timer::GetFrequency()))) - timeMs <= ms); // Wait 20ms
+    uint64_t ticksPerMs = (Timer::GetFrequency() / 1000);
+    uint64_t timeMs = Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * ticksPerMs);
+    
+    while((Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * ticksPerMs)) - timeMs <= ms);
 }
 
 extern void* _binary_smptrampoline_bin_start;
 extern void* _binary_smptrampoline_bin_size;
 
-uint16_t* smpMagic = (uint16_t*)SMP_TRAMPOLINE_DATA_MAGIC;
-uint16_t* smpID = (uint16_t*)SMP_TRAMPOLINE_CPU_ID;
+volatile uint16_t* smpMagic = (uint16_t*)SMP_TRAMPOLINE_DATA_MAGIC;
+volatile uint16_t* smpID = (uint16_t*)SMP_TRAMPOLINE_CPU_ID;
 gdt_ptr_t* smpGDT = (gdt_ptr_t*)SMP_TRAMPOLINE_GDT_PTR;
-uint64_t* smpCR3 = (uint64_t*)SMP_TRAMPOLINE_CR3;
-uint64_t* smpStack = (uint64_t*)SMP_TRAMPOLINE_STACK;
-uint64_t* smpEntry2 = (uint64_t*)SMP_TRAMPOLINE_ENTRY2;
+volatile uint64_t* smpCR3 = (uint64_t*)SMP_TRAMPOLINE_CR3;
+volatile uint64_t* smpStack = (uint64_t*)SMP_TRAMPOLINE_STACK;
+volatile uint64_t* smpEntry2 = (uint64_t*)SMP_TRAMPOLINE_ENTRY2;
 
 extern gdt_ptr_t GDT64Pointer64;
 
@@ -116,11 +118,6 @@ namespace SMP{
             ACPI::processorCount = 1;
             processorCount = 1;
             return;
-        }
-        
-        if(ACPI::processorCount > 2) {
-            ACPI::processorCount = 2;
-            Log::Warning("[SMP] Unfortunately we only support 2 processors for now due to stability concerns");
         }
 
         processorCount = ACPI::processorCount;

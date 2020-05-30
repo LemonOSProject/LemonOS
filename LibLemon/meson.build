@@ -32,6 +32,7 @@ cpp_files = [
     'src/spawn.cpp',
     'src/info.cpp',
     'src/sharedmem.cpp',
+    'src/util.cpp',
 
     'src/gfx/font.cpp',
     'src/gfx/graphics.cpp',

@@ -27,6 +27,7 @@ Socket* Socket::CreateSocket(int domain, int type, int protocol){
 Socket::Socket(int type, int protocol){
     this->type = type;
     pendingConnections.value = CONNECTION_BACKLOG;
+    flags = FS_NODE_SOCKET;
 }
 
 Socket::~Socket(){
@@ -143,6 +144,8 @@ Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen){
     sock->outbound = client->inbound; // Outbound to client
     sock->inbound = client->outbound; // Inbound to server
     sock->role = ServerRole;
+    sock->peer = client;
+    client->peer = sock;
 
     sock->connected = client->connected = true;
 
@@ -243,11 +246,15 @@ int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* 
         return -ENOTCONN;
     }
 
-    while(inbound->Empty()){
+    while(inbound->Empty() && !(flags & MSG_DONTWAIT)){
         // TODO: Actually block
     }
 
-    return inbound->Read(buffer, len);
+    if(flags & MSG_PEEK){
+        return inbound->Peek(buffer, len);
+    } else {
+        return inbound->Read(buffer, len);
+    }
 }
 
 int64_t LocalSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen){
@@ -279,6 +286,14 @@ fs_fd_t* LocalSocket::Open(size_t flags){
     fDesc->node = this;
 
     return fDesc;
+}
+
+void LocalSocket::Close(){
+    if(peer){
+        peer->connected = false;
+    }
+
+    Socket::Close();
 }
 
 namespace SocketManager{

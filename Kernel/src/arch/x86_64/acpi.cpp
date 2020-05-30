@@ -112,6 +112,8 @@ namespace ACPI{
 		}
 
 		Log::Info("[ACPI] System Contains %d Processors", processorCount);
+
+		return 0;
 	}
 
 	void Init(){
@@ -247,14 +249,14 @@ extern "C"{
 		
 	void laihost_sleep(uint64_t ms){
 		uint64_t freq = Timer::GetFrequency();
-		float delayInTicks = (freq/1000)*ms;
+		uint64_t delayInTicks = (freq/1000)*ms;
 		uint64_t seconds = Timer::GetSystemUptime();
 		uint64_t ticks = Timer::GetTicks();
 		uint64_t totalTicks = seconds*freq + ticks;
 
 		for(;;){
 			uint64_t totalTicksNew = Timer::GetSystemUptime()*freq + Timer::GetTicks();
-			if(totalTicksNew - totalTicks == (int)delayInTicks){
+			if(totalTicksNew - totalTicks == delayInTicks){
 				break;
 			}
 		}

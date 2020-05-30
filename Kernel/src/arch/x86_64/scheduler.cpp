@@ -156,6 +156,8 @@ namespace Scheduler{
         memset(proc,0,sizeof(process_t));
 
         proc->fileDescriptors.clear();
+        proc->sharedMemory.clear();
+        proc->children.clear();
 
         proc->threads = (thread_t*)kmalloc(sizeof(thread_t) * 1);
 
@@ -168,7 +170,6 @@ namespace Scheduler{
         proc->threadCount = 1;
         proc->parent = nullptr;
         proc->uid = 0;
-        proc->sharedMemory.clear();
 
         proc->addressSpace = Memory::CreateAddressSpace();
         proc->pid = nextPID++; // Set Process ID to the next availiable
@@ -246,7 +247,6 @@ namespace Scheduler{
         for(unsigned i = 0; i < process->children.get_length(); i++){
             EndProcess(process->children.get_at(i));
         }
-        asm("cli");
 
         if(process->parent){
             for(unsigned i = 0; i < process->parent->children.get_length(); i++){
@@ -258,7 +258,9 @@ namespace Scheduler{
         }
 
         CPU* cpu = GetCPULocal();
+        asm("sti");
         acquireLock(&cpu->runQueueLock);
+        asm("cli");
 
         for(int i = 0; i < process->threadCount; i++){
             for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
@@ -271,13 +273,13 @@ namespace Scheduler{
                 processes->remove_at(i);
         }
 
-        /*for(int i = 0; i < process->fileDescriptors.get_length(); i++){
+        for(int i = 0; i < process->fileDescriptors.get_length(); i++){
             if(process->fileDescriptors[i]){
                 fs::Close(process->fileDescriptors[i]);
             }
         }
 
-        process->fileDescriptors.clear();*/
+        process->fileDescriptors.clear();
         
         for(int i = 0; i < SMP::processorCount; i++){
             if(i == cpu->id) continue; // Is current processor?
@@ -328,9 +330,9 @@ namespace Scheduler{
             }
         }
 
+        releaseLock(&cpu->runQueueLock);
         kfree(process);
         asm("sti");
-        releaseLock(&schedulerLock);
     }
 
     void Tick(regs64_t* r){
@@ -349,11 +351,11 @@ namespace Scheduler{
             return;
         }
 
-        while(acquireTestLock(&cpu->runQueueLock)) {
+        while(__builtin_expect(acquireTestLock(&cpu->runQueueLock), 0)) {
             return;
         }
         
-        if(cpu->currentThread && cpu->currentThread->parent != idleProcess){
+        if(__builtin_expect(cpu->currentThread && cpu->currentThread->parent != idleProcess, 1)){
             cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
 
             asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
@@ -363,7 +365,7 @@ namespace Scheduler{
             cpu->runQueue->add_back(cpu->currentThread);
         }
 
-        if (cpu->runQueue->get_length() <= 0){
+        if (__builtin_expect(cpu->runQueue->get_length() <= 0, 0)){
             cpu->currentThread = &idleProcess->threads[0];
         } else {
             cpu->currentThread = cpu->runQueue->remove_at(0);

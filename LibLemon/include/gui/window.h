@@ -8,7 +8,7 @@
 #include <lemon/types.h>
 #include <lemon/syscall.h>
 #include <gfx/surface.h>
-#include <gfx/window/widgets.h>
+#include <gui/widgets.h>
 #include <list.h>
 
 typedef struct {

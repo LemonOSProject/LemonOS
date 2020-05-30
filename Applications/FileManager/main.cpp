@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <gui/messagebox.h>
 #include <lemon/spawn.h>
+#include <lemon/util.h>
 
 void OnFileOpened(char* path, char** filePointer){
 	if(strncmp(path + strlen(path) - 4, ".lef", 4) == 0){
@@ -83,6 +84,8 @@ int main(int argc, char** argv){
 
 		if(repaint)
 			Lemon::GUI::PaintWindow(window);
+
+		lemon_yield();
 	}
 
 	for(;;);

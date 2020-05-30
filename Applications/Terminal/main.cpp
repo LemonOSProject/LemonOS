@@ -13,6 +13,7 @@
 #include <ctype.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <lemon/util.h>
 #include <vector>
 
 #include "escape.h"
@@ -290,6 +291,8 @@ int main(char argc, char** argv){
 
 	char* _buf = (char*)malloc(512);
 
+	bool paint = true;
+
 	terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
 	if(!terminalFont){
 		terminalFont = Lemon::Graphics::GetFont("default");
@@ -310,9 +313,7 @@ int main(char argc, char** argv){
 			if(msg.msg == WINDOW_EVENT_KEY){
 				if(msg.data < 128){
 					char key = (char)msg.data;
-					char b[] = {key, key, 0};
-					lemon_write(masterPTYFd, b, 1);
-					//PrintChar(key);
+					lemon_write(masterPTYFd, &key, 1);
 				}
 			} else if (msg.msg == WINDOW_EVENT_CLOSE){
 				Lemon::GUI::DestroyWindow(window);
@@ -325,9 +326,15 @@ int main(char argc, char** argv){
 			for(int i = 0; i < len; i++){
 				PrintChar(_buf[i]);
 			}
+			paint = true;
 		}
 		
-		Lemon::GUI::PaintWindow(window);
+		if(paint){
+			Lemon::GUI::PaintWindow(window);
+			paint = false;
+		}
+
+		lemon_yield();
 	}
 	for(;;);
 }

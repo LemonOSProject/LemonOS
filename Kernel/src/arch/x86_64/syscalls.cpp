@@ -39,7 +39,7 @@
 #define SYS_CREATE_WINDOW 22
 #define SYS_DESTROY_WINDOW 23
 #define SYS_DESKTOP_GET_WINDOW 24
-
+#define SYS_YIELD 25
 #define SYS_UPDATE_WINDOW 26
 #define SYS_GET_DESKTOP_PID 27
 #define SYS_SEND_MESSAGE 28
@@ -74,8 +74,9 @@
 #define SYS_RECEIVEFROM 57
 #define SYS_GETUID 58
 #define SYS_SETUID 59
+#define SYS_POLL 60
 
-#define NUM_SYSCALLS 60
+#define NUM_SYSCALLS 61
 
 #define EXEC_CHILD 1
 
@@ -153,9 +154,9 @@ long SysExec(regs64_t* r){
 		Scheduler::GetCurrentProcess()->children.add_back(proc);
 		proc->parent = Scheduler::GetCurrentProcess();
 
-		proc->fileDescriptors.replace_at(0, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));
-		proc->fileDescriptors.replace_at(1, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1));
-		proc->fileDescriptors.replace_at(2, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2));
+		proc->fileDescriptors.replace_at(0, new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0)));
+		proc->fileDescriptors.replace_at(1, new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1)));
+		proc->fileDescriptors.replace_at(2, new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2)));
 	}
 
 	strncpy(proc->workingDir, Scheduler::GetCurrentProcess()->workingDir, PATH_MAX);
@@ -324,6 +325,8 @@ long SysAlloc(regs64_t* r){
 	}
 
 	*addressPointer = address;
+
+	return 0;
 }
 
 long SysChmod(regs64_t* r){
@@ -505,6 +508,10 @@ long SysDesktopGetWindow(regs64_t* r){
 	releaseLock(&GetDesktop()->lock);
 
 	return 0;
+}
+
+long SysYield(regs64_t* r){
+	Scheduler::Yield();
 }
 
 long SysUpdateWindow(regs64_t* r){
@@ -1234,7 +1241,113 @@ long SysGetUID(regs64_t* r){
 }
 
 long SysSetUID(regs64_t* r){
-	
+	return 0;
+}
+
+/* 
+ * SysPoll (fds, nfds, timeout) - Wait for file descriptors
+ * fds - Array of pollfd structs
+ * nfds - Number of pollfd structs
+ * timeout - timeout period
+ *
+ * On Success - return number of file descriptors
+ * On Failure - return -1
+ */
+long SysPoll(regs64_t* r){
+	pollfd* fds = (pollfd*)r->rbx;
+	unsigned nfds = r->rcx;
+	int timeout = r->rdx;
+
+	process_t* proc = Scheduler::GetCurrentProcess();
+	if(!Memory::CheckUsermodePointer(r->rbx, nfds * sizeof(pollfd), proc->addressSpace)){
+		Log::Warning("sys_poll: Invalid pointer to file descriptor array");
+	}
+
+	fs_fd_t** files = (fs_fd_t**)kmalloc(sizeof(fs_fd_t*) * nfds);
+
+	unsigned eventCount = 0;
+	for(unsigned i = 0; i < nfds; i++){
+		fds[i].revents = 0;
+		if(fds[i].fd < 0) continue;
+
+		if(r->rbx > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+			Log::Warning("sys_poll: Invalid File Descriptor: %d", r->rbx);
+			files[i] = 0;
+			fds[i].revents &= POLLNVAL;
+			eventCount++;
+			continue;
+		}
+
+		fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
+
+		if(!handle){
+			Log::Warning("sys_poll: Invalid File Descriptor: %d", r->rbx);
+			files[i] = 0;
+			fds[i].revents &= POLLNVAL;
+			eventCount++;
+			continue;
+		}
+
+		files[i] = handle;
+
+		bool hasEvent = 0;
+
+		if(files[i]->node->flags & FS_NODE_SOCKET){
+			if(!((Socket*)files[i]->node)->IsConnected()){
+				fds[i].revents &= POLLHUP;
+				hasEvent = 1;
+			}
+		}
+
+		if(files[i]->node->CanRead() && (fds[i].events & POLLIN)) { // If readable and the caller requested POLLIN
+			fds[i].revents &= POLLIN;
+			hasEvent = 1;
+		}
+		
+		if(files[i]->node->CanWrite() && (fds[i].events & POLLOUT)) { // If writable and the caller requested POLLOUT
+			fds[i].revents &= POLLOUT;
+			hasEvent = 1;
+		}
+
+		if(hasEvent) eventCount++;
+	}
+
+	if(timeout){
+		int ticksPerMs = (1000 / Timer::GetFrequency());
+		unsigned endMs = Timer::GetSystemUptime() * 1000 + ticksPerMs * (Timer::GetTicks() + timeout);
+		while(((Timer::GetSystemUptime() * 1000 + ticksPerMs * Timer::GetTicks()) < endMs) || (timeout < 0)){ // Wait until timeout, unless timeout is negative in which wait infinitely
+			if(eventCount > 0){
+				break;
+			}
+
+			for(unsigned i = 0; i < nfds; i++){
+				if(!files[i]) continue;
+
+				bool hasEvent = 0;
+
+				if(files[i]->node->flags & FS_NODE_SOCKET){
+					if(!((Socket*)files[i]->node)->IsConnected()){
+						fds[i].revents &= POLLHUP;
+						hasEvent = 1;
+					}
+				}
+
+				if(files[i]->node->CanRead() && (fds[i].events & POLLIN)) { // If readable and the caller requested POLLIN
+					fds[i].revents &= POLLIN;
+					hasEvent = 1;
+				}
+				
+				if(files[i]->node->CanWrite() && (fds[i].events & POLLOUT)) { // If writable and the caller requested POLLOUT
+					fds[i].revents &= POLLOUT;
+					hasEvent = 1;
+				}
+
+				if(hasEvent) eventCount++;
+			}
+		}
+	}
+
+	return eventCount;
 }
 
 syscall_t syscalls[]{
@@ -1263,7 +1376,7 @@ syscall_t syscalls[]{
 	SysCreateWindow,
 	SysDestroyWindow,
 	SysDesktopGetWindow,
-	nullptr,					// 25
+	SysYield,					// 25
 	SysUpdateWindow,
 	SysGetDesktopPID,
 	SysSendMessage,
@@ -1298,6 +1411,7 @@ syscall_t syscalls[]{
 	SysReceiveFrom,
 	SysGetUID,
 	SysSetUID,					
+	SysPoll,					// 60
 };
 
 int lastSyscall = 0;

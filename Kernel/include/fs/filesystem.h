@@ -24,6 +24,15 @@
 #define S_IFLNK 0x0A000
 #define S_IFSOCK 0x0C000
 
+#define POLLIN 0x01
+#define POLLOUT 0x02
+#define POLLPRI 0x04
+#define POLLHUP 0x08
+#define POLLERR 0x10
+#define POLLRDHUP 0x20
+#define POLLNVAL 0x40
+#define POLLWRNORM 0x80
+
 typedef int64_t ino_t;
 typedef uint64_t dev_t;
 typedef int32_t uid_t;
@@ -52,6 +61,12 @@ typedef struct fs_fd{
     mode_t mode;
 } fs_fd_t;
 
+struct pollfd {
+    int fd;
+    short events;
+    short revents;
+};
+
 class FsNode{
 public:
     char name[128]; // Filename
@@ -68,6 +83,9 @@ public:
     virtual int ReadDir(struct fs_dirent*, uint32_t);
     virtual FsNode* FindDir(char* name);
     virtual int Ioctl(uint64_t cmd, uint64_t arg);
+
+    virtual bool CanRead() { return true; }
+    virtual bool CanWrite() { return false; }
 
     FsNode* link;
     FsNode* parent;

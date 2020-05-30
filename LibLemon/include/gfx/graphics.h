@@ -82,6 +82,16 @@ uint32_t        alphaMask;
 } __attribute__((packed)) bitmap_info_headerv4_t;
 
 namespace Lemon::Graphics{
+    enum {
+        SizeUnitPixels,
+        SizeUnitPercentage,        
+    };
+    
+    enum {
+        PositionAbsolute,
+        PositionRelative,        
+    };
+
     enum ImageType {
         Image_Unknown,
         Image_BMP,

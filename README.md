@@ -7,11 +7,13 @@ Lemon OS is a 64-bit operating system written in C++.
 (https://lemonos.org)
 
 ### Features
+- Symmetric Multiprocessing (SMP)
+- UNIX Domain Sockets
 - Window Management
 - ATA and SATA Driver
 - Dynamic Linking
-- Pseudoterminals and Terminal Emulator
-- Intel 8254x Driver
+- Pseudoterminals and 256 colour compatible Terminal Emulator
+- Intel 8254x Ethernet Driver
 - Freetype and Libpng Port
 - [GnuBoy Port](https://github.com/fido2020/lemon-gnuboy)
 - [DOOM Port](https://github.com/fido2020/LemonDOOM)
@@ -24,6 +26,7 @@ Lemon OS is a 64-bit operating system written in C++.
 - 256 MB RAM (512 is more optimal)
 - x86_64 Processor
 - VESA VBE support
+- I/O APIC (mostly relevant for Virtual Machines)
 
 ### Build Requirements
 - UNIX-like system (e.g. Linux or Windows under WSL)

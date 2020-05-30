@@ -27,14 +27,14 @@ memcpy_sse2_unaligned:
 	push rbp    ; save the prior rbp value
     mov rbp, rsp
 
+	xor rax, rax
 	mov rcx, rdx
 .loop:
-	movdqu xmm0, [rsi]
+	movdqu xmm0, [rsi + rax]
 
-	movdqu [rdi], xmm0
+	movdqu [rdi + rax], xmm0
 
-	add rdi, 0x10
-	add rsi, 0x10
+	add rax, 0x10
 	loop .loop
 
 	mov rsp, rbp

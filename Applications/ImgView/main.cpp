@@ -1,10 +1,10 @@
-#include <gfx/window/window.h>
-#include <gfx/window/widgets.h>
-#include <gfx/window/messagebox.h>
+#include <gui/window.h>
+#include <gui/widgets.h>
+#include <gui/messagebox.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <lemon/ipc.h>
-#include <gfx/window/filedialog.h>
+#include <gui/filedialog.h>
 
 win_info_t winInfo{
     .x = 0,

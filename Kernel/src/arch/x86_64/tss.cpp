@@ -28,7 +28,7 @@ namespace TSS
         memset((void*)tss->ist2, 0, PAGE_SIZE_4K);
         memset((void*)tss->ist3, 0, PAGE_SIZE_4K);
 
-        asm("mov %%rsp, %0" : "=r"(tss->rsp0));
+        asm volatile("mov %%rsp, %0" : "=r"(tss->rsp0));
             
         asm volatile("ltr %%ax" :: "a"(0x2B));
     }

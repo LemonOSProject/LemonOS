@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <gfx/graphics.h>
 #include <lemon/filesystem.h>
-#include <gfx/window/window.h>
+#include <gui/window.h>
 #include <stdio.h>
 #include <list.h>
 #include <lemon/keyboard.h>
@@ -18,6 +18,7 @@
 #include <lemon/spawn.h>
 #include <lemon/info.h>
 #include <lemon/sharedmem.h>
+#include <lemon/util.h>
 
 #define MENU_ITEM_HEIGHT 24
 
@@ -122,6 +123,8 @@ void LoadConfig(){
 	}
 }
 
+bool paint = true;
+
 int main(){
 
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
@@ -150,12 +153,6 @@ int main(){
 	LoadConfig();
 
 	for(;;){
-		Lemon::GUI::PaintWindow(taskbar);
-
-		if(showMenu){
-			Lemon::GUI::PaintWindow(menu);
-		}
-
 		ipc_message_t msg;
 		while(Lemon::ReceiveMessage(&msg)){
 			switch (msg.msg)
@@ -184,12 +181,23 @@ int main(){
 						Lemon::GUI::UpdateWindow(menu);
 					}
 				}
+				paint = true;
 				break;
 			
 			default:
 				break;
 			}
 		}
+
+		if(paint){
+			Lemon::GUI::PaintWindow(taskbar);
+
+			if(showMenu){
+				Lemon::GUI::PaintWindow(menu);
+			}
+		}
+
+		lemon_yield();
 	}
 
 	for(;;);

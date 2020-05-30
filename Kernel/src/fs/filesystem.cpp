@@ -258,7 +258,7 @@ namespace fs{
 
         fd->node->Close();
 
-		delete fd;
+		kfree(fd);
     }
 
     int ReadDir(FsNode* node, fs_dirent_t* dirent, uint32_t index){

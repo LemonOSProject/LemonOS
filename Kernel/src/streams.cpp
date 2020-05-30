@@ -14,8 +14,18 @@ int64_t Stream::Write(void* buffer, size_t len){
     return -1; // We should not return but get the compiler to shut up
 }
 
+int64_t Stream::Peek(void* buffer, size_t len){
+    assert(!"Stream::Peek called from base class");
+    
+    return -1; // We should not return but get the compiler to shut up
+}
+
 int64_t Stream::Empty(){
     return 1;
+}
+
+Stream::~Stream(){
+    
 }
 
 DataStream::DataStream(size_t bufSize){
@@ -42,6 +52,18 @@ int64_t DataStream::Read(void* data, size_t len){
     bufferPos -= len;
 
     releaseLock(&streamLock);
+    
+    return len;
+}
+
+int64_t DataStream::Peek(void* data, size_t len){
+    if(len >= bufferPos) len = bufferPos;
+
+    if(!len) return 0;
+
+    memcpy(data, buffer, len);
+    
+    memcpy(buffer, buffer + len, bufferPos - len);
     
     return len;
 }
@@ -85,6 +107,18 @@ int64_t PacketStream::Read(void* buffer, size_t len){
     return len;
 }
 
+int64_t PacketStream::Peek(void* buffer, size_t len){
+    if(packets.get_length() <= 0) return 0;
+
+    stream_packet_t pkt = packets.get_at(0);
+
+    if(len > pkt.len) len = pkt.len;
+
+    memcpy(buffer, pkt.data, len);
+
+    return len;
+}
+
 int64_t PacketStream::Write(void* buffer, size_t len){
     stream_packet_t pkt;
     pkt.len = len;
@@ -92,6 +126,8 @@ int64_t PacketStream::Write(void* buffer, size_t len){
     memcpy(pkt.data, buffer, len);
 
     packets.add_back(pkt);
+
+    return pkt.len;
 }
 
 int64_t PacketStream::Empty(){
