@@ -1,83 +1,88 @@
 #pragma once
 
-#define WINDOW_FLAGS_NODECORATION 0x1
-#define WINDOW_FLAGS_SNAP_TO_BOTTOM 0x2
-#define WINDOW_FLAGS_MINIMIZED 0x4
-
-#include <stdint.h>
-#include <lemon/types.h>
-#include <lemon/syscall.h>
+#include <core/msghandler.h>
+#include <core/event.h>
 #include <gfx/surface.h>
-#include <gfx/window/widgets.h>
-#include <list.h>
+#include <gfx/graphics.h>
 
-typedef struct {
-	uint16_t windowCount;
-	uint16_t maxWindowCount;
-	uint8_t dirty;
-	uint8_t reserved[3];
-	handle_t* windows[];
-} __attribute__((packed)) window_list_t;
+#define WINDOW_FLAGS_NODECORATION 0x1
 
-typedef struct {
-	uint16_t x = 0;
-	uint16_t y = 0;
+namespace Lemon::GUI {
+    static const char* wmSocketAddress = "lemonwm";
 
-	uint16_t width = 0; // Width
-	uint16_t height = 0; // Height
-
-	uint32_t flags; // Window Flags
-
-	char title[96]; // Title of window
-
-	uint64_t primaryBufferKey;
-	uint64_t secondaryBufferKey;
-	uint8_t currentBuffer;
-
-	uint64_t ownerPID;
-
-	handle_t handle;
-} __attribute__((packed)) win_info_t;
-
-namespace Lemon::GUI{
 	typedef void(*WindowPaintHandler)(surface_t*);
+    typedef void(*MessageReceiveHandler)();
+    typedef void(*EventCallback)();
 
+    enum {
+        WMCreateWindow,
+        WMDestroyWindow,
+        WMSetTitle,
+        WMRelocate,
+        WMResize,
+        WMUpdateFlags,
+    };
 
-	struct Window{
-		List<Widget*> widgets;
+    struct WMCreateWindowCommand{
+        vector2i_t size; // Window Size
+        vector2i_t pos; // Window Position
+        uint32_t flags; // Window Flags
+        unsigned long bufferKey; // Shared Memory Key
+        unsigned short titleLength; // Length (in bytes) of the title;
+        char title[];
+    };
 
-		handle_t handle = (handle_t)0;
-		win_info_t info;
+    struct WMCommand{
+        short cmd;
+        unsigned short length;
+        union{
+            vector2i_t position;
+            vector2i_t size;
+            uint32_t flags;
+            WMCreateWindowCommand create;
+            struct {
+            unsigned short titleLength;
+            char title[];
+            };
+        };
+    };
 
-		rgba_colour_t background = {192,192,190,255};
+    struct WindowBuffer {
+        uint64_t currentBuffer;
+        uint64_t buffer1Offset;
+        uint64_t buffer2Offset;
+        uint64_t padding; // Pad to 32 bytes
+    };
 
-		surface_t surface;
-		uint8_t* primaryBuffer;
-		uint8_t* secondaryBuffer;
+    class Window {
+    private:
+        MessageClient msgClient;
+        WindowBuffer* windowBufferInfo;
+        uint8_t* buffer1;
+        uint8_t* buffer2;
+        uint64_t windowBufferKey;
 
-		int lastPressedWidget = -1;
-		int activeWidget = -1;
-		vector2i_t mousePos;
-		
-		WindowPaintHandler OnPaint = NULL;
-	};
+        uint32_t flags;
+    public:
+        surface_t surface;
 
-	//handle_t _CreateWindow(win_info_t* wininfo);
-	handle_t _CreateWindow(win_info_t* wininfo, void** primaryBuffer, void** secondaryBuffer);
-	void _DestroyWindow(handle_t window);
-	void _PaintWindow(handle_t window);//, surface_t* surface);
-	void SwapWindowBuffers(Window* win);
+        Window(const char* title, vector2i_t size, vector2i_t pos = {0, 0}, uint32_t flags = 0);
+        ~Window();
 
-	Window* CreateWindow(win_info_t* info);
-	void DestroyWindow(Window* win);
-	void ResizeWindow(Window* win, vector2i_t size);
-	void PaintWindow(Window* win);
-	void UpdateWindow(Window* win);
+        void SetTitle(const char* title);
+        void Relocate(vector2i_t pos);
+        void Resize(vector2i_t size);
 
-	void HandleMouseDown(Window* win, vector2i_t mousePos);
-	Widget* HandleMouseUp(Window* win, vector2i_t mousePos);
-	void HandleMouseMovement(Window* win, vector2i_t mousePos);
-	void HandleKeyPress(Window* win, int key);
+        void UpdateFlags(uint32_t flags);
 
-	void AddWidget(Widget* widget, Window* win);
+        uint32_t GetFlags() { return flags; }
+        vector2i_t GetSize() { return {surface.width, surface.height}; };
+
+        void Paint();
+        void SwapBuffers();
+        bool PollEvent(LemonEvent& ev);
+
+        WindowPaintHandler OnPaint = nullptr;
+        MessageReceiveHandler OnReceiveMessage = nullptr;
+    };
 }

@@ -5,12 +5,14 @@
 #include <errno.h>
 
 Socket* Socket::CreateSocket(int domain, int type, int protocol){
+    if(type & SOCK_NONBLOCK) type &= ~SOCK_NONBLOCK;
+
     if(domain != UnixDomain){
         Log::Warning("CreateSocket: domain %d is not supported", domain);
         return nullptr;
     }
     if(type != StreamSocket && type != DatagramSocket){
-        Log::Warning("CreateSocket: type %d is not supported", domain);
+        Log::Warning("CreateSocket: type %d is not supported", type);
         return nullptr;
     }
     if(protocol){
@@ -27,6 +29,7 @@ Socket* Socket::CreateSocket(int domain, int type, int protocol){
 Socket::Socket(int type, int protocol){
     this->type = type;
     pendingConnections.value = CONNECTION_BACKLOG;
+    flags = FS_NODE_SOCKET;
 }
 
 Socket::~Socket(){
@@ -42,6 +45,10 @@ int Socket::ConnectTo(Socket* client){
 }
 
 Socket* Socket::Accept(sockaddr* addr, socklen_t* addrlen){
+    return Accept(addr, addrlen, 0);
+}
+
+Socket* Socket::Accept(sockaddr* addr, socklen_t* addrlen, int mode){
     assert(!"Accept has been called from socket base");
 
     return nullptr;
@@ -129,7 +136,11 @@ int LocalSocket::ConnectTo(Socket* client){
     SemaphoreSignal(&pendingConnections);
 }
 
-Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen){
+Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen, int mode){
+    if((mode & O_NONBLOCK) && pending.get_length() <= 0){
+        return nullptr;
+    }
+
     while(pending.get_length() <= 0){
         // TODO: Actually block the task
     }
@@ -143,6 +154,8 @@ Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen){
     sock->outbound = client->inbound; // Outbound to client
     sock->inbound = client->outbound; // Inbound to server
     sock->role = ServerRole;
+    sock->peer = client;
+    client->peer = sock;
 
     sock->connected = client->connected = true;
 
@@ -243,11 +256,19 @@ int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* 
         return -ENOTCONN;
     }
 
+    if(inbound->Empty() && (flags & MSG_DONTWAIT)){
+        return -EAGAIN;
+    }
+
     while(inbound->Empty()){
         // TODO: Actually block
     }
 
-    return inbound->Read(buffer, len);
+    if(flags & MSG_PEEK){
+        return inbound->Peek(buffer, len);
+    } else {
+        return inbound->Read(buffer, len);
+    }
 }
 
 int64_t LocalSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen){
@@ -266,8 +287,6 @@ int64_t LocalSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr*
         return -ENOTCONN;
     }
 
-    Log::Info("Writing %d bytes", len);
-
     return outbound->Write(buffer, len);
 }
 
@@ -279,6 +298,14 @@ fs_fd_t* LocalSocket::Open(size_t flags){
     fDesc->node = this;
 
     return fDesc;
+}
+
+void LocalSocket::Close(){
+    if(peer){
+        peer->connected = false;
+    }
+
+    Socket::Close();
 }
 
 namespace SocketManager{

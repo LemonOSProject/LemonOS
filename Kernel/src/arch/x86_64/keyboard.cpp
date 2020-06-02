@@ -4,72 +4,80 @@
 #include <logging.h>
 #include <gui.h>
 #include <apic.h>
+#include <fs/filesystem.h>
 
-uint8_t key = 0;
-bool caps = false;
-
-char keymap_us[128] =
-{
-	0,  27, '1', '2', '3', '4', '5', '6', '7', '8',	/* 9 */
-	'9', '0', '-', '=', '\b',	/* Backspace */
-	'\t',			/* Tab */
-	'q', 'w', 'e', 'r',	/* 19 */
-	't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',	/* Enter key */
-	0,			/* 29   - Control */
-	'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */
-	'\'', '`',   0,		/* Left shift */
-	'\\', 'z', 'x', 'c', 'v', 'b', 'n',			/* 49 */
-	'm', ',', '.', '/',   0,				/* Right shift */
-	'*',
-	0,	/* Alt */
-	' ',	/* Space bar */
-	0,	/* Caps lock */
-	0,	/* 59 - F1 key ... > */
-	0,   0,   0,   0,   0,   0,   0,   0,
-	0,	/* < ... F10 */
-	0,	/* 69 - Num lock*/
-	0,	/* Scroll Lock */
-	0,	/* Home key */
-	0,	/* Up Arrow */
-	0,	/* Page Up */
-	'-',
-	0,	/* Left Arrow */
-	0,
-	0,	/* Right Arrow */
-	'+',
-	0,	/* 79 - End key*/
-	0,	/* Down Arrow */
-	0,	/* Page Down */
-	0,	/* Insert Key */
-	0,	/* Delete Key */
-	0,   0,   0,
-	0,	/* F11 Key */
-	0,	/* F12 Key */
-	0,	/* All other keys are undefined */
-};
+#define KEY_QUEUE_SIZE 256
 
 namespace Keyboard{
+    uint8_t keyQueue[KEY_QUEUE_SIZE];
+
+	short keyQueueEnd = 0;
+	short keyQueueStart = 0;
+	short keyCount = 0;
+
+    bool ReadKey(uint8_t* key){
+        if(keyCount <= 0) return false;
+
+        *key = keyQueue[keyQueueStart];
+
+        keyQueueStart++;
+
+        if(keyQueueStart >= KEY_QUEUE_SIZE) {
+            keyQueueStart = 0;
+        }
+
+        keyCount--;
+
+        return true;
+    }
+
+	class KeyboardDevice : public FsNode{
+	public:
+		KeyboardDevice(char* name){
+			strcpy(this->name, name);
+
+            flags = FS_NODE_CHARDEVICE;
+		}
+
+		size_t Read(size_t offset, size_t size, uint8_t *buffer){
+            if(size > keyCount) size = keyCount;
+
+            if(!size) return 0;
+
+            for(short i = 0; i < size; i++){
+                ReadKey(buffer++); // Insert key and increment
+            }
+
+            return size;
+		}
+	};
+
+    KeyboardDevice kbDev("keyboard0");
 
     // Interrupt handler
     void Handler(regs64_t* r)
     {
         // Read from the keyboard's data buffer
-        key = inportb(0x60);
+        uint8_t key = inportb(0x60);
 		
-		if(GetDesktop()) {
-			message_t wmKeyMessage;
-            wmKeyMessage.senderPID = 0;
-            wmKeyMessage.recieverPID = GetDesktop()->pid; // Window Manager
-            wmKeyMessage.msg = 0x1BEEF; // Desktop Event - Key Press
-            wmKeyMessage.data = key; // The key that was pressed
-			wmKeyMessage.data2 = 0;
-			
-            Scheduler::SendMessage(wmKeyMessage);
+        if(keyCount >= KEY_QUEUE_SIZE) return; // Drop key
+
+        // Add key to queue
+        keyQueue[keyQueueEnd] = key;
+
+        keyQueueEnd++;
+        
+        if(keyQueueEnd >= KEY_QUEUE_SIZE) {
+            keyQueueEnd = 0;
         }
+
+        keyCount++;
     }
 
     // Register interrupt handler
     void Install() {
+        fs::RegisterDevice(&kbDev);
+
         IDT::RegisterInterruptHandler(IRQ0 + 1, Handler);
 		APIC::IO::MapLegacyIRQ(1);
     }

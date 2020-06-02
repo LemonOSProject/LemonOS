@@ -15,6 +15,7 @@
 #include <sharedmem.h>
 #include <cpu.h>
 #include <net/socket.h>
+#include <errno.h>
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -39,7 +40,7 @@
 #define SYS_CREATE_WINDOW 22
 #define SYS_DESTROY_WINDOW 23
 #define SYS_DESKTOP_GET_WINDOW 24
-
+#define SYS_YIELD 25
 #define SYS_UPDATE_WINDOW 26
 #define SYS_GET_DESKTOP_PID 27
 #define SYS_SEND_MESSAGE 28
@@ -74,8 +75,11 @@
 #define SYS_RECEIVEFROM 57
 #define SYS_GETUID 58
 #define SYS_SETUID 59
+#define SYS_POLL 60
+#define SYS_SENDMSG 61
+#define SYS_RECVMSG 62
 
-#define NUM_SYSCALLS 60
+#define NUM_SYSCALLS 63
 
 #define EXEC_CHILD 1
 
@@ -153,9 +157,9 @@ long SysExec(regs64_t* r){
 		Scheduler::GetCurrentProcess()->children.add_back(proc);
 		proc->parent = Scheduler::GetCurrentProcess();
 
-		proc->fileDescriptors.replace_at(0, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));
-		proc->fileDescriptors.replace_at(1, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1));
-		proc->fileDescriptors.replace_at(2, Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2));
+		proc->fileDescriptors.replace_at(0, new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0)));
+		proc->fileDescriptors.replace_at(1, new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1)));
+		proc->fileDescriptors.replace_at(2, new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2)));
 	}
 
 	strncpy(proc->workingDir, Scheduler::GetCurrentProcess()->workingDir, PATH_MAX);
@@ -208,6 +212,14 @@ long SysWrite(regs64_t* r){
 	return ret;
 }
 
+/*
+ * SysOpen (path, flags) - Opens file at specified path with flags
+ * path - Path of file
+ * flags - flags of opened file descriptor
+ * 
+ * On success: return file descriptor
+ * On failure: return -1
+ */
 long SysOpen(regs64_t* r){
 	char* filepath = (char*)kmalloc(strlen((char*)r->rbx) + 1);
 	strcpy(filepath, (char*)r->rbx);
@@ -229,7 +241,10 @@ long SysOpen(regs64_t* r){
 	}
 
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
-	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(fs::Open(node, 0));
+
+	fs_fd_t* handle = fs::Open(node, r->rcx);
+
+	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(handle);
 	fs::Open(node, 0);
 
 	return fd;
@@ -324,6 +339,8 @@ long SysAlloc(regs64_t* r){
 	}
 
 	*addressPointer = address;
+
+	return 0;
 }
 
 long SysChmod(regs64_t* r){
@@ -440,100 +457,9 @@ long SysCreateDesktop(regs64_t* r){
 	return 0;
 }
 
-long SysCreateWindow(regs64_t* r){
-	win_info_t* info = (win_info_t*)r->rbx;
-	window_t* win = (window_t*)kmalloc(sizeof(window_t));
-	handle_t handle =  Scheduler::RegisterHandle(win);
-	info->handle = handle;
-	info->ownerPID = Scheduler::GetCurrentProcess()->pid;
-	win->info = *info;
-	win->desktop = GetDesktop();
-	acquireLock(&GetDesktop()->lock);
-	
-	while(GetDesktop()->windows->dirty == 2);
-
-	window_list_t* windowList = GetDesktop()->windows;
-	if(windowList->windowCount < windowList->maxWindowCount)
-		windowList->windows[windowList->windowCount++] = info->handle;
-
-	windowList->dirty = 1;
-	
-	releaseLock(&GetDesktop()->lock);
-
+long SysYield(regs64_t* r){
+	Scheduler::Yield();
 	return 0;
-}
-
-long SysDestroyWindow(regs64_t* r){
-	handle_t handle = (handle_t)r->rbx;
-
-	window_t* win;
-	if((win = (window_t*)Scheduler::FindHandle(handle))){
-		desktop_t* desktop = GetDesktop();
-		acquireLock(&desktop->lock);
-
-		
-		for(int i = 0; i < GetDesktop()->windows->windowCount; i++){
-			if(GetDesktop()->windows->windows[i] == win->info.handle){
-				while(desktop->windows->dirty == 2);
-				memcpy(&desktop->windows->windows[i], &desktop->windows->windows[i + 1], (desktop->windows->windowCount - i - 1));
-				desktop->windows->windowCount--;
-				desktop->windows->dirty = 1;
-			}
-		}
-
-		releaseLock(&GetDesktop()->lock);
-	} else return 2;
-
-	return 0;
-}
-
-long SysDesktopGetWindow(regs64_t* r){
-	win_info_t* winInfo = (win_info_t*)r->rbx;
-
-	acquireLock(&GetDesktop()->lock);
-
-	handle_t handle = (handle_t)r->rcx;
-	window_t* win = (window_t*)Scheduler::FindHandle(handle);
-
-	if(win) {
-		*winInfo = win->info;
-	} else {
-		releaseLock(&GetDesktop()->lock);
-		return -1;
-	}
-
-	releaseLock(&GetDesktop()->lock);
-
-	return 0;
-}
-
-long SysUpdateWindow(regs64_t* r){
-	handle_t handle = (handle_t*)r->rbx;
-	win_info_t* info = (win_info_t*)r->rdx;
-
-	Window* window = (Window*)Scheduler::FindHandle(handle);
-	if(!window) return 2;
-
-	if(info){ // Update Window Info
-		win_info_t oldInfo = window->info;
-		window->info = *info;
-
-		if(window->info.handle != oldInfo.handle){
-			window->info.handle = oldInfo.handle; // Do not allow a change in handle
-			Log::Error("sys_update_window: Applications are NOT allowed to change window handles");
-		}
-
-		if(oldInfo.width != info->width || oldInfo.height != info->height){
-			// TODO: Ensure that enough memory is allocated in the case of a resized window
-			Log::Warning("sys_update_window: Window has been resized");
-		}
-
-		if(GetDesktop()->windows->dirty != 2) GetDesktop()->windows->dirty = 1; // Force the WM to refresh the background
-
-		return 0;
-	}
-
-	return 1;
 }
 
 long SysGetDesktopPID(regs64_t* r){
@@ -919,6 +845,9 @@ long SysSocket(regs64_t* r){
 	if(!sock) return -1;
 	
 	fs_fd_t* fDesc = fs::Open(sock, 0);
+
+	if(type & SOCK_NONBLOCK) fDesc->mode |= O_NONBLOCK;
+
 	int fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 
 	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(fDesc);
@@ -1021,9 +950,14 @@ long SysAccept(regs64_t* r){
 
 	Socket* sock = (Socket*)handle->node;
 	
-	Socket* newSock = sock->Accept(addr, len);
+	Socket* newSock = sock->Accept(addr, len, handle->mode);
+	if(!newSock){
+		return -1;
+	}
+
 	int fd = proc->fileDescriptors.get_length();
-	proc->fileDescriptors.add_back(fs::Open(newSock));
+	fs_fd_t* newHandle = fs::Open(newSock);
+	proc->fileDescriptors.add_back(newHandle);
 
 	if(newSock)
 		return fd;
@@ -1234,7 +1168,239 @@ long SysGetUID(regs64_t* r){
 }
 
 long SysSetUID(regs64_t* r){
+	return 0;
+}
+
+/* 
+ * SysPoll (fds, nfds, timeout) - Wait for file descriptors
+ * fds - Array of pollfd structs
+ * nfds - Number of pollfd structs
+ * timeout - timeout period
+ *
+ * On Success - return number of file descriptors
+ * On Failure - return -1
+ */
+long SysPoll(regs64_t* r){
+	pollfd* fds = (pollfd*)r->rbx;
+	unsigned nfds = r->rcx;
+	int timeout = r->rdx;
+
+	process_t* proc = Scheduler::GetCurrentProcess();
+	if(!Memory::CheckUsermodePointer(r->rbx, nfds * sizeof(pollfd), proc->addressSpace)){
+		Log::Warning("sys_poll: Invalid pointer to file descriptor array");
+	}
+
+	fs_fd_t** files = (fs_fd_t**)kmalloc(sizeof(fs_fd_t*) * nfds);
+
+	unsigned eventCount = 0; // Amount of fds with evetns
+	for(unsigned i = 0; i < nfds; i++){
+		fds[i].revents = 0;
+		if(fds[i].fd < 0) continue;
+
+		if(fds[i].fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+			Log::Warning("sys_poll: Invalid File Descriptor: %d", fds[i].fd);
+			files[i] = 0;
+			fds[i].revents |= POLLNVAL;
+			eventCount++;
+			continue;
+		}
+
+		fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[fds[i].fd];
+
+		if(!handle){
+			Log::Warning("sys_poll: Invalid File Descriptor: %d", fds[i].fd);
+			files[i] = 0;
+			fds[i].revents |= POLLNVAL;
+			eventCount++;
+			continue;
+		}
+
+		files[i] = handle;
+
+		bool hasEvent = 0;
+
+		if(files[i]->node->flags & FS_NODE_SOCKET){
+			if(!((Socket*)files[i]->node)->IsConnected()){
+				fds[i].revents |= POLLHUP;
+				hasEvent = true;
+			}
+		}
+
+		if(files[i]->node->CanRead() && (fds[i].events & POLLIN)) { // If readable and the caller requested POLLIN
+			fds[i].revents |= POLLIN;
+			hasEvent = true;
+		}
+		
+		if(files[i]->node->CanWrite() && (fds[i].events & POLLOUT)) { // If writable and the caller requested POLLOUT
+			fds[i].revents |= POLLOUT;
+			hasEvent = true;
+		}
+
+		if(hasEvent) eventCount++;
+	}
+
+	if(timeout){
+		int ticksPerMs = (1000 / Timer::GetFrequency());
+		unsigned endMs = Timer::GetSystemUptime() * 1000 + ticksPerMs * (Timer::GetTicks() + timeout);
+		while(((Timer::GetSystemUptime() * 1000 + ticksPerMs * Timer::GetTicks()) < endMs) || (timeout < 0)){ // Wait until timeout, unless timeout is negative in which wait infinitely
+			if(eventCount > 0){
+				break;
+			}
+
+			for(unsigned i = 0; i < nfds; i++){
+				if(!files[i]) continue;
+
+				bool hasEvent = 0;
+
+				if(files[i]->node->flags & FS_NODE_SOCKET){
+					if(!((Socket*)files[i]->node)->IsConnected()){
+						fds[i].revents |= POLLHUP;
+						hasEvent = 1;
+					}
+				}
+
+				if(files[i]->node->CanRead() && (fds[i].events & POLLIN)) { // If readable and the caller requested POLLIN
+					fds[i].revents |= POLLIN;
+					hasEvent = 1;
+				}
+				
+				if(files[i]->node->CanWrite() && (fds[i].events & POLLOUT)) { // If writable and the caller requested POLLOUT
+					fds[i].revents |= POLLOUT;
+					hasEvent = 1;
+				}
+
+				if(hasEvent) eventCount++;
+			}
+		}
+	}
+
+	kfree(files);
+
+	return eventCount;
+}
+
+/* 
+ * SysSend (sockfd, msg, flags) - Send data through a socket
+ * sockfd - Socket file descriptor
+ * msg - Message Header
+ * flags - flags
+ *
+ * On Success - return amount of data sent
+ * On Failure - return -1
+ */
+long SysSendMsg(regs64_t* r){
+	process_t* proc = Scheduler::GetCurrentProcess();
+
+	if(r->rbx >= proc->fileDescriptors.get_length()){
+		Log::Warning("sys_sendmsg: Invalid File Descriptor: %d", r->rbx);
+		return -1;
+	}
+
+	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+
+	msghdr* msg = (msghdr*)r->rcx;
+	uint64_t flags = r->rsi;
+
+	if(!handle){ 
+		Log::Warning("sys_sendmsg: Invalid file descriptor: ", r->rbx);
+		return -1; 
+	}
+
+	if(!(handle->node->flags & FS_NODE_SOCKET)){
+		Log::Warning("sys_sendmsg: File (Descriptor: %d) is not a socket", r->rbx);
+		return -2;
+	}
 	
+	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(msghdr), proc->addressSpace)){
+		Log::Warning("sys_sendmsg: Invalid msg ptr");
+		return -EFAULT;
+	}
+	
+	if(!Memory::CheckUsermodePointer((uintptr_t)msg->iov, sizeof(iovec) * msg->iovlen, proc->addressSpace)){
+		Log::Warning("sys_sendmsg: msg: Invalid iovec ptr");
+		return -EFAULT;
+	}
+
+	long sent = 0;
+	Socket* sock = (Socket*)handle->node;
+
+	for(unsigned i = 0; i < msg->iovlen; i++){
+		if(!Memory::CheckUsermodePointer((uintptr_t)msg->iov[i].base, msg->iov[i].len, proc->addressSpace)){
+			Log::Warning("sys_sendmsg: msg: Invalid iovec entry base");
+			return -EFAULT;
+		}
+
+		long ret = sock->Send(msg->iov[i].base, msg->iov[i].len, flags);
+
+		if(ret < 0) return ret;
+
+		sent += ret;
+	}
+
+	return sent;
+}
+
+/* 
+ * SysRecvMsg (sockfd, msg, flags) - Recieve data through socket
+ * sockfd - Socket file descriptor
+ * msg - Message Header
+ * flags - flags
+ *
+ * On Success - return amount of data received
+ * On Failure - return -1
+ */
+long SysRecvMsg(regs64_t* r){
+	process_t* proc = Scheduler::GetCurrentProcess();
+
+	if(r->rbx >= proc->fileDescriptors.get_length()){
+		Log::Warning("sys_sendmsg: Invalid File Descriptor: %d", r->rbx);
+		return -1;
+	}
+
+	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+
+	msghdr* msg = (msghdr*)r->rcx;
+	uint64_t flags = r->rsi;
+
+	if(!handle){ 
+		Log::Warning("sys_recvmsg: Invalid file descriptor: ", r->rbx);
+		return -1; 
+	}
+
+	if(!(handle->node->flags & FS_NODE_SOCKET)){
+		Log::Warning("sys_recvmsg: File (Descriptor: %d) is not a socket", r->rbx);
+		return -2;
+	}
+	
+	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(msghdr), proc->addressSpace)){
+		Log::Warning("sys_recvmsg: Invalid msg ptr");
+		return -EFAULT;
+	}
+	
+	if(!Memory::CheckUsermodePointer((uintptr_t)msg->iov, sizeof(iovec) * msg->iovlen, proc->addressSpace)){
+		Log::Warning("sys_recvmsg: msg: Invalid iovec ptr");
+		return -EFAULT;
+	}
+
+	long read = 0;
+	Socket* sock = (Socket*)handle->node;
+
+	for(unsigned i = 0; i < msg->iovlen; i++){
+		if(!Memory::CheckUsermodePointer((uintptr_t)msg->iov[i].base, msg->iov[i].len, proc->addressSpace)){
+			Log::Warning("sys_recvmsg: msg: Invalid iovec entry base");
+			return -EFAULT;
+		}
+
+		long ret = sock->Receive(msg->iov[i].base, msg->iov[i].len, flags);
+
+		if(ret < 0) {
+			return ret;
+		}
+
+		read += ret;
+	}
+
+	return read;
 }
 
 syscall_t syscalls[]{
@@ -1255,16 +1421,16 @@ syscall_t syscalls[]{
 	SysMapFB,
 	SysAlloc,					// 15
 	SysChmod,
-	SysCreateDesktop,
+	nullptr,
 	SysStat,
 	SysLSeek,
 	SysGetPID,					// 20
 	SysMount,
-	SysCreateWindow,
-	SysDestroyWindow,
-	SysDesktopGetWindow,
-	nullptr,					// 25
-	SysUpdateWindow,
+	nullptr,
+	nullptr,
+	nullptr,
+	SysYield,					// 25
+	nullptr,
 	SysGetDesktopPID,
 	SysSendMessage,
 	SysReceiveMessage,
@@ -1298,6 +1464,9 @@ syscall_t syscalls[]{
 	SysReceiveFrom,
 	SysGetUID,
 	SysSetUID,					
+	SysPoll,					// 60
+	SysSendMsg,
+	SysRecvMsg,
 };
 
 int lastSyscall = 0;
@@ -1307,10 +1476,9 @@ void SyscallHandler(regs64_t* regs) {
 		
 	asm("sti");
 
-	long ret;
-	if(syscalls[regs->rax])
-		ret = syscalls[regs->rax](regs); // Call syscall
-	regs->rax = ret;
+	if(!syscalls[regs->rax]) return;
+
+	regs->rax = syscalls[regs->rax](regs); // Call syscall
 }
 
 void InitializeSyscalls() {

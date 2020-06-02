@@ -15,14 +15,43 @@
 #define FS_NODE_CHARDEVICE 0x40
 #define FS_NODE_SOCKET 0x80
 
-#define S_IFMT 0x0F000
-#define S_IFBLK 0x06000
-#define S_IFCHR 0x02000
-#define S_IFIFO 0x01000
-#define S_IFREG 0x08000
-#define S_IFDIR 0x04000
-#define S_IFLNK 0x0A000
-#define S_IFSOCK 0x0C000
+#define S_IFMT 0xF000
+#define S_IFBLK 0x6000
+#define S_IFCHR 0x2000
+#define S_IFIFO 0x1000
+#define S_IFREG 0x8000
+#define S_IFDIR 0x4000
+#define S_IFLNK 0xA000
+#define S_IFSOCK 0xC000
+
+#define POLLIN 0x01
+#define POLLOUT 0x02
+#define POLLPRI 0x04
+#define POLLHUP 0x08
+#define POLLERR 0x10
+#define POLLRDHUP 0x20
+#define POLLNVAL 0x40
+#define POLLWRNORM 0x80
+
+#define O_ACCESS 7
+#define O_EXEC 1
+#define O_RDONLY 2
+#define O_RDWR 3
+#define O_SEARCH 4
+#define O_WRONLY 5
+
+#define O_APPEND 0x0008
+#define O_CREAT 0x0010
+#define O_DIRECTORY 0x0020
+#define O_EXCL 0x0040
+#define O_NOCTTY 0x0080
+#define O_NOFOLLOW 0x0100
+#define O_TRUNC 0x0200
+#define O_NONBLOCK 0x0400
+#define O_DSYNC 0x0800
+#define O_RSYNC 0x1000
+#define O_SYNC 0x2000
+#define O_CLOEXEC 0x4000
 
 typedef int64_t ino_t;
 typedef uint64_t dev_t;
@@ -52,6 +81,12 @@ typedef struct fs_fd{
     mode_t mode;
 } fs_fd_t;
 
+struct pollfd {
+    int fd;
+    short events;
+    short revents;
+};
+
 class FsNode{
 public:
     char name[128]; // Filename
@@ -68,6 +103,9 @@ public:
     virtual int ReadDir(struct fs_dirent*, uint32_t);
     virtual FsNode* FindDir(char* name);
     virtual int Ioctl(uint64_t cmd, uint64_t arg);
+
+    virtual bool CanRead() { return true; }
+    virtual bool CanWrite() { return false; }
 
     FsNode* link;
     FsNode* parent;

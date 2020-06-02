@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include <gfx/surface.h>
-#include <lemon/fb.h>
 #include <png.h>
 #include <string.h>
 #include <gfx/font.h>
@@ -24,8 +23,20 @@ inline vector2i_t operator- (const vector2i_t& l, const vector2i_t& r){
 }
 
 typedef struct Rect{
-    vector2i_t pos;
-    vector2i_t size;
+    union {
+        vector2i_t pos;
+        struct {
+            int x;
+            int y;
+        };
+    };
+    union {
+        vector2i_t size;
+        struct {
+            int width;
+            int height;
+        };
+    };
 } rect_t; // Rectangle
 
 typedef struct RGBAColour{
@@ -82,6 +93,16 @@ uint32_t        alphaMask;
 } __attribute__((packed)) bitmap_info_headerv4_t;
 
 namespace Lemon::Graphics{
+    enum {
+        SizeUnitPixels,
+        SizeUnitPercentage,        
+    };
+    
+    enum {
+        PositionAbsolute,
+        PositionRelative,        
+    };
+
     enum ImageType {
         Image_Unknown,
         Image_BMP,
@@ -107,9 +128,6 @@ namespace Lemon::Graphics{
 
         return type;
     }
-
-    //  CreateFramebufferSurface (fbInfo, address) - Create a surface object from a framebuffer
-    surface_t* CreateFramebufferSurface(fb_info_t fbInfo, void* address);
 
     // PointInRect (rect, point) - Check if a point lies inside a rectangle
     bool PointInRect(rect_t rect, vector2i_t point);

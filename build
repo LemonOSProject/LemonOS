@@ -1,1 +1,54 @@
-ninja -C LibC/build -j5 && ninja install -C LibC/build && ninja -C LibLemon/build -j5 && ninja -C LibLemon/build install && Scripts/buildinitrd.sh && ninja -C Kernel/build -j5 && Scripts/build-nix/copytodisk.sh
+#ninja -C LibC/build -j5 && ninja install -C LibC/build && ninja -C LibLemon/build -j5 && ninja -C LibLemon/build install && Scripts/buildinitrd.sh && ninja -C Kernel/build -j5 && Scripts/build-nix/copytodisk.sh
+
+export JOBCOUNT=-j5
+
+libc(){
+	ninja -C LibC/build install $JOBCOUNT
+}
+
+liblemon(){
+	ninja -C LibLemon/build install $JOBCOUNT
+}
+
+apps(){
+	ninja -C Applications/build install $JOBCOUNT
+}
+
+initrd(){
+	Scripts/buildinitrd.sh
+}
+
+kernel(){
+	ninja -C Kernel/build 
+}
+
+disk(){
+	Scripts/build-nix/copytodisk.sh
+}
+
+userspace(){
+	liblemon
+	apps
+	initrd
+}
+
+all() {
+	libc
+	liblemon
+	apps
+	initrd
+	kernel
+	disk
+}
+
+if [ -n $1 ]; then
+	$1
+fi
+
+if [ -n $2 ]; then
+	$2
+fi
+
+if [ -n $3 ]; then
+	$3
+fi

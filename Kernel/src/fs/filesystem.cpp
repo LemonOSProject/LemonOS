@@ -24,7 +24,7 @@ namespace fs{
 	
 	class Null : public FsNode {
 	public:
-		uint32_t flags = FS_NODE_FILE;
+		Null() { flags = FS_NODE_FILE; }
 
 		size_t Read(size_t, size_t, uint8_t *);
 		size_t Write(size_t, size_t, uint8_t *);
@@ -258,7 +258,7 @@ namespace fs{
 
         fd->node->Close();
 
-		delete fd;
+		kfree(fd);
     }
 
     int ReadDir(FsNode* node, fs_dirent_t* dirent, uint32_t index){

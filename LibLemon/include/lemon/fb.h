@@ -1,7 +1,8 @@
-#ifndef FB_H
-#define FB_H
+#pragma once 
 
-#include <stdint.h>
+#ifndef __lemon__
+    #error "Lemon OS Only"
+#endif
 
 typedef struct FBInfo{
     uint32_t width; // Resolution width
@@ -11,6 +12,4 @@ typedef struct FBInfo{
     uint32_t pitch; // Video mode pitch
 } __attribute__((packed)) fb_info_t;
 
-uint8_t* lemon_map_fb(struct FBInfo* fbInfo);
-
-#endif
+volatile uint8_t* LemonMapFramebuffer(FBInfo& fbInfo);

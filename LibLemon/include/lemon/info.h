@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef __lemon__
+    #error "Lemon OS Only"
+#endif
+
 #include <stdint.h>
 
 typedef struct {

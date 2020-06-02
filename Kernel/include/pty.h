@@ -78,6 +78,8 @@ public:
     size_t Read(size_t, size_t, uint8_t *);
     size_t Write(size_t, size_t, uint8_t *);
     int Ioctl(uint64_t cmd, uint64_t arg);
+
+    bool CanRead();
 };
 
 class PTY{

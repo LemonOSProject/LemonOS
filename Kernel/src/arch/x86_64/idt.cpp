@@ -126,7 +126,7 @@ int errCode = 0;
 
 namespace IDT{
 	void IPIHalt(regs64_t* r){
-		Log::Warning("Received halt IPI, halting processor.");
+		//Log::Warning("Received halt IPI, halting processor.");
 
 		asm("cli");
 		asm("hlt");
@@ -148,8 +148,6 @@ namespace IDT{
 		idt_ptr.limit = sizeof(idt_entry_t) * 256 - 1;
 		idt_ptr.base = (uint64_t)&idt;
 
-		memset((uint8_t*)idt, 0, sizeof(idt_entry_t) * 256);
-		memset((uint8_t*)interrupt_handlers, 0, sizeof(isr_t) * 256);
 		for(int i = 0; i < 256; i++){
 			SetGate(i, 0,0x08,0x8E);
 		}
@@ -219,8 +217,7 @@ namespace IDT{
 		SetGate(45, (uint64_t)irq13, 0x08, 0x8E);
 		SetGate(46, (uint64_t)irq14, 0x08, 0x8E);
 		SetGate(47, (uint64_t)irq15, 0x08, 0x8E);
-
-		memset((uint8_t*)&interrupt_handlers, 0, sizeof(isr_t) * 256);
+		
 		__asm__ __volatile__("sti");
 
 		RegisterInterruptHandler(IPI_HALT, IPIHalt);

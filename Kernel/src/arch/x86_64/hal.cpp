@@ -66,6 +66,8 @@ namespace HAL{
 
         asm("sti");
 
+        Log::Initialize();
+
         // Manage Multiboot Modules
 	    Log::Info("Multiboot Module Count: %d", multibootInfo.modsCount);
         bootModuleCount = multibootInfo.modsCount;

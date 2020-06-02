@@ -93,6 +93,8 @@ int PTYDevice::Ioctl(uint64_t cmd, uint64_t arg){
 	return 0;
 }
 
+bool PTYDevice::CanRead() { return !(pty->canonical && !pty->slave.lines); };
+
 PTY::PTY(){
 	slaveFile.flags = FS_NODE_CHARDEVICE;
 	strcpy(slaveFile.name, "pty");
@@ -130,10 +132,12 @@ size_t PTY::Slave_Read(char* buffer, size_t count){
 }
 
 size_t PTY::Master_Write(char* buffer, size_t count){
-	if(echo)
+	size_t ret = slave.Write(buffer, count);
+
+	if(echo && ret)
 		master.Write(buffer, count);
 
-	return slave.Write(buffer, count);
+	return ret;
 }
 
 size_t PTY::Slave_Write(char* buffer, size_t count){

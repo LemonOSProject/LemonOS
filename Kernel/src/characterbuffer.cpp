@@ -23,11 +23,18 @@ size_t CharacterBuffer::Write(char* _buffer, size_t size){
         kfree(oldBuf);
     }
 
+    size_t written = 0;
+
     for(int i = 0; i < size; i++){
         if(_buffer[i] == '\b' /*Backspace*/ && !ignoreBackspace){
-            if(bufferPos > 0) bufferPos--;
+            if(bufferPos > 0) {
+                bufferPos--;
+                written++;
+            }
+            continue;
         } else {
             buffer[bufferPos++] = _buffer[i];
+            written++;
         }
 
         if(_buffer[i] == '\n' || _buffer[i] == '\0') lines++;
@@ -35,7 +42,7 @@ size_t CharacterBuffer::Write(char* _buffer, size_t size){
 
     releaseLock(&(this->lock));
 
-    return size;
+    return written;
 }
 
 size_t CharacterBuffer::Read(char* _buffer, size_t count){

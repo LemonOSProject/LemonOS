@@ -16,8 +16,11 @@ typedef struct {
 class Stream {
 public:
     virtual int64_t Read(void* buffer, size_t len);
+    virtual int64_t Peek(void* buffer, size_t len);
     virtual int64_t Write(void* buffer, size_t len);
     virtual int64_t Empty();
+
+    virtual ~Stream();
 };
 
 class DataStream : public Stream {
@@ -32,6 +35,7 @@ public:
     ~DataStream();
 
     int64_t Read(void* buffer, size_t len);
+    int64_t Peek(void* buffer, size_t len);
     int64_t Write(void* buffer, size_t len);
     virtual int64_t Empty();
 };
@@ -40,6 +44,7 @@ class PacketStream : public Stream {
     List<stream_packet_t> packets;
 public:
     int64_t Read(void* buffer, size_t len);
+    int64_t Peek(void* buffer, size_t len);
     int64_t Write(void* buffer, size_t len);
     virtual int64_t Empty();
 };

@@ -7,6 +7,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <fs/filesystem.h>
+#include <pty.h>
 
 namespace Log{
 
@@ -17,18 +18,34 @@ namespace Log{
 	size_t logBufferSize = 0;
 
 	int logLock = 0;
+	
+	void WriteN(const char* str, int n);
 
 	class LogDevice : public FsNode{
 	public:
 		LogDevice(char* name){
+			flags = FS_NODE_FILE;
 			strcpy(this->name, name);
 		}
-		uint32_t flags = FS_NODE_FILE;
 
 		size_t Read(size_t offset, size_t size, uint8_t *buffer){
+			if(!logBuffer) return 0;
+
 			if(size + offset > logBufferPos) size = logBufferPos - offset;
 			memcpy(buffer, logBuffer + offset, size);
+
 			return size;
+		}
+
+		size_t Write(size_t offset, size_t size, uint8_t *buffer){
+			WriteN((char*)buffer, size);
+
+			return size;
+		}
+
+		int Ioctl(uint64_t cmd, uint64_t arg){
+			if(cmd == TIOCGWINSZ) return 0; // Pretend to be a terminal
+			else return -1;
 		}
 	};
 
@@ -36,6 +53,9 @@ namespace Log{
 
     void Initialize(){
 		initialize_serial();
+
+		logDevice = new LogDevice("kernellog");
+		fs::RegisterDevice(logDevice);
     }
 
 	void SetVideoConsole(VideoConsole* con){
@@ -43,13 +63,9 @@ namespace Log{
 	}
 
 	void EnableBuffer(){
-		logDevice = new LogDevice("kernellog");
-
 		logBufferSize = 4096;
 		logBuffer = (char*)kmalloc(logBufferSize);
 		logBufferPos = 0;
-
-		fs::RegisterDevice(logDevice);
 	}
 
 	void WriteN(const char* str, int n){
@@ -136,6 +152,13 @@ namespace Log{
 		if(console) 
 			console->Update();
 	}
+
+    void Print(const char* __restrict fmt, ...){
+		va_list args;
+		va_start(args, fmt);
+		WriteF(fmt, args);
+		va_end(args);
+    }
 
 	void Warning(const char* __restrict fmt, ...){
 		//acquireLock(&logLock);

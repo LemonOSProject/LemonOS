@@ -1,10 +1,8 @@
-#include <lemon/types.h>
 #include <lemon/syscall.h>
 #include <gfx/surface.h>
 #include <gfx/graphics.h>
 #include <gui/window.h>
-#include <lemon/ipc.h>
-#include <lemon/keyboard.h>
+#include <core/keyboard.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <list.h>
@@ -13,6 +11,7 @@
 #include <ctype.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <lemon/util.h>
 #include <vector>
 
 #include "escape.h"
@@ -24,6 +23,8 @@
 
 #define MENU_WIDTH 200
 #define MENU_HEIGHT 300
+
+Lemon::GUI::Window* window;
 
 struct TermState{
 	bool bold : 1;
@@ -67,17 +68,17 @@ const int escBufMax = 256;
 
 char escBuf[escBufMax];
 
-win_info_t windowInfo;
 char charactersPerLine;
 
 void OnPaint(surface_t* surface){
+	Lemon::Graphics::DrawRect(0, 0, window->GetSize().x, window->GetSize().y, 0, 0, 0, surface);
 
 	int line = 0;
 	int i = 0;
 	int fontHeight = terminalFont->height;
+	int _currentLine = (curPos.y < 25) ? 0 : (curPos.y - 24);
 
 	for(int i = 0; i < 25 && i <= curPos.y; i++){
-		int _currentLine = (curPos.y < 25) ? 0 : (curPos.y - 24);
 		for(int j = 0; j < buffer[_currentLine + i].size(); j++){
 			TerminalChar ch = buffer[_currentLine + i][j];
 			rgba_colour_t fg = colours[ch.s.fgColour];
@@ -86,6 +87,13 @@ void OnPaint(surface_t* surface){
 			Lemon::Graphics::DrawChar(ch.c, j * 8, i * fontHeight, fg.r, fg.g, fg.b, surface, terminalFont);
 		}
 	}
+
+	timespec t;
+	clock_gettime(CLOCK_BOOTTIME, &t);
+
+	long msec = (t.tv_nsec / 1000000.0);
+	if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
+		Lemon::Graphics::DrawRect(curPos.x * 8, (curPos.y - _currentLine) * fontHeight + (fontHeight / 4 * 3), 8, fontHeight / 4, colours[0x7] /* Grey */, surface);
 }
 
 void DoAnsiSGR(){
@@ -265,18 +273,9 @@ void PrintChar(char ch){
 
 extern "C"
 int main(char argc, char** argv){
-	
-	Lemon::GUI::Window* window;
-
-	windowInfo.width = 640;
-	windowInfo.height = 312;
-	windowInfo.x = 0;
-	windowInfo.y = 0;
-	windowInfo.flags = 0;
-	strcpy(windowInfo.title, "Terminal");
-	window = Lemon::GUI::CreateWindow(&windowInfo);
-	window->background = {0,0,0,255};
 	curPos = {0, 0};
+
+	window = new Lemon::GUI::Window("Terminal", {640, 312}, {0, 0});
 
 	int masterPTYFd;
 	syscall(SYS_GRANT_PTY, (uintptr_t)&masterPTYFd, 0, 0, 0, 0);
@@ -290,6 +289,8 @@ int main(char argc, char** argv){
 
 	char* _buf = (char*)malloc(512);
 
+	bool paint = true;
+
 	terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
 	if(!terminalFont){
 		terminalFont = Lemon::Graphics::GetFont("default");
@@ -298,24 +299,22 @@ int main(char argc, char** argv){
 	winsize wSz = {
 		.ws_row = 25,
 		.ws_col = COLUMN_COUNT,
-		.ws_xpixel = windowInfo.width,
-		.ws_ypixel = windowInfo.height,
+		.ws_xpixel = window->GetSize().x,
+		.ws_ypixel = window->GetSize().y,
 	};
 
 	ioctl(masterPTYFd, TIOCSWINSZ, &wSz);
 
 	for(;;){
-		ipc_message_t msg;
-		while(Lemon::ReceiveMessage(&msg)){
-			if(msg.msg == WINDOW_EVENT_KEY){
-				if(msg.data < 128){
-					char key = (char)msg.data;
-					char b[] = {key, key, 0};
-					lemon_write(masterPTYFd, b, 1);
-					//PrintChar(key);
+		Lemon::LemonEvent ev;
+		while(window->PollEvent(ev)){
+			if(ev.event == Lemon::EventKeyPressed){
+				if(ev.key < 128){
+					char key = (char)ev.key;
+					lemon_write(masterPTYFd, &key, 1);
 				}
-			} else if (msg.msg == WINDOW_EVENT_CLOSE){
-				Lemon::GUI::DestroyWindow(window);
+			} else if (ev.event == Lemon::EventWindowClosed){
+				//Lemon::GUI::DestroyWindow(window);
 				free(_buf);
 				exit(0);
 			}
@@ -325,9 +324,15 @@ int main(char argc, char** argv){
 			for(int i = 0; i < len; i++){
 				PrintChar(_buf[i]);
 			}
+			paint = true;
 		}
 		
-		Lemon::GUI::PaintWindow(window);
+		//if(paint){
+			window->Paint();
+			//paint = false;
+		//}
+
+		lemon_yield();
 	}
 	for(;;);
 }

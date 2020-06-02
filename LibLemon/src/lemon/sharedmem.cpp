@@ -1,12 +1,12 @@
-#include <lemon/sharedmem.h>
+#include <core/sharedmem.h>
 
 #include <lemon/syscall.h>
 #include <sys/types.h>
 
 namespace Lemon {
-    uint64_t CreateSharedMemory(uint64_t size, uint64_t flags, pid_t owner, pid_t recipient){
+    uint64_t CreateSharedMemory(uint64_t size, uint64_t flags){
         uint64_t key;
-        syscall(SYS_CREATE_SHARED_MEMORY, &key, size, flags, recipient, 0);
+        syscall(SYS_CREATE_SHARED_MEMORY, &key, size, flags, /*recipient*/0, 0);
         return key;
     }
 

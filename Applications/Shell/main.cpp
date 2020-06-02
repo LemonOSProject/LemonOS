@@ -8,16 +8,16 @@
 #include <stdlib.h>
 #include <gfx/graphics.h>
 #include <lemon/filesystem.h>
-#include <gfx/window/window.h>
+#include <gui/window.h>
 #include <stdio.h>
 #include <list.h>
-#include <lemon/keyboard.h>
-#include <lemon/ipc.h>
+#include <core/keyboard.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <lemon/spawn.h>
 #include <lemon/info.h>
-#include <lemon/sharedmem.h>
+#include <core/sharedmem.h>
+#include <lemon/util.h>
 
 #define MENU_ITEM_HEIGHT 24
 
@@ -50,8 +50,6 @@ void OnTaskbarPaint(surface_t* surface){
 		Lemon::Graphics::DrawGradientVertical(0,0,100, 24, {220,/*24*/48,30}, {/*160*/120, /*16*/12, /*16*/12},surface);
 		Lemon::Graphics::DrawRect(0,24,100, surface->height - 24, {/*160*/120, /*16*/12, /*16*/12},surface);
 	}
-
-	syscall(SYS_INFO, &sysInfo, 0, 0, 0, 0);
 
 	sprintf(memString, "Used Memory: %d/%d KB", sysInfo.usedMem, sysInfo.totalMem);
 	Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255, 255, surface);
@@ -122,12 +120,14 @@ void LoadConfig(){
 	}
 }
 
+bool paint = true;
+
 int main(){
 
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
 	syscall(SYS_UNAME, (uintptr_t)versionString,0,0,0,0);
 
-	win_info_t taskbarInfo;
+	/*win_info_t taskbarInfo;
 	taskbarInfo.width = videoInfo.width;
 	taskbarInfo.height = 30;
 	taskbarInfo.x = 0;
@@ -139,24 +139,46 @@ int main(){
 	menuInfo.height = 300;
 	menuInfo.x = 0;
 	menuInfo.y = videoInfo.height - menuInfo.height - taskbarInfo.height;
-	menuInfo.flags = WINDOW_FLAGS_NODECORATION;
+	menuInfo.flags = WINDOW_FLAGS_NODECORATION;*/
 
-	taskbar = Lemon::GUI::CreateWindow(&taskbarInfo);
+	taskbar = new Lemon::GUI::Window("", {videoInfo.width, 30}, {0, videoInfo.height - 30}, WINDOW_FLAGS_NODECORATION);
 	taskbar->OnPaint = OnTaskbarPaint;
 
-	menu = Lemon::GUI::CreateWindow(&menuInfo);
+	menu = new Lemon::GUI::Window("", {240, 300}, {0, videoInfo.height - 30 - 300}, WINDOW_FLAGS_NODECORATION);
 	menu->OnPaint = OnMenuPaint;
 
 	LoadConfig();
 
 	for(;;){
-		Lemon::GUI::PaintWindow(taskbar);
+		Lemon::LemonEvent ev;
+		while(taskbar->PollEvent(ev)){
+			if(ev.event == Lemon::EventMouseReleased){
+				if(ev.mousePos.x < 100){
+					showMenu = !showMenu;
 
-		if(showMenu){
-			Lemon::GUI::PaintWindow(menu);
+					if(!showMenu){
+						//menu->info.flags |= WINDOW_FLAGS_MINIMIZED;
+					} else {
+						//menu->info.flags &= ~((typeof(menu->info.flags))WINDOW_FLAGS_MINIMIZED);
+					}
+
+					//Lemon::GUI::UpdateWindow(menu);
+				}
+			}
 		}
 
-		ipc_message_t msg;
+		while(menu->PollEvent(ev)){
+			if(ev.event == Lemon::EventMouseReleased){
+				if(ev.mousePos.y > 42 && ev.mousePos.y < (menuItemCount*MENU_ITEM_HEIGHT + 42)){
+					char* argv[] = {menuItems[(int)floor((double)(ev.mousePos.y - 42) / MENU_ITEM_HEIGHT)].path};
+					lemon_spawn(argv[0], 1, argv, 0);
+					showMenu = false;
+					//menu->info.flags |= WINDOW_FLAGS_MINIMIZED;
+					//Lemon::GUI::UpdateWindow(menu);
+				}
+			}
+		}
+		/*ipc_message_t msg;
 		while(Lemon::ReceiveMessage(&msg)){
 			switch (msg.msg)
 			{
@@ -176,20 +198,31 @@ int main(){
 
 					Lemon::GUI::UpdateWindow(menu);
 				} else if ((handle_t)msg.data2 == menu->handle){
-					if(mouseY > 42 && mouseY < (menuItemCount*MENU_ITEM_HEIGHT + 42)){
-						char* argv[] = {menuItems[(int)floor((double)(mouseY - 42) / MENU_ITEM_HEIGHT)].path};
-						lemon_spawn(argv[0], 1, argv, 0);
-						showMenu = false;
-						menu->info.flags |= WINDOW_FLAGS_MINIMIZED;
-						Lemon::GUI::UpdateWindow(menu);
-					}
 				}
+				paint = true;
 				break;
 			
 			default:
 				break;
 			}
+		}*/
+
+		uint64_t usedMemLast = sysInfo.usedMem;
+		syscall(SYS_INFO, &sysInfo, 0, 0, 0, 0);
+
+		if(sysInfo.usedMem != usedMemLast) paint = true;
+
+		if(paint){
+			taskbar->Paint();
+
+			if(showMenu){
+				menu->Paint();
+			}
+
+			paint = false;
 		}
+
+		lemon_yield();
 	}
 
 	for(;;);

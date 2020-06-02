@@ -195,8 +195,8 @@ extern "C"
 
 	Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
-	Network::InitializeDrivers();
-	Network::InitializeConnections();
+	//Network::InitializeDrivers();
+	//Network::InitializeConnections();
 	NVMe::Initialize();
 	USB::XHCI::Initialize();
 	ATA::Init();

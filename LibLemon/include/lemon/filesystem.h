@@ -1,6 +1,10 @@
 #ifndef FS_H
 #define FS_H
 
+#ifndef __lemon__
+    #error "Lemon OS Only"
+#endif
+
 #include <stddef.h>
 #include <sys/types.h>
 #include <stdint.h>

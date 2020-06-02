@@ -7,5 +7,5 @@ cp ~/.local/share/lemon/sysroot/lib/*.so* Initrd/
 cp -r ~/.local/share/lemon/sysroot/bin Initrd/
 
 cd Initrd
-tar -cvf ../initrd.tar *
+tar -cf ../initrd.tar *
 cd ..

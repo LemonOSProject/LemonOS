@@ -6,7 +6,19 @@
 #include <lock.h>
 #include <stream.h>
 
+#define MSG_CTRUNC 0x1
+#define MSG_DONTROUTE 0x2
+#define MSG_EOR 0x4
+#define MSG_OOB 0x8
+#define MSG_NOSIGNAL 0x10
+#define MSG_PEEK 0x20
+#define MSG_TRUNC 0x40
+#define MSG_WAITALL 0x80
+#define MSG_DONTWAIT 0x1000
+
 #define CONNECTION_BACKLOG 128
+
+#define SOCK_NONBLOCK 0x10000
 
 typedef unsigned int sa_family_t;
 typedef uint32_t socklen_t;
@@ -19,6 +31,27 @@ typedef struct sockaddr {
 struct sockaddr_un {
     sa_family_t sun_family;               /* AF_UNIX */
     char        sun_path[108];            /* Pathname */
+};
+
+struct iovec {
+    void* base;
+    size_t len;
+};
+
+struct msghdr {
+    void* name;
+    socklen_t namelen;
+    struct iovec* iov;
+    size_t iovlen;
+    void* control;
+    size_t controllen;
+    int flags;
+};
+
+struct poll {
+    int fd;
+    short events;
+    short returnedEvents;
 };
 
 class Socket;
@@ -66,11 +99,12 @@ public:
     static Socket* CreateSocket(int domain, int type, int protocol);
 
     Socket(int type, int protocol);
-    ~Socket();
+    virtual ~Socket();
     
     virtual int ConnectTo(Socket* client);
 
     virtual Socket* Accept(sockaddr* addr, socklen_t* addrlen);
+    virtual Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
     virtual int Bind(const sockaddr* addr, socklen_t addrlen);
     virtual int Connect(const sockaddr* addr, socklen_t addrlen);
     virtual int Listen(int backlog);
@@ -87,12 +121,15 @@ public:
     virtual void Close();
 
     virtual int GetDomain() { return domain; }
-    virtual int IsListening() { return domain; }
+    virtual int IsListening() { return passive; }
     virtual int IsBlocking() { return blocking; }
+    virtual int IsConnected() { return connected; }
 };
 
 class LocalSocket : public Socket {
 public:
+    LocalSocket* peer = nullptr;
+
     Stream* inbound = nullptr;
     Stream* outbound = nullptr;
 
@@ -100,15 +137,18 @@ public:
 
     int ConnectTo(Socket* client);
     
-    Socket* Accept(sockaddr* addr, socklen_t* addrlen);
+    Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
     int Bind(const sockaddr* addr, socklen_t addrlen);
     int Connect(const sockaddr* addr, socklen_t addrlen);
     int Listen(int backlog);
     
     fs_fd_t* Open(size_t flags);
+    void Close();
     
     int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
     int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
+
+    bool CanRead() { return inbound && !inbound->Empty(); }
 };
 
 namespace SocketManager{

@@ -19,36 +19,32 @@ liblemon_cpp_args = ['-Wno-write-strings', '-Wno-pointer-arith', '-Wall', '-Wext
     '-fPIC',
     '-m64',
     '-O3',
-    '-fno-exceptions', '-std=c++14']
+    '-fno-exceptions', '-std=c++14',
+    '-I/usr/include/freetype2/']
 
 add_project_arguments(liblemon_cpp_args, language : ['c', 'cpp'])
 
 cpp_files = [
-    'src/fb.cpp',
-    'src/filesystem.cpp',
-    'src/ipc.cpp',
-    'src/itoa.cpp',
-    'src/runtime.cpp',
-    'src/spawn.cpp',
-    'src/info.cpp',
-    'src/sharedmem.cpp',
-
     'src/gfx/font.cpp',
     'src/gfx/graphics.cpp',
     'src/gfx/image.cpp',
     'src/gfx/surface.cpp',
     'src/gfx/text.cpp',
 
-    'src/gui/filedialog.cpp',
-    'src/gui/messagebox.cpp',
-    'src/gui/widgets.cpp',
-    'src/gui/fileview.cpp',
+    'src/ipc/msghandler.cpp',
+
     'src/gui/window.cpp',
 ]
 
 asm_files = [
     'src/gfx/sse2.asm',
 ]
+
+if host_machine.system() == 'lemon'
+    subdir('src/lemon')
+elif host_machine.system() == 'linux'
+    subdir('src/linux')
+endif
 
 prefix = get_option('prefix')
 install_subdir('include', install_dir: prefix)

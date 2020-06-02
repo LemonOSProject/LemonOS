@@ -1,5 +1,4 @@
-#ifndef SURFACE_H
-#define SURFACE_H
+#pragma once
 
 #include <stdint.h>
 
@@ -9,5 +8,3 @@ typedef struct Surface{
 	uint8_t* buffer; // Start of the buffer
 	uint8_t linePadding;
 } surface_t;
-
-#endif

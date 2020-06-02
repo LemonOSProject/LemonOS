@@ -2,7 +2,6 @@
 
 #include <gfx/font.h>
 #include <ft2build.h>
-#include <lemon/syscall.h>
 #include FT_FREETYPE_H
 
 #include <ctype.h>
@@ -26,14 +25,14 @@ namespace Lemon::Graphics{
         fontState = -1;
 
         if(FT_Init_FreeType(&library)){
-            syscall(0,(uintptr_t)"Error initializing freetype",0,0,0,0);
+            ////syscall(0,(uintptr_t)"Error initializing freetype",0,0,0,0);
             return;
         }
 
         FILE* fontFile = fopen("/initrd/montserrat.ttf", "r");
         
         if(!fontFile){
-            syscall(0,(uintptr_t)"Error loading font /initrd/montserrat.ttf",0,0,0,0);
+            ////syscall(0,(uintptr_t)"Error loading font /initrd/montserrat.ttf",0,0,0,0);
             return;
         }
 
@@ -48,12 +47,12 @@ namespace Lemon::Graphics{
         mainFont = new Font;
 
         if(int err = FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &mainFont->face)){
-            syscall(0,(uintptr_t)"Error loading font from memory /initrd/montserrat.ttf",err,0,0,0);
+            //syscall(0,(uintptr_t)"Error loading font from memory /initrd/montserrat.ttf",err,0,0,0);
             return;
         }
 
         if(int err = FT_Set_Pixel_Sizes(mainFont->face, 0, 12)){
-            syscall(0,(uintptr_t)"Error Setting Font Size", err, 0, 0, 0);
+            //syscall(0,(uintptr_t)"Error Setting Font Size", err, 0, 0, 0);
             return;
         }
 
@@ -72,14 +71,14 @@ namespace Lemon::Graphics{
         fontState = -1;
 
         if(FT_Init_FreeType(&library)){
-            syscall(0,(uintptr_t)"Error initializing freetype",0,0,0,0);
+            //syscall(0,(uintptr_t)"Error initializing freetype",0,0,0,0);
             return nullptr;
         }
 
         FILE* fontFile = fopen(path, "r");
         
         if(!fontFile){
-            syscall(0,(uintptr_t)"Error loading custom font",0,0,0,0);
+            //syscall(0,(uintptr_t)"Error loading custom font",0,0,0,0);
             return nullptr;
         }
 
@@ -94,12 +93,12 @@ namespace Lemon::Graphics{
         Font* font = new Font;
 
         if(int err = FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &font->face)){
-            syscall(0,(uintptr_t)"Error loading custom font from memory",err,0,0,0);
+            //syscall(0,(uintptr_t)"Error loading custom font from memory",err,0,0,0);
             return nullptr;
         }
 
         if(int err = FT_Set_Pixel_Sizes(font->face, 0, sz)){
-            syscall(0,(uintptr_t)"Error Setting Font Size", err, 0, 0, 0);
+            //syscall(0,(uintptr_t)"Error Setting Font Size", err, 0, 0, 0);
             return nullptr;
         }
 
@@ -157,7 +156,7 @@ namespace Lemon::Graphics{
         uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
         uint32_t* buffer = (uint32_t*)surface->buffer; 
         if(int err = FT_Load_Char(font->face, character, FT_LOAD_RENDER)) {
-            syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
+            //syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
             fontState = 0;
             return 0;
         }
@@ -213,7 +212,7 @@ namespace Lemon::Graphics{
             }
 
             if(int err = FT_Load_Char(font->face, *str, FT_LOAD_RENDER)) {
-                syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
+                //syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
                 fontState = 0;
                 return;
             }
@@ -257,7 +256,7 @@ namespace Lemon::Graphics{
         }
 
         if(int err = FT_Load_Char(font->face, c, FT_LOAD_ADVANCE_ONLY)) {
-            syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
+            //syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
             fontState = 0;
             return 0;
         }
@@ -294,7 +293,7 @@ namespace Lemon::Graphics{
             }
 
             if(int err = FT_Load_Char(font->face, *str, FT_LOAD_ADVANCE_ONLY)) {
-                syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
+                //syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
                 fontState = 0;
                 return 0;
             }

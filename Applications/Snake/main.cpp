@@ -92,21 +92,10 @@ void Reset(){
 
 vector2i_t applePos = {1,1};
 
-extern "C"
-int main(char argc, char** argv){
-	win_info_t windowInfo;
-	Lemon::GUI::Window* window;
-
-	windowInfo.width = 256;
-	windowInfo.height = 256;
-	windowInfo.x = 50;
-	windowInfo.y = 50;
-	windowInfo.flags = 0;
-	strcpy(windowInfo.title, "Snake");
+int main(){
+	Lemon::GUI::Window* window = new Lemon::GUI::Window("Snake", {256, 256});
 
 	snake = new List<vector2i_t>();
-
-	window = Lemon::GUI::CreateWindow(&windowInfo);
 
 	Reset();
 
@@ -114,15 +103,15 @@ int main(char argc, char** argv){
 
 		Wait();
 
-		ipc_message_t msg;
-		while(Lemon::ReceiveMessage(&msg)){
-			if(msg.msg == WINDOW_EVENT_KEY){
+		Lemon::LemonEvent msg;
+		while(window->PollEvent(msg)){
+			if(msg.event == Lemon::EventKeyPressed){
 				if(gameOver) {
 					gameOver = false;
 					Reset();
 					continue;
 				}
-				switch(msg.data){
+				switch(msg.key){
 					case 'w':
 					case KEY_ARROW_UP:
 						if(direction != 3)
@@ -144,12 +133,12 @@ int main(char argc, char** argv){
 							direction = 3;
 						break;
 				}
-			} else if (msg.msg == WINDOW_EVENT_KEYRELEASED && gameOver) {
+			} else if (msg.event == Lemon::EventKeyReleased && gameOver) {
 				gameOver = false;
 				Reset();
 				continue;
-			} else if (msg.msg == WINDOW_EVENT_CLOSE){
-				Lemon::GUI::DestroyWindow(window);
+			} else if (msg.event == Lemon::EventWindowClosed){
+				//Lemon::GUI::DestroyWindow(window);
 				exit(0);
 			}
 		}
@@ -195,7 +184,7 @@ int main(char argc, char** argv){
 		if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_SNAKE || snake->get_at(0).y < 0 || snake->get_at(0).x < 0 || snake->get_at(0).y >= 16 || snake->get_at(0).x >= 16){
 			gameOver = true;
 			Lemon::Graphics::DrawString("Game Over, Press any key to Reset", 0, 0, 255, 255, 255, &window->surface);
-			Lemon::GUI::SwapWindowBuffers(window);
+			window->SwapBuffers();
 			continue;
 		} else if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_APPLE){
 			snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] = SNAKE_CELL_EMPTY;
@@ -233,7 +222,7 @@ int main(char argc, char** argv){
 			}
 		}
 		
-		Lemon::GUI::SwapWindowBuffers(window);
+		window->SwapBuffers();
 	}
 
 	for(;;);

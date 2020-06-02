@@ -69,8 +69,8 @@ namespace APIC{
     namespace IO {
         uintptr_t base = 0;
         uintptr_t virtualBase;
-        uint32_t* registerSelect;
-        uint32_t* ioWindow;
+        volatile uint32_t* registerSelect;
+        volatile uint32_t* ioWindow;
 
         uint32_t interrupts;
         uint32_t apicID;

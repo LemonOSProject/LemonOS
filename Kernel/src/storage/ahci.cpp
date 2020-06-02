@@ -81,5 +81,7 @@ namespace AHCI{
 				}
 			}
 		}
+
+		return 0;
 	}
 }

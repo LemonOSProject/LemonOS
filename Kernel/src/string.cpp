@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #pragma GCC push_options
-#pragma GCC optimize ("O1")
+#pragma GCC optimize ("O2")
 
 void reverse(char *str, int length)
 {
@@ -51,17 +51,17 @@ char* itoa(unsigned long long num, char* str, int base)
 
 	return str;
 }
+
 extern "C"
 void* memset(void* src, int c, size_t count) {
-	unsigned char *xs = (uint8_t*)src;
+	uint8_t* xs = (uint8_t*)src;
 
 	while (count--)
 		*xs++ = c;
+		
 	return src;
 }
 
-#pragma GCC push_options
-#pragma GCC optimize ("O3")
 extern "C"
 void *memcpy(void* dest, const void* src, size_t count) {
 	const char *sp = (char*)src;
@@ -84,7 +84,6 @@ void *memcpy(void* dest, const void* src, size_t count) {
 	} 
 	return dest;
 }
-#pragma GCC pop_options
 
 extern "C"
 int memcmp(const void *s1, const void *s2, size_t n) {
@@ -201,10 +200,12 @@ char *strtok(char * str, const char * delim)
 
 char* strcat(char* dest, const char* src){
     strcpy(dest + strlen(dest), src);
+	return dest;
 }
 
 char* strncat(char* dest, const char* src, size_t n){
     strncpy(dest + strlen(dest), src, n);
+	return dest;
 }
 
 char toupper(char c){
@@ -217,6 +218,7 @@ char* strupr(char* s){
 	for(int i = 0; s[i] != '\0'; i++){
 		s[i] = toupper(s[i]);
 	}
+	return s;
 }
 
 char* strnupr(char* s, size_t n){

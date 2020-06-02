@@ -4,11 +4,15 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <list.h>
+#include <time.h>
 
 #include "defines.h"
 
 char* socketAddress = SOCKET_TEST_ADDR;
 int socketAddressLength = 0;
+
+List<int> fds;
 
 int main(int argc, char** argv){
     char* data;
@@ -19,7 +23,7 @@ int main(int argc, char** argv){
         data = "Socket test data";
     }
 
-    int sock = socket(AF_UNIX, SOCK_STREAM, 0);
+    int sock = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
 
     if(sock < 0){
         perror("Error Creating Socket");
@@ -42,17 +46,30 @@ int main(int argc, char** argv){
         return 4;
     }
 
-    char buf[100];
+    char buf[101];
     while(1){
+        while(1){
+            timespec t;
+            clock_gettime(CLOCK_BOOTTIME, &t);
+
+            long msec = (t.tv_nsec / 1000000.0);
+            if(msec < 20) break;
+        }
+
+        printf(".");
+        fflush(stdout);
+
         int client = accept(sock, 0, 0);
         if(client < 0){
-            perror("Error accepting connection");
+            //perror("Error accepting connection");
             continue;
         }
 
         int count;
-        while(count = read(client, buf, 100)){
-            printf("Read %x bytes\n", count); 
+        if(count = read(client, buf, 100)){
+            printf("reading\n");
+            buf[count] = 0;
+            printf("Read %x bytes: %s\n", count, buf); 
         }
         
         if(!count)

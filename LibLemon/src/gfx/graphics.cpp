@@ -1,8 +1,5 @@
 #include <gfx/graphics.h>
 
-#include <lemon/syscall.h>
-#include <lemon/fb.h>
-
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
@@ -66,19 +63,6 @@ void memcpy_optimized(void* dest, void* src, size_t count) {
 }
 
 namespace Lemon::Graphics{
-
-    surface_t* CreateFramebufferSurface(fb_info_t fbInfo, void* address){
-        surface_t* surface = (surface_t*)malloc(sizeof(surface_t));
-        surface->x = surface->y = 0;
-        surface->width = fbInfo.width;
-        surface->height = fbInfo.height;
-        surface->depth = fbInfo.bpp;
-        surface->pitch = fbInfo.pitch;
-
-        surface->buffer = (uint8_t*)address;
-
-        return surface;
-    }
 
     // Check if a point lies inside a rectangle
     bool PointInRect(rect_t rect, vector2i_t point){
@@ -187,6 +171,10 @@ namespace Lemon::Graphics{
     }
 
     void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset){
+        if(dest->height == src->height && dest->width == src->width && offset.x == 0 && offset.y == 0) {
+            memcpy_optimized(dest->buffer, src->buffer, dest->width * dest->height * 4);
+        }
+
         for(int i = 0; i < src->height && i < dest->height - offset.y; i++){
             int rowSize = ((offset.x + src->width) > dest->width) ? dest->width - offset.x : src->width;
 
