@@ -1,5 +1,9 @@
 #include <fs/filesystem.h>
 
+FsNode::~FsNode(){
+    
+}
+
 size_t FsNode::Read(size_t, size_t, uint8_t *){
     return 0;
 }

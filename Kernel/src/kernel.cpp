@@ -59,36 +59,7 @@ void KernelProcess(){
 
 	Log::Write("OK");
 
-	for(;;){ // Use the idle task to clean up the windows of dead processes
-		unsigned oldUptime = Timer::GetSystemUptime();
-		while(Timer::GetSystemUptime() < oldUptime + 1) {
-			Scheduler::Yield();
-			asm("hlt");
-		}
-		continue;
-
-		if(!GetDesktop()) continue;
-
-		desktop_t* desktop = GetDesktop();
-
-		for(int i = 0; i < desktop->windows->windowCount; i++){
-			handle_t handle = desktop->windows->windows[i];
-			Window* win = (Window*)Scheduler::FindHandle(handle);
-			if(!Scheduler::FindProcessByPID(win->info.ownerPID)){
-				acquireLock(&desktop->lock);
-
-				while(desktop->windows->dirty == 2);
-				memcpy(&desktop->windows->windows[i], &desktop->windows->windows[i + 1], (desktop->windows->windowCount - i - 1));
-				desktop->windows->windowCount--;
-				desktop->windows->dirty = 1;
-
-				releaseLock(&desktop->lock);
-				
-				Memory::DestroySharedMemory(win->info.primaryBufferKey);
-				Memory::DestroySharedMemory(win->info.secondaryBufferKey);
-			}
-		}
-	}
+	Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 }
 
 typedef void (*ctor_t)(void);

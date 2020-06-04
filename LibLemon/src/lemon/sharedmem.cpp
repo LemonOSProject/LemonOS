@@ -17,7 +17,7 @@ namespace Lemon {
     }
     
     void UnmapSharedMemory(void* address, uint64_t key){
-        syscall(SYS_UNMAP_SHARED_MEMORY, address, key, 0, 0, 0);
+        long ret = syscall(SYS_UNMAP_SHARED_MEMORY, address, key, 0, 0, 0);
     }
 
     long DestroySharedMemory(uint64_t key){

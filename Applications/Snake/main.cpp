@@ -1,10 +1,8 @@
-#include <lemon/types.h>
 #include <lemon/syscall.h>
 #include <gfx/surface.h>
 #include <gfx/graphics.h>
 #include <gui/window.h>
-#include <lemon/keyboard.h>
-#include <lemon/ipc.h>
+#include <core/keyboard.h>
 #include <stdlib.h>
 #include <list.h>
 
@@ -138,7 +136,7 @@ int main(){
 				Reset();
 				continue;
 			} else if (msg.event == Lemon::EventWindowClosed){
-				//Lemon::GUI::DestroyWindow(window);
+				delete window;
 				exit(0);
 			}
 		}

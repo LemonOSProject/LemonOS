@@ -72,6 +72,8 @@ void InputManager::Poll(){
                 wm->MouseUp();
             }
         }
+
+		wm->MouseMove();
     }
 
     uint8_t buf[16];

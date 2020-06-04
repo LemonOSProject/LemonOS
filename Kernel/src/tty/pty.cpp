@@ -27,6 +27,7 @@ char GetNextPTY(){
 	nextPTY++;
 	if(nextPTY < 'a' && nextPTY > '9') nextPTY = 'a';
 	else if (nextPTY < 'A' && nextPTY > 'z') nextPTY = 'A';
+	else return nextPTY;
 }
 
 List<PTY*>* ptys = NULL;
@@ -49,6 +50,8 @@ size_t PTYDevice::Read(size_t offset, size_t size, uint8_t *buffer){
 	else if(pty && device == PTYMasterDevice){
 		return pty->Master_Read((char*)buffer,size);
 	}
+
+	return 0;
 }
 	
 size_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
@@ -60,6 +63,8 @@ size_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
 	else if(pty && device == PTYMasterDevice){
 		return pty->Master_Write((char*)buffer,size);
 	}
+
+	return 0;
 }
 
 int PTYDevice::Ioctl(uint64_t cmd, uint64_t arg){

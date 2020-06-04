@@ -96,6 +96,8 @@ public:
     ino_t inode = 0; // Inode number
     size_t size = 0; // Node size
 
+    virtual ~FsNode();
+
     virtual size_t Read(size_t, size_t, uint8_t *);
     virtual size_t Write(size_t, size_t, uint8_t *);
     virtual fs_fd_t* Open(size_t flags);

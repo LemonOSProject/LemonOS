@@ -22,6 +22,10 @@ inline vector2i_t operator- (const vector2i_t& l, const vector2i_t& r){
     return {l.x - r.x, l.y - r.y};
 }
 
+inline void operator-= (vector2i_t& l, const vector2i_t& r){
+    l = l - r;
+}
+
 typedef struct Rect{
     union {
         vector2i_t pos;
@@ -75,21 +79,21 @@ typedef struct{
 } video_mode_t;
 
 typedef struct {
-uint32_t        hdrSize;
-int32_t         width;
-int32_t         height;
-uint16_t        colourPlanes;
-uint16_t        bpp;
-uint32_t        compression;
-uint32_t        size;
-int32_t         hres;
-int32_t         vres;
-uint32_t        clrUsed;
-uint32_t        clrImportant;
-uint32_t        redMask;
-uint32_t        greenMask;
-uint32_t        blueMask;
-uint32_t        alphaMask;
+    uint32_t        hdrSize;
+    int32_t         width;
+    int32_t         height;
+    uint16_t        colourPlanes;
+    uint16_t        bpp;
+    uint32_t        compression;
+    uint32_t        size;
+    int32_t         hres;
+    int32_t         vres;
+    uint32_t        clrUsed;
+    uint32_t        clrImportant;
+    uint32_t        redMask;
+    uint32_t        greenMask;
+    uint32_t        blueMask;
+    uint32_t        alphaMask;
 } __attribute__((packed)) bitmap_info_headerv4_t;
 
 namespace Lemon::Graphics{

@@ -131,7 +131,7 @@ long SysExec(regs64_t* r){
 
 	if(envp){
 		int i = 0;
-        for(; envp[i]; i++);
+        while(envp[i]) i++;
 		envCount = i;
 
 		kernelEnvp = (char**)kmalloc(envCount * sizeof(char*));
@@ -388,7 +388,7 @@ long SysLSeek(regs64_t* r){
 	}
 
 	long ret = 0;
-	int fd = r->rbx;
+	uint64_t fd = r->rbx;
 
 	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length() || !Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
 		Log::Warning("sys_lseek: Invalid File Descriptor, %d", fd);
@@ -460,10 +460,6 @@ long SysCreateDesktop(regs64_t* r){
 long SysYield(regs64_t* r){
 	Scheduler::Yield();
 	return 0;
-}
-
-long SysGetDesktopPID(regs64_t* r){
-	return GetDesktop()->pid;
 }
 
 // SendMessage(message_t* msg) - Sends an IPC message to a process
@@ -804,6 +800,10 @@ long SysUnmapSharedMemory(regs64_t* r){
 		return -1;
 
 	Memory::Free4KPages((void*)address, sMem->pgCount, Scheduler::GetCurrentProcess()->addressSpace);
+
+	sMem->mapCount--;
+
+	Memory::DestroySharedMemory(key); // Active shared memory will not be destroyed and this will return
 
 	return 0;
 }
@@ -1197,7 +1197,7 @@ long SysPoll(regs64_t* r){
 		fds[i].revents = 0;
 		if(fds[i].fd < 0) continue;
 
-		if(fds[i].fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+		if((uint64_t)fds[i].fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 			Log::Warning("sys_poll: Invalid File Descriptor: %d", fds[i].fd);
 			files[i] = 0;
 			fds[i].revents |= POLLNVAL;
@@ -1431,7 +1431,7 @@ syscall_t syscalls[]{
 	nullptr,
 	SysYield,					// 25
 	nullptr,
-	SysGetDesktopPID,
+	nullptr,
 	SysSendMessage,
 	SysReceiveMessage,
 	SysUptime,					// 30

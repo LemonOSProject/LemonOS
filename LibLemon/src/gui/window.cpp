@@ -3,13 +3,18 @@
 
 #include <stdlib.h>
 
+#include <unistd.h>
+
 namespace Lemon::GUI{
-    Window::Window(const char* title, vector2i_t size, vector2i_t pos, uint32_t flags){
+    Window::Window(const char* title, vector2i_t size, uint32_t flags, int type, vector2i_t pos) : rootContainer({{0, 0}, size}) {
+        windowType = type;
+        this->flags = flags;
+        
         sockaddr_un sockAddr;
         strcpy(sockAddr.sun_path, wmSocketAddress);
         sockAddr.sun_family = AF_UNIX;
 
-        msgClient.Connect(sockAddr, sizeof(sockaddr_un));
+        msgClient.Connect(sockAddr, sizeof(sockaddr_un)); // Connect to Window Manager
 
         LemonMessage* createMsg = (LemonMessage*)malloc(sizeof(LemonMessage) + sizeof(WMCommand) + strlen(title));
     
@@ -42,6 +47,74 @@ namespace Lemon::GUI{
         createMsg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
         
         msgClient.Send(createMsg);
+
+        free(createMsg);
+    }
+
+    Window::~Window(){
+        LemonMessage* destroyMsg = (LemonMessage*)malloc(sizeof(LemonMessage) + sizeof(WMCommand));
+
+        WMCommand* cmd = (WMCommand*)destroyMsg->data;
+        cmd->cmd = WMDestroyWindow;
+
+        destroyMsg->length = sizeof(WMCommand);
+        destroyMsg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+
+        msgClient.Send(destroyMsg);
+
+        free(destroyMsg);
+
+        //usleep(1000);
+    }
+
+    void Window::Minimize(bool minimized){
+        LemonMessage* msg = (LemonMessage*)malloc(sizeof(LemonMessage) + sizeof(WMCommand));
+
+        WMCommand* cmd = (WMCommand*)msg->data;
+        cmd->cmd = WMMinimize;
+        cmd->minimized = minimized;
+
+        msg->length = sizeof(WMCommand);
+        msg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+
+        msgClient.Send(msg);
+
+        free(msg);
+    }
+
+    void Window::Resize(vector2i_t size){
+        Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey);
+
+        size_t windowBufferSize = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F)) + ((size.x * size.y * 4 + 0x1F) & (~0x1F) /* Round up to 32 bytes*/) * 2;
+
+        windowBufferKey = Lemon::CreateSharedMemory(windowBufferSize, SMEM_FLAGS_SHARED);
+        windowBufferInfo = (WindowBuffer*)Lemon::MapSharedMemory(windowBufferKey);
+        windowBufferInfo->currentBuffer = 0;
+        windowBufferInfo->buffer1Offset = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F));
+        windowBufferInfo->buffer2Offset = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F)) + ((size.x * size.y * 4 + 0x1F) & (~0x1F) /* Round up to 32 bytes*/);
+
+        buffer1 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer1Offset;
+        buffer2 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer2Offset;
+
+        surface.buffer = buffer1;
+        surface.width = size.x;
+        surface.height = size.y;
+        rootContainer.SetBounds({{0, 0}, size});
+
+        LemonMessage* msg = (LemonMessage*)malloc(sizeof(LemonMessage) + sizeof(WMCommand));
+
+        WMCommand* cmd = (WMCommand*)msg->data;
+        cmd->cmd = WMResize;
+
+        cmd->size = size;
+        cmd->bufferKey = windowBufferKey;
+
+        msg->length = sizeof(WMCommand);
+        msg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+
+        msgClient.Send(msg);
+
+        free(msg);
     }
 
     void Window::SwapBuffers(){
@@ -55,7 +128,9 @@ namespace Lemon::GUI{
     }
 
     void Window::Paint(){
-        OnPaint(&surface);
+        if(windowType == WindowType::GUI) rootContainer.Paint(&surface);
+
+        if(OnPaint) OnPaint(&surface);
 
         SwapBuffers();
     }
@@ -69,5 +144,35 @@ namespace Lemon::GUI{
         }
 
         return false;
+    }
+
+    void Window::GUIHandleEvent(LemonEvent& ev){
+        switch(ev.event){
+            case EventMousePressed:
+                rootContainer.OnMouseDown(ev.mousePos);
+                break;
+            case EventMouseReleased:
+                rootContainer.OnMouseUp(ev.mousePos);
+                break;
+            case EventMouseMoved:
+                rootContainer.OnMouseMove(ev.mousePos);
+                break;
+            case EventKeyPressed:
+                rootContainer.OnKeyPress(ev.key);
+                break;
+            case EventKeyReleased:
+                break;
+            case EventWindowResize:
+                if(flags & WINDOW_FLAGS_RESIZABLE){
+                    Resize(ev.resizeBounds);
+                }
+                break;
+            case EventWindowClosed:
+                break;
+        }
+    }
+
+    void Window::AddWidget(Widget* w){
+        rootContainer.AddWidget(w);
     }
 }

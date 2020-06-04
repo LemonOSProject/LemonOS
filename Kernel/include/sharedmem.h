@@ -10,6 +10,7 @@ typedef struct {
 
     uint64_t flags; // Flags
     uint64_t key; // Key
+    uint64_t mapCount; // Amount of references/mappings
 
     pid_t owner; // Owner Process
     pid_t recipient; // Recipient Process (if private)

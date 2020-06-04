@@ -31,11 +31,11 @@ elf_info_t LoadELFSegments(process_t* proc, void* elf, uintptr_t base){
     elfInfo.phEntrySize = elfHdr.phEntrySize;
     elfInfo.phNum = elfHdr.phNum;
 
-    for(int i = 0; i < elfHdr.phNum; i++){
+    for(uint16_t i = 0; i < elfHdr.phNum; i++){
         elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
 
         if(elfPHdr.memSize == 0) continue;
-        for(int j = 0; j < ((elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) >> 12); j++){
+        for(unsigned j = 0; j < ((elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) >> 12); j++){
             uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
             Memory::MapVirtualMemory4K(phys,base + elfPHdr.vaddr + j * PAGE_SIZE_4K, 1, proc->addressSpace);
         }

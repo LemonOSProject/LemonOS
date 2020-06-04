@@ -1,5 +1,3 @@
-#pragma once
-
 #include <memory.h>
 #include <stddef.h>
 #include <panic.h>

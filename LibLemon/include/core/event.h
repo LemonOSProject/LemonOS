@@ -25,6 +25,7 @@ namespace Lemon {
         union {
             int key;
             vector2i_t mousePos;
+            vector2i_t resizeBounds;
         };
     } __attribute__((packed)) lemon_event_t;
 }

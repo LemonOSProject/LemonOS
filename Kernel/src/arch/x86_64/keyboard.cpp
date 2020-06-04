@@ -11,9 +11,9 @@
 namespace Keyboard{
     uint8_t keyQueue[KEY_QUEUE_SIZE];
 
-	short keyQueueEnd = 0;
-	short keyQueueStart = 0;
-	short keyCount = 0;
+	unsigned short keyQueueEnd = 0;
+	unsigned short keyQueueStart = 0;
+	unsigned short keyCount = 0;
 
     bool ReadKey(uint8_t* key){
         if(keyCount <= 0) return false;

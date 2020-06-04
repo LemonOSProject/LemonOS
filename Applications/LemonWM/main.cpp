@@ -38,6 +38,10 @@ int main(){
     strcpy(srvAddr.sun_path, Lemon::GUI::wmSocketAddress);
     srvAddr.sun_family = AF_UNIX;
     WMInstance wm = WMInstance(renderSurface, srvAddr);
+
+    if(int e = Lemon::Graphics::LoadImage("/initrd/winbuttons.bmp", &wm.compositor.windowButtons)){
+        printf("LemonWM: Warning: Error %d loading buttons.\n", e);
+    }
     
 	timespec t;
 	clock_gettime(CLOCK_BOOTTIME, &t);

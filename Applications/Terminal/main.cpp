@@ -275,7 +275,7 @@ extern "C"
 int main(char argc, char** argv){
 	curPos = {0, 0};
 
-	window = new Lemon::GUI::Window("Terminal", {640, 312}, {0, 0});
+	window = new Lemon::GUI::Window("Terminal", {640, 312});
 
 	int masterPTYFd;
 	syscall(SYS_GRANT_PTY, (uintptr_t)&masterPTYFd, 0, 0, 0, 0);
@@ -314,7 +314,7 @@ int main(char argc, char** argv){
 					lemon_write(masterPTYFd, &key, 1);
 				}
 			} else if (ev.event == Lemon::EventWindowClosed){
-				//Lemon::GUI::DestroyWindow(window);
+				delete window;
 				free(_buf);
 				exit(0);
 			}

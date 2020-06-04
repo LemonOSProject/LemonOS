@@ -3,6 +3,7 @@
 #include <lock.h>
 #include <sharedmem.h>
 #include <scheduler.h>
+#include <logging.h>
 
 #define DEFAULT_TABLE_SIZE 65535
 
@@ -40,7 +41,7 @@ namespace Memory {
 
     int CanModifySharedMemory(pid_t pid, uint64_t key){
         shared_mem_t* sMem = nullptr;
-        if(sMem = GetSharedMemory(key)){
+        if((sMem = GetSharedMemory(key))){
             if((sMem->owner = pid)) return 1;
         }
 
@@ -60,6 +61,7 @@ namespace Memory {
         table[key] = sMem;
         sMem->pgCount = pgCount;
         sMem->pages = (uint64_t*)kmalloc(sMem->pgCount * sizeof(uint64_t*));
+        sMem->mapCount = 0;
 
         for(unsigned i = 0; i < sMem->pgCount; i++){
             sMem->pages[i] = Memory::AllocatePhysicalMemoryBlock();
@@ -90,6 +92,7 @@ namespace Memory {
                 return nullptr; // Does not have access rights
             }
         }
+        sMem->mapCount++;
 
         void* mapping;
         
@@ -112,11 +115,29 @@ namespace Memory {
     }
 
     void DestroySharedMemory(uint64_t key){
-        acquireLock(&lock);
+        //acquireLock(&lock);
         
-        // TODO: Implement
-        #warning DestroySharedMemory unimplemented
+        shared_mem_t* sMem = GetSharedMemory(key);
+        
+        if(!sMem) {
+            releaseLock(&lock);
+            return; // Check for invalid key
+        }
 
-        releaseLock(&lock);
+        if(sMem->mapCount > 0){
+            Log::Error("Will not destroy active shared memory");
+            return;
+        }
+
+        for(unsigned i = 0; i < sMem->pgCount; i++){
+            Memory::FreePhysicalMemoryBlock(sMem->pages[i]);
+        }
+
+        table[key] = nullptr;
+
+        kfree(sMem->pages); // Free physical page array
+        kfree(sMem); // Free structure
+
+        //releaseLock(&lock);
     }
 }

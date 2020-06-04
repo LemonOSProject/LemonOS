@@ -127,24 +127,10 @@ int main(){
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
 	syscall(SYS_UNAME, (uintptr_t)versionString,0,0,0,0);
 
-	/*win_info_t taskbarInfo;
-	taskbarInfo.width = videoInfo.width;
-	taskbarInfo.height = 30;
-	taskbarInfo.x = 0;
-	taskbarInfo.y = videoInfo.height - taskbarInfo.height;
-	taskbarInfo.flags = WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_SNAP_TO_BOTTOM;
-
-	win_info_t menuInfo;
-	menuInfo.width = 240;
-	menuInfo.height = 300;
-	menuInfo.x = 0;
-	menuInfo.y = videoInfo.height - menuInfo.height - taskbarInfo.height;
-	menuInfo.flags = WINDOW_FLAGS_NODECORATION;*/
-
-	taskbar = new Lemon::GUI::Window("", {videoInfo.width, 30}, {0, videoInfo.height - 30}, WINDOW_FLAGS_NODECORATION);
+	taskbar = new Lemon::GUI::Window("", {videoInfo.width, 30}, WINDOW_FLAGS_NODECORATION, Lemon::GUI::WindowType::Basic, {0, videoInfo.height - 30});
 	taskbar->OnPaint = OnTaskbarPaint;
 
-	menu = new Lemon::GUI::Window("", {240, 300}, {0, videoInfo.height - 30 - 300}, WINDOW_FLAGS_NODECORATION);
+	menu = new Lemon::GUI::Window("", {240, 300}, WINDOW_FLAGS_NODECORATION, Lemon::GUI::WindowType::Basic, {0, videoInfo.height - 30 - 300});
 	menu->OnPaint = OnMenuPaint;
 
 	LoadConfig();
@@ -156,13 +142,9 @@ int main(){
 				if(ev.mousePos.x < 100){
 					showMenu = !showMenu;
 
-					if(!showMenu){
-						//menu->info.flags |= WINDOW_FLAGS_MINIMIZED;
-					} else {
-						//menu->info.flags &= ~((typeof(menu->info.flags))WINDOW_FLAGS_MINIMIZED);
-					}
+					menu->Minimize(!showMenu);
 
-					//Lemon::GUI::UpdateWindow(menu);
+					paint = true;
 				}
 			}
 		}
@@ -172,40 +154,14 @@ int main(){
 				if(ev.mousePos.y > 42 && ev.mousePos.y < (menuItemCount*MENU_ITEM_HEIGHT + 42)){
 					char* argv[] = {menuItems[(int)floor((double)(ev.mousePos.y - 42) / MENU_ITEM_HEIGHT)].path};
 					lemon_spawn(argv[0], 1, argv, 0);
+
 					showMenu = false;
-					//menu->info.flags |= WINDOW_FLAGS_MINIMIZED;
-					//Lemon::GUI::UpdateWindow(menu);
+					menu->Minimize(!showMenu);
+
+					paint = true;
 				}
 			}
 		}
-		/*ipc_message_t msg;
-		while(Lemon::ReceiveMessage(&msg)){
-			switch (msg.msg)
-			{
-			case WINDOW_EVENT_MOUSEUP:
-				uint32_t mouseX;
-				uint32_t mouseY;
-				mouseX = msg.data >> 32;
-				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				if(mouseX < 100 && (handle_t)msg.data2 == taskbar->handle){
-					showMenu = !showMenu;
-
-					if(!showMenu){
-						menu->info.flags |= WINDOW_FLAGS_MINIMIZED;
-					} else {
-						menu->info.flags &= ~((typeof(menu->info.flags))WINDOW_FLAGS_MINIMIZED);
-					}
-
-					Lemon::GUI::UpdateWindow(menu);
-				} else if ((handle_t)msg.data2 == menu->handle){
-				}
-				paint = true;
-				break;
-			
-			default:
-				break;
-			}
-		}*/
 
 		uint64_t usedMemLast = sysInfo.usedMem;
 		syscall(SYS_INFO, &sysInfo, 0, 0, 0, 0);

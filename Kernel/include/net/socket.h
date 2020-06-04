@@ -56,7 +56,7 @@ struct poll {
 
 class Socket;
 
-typedef struct SocketConnection {
+struct SocketConnection {
     Socket* socket;
     int connectionType;
 };

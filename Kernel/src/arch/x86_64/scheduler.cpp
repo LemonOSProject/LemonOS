@@ -52,7 +52,7 @@ namespace Scheduler{
     
     inline void InsertNewThreadIntoQueue(thread_t* thread){
         uint8_t cpu = 0;
-        for(int i = 0; i < SMP::processorCount; i++){
+        for(unsigned i = 0; i < SMP::processorCount; i++){
                 Log::Info("CPU %d has %d threads", i, SMP::cpus[i]->runQueue->get_length());
             if(SMP::cpus[i]->runQueue->get_length() < SMP::cpus[cpu]->runQueue->get_length()) {
                 cpu = i;
@@ -79,7 +79,7 @@ namespace Scheduler{
         
         IDT::RegisterInterruptHandler(IPI_SCHEDULE, Schedule);
 
-        process_t* proc = CreateProcess((void*)KernelProcess);
+        CreateProcess((void*)KernelProcess);
 
         cpu->currentThread = nullptr;
         schedulerReady = true;
@@ -263,7 +263,7 @@ namespace Scheduler{
         acquireLock(&cpu->runQueueLock);
         asm("cli");
 
-        for(int i = 0; i < process->threadCount; i++){
+        for(uint32_t i = 0; i < process->threadCount; i++){
             for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
                 if(cpu->runQueue->get_at(j) == &process->threads[i]) cpu->runQueue->remove(&process->threads[i]);
             }
@@ -274,7 +274,7 @@ namespace Scheduler{
                 processes->remove_at(i);
         }
 
-        for(int i = 0; i < process->fileDescriptors.get_length(); i++){
+        for(unsigned i = 0; i < process->fileDescriptors.get_length(); i++){
             if(process->fileDescriptors[i]){
                 fs::Close(process->fileDescriptors[i]);
             }
@@ -282,7 +282,7 @@ namespace Scheduler{
 
         process->fileDescriptors.clear();
         
-        for(int i = 0; i < SMP::processorCount; i++){
+        for(unsigned i = 0; i < SMP::processorCount; i++){
             if(i == cpu->id) continue; // Is current processor?
 
             acquireLock(&SMP::cpus[i]->runQueueLock);
@@ -292,7 +292,7 @@ namespace Scheduler{
                 APIC::Local::SendIPI(i, 0, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
             }
             
-            for(int j = 0; j < SMP::cpus[i]->runQueue->get_length(); j++){
+            for(unsigned j = 0; j < SMP::cpus[i]->runQueue->get_length(); j++){
                 thread_t* thread = SMP::cpus[i]->runQueue->get_at(j);
 
                 assert(thread);
@@ -316,7 +316,6 @@ namespace Scheduler{
         Memory::DestroyAddressSpace(process->addressSpace);
 
         if(cpu->currentThread->parent == process){
-            thread_t* orig = cpu->currentThread;
             cpu->currentThread = nullptr; // Force reschedule
             kfree(process->threads);
             kfree(process);

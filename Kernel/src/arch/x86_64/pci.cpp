@@ -81,10 +81,10 @@ namespace PCI{
 
 	pci_device_header_type1_t ReadType1Config(uint8_t bus, uint8_t slot, uint8_t func){
 		pci_device_header_type1_t header;
-		uint8_t offset;
+		uint8_t offset = 0;
 		header.headerType = Config_ReadByte(bus, slot, func, 13) & 0x7F;
 		if(header.headerType != 1) return header;
-		for(; offset < sizeof(pci_device_header_type1_t); offset += 1){
+		for(; offset < sizeof(pci_device_header_type1_t); offset++){
 			*((uint8_t*)(&header) + offset) = Config_ReadByte(bus, slot, func, offset);
 		}
 	}
@@ -112,7 +112,7 @@ namespace PCI{
 	}
 
 	bool FindDevice(uint16_t deviceID, uint16_t vendorID){
-		for(int i = 0; i < devices->get_length(); i++){
+		for(unsigned i = 0; i < devices->get_length(); i++){
 			if(devices->get_at(i).deviceID == deviceID && devices->get_at(i).vendorID == vendorID){
 				return true;
 			}
@@ -126,7 +126,7 @@ namespace PCI{
 	pci_device_t RegisterPCIDevice(pci_device_t device){
 		device.vendor = &vendors[device.vendorID];
 		
-		for(int i = 0; i < devices->get_length(); i++){
+		for(unsigned i = 0; i < devices->get_length(); i++){
 			if(device.generic ? (devices->get_at(i).classCode == device.classCode && devices->get_at(i).subclass == device.subclass) : (devices->get_at(i).deviceID == device.deviceID && devices->get_at(i).vendorID == device.vendorID)){
 				pci_device_t dev;
 				dev = devices->get_at(i);

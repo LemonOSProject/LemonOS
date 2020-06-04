@@ -14,6 +14,10 @@ namespace Lemon {
         sock.events = POLLIN | POLLHUP;
     }
 
+    MessageClient::~MessageClient(){
+        close(sock.fd);
+    }
+
     MessageServer::MessageServer(sockaddr_un& address, socklen_t len){
         sock = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
         assert(sock > 0);
@@ -70,7 +74,12 @@ namespace Lemon {
             for(int i = 0; i < fds.size(); i++){
                 if(fds[i].revents & (POLLNVAL | POLLHUP)){
                     fds.erase(fds.begin() + i);
-                    continue;
+                    
+                    std::shared_ptr<LemonMessageInfo> newMsg = std::shared_ptr<LemonMessageInfo>((LemonMessageInfo*)malloc(sizeof(LemonMessageInfo)));
+                    newMsg->msg.protocol = 0; // Disconnected
+                    newMsg->clientFd = fds[i].fd;
+
+                    return newMsg;
                 }
 
                 if(!(fds[i].revents & POLLIN)) continue; // We only care about POLLIN

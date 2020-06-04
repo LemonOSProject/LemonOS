@@ -103,7 +103,7 @@ int memcmp(const void *s1, const void *s2, size_t n) {
 
 void strcpy(char* dest, const char* src)
 {
-	int i = 0;
+	size_t i = 0;
 	for(; src[i] != '\0'; i++)
 	{
 		dest[i] = src[i];
@@ -113,7 +113,7 @@ void strcpy(char* dest, const char* src)
 
 void strncpy(char* dest, const char* src, size_t n)
 {
-	int i = 0;
+	size_t i = 0;
 	for(; src[i] != '\0' && i < n; i++)
 	{
 		dest[i] = src[i];
@@ -215,7 +215,7 @@ char toupper(char c){
 }
 
 char* strupr(char* s){
-	for(int i = 0; s[i] != '\0'; i++){
+	for(size_t i = 0; s[i] != '\0'; i++){
 		s[i] = toupper(s[i]);
 	}
 	return s;
@@ -223,7 +223,7 @@ char* strupr(char* s){
 
 char* strnupr(char* s, size_t n){
 
-	for(int i = 0; s[i] && i < n; i++){
+	for(size_t i = 0; s[i] && i < n; i++){
 		if(!(i < n)) break;
 		s[i] = toupper(s[i]);
 	}

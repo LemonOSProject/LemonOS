@@ -34,6 +34,7 @@ cpp_files = [
     'src/ipc/msghandler.cpp',
 
     'src/gui/window.cpp',
+    'src/gui/widgets.cpp',
 ]
 
 asm_files = [
@@ -44,7 +45,10 @@ if host_machine.system() == 'lemon'
     subdir('src/lemon')
 elif host_machine.system() == 'linux'
     subdir('src/linux')
+else
+    error('System ' + host_machine.system() + ' not supported!')
 endif
+    
 
 prefix = get_option('prefix')
 install_subdir('include', install_dir: prefix)

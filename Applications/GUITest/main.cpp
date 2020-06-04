@@ -18,10 +18,18 @@ void OnPaint(surface_t* surface){
 }
 
 int main(){
-    Lemon::GUI::Window* win = new Lemon::GUI::Window("Test Window", {640, 480});
-    win->OnPaint = OnPaint;
+    Lemon::GUI::Window* win = new Lemon::GUI::Window("Test Window", {640, 480}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
 
+    Lemon::GUI::Button* button = new Lemon::GUI::Button("I am a Button", {10, 10, 10, 24});
+    win->AddWidget(button);
+    button->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Fixed);
+    
     for(;;){
+        Lemon::LemonEvent ev;
+        while(win->PollEvent(ev)){
+            win->GUIHandleEvent(ev);
+        }
+
         win->Paint();
     }
 }

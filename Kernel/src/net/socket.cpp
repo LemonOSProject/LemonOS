@@ -3,6 +3,7 @@
 #include <logging.h>
 #include <assert.h>
 #include <errno.h>
+#include <scheduler.h>
 
 Socket* Socket::CreateSocket(int domain, int type, int protocol){
     if(type & SOCK_NONBLOCK) type &= ~SOCK_NONBLOCK;
@@ -131,9 +132,12 @@ int LocalSocket::ConnectTo(Socket* client){
 
     while(!client->connected){
         // TODO: Actually block the task
+        Scheduler::Yield();
     }
 
     SemaphoreSignal(&pendingConnections);
+
+    return 0;
 }
 
 Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen, int mode){
@@ -143,6 +147,7 @@ Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen, int mode){
 
     while(pending.get_length() <= 0){
         // TODO: Actually block the task
+        Scheduler::Yield();
     }
 
     Socket* next = pending.remove_at(0);
@@ -251,7 +256,7 @@ int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* 
         }
     }
 
-    if(!connected){
+    if(!inbound){
         Log::Warning("LocalSocket not connected");
         return -ENOTCONN;
     }
@@ -262,6 +267,7 @@ int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* 
 
     while(inbound->Empty()){
         // TODO: Actually block
+        Scheduler::Yield();
     }
 
     if(flags & MSG_PEEK){

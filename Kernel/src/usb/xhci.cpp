@@ -54,6 +54,8 @@ namespace USB{
                 Log::Error("XHCI: Controller Timed Out");
                 return 2;
             }
+
+            return 0;
         }
     }
 }

@@ -86,7 +86,8 @@ namespace APIC{
         }
         
         uint64_t Read64(uint32_t reg){
-
+            assert(!"unimplemented");
+            return 0;
         }
 
         void Write64(uint32_t reg, uint64_t data){
@@ -117,7 +118,7 @@ namespace APIC{
 
             Log::Info("[APIC] I/O APIC Base %x (%x), Available Interrupts: %d, ID: %d ", base, virtualBase, interrupts, apicID);
 
-            for(int i = 0; i < ACPI::isos->get_length(); i++){
+            for(unsigned i = 0; i < ACPI::isos->get_length(); i++){
                 apic_iso_t* iso = ACPI::isos->get_at(i);
 				Log::Info("[APIC] Interrupt Source Override, IRQ: %d, GSI: %d", iso->irqSource, iso->gSI);
                 Redirect(iso->gSI, iso->irqSource + 0x20, ICR_MESSAGE_TYPE_LOW_PRIORITY);
@@ -132,7 +133,7 @@ namespace APIC{
 
         void MapLegacyIRQ(uint8_t irq){
             Log::Info("[APIC] Mapping Legacy IRQ, IRQ: %d", irq);
-            for(int i = 0; i < ACPI::isos->get_length(); i++){
+            for(unsigned i = 0; i < ACPI::isos->get_length(); i++){
                 apic_iso_t* iso = ACPI::isos->get_at(i);
                 if(iso->irqSource == irq) return; // We should have already redirected this IRQ
             }

@@ -36,8 +36,8 @@ void write_serial(const char* s) {
 	write_serial_n(s, strlen(s));
 }
 
-void write_serial_n(const char* s, unsigned long long n) {
-	int i = 0;
+void write_serial_n(const char* s, unsigned n) {
+	unsigned i = 0;
 
 	if(CheckInterrupts())
 		acquireLock(&lock); // Make the serial output readable

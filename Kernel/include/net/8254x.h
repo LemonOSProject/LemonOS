@@ -86,7 +86,7 @@ namespace Network{
             uint8_t status; // Status
             uint8_t errors; // Errors
             uint16_t special; // Special
-        } r_desc_t __attribute__((packed));
+        } __attribute__((packed)) r_desc_t;
 
         typedef struct {
             uint64_t addr; // Buffer Address
@@ -97,7 +97,7 @@ namespace Network{
             uint8_t reserved : 4; // Reserved
             uint8_t css; // Checksum start field
             uint16_t special; // Special
-        } t_desc_t __attribute__((packed));
+        } __attribute__((packed)) t_desc_t;
 
         r_desc_t* rxDescriptors;
         t_desc_t* txDescriptors;

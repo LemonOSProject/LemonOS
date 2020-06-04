@@ -104,7 +104,7 @@ namespace Network{
                 pack.length = rxDescriptors[rxTail].length;
                 memcpy(pack.data, rxDescriptorsVirt[rxTail], pack.length);
 
-                for(int i = 0; i < pack.length; i++){
+                for(size_t i = 0; i < pack.length; i++){
                     //Log::Info("Byte: %d, ", ((uint8_t*)pack.data)[i]);
                 }
 

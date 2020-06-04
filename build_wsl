@@ -1,1 +1,0 @@
-ninja install -C LibC/build -j7 && ninja -C LibLemon/build install -j7 && Scripts/buildinitrd.sh && ninja -C Kernel/build -j7 && cmd.exe /c Scripts\\build-win\\copytodisk.bat

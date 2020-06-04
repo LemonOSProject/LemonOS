@@ -21,6 +21,7 @@ namespace Lemon{
         pollfd sock;
     public:
         MessageClient();
+        ~MessageClient();
 
         void Connect(sockaddr_un& address, socklen_t len);
 
@@ -33,6 +34,7 @@ namespace Lemon{
         std::deque<std::shared_ptr<LemonMessageInfo>> queue;
 
         int sock = 0;
+
     public:
         MessageServer(sockaddr_un& address, socklen_t len);
 

@@ -6,10 +6,21 @@ namespace Lemon::GUI {
     enum {
         LemonShellToggleMenu,
         LemonShellOpen,
+        LemonShellAddWindow,
+        LemonShellRemoveWindow,
+        LemonShellSetActive,
     };
 
     struct ShellCommand{
         short cmd;
         unsigned short length;
+        union
+        {
+            struct {
+            int windowID;
+            char windowTitle[];
+            };
+        };
+        
     };
 }

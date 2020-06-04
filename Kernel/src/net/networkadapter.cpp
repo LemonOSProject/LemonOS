@@ -14,7 +14,7 @@ namespace Network {
     }
 
     void FindMainAdapter(){
-        for(int i = 0; i < adapters.get_length(); i++){
+        for(unsigned i = 0; i < adapters.get_length(); i++){
             if(adapters[i]->GetLink() == LinkUp){
                 mainAdapter = adapters[i];
                 return;
