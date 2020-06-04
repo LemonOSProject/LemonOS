@@ -53,6 +53,15 @@
 #define O_SYNC 0x2000
 #define O_CLOEXEC 0x4000
 
+#define POLLIN 0x01
+#define POLLOUT 0x02
+#define POLLPRI 0x04
+#define POLLHUP 0x08
+#define POLLERR 0x10
+#define POLLRDHUP 0x20
+#define POLLNVAL 0x40
+#define POLLWRNORM 0x80
+
 typedef int64_t ino_t;
 typedef uint64_t dev_t;
 typedef int32_t uid_t;
