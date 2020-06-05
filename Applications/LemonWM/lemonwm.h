@@ -146,9 +146,12 @@ public:
 };
 
 static inline bool PointInWindow(WMWindow* win, vector2i_t point){
-	int windowHeight = (win->flags & WINDOW_FLAGS_NODECORATION) ? win->size.y : (win->size.y + WINDOW_TITLEBAR_HEIGHT + (WINDOW_BORDER_THICKNESS * 2)); // Account for titlebar and borders
-	int windowWidth = (win->flags & WINDOW_FLAGS_NODECORATION) ? win->size.x : (win->size.x + (WINDOW_BORDER_THICKNESS * 2)); // Account for borders
-	return Lemon::Graphics::PointInRect({{win->pos},{windowWidth, windowHeight}}, point);
+	int windowHeight = (win->flags & WINDOW_FLAGS_NODECORATION) ? win->size.y : (win->size.y + WINDOW_TITLEBAR_HEIGHT + (WINDOW_BORDER_THICKNESS * 3)); // Account for titlebar and borders
+	int windowWidth = (win->flags & WINDOW_FLAGS_NODECORATION) ? win->size.x : (win->size.x + (WINDOW_BORDER_THICKNESS * 3)); // Account for borders and extend the window a little bit so it is easier to resize
+
+    vector2i_t windowOffset = (win->flags & WINDOW_FLAGS_NODECORATION) ? (vector2i_t){0, 0} : (vector2i_t){-1, -1};
+
+	return Lemon::Graphics::PointInRect({{win->pos + windowOffset},{windowWidth, windowHeight}}, point);
 }
 
 static inline bool PointInWindowProper(WMWindow* win, vector2i_t point){

@@ -6,6 +6,7 @@
 
 #define LEMON_MESSAGE_PROTCOL_WMEVENT 1
 #define LEMON_MESSAGE_PROTCOL_WMCMD 2
+#define LEMON_MESSAGE_PROTOCOL_SHELLCMD 3
 
 namespace Lemon {
     typedef struct LemonMessage {

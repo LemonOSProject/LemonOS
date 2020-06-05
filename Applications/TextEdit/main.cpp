@@ -1,11 +1,8 @@
-#include <lemon/types.h>
 #include <lemon/syscall.h>
 #include <gfx/surface.h>
 #include <gfx/graphics.h>
 #include <gui/window.h>
 #include <gui/widgets.h>
-#include <lemon/keyboard.h>
-#include <lemon/ipc.h>
 #include <stdlib.h>
 #include <list.h>
 #include <gui/filedialog.h>
@@ -18,49 +15,41 @@ ExtendedTextBox* textBox;
 Lemon::GUI::Window* window;
 
 void OnWindowPaint(surface_t* surface){
-	Lemon::Graphics::DrawRect(0, window->info.height - 20, window->info.width, 20, 160, 160, 160, surface);
+	Lemon::Graphics::DrawRect(0, window->GetSize().y - 20, window->GetSize().x, 20, 160, 160, 160, surface);
 
 	char buf[32];
 	sprintf(buf, "Line: %d    Col: %d", textBox->cursorPos.y + 1, textBox->cursorPos.x + 1); // lines and columns don't start at 0
 
-	Lemon::Graphics::DrawString(buf, 4, window->info.height - 20 + 4, 0, 0, 0, surface);
+	Lemon::Graphics::DrawString(buf, 4, window->GetSize().y - 20 + 4, 0, 0, 0, surface);
 }
 
 int main(int argc, char** argv){
-	
-	win_info_t windowInfo;
-
-	windowInfo.width = 512;
-	windowInfo.height = 256;
-	windowInfo.x = 100;
-	windowInfo.y = 50;
-	windowInfo.flags = 0;
-	strcpy(windowInfo.title, "TextEdit");
 
 	char* filePath;
 
 	if(argc > 1){
 		filePath = argv[1];
 	} else {
-		filePath = Lemon::GUI::FileDialog("/");
+		//filePath = Lemon::GUI::FileDialog("/");
 
 		if(!filePath){
-			Lemon::GUI::MessageBox("Invalid filepath!", MESSAGEBOX_OK);
+			//Lemon::GUI::MessageBox("Invalid filepath!", MESSAGEBOX_OK);
 			exit(1);
 		}
 	}
 
-	window = Lemon::GUI::CreateWindow(&windowInfo);
+	window = new Lemon::GUI::Window("TextEdit", {512, 256}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
+
 	window->OnPaint = OnWindowPaint;
 
-	textBox = new ExtendedTextBox({{0, 0}, {windowInfo.width, windowInfo.height - 20}});
-
-	window->widgets.add_back(textBox);
+	textBox = new ExtendedTextBox({{0, 0}, {0, 20}});
+	window->AddWidget(textBox);
+	textBox->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft);
 
 	FILE* textFile = fopen(filePath, "r");
 
 	if(!textFile){
-		Lemon::GUI::MessageBox("Failed to open file!", MESSAGEBOX_OK);
+		//Lemon::GUI::MessageBox("Failed to open file!", MESSAGEBOX_OK);
 		exit(1);
 	}
 
@@ -81,37 +70,15 @@ int main(int argc, char** argv){
 
 	free(textBuffer);
 
-	for(;;){
-		ipc_message_t msg;
-		while(Lemon::ReceiveMessage(&msg)){
-			if(msg.msg == WINDOW_EVENT_MOUSEDOWN){
-				uint32_t mouseX;
-				uint32_t mouseY;
-				mouseX = (msg.data >> 32);
-				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				Lemon::GUI::HandleMouseDown(window, {(int)mouseX, (int)mouseY});
-			}
-			else if(msg.msg == WINDOW_EVENT_MOUSEUP){	
-				uint32_t mouseX;
-				uint32_t mouseY;
-				mouseX = msg.data >> 32;
-				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				Lemon::GUI::HandleMouseUp(window, {(int)mouseX, (int)mouseY});
-			} else if (msg.msg == WINDOW_EVENT_MOUSEMOVE) {
-				uint32_t mouseX = msg.data >> 32;
-				uint32_t mouseY = msg.data & 0xFFFFFFFF;
-
-				Lemon::GUI::HandleMouseMovement(window, {mouseX, mouseY});
-			}  else if (msg.msg == WINDOW_EVENT_KEY) {
-				Lemon::GUI::HandleKeyPress(window, msg.data);
-			} else if (msg.msg == WINDOW_EVENT_CLOSE) {
-				Lemon::GUI::DestroyWindow(window);
-				exit(0);
-			}
+	while(!window->closed){
+		Lemon::LemonEvent ev;
+		while(window->PollEvent(ev)){
+			window->GUIHandleEvent(ev);
 		}
 
-		Lemon::GUI::PaintWindow(window);
+		window->Paint();
 	}
 
-	for(;;);
+	delete window;
+	return 0;
 }

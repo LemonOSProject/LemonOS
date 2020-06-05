@@ -11,4 +11,5 @@ public:
     void OnMouseDown(vector2i_t mousePos);
     void OnMouseUp(vector2i_t mousePos);
     void OnMouseMove(vector2i_t mousePos);
+    void UpdateFixedBounds();
 };

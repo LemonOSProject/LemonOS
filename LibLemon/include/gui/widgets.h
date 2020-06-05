@@ -19,6 +19,12 @@ namespace Lemon::GUI {
         Right,
     };
 
+    enum WidgetAlignment {
+        WAlignLeft,
+        WAlignCentre,
+        WAlignRight,
+    };
+
     class Widget {
     protected:
         Widget* parent = nullptr;
@@ -31,6 +37,8 @@ namespace Lemon::GUI {
 
         LayoutSize sizeX;
         LayoutSize sizeY;
+
+        WidgetAlignment align = WAlignLeft;
     public:
         Widget();
         Widget(rect_t bounds, LayoutSize newSizeX = LayoutSize::Fixed, LayoutSize newSizeY = LayoutSize::Fixed);
@@ -38,7 +46,7 @@ namespace Lemon::GUI {
 
         virtual void SetParent(Widget* newParent) { parent = newParent; UpdateFixedBounds(); };
 
-        virtual void SetLayout(LayoutSize newSizeX, LayoutSize newSizeY){ sizeX = newSizeX; sizeY = newSizeY; UpdateFixedBounds(); };
+        virtual void SetLayout(LayoutSize newSizeX, LayoutSize newSizeY, WidgetAlignment newAlign){ sizeX = newSizeX; sizeY = newSizeY; align = newAlign; UpdateFixedBounds(); };
 
         virtual void Paint(surface_t* surface);
 
@@ -89,7 +97,7 @@ namespace Lemon::GUI {
 
         rect_t scrollBar;
 
-        int scrollPos;
+        int scrollPos = 0;
 
         void ResetScrollBar(int displayHeight /* Region that can be displayed at one time */, int areaHeight /* Total Scroll Area*/);
         void Paint(surface_t* surface, vector2i_t offset, int width = 16);
@@ -108,7 +116,7 @@ namespace Lemon::GUI {
 
         rect_t scrollBar;
 
-        int scrollPos;
+        int scrollPos = 0;
 
         void ResetScrollBar(int displayWidth /* Region that can be displayed at one time */, int areaWidth /* Total Scroll Area*/);
         void Paint(surface_t* surface, vector2i_t offset, int height = 16);
@@ -140,7 +148,7 @@ namespace Lemon::GUI {
         void OnMouseDown(vector2i_t mousePos);
         void OnMouseUp(vector2i_t mousePos);
 
-        void (*OnPress)(Button*);
+        void (*OnPress)(Button*) = nullptr;
     };
 
     class Bitmap : public Widget{
@@ -158,5 +166,34 @@ namespace Lemon::GUI {
         Label(const char* _label, rect_t _bounds);
 
         void Paint(surface_t* surface);
+    };
+
+    class TextBox : public Widget{
+    protected:
+        ScrollBar sBar;
+    public:
+        bool editable;
+        bool multiline;
+        bool active;
+        std::vector<std::string> contents;
+        int lineCount;
+        int lineSpacing = 3;
+        size_t bufferSize;
+        vector2i_t cursorPos = {0, 0};
+        Graphics::Font* font;
+
+        TextBox(rect_t bounds, bool multiline);
+
+        void Paint(surface_t* surface);
+        void LoadText(char* text);
+
+        void OnMouseDown(vector2i_t mousePos);
+        void OnMouseUp(vector2i_t mousePos);
+        void OnMouseMove(vector2i_t mousePos);
+        void OnKeyPress(int key);
+
+        void ResetScrollBar();
+
+        rgba_colour_t textColour = {0,0,0,255};
     };
 }

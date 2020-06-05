@@ -38,7 +38,10 @@ namespace Lemon::GUI {
             fixedBounds.pos += parent->GetFixedBounds().pos;
 
             if(sizeX == LayoutSize::Stretch){
-                fixedBounds.width = parent->bounds.width - bounds.width - bounds.x;
+                if(align == WidgetAlignment::WAlignRight)
+                    fixedBounds.width = (parent->GetFixedBounds().size.x - bounds.pos.x) - parent->GetFixedBounds().pos.x;
+                else
+                    fixedBounds.width = parent->bounds.width - bounds.width - bounds.x;
             } else {
                 fixedBounds.width = bounds.width;
             }
@@ -47,6 +50,10 @@ namespace Lemon::GUI {
                 fixedBounds.height = parent->bounds.height - bounds.height - bounds.y;
             } else {
                 fixedBounds.height = bounds.height;
+            }
+
+            if(align == WidgetAlignment::WAlignRight){
+                fixedBounds.pos.x = (parent->GetFixedBounds().pos.x + parent->GetFixedBounds().size.x) - bounds.pos.x - fixedBounds.width;
             }
         } else {
             fixedBounds.size = bounds.size;
@@ -297,6 +304,181 @@ namespace Lemon::GUI {
             if(scrollBar.pos.x + scrollBar.size.x > width) scrollBar.pos.x = width - scrollBar.size.x;
             if(scrollBar.pos.x < 0) scrollBar.pos.x = 0;
             scrollPos = scrollBar.pos.x * scrollIncrement;
+        }
+    }
+
+    //////////////////////////
+    // Text Box
+    //////////////////////////
+    TextBox::TextBox(rect_t bounds, bool multiline) : Widget(bounds) {
+        this->multiline = multiline;
+        font = Graphics::GetFont("default");
+        contents.push_back(std::string());
+    }
+
+    void TextBox::Paint(surface_t* surface){
+        Graphics::DrawRect(fixedBounds.pos.x, fixedBounds.pos.y, fixedBounds.size.x, fixedBounds.size.y, 255, 255, 255, surface);
+        int xpos = 2;
+        int ypos = 2;
+        for(size_t i = 0; i < contents.size(); i++){
+            for(size_t j = 0; j < contents[i].length(); j++){
+                if(contents[i][j] == '\t'){
+                    xpos += font->tabWidth * font->width;
+                    continue;
+                } else if (isspace(contents[i][j])) {
+                    xpos += font->width;
+                    continue;
+                }
+                else if (!isgraph(contents[i][j])) continue;
+
+                xpos += Graphics::DrawChar(contents[i][j], fixedBounds.pos.x + xpos, fixedBounds.pos.y + ypos - sBar.scrollPos, textColour.r, textColour.g, textColour.b, surface, font);
+
+                if((xpos > (fixedBounds.size.x - 8 - 16))){
+                    //xpos = 0;
+                    //ypos += font->height + lineSpacing;
+                    break;
+                }
+            }
+            ypos += font->height + lineSpacing;
+            xpos = 0;
+            if(ypos - sBar.scrollPos + font->height + lineSpacing >= fixedBounds.size.y) break;
+        }
+
+        timespec t;
+        clock_gettime(CLOCK_BOOTTIME, &t);
+
+        long msec = (t.tv_nsec / 1000000.0);
+        if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
+            Graphics::DrawRect(fixedBounds.pos.x + Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font) + 2, fixedBounds.pos.y + cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos + 2, 2, font->height + 2, 0, 0, 0, surface);
+
+        if(multiline)
+            sBar.Paint(surface, {fixedBounds.pos.x + fixedBounds.size.x - 16, fixedBounds.pos.y});
+    }
+
+    void TextBox::LoadText(char* text){
+        char* text2 = text;
+        int lineCount = 1;
+
+        if(multiline){
+            while(*text2){
+                if(*text2 == '\n') lineCount++;
+                text2++;
+            }
+
+            text2 = text;
+            for(int i = 0; i < lineCount; i++){
+                char* end = strchr(text2, '\n');
+                if(end){
+                    int len = (uintptr_t)(end - text2);
+                    if(len > strlen(text2)) break;
+
+                    contents.push_back(std::string(text2, len));
+
+                    text2 = end + 1;
+                } else {
+                    contents.push_back(std::string(text2));
+                }
+            }
+            
+            this->lineCount = contents.size();
+            ResetScrollBar();
+        } else {
+            contents.push_back(std::string(text2));
+        }
+    }
+
+    void TextBox::OnMouseDown(vector2i_t mousePos){
+        mousePos.x -= fixedBounds.pos.x;
+        mousePos.y -= fixedBounds.pos.y;
+
+        if(multiline && mousePos.x > fixedBounds.size.x - 16){
+            sBar.OnMouseDownRelative({mousePos.x + fixedBounds.size.x - 16, mousePos.y});
+            return;
+        }
+
+        cursorPos.y = (sBar.scrollPos + mousePos.y) / (font->height + lineSpacing);
+        if(cursorPos.y >= contents.size()) cursorPos.y = contents.size() - 1;
+
+        int dist = 0;
+        for(cursorPos.x = 0; cursorPos.x < contents[cursorPos.y].length(); cursorPos.x++){
+            dist += Graphics::GetCharWidth(contents[cursorPos.y][cursorPos.x], font);
+            if(dist >= mousePos.x){
+                break;
+            }
+        }
+    }
+
+    void TextBox::OnMouseMove(vector2i_t mousePos){
+        if(multiline && sBar.pressed){
+            sBar.OnMouseMoveRelative({0, mousePos.y - fixedBounds.pos.y});
+        }
+    }
+
+    void TextBox::OnMouseUp(vector2i_t mousePos){
+        sBar.pressed = false;
+    }
+
+
+    void TextBox::ResetScrollBar(){
+        sBar.ResetScrollBar(fixedBounds.size.y, contents.size() * (font->height + lineSpacing));
+    }
+
+    void TextBox::OnKeyPress(int key){
+        if(isprint(key)){
+            contents[cursorPos.y].insert(cursorPos.x++, 1, key);
+        } else if(key == '\b' || key == KEY_DELETE){
+            if(key == KEY_DELETE){ // Delete is essentially backspace but on the character in front so just increment the cursor pos.
+                cursorPos.x++;
+                if(cursorPos.x > contents[cursorPos.x].length()){
+                    if(cursorPos.y < contents.size()){
+                        cursorPos.x = contents[++cursorPos.y].length();
+                    } else cursorPos.x = contents[cursorPos.y].length();
+                }
+            }
+
+            if(cursorPos.x) {
+                contents[cursorPos.y].erase(--cursorPos.x, 1);
+            } else if(cursorPos.y) { // Delete line if not at start of file
+                cursorPos.x = contents[cursorPos.y - 1].length(); // Move cursor horizontally to end of previous line
+                contents[cursorPos.y - 1] += contents[cursorPos.y]; // Append contents of current line to previous
+                contents.erase(contents.begin() + cursorPos.y--); // Remove line and move to previous line
+
+                ResetScrollBar();
+            }
+        } else if(key == '\n'){
+            std::string s = contents[cursorPos.y].substr(cursorPos.x); // Grab the contents of the line after the cursor
+            contents[cursorPos.y].erase(cursorPos.x); // Erase all that was after the cursor
+            contents.insert(contents.begin() + (++cursorPos.y), s); // Insert new line after cursor and move to that line
+            cursorPos.x = 0;
+            ResetScrollBar();
+        } else if (key == KEY_ARROW_LEFT){ // Move cursor left
+            cursorPos.x--;
+            if(cursorPos.x < 0){
+                if(cursorPos.y){
+                    cursorPos.x = contents[--cursorPos.y].length();
+                } else cursorPos.x = 0;
+            }
+        } else if (key == KEY_ARROW_RIGHT){ // Move cursor right
+            cursorPos.x++;
+            if(cursorPos.x > contents[cursorPos.y].length()){
+                if(cursorPos.y < contents.size()){
+                    cursorPos.x = contents[++cursorPos.y].length();
+                } else cursorPos.x = contents[cursorPos.y].length();
+            }
+        } else if (key == KEY_ARROW_UP){ // Move cursor up
+            if(cursorPos.y){
+                cursorPos.y--;
+                if(cursorPos.x > contents[cursorPos.y].length()){
+                    cursorPos.x = contents[cursorPos.y].length();
+                }
+            } else cursorPos.x = 0;
+        } else if (key == KEY_ARROW_DOWN){ // Move cursor down
+            if(cursorPos.y < contents.size()){
+                cursorPos.y++;
+                if(cursorPos.x > contents[cursorPos.y].length()){
+                    cursorPos.x = contents[cursorPos.y].length();
+                }
+            } else cursorPos.x = contents[cursorPos.y].length();;
         }
     }
 }

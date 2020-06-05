@@ -59,7 +59,7 @@ int escapeType = 0;
 surface_t menuSurface;
 surface_t windowSurface;
 
-#define COLUMN_COUNT 80
+int columnCount = 80;
 std::vector<std::vector<TerminalChar>> buffer;
 
 vector2i_t curPos = {0, 0};
@@ -181,7 +181,7 @@ void DoAnsiCSI(char ch){
 		break;
 	case ANSI_CSI_CUF:
 		curPos.x++;
-		if(curPos.x >= COLUMN_COUNT) {
+		if(curPos.x >= columnCount) {
 			curPos.x = 0;
 			curPos.y++;
 		}
@@ -189,7 +189,7 @@ void DoAnsiCSI(char ch){
 	case ANSI_CSI_CUB:
 		curPos.x--;
 		if(curPos.x < 0) {
-			curPos.x = COLUMN_COUNT - 1;
+			curPos.x = columnCount - 1;
 			curPos.y--;
 		}
 		if(curPos.y < 0) curPos.y = 0;
@@ -258,7 +258,7 @@ void PrintChar(char ch){
 		default:
 			if(!(isgraph(ch) || isspace(ch))) break;
 
-			if(curPos.x >= COLUMN_COUNT){
+			if(curPos.x >= columnCount){
 				curPos.y++;
 				curPos.x = 0;
 			}
@@ -298,7 +298,7 @@ int main(char argc, char** argv){
 
 	winsize wSz = {
 		.ws_row = 25,
-		.ws_col = COLUMN_COUNT,
+		.ws_col = columnCount,
 		.ws_xpixel = window->GetSize().x,
 		.ws_ypixel = window->GetSize().y,
 	};
@@ -317,6 +317,14 @@ int main(char argc, char** argv){
 				delete window;
 				free(_buf);
 				exit(0);
+			} else if (ev.event == Lemon::EventWindowResize){
+				window->Resize(ev.resizeBounds);
+
+				columnCount = window->GetSize().x / 8;
+
+				wSz.ws_col = columnCount;
+				wSz.ws_xpixel = window->GetSize().x;
+				wSz.ws_ypixel = window->GetSize().y;
 			}
 		}
 

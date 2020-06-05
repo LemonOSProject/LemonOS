@@ -3,6 +3,12 @@
 namespace Lemon::GUI {
     static const char* shellSocketAddress = "lemonshell";
     
+    enum ShellWindowState{
+        ShellWindowStateNormal,
+        ShellWindowStateActive,
+        ShellWindowStateMinimized,
+    };
+
     enum {
         LemonShellToggleMenu,
         LemonShellOpen,
@@ -13,12 +19,17 @@ namespace Lemon::GUI {
 
     struct ShellCommand{
         short cmd;
-        unsigned short length;
         union
         {
             struct {
             int windowID;
+            short windowState;
+            short titleLength;
             char windowTitle[];
+            };
+            struct {
+                short pathLength;
+                char path[];
             };
         };
         

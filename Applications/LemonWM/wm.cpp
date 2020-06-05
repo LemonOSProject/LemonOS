@@ -214,6 +214,14 @@ void WMInstance::MouseMove(){
         PostEvent(ev, active);
         
         resizeStartPos = input.mouse.pos;
+    } else if (active && PointInWindowProper(active, input.mouse.pos)){
+        Lemon::LemonEvent ev;
+        ev.event = Lemon::EventMouseMoved;
+        ev.mousePos = input.mouse.pos - active->pos;
+
+        if(!(active->flags & WINDOW_FLAGS_NODECORATION)) ev.mousePos = ev.mousePos - (vector2i_t){1, 25};
+
+        PostEvent(ev, active);
     }
 }
 

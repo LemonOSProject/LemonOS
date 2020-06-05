@@ -83,17 +83,17 @@ void WMWindow::RecalculateButtonRects(){
 }
 
 rect_t WMWindow::GetBottomBorderRect(){ // Windows with no titlebar also have no borders so don't worry about checking for the no decoration flag
-	return {{pos.x, pos.y + size.y + WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS}, {size.x + WINDOW_BORDER_THICKNESS * 2, WINDOW_BORDER_THICKNESS}};
+	return {{pos.x - 1, pos.y + size.y + WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS}, {size.x + WINDOW_BORDER_THICKNESS * 3, WINDOW_BORDER_THICKNESS + 1}};
 }
 
 rect_t WMWindow::GetTopBorderRect(){ // Windows with no titlebar also have no borders so don't worry about checking for the no decoration flag
-	return {{pos.x, pos.y}, {size.x + WINDOW_BORDER_THICKNESS * 2, WINDOW_BORDER_THICKNESS}};
+	return {{pos.x - 1, pos.y - 1 /*Extend the border rect out a bit*/}, {size.x + WINDOW_BORDER_THICKNESS * 3, WINDOW_BORDER_THICKNESS + 1}};
 }
 
 rect_t WMWindow::GetLeftBorderRect(){ // Windows with no titlebar also have no borders so don't worry about checking for the no decoration flag
-	return {{pos.x, pos.y}, {WINDOW_BORDER_THICKNESS, size.y + WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS * 2}};
+	return {{pos.x - 1, pos.y - 1}, {WINDOW_BORDER_THICKNESS + 1, size.y + WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS * 3}};
 }
 
 rect_t WMWindow::GetRightBorderRect(){ // Windows with no titlebar also have no borders so don't worry about checking for the no decoration flag
-	return {{pos.x + size.x + WINDOW_BORDER_THICKNESS, pos.y}, {WINDOW_BORDER_THICKNESS, size.y + WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS * 2}};
+	return {{pos.x + size.x + WINDOW_BORDER_THICKNESS, pos.y - 1}, {WINDOW_BORDER_THICKNESS + 1, size.y + WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS * 3}};
 }

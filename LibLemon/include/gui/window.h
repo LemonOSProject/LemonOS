@@ -81,6 +81,7 @@ namespace Lemon::GUI {
         int windowType = WindowType::Basic;
     public:
         surface_t surface;
+        bool closed = false; // Set to true when close button pressed
 
         Window(const char* title, vector2i_t size, uint32_t flags = 0, int type = WindowType::Basic, vector2i_t pos = {0, 0});
         ~Window();

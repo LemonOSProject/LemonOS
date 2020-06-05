@@ -125,7 +125,7 @@ namespace Memory {
         }
 
         if(sMem->mapCount > 0){
-            Log::Error("Will not destroy active shared memory");
+            //Log::Error("Will not destroy active shared memory");
             return;
         }
 

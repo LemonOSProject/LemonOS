@@ -18,6 +18,8 @@
 #include <lemon/info.h>
 #include <core/sharedmem.h>
 #include <lemon/util.h>
+#include <gui/shell.h>
+#include <map>
 
 #define MENU_ITEM_HEIGHT 24
 

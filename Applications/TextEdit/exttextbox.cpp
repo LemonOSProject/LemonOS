@@ -2,10 +2,12 @@
 
 #include <math.h>
 
-ExtendedTextBox::ExtendedTextBox(rect_t bounds) : Lemon::GUI::TextBox({{bounds.pos.x + 40, bounds.pos.y}, {bounds.size.x - 40, bounds.size.y}}){
+#define LINE_NUM_PANEL_WIDTH 40
+
+ExtendedTextBox::ExtendedTextBox(rect_t bounds) : Lemon::GUI::TextBox(bounds, true){
     textBoxBounds = bounds;
-    textBoxBounds.pos.x += 40;
-    textBoxBounds.size.x -= 40;
+    textBoxBounds.pos.x += LINE_NUM_PANEL_WIDTH;
+    textBoxBounds.size.x -= LINE_NUM_PANEL_WIDTH;
     normalBounds = bounds;
 }
 
@@ -13,36 +15,46 @@ void ExtendedTextBox::Paint(surface_t* surface){
     char num[10];
     for(int i = floor(((double)sBar.scrollPos) / (font->height + lineSpacing)); i < contents.size(); i++){
         int yPos = i * (lineSpacing + font->height) - sBar.scrollPos;
-        Lemon::Graphics::DrawRect(0, 40, yPos, (lineSpacing + font->height), 160, 160, 160, surface);
         sprintf(num, "%d", i);
         int textSz = Lemon::Graphics::GetTextLength(num);
-        Lemon::Graphics::DrawString(num, 20 - textSz / 2, yPos + lineSpacing / 2, 30, 30, 30, surface);
+        Lemon::Graphics::DrawString(num, (LINE_NUM_PANEL_WIDTH / 2) - textSz / 2, yPos + lineSpacing / 2, 30, 30, 30, surface);
     }
-    bounds = textBoxBounds;
+    fixedBounds = textBoxBounds;
     TextBox::Paint(surface);
-    bounds = normalBounds;
+    fixedBounds = normalBounds;
 }
 
 void ExtendedTextBox::OnMouseDown(vector2i_t mousePos){
-    if((mousePos.x - bounds.pos.x) > 40){
-        bounds = textBoxBounds;
+    if((mousePos.x - fixedBounds.pos.x) > LINE_NUM_PANEL_WIDTH){
+        fixedBounds = textBoxBounds;
         TextBox::OnMouseDown(mousePos);
-        bounds = normalBounds;
+        fixedBounds = normalBounds;
     }
 }
 
 void ExtendedTextBox::OnMouseUp(vector2i_t mousePos){
-    if((mousePos.x - bounds.pos.x) > 40){
-        bounds = textBoxBounds;
+    if((mousePos.x - fixedBounds.pos.x) > LINE_NUM_PANEL_WIDTH){
+        fixedBounds = textBoxBounds;
         TextBox::OnMouseUp(mousePos);
-        bounds = normalBounds;
+        fixedBounds = normalBounds;
     }
 }
 
 void ExtendedTextBox::OnMouseMove(vector2i_t mousePos){
-    if((mousePos.x - bounds.pos.x) > 40){
-        bounds = textBoxBounds;
+    if((mousePos.x - fixedBounds.pos.x) > LINE_NUM_PANEL_WIDTH){
+        fixedBounds = textBoxBounds;
         TextBox::OnMouseMove(mousePos);
-        bounds = normalBounds;
+        fixedBounds = normalBounds;
     }
+}
+
+void ExtendedTextBox::UpdateFixedBounds(){
+    Widget::UpdateFixedBounds();
+
+    textBoxBounds = fixedBounds;
+    textBoxBounds.pos.x += LINE_NUM_PANEL_WIDTH;
+    textBoxBounds.size.x -= LINE_NUM_PANEL_WIDTH;
+    normalBounds = fixedBounds;
+
+    ResetScrollBar();
 }

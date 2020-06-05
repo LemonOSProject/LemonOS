@@ -168,6 +168,7 @@ namespace Lemon::GUI{
                 }
                 break;
             case EventWindowClosed:
+                closed = true;
                 break;
         }
     }
