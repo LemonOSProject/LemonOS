@@ -40,11 +40,14 @@ namespace Lemon::GUI {
 
         WidgetAlignment align = WAlignLeft;
     public:
+        Widget* active = nullptr; // Only applies to containers, etc. is so widgets know whether they are active or not
+
         Widget();
         Widget(rect_t bounds, LayoutSize newSizeX = LayoutSize::Fixed, LayoutSize newSizeY = LayoutSize::Fixed);
         virtual ~Widget();
 
         virtual void SetParent(Widget* newParent) { parent = newParent; UpdateFixedBounds(); };
+        Widget* GetParent() { return parent; }
 
         virtual void SetLayout(LayoutSize newSizeX, LayoutSize newSizeY, WidgetAlignment newAlign){ sizeX = newSizeX; sizeY = newSizeY; align = newAlign; UpdateFixedBounds(); };
 
@@ -53,6 +56,7 @@ namespace Lemon::GUI {
         virtual void OnMouseDown(vector2i_t mousePos);
         virtual void OnMouseUp(vector2i_t mousePos);
         virtual void OnMouseMove(vector2i_t mousePos);
+        virtual void OnDoubleClick(vector2i_t mousePos);
         virtual void OnKeyPress(int key);
         virtual void OnHover(vector2i_t mousePos);
 
@@ -68,8 +72,6 @@ namespace Lemon::GUI {
     protected:
         std::vector<Widget*> children;
 
-        Widget* active;
-
     public:
         rgba_colour_t background = {190, 190, 180, 255};
 
@@ -82,6 +84,7 @@ namespace Lemon::GUI {
         void OnMouseDown(vector2i_t mousePos);
         void OnMouseUp(vector2i_t mousePos);
         void OnMouseMove(vector2i_t mousePos);
+        void OnDoubleClick(vector2i_t mousePos);
         void OnKeyPress(int key);
 
         void UpdateFixedBounds();
@@ -172,8 +175,8 @@ namespace Lemon::GUI {
     protected:
         ScrollBar sBar;
     public:
-        bool editable;
-        bool multiline;
+        bool editable =  true;
+        bool multiline = false;
         bool active;
         std::vector<std::string> contents;
         int lineCount;
@@ -185,7 +188,7 @@ namespace Lemon::GUI {
         TextBox(rect_t bounds, bool multiline);
 
         void Paint(surface_t* surface);
-        void LoadText(char* text);
+        void LoadText(const char* text);
 
         void OnMouseDown(vector2i_t mousePos);
         void OnMouseUp(vector2i_t mousePos);
@@ -195,5 +198,85 @@ namespace Lemon::GUI {
         void ResetScrollBar();
 
         rgba_colour_t textColour = {0,0,0,255};
+        
+        void (*OnSubmit)(TextBox*) = nullptr;
+    };
+
+    class ListItem{
+        public:
+        std::vector<std::string> details;
+    };
+
+    class ListColumn{
+        public:
+        std::string name;
+        int displayWidth;
+    };
+
+    class ListView : public Widget{
+        ListColumn primaryColumn;
+        std::vector<ListColumn> columns;
+        std::vector<ListItem> items;
+
+        int selected = 0;
+        int itemHeight = 20;
+        int columnDisplayHeight = 20;
+
+        bool showScrollBar = false;
+
+        ScrollBar sBar;
+
+        Graphics::Font* font;
+
+        void ResetScrollBar();
+    public:
+        ListView(rect_t bounds);
+        ~ListView();
+
+        void Paint(surface_t* surface);
+
+        void OnMouseDown(vector2i_t mousePos);
+        void OnMouseUp(vector2i_t mousePos);
+        void OnMouseMove(vector2i_t mousePos);
+        void OnDoubleClick(vector2i_t mousePos);
+        void OnKeyPress(int key);
+
+        void AddColumn(ListColumn& column);
+        int AddItem(ListItem& item);
+        void ClearItems();
+
+        void UpdateFixedBounds();
+
+        void(*OnSubmit)(ListItem&, ListView*) = nullptr;
+    };
+    
+    class FileView : public Container{
+    protected:
+        int pathBoxHeight = 20;
+        int sidepanelWidth = 120;
+        int currentDir;
+        char** filePointer;
+
+        void(*OnFileOpened)(char*, FileView*) = nullptr;
+
+        ListView* fileList;
+        TextBox* pathBox;
+
+        Widget* active;
+
+        ListColumn nameCol, sizeCol;
+        
+    public:
+        static surface_t icons;
+
+        std::string currentPath;
+        FileView(rect_t bounds, char* path, void(*_OnFileOpened)(char*, FileView*));
+        
+        void Refresh();
+
+        void OnSubmit(ListItem& item, ListView* list);
+        void OnTextSubmit();
+        static void OnListSubmit(ListItem& item, ListView* list);
+        static void OnTextBoxSubmit(TextBox* textBox);
     };
 }

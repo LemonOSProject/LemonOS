@@ -25,14 +25,14 @@ namespace Lemon::Graphics{
         fontState = -1;
 
         if(FT_Init_FreeType(&library)){
-            ////syscall(0,(uintptr_t)"Error initializing freetype",0,0,0,0);
+            printf("Error initializing freetype");
             return;
         }
 
         FILE* fontFile = fopen("/initrd/montserrat.ttf", "r");
         
         if(!fontFile){
-            ////syscall(0,(uintptr_t)"Error loading font /initrd/montserrat.ttf",0,0,0,0);
+            printf("Error loading font /initrd/montserrat.ttf");
             return;
         }
 

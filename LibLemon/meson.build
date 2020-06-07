@@ -35,6 +35,8 @@ cpp_files = [
 
     'src/gui/window.cpp',
     'src/gui/widgets.cpp',
+    'src/gui/colours.cpp',
+    'src/gui/fileview.cpp',
 ]
 
 asm_files = [

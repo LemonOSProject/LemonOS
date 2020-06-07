@@ -32,6 +32,31 @@ int main(){
     win->AddWidget(tBox);
     tBox->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Fixed, Lemon::GUI::WidgetAlignment::WAlignLeft);
 
+    Lemon::GUI::ListView* lView = new Lemon::GUI::ListView({10, 80, 10, 10});
+    win->AddWidget(lView);
+    lView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft);
+
+    Lemon::GUI::ListColumn col1;
+    col1.displayWidth = 220;
+    col1.name = "Name";
+    
+    Lemon::GUI::ListColumn col2;
+    col2.displayWidth = 130;
+    col2.name = "Random Integer";
+
+    lView->AddColumn(col1);
+    lView->AddColumn(col2);
+
+    for(int i = 0; i < 10; i++){
+        Lemon::GUI::ListItem item;
+        int randI = rand() % 1000;
+        char buf[80];
+        sprintf(buf, "Item #%d", i);
+        item.details.push_back(buf);
+        item.details.push_back(std::to_string(randI));
+        lView->AddItem(item);
+    }
+
     while(!win->closed){
         Lemon::LemonEvent ev;
         while(win->PollEvent(ev)){

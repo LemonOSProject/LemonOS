@@ -73,7 +73,7 @@ guitest_src = [
     'GUITest/main.cpp',
 ]
 
-#executable('fileman.lef', fileman_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')
+executable('fileman.lef', fileman_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')
 executable('init.lef', lemonwm_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')
 executable('lsh.lef', lsh_src, cpp_args : application_cpp_args, link_args : ['-llemon'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')
 executable('shell.lef', shell_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype'], install : true, install_dir : meson.current_source_dir() + '/../Initrd')

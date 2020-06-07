@@ -4,6 +4,8 @@
 #include <ctype.h>
 #include <string>
 #include <math.h>
+#include <gui/colours.h>
+#include <assert.h>
 
 namespace Lemon::GUI {
     Widget::Widget() {}
@@ -28,6 +30,8 @@ namespace Lemon::GUI {
     void Widget::OnHover(vector2i_t mousePos){}
 
     void Widget::OnMouseMove(vector2i_t mousePos) {}
+    
+    void Widget::OnDoubleClick(vector2i_t mousePos) {}
 
     void Widget::OnKeyPress(int key) {}
 
@@ -41,13 +45,13 @@ namespace Lemon::GUI {
                 if(align == WidgetAlignment::WAlignRight)
                     fixedBounds.width = (parent->GetFixedBounds().size.x - bounds.pos.x) - parent->GetFixedBounds().pos.x;
                 else
-                    fixedBounds.width = parent->bounds.width - bounds.width - bounds.x;
+                    fixedBounds.width = parent->GetFixedBounds().width - bounds.width - bounds.x;
             } else {
                 fixedBounds.width = bounds.width;
             }
             
             if(sizeY == LayoutSize::Stretch){
-                fixedBounds.height = parent->bounds.height - bounds.height - bounds.y;
+                fixedBounds.height = parent->GetFixedBounds().height - bounds.height - bounds.y;
             } else {
                 fixedBounds.height = bounds.height;
             }
@@ -106,6 +110,14 @@ namespace Lemon::GUI {
         }
     }
 
+    void Container::OnDoubleClick(vector2i_t mousePos){
+        if(active && Graphics::PointInRect(active->GetFixedBounds(), mousePos)){ // If user hasnt clicked on same widget then this aint a double click
+            active->OnDoubleClick(mousePos);
+        } else {
+            OnMouseDown(mousePos);
+        }
+    }
+
     void Container::OnKeyPress(int key){
         if(active) {
             active->OnKeyPress(key);
@@ -113,11 +125,11 @@ namespace Lemon::GUI {
     }
 
     void Container::UpdateFixedBounds(){
+        Widget::UpdateFixedBounds();
+
         for(Widget* w : children){
             w->UpdateFixedBounds();
         }
-
-        Widget::UpdateFixedBounds();
     }
     
     //////////////////////////
@@ -344,20 +356,24 @@ namespace Lemon::GUI {
             if(ypos - sBar.scrollPos + font->height + lineSpacing >= fixedBounds.size.y) break;
         }
 
-        timespec t;
-        clock_gettime(CLOCK_BOOTTIME, &t);
+        if(parent->active == this){ // Only draw cursor if active
+            timespec t;
+            clock_gettime(CLOCK_BOOTTIME, &t);
 
-        long msec = (t.tv_nsec / 1000000.0);
-        if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
-            Graphics::DrawRect(fixedBounds.pos.x + Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font) + 2, fixedBounds.pos.y + cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos + 2, 2, font->height + 2, 0, 0, 0, surface);
+            long msec = (t.tv_nsec / 1000000.0);
+            if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
+                Graphics::DrawRect(fixedBounds.pos.x + Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font) + 2, fixedBounds.pos.y + cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos + 2, 2, font->height + 2, 0, 0, 0, surface);
+        }
 
         if(multiline)
             sBar.Paint(surface, {fixedBounds.pos.x + fixedBounds.size.x - 16, fixedBounds.pos.y});
     }
 
-    void TextBox::LoadText(char* text){
-        char* text2 = text;
+    void TextBox::LoadText(const char* text){
+        const char* text2 = text;
         int lineCount = 1;
+
+        contents.clear();
 
         if(multiline){
             while(*text2){
@@ -424,6 +440,8 @@ namespace Lemon::GUI {
     }
 
     void TextBox::OnKeyPress(int key){
+        if(!editable) return;
+
         if(isprint(key)){
             contents[cursorPos.y].insert(cursorPos.x++, 1, key);
         } else if(key == '\b' || key == KEY_DELETE){
@@ -446,11 +464,15 @@ namespace Lemon::GUI {
                 ResetScrollBar();
             }
         } else if(key == '\n'){
-            std::string s = contents[cursorPos.y].substr(cursorPos.x); // Grab the contents of the line after the cursor
-            contents[cursorPos.y].erase(cursorPos.x); // Erase all that was after the cursor
-            contents.insert(contents.begin() + (++cursorPos.y), s); // Insert new line after cursor and move to that line
-            cursorPos.x = 0;
-            ResetScrollBar();
+            if(multiline){
+                std::string s = contents[cursorPos.y].substr(cursorPos.x); // Grab the contents of the line after the cursor
+                contents[cursorPos.y].erase(cursorPos.x); // Erase all that was after the cursor
+                contents.insert(contents.begin() + (++cursorPos.y), s); // Insert new line after cursor and move to that line
+                cursorPos.x = 0;
+                ResetScrollBar();
+            } else if (OnSubmit){
+                OnSubmit(this);
+            }
         } else if (key == KEY_ARROW_LEFT){ // Move cursor left
             cursorPos.x--;
             if(cursorPos.x < 0){
@@ -480,5 +502,157 @@ namespace Lemon::GUI {
                 }
             } else cursorPos.x = contents[cursorPos.y].length();;
         }
+    }
+
+    //////////////////////////
+    // ListView
+    //////////////////////////
+    ListView::ListView(rect_t bounds) : Widget(bounds) {
+        font = Graphics::GetFont("default");
+
+        assert(font); // Then shit really went down
+    }
+
+    ListView::~ListView(){
+
+    }
+
+    void ListView::Paint(surface_t* surface){
+        Graphics::DrawRect(fixedBounds.x, fixedBounds.y, fixedBounds.width, columnDisplayHeight, colours[Colour::Background], surface);
+        rgba_colour_t textColour = colours[Colour::TextDark];
+        
+        int totalColumnWidth;
+        int xPos = fixedBounds.x;
+        for(ListColumn col : columns){
+            Graphics::DrawString(col.name.c_str(), xPos + 4, fixedBounds.y + 4, textColour.r, textColour.g, textColour.b, surface);
+
+            xPos += col.displayWidth;
+
+            Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, textColour, surface); // Divider
+            xPos++;
+            Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, colours[Colour::TextLight], surface); // Divider
+            xPos++;
+        }
+
+        totalColumnWidth = xPos;
+
+        int yPos = fixedBounds.y + columnDisplayHeight;
+
+        Graphics::DrawRect(fixedBounds.x, fixedBounds.y + columnDisplayHeight, fixedBounds.width, fixedBounds.height - 20, colours[Colour::ContentBackground], surface);
+
+        unsigned index = 0;
+
+        if(showScrollBar) index = sBar.scrollPos / itemHeight;
+
+        for(; index < items.size(); index++){
+            ListItem item = items[index];
+
+            xPos = fixedBounds.x;
+
+            if(index == selected){
+                Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::Foreground], surface);
+            }
+
+            for(unsigned i = 0; i < item.details.size() && i < columns.size(); i++){
+                vector2i_t textPos = {xPos + 2, yPos + itemHeight / 2 - font->height / 2};
+                Graphics::DrawString(item.details[i].c_str(), textPos.x, textPos.y, textColour.r, textColour.g, textColour.b, surface);
+
+                xPos += columns[i].displayWidth + 2;
+            }
+
+            yPos += itemHeight;
+        }
+
+        if(showScrollBar) sBar.Paint(surface, fixedBounds.pos + (vector2i_t){fixedBounds.size.x, 0} - (vector2i_t){16, -columnDisplayHeight});
+    }
+
+    void ListView::AddColumn(ListColumn& column){
+        columns.push_back(ListColumn(column));
+    }
+
+    int ListView::AddItem(ListItem& item){
+        int index = items.size();
+
+        items.push_back(ListItem(item));
+
+        ResetScrollBar();
+
+        return index;
+    }
+
+    void ListView::ClearItems(){
+        items.clear();
+
+        ResetScrollBar();
+    }
+    
+    void ListView::OnMouseDown(vector2i_t mousePos){
+        if(showScrollBar && mousePos.x > fixedBounds.pos.x + fixedBounds.size.x - 16){
+            sBar.OnMouseDownRelative({mousePos.x - fixedBounds.pos.x + fixedBounds.size.x - 16, mousePos.y - columnDisplayHeight - fixedBounds.pos.y});
+            return;
+        }
+
+        selected = floor(((double)mousePos.y + sBar.scrollPos - fixedBounds.pos.y - columnDisplayHeight) / itemHeight);
+
+        if(selected < 0) selected = 0;
+        if(selected >= items.size()) selected = items.size() - 1;
+    }
+
+    void ListView::OnDoubleClick(vector2i_t mousePos){
+        if(!Graphics::PointInRect({fixedBounds.x, fixedBounds.y + columnDisplayHeight, fixedBounds.width - (showScrollBar ? 16 : 0), fixedBounds.height - columnDisplayHeight}, mousePos)){
+            OnMouseDown(mousePos);
+            return;
+        } else {
+            int clickedItem = floor(((double)mousePos.y + sBar.scrollPos - fixedBounds.pos.y - columnDisplayHeight) / itemHeight);
+
+            if(selected == clickedItem){ // Make sure the same item was clicked twice
+                if(OnSubmit) OnSubmit(items[selected], this);
+            } else {
+                selected = clickedItem;
+
+                if(selected < 0) selected = 0;
+                if(selected >= items.size()) selected = items.size() - 1;
+            }
+        }
+    }
+
+    void ListView::OnMouseMove(vector2i_t mousePos){
+        if(showScrollBar && sBar.pressed){
+            sBar.OnMouseMoveRelative({0, mousePos.y - fixedBounds.pos.y});
+        }
+    }
+
+    void ListView::OnMouseUp(vector2i_t mousePos){
+        sBar.pressed = false;
+    }
+
+    void ListView::OnKeyPress(int key){
+        switch(key){
+            case KEY_ARROW_UP:
+                selected--;
+                break;
+            case KEY_ARROW_DOWN:
+                selected++;
+                break;
+            case KEY_ENTER:
+                if(OnSubmit) OnSubmit(items[selected], this);
+                return;
+        }
+
+        if(selected < 0) selected = 0;
+        if(selected >= items.size()) selected = items.size() - 1;
+    }
+    
+    void ListView::ResetScrollBar(){
+        if((items.size() * itemHeight) > (fixedBounds.size.y - columnDisplayHeight)) showScrollBar = true;
+        else showScrollBar = false;
+
+        sBar.ResetScrollBar(fixedBounds.size.y - columnDisplayHeight, items.size() * itemHeight);
+    }
+
+    void ListView::UpdateFixedBounds(){
+        Widget::UpdateFixedBounds();
+
+        ResetScrollBar();
     }
 }

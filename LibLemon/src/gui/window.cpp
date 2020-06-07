@@ -149,7 +149,18 @@ namespace Lemon::GUI{
     void Window::GUIHandleEvent(LemonEvent& ev){
         switch(ev.event){
             case EventMousePressed:
-                rootContainer.OnMouseDown(ev.mousePos);
+                {
+                    timespec newClick;
+                    clock_gettime(CLOCK_BOOTTIME, &newClick);
+
+                    if((newClick.tv_nsec / 1000000 + newClick.tv_sec * 1000) - (lastClick.tv_nsec / 1000000 + lastClick.tv_sec * 1000) < 600){ // Douuble click if clicks less than 600ms apart
+                        rootContainer.OnDoubleClick(ev.mousePos);
+                    } else {
+                        rootContainer.OnMouseDown(ev.mousePos);
+                    }
+
+                    lastClick = newClick;
+                }
                 break;
             case EventMouseReleased:
                 rootContainer.OnMouseUp(ev.mousePos);

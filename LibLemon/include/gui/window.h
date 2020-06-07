@@ -79,6 +79,8 @@ namespace Lemon::GUI {
         Container rootContainer;
 
         int windowType = WindowType::Basic;
+
+        timespec lastClick;
     public:
         surface_t surface;
         bool closed = false; // Set to true when close button pressed
