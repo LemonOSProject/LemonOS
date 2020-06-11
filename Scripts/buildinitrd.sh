@@ -1,5 +1,3 @@
-mkdir -p InitrdWriter/Contents
-
 ninja -C Applications/build install
 
 cp Resources/* Initrd/

@@ -24,6 +24,7 @@ namespace Lemon::GUI {
         WMResize,
         WMUpdateFlags,
         WMMinimize,
+        WMInitializeShellConnection,
     };
 
     struct WMCreateWindowCommand{

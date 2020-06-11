@@ -1,17 +1,19 @@
-#include <gui/shell.h>
+#include <core/shell.h>
 #include <core/msghandler.h>
 #include <string.h>
 
 #include "shell.h"
 
-ShellInstance::ShellInstance(Lemon::GUI::Window* taskbar, Lemon::GUI::Window* menu){
-	sockaddr_un shellSrvAddr;
-	strcpy(shellSrvAddr.sun_path, Lemon::GUI::shellSocketAddress);
-	shellSrvAddr.sun_family = AF_UNIX;
-	shellSrv = Lemon::MessageServer(shellSrvAddr, sizeof(sockaddr_un));
+ShellInstance::ShellInstance(sockaddr_un& address) : shellSrv(address, sizeof(sockaddr_un)) {
 
-    this->taskbar = taskbar;
+}
+
+void ShellInstance::SetMenu(Lemon::GUI::Window* menu){
     this->menu = menu;
+}
+
+void ShellInstance::SetTaskbar(Lemon::GUI::Window* taskbar){
+    this->taskbar = taskbar;
 }
 
 void ShellInstance::PollCommands(){
@@ -21,18 +23,29 @@ void ShellInstance::PollCommands(){
         }
 
         if(m->msg.protocol == LEMON_MESSAGE_PROTOCOL_SHELLCMD){
-            Lemon::GUI::ShellCommand* cmd = (Lemon::GUI::ShellCommand*)m->msg.data;
+            Lemon::Shell::ShellCommand* cmd = (Lemon::Shell::ShellCommand*)m->msg.data;
 
             switch (cmd->cmd)
             {
-            case Lemon::GUI::LemonShellAddWindow:
+            case Lemon::Shell::LemonShellAddWindow:
                 {
+                    ShellWindow* win = new ShellWindow();
+
                     char* title = (char*)malloc(cmd->titleLength + 1);
                     strncpy(title, cmd->windowTitle, cmd->titleLength);
                     title[cmd->titleLength] = 0; // Null terminate
+
+                    win->title = title;
+
+                    free(title);
+
+                    win->id = cmd->windowID;
+                    win->state = cmd->windowState;
+
+                    windows.insert(std::pair<int, ShellWindow*>(cmd->windowID, win));
                 }
                 break;
-            case Lemon::GUI::LemonShellRemoveWindow:
+            case Lemon::Shell::LemonShellRemoveWindow: {
                 ShellWindow* win;
                 try{
                     win = windows.at(cmd->windowID);
@@ -43,11 +56,11 @@ void ShellInstance::PollCommands(){
 
                 windows.erase(cmd->windowID);
                 break;
-            case Lemon::GUI::LemonShellToggleMenu:
+            } case Lemon::Shell::LemonShellToggleMenu:
                 showMenu = !showMenu;
                 menu->Minimize(!showMenu);
                 break;
-            case Lemon::GUI::LemonShellSetActive:
+            case Lemon::Shell::LemonShellSetWindowState: {
                 ShellWindow* win;
                 try{
                     win = windows.at(cmd->windowID);
@@ -57,12 +70,12 @@ void ShellInstance::PollCommands(){
                 }
 
                 if(active){
-                    active->state = Lemon::GUI::ShellWindowStateNormal;
+                    active->state = Lemon::Shell::ShellWindowStateNormal;
                 }
 
                 active = win;
                 break;
-            case Lemon::GUI::LemonShellOpen:
+            } case Lemon::Shell::LemonShellOpen: {
                 char* path = (char*)malloc(cmd->pathLength + 1);
 
                 strncpy(path, cmd->path, cmd->pathLength);
@@ -72,7 +85,7 @@ void ShellInstance::PollCommands(){
 
                 free(path);
                 break;
-            default:
+            } default:
                 break;
             }
         }

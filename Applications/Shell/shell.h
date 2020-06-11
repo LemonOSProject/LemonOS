@@ -3,9 +3,10 @@
 
 #include <map>
 
-struct ShellWindow{
+class ShellWindow{
+public:
 	int id;
-	char* title;
+	std::string title;
 	int state;
 };
 
@@ -21,7 +22,10 @@ public:
     ShellWindow* active = nullptr;
     bool showMenu = true;
 
-    ShellInstance(Lemon::GUI::Window* taskbar, Lemon::GUI::Window* menu);
+    ShellInstance(sockaddr_un& address);
+
+    void SetMenu(Lemon::GUI::Window* menu);
+    void SetTaskbar(Lemon::GUI::Window* taskbar);
 
     void Update();
     void Open(char* path);

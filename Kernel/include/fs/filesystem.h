@@ -107,13 +107,14 @@ public:
 
     virtual ~FsNode();
 
-    virtual size_t Read(size_t, size_t, uint8_t *);
-    virtual size_t Write(size_t, size_t, uint8_t *);
-    virtual fs_fd_t* Open(size_t flags);
-    virtual void Close();
-    virtual int ReadDir(struct fs_dirent*, uint32_t);
-    virtual FsNode* FindDir(char* name);
-    virtual int Ioctl(uint64_t cmd, uint64_t arg);
+    virtual size_t Read(size_t, size_t, uint8_t *); // Read Data
+    virtual size_t Write(size_t, size_t, uint8_t *); // Write Data
+    virtual fs_fd_t* Open(size_t flags); // Open
+    virtual void Close(); // Close
+    virtual int ReadDir(struct fs_dirent*, uint32_t); // Read Directory
+    virtual FsNode* FindDir(char* name); // Write directory
+    virtual int Ioctl(uint64_t cmd, uint64_t arg); // I/O Control
+    virtual void Update(); // Update node on device
 
     virtual bool CanRead() { return true; }
     virtual bool CanWrite() { return false; }

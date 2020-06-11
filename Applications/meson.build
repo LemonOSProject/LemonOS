@@ -20,6 +20,7 @@ lsh_src = [
 
 shell_src = [
     'Shell/main.cpp',
+    'Shell/shell.cpp',
 ]
 
 snake_src = [

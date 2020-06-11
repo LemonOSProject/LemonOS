@@ -18,8 +18,10 @@
 #include <lemon/info.h>
 #include <core/sharedmem.h>
 #include <lemon/util.h>
-#include <gui/shell.h>
+#include <core/shell.h>
 #include <map>
+
+#include "shell.h"
 
 #define MENU_ITEM_HEIGHT 24
 
@@ -125,6 +127,10 @@ void LoadConfig(){
 bool paint = true;
 
 int main(){
+	sockaddr_un shellAddress;
+	strcpy(shellAddress.sun_path, Lemon::Shell::shellSocketAddress);
+	shellAddress.sun_family = AF_UNIX;
+	ShellInstance sh = ShellInstance(shellAddress);
 
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
 	syscall(SYS_UNAME, (uintptr_t)versionString,0,0,0,0);

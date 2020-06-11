@@ -54,6 +54,7 @@ cpp_files = [
     'src/streams.cpp',
 
     'src/fs/fat32.cpp',
+    'src/fs/ext2.cpp',
     'src/fs/filesystem.cpp',
     'src/fs/fsvolume.cpp',
     'src/fs/tar.cpp',

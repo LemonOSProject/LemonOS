@@ -60,6 +60,7 @@ surface_t menuSurface;
 surface_t windowSurface;
 
 int columnCount = 80;
+int rowCount = 25;
 std::vector<std::vector<TerminalChar>> buffer;
 
 vector2i_t curPos = {0, 0};
@@ -76,9 +77,9 @@ void OnPaint(surface_t* surface){
 	int line = 0;
 	int i = 0;
 	int fontHeight = terminalFont->height;
-	int _currentLine = (curPos.y < 25) ? 0 : (curPos.y - 24);
+	int _currentLine = (curPos.y < rowCount) ? 0 : (curPos.y - (rowCount - 1));
 
-	for(int i = 0; i < 25 && i <= curPos.y; i++){
+	for(int i = 0; i < rowCount && i <= curPos.y; i++){
 		for(int j = 0; j < buffer[_currentLine + i].size(); j++){
 			TerminalChar ch = buffer[_currentLine + i][j];
 			rgba_colour_t fg = colours[ch.s.fgColour];
@@ -250,8 +251,6 @@ void PrintChar(char ch){
 				curPos.x = buffer[curPos.y].size();
 			}
 			
-			//buffer[curPos.y][curPos.x].s = state;
-			//buffer[curPos.y][curPos.x].c = 0;
 			buffer[curPos.y].pop_back();
 			break;
 		case ' ':
@@ -297,7 +296,7 @@ int main(char argc, char** argv){
 	}
 
 	winsize wSz = {
-		.ws_row = 25,
+		.ws_row = rowCount,
 		.ws_col = columnCount,
 		.ws_xpixel = window->GetSize().x,
 		.ws_ypixel = window->GetSize().y,
@@ -321,10 +320,14 @@ int main(char argc, char** argv){
 				window->Resize(ev.resizeBounds);
 
 				columnCount = window->GetSize().x / 8;
+				rowCount = window->GetSize().y / terminalFont->height;
 
 				wSz.ws_col = columnCount;
+				wSz.ws_row = rowCount;
 				wSz.ws_xpixel = window->GetSize().x;
 				wSz.ws_ypixel = window->GetSize().y;
+				
+				ioctl(masterPTYFd, TIOCSWINSZ, &wSz);
 			}
 		}
 

@@ -113,6 +113,7 @@ public:
 class WMInstance {
 protected:
     Lemon::MessageServer server;
+    Lemon::MessageClient shellClient;
 
     WMWindow* active;
     bool drag = false;

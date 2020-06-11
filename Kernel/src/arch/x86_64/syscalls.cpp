@@ -361,13 +361,14 @@ long SysStat(regs64_t* r){
 
 	stat->st_dev = 0;
 	stat->st_ino = node->inode;
+	stat->st_mode = 0;
 	
-	if(node->flags & FS_NODE_DIRECTORY) stat->st_mode = S_IFDIR;
-	if(node->flags & FS_NODE_FILE) stat->st_mode = S_IFREG;
-	if(node->flags & FS_NODE_BLKDEVICE) stat->st_mode = S_IFBLK;
-	if(node->flags & FS_NODE_CHARDEVICE) stat->st_mode = S_IFCHR;
-	if(node->flags & FS_NODE_SYMLINK) stat->st_mode = S_IFLNK;
-	if(node->flags & FS_NODE_SOCKET) stat->st_mode = S_IFSOCK;
+	if(node->flags & FS_NODE_DIRECTORY) stat->st_mode |= S_IFDIR;
+	if(node->flags & FS_NODE_FILE) stat->st_mode |= S_IFREG;
+	if(node->flags & FS_NODE_BLKDEVICE) stat->st_mode |= S_IFBLK;
+	if(node->flags & FS_NODE_CHARDEVICE) stat->st_mode |= S_IFCHR;
+	if(node->flags & FS_NODE_SYMLINK) stat->st_mode |= S_IFLNK;
+	if(node->flags & FS_NODE_SOCKET) stat->st_mode |= S_IFSOCK;
 
 	stat->st_nlink = 0;
 	stat->st_uid = node->uid;

@@ -2,8 +2,14 @@
 
 #include <gui/window.h>
 #include <sys/un.h>
+#include <core/shell.h>
 
 WMInstance::WMInstance(surface_t& surface, sockaddr_un address) : server(address, sizeof(sockaddr_un)){
+    sockaddr_un shellAddr;
+    strcpy(shellAddr.sun_path, Lemon::Shell::shellSocketAddress);
+    shellAddr.sun_family = AF_UNIX;
+    //shellClient.Connect(shellAddr, sizeof(sockaddr_un));
+
     this->surface = surface;
 }
 
@@ -60,6 +66,10 @@ void WMInstance::Poll(){
                 win->RecalculateButtonRects();
 
                 windows.push_back(win);
+
+                //Lemon::Shell::AddWindow(m->clientFd, Lemon::Shell::ShellWindowState::ShellWindowStateActive, title, shellClient);
+
+                active = win;
             } else if (cmd->cmd == Lemon::GUI::WMResize){
                 WMWindow* win = FindWindow(m->clientFd);
 
@@ -77,6 +87,8 @@ void WMInstance::Poll(){
                     printf("WM: Warning: Unknown Window ID: %d\n", m->clientFd);
                     continue;
                 }
+                
+                //Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
 
                 windows.remove(win);
 
