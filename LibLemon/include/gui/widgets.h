@@ -270,7 +270,7 @@ namespace Lemon::GUI {
         static surface_t icons;
 
         std::string currentPath;
-        FileView(rect_t bounds, char* path, void(*_OnFileOpened)(char*, FileView*));
+        FileView(rect_t bounds, const char* path, void(*_OnFileOpened)(char*, FileView*) = nullptr);
         
         void Refresh();
 

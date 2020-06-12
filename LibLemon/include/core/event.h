@@ -17,6 +17,8 @@ namespace Lemon {
         EventWindowClosed,
         EventWindowMinimized,
         EventWindowResize,
+        EventWindowAdded,
+        EventWindowRemoved,
     };
 
     typedef struct LemonEvent {

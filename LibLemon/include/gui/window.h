@@ -8,6 +8,7 @@
 
 #define WINDOW_FLAGS_NODECORATION 0x1
 #define WINDOW_FLAGS_RESIZABLE 0x2
+#define WINDOW_FLAGS_TASKBAR 0x4
 
 namespace Lemon::GUI {
     static const char* wmSocketAddress = "lemonwm";
@@ -59,7 +60,7 @@ namespace Lemon::GUI {
         uint64_t currentBuffer;
         uint64_t buffer1Offset;
         uint64_t buffer2Offset;
-        uint64_t padding; // Pad to 32 bytes
+        uint64_t drawing; // Is being drawn?
     };
 
     enum WindowType {
@@ -106,6 +107,8 @@ namespace Lemon::GUI {
 
         uint32_t GetFlags() { return flags; }
         vector2i_t GetSize() { return {surface.width, surface.height}; };
+
+        void SendWMMsg(LemonMessage* m) { msgClient.Send(m); }
 
         WindowPaintHandler OnPaint = nullptr;
     };

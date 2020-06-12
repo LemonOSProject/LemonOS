@@ -165,10 +165,10 @@ namespace fs::Ext2{
 
     class Ext2Node : public FsNode{
     public:
-        size_t Read(size_t, size_t, uint8_t *);
-        size_t Write(size_t, size_t, uint8_t *);
-        int ReadDir(struct fs_dirent*, uint32_t);
-        FsNode* FindDir(char* name);
+        //size_t Read(size_t, size_t, uint8_t *);
+        //size_t Write(size_t, size_t, uint8_t *);
+        //int ReadDir(struct fs_dirent*, uint32_t);
+        //FsNode* FindDir(char* name);
 
         Ext2Volume* vol;
     };

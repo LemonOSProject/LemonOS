@@ -83,5 +83,10 @@ namespace fs::Ext2{
         } else {
             inodeSize = 128;
         }
+
+        mountPoint = new Ext2Node();
+        strcpy(mountPoint->name, name);
+        mountPoint->flags = FS_NODE_MOUNTPOINT | FS_NODE_DIRECTORY;
+        strcpy(mountPointDirent.name, name);
     }
 }

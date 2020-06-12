@@ -30,7 +30,7 @@ int main(int argc, char** argv){
 	if(argc > 1){
 		filePath = argv[1];
 	} else {
-		//filePath = Lemon::GUI::FileDialog("/");
+		filePath = Lemon::GUI::FileDialog("/");
 
 		if(!filePath){
 			//Lemon::GUI::MessageBox("Invalid filepath!", MESSAGEBOX_OK);

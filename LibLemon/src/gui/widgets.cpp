@@ -96,11 +96,8 @@ namespace Lemon::GUI {
     }
 
     void Container::OnMouseUp(vector2i_t mousePos){
-        for(Widget* w : children){
-            if(Graphics::PointInRect(w->GetFixedBounds(), mousePos)){
-                w->OnMouseUp(mousePos);
-                break;
-            }
+        if(active){
+            active->OnMouseUp(mousePos);
         }
     }
 
@@ -215,7 +212,7 @@ namespace Lemon::GUI {
     }
 
     void Button::OnMouseUp(vector2i_t mousePos){
-        if(OnPress) OnPress(this);
+        if(Graphics::PointInRect(fixedBounds, mousePos) && OnPress) OnPress(this);
 
         pressed = false;
     }
@@ -297,6 +294,7 @@ namespace Lemon::GUI {
 
     void ScrollBarHorizontal::Paint(surface_t* surface, vector2i_t offset, int height){
         Graphics::DrawRect(offset.x, offset.y, width, height, 128, 128, 128, surface);
+        
         if(pressed) 
             Graphics::DrawRect(offset.x + scrollBar.pos.x, offset.y, scrollBar.size.x, height, 224/1.1, 224/1.1, 219/1.1, surface);
         else 
@@ -554,8 +552,28 @@ namespace Lemon::GUI {
             }
 
             for(unsigned i = 0; i < item.details.size() && i < columns.size(); i++){
+
+                std::string str = item.details[i];
+
+                if(Graphics::GetTextLength(str.c_str()) > columns[i].displayWidth - 2) {
+                    int l = str.length() - 1;
+                    while(l){
+                        str = str.substr(0, l);
+
+                        if(Graphics::GetTextLength(str.c_str()) < columns[i].displayWidth + 2) {
+                            if(l > 2){
+                                str.erase(str.end() - 1); // Omit last character
+                                str.append("..."); // We have a variable width font should we should only have to omit 1 character
+                            }
+                            break;
+                        }
+                        
+                        l = str.length() - 1;
+                    }
+                }
+
                 vector2i_t textPos = {xPos + 2, yPos + itemHeight / 2 - font->height / 2};
-                Graphics::DrawString(item.details[i].c_str(), textPos.x, textPos.y, textColour.r, textColour.g, textColour.b, surface);
+                Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour.r, textColour.g, textColour.b, surface);
 
                 xPos += columns[i].displayWidth + 2;
             }

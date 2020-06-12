@@ -37,3 +37,7 @@ FsNode* FsNode::FindDir(char* name){
 int FsNode::Ioctl(uint64_t cmd, uint64_t arg){
     return -1;
 }
+
+void FsNode::Update(){
+    
+}

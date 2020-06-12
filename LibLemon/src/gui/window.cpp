@@ -64,7 +64,7 @@ namespace Lemon::GUI{
 
         free(destroyMsg);
 
-        //usleep(1000);
+        usleep(100);
     }
 
     void Window::Minimize(bool minimized){
@@ -118,6 +118,8 @@ namespace Lemon::GUI{
     }
 
     void Window::SwapBuffers(){
+        if(windowBufferInfo->drawing) return;
+
         if(surface.buffer == buffer1){
             windowBufferInfo->currentBuffer = 0;
             surface.buffer = buffer2;

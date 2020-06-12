@@ -539,7 +539,7 @@ long SysReadDir(regs64_t* r){
 
 	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 		if(r->rsi) *((int*)r->rsi) = 0;
-		return 2;
+		return -1;
 	} 
 	
 	fs_dirent_t* direntPointer = (fs_dirent_t*)r->rcx;
@@ -548,7 +548,7 @@ long SysReadDir(regs64_t* r){
 
 	if(!(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->flags & FS_NODE_DIRECTORY)){
 		if(r->rsi) *((int*)r->rsi) = 0;
-		return 2;
+		return -ENOTDIR;
 	}
 
 	int ret = fs::ReadDir(Scheduler::GetCurrentProcess()->fileDescriptors[fd], direntPointer, count);
@@ -1484,5 +1484,5 @@ void SyscallHandler(regs64_t* regs) {
 }
 
 void InitializeSyscalls() {
-	IDT::RegisterInterruptHandler(0x69,SyscallHandler);
+	IDT::RegisterInterruptHandler(0x69, SyscallHandler);
 }

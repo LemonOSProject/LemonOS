@@ -57,7 +57,7 @@ namespace Lemon::GUI {
         fv->Refresh();
     }
     
-    FileView::FileView(rect_t bounds, char* path, void(*_OnFileOpened)(char*, FileView*)) : Container(bounds) {
+    FileView::FileView(rect_t bounds, const char* path, void(*_OnFileOpened)(char*, FileView*)) : Container(bounds) {
         OnFileOpened = _OnFileOpened;
         currentPath = path;
 
@@ -68,9 +68,9 @@ namespace Lemon::GUI {
         fileList->OnSubmit = OnListSubmit;
 
         nameCol.name = "Name";
-        nameCol.displayWidth = 300;
+        nameCol.displayWidth = 280;
         sizeCol.name = "Size";
-        sizeCol.displayWidth = 50;
+        sizeCol.displayWidth = 80;
 
         fileList->AddColumn(nameCol);
         fileList->AddColumn(sizeCol);
@@ -85,8 +85,11 @@ namespace Lemon::GUI {
         char str[150];
         int i = 0;
         lemon_dirent_t dirent;
-        while(lemon_readdir(sideBar, i++, &dirent)){
+        while(lemon_readdir(sideBar, i++, &dirent) > 0){
             int icon = 3;
+
+            printf("Name: %s\n", dirent.name);
+
             if(strncmp(dirent.name, "hd", 2) == 0 && dirent.name[2]){ // hd(x)?
                 sprintf(str, "Harddrive (%s)", dirent.name);
                 icon = 0;
@@ -140,7 +143,7 @@ namespace Lemon::GUI {
 
         int i = 0;
         lemon_dirent_t dirent;
-        while(lemon_readdir(currentDir, i++, &dirent)){
+        while(lemon_readdir(currentDir, i++, &dirent) > 0){
             ListItem item;
             item.details.push_back(dirent.name);
 
@@ -149,7 +152,7 @@ namespace Lemon::GUI {
                 continue;
             }
 
-            sprintf(buf, "%s%s", currentPath.c_str(), dirent.name);
+            sprintf(buf, "%s%s\0", currentPath.c_str(), dirent.name);
             
             int fileFd = open(buf, O_RDONLY);
 
@@ -183,6 +186,7 @@ namespace Lemon::GUI {
 
     void FileView::OnSubmit(ListItem& item, ListView* list){
         char buf[PATH_MAX];
+        memset(buf, 0, PATH_MAX);
 
         sprintf(buf, "%s%s", currentPath.c_str(), item.details[0].c_str());
         

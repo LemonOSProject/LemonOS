@@ -1,4 +1,4 @@
-#include <gui/shell.h>
+#include <core/shell.h>
 #include <gui/window.h>
 
 #include <map>

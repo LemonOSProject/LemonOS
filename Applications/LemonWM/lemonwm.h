@@ -103,11 +103,13 @@ class CompositorInstance{
 protected:
     WMInstance* wm;
 
+    timespec lastRender;
 public:
     CompositorInstance(WMInstance* wm);
     void Paint();
 
     surface_t windowButtons;
+    surface_t mouseCursor;
 };
 
 class WMInstance {
@@ -129,7 +131,10 @@ protected:
     void MinimizeWindow(WMWindow* win, bool state);
     void MinimizeWindow(int id, bool state);
 public:
+    bool redrawBackground = true;
+
     surface_t surface;
+    surface_t screenSurface;
 
     std::list<WMWindow*> windows;
 
@@ -147,10 +152,10 @@ public:
 };
 
 static inline bool PointInWindow(WMWindow* win, vector2i_t point){
-	int windowHeight = (win->flags & WINDOW_FLAGS_NODECORATION) ? win->size.y : (win->size.y + WINDOW_TITLEBAR_HEIGHT + (WINDOW_BORDER_THICKNESS * 3)); // Account for titlebar and borders
-	int windowWidth = (win->flags & WINDOW_FLAGS_NODECORATION) ? win->size.x : (win->size.x + (WINDOW_BORDER_THICKNESS * 3)); // Account for borders and extend the window a little bit so it is easier to resize
+	int windowHeight = (win->flags & WINDOW_FLAGS_NODECORATION) ? win->size.y : (win->size.y + WINDOW_TITLEBAR_HEIGHT + (WINDOW_BORDER_THICKNESS * 4)); // Account for titlebar and borders
+	int windowWidth = (win->flags & WINDOW_FLAGS_NODECORATION) ? win->size.x : (win->size.x + (WINDOW_BORDER_THICKNESS * 4)); // Account for borders and extend the window a little bit so it is easier to resize
 
-    vector2i_t windowOffset = (win->flags & WINDOW_FLAGS_NODECORATION) ? (vector2i_t){0, 0} : (vector2i_t){-1, -1};
+    vector2i_t windowOffset = (win->flags & WINDOW_FLAGS_NODECORATION) ? (vector2i_t){0, 0} : (vector2i_t){-WINDOW_BORDER_THICKNESS, -WINDOW_BORDER_THICKNESS};
 
 	return Lemon::Graphics::PointInRect({{win->pos + windowOffset},{windowWidth, windowHeight}}, point);
 }

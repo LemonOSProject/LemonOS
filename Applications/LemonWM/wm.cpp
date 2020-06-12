@@ -5,12 +5,9 @@
 #include <core/shell.h>
 
 WMInstance::WMInstance(surface_t& surface, sockaddr_un address) : server(address, sizeof(sockaddr_un)){
-    sockaddr_un shellAddr;
-    strcpy(shellAddr.sun_path, Lemon::Shell::shellSocketAddress);
-    shellAddr.sun_family = AF_UNIX;
-    //shellClient.Connect(shellAddr, sizeof(sockaddr_un));
 
     this->surface = surface;
+    screenSurface.buffer = nullptr;
 }
 
 WMWindow* WMInstance::FindWindow(int id){
@@ -24,6 +21,8 @@ WMWindow* WMInstance::FindWindow(int id){
 }
 
 void WMInstance::MinimizeWindow(WMWindow* win, bool state){
+    redrawBackground = true;
+
     win->Minimize(state);
 
     if(state == false) { // Showing the window to add to top
@@ -67,7 +66,7 @@ void WMInstance::Poll(){
 
                 windows.push_back(win);
 
-                //Lemon::Shell::AddWindow(m->clientFd, Lemon::Shell::ShellWindowState::ShellWindowStateActive, title, shellClient);
+                Lemon::Shell::AddWindow(m->clientFd, Lemon::Shell::ShellWindowState::ShellWindowStateActive, title, shellClient);
 
                 active = win;
             } else if (cmd->cmd == Lemon::GUI::WMResize){
@@ -88,13 +87,20 @@ void WMInstance::Poll(){
                     continue;
                 }
                 
-                //Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
+                Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
 
                 windows.remove(win);
+                redrawBackground = true;
 
                 delete win;
             } else if(cmd->cmd == Lemon::GUI::WMMinimize){
                 MinimizeWindow(m->clientFd, cmd->minimized);
+            } else if(cmd->cmd == Lemon::GUI::WMInitializeShellConnection){
+                sockaddr_un shellAddr;
+                strcpy(shellAddr.sun_path, Lemon::Shell::shellSocketAddress);
+                shellAddr.sun_family = AF_UNIX;
+                shellClient.Connect(shellAddr, sizeof(sockaddr_un));
+                printf("Connected\n");
             }
         } else if (m && m->msg.protocol == 0){ // Client Disconnected
             WMWindow* win = FindWindow(m->clientFd);
@@ -103,7 +109,10 @@ void WMInstance::Poll(){
                 continue;
             }
 
+            Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
+            
             windows.remove(win);
+            redrawBackground = true;
 
             delete win;
         }
@@ -223,9 +232,14 @@ void WMInstance::MouseMove(){
             return;
         }
 
+        if(ev.resizeBounds.x < 100) ev.resizeBounds.x = 100;
+        if(ev.resizeBounds.y < 50) ev.resizeBounds.y = 50;
+
         PostEvent(ev, active);
         
         resizeStartPos = input.mouse.pos;
+
+        redrawBackground = true;
     } else if (active && PointInWindowProper(active, input.mouse.pos)){
         Lemon::LemonEvent ev;
         ev.event = Lemon::EventMouseMoved;
@@ -255,6 +269,7 @@ void WMInstance::Update(){
 
     if(drag && active){
         active->pos = input.mouse.pos - dragOffset; // Move window
+        redrawBackground = true;
     }
     
     compositor.Paint(); // Render the frame

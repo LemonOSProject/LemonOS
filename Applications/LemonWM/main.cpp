@@ -42,6 +42,10 @@ int main(){
     if(int e = Lemon::Graphics::LoadImage("/initrd/winbuttons.bmp", &wm.compositor.windowButtons)){
         printf("LemonWM: Warning: Error %d loading buttons.\n", e);
     }
+
+    if(int e = Lemon::Graphics::LoadImage("/initrd/mouse.png", &wm.compositor.mouseCursor)){
+        printf("LemonWM: Warning: Error %d loading mouse cursor.\n", e);
+    }
     
 	timespec t;
 	clock_gettime(CLOCK_BOOTTIME, &t);
@@ -67,9 +71,9 @@ int main(){
         wm.Update();
     }
 
+    wm.screenSurface = fbSurface;
+
     for(;;){
         wm.Update();
-
-        Lemon::Graphics::surfacecpy(&fbSurface, &wm.surface);
     }
 }

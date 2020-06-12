@@ -28,6 +28,7 @@
 fb_info_t videoInfo;
 Lemon::GUI::Window* taskbar;
 Lemon::GUI::Window* menu;
+ShellInstance* shell;
 
 bool showMenu = true;
 
@@ -57,6 +58,12 @@ void OnTaskbarPaint(surface_t* surface){
 
 	sprintf(memString, "Used Memory: %d/%d KB", sysInfo.usedMem, sysInfo.totalMem);
 	Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255, 255, surface);
+
+	int xpos = 100;
+	for(std::pair<int, ShellWindow*> win : shell->windows){
+		Lemon::Graphics::DrawString(win.second->title.c_str(), xpos, 10, 255, 255, 255, surface);
+		xpos += 100;
+	}
 }
 
 void OnMenuPaint(surface_t* surface){
@@ -130,20 +137,30 @@ int main(){
 	sockaddr_un shellAddress;
 	strcpy(shellAddress.sun_path, Lemon::Shell::shellSocketAddress);
 	shellAddress.sun_family = AF_UNIX;
-	ShellInstance sh = ShellInstance(shellAddress);
+	shell = new ShellInstance(shellAddress);
 
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
 	syscall(SYS_UNAME, (uintptr_t)versionString,0,0,0,0);
 
-	taskbar = new Lemon::GUI::Window("", {videoInfo.width, 30}, WINDOW_FLAGS_NODECORATION, Lemon::GUI::WindowType::Basic, {0, videoInfo.height - 30});
+	taskbar = new Lemon::GUI::Window("", {videoInfo.width, 30}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_TASKBAR, Lemon::GUI::WindowType::Basic, {0, videoInfo.height - 30});
 	taskbar->OnPaint = OnTaskbarPaint;
 
 	menu = new Lemon::GUI::Window("", {240, 300}, WINDOW_FLAGS_NODECORATION, Lemon::GUI::WindowType::Basic, {0, videoInfo.height - 30 - 300});
 	menu->OnPaint = OnMenuPaint;
 
+	Lemon::LemonMessage* msg = (Lemon::LemonMessage*)malloc(sizeof(Lemon::LemonMessage) + sizeof(Lemon::GUI::WMCommand));
+	Lemon::GUI::WMCommand* cmd = (Lemon::GUI::WMCommand*)msg->data;
+	cmd->cmd = Lemon::GUI::WMInitializeShellConnection;
+	msg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+	msg->length = sizeof(Lemon::GUI::WMCommand);
+	taskbar->SendWMMsg(msg);
+	free(msg);
+
 	LoadConfig();
 
 	for(;;){
+		shell->Update();
+
 		Lemon::LemonEvent ev;
 		while(taskbar->PollEvent(ev)){
 			if(ev.event == Lemon::EventMouseReleased){
