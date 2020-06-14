@@ -45,7 +45,7 @@ namespace Lemon::GUI {
             if(FileView::icons.buffer)
                 Graphics::surfacecpy(surface, &FileView::icons, bounds.pos + (vector2i_t){2, 2}, (rect_t){{icon * 16, 0}, {16, 16}});
             
-            Graphics::DrawString(label, bounds.pos.x + 20, bounds.pos.y + bounds.size.y / 2 - 8, 0, 0, 0, surface);
+            Graphics::DrawString(label.c_str(), bounds.pos.x + 20, bounds.pos.y + bounds.size.y / 2 - 8, 0, 0, 0, surface);
         }
 	};
 
@@ -57,7 +57,7 @@ namespace Lemon::GUI {
         fv->Refresh();
     }
     
-    FileView::FileView(rect_t bounds, const char* path, void(*_OnFileOpened)(char*, FileView*)) : Container(bounds) {
+    FileView::FileView(rect_t bounds, const char* path, void(*_OnFileOpened)(const char*, FileView*)) : Container(bounds) {
         OnFileOpened = _OnFileOpened;
         currentPath = path;
 
@@ -139,7 +139,7 @@ namespace Lemon::GUI {
             return;
         }
 
-        char buf[PATH_MAX];
+        std::string absPath;
 
         int i = 0;
         lemon_dirent_t dirent;
@@ -152,9 +152,9 @@ namespace Lemon::GUI {
                 continue;
             }
 
-            sprintf(buf, "%s%s\0", currentPath.c_str(), dirent.name);
+            absPath = currentPath + dirent.name;
             
-            int fileFd = open(buf, O_RDONLY);
+            int fileFd = open(absPath.c_str(), O_RDONLY);
 
             if(fileFd <= 0){
                 perror("GUI: FileView: File: open:");
@@ -184,13 +184,16 @@ namespace Lemon::GUI {
         #endif
     }
 
-    void FileView::OnSubmit(ListItem& item, ListView* list){
-        char buf[PATH_MAX];
-        memset(buf, 0, PATH_MAX);
+    void FileView::OnSubmit(std::string& path){
+        std::string absPath;
 
-        sprintf(buf, "%s%s", currentPath.c_str(), item.details[0].c_str());
+        if(path[0] == '/'){ // Absolute Path
+            absPath = path;
+        } else { // Relative Path
+            absPath = currentPath + path;
+        }
         
-        int fileFd = open(buf, O_RDONLY);
+        int fileFd = open(absPath.c_str(), O_RDONLY);
 
         if(fileFd <= 0){
             perror("GUI: FileView: OnSubmit: File: open:");
@@ -210,49 +213,23 @@ namespace Lemon::GUI {
         }
 
         if(S_ISDIR(statResult.st_mode)){
-            currentPath = buf;
+            currentPath = absPath;
 
             Refresh();
         } else if(OnFileOpened) {
-            OnFileOpened(buf, this);
+            OnFileOpened(absPath.c_str(), this);
         }
     }
     
-    void FileView::OnTextSubmit(){
-        int fileFd = open(pathBox->contents[0].c_str(), O_RDONLY);
-
-        if(fileFd <= 0){
-            printf("Warning: GUI: FileView: Invalid Path\n");
-            return; // Invalid Path
-        }
-
-        struct stat statResult;
-        int ret = fstat(fileFd, &statResult);
-
-        close(fileFd);
-
-        if(ret){
-            perror("GUI: FileView: OnTextSubmit: File: Stat:");
-            assert(!ret);
-            return;
-        }
-
-        if(S_ISDIR(statResult.st_mode)){
-            currentPath =  pathBox->contents[0].c_str();
-
-            Refresh();
-        }
-    }
-
     void FileView::OnListSubmit(ListItem& item, ListView* list){
         FileView* fv = (FileView*)list->GetParent();
 
-        fv->OnSubmit(item, list);
+        fv->OnSubmit(item.details[0]);
     }
 
     void FileView::OnTextBoxSubmit(TextBox* textBox){
         FileView* fv = (FileView*)textBox->GetParent();
 
-        fv->OnTextSubmit();
+        fv->OnSubmit(textBox->contents[0]);
     }
 }

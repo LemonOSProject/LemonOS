@@ -44,6 +44,52 @@ int menuItemCount = 0;
 lemon_sysinfo_t sysInfo;
 char memString[128];
 
+class WindowButton : public Lemon::GUI::Button {
+	ShellWindow* win;
+public:
+	WindowButton(ShellWindow* win, rect_t bounds) : Button(win->title.c_str(), bounds){
+		this->win = win;
+		labelAlignment = Lemon::GUI::TextAlignment::Left;
+	}
+
+	void Paint(surface_t* surface){
+		if(win->state == Lemon::Shell::ShellWindowStateActive || pressed){
+			Lemon::Graphics::DrawRect(fixedBounds, {96, 96, 96}, surface);
+		}
+
+		DrawButtonBorders(surface, false);
+		DrawButtonLabel(surface, true);
+	}
+
+	void OnMouseUp(vector2i_t mousePos){
+		pressed = false;
+
+		if(win->state == Lemon::Shell::ShellWindowStateActive){
+			window->Minimize(win->id, true);
+		} else {
+			window->Minimize(win->id, false);
+		}
+	}
+};
+
+std::map<ShellWindow*, WindowButton*> taskbarWindows;
+Lemon::GUI::LayoutContainer* taskbarWindowsContainer;
+
+void AddWindow(ShellWindow* win){
+	WindowButton* btn = new WindowButton(win, {0, 0, 0, 0} /* The LayoutContainer will handle boudns for us*/);
+	taskbarWindows.insert(std::pair<ShellWindow*, WindowButton*>(win, btn));
+
+	taskbarWindowsContainer->AddWidget(btn);
+}
+
+void RemoveWindow(ShellWindow* win){
+	WindowButton* btn = taskbarWindows[win];
+	taskbarWindows.erase(win);
+
+	taskbarWindowsContainer->RemoveWidget(btn);
+	delete btn;
+}
+
 void OnTaskbarPaint(surface_t* surface){
 	Lemon::Graphics::DrawGradientVertical(100,0,surface->width - 100, /*surface->height*/24, {96, 96, 96}, {42, 50, 64},surface);
 	Lemon::Graphics::DrawRect(100,24,surface->width - 100, surface->height - 24, {42,50,64},surface);
@@ -58,12 +104,6 @@ void OnTaskbarPaint(surface_t* surface){
 
 	sprintf(memString, "Used Memory: %d/%d KB", sysInfo.usedMem, sysInfo.totalMem);
 	Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255, 255, surface);
-
-	int xpos = 100;
-	for(std::pair<int, ShellWindow*> win : shell->windows){
-		Lemon::Graphics::DrawString(win.second->title.c_str(), xpos, 10, 255, 255, 255, surface);
-		xpos += 100;
-	}
 }
 
 void OnMenuPaint(surface_t* surface){
@@ -142,10 +182,14 @@ int main(){
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
 	syscall(SYS_UNAME, (uintptr_t)versionString,0,0,0,0);
 
-	taskbar = new Lemon::GUI::Window("", {videoInfo.width, 30}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_TASKBAR, Lemon::GUI::WindowType::Basic, {0, videoInfo.height - 30});
+	taskbar = new Lemon::GUI::Window("", {videoInfo.width, 30}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, videoInfo.height - 30});
 	taskbar->OnPaint = OnTaskbarPaint;
+	taskbar->rootContainer.background = {0, 0, 0, 0};
+	taskbarWindowsContainer = new Lemon::GUI::LayoutContainer({100, 0, videoInfo.width - 104, videoInfo.height}, {128, 30 - 4});
+	taskbarWindowsContainer->background = {0, 0, 0, 0};
+	taskbar->AddWidget(taskbarWindowsContainer);
 
-	menu = new Lemon::GUI::Window("", {240, 300}, WINDOW_FLAGS_NODECORATION, Lemon::GUI::WindowType::Basic, {0, videoInfo.height - 30 - 300});
+	menu = new Lemon::GUI::Window("", {240, 300}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::Basic, {0, videoInfo.height - 30 - 300});
 	menu->OnPaint = OnMenuPaint;
 
 	Lemon::LemonMessage* msg = (Lemon::LemonMessage*)malloc(sizeof(Lemon::LemonMessage) + sizeof(Lemon::GUI::WMCommand));
@@ -157,6 +201,8 @@ int main(){
 	free(msg);
 
 	LoadConfig();
+	
+	shell->AddWindow = AddWindow;
 
 	for(;;){
 		shell->Update();
@@ -170,14 +216,18 @@ int main(){
 					menu->Minimize(!showMenu);
 
 					paint = true;
+				} else {
+					taskbar->GUIHandleEvent(ev);
 				}
+			} else {
+				taskbar->GUIHandleEvent(ev);
 			}
 		}
 
 		while(menu->PollEvent(ev)){
 			if(ev.event == Lemon::EventMouseReleased){
 				if(ev.mousePos.y > 42 && ev.mousePos.y < (menuItemCount*MENU_ITEM_HEIGHT + 42)){
-					char* argv[] = {menuItems[(int)floor((double)(ev.mousePos.y - 42) / MENU_ITEM_HEIGHT)].path};
+					char* const argv[] = {menuItems[(int)floor((double)(ev.mousePos.y - 42) / MENU_ITEM_HEIGHT)].path};
 					lemon_spawn(argv[0], 1, argv, 0);
 
 					showMenu = false;
@@ -194,7 +244,6 @@ int main(){
 		if(sysInfo.usedMem != usedMemLast) paint = true;
 
 		if(paint){
-			taskbar->Paint();
 
 			if(showMenu){
 				menu->Paint();
@@ -202,6 +251,7 @@ int main(){
 
 			paint = false;
 		}
+		taskbar->Paint();
 
 		lemon_yield();
 	}

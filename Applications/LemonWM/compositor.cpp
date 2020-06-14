@@ -16,7 +16,7 @@ CompositorInstance::CompositorInstance(WMInstance* wm){
 void CompositorInstance::Paint(){
     timespec cTime;
     clock_gettime(CLOCK_BOOTTIME, &cTime);
-    if((cTime - lastRender) < 16666667) return; // Cap at 60 FPS
+    if((cTime - lastRender) < (16666667 / 2)) return; // Cap at 120 FPS
 
     lastRender = cTime;
 

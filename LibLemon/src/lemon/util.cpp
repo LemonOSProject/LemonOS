@@ -5,7 +5,7 @@
 
 extern char** environ;
 
-pid_t lemon_spawn(const char* path, int argc, char** argv, int flags){
+pid_t lemon_spawn(const char* path, int argc, char* const argv[], int flags){
 	return syscall(SYS_EXEC, (uintptr_t)path, argc, (uintptr_t)argv, flags, environ);
 } 
 

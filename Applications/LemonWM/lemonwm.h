@@ -130,6 +130,8 @@ protected:
 
     void MinimizeWindow(WMWindow* win, bool state);
     void MinimizeWindow(int id, bool state);
+
+    void SetActive(WMWindow* win);
 public:
     bool redrawBackground = true;
 

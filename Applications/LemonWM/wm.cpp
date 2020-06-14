@@ -26,11 +26,12 @@ void WMInstance::MinimizeWindow(WMWindow* win, bool state){
     win->Minimize(state);
 
     if(state == false) { // Showing the window to add to top
-        windows.remove(win);
-        windows.push_back(win);
-        active = win;
+        SetActive(win);
     } else { // Hiding the window, so if active set not active
-        if(active == win) active = nullptr;
+        if(active == win) SetActive(nullptr);
+
+        if(!(win->flags & WINDOW_FLAGS_NOSHELL))
+            Lemon::Shell::SetWindowState(win->clientFd, Lemon::Shell::ShellWindowStateMinimized, shellClient);
     }
 }
 
@@ -42,6 +43,25 @@ void WMInstance::MinimizeWindow(int id, bool state){
     }
 
     MinimizeWindow(win, state);
+}
+
+void WMInstance::SetActive(WMWindow* win){
+    if(active == win) return;
+
+    if(active && !(active->flags & WINDOW_FLAGS_NOSHELL) && !active->minimized){
+        Lemon::Shell::SetWindowState(active->clientFd, Lemon::Shell::ShellWindowStateNormal, shellClient);
+    }
+
+    active = win;
+
+    if(win){
+        if(!(win->flags & WINDOW_FLAGS_NOSHELL)){
+            Lemon::Shell::SetWindowState(win->clientFd, Lemon::Shell::ShellWindowStateActive, shellClient);
+        }
+        
+        windows.remove(win);
+        windows.push_back(win); // Add to top
+    }
 }
 
 void WMInstance::Poll(){
@@ -66,9 +86,10 @@ void WMInstance::Poll(){
 
                 windows.push_back(win);
 
-                Lemon::Shell::AddWindow(m->clientFd, Lemon::Shell::ShellWindowState::ShellWindowStateActive, title, shellClient);
-
-                active = win;
+                if(!(win->flags & WINDOW_FLAGS_NOSHELL)){
+                    Lemon::Shell::AddWindow(m->clientFd, Lemon::Shell::ShellWindowState::ShellWindowStateNormal, title, shellClient);
+                }
+                SetActive(win);
             } else if (cmd->cmd == Lemon::GUI::WMResize){
                 WMWindow* win = FindWindow(m->clientFd);
 
@@ -95,6 +116,8 @@ void WMInstance::Poll(){
                 delete win;
             } else if(cmd->cmd == Lemon::GUI::WMMinimize){
                 MinimizeWindow(m->clientFd, cmd->minimized);
+            } else if(cmd->cmd == Lemon::GUI::WMMinimizeOther){
+                MinimizeWindow(cmd->minimizeWindowID, cmd->minimized);
             } else if(cmd->cmd == Lemon::GUI::WMInitializeShellConnection){
                 sockaddr_un shellAddr;
                 strcpy(shellAddr.sun_path, Lemon::Shell::shellSocketAddress);
@@ -136,10 +159,7 @@ void WMInstance::MouseDown(){
         if(PointInWindow(win, input.mouse.pos)){
             if(win->minimized) continue;
 
-            windows.remove(win);
-            windows.push_back(win); // Add to top
-
-            active = win;
+            SetActive(win);
 
             if(PointInWindowProper(win, input.mouse.pos)){
                 Lemon::LemonEvent ev;

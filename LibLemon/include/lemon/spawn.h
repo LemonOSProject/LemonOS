@@ -8,4 +8,4 @@
 #include <sys/types.h>
 #include <stdint.h>
 
-pid_t lemon_spawn(const char* path, int argc, char** argv, int flags = 0);
+pid_t lemon_spawn(const char* path, int argc, char* const argv[], int flags = 0);

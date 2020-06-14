@@ -53,17 +53,18 @@ namespace Scheduler{
     inline void InsertNewThreadIntoQueue(thread_t* thread){
         uint8_t cpu = 0;
         for(unsigned i = 0; i < SMP::processorCount; i++){
-                Log::Info("CPU %d has %d threads", i, SMP::cpus[i]->runQueue->get_length());
+            Log::Info("CPU %d has %d threads", i, SMP::cpus[i]->runQueue->get_length());
+            
             if(SMP::cpus[i]->runQueue->get_length() < SMP::cpus[cpu]->runQueue->get_length()) {
                 cpu = i;
             }
         }
 
-        asm("cli");
         acquireLock(&SMP::cpus[cpu]->runQueueLock);
+        asm("cli");
         SMP::cpus[cpu]->runQueue->add_back(thread);
-        releaseLock(&SMP::cpus[cpu]->runQueueLock);
         asm("sti");
+        releaseLock(&SMP::cpus[cpu]->runQueueLock);
     }
 
     void Initialize() {

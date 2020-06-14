@@ -281,7 +281,7 @@ int main(char argc, char** argv){
 
 	setenv("TERM", "xterm", 1); // the Lemon OS terminal is (fairly) xterm compatible (256 colour, etc.)
 
-	char* _argv[] = {"/initrd/lsh.lef"};
+	char* const _argv[] = {"/initrd/lsh.lef"};
 	lemon_spawn("/initrd/lsh.lef", 1, _argv, 1);
 	
 	window->OnPaint = OnPaint;

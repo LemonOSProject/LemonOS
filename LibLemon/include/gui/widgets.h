@@ -8,6 +8,8 @@
 #include <string>
 
 namespace Lemon::GUI {
+    class Window;
+
     enum LayoutSize {
         Fixed,      // Fixed Size in Pixels
         Stretch,   // Size is a offset from the edge of the container
@@ -41,6 +43,7 @@ namespace Lemon::GUI {
         WidgetAlignment align = WAlignLeft;
     public:
         Widget* active = nullptr; // Only applies to containers, etc. is so widgets know whether they are active or not
+        Window* window = nullptr;
 
         Widget();
         Widget(rect_t bounds, LayoutSize newSizeX = LayoutSize::Fixed, LayoutSize newSizeY = LayoutSize::Fixed);
@@ -78,6 +81,7 @@ namespace Lemon::GUI {
         Container(rect_t bounds);
 
         void AddWidget(Widget* w);
+        void RemoveWidget(Widget* w);
 
         void Paint(surface_t* surface);
 
@@ -88,6 +92,20 @@ namespace Lemon::GUI {
         void OnKeyPress(int key);
 
         void UpdateFixedBounds();
+    };
+
+    class LayoutContainer : public Container {
+    protected:
+        vector2i_t itemSize;
+        bool isOverflowing = false;
+    public:
+        LayoutContainer(rect_t bounds, vector2i_t itemSize);
+        
+        void AddWidget(Widget* w);
+        void RemoveWidget(Widget* w);
+
+        void UpdateFixedBounds();
+        bool IsOverflowing() { return isOverflowing; }
     };
 
     class ScrollBar { /* Not a widget, but is to be used in widgets*/
@@ -133,23 +151,24 @@ namespace Lemon::GUI {
         bool drawText = true;
 
         TextAlignment labelAlignment = TextAlignment::Centre;
+        
+        std::string label;
+        int labelLength;
 
         void DrawButtonBorders(surface_t* surface, bool white);
         void DrawButtonLabel(surface_t* surface, bool white);
     public:
         bool active;
         bool pressed;
-        char label[64];
-        int labelLength;
         int style; // 0 - Normal, 1 - Blue, 2 - Red, 3 - Yellow
 
         bool state;
 
         Button(const char* _label, rect_t _bounds);
 
-        void Paint(surface_t* surface);
-        void OnMouseDown(vector2i_t mousePos);
-        void OnMouseUp(vector2i_t mousePos);
+        virtual void Paint(surface_t* surface);
+        virtual void OnMouseDown(vector2i_t mousePos);
+        virtual void OnMouseUp(vector2i_t mousePos);
 
         void (*OnPress)(Button*) = nullptr;
     };
@@ -257,7 +276,7 @@ namespace Lemon::GUI {
         int currentDir;
         char** filePointer;
 
-        void(*OnFileOpened)(char*, FileView*) = nullptr;
+        void(*OnFileOpened)(const char*, FileView*) = nullptr;
 
         ListView* fileList;
         TextBox* pathBox;
@@ -270,12 +289,11 @@ namespace Lemon::GUI {
         static surface_t icons;
 
         std::string currentPath;
-        FileView(rect_t bounds, const char* path, void(*_OnFileOpened)(char*, FileView*) = nullptr);
+        FileView(rect_t bounds, const char* path, void(*_OnFileOpened)(const char*, FileView*) = nullptr);
         
         void Refresh();
 
-        void OnSubmit(ListItem& item, ListView* list);
-        void OnTextSubmit();
+        void OnSubmit(std::string& path);
         static void OnListSubmit(ListItem& item, ListView* list);
         static void OnTextBoxSubmit(TextBox* textBox);
     };

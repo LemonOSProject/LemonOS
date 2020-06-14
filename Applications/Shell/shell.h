@@ -29,4 +29,10 @@ public:
 
     void Update();
     void Open(char* path);
+
+    void SetWindowState(ShellWindow* win);
+
+    void(*AddWindow)(ShellWindow*) = nullptr;
+    void(*RemoveWindow)(ShellWindow*) = nullptr;
+    void(*RefreshWindows)(void) = nullptr;
 };

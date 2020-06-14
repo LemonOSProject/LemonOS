@@ -3,7 +3,7 @@
 namespace Lemon::GUI{
 	char* selectedPth = nullptr; // TODO: Better solution
 
-	void FileDialogOnFileOpened(char* path, FileView* fv){
+	void FileDialogOnFileOpened(const char* path, FileView* fv){
 		selectedPth = strdup(path);
 	}
 

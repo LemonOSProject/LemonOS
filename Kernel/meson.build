@@ -26,7 +26,7 @@ arguments : ['@INPUT@','@OUTPUT@', meson.current_source_dir() + '/src/arch/x86_6
 
 kernel_cpp_args = ['-Wno-write-strings', '-Wno-pointer-arith',
     '-DLemon64',
-    '-O1',
+    '-O2',
     '-ffreestanding', '-nostdlib',
     '-mcmodel=large', '-mno-red-zone', '-fno-pic',
     '-mno-mmx', '-mno-sse', '-mno-sse2',

@@ -44,17 +44,17 @@ namespace Memory{
 
     // Sets a bit in the physical memory bitmap
     inline void bit_set(uint64_t bit) {  
-        physicalMemoryBitmap[bit / 32] |= (1 << (bit % 32));
+        physicalMemoryBitmap[bit >> 5] |= (1 << (bit % 32));
     }
 
     // Clears a bit in the physical memory bitmap
     inline void bit_clear(uint64_t bit) {
-        physicalMemoryBitmap[bit / 32] &= ~ (1 << (bit % 32));
+        physicalMemoryBitmap[bit >> 5] &= ~ (1 << (bit % 32));
     }
 
     // Tests a bit in the physical memory bitmap
     inline bool bit_test(uint64_t bit) {
-        return physicalMemoryBitmap[bit / 32] & (1 << (bit % 32));
+        return physicalMemoryBitmap[bit >> 5] & (1 << (bit % 32));
     }
 
     // Finds the first free block in physical memory

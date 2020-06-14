@@ -8,7 +8,7 @@
 
 #define WINDOW_FLAGS_NODECORATION 0x1
 #define WINDOW_FLAGS_RESIZABLE 0x2
-#define WINDOW_FLAGS_TASKBAR 0x4
+#define WINDOW_FLAGS_NOSHELL 0x4
 
 namespace Lemon::GUI {
     static const char* wmSocketAddress = "lemonwm";
@@ -25,6 +25,7 @@ namespace Lemon::GUI {
         WMResize,
         WMUpdateFlags,
         WMMinimize,
+        WMMinimizeOther,
         WMInitializeShellConnection,
     };
 
@@ -48,7 +49,10 @@ namespace Lemon::GUI {
             };
             uint32_t flags;
             WMCreateWindowCommand create;
+            struct{
             bool minimized;
+            int minimizeWindowID;
+            };
             struct {
             unsigned short titleLength;
             char title[];
@@ -78,12 +82,11 @@ namespace Lemon::GUI {
 
         uint32_t flags;
 
-        Container rootContainer;
-
         int windowType = WindowType::Basic;
 
         timespec lastClick;
     public:
+        Container rootContainer;
         surface_t surface;
         bool closed = false; // Set to true when close button pressed
 
@@ -94,6 +97,7 @@ namespace Lemon::GUI {
         void Relocate(vector2i_t pos);
         void Resize(vector2i_t size);
         void Minimize(bool minimized = true);
+        void Minimize(int windowID, bool minimized = true);
 
         void UpdateFlags(uint32_t flags);
 
@@ -104,6 +108,7 @@ namespace Lemon::GUI {
         void GUIHandleEvent(LemonEvent& ev); // If the application decides to use the GUI they can pass events from PollEvent to here
 
         void AddWidget(Widget* w);
+        void RemoveWidget(Widget* w);
 
         uint32_t GetFlags() { return flags; }
         vector2i_t GetSize() { return {surface.width, surface.height}; };

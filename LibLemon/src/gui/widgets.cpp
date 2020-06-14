@@ -6,6 +6,7 @@
 #include <math.h>
 #include <gui/colours.h>
 #include <assert.h>
+#include <algorithm>
 
 namespace Lemon::GUI {
     Widget::Widget() {}
@@ -75,6 +76,14 @@ namespace Lemon::GUI {
         children.push_back(w);
 
         w->SetParent(this);
+        w->window = window;
+    }
+
+    void Container::RemoveWidget(Widget* w){
+        w->SetParent(nullptr);
+        w->window = nullptr;
+
+        children.erase(std::remove(children.begin(), children.end(), w), children.end());
     }
 
     void Container::Paint(surface_t* surface){
@@ -130,11 +139,53 @@ namespace Lemon::GUI {
     }
     
     //////////////////////////
+    // LayoutContainer
+    //////////////////////////
+    LayoutContainer::LayoutContainer(rect_t bounds, vector2i_t itemSize) : Container(bounds){
+        this->itemSize = itemSize;
+    }
+
+    void LayoutContainer::AddWidget(Widget* w){
+        Container::AddWidget(w);
+
+        UpdateFixedBounds();
+    }
+
+    void LayoutContainer::RemoveWidget(Widget* w){
+        Container::RemoveWidget(w);
+        
+        UpdateFixedBounds();
+    }
+    
+    void LayoutContainer::UpdateFixedBounds(){
+        Widget::UpdateFixedBounds();
+
+        vector2i_t pos = {2, 2};
+        isOverflowing = false;
+
+        for(Widget* w : children){
+            w->SetBounds({pos, itemSize});
+            w->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WidgetAlignment::WAlignLeft);
+
+            w->UpdateFixedBounds();
+
+            pos.x += itemSize.x;
+
+            if(pos.x + itemSize.x > fixedBounds.width){
+                pos.x = 2;
+                pos.y += itemSize.y + 2;
+            }
+        }
+
+        if(pos.y + itemSize.y > fixedBounds.height) isOverflowing = true;
+    }
+
+    //////////////////////////
     // Button
     //////////////////////////
     Button::Button(const char* _label, rect_t _bounds) : Widget(_bounds) {
-        strcpy(label, _label);
-        labelLength = Graphics::GetTextLength(label);
+        label = _label;
+        labelLength = Graphics::GetTextLength(label.c_str());
     }
 
     void Button::DrawButtonBorders(surface_t* surface, bool white){
@@ -159,15 +210,15 @@ namespace Lemon::GUI {
         vector2i_t btnPos = fixedBounds.pos;
 
         if(white){
-            colour = {250, 250, 250, 255};
+            colour = colours[Colour::TextLight];
         } else {
-            colour = {0, 0, 0, 255};
+            colour = colours[Colour::TextDark];
         }
 
         if(labelAlignment = TextAlignment::Centre){
-            Graphics::DrawString(label, btnPos.x + (fixedBounds.size.x / 2) - (labelLength / 2), btnPos.y + (bounds.size.y / 2 - 8), colour.r, colour.g, colour.b, surface);
+            Graphics::DrawString(label.c_str(), btnPos.x + (fixedBounds.size.x / 2) - (labelLength / 2), btnPos.y + (bounds.size.y / 2 - 8), colour.r, colour.g, colour.b, surface);
         } else {
-            Graphics::DrawString(label, btnPos.x + 2, btnPos.y + (fixedBounds.height / 2 - 8), colour.r, colour.g, colour.b, surface);
+            Graphics::DrawString(label.c_str(), btnPos.x + 2, btnPos.y + (fixedBounds.size.y / 2 - 6), colour.r, colour.g, colour.b, surface);
         }
     }
 

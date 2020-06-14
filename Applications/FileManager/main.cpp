@@ -11,16 +11,20 @@
 #include <lemon/spawn.h>
 #include <lemon/util.h>
 
-void OnFileOpened(char* path, Lemon::GUI::FileView* fv){
+void OnFileOpened(const char* path, Lemon::GUI::FileView* fv){
+	char* pathCopy = strdup(path);
+
 	if(strncmp(path + strlen(path) - 4, ".lef", 4) == 0){
-		lemon_spawn(path, 1, &path);
+		lemon_spawn(path, 1, &pathCopy);
 	} else if(strncmp(path + strlen(path) - 4, ".txt", 4) == 0 || strncmp(path + strlen(path) - 4, ".cfg", 4) == 0){
-		char* argv[] = {"/initrd/textedit.lef", path};
+		char* argv[] = {"/initrd/textedit.lef", pathCopy};
 		lemon_spawn("/initrd/textedit.lef", 2, argv);
 	} else if(strncmp(path + strlen(path) - 4, ".png", 4) == 0 || strncmp(path + strlen(path) - 4, ".bmp", 4) == 0){
-		char* argv[] = {"/initrd/imgview.lef", path};
+		char* argv[] = {"/initrd/imgview.lef", pathCopy};
 		lemon_spawn("/initrd/imgview.lef", 2, argv);
 	}
+
+	free(pathCopy);
 }
 
 extern "C"
@@ -35,7 +39,7 @@ int main(int argc, char** argv){
 	
 	bool repaint = true;
 
-	for(;;){
+	while(!window->closed){
 		Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){
 			window->GUIHandleEvent(ev);
@@ -47,5 +51,6 @@ int main(int argc, char** argv){
 		lemon_yield();
 	}
 
-	for(;;);
+	delete window;
+	return 0;
 }

@@ -49,6 +49,8 @@ namespace Lemon::GUI{
         msgClient.Send(createMsg);
 
         free(createMsg);
+
+        rootContainer.window = this;
     }
 
     Window::~Window(){
@@ -73,6 +75,22 @@ namespace Lemon::GUI{
         WMCommand* cmd = (WMCommand*)msg->data;
         cmd->cmd = WMMinimize;
         cmd->minimized = minimized;
+
+        msg->length = sizeof(WMCommand);
+        msg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+
+        msgClient.Send(msg);
+
+        free(msg);
+    }
+    
+    void Window::Minimize(int windowID, bool minimized){
+        LemonMessage* msg = (LemonMessage*)malloc(sizeof(LemonMessage) + sizeof(WMCommand));
+
+        WMCommand* cmd = (WMCommand*)msg->data;
+        cmd->cmd = WMMinimizeOther;
+        cmd->minimized = minimized;
+        cmd->minimizeWindowID = windowID;
 
         msg->length = sizeof(WMCommand);
         msg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
@@ -130,9 +148,10 @@ namespace Lemon::GUI{
     }
 
     void Window::Paint(){
-        if(windowType == WindowType::GUI) rootContainer.Paint(&surface);
 
         if(OnPaint) OnPaint(&surface);
+        
+        if(windowType == WindowType::GUI) rootContainer.Paint(&surface);
 
         SwapBuffers();
     }
@@ -188,5 +207,9 @@ namespace Lemon::GUI{
 
     void Window::AddWidget(Widget* w){
         rootContainer.AddWidget(w);
+    }
+
+    void Window::RemoveWidget(Widget* w){
+        rootContainer.RemoveWidget(w);
     }
 }
