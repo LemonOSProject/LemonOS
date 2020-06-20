@@ -41,6 +41,10 @@ PTY* GrantPTY(uint64_t pid){
 	return pty;
 }
 
+PTYDevice::PTYDevice(){
+	dirent.node = this;
+}
+
 size_t PTYDevice::Read(size_t offset, size_t size, uint8_t *buffer){
 	assert(pty);
 	assert(device == PTYSlaveDevice || device == PTYMasterDevice);
@@ -102,9 +106,9 @@ bool PTYDevice::CanRead() { return !(pty->canonical && !pty->slave.lines); };
 
 PTY::PTY(){
 	slaveFile.flags = FS_NODE_CHARDEVICE;
-	strcpy(slaveFile.name, "pty");
+	strcpy(slaveFile.dirent.name, "pty");
 	char _name[] = {nextPTY, 0};
-	strcpy(slaveFile.name + strlen(slaveFile.name), _name);
+	strcpy(slaveFile.dirent.name + strlen(slaveFile.dirent.name), _name);
 	GetNextPTY();
 
 	master.ignoreBackspace = true;
@@ -121,7 +125,7 @@ PTY::PTY(){
 
 	for(int i = 0; i < NCCS; i++) tios.c_cc[i] = c_cc_default[i];
 
-	fs::RegisterDevice(&slaveFile);
+	fs::RegisterDevice(&slaveFile.dirent);
 
 	ptys->add_back(this);
 }

@@ -50,21 +50,23 @@ namespace Scheduler{
         GetCPULocal()->runQueue->remove(thread);
     }
     
-    inline void InsertNewThreadIntoQueue(thread_t* thread){
-        uint8_t cpu = 0;
+    void InsertNewThreadIntoQueue(thread_t* thread){
+        CPU* cpu = SMP::cpus[0];
         for(unsigned i = 0; i < SMP::processorCount; i++){
             Log::Info("CPU %d has %d threads", i, SMP::cpus[i]->runQueue->get_length());
             
-            if(SMP::cpus[i]->runQueue->get_length() < SMP::cpus[cpu]->runQueue->get_length()) {
-                cpu = i;
+            if(SMP::cpus[i]->runQueue->get_length() < cpu->runQueue->get_length()) {
+                cpu = SMP::cpus[i];
             }
         }
 
-        acquireLock(&SMP::cpus[cpu]->runQueueLock);
+        Log::Info("Inserting thread into run queue of CPU %d", cpu->id);
+
+        acquireLock(&cpu->runQueueLock);
         asm("cli");
-        SMP::cpus[cpu]->runQueue->add_back(thread);
+        cpu->runQueue->add_back(thread);
         asm("sti");
-        releaseLock(&SMP::cpus[cpu]->runQueueLock);
+        releaseLock(&cpu->runQueueLock);
     }
 
     void Initialize() {
@@ -215,9 +217,12 @@ namespace Scheduler{
     }
 
     void Yield(){
-        GetCPULocal()->currentThread->timeSlice = 0;
+        CPU* cpu = GetCPULocal();
         
-        APIC::Local::SendIPI(0, ICR_DSH_SELF, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE); // Send schedule IPI to self
+        if(cpu->currentThread) {
+            cpu->currentThread->timeSlice = 0;
+            APIC::Local::SendIPI(0, ICR_DSH_SELF, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE); // Send schedule IPI to self
+        }
     }
 
     process_t* CreateProcess(void* entry) {
@@ -346,7 +351,7 @@ namespace Scheduler{
 
     void Schedule(regs64_t* r){
         CPU* cpu = GetCPULocal();
-        
+
         if(cpu->currentThread && cpu->currentThread->timeSlice > 0) {
             cpu->currentThread->timeSlice--;
             return;
@@ -365,7 +370,7 @@ namespace Scheduler{
 
             cpu->runQueue->add_back(cpu->currentThread);
         }
-
+        
         if (__builtin_expect(cpu->runQueue->get_length() <= 0, 0)){
             cpu->currentThread = &idleProcess->threads[0];
         } else {

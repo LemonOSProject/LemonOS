@@ -129,7 +129,7 @@ namespace ATA{
 		return 0;
     }
 
-	int Read(ATADiskDevice* drive, uint64_t lba, uint16_t count, void* buffer){
+	int Access(ATADiskDevice* drive, uint64_t lba, uint16_t count, void* buffer, bool write){
 		if(count > 4){
 			Log::Warning("ATA::Read was called with count > 4");
 			return 1;
@@ -142,7 +142,11 @@ namespace ATA{
 
 		outportb(busMasterPort + ATA_BMR_STATUS, inportb(busMasterPort +  ATA_BMR_STATUS) | 4 | 2); // Clear Error and Interrupt Bits
 
-		outportb(busMasterPort + ATA_BMR_CMD, 8 /* Read */);
+		if(write){
+			outportb(busMasterPort + ATA_BMR_CMD, 0 /*Write */);
+		} else {
+			outportb(busMasterPort + ATA_BMR_CMD, 8 /* Read */);
+		}
 		
 		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80);
 
@@ -165,11 +169,19 @@ namespace ATA{
 
 		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80 || !(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x40));
 
-		WriteRegister(drive->port, ATA_REGISTER_COMMAND, 0x25); // 48-bit read DMA
+		if(write){
+			WriteRegister(drive->port, ATA_REGISTER_COMMAND, 0x35); // 48-bit write DMA
+		} else {
+			WriteRegister(drive->port, ATA_REGISTER_COMMAND, 0x25); // 48-bit read DMA
+		}
 
 		for(int i = 0; i < 4; i++) inportb(0x3f6);
 
-		outportb(busMasterPort + ATA_BMR_CMD, 8 /*Read*/ | 1 /* Start*/);
+		if(write){
+			outportb(busMasterPort + ATA_BMR_CMD, 0 /*Write*/ | 1 /*Start*/);
+		} else {
+			outportb(busMasterPort + ATA_BMR_CMD, 8 /*Read*/ | 1 /*Start*/);
+		}
 		
 		while(!(inportb(busMasterPort + ATA_BMR_STATUS) & 0x4));// || (ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80));
 		

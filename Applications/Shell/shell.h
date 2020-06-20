@@ -8,6 +8,7 @@ public:
 	int id;
 	std::string title;
 	int state;
+	int lastState;
 };
 
 class ShellInstance {

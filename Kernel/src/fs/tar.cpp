@@ -50,7 +50,7 @@ namespace fs::tar{
             vol->Close(this);
         }
     }
-    int TarNode::ReadDir(struct fs_dirent* dirent, uint32_t index){
+    int TarNode::ReadDir(DirectoryEntry* dirent, uint32_t index){
         if(vol){
             return vol->ReadDir(this, dirent, index);
         } else return -10;
@@ -137,9 +137,9 @@ namespace fs::tar{
         volumeNode->parent = 0;
 
         mountPoint = volumeNode;
-        strcpy(volumeNode->name,name);
-        strcpy(mountPointDirent.name, volumeNode->name);
-        mountPointDirent.type = FS_NODE_DIRECTORY;
+        strcpy(mountPointDirent.name, name);
+        mountPointDirent.flags = FS_NODE_DIRECTORY;
+        mountPointDirent.node = volumeNode;
 
         volumeNode->children = (ino_t*)kmalloc(sizeof(ino_t) * entryCount);
         volumeNode->entryCount = entryCount;
@@ -190,7 +190,7 @@ namespace fs::tar{
         TarNode* tarNode = &nodes[node->inode];
     }
 
-    int TarVolume::ReadDir(TarNode* node, struct fs_dirent* dirent, uint32_t index){
+    int TarVolume::ReadDir(TarNode* node, DirectoryEntry* dirent, uint32_t index){
         TarNode* tarNode = &nodes[node->inode];
         
         if(!(node->flags & FS_NODE_DIRECTORY)) return -1;
@@ -208,8 +208,8 @@ namespace fs::tar{
         TarNode* dir = &nodes[tarNode->children[index - 2]];
 
         strcpy(dirent->name, dir->name);
-        dirent->type = dir->flags;
-        dirent->inode = dir->inode;
+        dirent->flags = dir->flags;
+        dirent->node = dir;
 
         return 0;
     }

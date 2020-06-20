@@ -71,9 +71,13 @@ class PTY;
 
 class PTYDevice : public FsNode {
 public:
+    DirectoryEntry dirent;
+
     PTY* pty;
 
     int device;
+
+    PTYDevice();
 
     size_t Read(size_t, size_t, uint8_t *);
     size_t Write(size_t, size_t, uint8_t *);

@@ -97,7 +97,7 @@ namespace Lemon::GUI {
         void Relocate(vector2i_t pos);
         void Resize(vector2i_t size);
         void Minimize(bool minimized = true);
-        void Minimize(int windowID, bool minimized = true);
+        void Minimize(int windowID, bool minimized);
 
         void UpdateFlags(uint32_t flags);
 

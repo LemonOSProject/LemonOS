@@ -22,7 +22,7 @@ Lemon OS is a 64-bit operating system written in C++.
 - [DOOM Port](https://github.com/fido2020/LemonDOOM)
 
 ### Work In Progess
-- Ext2 Support
+- Ext2 Support (read/write but no mkdir, create)
 - Network Stack
 
 ### System requirements

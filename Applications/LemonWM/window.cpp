@@ -39,6 +39,7 @@ void WMWindow::Draw(surface_t* surface){
 	windowBufferInfo->drawing = 1;
 	vector2i_t renderPos = pos + (vector2i_t){WINDOW_BORDER_THICKNESS, WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS};
     surface_t wSurface = {.width = size.x, .height = size.y, .buffer = ((windowBufferInfo->currentBuffer == 0) ? buffer1 : buffer2)};
+	
     Lemon::Graphics::surfacecpy(surface, &wSurface, renderPos);
 	windowBufferInfo->drawing = 0;
 

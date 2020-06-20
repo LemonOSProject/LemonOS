@@ -17,7 +17,7 @@
     char buf[16];
     itoa(line, buf, 10);
 
-    asm("int $0xe");
+    asm("ud2");
 
     const char* panic[] = {"Kernel Assertion Failed", msg, "File: ", file, "Line:", buf};
     KernelPanic(panic, 6);

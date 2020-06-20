@@ -23,9 +23,13 @@ namespace Log{
 
 	class LogDevice : public FsNode{
 	public:
+		DirectoryEntry dirent;
+
 		LogDevice(char* name){
 			flags = FS_NODE_FILE;
-			strcpy(this->name, name);
+			strcpy(dirent.name, name);
+			dirent.node = this;
+			dirent.flags = flags;
 		}
 
 		size_t Read(size_t offset, size_t size, uint8_t *buffer){
@@ -55,7 +59,7 @@ namespace Log{
 		initialize_serial();
 
 		logDevice = new LogDevice("kernellog");
-		fs::RegisterDevice(logDevice);
+		fs::RegisterDevice(&logDevice->dirent);
     }
 
 	void SetVideoConsole(VideoConsole* con){

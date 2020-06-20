@@ -19,25 +19,43 @@ fs_fd_t* FsNode::Open(size_t flags){
     fDesc->mode = flags;
     fDesc->node = this;
 
+    handleCount++;
+
     return fDesc;
 }
 
 void FsNode::Close(){
-
+    handleCount--;
 }
 
-int FsNode::ReadDir(struct fs_dirent*, uint32_t){
-    return 0;
+int FsNode::ReadDir(DirectoryEntry*, uint32_t){
+    return -1;
 }
 
 FsNode* FsNode::FindDir(char* name){
     return nullptr;
 }
 
+int FsNode::Create(DirectoryEntry*, uint32_t){
+    return -1;
+}
+
+int FsNode::CreateDirectory(DirectoryEntry*, uint32_t){
+    return -1;
+}
+
+int FsNode::Link(FsNode*, DirectoryEntry*){
+    return -1;
+}
+
+int FsNode::Unlink(DirectoryEntry*){
+    return -1;
+}
+
 int FsNode::Ioctl(uint64_t cmd, uint64_t arg){
     return -1;
 }
 
-void FsNode::Update(){
+void FsNode::Sync(){
     
 }

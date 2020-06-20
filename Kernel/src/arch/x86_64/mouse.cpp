@@ -107,10 +107,15 @@ namespace Mouse{
 
 	class MouseDevice : public FsNode{
 	public:
+		DirectoryEntry dirent;
+
 		MouseDevice(char* name){
 			strcpy(this->name, name);
+			flags = FS_NODE_CHARDEVICE;
+			strcpy(dirent.name, name);
+			dirent.flags = flags;
+			dirent.node = this;
 		}
-		uint32_t flags = FS_NODE_CHARDEVICE;
 
 		size_t Read(size_t offset, size_t size, uint8_t *buffer){
 			if(size < sizeof(MousePacket)) return 0;
@@ -138,7 +143,7 @@ namespace Mouse{
 	{
 		uint8_t status;
 
-		fs::RegisterDevice(&mouseDev);
+		fs::RegisterDevice(&mouseDev.dirent);
 
 		Wait(1);
 		outportb(0x64, 0xA8);

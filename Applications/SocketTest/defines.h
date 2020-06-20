@@ -1,1 +1,0 @@
-#define SOCKET_TEST_ADDR "lemonsockettest"

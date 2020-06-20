@@ -227,6 +227,8 @@ void PrintChar(char ch){
 			}
 		} else if (escapeType == ANSI_RIS){
 			state = defaultState;
+			buffer.clear();
+			curPos = {0, 0};
 		}
 		escapeSequence = 0;
 		escapeType = 0;

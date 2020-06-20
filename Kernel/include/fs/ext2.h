@@ -1,6 +1,7 @@
 #include <fs/filesystem.h>
 #include <fs/fsvolume.h>
 #include <device.h>
+#include <hash.h>
 
 #include <stdint.h>
 
@@ -16,6 +17,7 @@
 
 #define EXT2_GOOD_OLD_INODE_SIZE 128
 
+#define EXT2_S_IFMT  0xF000
 #define EXT2_S_IFBLK 0x6000
 #define EXT2_S_IFCHR 0x2000
 #define EXT2_S_IFIFO 0x1000
@@ -23,6 +25,13 @@
 #define EXT2_S_IFDIR 0x4000
 #define EXT2_S_IFLNK 0xA000
 #define EXT2_S_IFSOCK 0xC000
+
+#define EXT2_ROOT_INODE_INDEX 2
+
+#define EXT2_DIRECT_BLOCK_COUNT 12
+#define EXT2_SINGLY_INDIRECT_INDEX 12
+#define EXT2_DOUBLY_INDIRECT_INDEX 13
+#define EXT2_TRIPLY_INDIRECT_INDEX 14
 
 namespace fs::Ext2{
     enum ErrorAction{
@@ -126,7 +135,7 @@ namespace fs::Ext2{
         uint16_t freeInodeCount;    // Number of free inodes in group
         uint16_t usedDirsCount;     // Number of inodes allocted to directories in group
         uint16_t padding;           // Padding
-        uint8_t reserved[8];
+        uint8_t reserved[12];
     } __attribute__((packed)) ext2_blockgrp_desc_t; // Block group descriptor
 
     typedef struct {
@@ -139,9 +148,9 @@ namespace fs::Ext2{
         uint32_t deleteTime;        // Deletion time in UNIX time
         uint16_t gid;               // Group ID
         uint16_t linkCount;         // Amount of hard links (most inodes will have a count of 1)
-        uint16_t blockCount;        // Number of 512 byte blocks reserved to the data of this inode
-        uint16_t flags;             // How to access data
-        uint16_t osd1;              // Operating System dependant value
+        uint32_t blockCount;        // Number of 512 byte blocks reserved to the data of this inode
+        uint32_t flags;             // How to access data
+        uint32_t osd1;              // Operating System dependant value
         uint32_t blocks[15];     // Amount of blocks used to hold data, the first 12 entries are direct blocks, the 13th first indirect block, the 14th is the first doubly-indirect block and the 15th triply indirect
         uint32_t generation;        // Indicates the file version
         uint32_t fileACL;           // Extended attributes (only applies to rev 1)
@@ -165,12 +174,18 @@ namespace fs::Ext2{
 
     class Ext2Node : public FsNode{
     public:
-        //size_t Read(size_t, size_t, uint8_t *);
-        //size_t Write(size_t, size_t, uint8_t *);
-        //int ReadDir(struct fs_dirent*, uint32_t);
-        //FsNode* FindDir(char* name);
+        Ext2Node(Ext2Volume* vol) { this->vol = vol; }
+        Ext2Node(Ext2Volume* vol, ext2_inode_t& ino, ino_t inode);
+
+        size_t Read(size_t, size_t, uint8_t *);
+        size_t Write(size_t, size_t, uint8_t *);
+        int ReadDir(DirectoryEntry*, uint32_t);
+        FsNode* FindDir(char* name);
+        void Close();
+        void Sync();
 
         Ext2Volume* vol;
+        ext2_inode_t e2inode;
     };
 
     class Ext2Volume : public FsVolume {
@@ -182,33 +197,70 @@ namespace fs::Ext2{
             ext2_superblock_extended_t superext;
         } __attribute__((packed));
 
-        uint32_t blocksize;
+        uint32_t superBlockIndex; // Block ID of the superblock 
+        uint32_t rootInode = EXT2_ROOT_INODE_INDEX; // Inode number of the root directory
+        uint32_t firstBlockGroupIndex; // Block ID of the first block group descriptor
+        uint32_t blocksize; // Volume block size
+
+        ext2_blockgrp_desc_t* blockGroups;
+        uint32_t blockGroupCount;
+
+        int error = false;
+        bool readOnly = false;
+        
+        bool sparse, largeFiles, filetype;
+        uint32_t inodeSize = 128;
+
+        HashMap<uint32_t, Ext2Node*> inodeCache;
 
         inline uint32_t LocationToBlock(uint64_t l){
-            return (l >> super.logBlockSize) >> 1024;
+            return (l >> super.logBlockSize) >> 10;
         }
 
         inline uint64_t BlockToLBA(uint64_t block){
             return block * (blocksize / part->parentDisk->blocksize);
         }
 
-        ext2_blockgrp_desc_t* blockGroups;
-        uint32_t blockGroupCount;
+        inline uint32_t ResolveInodeBlockGroup(uint32_t inode){
+            return (inode - 1) / super.inodesPerGroup;
+        }
 
-        bool error = false;
+        inline uint32_t ResolveInodeBlockGroupIndex(uint32_t inode){
+            return (inode - 1) % super.inodesPerGroup;
+        }
+
+        inline uint64_t InodeLBA(uint32_t inode){
+            uint32_t block = blockGroups[ResolveInodeBlockGroup(inode)].inodeTable;
+            uint64_t lba = (block * blocksize + ResolveInodeBlockGroupIndex(inode) * inodeSize) / part->parentDisk->blocksize;
+
+            return lba;
+        }
         
-        bool sparse, largeFiles, filetype;
+        uint32_t GetInodeBlock(uint32_t index, ext2_inode_t& inode);
+        void SetInodeBlock(uint32_t index, ext2_inode_t& inode, uint32_t block);
 
-        uint32_t inodeSize = 128;
+        int ReadInode(uint32_t num, ext2_inode_t& inode);
+        int WriteInode(uint32_t num, ext2_inode_t& inode);
+
+        int ReadBlock(uint32_t block, void* buffer);
+        int WriteBlock(uint32_t block, void* buffer);
+
+        ext2_inode_t CreateInode();
+        void EraseInode(ext2_inode_t& inode);
+
+        uint32_t AllocateBlock();
     public:
         Ext2Volume(PartitionDevice* part, const char* name);
 
         size_t Read(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer);
         size_t Write(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer);
-        int ReadDir(Ext2Node* node, struct fs_dirent* dirent, uint32_t index);
+        int ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index);
         FsNode* FindDir(Ext2Node* node, char* name);
 
-        int UpdateNode(FsNode* node);
+        void SyncNode(Ext2Node* node);
+        void CleanNode(Ext2Node* node);
+
+        int Error() { return error; }
     };
     
     int Identify(PartitionDevice* part);

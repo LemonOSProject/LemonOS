@@ -46,6 +46,7 @@ char memString[128];
 
 class WindowButton : public Lemon::GUI::Button {
 	ShellWindow* win;
+
 public:
 	WindowButton(ShellWindow* win, rect_t bounds) : Button(win->title.c_str(), bounds){
 		this->win = win;
@@ -64,7 +65,7 @@ public:
 	void OnMouseUp(vector2i_t mousePos){
 		pressed = false;
 
-		if(win->state == Lemon::Shell::ShellWindowStateActive){
+		if(win->lastState == Lemon::Shell::ShellWindowStateActive){
 			window->Minimize(win->id, true);
 		} else {
 			window->Minimize(win->id, false);

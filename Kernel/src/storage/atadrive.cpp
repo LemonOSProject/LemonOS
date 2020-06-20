@@ -52,7 +52,8 @@ namespace ATA{
 
             if(!size) continue;
 
-            if(ATA::Read(this, lba, 1, buf)){
+            if(ATA::Access(this, lba, 1, buf, false)){
+                kfree(buf);
                 return 1; // Error Reading Sectors
             }
 
@@ -60,6 +61,36 @@ namespace ATA{
             buffer += size;
             lba++;
         }
+
+        kfree(buf);
+
+        return 0;
+    }
+    
+    int ATADiskDevice::Write(uint64_t lba, uint32_t count, void* buffer){
+        uint8_t* buf = (uint8_t*)kmalloc(512);
+
+        uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
+
+        while(blockCount-- && count){
+            uint64_t size;
+            if(count < 512) size = count;
+            else size = 512;
+
+            if(!size) continue;
+
+            memcpy(buf, buffer, size);
+
+            if(ATA::Access(this, lba, 1, buf, true)){
+                kfree(buf);
+                return 1; // Error Reading Sectors
+            }
+
+            buffer += size;
+            lba++;
+        }
+
+        kfree(buf);
 
         return 0;
     }

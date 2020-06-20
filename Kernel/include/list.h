@@ -87,11 +87,11 @@ public:
 		releaseLock(&lock);
 	}
 
-	T operator[](unsigned pos) {
+	T& operator[](unsigned pos) {
 		return get_at(pos);
 	}
 
-	T get_at(unsigned pos) {
+	T& get_at(unsigned pos) {
 		assert(num > 0 && pos < num && front != nullptr);
 		/*if (num <= 0 || pos >= num || front == NULL) {
 			T obj; // Need to do something when item not in list
@@ -203,11 +203,9 @@ public:
 	}
 
 	void add_back(T obj) {
-		
 		if (!front) {
 			front = obj;
-		}
-		else if (back) {
+		} else if (back) {
 			back->next = obj;
 			obj->prev = back;
 		}

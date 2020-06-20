@@ -111,7 +111,7 @@ extern "C"
 	
 	Log::Info("Filesystem Root:");
 
-	fs_dirent_t dirent;
+	DirectoryEntry dirent;
 	FsNode* root = fs::GetRoot();
 	int i = 0;
 	while((fs::ReadDir(root,&dirent,i++)) != -1){ // Read until no more dirents

@@ -4,11 +4,11 @@
 #include <paging.h>
 #include <logging.h>
 #include <gpt.h>
+#include <ata.h>
 
 #define ATA_DEV_BUSY 0x80
 #define ATA_DEV_DRQ 0x08
 
-#define ATA_CMD_READ_DMA_EX     0x25
 #define HBA_PxIS_TFES   (1 << 30)
 
 namespace AHCI{
@@ -88,7 +88,7 @@ namespace AHCI{
 
             if(!size) continue;
 
-            if(Access(lba, 1, 0)){
+            if(Access(lba, 1, 0)){ // LBA, 1 block, read
                 return 1; // Error Reading Sectors
             }
 
@@ -103,6 +103,8 @@ namespace AHCI{
     
     int Port::Write(uint64_t lba, uint32_t count, void* buffer){
         uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
+
+        Log::Info("Writing to disk");
 
         while(blockCount-- && count){
             uint64_t size;
@@ -156,7 +158,12 @@ namespace AHCI{
         cmdfis->fis_type = FIS_TYPE_REG_H2D;
         cmdfis->c = 1;  // Command
         cmdfis->pmport = 0; // Port multiplier
-        cmdfis->command = ATA_CMD_READ_DMA_EX;
+
+        if(write){
+            cmdfis->command = ATA_CMD_WRITE_DMA_EX;
+        } else {
+            cmdfis->command = ATA_CMD_READ_DMA_EX;
+        }
  
         cmdfis->lba0 = lba & 0xFF;
         cmdfis->lba1 = (lba >> 8) & 0xFF;

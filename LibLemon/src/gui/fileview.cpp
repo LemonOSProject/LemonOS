@@ -147,11 +147,6 @@ namespace Lemon::GUI {
             ListItem item;
             item.details.push_back(dirent.name);
 
-            if(dirent.type & FS_NODE_DIRECTORY) {
-                fileList->AddItem(item);
-                continue;
-            }
-
             absPath = currentPath + dirent.name;
             
             int fileFd = open(absPath.c_str(), O_RDONLY);
@@ -171,6 +166,11 @@ namespace Lemon::GUI {
                 perror("GUI: FileView: File: Stat:");
                 assert(!ret);
                 return;
+            }
+
+            if(statResult.st_mode & S_IFDIR){
+                fileList->AddItem(item);
+                continue;
             }
 
             char buf[80];
@@ -212,7 +212,7 @@ namespace Lemon::GUI {
             return;
         }
 
-        if(S_ISDIR(statResult.st_mode)){
+        if(statResult.st_mode & S_IFDIR){
             currentPath = absPath;
 
             Refresh();

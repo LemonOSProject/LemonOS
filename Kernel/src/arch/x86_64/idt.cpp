@@ -312,7 +312,7 @@ extern "C"
 	void irq_handler(int int_num, regs64_t* regs) {
 		LocalAPICEOI();
 		
-		if (interrupt_handlers[int_num] != 0) {
+		if (__builtin_expect(interrupt_handlers[int_num] != 0, 1)) {
 			isr_t handler;
 			handler = interrupt_handlers[int_num];
 			handler(regs);
@@ -325,8 +325,8 @@ extern "C"
 	extern "C"
 	void ipi_handler(int int_num, regs64_t* regs) {
 		LocalAPICEOI();
-		
-		if (interrupt_handlers[int_num] != 0) {
+
+		if (__builtin_expect(interrupt_handlers[int_num] != 0, 1)) {
 			isr_t handler;
 			handler = interrupt_handlers[int_num];
 			handler(regs);

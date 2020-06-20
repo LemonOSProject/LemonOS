@@ -551,7 +551,11 @@ long SysReadDir(regs64_t* r){
 		return -ENOTDIR;
 	}
 
-	int ret = fs::ReadDir(Scheduler::GetCurrentProcess()->fileDescriptors[fd], direntPointer, count);
+	DirectoryEntry tempent;
+	int ret = fs::ReadDir(Scheduler::GetCurrentProcess()->fileDescriptors[fd], &tempent, count);
+
+	strcpy(direntPointer->name, tempent.name);
+	direntPointer->type = tempent.flags;
 
 	if(r->rsi) *((int*)r->rsi) = ret;
 	return ret;

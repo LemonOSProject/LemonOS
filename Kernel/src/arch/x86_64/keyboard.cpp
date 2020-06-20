@@ -33,10 +33,13 @@ namespace Keyboard{
 
 	class KeyboardDevice : public FsNode{
 	public:
-		KeyboardDevice(char* name){
-			strcpy(this->name, name);
+        DirectoryEntry dirent;
 
+		KeyboardDevice(char* name){
             flags = FS_NODE_CHARDEVICE;
+            strcpy(dirent.name, name);
+            dirent.flags = flags;
+            dirent.node = this;
 		}
 
 		size_t Read(size_t offset, size_t size, uint8_t *buffer){
@@ -76,7 +79,7 @@ namespace Keyboard{
 
     // Register interrupt handler
     void Install() {
-        fs::RegisterDevice(&kbDev);
+        fs::RegisterDevice(&kbDev.dirent);
 
         IDT::RegisterInterruptHandler(IRQ0 + 1, Handler);
 		APIC::IO::MapLegacyIRQ(1);

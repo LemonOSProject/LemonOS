@@ -81,6 +81,7 @@ void ShellInstance::PollCommands(){
                     break;
                 }
 
+                win->lastState = win->state;
                 win->state = cmd->windowState;
 
                 if(win->state == Lemon::Shell::ShellWindowStateActive){

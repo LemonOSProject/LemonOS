@@ -3,6 +3,7 @@
 #include <gui/window.h>
 #include <sys/un.h>
 #include <core/shell.h>
+#include <core/keyboard.h>
 
 WMInstance::WMInstance(surface_t& surface, sockaddr_un address) : server(address, sizeof(sockaddr_un)){
 
@@ -25,10 +26,12 @@ void WMInstance::MinimizeWindow(WMWindow* win, bool state){
 
     win->Minimize(state);
 
-    if(state == false) { // Showing the window to add to top
+    if(state == false) { // Showing the window and adding to top
         SetActive(win);
     } else { // Hiding the window, so if active set not active
-        if(active == win) SetActive(nullptr);
+        if(active == win){
+            SetActive(nullptr);
+        }
 
         if(!(win->flags & WINDOW_FLAGS_NOSHELL))
             Lemon::Shell::SetWindowState(win->clientFd, Lemon::Shell::ShellWindowStateMinimized, shellClient);
@@ -41,6 +44,9 @@ void WMInstance::MinimizeWindow(int id, bool state){
     if(!win) {
         printf("Invalid window ID: %d\n", id);
     }
+    if(state)
+
+        printf("minimizing\n");
 
     MinimizeWindow(win, state);
 }
@@ -272,7 +278,9 @@ void WMInstance::MouseMove(){
 }
 
 void WMInstance::KeyUpdate(int key, bool pressed){
-    if(active){
+    if(key == KEY_GUI && pressed){
+        Lemon::Shell::ToggleMenu(shellClient);
+    } else if(active){
         Lemon::LemonEvent ev;
 
         ev.event = pressed ? Lemon::EventKeyPressed : Lemon::EventKeyReleased;
@@ -289,6 +297,8 @@ void WMInstance::Update(){
 
     if(drag && active){
         active->pos = input.mouse.pos - dragOffset; // Move window
+        if(active->pos.y < 0) active->pos.y = 0;
+
         redrawBackground = true;
     }
     

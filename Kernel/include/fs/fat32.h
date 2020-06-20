@@ -99,7 +99,7 @@ namespace fs::FAT32{
         size_t Write(size_t, size_t, uint8_t *);
         //fs_fd_t* Open(size_t flags);
         //void Close();
-        int ReadDir(struct fs_dirent*, uint32_t);
+        int ReadDir(DirectoryEntry*, uint32_t);
         FsNode* FindDir(char* name);
 
         Fat32Volume* vol;
@@ -113,7 +113,7 @@ namespace fs::FAT32{
         size_t Write(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer);
         void Open(Fat32Node* node, uint32_t flags);
         void Close(Fat32Node* node);
-        int ReadDir(Fat32Node* node, struct fs_dirent* dirent, uint32_t index);
+        int ReadDir(Fat32Node* node, DirectoryEntry* dirent, uint32_t index);
         FsNode* FindDir(Fat32Node* node, char* name);
 
     private:

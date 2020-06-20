@@ -58,9 +58,8 @@ namespace fs::FAT32{
 
         mountPoint = &fat32MountPoint;
 
-        mountPointDirent.inode = bootRecord->ebr.rootClusterNum;
-        mountPointDirent.type = FS_NODE_DIRECTORY;
-        
+        mountPointDirent.flags = FS_NODE_DIRECTORY;
+        mountPointDirent.node = &fat32MountPoint;
         strcpy(mountPointDirent.name, name);
         
     }
@@ -170,7 +169,7 @@ namespace fs::FAT32{
 
     }
 
-    int Fat32Volume::ReadDir(Fat32Node* node, fs_dirent_t* dirent, uint32_t index){
+    int Fat32Volume::ReadDir(Fat32Node* node, DirectoryEntry* dirent, uint32_t index){
         int lfnCount = 0;
         int entryCount = 0;
 
@@ -218,8 +217,6 @@ namespace fs::FAT32{
             lfnEntries[i] = lfnEntry; 
         }
 
-        dirent->inode = dirEntry->lowClusterNum | (dirEntry->highClusterNum << 16);
-
         if(lfnCount){
             GetLongFilename(dirent->name, lfnEntries, lfnCount);
         } else {
@@ -231,8 +228,8 @@ namespace fs::FAT32{
             }
         }
 
-        if(dirEntry->attributes & FAT_ATTR_DIRECTORY) dirent->type = FS_NODE_DIRECTORY;
-        else dirent->type = FS_NODE_FILE;
+        if(dirEntry->attributes & FAT_ATTR_DIRECTORY) dirent->flags = FS_NODE_DIRECTORY;
+        else dirent->flags = FS_NODE_FILE;
 
         return 0;
     }
@@ -327,7 +324,7 @@ namespace fs::FAT32{
         vol->Close(this);
     }*/
 
-    int Fat32Node::ReadDir(fs_dirent_t* dirent, uint32_t index){
+    int Fat32Node::ReadDir(DirectoryEntry* dirent, uint32_t index){
         return vol->ReadDir(this, dirent, index);
     }
 

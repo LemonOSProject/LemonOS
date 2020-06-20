@@ -10,7 +10,7 @@ namespace fs{
 	public:
 		Root() { flags = FS_NODE_DIRECTORY; }
 
-		int ReadDir(struct fs_dirent*, uint32_t);
+		int ReadDir(DirectoryEntry*, uint32_t);
 		FsNode* FindDir(char* name);
 	};
 	
@@ -18,7 +18,7 @@ namespace fs{
 	public:
 		Dev() { flags = FS_NODE_DIRECTORY; }
 
-		int ReadDir(struct fs_dirent*, uint32_t);
+		int ReadDir(DirectoryEntry*, uint32_t);
 		FsNode* FindDir(char* name);
 	};
 	
@@ -31,40 +31,38 @@ namespace fs{
 	};
 
     Root root;
-	fs_dirent_t rootDirent;
+	DirectoryEntry rootDirent = DirectoryEntry(&root, "");
 
 	Dev dev;
-	fs_dirent_t devDirent;
+	DirectoryEntry devDirent = DirectoryEntry(&dev, "dev");
 
 	Null null;
-    
-	fs_dirent_t dirent;
+	DirectoryEntry nullDirent = DirectoryEntry(&dev, "null");
 
 	List<FsVolume*>* volumes;
     
-	FsNode* devices[64];
+	DirectoryEntry* devices[64];
 	uint32_t deviceCount = 0;
 
     void Initialize(){
 		volumes = new List<FsVolume*>();
 
-		strcpy(root.name,"");
 		root.flags = FS_NODE_DIRECTORY;
 		root.inode = 0;
+		rootDirent.flags = FS_NODE_DIRECTORY;
 		strcpy(rootDirent.name, "");
 
-		strcpy(dev.name,"dev");
 		dev.flags = FS_NODE_DIRECTORY;
 		dev.inode = 0;
 		strcpy(devDirent.name, "dev");
-		devDirent.type = FS_NODE_DIRECTORY;
+		devDirent.flags = FS_NODE_DIRECTORY;
 
-		strcpy(null.name,"null");
+		strcpy(nullDirent.name,"null");
 		null.flags = FS_NODE_CHARDEVICE;
 		null.inode = 0;
 		null.size = 1;
 
-        RegisterDevice(&null);
+        RegisterDevice(&nullDirent);
     }
 
 	void RegisterVolume(FsVolume* vol){
@@ -96,8 +94,7 @@ namespace fs{
 		while(file != NULL){ // Iterate through the directories to find the file
 			FsNode* node = fs::FindDir(current_node,file);
 			if(!node) {
-				Log::Warning(tempPath);
-				Log::Write(" not found!");
+				Log::Warning("%s not found!", tempPath);
 				return nullptr;
 			}
 			if(node->flags & FS_NODE_DIRECTORY){
@@ -176,30 +173,29 @@ namespace fs{
 		return outPath;
 	}
 
-	void RegisterDevice(FsNode* device){
+	void RegisterDevice(DirectoryEntry* device){
 		Log::Info("Device Registered: ");
 		Log::Write(device->name);
 		devices[deviceCount++] = device;
 	}
     
-	int Dev::ReadDir(fs_dirent_t* dirent, uint32_t index){
+	int Dev::ReadDir(DirectoryEntry* dirent, uint32_t index){
 		Log::Info("readdir %d", index);
+
 		if(index >= deviceCount) return -1;
-		memset(dirent->name,0,128); // Zero the string
 		strcpy(dirent->name,devices[index]->name);
-		dirent->inode = index;
-		dirent->type = 0;
+
 		return 0;
 	}
 
     FsNode* Dev::FindDir(char* name){
 		for(unsigned i = 0; i < deviceCount; i++)
-			if(strcmp(devices[i]->name, name) == 0) return devices[i];
+			if(strcmp(devices[i]->name, name) == 0) return devices[i]->node;
 
         return NULL;
 	}
 
-	int Root::ReadDir(fs_dirent_t* dirent, uint32_t index){
+	int Root::ReadDir(DirectoryEntry* dirent, uint32_t index){
 		if(index == 0){
 			*dirent = devDirent;
 			return 0;
@@ -210,10 +206,10 @@ namespace fs{
 	}
 
     FsNode* Root::FindDir(char* name){
-		if(strcmp(name,dev.name) == 0) return &dev;
+		if(strcmp(name,devDirent.name) == 0) return &dev;
 
 		for(int i = 0; i < fs::volumes->get_length(); i++){
-			if(strcmp(fs::volumes->get_at(i)->mountPoint->name,name) == 0) return (fs::volumes->get_at(i)->mountPoint);
+			if(strcmp(fs::volumes->get_at(i)->mountPointDirent.name,name) == 0) return (fs::volumes->get_at(i)->mountPointDirent.node);
 		}
 
         return NULL;
@@ -261,12 +257,12 @@ namespace fs{
 		kfree(fd);
     }
 
-    int ReadDir(FsNode* node, fs_dirent_t* dirent, uint32_t index){
+    int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index){
 		assert(node);
 
 		if(node->flags & FS_NODE_SYMLINK) return ReadDir(node->link, dirent, index);
 
-        return node->ReadDir( dirent, index);
+        return node->ReadDir(dirent, index);
     }
 
     FsNode* FindDir(FsNode* node, char* name){
@@ -294,7 +290,7 @@ namespace fs{
 		} else return 0;
     }
 
-    int ReadDir(fs_fd_t* handle, fs_dirent_t* dirent, uint32_t index){
+    int ReadDir(fs_fd_t* handle, DirectoryEntry* dirent, uint32_t index){
         if(handle->node)
             return ReadDir(handle->node, dirent, index);
         else return 0;

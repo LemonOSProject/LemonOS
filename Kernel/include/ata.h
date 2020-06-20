@@ -24,6 +24,9 @@
 #define ATA_BMR_DEV_SPECIFIC_2_SECONDARY 11
 #define ATA_BMR_PRDT_ADDRESS_SECONDARY 12
 
+#define ATA_CMD_READ_DMA_EX     0x25
+#define ATA_CMD_WRITE_DMA_EX     0x35
+
 #define ATA_PRD_BUFFER(x) (x & 0xFFFFFFFF)
 #define ATA_PRD_TRANSFER_SIZE(x) ((x & 0xFFFF) << 32)
 #define ATA_PRD_END 0x8000000000000000ULL //(0x8000 << 48)
@@ -34,5 +37,5 @@ namespace ATA{
     void SendCommand(uint8_t drive, uint8_t command);
 
     int Init();
-    int Read(ATADiskDevice* drive, uint64_t lba, uint16_t count, void* buffer);
+    int Access(ATADiskDevice* drive, uint64_t lba, uint16_t count, void* buffer, bool write = false);
 }

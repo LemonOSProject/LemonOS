@@ -4,16 +4,9 @@
 #include <stddef.h>
 
 #include <list.h>
+#include <hash.h>
 
 #define PATH_MAX 4096
-
-#define FS_NODE_FILE 0x1
-#define FS_NODE_DIRECTORY 0x2
-#define FS_NODE_MOUNTPOINT 0x8
-#define FS_NODE_BLKDEVICE 0x10
-#define FS_NODE_SYMLINK 0x20
-#define FS_NODE_CHARDEVICE 0x40
-#define FS_NODE_SOCKET 0x80
 
 #define S_IFMT 0xF000
 #define S_IFBLK 0x6000
@@ -23,6 +16,14 @@
 #define S_IFDIR 0x4000
 #define S_IFLNK 0xA000
 #define S_IFSOCK 0xC000
+
+#define FS_NODE_FILE 0x1
+#define FS_NODE_DIRECTORY S_IFDIR//0x2
+#define FS_NODE_MOUNTPOINT S_IFDIR//0x8
+#define FS_NODE_BLKDEVICE S_IFBLK//0x10
+#define FS_NODE_SYMLINK 0x20//S_IFLNK//0x20
+#define FS_NODE_CHARDEVICE S_IFCHR//0x40
+#define FS_NODE_SOCKET S_IFSOCK//0x80
 
 #define POLLIN 0x01
 #define POLLOUT 0x02
@@ -96,25 +97,51 @@ struct pollfd {
     short revents;
 };
 
+class DirectoryEntry{
+public:
+    char name[256];
+
+    FsNode* node = nullptr;
+    DirectoryEntry* parent = nullptr;
+
+    mode_t flags = 0;
+
+    DirectoryEntry(FsNode* node, const char* name) { this->node = node; strcpy(this->name, name); }
+    DirectoryEntry() {}
+};
+
 class FsNode{
 public:
-    char name[128]; // Filename
+    char name[256]; // Filename
     uint32_t flags = 0; // Flags
     uint32_t pmask = 0; // Permission mask
     uid_t uid = 0; // User id
     ino_t inode = 0; // Inode number
     size_t size = 0; // Node size
+    int nlink = 0; // Amount of references/hard links
+    unsigned handleCount = 0; // Amount of file handles that point to this node
+
+    int error = 0;
 
     virtual ~FsNode();
 
     virtual size_t Read(size_t, size_t, uint8_t *); // Read Data
     virtual size_t Write(size_t, size_t, uint8_t *); // Write Data
+
     virtual fs_fd_t* Open(size_t flags); // Open
     virtual void Close(); // Close
-    virtual int ReadDir(struct fs_dirent*, uint32_t); // Read Directory
-    virtual FsNode* FindDir(char* name); // Write directory
+
+    virtual int ReadDir(DirectoryEntry*, uint32_t); // Read Directory
+    virtual FsNode* FindDir(char* name); // Find in directory
+
+    virtual int Create(DirectoryEntry*, uint32_t);
+    virtual int CreateDirectory(DirectoryEntry*, uint32_t);
+    
+    virtual int Link(FsNode*, DirectoryEntry*);
+    virtual int Unlink(DirectoryEntry*);
+
     virtual int Ioctl(uint64_t cmd, uint64_t arg); // I/O Control
-    virtual void Update(); // Update node on device
+    virtual void Sync(); // Sync node to device
 
     virtual bool CanRead() { return true; }
     virtual bool CanWrite() { return false; }
@@ -136,7 +163,7 @@ namespace fs{
 
     void Initialize();
     FsNode* GetRoot();
-    void RegisterDevice(FsNode* device);
+    void RegisterDevice(DirectoryEntry* device);
 
     FsNode* ResolvePath(char* path, char* workingDir = nullptr);
     char* CanonicalizePath(char* path, char* workingDir);
@@ -146,12 +173,12 @@ namespace fs{
     fs_fd_t* Open(FsNode* node, uint32_t flags = 0);
     void Close(FsNode* node);
     void Close(fs_fd_t* handle);
-    int ReadDir(FsNode* node, fs_dirent_t* dirent, uint32_t index);
+    int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index);
     FsNode* FindDir(FsNode* node, char* name);
     
     size_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer);
     size_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer);
-    int ReadDir(fs_fd_t* handle, fs_dirent_t* dirent, uint32_t index);
+    int ReadDir(fs_fd_t* handle, DirectoryEntry* dirent, uint32_t index);
     FsNode* FindDir(fs_fd_t* handle, char* name);
 
     int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg);
