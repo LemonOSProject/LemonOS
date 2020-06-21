@@ -4,11 +4,11 @@ FsNode::~FsNode(){
     
 }
 
-size_t FsNode::Read(size_t, size_t, uint8_t *){
+ssize_t FsNode::Read(size_t, size_t, uint8_t *){
     return 0;
 }
 
-size_t FsNode::Write(size_t, size_t, uint8_t *){
+ssize_t FsNode::Write(size_t, size_t, uint8_t *){
     return 0;
 }
 

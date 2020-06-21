@@ -32,7 +32,7 @@ namespace Log{
 			dirent.flags = flags;
 		}
 
-		size_t Read(size_t offset, size_t size, uint8_t *buffer){
+		ssize_t Read(size_t offset, size_t size, uint8_t *buffer){
 			if(!logBuffer) return 0;
 
 			if(size + offset > logBufferPos) size = logBufferPos - offset;
@@ -41,7 +41,7 @@ namespace Log{
 			return size;
 		}
 
-		size_t Write(size_t offset, size_t size, uint8_t *buffer){
+		ssize_t Write(size_t offset, size_t size, uint8_t *buffer){
 			WriteN((char*)buffer, size);
 
 			return size;

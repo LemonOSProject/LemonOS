@@ -42,7 +42,7 @@ namespace Keyboard{
             dirent.node = this;
 		}
 
-		size_t Read(size_t offset, size_t size, uint8_t *buffer){
+		ssize_t Read(size_t offset, size_t size, uint8_t *buffer){
             if(size > keyCount) size = keyCount;
 
             if(!size) return 0;

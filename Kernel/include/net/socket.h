@@ -111,11 +111,11 @@ public:
     
     virtual int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
     virtual int64_t Receive(void* buffer, size_t len, int flags);
-    virtual size_t Read(size_t offset, size_t size, uint8_t* buffer);
+    virtual ssize_t Read(size_t offset, size_t size, uint8_t* buffer);
     
     virtual int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
     virtual int64_t Send(void* buffer, size_t len, int flags);
-    virtual size_t Write(size_t offset, size_t size, uint8_t* buffer);
+    virtual ssize_t Write(size_t offset, size_t size, uint8_t* buffer);
     
     virtual fs_fd_t* Open(size_t flags);
     virtual void Close();

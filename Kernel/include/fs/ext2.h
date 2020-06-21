@@ -196,8 +196,8 @@ namespace fs::Ext2{
         Ext2Node(Ext2Volume* vol) { this->vol = vol; }
         Ext2Node(Ext2Volume* vol, ext2_inode_t& ino, ino_t inode);
 
-        size_t Read(size_t, size_t, uint8_t *);
-        size_t Write(size_t, size_t, uint8_t *);
+        ssize_t Read(size_t, size_t, uint8_t *);
+        ssize_t Write(size_t, size_t, uint8_t *);
         int ReadDir(DirectoryEntry*, uint32_t);
         FsNode* FindDir(char* name);
         int Create(DirectoryEntry*, uint32_t);
@@ -279,8 +279,8 @@ namespace fs::Ext2{
     public:
         Ext2Volume(PartitionDevice* part, const char* name);
 
-        size_t Read(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer);
-        size_t Write(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer);
+        ssize_t Read(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer);
+        ssize_t Write(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer);
         int ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index);
         FsNode* FindDir(Ext2Node* node, char* name);
         int Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);

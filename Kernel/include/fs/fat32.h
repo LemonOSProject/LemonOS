@@ -95,8 +95,8 @@ namespace fs::FAT32{
 
     class Fat32Node : public FsNode {
     public:
-        size_t Read(size_t, size_t, uint8_t *);
-        size_t Write(size_t, size_t, uint8_t *);
+        ssize_t Read(size_t, size_t, uint8_t *);
+        ssize_t Write(size_t, size_t, uint8_t *);
         //fs_fd_t* Open(size_t flags);
         //void Close();
         int ReadDir(DirectoryEntry*, uint32_t);
@@ -109,8 +109,8 @@ namespace fs::FAT32{
     public:
         Fat32Volume(PartitionDevice* part, char* name);
 
-        size_t Read(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer);
-        size_t Write(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer);
+        ssize_t Read(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer);
+        ssize_t Write(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer);
         void Open(Fat32Node* node, uint32_t flags);
         void Close(Fat32Node* node);
         int ReadDir(Fat32Node* node, DirectoryEntry* dirent, uint32_t index);

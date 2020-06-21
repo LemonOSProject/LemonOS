@@ -26,8 +26,8 @@ namespace fs{
 	public:
 		Null() { flags = FS_NODE_FILE; }
 
-		size_t Read(size_t, size_t, uint8_t *);
-		size_t Write(size_t, size_t, uint8_t *);
+		ssize_t Read(size_t, size_t, uint8_t *);
+		ssize_t Write(size_t, size_t, uint8_t *);
 	};
 
     Root root;
@@ -261,17 +261,17 @@ namespace fs{
         return NULL;
 	}
 
-	size_t Null::Read(size_t offset, size_t size, uint8_t *buffer){
+	ssize_t Null::Read(size_t offset, size_t size, uint8_t *buffer){
 
 		memset(buffer, -1, size);
 		return size;
 	}
 	
-	size_t Null::Write(size_t offset, size_t size, uint8_t *buffer){
+	ssize_t Null::Write(size_t offset, size_t size, uint8_t *buffer){
 		return size;
 	}
 
-    size_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
+    ssize_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
 		assert(node);
 
 		if(node->flags & FS_NODE_SYMLINK) return Read(node->link, offset, size, buffer);
@@ -279,7 +279,7 @@ namespace fs{
         return node->Read(offset,size,buffer);
     }
 
-    size_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
+    ssize_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
 		assert(node);
 
 		if(node->flags & FS_NODE_SYMLINK) return Write(node->link, offset, size, buffer);
@@ -319,7 +319,7 @@ namespace fs{
 		return node->FindDir(name);
     }
 	
-    size_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer){
+    ssize_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer){
         if(handle->node){
             off_t ret = Read(handle->node,handle->pos,size,buffer);
 			handle->pos += ret;
@@ -328,7 +328,7 @@ namespace fs{
         else return 0;
     }
 
-    size_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer){
+    ssize_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer){
         if(handle->node){
             off_t ret = Write(handle->node,handle->pos,size,buffer);
 			handle->pos += ret;

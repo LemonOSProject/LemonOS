@@ -1,6 +1,7 @@
 #include <fs/tar.h>
 
 #include <logging.h>
+#include <errno.h>
 
 inline static long OctToDec(char* str, int size) {
     long n = 0;
@@ -33,16 +34,16 @@ inline static uint32_t TarTypeToFilesystemFlags(char type){
 }
 
 namespace fs::tar{
-    size_t TarNode::Read(size_t offset, size_t size, uint8_t *buffer){
+    ssize_t TarNode::Read(size_t offset, size_t size, uint8_t *buffer){
         if(vol){
             return vol->Read(this, offset, size, buffer);
-        } else return 0;
+        } else return -1;
     }
 
-    size_t TarNode::Write(size_t offset, size_t size, uint8_t *buffer){
+    ssize_t TarNode::Write(size_t offset, size_t size, uint8_t *buffer){
         if(vol){
             return vol->Write(this, offset, size, buffer);
-        } else return 0;
+        } else return -1;
     }
 
     void TarNode::Close(){
@@ -164,22 +165,22 @@ namespace fs::tar{
         volumeNode->entryCount = e;
     }
 
-    size_t TarVolume::Read(TarNode* node, size_t offset, size_t size, uint8_t *buffer){
+    ssize_t TarVolume::Read(TarNode* node, size_t offset, size_t size, uint8_t *buffer){
         TarNode* tarNode = &nodes[node->inode];
 
-		if(offset > node->size) return 0;
+		if(offset > node->size) return -1;
 		else if(offset + size > node->size || size > node->size) size = node->size - offset;
 
-		if(!size) return 0;
+		if(!size) return -EINVAL;
 
 		memcpy(buffer, (void*)(((uintptr_t)tarNode->header) + 512 + offset), size);
 		return size;
     }
 
-    size_t TarVolume::Write(TarNode* node, size_t offset, size_t size, uint8_t *buffer){
+    ssize_t TarVolume::Write(TarNode* node, size_t offset, size_t size, uint8_t *buffer){
         TarNode* tarNode = &nodes[node->inode];
 
-        return 0;
+        return -EROFS;
     }
 
     void TarVolume::Open(TarNode* node, uint32_t flags){

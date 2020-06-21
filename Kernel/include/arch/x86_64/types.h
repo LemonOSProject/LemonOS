@@ -2,4 +2,4 @@
 
 #include <stdint.h>
 
-typedef uint64_t ptr_t;
+typedef long long ssize_t;

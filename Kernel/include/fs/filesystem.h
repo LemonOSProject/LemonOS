@@ -4,7 +4,8 @@
 #include <stddef.h>
 
 #include <list.h>
-#include <hash.h>
+
+#include <types.h>
 
 #define PATH_MAX 4096
 #define NAME_MAX 255
@@ -128,8 +129,8 @@ public:
 
     virtual ~FsNode();
 
-    virtual size_t Read(size_t, size_t, uint8_t *); // Read Data
-    virtual size_t Write(size_t, size_t, uint8_t *); // Write Data
+    virtual ssize_t Read(size_t, size_t, uint8_t *); // Read Data
+    virtual ssize_t Write(size_t, size_t, uint8_t *); // Write Data
 
     virtual fs_fd_t* Open(size_t flags); // Open
     virtual void Close(); // Close
@@ -173,16 +174,16 @@ namespace fs{
     char* CanonicalizePath(const char* path, char* workingDir);
     char* BaseName(const char* path);
 
-    size_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer);
-    size_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer);
+    ssize_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer);
+    ssize_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer);
     fs_fd_t* Open(FsNode* node, uint32_t flags = 0);
     void Close(FsNode* node);
     void Close(fs_fd_t* handle);
     int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index);
     FsNode* FindDir(FsNode* node, char* name);
     
-    size_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer);
-    size_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer);
+    ssize_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer);
+    ssize_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer);
     int ReadDir(fs_fd_t* handle, DirectoryEntry* dirent, uint32_t index);
     FsNode* FindDir(fs_fd_t* handle, char* name);
 

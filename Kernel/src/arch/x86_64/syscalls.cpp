@@ -183,11 +183,12 @@ long SysRead(regs64_t* r){
 		return -3;
 	}
 
-	int ret = fs::Read(handle, count, buffer);
+	ssize_t ret = fs::Read(handle, count, buffer);
 	return ret;
 }
 
 long SysWrite(regs64_t* r){
+	Log::Info("writing to fd %d", r->rbx);
 	if(r->rbx > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 		Log::Warning("Invalid File Descriptor: %d", r->rbx);
 		return -1;
@@ -200,11 +201,9 @@ long SysWrite(regs64_t* r){
 
 	if(!(r->rcx && r->rdx)) return 1;
 
-	int ret = fs::Write(handle, r->rdx, (uint8_t*)r->rcx);
+	ssize_t ret = fs::Write(handle, r->rdx, (uint8_t*)r->rcx);
+	Log::Info("written %d bytes", ret);
 
-	if(r->rsi){
-		*((int*)r->rsi) = ret;
-	}
 	return ret;
 }
 

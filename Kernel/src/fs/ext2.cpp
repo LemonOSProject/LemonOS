@@ -295,6 +295,7 @@ namespace fs::Ext2{
                     }
                 }
 
+
                 if(block) break;
             }
 
@@ -307,6 +308,9 @@ namespace fs::Ext2{
                 error = DiskWriteError;
                 return 0;
             }
+
+            super.freeBlockCount--;
+            blockGroups[i].freeBlockCount--;
 
             return block;
         }
@@ -368,6 +372,9 @@ namespace fs::Ext2{
             ino.size = ino.sizeHigh = 0;
             ino.fragAddr = 0;
             ino.fileACL = 0;
+
+            super.freeInodeCount--;
+            blockGroups[i].freeInodeCount--;
 
             Ext2Node* node = new Ext2Node(this, ino, inode);
 
@@ -698,7 +705,7 @@ namespace fs::Ext2{
         return returnNode;
     }
 
-    size_t Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer){
+    ssize_t Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer){
         if(offset >= node->size) return 0;
         if(offset + size > node->size) size = node->size - offset;
 
@@ -712,7 +719,11 @@ namespace fs::Ext2{
 
         for(unsigned i = 0; i < blockCount && size > 0; i++, blockIndex++){
             uint32_t block = GetInodeBlock(blockIndex, node->e2inode);
-            ReadBlock(block, blockBuffer);
+            if(ReadBlock(block, blockBuffer)){
+                Log::Info("[Ext2] Error reading block %d", block);
+                error = DiskReadError;
+                return -1;
+            }
             
             if(offset % blocksize){
                 size_t readSize = blocksize - (offset % blocksize);
@@ -734,13 +745,15 @@ namespace fs::Ext2{
 
         kfree(blockBuffer);
 
+        Log::Info("[Ext2] Returning %d", ret);
+
         return ret;
     }
 
-    size_t Ext2Volume::Write(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer){
+    ssize_t Ext2Volume::Write(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer){
         if(readOnly) {
             error = FilesystemAccessError;
-            return 0;
+            return -EROFS;
         }
 
         uint32_t blockIndex = LocationToBlock(offset); // Index of first block to write
@@ -852,6 +865,10 @@ namespace fs::Ext2{
     }
 
     int Ext2Volume::CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode){
+        if(readOnly){
+            return -EROFS;
+        }
+
         if(!(node->flags & FS_NODE_DIRECTORY)) {
             Log::Info("[Ext2] Not a directory!");
             return -ENOTDIR;
@@ -947,11 +964,11 @@ namespace fs::Ext2{
         return vol->FindDir(this, name);
     }
 
-    size_t Ext2Node::Read(size_t offset, size_t size, uint8_t* buffer){
+    ssize_t Ext2Node::Read(size_t offset, size_t size, uint8_t* buffer){
         return vol->Read(this, offset, size, buffer);
     }
 
-    size_t Ext2Node::Write(size_t offset, size_t size, uint8_t* buffer){
+    ssize_t Ext2Node::Write(size_t offset, size_t size, uint8_t* buffer){
         return vol->Write(this, offset, size, buffer);
     }
 

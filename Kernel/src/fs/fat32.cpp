@@ -4,6 +4,7 @@
 #include <logging.h>
 #include <memory.h>
 #include <string.h>
+#include <errno.h>
 
 namespace fs::FAT32{
 
@@ -140,8 +141,8 @@ namespace fs::FAT32{
         return _buf;
     }
 
-    size_t Fat32Volume::Read(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer){
-        if(!node->inode || node->flags & FS_NODE_DIRECTORY) return 0;
+    ssize_t Fat32Volume::Read(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer){
+        if(!node->inode || node->flags & FS_NODE_DIRECTORY) return -1;
 
         int count;
         void* _buf = ReadClusterChain(node->inode, &count, size);
@@ -152,7 +153,9 @@ namespace fs::FAT32{
         return size;
     }
 
-    size_t Fat32Volume::Write(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer){
+    ssize_t Fat32Volume::Write(Fat32Node* node, size_t offset, size_t size, uint8_t *buffer){
+        return -EROFS;
+
         List<uint32_t>* clusters = GetClusterChain(node->inode);
         if(offset + size > clusters->get_length() * bootRecord->bpb.sectorsPerCluster * part->parentDisk->blocksize){
             // TODO: Allocate clusters
@@ -308,11 +311,11 @@ namespace fs::FAT32{
         return _node;
     }
 
-    size_t Fat32Node::Read(size_t offset, size_t size, uint8_t *buffer){
+    ssize_t Fat32Node::Read(size_t offset, size_t size, uint8_t *buffer){
         return vol->Read(this, offset, size, buffer);
     }
 
-    size_t Fat32Node::Write(size_t offset, size_t size, uint8_t *buffer){
+    ssize_t Fat32Node::Write(size_t offset, size_t size, uint8_t *buffer){
         return vol->Write(this, offset, size, buffer);
     }
 

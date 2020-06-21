@@ -117,7 +117,7 @@ namespace Mouse{
 			dirent.node = this;
 		}
 
-		size_t Read(size_t offset, size_t size, uint8_t *buffer){
+		ssize_t Read(size_t offset, size_t size, uint8_t *buffer){
 			if(size < sizeof(MousePacket)) return 0;
 
 			if(packetCount <= 0) return 0; // No packets

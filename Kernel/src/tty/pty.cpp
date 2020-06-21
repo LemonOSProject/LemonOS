@@ -45,7 +45,7 @@ PTYDevice::PTYDevice(){
 	dirent.node = this;
 }
 
-size_t PTYDevice::Read(size_t offset, size_t size, uint8_t *buffer){
+ssize_t PTYDevice::Read(size_t offset, size_t size, uint8_t *buffer){
 	assert(pty);
 	assert(device == PTYSlaveDevice || device == PTYMasterDevice);
 
@@ -58,7 +58,7 @@ size_t PTYDevice::Read(size_t offset, size_t size, uint8_t *buffer){
 	return 0;
 }
 	
-size_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
+ssize_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
 	assert(pty);
 	assert(device == PTYSlaveDevice || device == PTYMasterDevice);
 

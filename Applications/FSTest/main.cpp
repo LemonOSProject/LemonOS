@@ -24,7 +24,7 @@ int main(int argc, char** argv){
     } else if(strcmp(argv[1], "mkdir") == 0){
         action = AMkdir;
     } else {
-        printf("Unknown action: %s\n");
+        printf("Unknown action: %s\n", argv[1]);
         return 2;
     }
 
@@ -33,16 +33,14 @@ int main(int argc, char** argv){
             perror("mkdir: ");
         }
         return 0;
-    }
+    } else if(action == ARead){
+        FILE* file;
+        if(!(file = fopen(argv[2], ""))){
+            printf("Failed to open file %s: ", argv[2]);
+            perror("");
+            return 3;
+        }
 
-    FILE* file;
-    if(!(file = fopen(argv[2], "w"))){
-        printf("Failed to open file %s: ", argv[2]);
-        perror("");
-        return 3;
-    }
-
-    if(action == ARead){
         char c;
         while((c = fgetc(file)) != EOF){
             fputc(c, stdout);
@@ -51,6 +49,13 @@ int main(int argc, char** argv){
         fclose(file);
         return 0;
     } else if(action == AWrite) {
+        FILE* file;
+        if(!(file = fopen(argv[2], "w"))){
+            printf("Failed to open file %s: ", argv[2]);
+            perror("");
+            return 3;
+        }
+
         if(argc > 4){
             for(int i = 3; i < argc; i++){
                 fwrite(argv[i], strlen(argv[i]), 1, file);

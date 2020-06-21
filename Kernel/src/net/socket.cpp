@@ -71,7 +71,7 @@ int Socket::Listen(int backlog){
     return 0;
 }
 
-size_t Socket::Read(size_t offset, size_t size, uint8_t* buffer){
+ssize_t Socket::Read(size_t offset, size_t size, uint8_t* buffer){
     return Receive(buffer, size, 0);
 }
 
@@ -87,7 +87,7 @@ int64_t Socket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, 
     return -1; // We should not return but get the compiler to shut up
 }
 
-size_t Socket::Write(size_t offset, size_t size, uint8_t* buffer){
+ssize_t Socket::Write(size_t offset, size_t size, uint8_t* buffer){
     return Send(buffer, size, 0);
 }
 
