@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <sys/stat.h>
 
 enum Action{
     ARead,
     AWrite,
+    AMkdir,
 };
 
 int main(int argc, char** argv){
@@ -19,9 +21,18 @@ int main(int argc, char** argv){
         action = ARead;
     } else if(strcmp(argv[1], "write") == 0){
         action = AWrite;
+    } else if(strcmp(argv[1], "mkdir") == 0){
+        action = AMkdir;
     } else {
         printf("Unknown action: %s\n");
         return 2;
+    }
+
+    if(action == AMkdir) {
+        if(mkdir(argv[2], 0)){
+            perror("mkdir: ");
+        }
+        return 0;
     }
 
     FILE* file;

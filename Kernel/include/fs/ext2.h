@@ -26,6 +26,15 @@
 #define EXT2_S_IFLNK 0xA000
 #define EXT2_S_IFSOCK 0xC000
 
+#define EXT2_FT_UNKNOWN 0
+#define EXT2_FT_REG_FILE 1
+#define EXT2_FT_DIR 2
+#define EXT2_FT_CHRDEV 3
+#define EXT2_FT_BLKDEV 4
+#define EXT2_FT_FIFO 5
+#define EXT2_FT_SOCK 6
+#define EXT2_FT_SYMLINK 7
+
 #define EXT2_ROOT_INODE_INDEX 2
 
 #define EXT2_DIRECT_BLOCK_COUNT 12
@@ -78,6 +87,16 @@ namespace fs::Ext2{
         MASIX, // MASIX
         FreeBSD, // FreeBSD
         Lites, // Lites
+    };
+
+    enum ErrorCode{
+        NoError,
+        DiskReadError,
+        DiskWriteError,
+        InvalidInodeError,
+        FilesystemAccessError,
+        IncompatibleError,
+        MiscError,
     };
 
     #define EXT2_READONLY_FEATURE_SUPPORT (ReadonlyFeatures::Sparse | ReadonlyFeatures::LargeFiles)
@@ -181,6 +200,9 @@ namespace fs::Ext2{
         size_t Write(size_t, size_t, uint8_t *);
         int ReadDir(DirectoryEntry*, uint32_t);
         FsNode* FindDir(char* name);
+        int Create(DirectoryEntry*, uint32_t);
+        int CreateDirectory(DirectoryEntry*, uint32_t);
+
         void Close();
         void Sync();
 
@@ -245,10 +267,15 @@ namespace fs::Ext2{
         int ReadBlock(uint32_t block, void* buffer);
         int WriteBlock(uint32_t block, void* buffer);
 
-        ext2_inode_t CreateInode();
+        Ext2Node* CreateNode();
         void EraseInode(ext2_inode_t& inode);
 
         uint32_t AllocateBlock();
+
+        int ListDir(Ext2Node* node, List<DirectoryEntry>& entries);
+        int WriteDir(Ext2Node* node, List<DirectoryEntry>& entries);
+        int InsertDir(Ext2Node* node, List<DirectoryEntry>& entries);
+        int InsertDir(Ext2Node* node, DirectoryEntry& ent);
     public:
         Ext2Volume(PartitionDevice* part, const char* name);
 
@@ -256,6 +283,8 @@ namespace fs::Ext2{
         size_t Write(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer);
         int ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index);
         FsNode* FindDir(Ext2Node* node, char* name);
+        int Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
+        int CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
 
         void SyncNode(Ext2Node* node);
         void CleanNode(Ext2Node* node);

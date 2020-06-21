@@ -75,6 +75,8 @@ namespace fs{
     }
 
 	FsNode* ResolvePath(char* path, char* workingDir){
+		Log::Info("Resolving: %s", path);
+
 		char* tempPath;
 		if(workingDir && path[0] != '/'){
 			tempPath = (char*)kmalloc(strlen(path) + strlen(workingDir) + 2);
@@ -94,7 +96,7 @@ namespace fs{
 		while(file != NULL){ // Iterate through the directories to find the file
 			FsNode* node = fs::FindDir(current_node,file);
 			if(!node) {
-				Log::Warning("%s not found!", tempPath);
+				Log::Warning("%s not found!", path);
 				return nullptr;
 			}
 			if(node->flags & FS_NODE_DIRECTORY){
@@ -104,7 +106,7 @@ namespace fs{
 			}
 
 			if(file = strtok(NULL, "/")){
-				Log::Warning("Found file %s in the path however we were not finished", node->name);
+				Log::Warning("Found file in the path however we were not finished");
 				return nullptr;
 			}
 
@@ -113,11 +115,33 @@ namespace fs{
 		}
 
 		kfree(tempPath);
-		Log::Info("Returning: %s", current_node->name);
 		return current_node;
 	}
+	
+	FsNode* ResolveParent(char* path, char* workingDir){
+		char* pathCopy = (char*)kmalloc(strlen(path) + 1);
+		strcpy(pathCopy, path);
 
-	char* CanonicalizePath(char* path, char* workingDir){
+		if(pathCopy[strlen(pathCopy) - 1] == '/'){ // Remove trailing slash
+			pathCopy[strlen(pathCopy) - 1] = 0;
+		}
+
+		char* dirPath = strrchr(pathCopy, '/');
+
+		FsNode* parentDirectory = nullptr;
+
+		if(dirPath == nullptr){
+			parentDirectory = fs::ResolvePath(workingDir);
+		} else {
+			*(dirPath - 1) = 0; // Cut off the directory name from the path copy
+			parentDirectory = fs::ResolvePath(pathCopy, workingDir);
+		}
+
+		kfree(pathCopy);
+		return parentDirectory;
+	}
+
+	char* CanonicalizePath(const char* path, char* workingDir){
 		char* tempPath;
 		if(workingDir && path[0] != '/'){
 			tempPath = (char*)kmalloc(strlen(path) + strlen(workingDir) + 2);
@@ -171,6 +195,28 @@ namespace fs{
 		delete tokens;
 
 		return outPath;
+	}
+
+	char* BaseName(const char* path){
+		char* pathCopy = (char*)kmalloc(strlen(path));
+		strcpy(pathCopy, path);
+		
+		if(pathCopy[strlen(pathCopy) - 1] == '/'){ // Remove trailing slash
+			pathCopy[strlen(pathCopy) - 1] == 0;
+		}
+
+		char* basename = nullptr;
+		char* temp;
+		if((temp = strrchr(pathCopy, '/'))){
+			basename = (char*)kmalloc(strlen(temp));
+			strcpy(basename, temp);
+
+			kfree(pathCopy);
+		} else {
+			basename = pathCopy;
+		}
+
+		return basename;
 	}
 
 	void RegisterDevice(DirectoryEntry* device){

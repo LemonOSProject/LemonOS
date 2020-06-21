@@ -8,9 +8,52 @@ template<typename T>
 class ListNode
 {
 public:
-	ListNode* next = NULL;
-	ListNode* prev = NULL;
+	ListNode* next = nullptr;
+	ListNode* prev = nullptr;
 	T obj;
+};
+
+template<typename T>
+class List;
+
+template<typename T>
+class ListIterator {
+	friend class List<T>;
+protected:
+	ListNode<T>* node = nullptr;
+public:
+	ListIterator& operator++(){
+		if(node)
+			node = node->next;
+
+		return *this;
+	}
+
+	ListIterator& operator=(const ListIterator& other){
+		node = other.node;
+
+		return *this;
+	}
+
+	T& operator*() {
+		return node->obj;
+	}
+
+	T* operator->() {
+		return &node->obj;
+	}
+
+	friend bool operator==(const ListIterator& l, const ListIterator& r){
+		if(l.node == r.node){
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	friend bool operator!=(const ListIterator& l, const ListIterator& r){
+		return !(operator==(l, r));
+	}
 };
 
 template<typename T>
@@ -47,8 +90,7 @@ public:
 	}
 
 	void add_back(T obj) {
-		ListNode<T>* node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
-		*node = ListNode<T>();
+		ListNode<T>* node = new ListNode<T>();
 		node->obj = obj;
 		
 		//acquireLock(&lock);
@@ -93,12 +135,6 @@ public:
 
 	T& get_at(unsigned pos) {
 		assert(num > 0 && pos < num && front != nullptr);
-		/*if (num <= 0 || pos >= num || front == NULL) {
-			T obj; // Need to do something when item not in list
-			memset(&obj, 0, sizeof(T));
-			return obj;
-		}*/
-
 
 		ListNode<T>* current = front;
 
@@ -175,6 +211,18 @@ public:
 	T get_back()
 	{
 		return back->obj;
+	}
+
+	ListIterator<T> begin(){
+		ListIterator<T> it;
+		it.node = front;
+		return it;
+	}
+	
+	ListIterator<T> end(){
+		ListIterator<T> it;
+		it.node = nullptr;
+		return it;
 	}
 public:
 	ListNode<T>* front;

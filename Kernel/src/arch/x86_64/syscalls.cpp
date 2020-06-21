@@ -32,17 +32,13 @@
 #define SYS_MAP_FB 14
 #define SYS_ALLOC 15
 #define SYS_CHMOD 16
-#define SYS_CREATE_DESKTOP 17
 #define SYS_STAT 18
 #define SYS_LSEEK 19
 #define SYS_GETPID 20
 #define SYS_MOUNT 21
-#define SYS_CREATE_WINDOW 22
-#define SYS_DESTROY_WINDOW 23
-#define SYS_DESKTOP_GET_WINDOW 24
+#define SYS_MKDIR 22
+#define SYS_RMDIR 23
 #define SYS_YIELD 25
-#define SYS_UPDATE_WINDOW 26
-#define SYS_GET_DESKTOP_PID 27
 #define SYS_SEND_MESSAGE 28
 #define SYS_RECEIVE_MESSAGE 29
 #define SYS_UPTIME 30
@@ -225,19 +221,43 @@ long SysOpen(regs64_t* r){
 	strcpy(filepath, (char*)r->rbx);
 	FsNode* root = fs::GetRoot();
 
+	uint64_t flags = r->rcx;
+
+	process_t* proc = Scheduler::GetCurrentProcess();
+
 	Log::Info("Opening: %s", filepath);
 	long fd;
 	if(strcmp(filepath,"/") == 0){
-		fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
-		Scheduler::GetCurrentProcess()->fileDescriptors.add_back(fs::Open(root, 0));
+		fd = proc->fileDescriptors.get_length();
+		proc->fileDescriptors.add_back(fs::Open(root, 0));
 		return fd;
 	}
 
-	FsNode* node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
+open:
+	FsNode* node = fs::ResolvePath(filepath, proc->workingDir);
 
 	if(!node){
-		Log::Warning("Failed to open file!");
-		return -1;
+		if(flags & O_CREAT){
+			FsNode* parent = fs::ResolveParent(filepath, proc->workingDir);
+			char* basename = fs::BaseName(filepath);
+
+			if(!parent) {
+				Log::Warning("sys_open: Could resolve parent directory of new file %s", basename);
+				return -EINVAL;
+			}
+
+			DirectoryEntry ent;
+			strcpy(ent.name, basename);
+			parent->Create(&ent, flags);
+
+			kfree(basename);
+
+			flags &= ~O_CREAT;
+			goto open;
+		} else {
+			Log::Warning("sys_open: Failed to open file %s", filepath);
+			return -EINVAL;
+		}
 	}
 
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
@@ -252,10 +272,18 @@ long SysOpen(regs64_t* r){
 
 long SysClose(regs64_t* r){
 	int fd = r->rbx;
+	
+	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+		Log::Warning("sys_close: Invalid File Descriptor, %d", fd);
+		return -EINVAL;
+	}
+
 	fs_fd_t* handle;
+
 	if((handle = Scheduler::GetCurrentProcess()->fileDescriptors[fd])){
 		fs::Close(handle);
 	}
+
 	Scheduler::GetCurrentProcess()->fileDescriptors.replace_at(fd, NULL);
 	return 0;
 }
@@ -352,11 +380,16 @@ long SysStat(regs64_t* r){
 	int fd = r->rcx;
 	int* ret = (int*)r->rdx;
 
+	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+		Log::Warning("sys_stat: Invalid File Descriptor, %d", fd);
+		*ret = EINVAL;
+		return -EINVAL;
+	}
 	FsNode* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(fd)->node;
 	if(!node){
 		Log::Warning("sys_stat: Invalid File Descriptor, %d", fd);
-		*ret = 1;
-		return 1;
+		*ret = EINVAL;
+		return -EINVAL;
 	}
 
 	stat->st_dev = 0;
@@ -431,31 +464,38 @@ long SysMount(regs64_t* r){
 	return 0;
 }
 
-long SysCreateDesktop(regs64_t* r){
-	window_list_t** winList = (window_list_t**)r->rbx;
+long SysMkdir(regs64_t* r){
+	char* path = (char*)r->rbx;
+	mode_t mode = r->rcx;
 
-	desktop_t* desktop = (desktop_t*)kmalloc(sizeof(desktop_t));
+	process_t* proc = Scheduler::GetCurrentProcess();
 
-	uint64_t pageCount = (sizeof(window_list_t) + WINDOW_COUNT_MAX * sizeof(handle_t) + 0xFFF) >> 12;
-	window_list_t* kernelWindowList = (window_list_t*)Memory::KernelAllocate4KPages(pageCount);
-	window_list_t* userWindowList = (window_list_t*)Memory::Allocate4KPages(pageCount, Scheduler::GetCurrentProcess()->addressSpace);
-	for(unsigned i = 0; i < pageCount; i++){
-		uintptr_t phys = Memory::AllocatePhysicalMemoryBlock();
-		Memory::KernelMapVirtualMemory4K(phys, ((uintptr_t)kernelWindowList) + i * PAGE_SIZE_4K, 1);
-		Memory::MapVirtualMemory4K(phys, ((uintptr_t)userWindowList) + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
+	if(!Memory::CheckUsermodePointer(r->rbx, 0, proc->addressSpace)){
+		Log::Warning("sys_mkdir: Invalid path pointer %x", r->rbx);
+		return -EFAULT;
 	}
 
-	kernelWindowList->maxWindowCount = WINDOW_COUNT_MAX;
-	kernelWindowList->windowCount = 0;
+	FsNode* parentDirectory = fs::ResolveParent(path, proc->workingDir);
+	char* dirPath = fs::BaseName(path);
 
-	desktop->windows = kernelWindowList;
-	desktop->pid = Scheduler::GetCurrentProcess()->pid;
-	desktop->lock = 0;
+	if(!parentDirectory){
+		Log::Warning("sys_mkdir: Could not resolve path: %s", path);
+		return -EINVAL;
+	}
 
-	*winList = userWindowList;
+	if(!(parentDirectory->flags & FS_NODE_DIRECTORY)){
+		Log::Warning("sys_mkdir: Could not resolve path: Not a directory: %s", path);
+		return -ENOTDIR;
+	}
 
-	SetDesktop(desktop);
+	DirectoryEntry dir;
+	strcpy(dir.name, dirPath);
+	int ret = parentDirectory->CreateDirectory(&dir, mode);
 
+	return ret;
+}
+
+long SysRmdir(regs64_t* r){
 	return 0;
 }
 
@@ -1432,8 +1472,8 @@ syscall_t syscalls[]{
 	SysLSeek,
 	SysGetPID,					// 20
 	SysMount,
-	nullptr,
-	nullptr,
+	SysMkdir,
+	SysRmdir,
 	nullptr,
 	SysYield,					// 25
 	nullptr,

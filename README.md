@@ -11,18 +11,18 @@ Lemon OS is a 64-bit operating system written in C++.
 - UNIX Domain Sockets
 - Window Manager and Server (LemonWM)
 - Graphical Shell
-- ATA and SATA Driver
+- Writable Ext2 Filesystem
+- Readable FAT32 Filesystem
+- IDE and AHCI Driver
 - Dynamic Linking
 - Terminal Emulator w/ 256 colour support
 - Intel 8254x Ethernet Driver
 - Freetype and Libpng Port
-- FAT32 Filesystem (readonly)
 - [mlibc](https://github.com/managarm/mlibc) C Library Port
 - [GnuBoy Port](https://github.com/fido2020/lemon-gnuboy)
 - [DOOM Port](https://github.com/fido2020/LemonDOOM)
 
 ### Work In Progess
-- Ext2 Support (read/write but no mkdir, create)
 - Network Stack
 
 ### System requirements

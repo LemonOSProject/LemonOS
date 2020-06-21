@@ -28,4 +28,5 @@ int strncmp(const char* s1, const char* s2, size_t n);
 char* strupr(char* s);
 char* strnupr(char* s, size_t n);
 
-char *strchr(const char *s, int c);
+char* strchr(const char *s, int c);
+char* strrchr(const char *s, int c);

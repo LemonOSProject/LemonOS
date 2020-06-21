@@ -7,6 +7,7 @@
 #include <hash.h>
 
 #define PATH_MAX 4096
+#define NAME_MAX 255
 
 #define S_IFMT 0xF000
 #define S_IFBLK 0x6000
@@ -102,6 +103,8 @@ public:
     char name[256];
 
     FsNode* node = nullptr;
+    uint32_t inode = 0;
+
     DirectoryEntry* parent = nullptr;
 
     mode_t flags = 0;
@@ -166,7 +169,9 @@ namespace fs{
     void RegisterDevice(DirectoryEntry* device);
 
     FsNode* ResolvePath(char* path, char* workingDir = nullptr);
-    char* CanonicalizePath(char* path, char* workingDir);
+    FsNode* ResolveParent(char* path, char* workingDir = nullptr);
+    char* CanonicalizePath(const char* path, char* workingDir);
+    char* BaseName(const char* path);
 
     size_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer);
     size_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer);

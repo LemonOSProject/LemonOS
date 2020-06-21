@@ -153,12 +153,22 @@ int strncmp(const char* s1, const char* s2, size_t n)
 }
 
 // strchr - Get pointer to first occurance of c in string s
-char *strchr(const char *s, int c)
+char* strchr(const char *s, int c)
 {
 	while (*s != (char)c)
 		if (!*s++)
 			return 0;
-	return (char *)s;
+	return (char*)s;
+}
+
+// strrchr - Get pointer to last occurance of c in string s
+char* strrchr(const char *s, int c)
+{
+	const char* occ = nullptr;
+	while (*s)
+		if (*s++ == c)
+			occ = s;
+	return (char*)occ;
 }
 
 // strspn - Get initial length of s1 including only the characters of s2
