@@ -188,21 +188,27 @@ long SysRead(regs64_t* r){
 }
 
 long SysWrite(regs64_t* r){
-	Log::Info("writing to fd %d", r->rbx);
-	if(r->rbx > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+	process_t* proc = Scheduler::GetCurrentProcess();
+
+	if(r->rbx > proc->fileDescriptors.get_length()){
 		Log::Warning("Invalid File Descriptor: %d", r->rbx);
-		return -1;
+		return -EINVAL;
 	}
-	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
+	fs_fd_t* handle = proc->fileDescriptors[r->rbx];
 	if(!handle){
 		Log::Warning("Invalid File Descriptor: %d", r->rbx);
-		return -2;
+		return -EINVAL;
 	}
 
-	if(!(r->rcx && r->rdx)) return 1;
+	uint8_t* buffer = (uint8_t*)r->rcx;
+	uint64_t count = r->rdx;
 
-	ssize_t ret = fs::Write(handle, r->rdx, (uint8_t*)r->rcx);
-	Log::Info("written %d bytes", ret);
+	if(!Memory::CheckUsermodePointer(r->rcx, count, proc->addressSpace)){
+		Log::Warning("Invalid Memory Buffer: %x", r->rcx);
+		return -EFAULT;
+	}
+
+	ssize_t ret = fs::Write(handle, r->rdx, buffer);
 
 	return ret;
 }

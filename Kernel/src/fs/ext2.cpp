@@ -675,19 +675,19 @@ namespace fs::Ext2{
             e2dirent = (ext2_directory_entry_t*)(buffer + blockOffset);
         }
 
-        if(strncmp(e2dirent->name, name, e2dirent->nameLength) != 0){
+        if(strlen(name) != e2dirent->nameLength || strncmp(e2dirent->name, name, e2dirent->nameLength) != 0){
             // Not found
             kfree(buffer);
             return nullptr;
         }
-
-        Ext2Node* returnNode = inodeCache.get(e2dirent->inode);
 
         if(!e2dirent->inode || e2dirent->inode > super.inodeCount){
             Log::Error("[Ext2] Directory Entry %s contains invalid inode %d", name, e2dirent->inode);
             kfree(buffer);
             return nullptr;
         }
+
+        Ext2Node* returnNode = inodeCache.get(e2dirent->inode);
 
         if(!returnNode){ // Could not locate inode in cache
             ext2_inode_t direntInode;
@@ -957,27 +957,45 @@ namespace fs::Ext2{
     }
 
     int Ext2Node::ReadDir(DirectoryEntry* ent, uint32_t idx){
-        return vol->ReadDir(this, ent, idx);
+        flock.AcquireRead();
+        auto ret = vol->ReadDir(this, ent, idx);
+        flock.ReleaseRead();
+        return ret;
     }
 
     FsNode* Ext2Node::FindDir(char* name){
-        return vol->FindDir(this, name);
+        flock.AcquireRead();
+        auto ret = vol->FindDir(this, name);
+        flock.ReleaseRead();
+        return ret;
     }
 
     ssize_t Ext2Node::Read(size_t offset, size_t size, uint8_t* buffer){
-        return vol->Read(this, offset, size, buffer);
+        flock.AcquireRead();
+        auto ret = vol->Read(this, offset, size, buffer);
+        flock.ReleaseRead();
+        return ret;
     }
 
     ssize_t Ext2Node::Write(size_t offset, size_t size, uint8_t* buffer){
-        return vol->Write(this, offset, size, buffer);
+        flock.AcquireWrite();
+        auto ret = vol->Write(this, offset, size, buffer);
+        flock.ReleaseWrite();
+        return ret;
     }
 
     int Ext2Node::Create(DirectoryEntry* ent, uint32_t mode){
-        return vol->Create(this, ent, mode);
+        flock.AcquireWrite();
+        auto ret = vol->Create(this, ent, mode);
+        flock.ReleaseWrite();
+        return ret;
     }
 
     int Ext2Node::CreateDirectory(DirectoryEntry* ent, uint32_t mode){
-        return vol->CreateDirectory(this, ent, mode);
+        flock.AcquireWrite();
+        auto ret = vol->CreateDirectory(this, ent, mode);
+        flock.ReleaseWrite();
+        return ret;
     }
 
     void Ext2Node::Sync(){

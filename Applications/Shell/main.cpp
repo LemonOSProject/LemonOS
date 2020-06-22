@@ -204,6 +204,7 @@ int main(){
 	LoadConfig();
 	
 	shell->AddWindow = AddWindow;
+	shell->RemoveWindow = RemoveWindow;
 
 	for(;;){
 		shell->Update();

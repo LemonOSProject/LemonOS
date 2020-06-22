@@ -42,11 +42,8 @@ void WMInstance::MinimizeWindow(int id, bool state){
     WMWindow* win = FindWindow(id);
 
     if(!win) {
-        printf("Invalid window ID: %d\n", id);
+        printf("[LemonWM] Invalid window ID: %d\n", id);
     }
-    if(state)
-
-        printf("minimizing\n");
 
     MinimizeWindow(win, state);
 }
@@ -80,7 +77,7 @@ void WMInstance::Poll(){
                 strncpy(title, cmd->create.title, cmd->create.titleLength);
                 title[cmd->create.titleLength] = 0;
 
-                printf("Creating Window:    Size: %dx%d, Title: %s\n", cmd->create.size.x, cmd->create.size.y, title);
+                printf("[LemonWM] Creating Window:    Size: %dx%d, Title: %s\n", cmd->create.size.x, cmd->create.size.y, title);
 
                 WMWindow* win = new WMWindow(this, cmd->create.bufferKey);
                 win->title = title;
@@ -100,7 +97,7 @@ void WMInstance::Poll(){
                 WMWindow* win = FindWindow(m->clientFd);
 
                 if(!win){
-                    printf("WM: Warning: Unknown Window ID: %d\n", m->clientFd);
+                    printf("[LemonWM] Warning: Unknown Window ID: %d\n", m->clientFd);
                     continue;
                 }
 
@@ -110,8 +107,12 @@ void WMInstance::Poll(){
                 WMWindow* win = FindWindow(m->clientFd);
 
                 if(!win){
-                    printf("WM: Warning: Unknown Window ID: %d\n", m->clientFd);
+                    printf("[LemonWM] Warning: Unknown Window ID: %d\n", m->clientFd);
                     continue;
+                }
+
+                if(active == win){
+                    SetActive(nullptr);
                 }
                 
                 Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
@@ -136,6 +137,10 @@ void WMInstance::Poll(){
 
             if(!win){
                 continue;
+            }
+
+            if(active == win){
+                SetActive(nullptr);
             }
 
             Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
@@ -212,7 +217,6 @@ void WMInstance::MouseDown(){
                     resizePoint = ResizePoint::Right;
                 }
                 resizeStartPos = input.mouse.pos;
-                printf("resizing\n");
             }
 
             break;

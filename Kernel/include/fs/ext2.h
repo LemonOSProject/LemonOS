@@ -2,6 +2,7 @@
 #include <fs/fsvolume.h>
 #include <device.h>
 #include <hash.h>
+#include <lock.h>
 
 #include <stdint.h>
 
@@ -208,6 +209,8 @@ namespace fs::Ext2{
 
         Ext2Volume* vol;
         ext2_inode_t e2inode;
+
+        FilesystemLock flock;
     };
 
     class Ext2Volume : public FsVolume {

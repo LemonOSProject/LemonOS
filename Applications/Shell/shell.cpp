@@ -60,9 +60,11 @@ void ShellInstance::PollCommands(){
                 try{
                     win = windows.at(cmd->windowID);
                 } catch (std::out_of_range e){
-                    printf("Warning: Shell: LemonShellSetActive: Window ID out of range\n");
+                    printf("[Shell] Warning: LemonShellSetActive: Window ID out of range\n");
                     break;
                 }
+
+                printf("[Shell] Window \e[33;1m%x\e[0m has been closed\n", win->title);
 
                 if(RemoveWindow) RemoveWindow(win);
 
@@ -77,7 +79,7 @@ void ShellInstance::PollCommands(){
                 try{
                     win = windows.at(cmd->windowID);
                 } catch (std::out_of_range e){
-                    printf("Warning: Shell: LemonShellSetActive: Window ID out of range");
+                    printf("[Shell] Warning: LemonShellSetActive: Window ID out of range\n");
                     break;
                 }
 

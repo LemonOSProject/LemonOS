@@ -73,11 +73,12 @@ namespace Lemon {
         if(evCount > 0){
             for(int i = 0; i < fds.size(); i++){
                 if(fds[i].revents & (POLLNVAL | POLLHUP)){
+                    int fd = fds[i].fd;
                     fds.erase(fds.begin() + i);
                     
                     std::shared_ptr<LemonMessageInfo> newMsg = std::shared_ptr<LemonMessageInfo>((LemonMessageInfo*)malloc(sizeof(LemonMessageInfo)));
                     newMsg->msg.protocol = 0; // Disconnected
-                    newMsg->clientFd = fds[i].fd;
+                    newMsg->clientFd = fd;
 
                     return newMsg;
                 }
