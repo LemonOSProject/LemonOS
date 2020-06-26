@@ -99,7 +99,7 @@ namespace fs{
 				Log::Warning("%s not found!", path);
 				return nullptr;
 			}
-			if(node->flags & FS_NODE_DIRECTORY){
+			if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
 				current_node = node;
 				file = strtok(NULL, "/");
 				continue;
@@ -272,7 +272,7 @@ namespace fs{
     ssize_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
 		assert(node);
 
-		if(node->flags & FS_NODE_SYMLINK) return Read(node->link, offset, size, buffer);
+		if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return Read(node->link, offset, size, buffer);
 
         return node->Read(offset,size,buffer);
     }
@@ -280,7 +280,7 @@ namespace fs{
     ssize_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
 		assert(node);
 
-		if(node->flags & FS_NODE_SYMLINK) return Write(node->link, offset, size, buffer);
+		if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return Write(node->link, offset, size, buffer);
 
         return node->Write(offset,size,buffer);
     }
@@ -304,7 +304,7 @@ namespace fs{
     int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index){
 		assert(node);
 
-		if(node->flags & FS_NODE_SYMLINK) return ReadDir(node->link, dirent, index);
+		if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return ReadDir(node->link, dirent, index);
 
         return node->ReadDir(dirent, index);
     }
@@ -312,7 +312,7 @@ namespace fs{
     FsNode* FindDir(FsNode* node, char* name){
 		assert(node);
 
-		if(node->flags & FS_NODE_SYMLINK) return FindDir(node->link, name);
+		if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return FindDir(node->link, name);
             
 		return node->FindDir(name);
     }

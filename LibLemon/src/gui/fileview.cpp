@@ -35,7 +35,8 @@ namespace Lemon::GUI {
     void FileViewOnListSelect(ListItem& item, ListView* lv){
         FileView* fv = (FileView*)lv->GetParent();
 
-        fv->OnFileSelected(item.details[0], fv);
+        if(fv->OnFileSelected)
+            fv->OnFileSelected(item.details[0], fv);
     }
     
 	class FileButton : public Button{
@@ -73,6 +74,7 @@ namespace Lemon::GUI {
         fileList->SetLayout(LayoutSize::Stretch, LayoutSize::Stretch, WidgetAlignment::WAlignLeft);
 
         fileList->OnSubmit = OnListSubmit;
+        fileList->OnSelect = FileViewOnListSelect;
 
         nameCol.name = "Name";
         nameCol.displayWidth = 280;

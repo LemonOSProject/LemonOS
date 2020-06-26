@@ -108,22 +108,6 @@ extern "C"
 	fs::volumes->add_back(new fs::LinkVolume(tar, "lib"));
 	Log::Write("OK");
 
-	
-	Log::Info("Filesystem Root:");
-
-	DirectoryEntry dirent;
-	FsNode* root = fs::GetRoot();
-	int i = 0;
-	while((fs::ReadDir(root,&dirent,i++)) != -1){ // Read until no more dirents
-		FsNode* node = fs::FindDir(root, dirent.name);
-		if(!node) continue;
-		if(node->flags & FS_NODE_DIRECTORY){
-			Log::Info("%s/", dirent.name);
-		} else {
-			Log::Info(dirent.name);
-		}
-	}
-
 	FsNode* initrd = fs::FindDir(fs::GetRoot(), "initrd");
 
 	FsNode* splashFile;

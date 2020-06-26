@@ -366,7 +366,7 @@ namespace fs::Ext2{
     }
     
     int Ext2Volume::ListDir(Ext2Node* node, List<DirectoryEntry>& entries){
-        if(!(node->flags & FS_NODE_DIRECTORY)){
+        if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
             Log::Warning("[Ext2] ListDir: Not a directory (inode %d)", node->inode);
             error = MiscError;
             return -1;
@@ -431,7 +431,7 @@ namespace fs::Ext2{
     }
 
     int Ext2Volume::WriteDir(Ext2Node* node, List<DirectoryEntry>& entries){
-        if(!(node->flags & FS_NODE_DIRECTORY)){
+        if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
             return -ENOTDIR;
         }
 
@@ -531,7 +531,7 @@ namespace fs::Ext2{
     }
 
     int Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index){
-        if(!(node->flags & FS_NODE_DIRECTORY)){
+        if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
             return -ENOTDIR;
         }
 
@@ -594,7 +594,7 @@ namespace fs::Ext2{
     }
 
     FsNode* Ext2Volume::FindDir(Ext2Node* node, char* name){
-        if(!(node->flags & FS_NODE_DIRECTORY)){
+        if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
             return nullptr;
         }
 
@@ -825,7 +825,7 @@ namespace fs::Ext2{
     }
 
     int Ext2Volume::Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode){
-        if(!(node->flags & FS_NODE_DIRECTORY)) return -ENOTDIR;
+        if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) return -ENOTDIR;
 
         Ext2Node* file = CreateNode();
         
@@ -852,7 +852,7 @@ namespace fs::Ext2{
             return -EROFS;
         }
 
-        if(!(node->flags & FS_NODE_DIRECTORY)) {
+        if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
             Log::Info("[Ext2] Not a directory!");
             return -ENOTDIR;
         }

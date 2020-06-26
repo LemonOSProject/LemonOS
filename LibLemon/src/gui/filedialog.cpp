@@ -1,9 +1,14 @@
 #include <gui/window.h>
 
+#include <sys/stat.h>
+#include <gui/filedialog.h>
+#include <gui/messagebox.h>
+
 namespace Lemon::GUI{
-	char* selectedPth = nullptr; // TODO: Better solution
-	FileView* dialogFileView = nullptr;
-	TextBox* dialogFileBox = nullptr;
+	__thread char* selectedPth = nullptr; // TODO: Better solution
+	__thread FileView* dialogFileView = nullptr;
+	__thread TextBox* dialogFileBox = nullptr;
+	__thread int dflags = 0;
 
 	void FileDialogOnFileOpened(const char* path, FileView* fv){
 		if(selectedPth){
@@ -14,22 +19,53 @@ namespace Lemon::GUI{
 	}
 
 	void FileDialogOnFileSelected(std::string& path, FileView* fv){
-
+		dialogFileBox->contents.front() = std::string(path);
 	}
 
 	void FileDialogOnCancelPress(Lemon::GUI::Button* btn){
 		btn->window->closed = true; // Tell FileDialog() that we want to close the window
 	}
 
-	void FileDialogOnOKPress(Lemon::GUI::Button* btn){
-		dialogFileView->OnSubmit(dialogFileBox->contents.front());
-	}
-
 	void FileDialogOnFileBoxSubmit(Lemon::GUI::TextBox* box){
-		dialogFileView->OnSubmit(box->contents.front());
+		if(box->contents.front().find('/') != std::string::npos && box->contents.size() > NAME_MAX){
+			DisplayMessageBox("Open...", "Filename is invalid!", MsgButtonsOK);
+			return;
+		}
+
+		std::string path = dialogFileView->currentPath;
+		path += box->contents.front();
+
+		struct stat sResult;
+		int e = stat(path.c_str(), &sResult);
+		if(e && dflags & FILE_DIALOG_CREATE && errno == ENOENT){
+			FileDialogOnFileOpened(path.c_str(), dialogFileView);
+			return;
+		} else if(e && errno == ENOENT) {
+			char buf[512];
+			sprintf(buf, "File %s not found!", path);
+			DisplayMessageBox("Open...", buf, MsgButtonsOK);
+			return;
+		} else if(e){
+			perror("GUI: FileDialog: ");
+			char buf[512];
+			sprintf(buf, "Error opening file %s (Error code: %d)", path, errno);
+			DisplayMessageBox("Open...", buf, MsgButtonsOK);
+			return;
+		} else if((sResult.st_mode & S_IFMT) == S_IFDIR && !(dflags & FILE_DIALOG_DIRECTORIES)) {
+			dialogFileView->OnSubmit(path);
+			return;
+		} else {
+			FileDialogOnFileOpened(path.c_str(), dialogFileView);
+		}
 	}
 
-	char* FileDialog(const char* path){
+	void FileDialogOnOKPress(Lemon::GUI::Button* btn){
+		FileDialogOnFileBoxSubmit(dialogFileBox);
+	}
+
+	char* FileDialog(const char* path, int flags){
+		dflags = flags;
+
 		if(!path){
 			path = "."; // Current Directory
 		}
@@ -43,6 +79,7 @@ namespace Lemon::GUI{
 		FileView* fv = new FileView({0, 0, 0, 63}, path, FileDialogOnFileOpened);
 		win->AddWidget(fv);
 		fv->SetLayout(LayoutSize::Stretch, LayoutSize::Stretch, WAlignLeft);
+		fv->OnFileSelected = FileDialogOnFileSelected;
 
 		dialogFileView = fv;
 
@@ -56,7 +93,7 @@ namespace Lemon::GUI{
 		cancelBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignRight, WAlignBottom);
 		cancelBtn->OnPress = FileDialogOnCancelPress;
 
-		TextBox* fileBox = new TextBox({105, 36, 110, 20}, false);
+		TextBox* fileBox = new TextBox({125, 36, 110, 20}, false);
 		win->AddWidget(fileBox);
 		fileBox->SetLayout(LayoutSize::Stretch, LayoutSize::Fixed, WAlignLeft, WAlignBottom);
 		fileBox->OnSubmit = FileDialogOnFileBoxSubmit;

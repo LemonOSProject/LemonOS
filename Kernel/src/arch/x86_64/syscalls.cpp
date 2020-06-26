@@ -265,7 +265,7 @@ open:
 		}
 	}
 
-	if(flags & O_DIRECTORY && node->flags != FS_NODE_DIRECTORY){
+	if(flags & O_DIRECTORY && ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY)){
 		return -ENOTDIR;
 	}
 
@@ -527,7 +527,7 @@ long SysMkdir(regs64_t* r){
 		return -EINVAL;
 	}
 
-	if(!(parentDirectory->flags & FS_NODE_DIRECTORY)){
+	if((parentDirectory->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
 		Log::Warning("sys_mkdir: Could not resolve path: Not a directory: %s", path);
 		return -ENOTDIR;
 	}
@@ -630,7 +630,7 @@ long SysReadDir(regs64_t* r){
 
 	unsigned int count = r->rdx;
 
-	if(!(Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->flags & FS_NODE_DIRECTORY)){
+	if((Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
 		if(r->rsi) *((int*)r->rsi) = 0;
 		return -ENOTDIR;
 	}
@@ -962,7 +962,7 @@ long SysBind(regs64_t* r){
 		return -1; 
 	}
 
-	if(!(handle->node->flags & FS_NODE_SOCKET)){
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_bind: File (Descriptor: %d) is not a socket", r->rbx);
 		return -2;
 	}
@@ -995,7 +995,7 @@ long SysListen(regs64_t* r){
 		return -1; 
 	}
 
-	if(!(handle->node->flags & FS_NODE_SOCKET)){
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_listen: File (Descriptor: %d) is not a socket", r->rbx);
 		return -2;
 	}
@@ -1021,7 +1021,7 @@ long SysAccept(regs64_t* r){
 		return -1; 
 	}
 
-	if(!(handle->node->flags & FS_NODE_SOCKET)){
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_accept: File (Descriptor: %d) is not a socket", r->rbx);
 		return -2;
 	}
@@ -1072,7 +1072,7 @@ long SysConnect(regs64_t* r){
 		return -1; 
 	}
 
-	if(!(handle->node->flags & FS_NODE_SOCKET)){
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_connect: File (Descriptor: %d) is not a socket", r->rbx);
 		return -2;
 	}
@@ -1112,7 +1112,7 @@ long SysSend(regs64_t* r){
 		return -1; 
 	}
 
-	if(!(handle->node->flags & FS_NODE_SOCKET)){
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", r->rbx);
 		return -2;
 	}
@@ -1150,7 +1150,7 @@ long SysSendTo(regs64_t* r){
 		return -1; 
 	}
 
-	if(!(handle->node->flags & FS_NODE_SOCKET)){
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", r->rbx);
 		return -2;
 	}
@@ -1191,7 +1191,7 @@ long SysReceive(regs64_t* r){
 		return -1; 
 	}
 
-	if(!(handle->node->flags & FS_NODE_SOCKET)){
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", r->rbx);
 		return -2;
 	}
@@ -1229,7 +1229,7 @@ long SysReceiveFrom(regs64_t* r){
 		return -1; 
 	}
 
-	if(!(handle->node->flags & FS_NODE_SOCKET)){
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", r->rbx);
 		return -2;
 	}
@@ -1309,7 +1309,7 @@ long SysPoll(regs64_t* r){
 
 		bool hasEvent = 0;
 
-		if(files[i]->node->flags & FS_NODE_SOCKET){
+		if((files[i]->node->flags & FS_NODE_TYPE) == FS_NODE_SOCKET){
 			if(!((Socket*)files[i]->node)->IsConnected()){
 				fds[i].revents |= POLLHUP;
 				hasEvent = true;
@@ -1396,7 +1396,7 @@ long SysSendMsg(regs64_t* r){
 		return -1; 
 	}
 
-	if(!(handle->node->flags & FS_NODE_SOCKET)){
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_sendmsg: File (Descriptor: %d) is not a socket", r->rbx);
 		return -2;
 	}
@@ -1457,7 +1457,7 @@ long SysRecvMsg(regs64_t* r){
 		return -1; 
 	}
 
-	if(!(handle->node->flags & FS_NODE_SOCKET)){
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_recvmsg: File (Descriptor: %d) is not a socket", r->rbx);
 		return -2;
 	}

@@ -171,6 +171,10 @@ namespace fs::tar{
     ssize_t TarVolume::Read(TarNode* node, size_t offset, size_t size, uint8_t *buffer){
         TarNode* tarNode = &nodes[node->inode];
 
+        if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+            return -EISDIR;
+        }
+
 		if(offset > node->size) return -1;
 		else if(offset + size > node->size || size > node->size) size = node->size - offset;
 
@@ -181,6 +185,10 @@ namespace fs::tar{
     }
 
     ssize_t TarVolume::Write(TarNode* node, size_t offset, size_t size, uint8_t *buffer){
+        if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+            return -EISDIR;
+        }
+
         return -EROFS;
     }
 
