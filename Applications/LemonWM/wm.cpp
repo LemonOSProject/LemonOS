@@ -131,6 +131,39 @@ void WMInstance::Poll(){
                 shellAddr.sun_family = AF_UNIX;
                 shellClient.Connect(shellAddr, sizeof(sockaddr_un));
                 printf("Connected\n");
+            } else if(cmd->cmd == Lemon::GUI::WMOpenContextMenu){
+                WMWindow* win = FindWindow(m->clientFd);
+
+                if(!win){
+                    printf("[LemonWM] Warning: Unknown Window ID: %d\n", m->clientFd);
+                    continue;
+                }
+
+                menu.items.clear();
+
+                char buf[256];
+                contextMenuBounds = {input.mouse.pos, {CONTEXT_ITEM_WIDTH, 0}};
+                
+                Lemon::GUI::WMContextMenuEntry* item = cmd->contextEntries;
+                for(int i = 0; i < cmd->contextEntryCount; i++){
+
+                    if(((uintptr_t)item) + sizeof(Lemon::GUI::WMContextMenuEntry) + item->length - (uintptr_t)(m->msg.data) > m->msg.length){
+                        printf("[LemonWM] Invalid context menu item length: %d", item->length);
+                        continue;
+                    }
+
+                    strncpy(buf, item->data, item->length);
+                    printf("item: %s\n", buf);
+
+                    menu.items.push_back(ContextMenuItem(buf, i, item->id));
+
+                    contextMenuBounds.height += CONTEXT_ITEM_HEIGHT;
+                    
+                    item = (Lemon::GUI::WMContextMenuEntry*)((void*)item + item->length + sizeof(Lemon::GUI::WMContextMenuEntry));
+                }
+
+                menu.owner = win;
+                contextMenuActive = true;
             }
         } else if (m && m->msg.protocol == 0){ // Client Disconnected
             WMWindow* win = FindWindow(m->clientFd);
@@ -224,8 +257,43 @@ void WMInstance::MouseDown(){
     } while (it-- != windows.begin());
 }
 
+void WMInstance::MouseRight(bool pressed){
+    auto it = windows.end();
+    do {
+        WMWindow* win = *it;
+            
+        if(PointInWindowProper(win, input.mouse.pos)){
+            Lemon::LemonEvent ev;
+
+            if(pressed){
+                ev.event = Lemon::EventRightMousePressed;
+            } else {
+                ev.event = Lemon::EventRightMouseReleased;
+            }
+
+            ev.mousePos = input.mouse.pos - win->pos;
+            if(!(win->flags & WINDOW_FLAGS_NODECORATION)) ev.mousePos = ev.mousePos - (vector2i_t){1, 25};
+
+            PostEvent(ev, win);
+        }
+    } while (it-- != windows.begin());
+}
+
 void WMInstance::MouseUp(){
-    resize = drag = false;
+    if(contextMenuActive && Lemon::Graphics::PointInRect(contextMenuBounds, input.mouse.pos)){
+        Lemon::LemonEvent ev;
+        ev.event = Lemon::EventWindowCommand;
+
+        ContextMenuItem item = menu.items[(input.mouse.pos.y - contextMenuBounds.y) / CONTEXT_ITEM_HEIGHT];
+
+        ev.windowCmd = item.id;
+        PostEvent(ev, menu.owner);
+
+        contextMenuActive = false;
+        return;
+    }
+
+    contextMenuActive = resize = drag = false;
 
     if(active){
         if(PointInWindowProper(active, input.mouse.pos)){

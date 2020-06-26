@@ -380,7 +380,6 @@ namespace Scheduler{
 
         asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 
-        //asm volatile("mov %%rax, %%cr8" :: "a"(cpu->currentThread->priority)); // Set Task Priority Register
 	    asm volatile ("wrmsr" :: "a"(cpu->currentThread->fsBase & 0xFFFFFFFF) /*Value low*/, "d"((cpu->currentThread->fsBase >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
         
         TSS::SetKernelStack(&cpu->tss, (uintptr_t)cpu->currentThread->kernelStack);

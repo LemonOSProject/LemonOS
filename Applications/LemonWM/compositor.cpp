@@ -1,5 +1,7 @@
 #include "lemonwm.h"
 
+#include <gui/colours.h>
+
 using namespace Lemon::Graphics;
 
 rgba_colour_t backgroundColor = {64, 128, 128};
@@ -31,10 +33,28 @@ void CompositorInstance::Paint(){
         win->Draw(renderSurface);
     }
 
+    if(wm->contextMenuActive){
+        DrawRect(wm->contextMenuBounds.x, wm->contextMenuBounds.y, wm->contextMenuBounds.width, wm->contextMenuBounds.height, Lemon::colours[Lemon::Colour::ContentBackground], renderSurface);
+
+        int ypos = wm->contextMenuBounds.y;
+
+        for(ContextMenuItem& item : wm->menu.items){
+            if(PointInRect({wm->contextMenuBounds.pos.x, ypos, CONTEXT_ITEM_WIDTH, CONTEXT_ITEM_HEIGHT},wm->input.mouse.pos)){
+                DrawRect(wm->contextMenuBounds.x + 24, ypos,  wm->contextMenuBounds.width - 24, CONTEXT_ITEM_HEIGHT, Lemon::colours[Lemon::Colour::Foreground], renderSurface);
+            }
+
+            DrawString(item.name.c_str(), wm->contextMenuBounds.x + 28, ypos + 4, 0, 0, 0, renderSurface);
+            ypos += CONTEXT_ITEM_HEIGHT;
+        }
+    }
+
     surfacecpyTransparent(renderSurface, &mouseCursor, wm->input.mouse.pos);
 
     if(wm->screenSurface.buffer)
         surfacecpy(&wm->screenSurface, renderSurface);
 
+    if(wm->contextMenuActive)
+        DrawRect(wm->contextMenuBounds, backgroundColor, renderSurface);
+    
     DrawRect(wm->input.mouse.pos.x, wm->input.mouse.pos.y, mouseCursor.width, mouseCursor.height, backgroundColor, renderSurface);
 }

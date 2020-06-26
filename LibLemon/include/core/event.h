@@ -19,6 +19,7 @@ namespace Lemon {
         EventWindowResize,
         EventWindowAdded,
         EventWindowRemoved,
+        EventWindowCommand,
     };
 
     typedef struct LemonEvent {
@@ -28,6 +29,7 @@ namespace Lemon {
             int key;
             vector2i_t mousePos;
             vector2i_t resizeBounds;
+            unsigned short windowCmd;
         };
     } __attribute__((packed)) lemon_event_t;
 }

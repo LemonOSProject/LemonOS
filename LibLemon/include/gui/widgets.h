@@ -2,6 +2,8 @@
 
 #include <gfx/surface.h>
 #include <gfx/graphics.h>
+#include <gui/ctxentry.h>
+#include <gui/colours.h>
 #include <list.h>
 
 #include <vector>
@@ -25,6 +27,8 @@ namespace Lemon::GUI {
         WAlignLeft,
         WAlignCentre,
         WAlignRight,
+        WAlignTop,
+        WAlignBottom,
     };
 
     class Widget {
@@ -41,6 +45,7 @@ namespace Lemon::GUI {
         LayoutSize sizeY;
 
         WidgetAlignment align = WAlignLeft;
+        WidgetAlignment verticalAlign = WAlignTop;
     public:
         Widget* active = nullptr; // Only applies to containers, etc. is so widgets know whether they are active or not
         Window* window = nullptr;
@@ -52,16 +57,19 @@ namespace Lemon::GUI {
         virtual void SetParent(Widget* newParent) { parent = newParent; UpdateFixedBounds(); };
         Widget* GetParent() { return parent; }
 
-        virtual void SetLayout(LayoutSize newSizeX, LayoutSize newSizeY, WidgetAlignment newAlign){ sizeX = newSizeX; sizeY = newSizeY; align = newAlign; UpdateFixedBounds(); };
+        virtual void SetLayout(LayoutSize newSizeX, LayoutSize newSizeY, WidgetAlignment newAlign = WAlignLeft, WidgetAlignment newAlignVert = WAlignTop){ sizeX = newSizeX; sizeY = newSizeY; align = newAlign; verticalAlign = newAlignVert; UpdateFixedBounds(); };
 
         virtual void Paint(surface_t* surface);
 
         virtual void OnMouseDown(vector2i_t mousePos);
         virtual void OnMouseUp(vector2i_t mousePos);
         virtual void OnMouseMove(vector2i_t mousePos);
+        virtual void OnRightMouseDown(vector2i_t mousePos);
+        virtual void OnRightMouseUp(vector2i_t mousePos);
         virtual void OnDoubleClick(vector2i_t mousePos);
         virtual void OnKeyPress(int key);
         virtual void OnHover(vector2i_t mousePos);
+        virtual void OnCommand(unsigned short command);
 
         virtual void UpdateFixedBounds();
 
@@ -76,7 +84,7 @@ namespace Lemon::GUI {
         std::vector<Widget*> children;
 
     public:
-        rgba_colour_t background = {190, 190, 180, 255};
+        rgba_colour_t background = Lemon::colours[Lemon::Colour::Background];
 
         Container(rect_t bounds);
 
@@ -87,6 +95,8 @@ namespace Lemon::GUI {
 
         void OnMouseDown(vector2i_t mousePos);
         void OnMouseUp(vector2i_t mousePos);
+        void OnRightMouseDown(vector2i_t mousePos);
+        void OnRightMouseUp(vector2i_t mousePos);
         void OnMouseMove(vector2i_t mousePos);
         void OnDoubleClick(vector2i_t mousePos);
         void OnKeyPress(int key);
@@ -190,9 +200,18 @@ namespace Lemon::GUI {
         void Paint(surface_t* surface);
     };
 
+    enum {
+        TextboxCommandCopy = 1,
+        TextboxCommandCut,
+        TextboxCommandPaste,
+        TextboxCommandDelete,
+    };
+
     class TextBox : public Widget{
     protected:
         ScrollBar sBar;
+
+        std::vector<ContextMenuEntry> ctxEntries;
     public:
         bool editable =  true;
         bool multiline = false;
@@ -213,6 +232,8 @@ namespace Lemon::GUI {
         void OnMouseUp(vector2i_t mousePos);
         void OnMouseMove(vector2i_t mousePos);
         void OnKeyPress(int key);
+        void OnRightMouseDown(vector2i_t mousePos);
+        void OnCommand(unsigned short cmd);
 
         void ResetScrollBar();
 
@@ -267,6 +288,7 @@ namespace Lemon::GUI {
         void UpdateFixedBounds();
 
         void(*OnSubmit)(ListItem&, ListView*) = nullptr;
+        void(*OnSelect)(ListItem&, ListView*) = nullptr;
     };
     
     class FileView : public Container{
@@ -296,5 +318,7 @@ namespace Lemon::GUI {
         void OnSubmit(std::string& path);
         static void OnListSubmit(ListItem& item, ListView* list);
         static void OnTextBoxSubmit(TextBox* textBox);
+
+        void (*OnFileSelected)(std::string& file, FileView* fv) = nullptr;
     };
 }

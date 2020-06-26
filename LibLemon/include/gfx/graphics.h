@@ -145,10 +145,14 @@ namespace Lemon::Graphics{
     void DrawRectOutline(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
     void DrawRectOutline(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface);
 
-    int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
-    int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font);
-    void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
-    void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font);
+    Font* DefaultFont();
+    int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font = DefaultFont());
+    int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font = DefaultFont());
+    int DrawChar(char c, int x, int y, rgba_colour_t col, surface_t* surface, Font* font = DefaultFont());
+    void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font = DefaultFont());
+    void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font = DefaultFont());
+    void DrawString(const char* str, unsigned int x, unsigned int y, rgba_colour_t colour, surface_t* surface, rect_t limits, Font* font = DefaultFont());
+    void DrawString(const char* str, unsigned int x, unsigned int y, rgba_colour_t colour, surface_t* surface, Font* font = DefaultFont());
     int GetTextLength(const char* str, Font* font);
     int GetTextLength(const char* str, size_t n, Font* font);
     int GetTextLength(const char* str);

@@ -38,6 +38,7 @@ cpp_files = [
     'src/gui/colours.cpp',
     'src/gui/fileview.cpp',
     'src/gui/filedialog.cpp',
+    'src/gui/messagebox.cpp',
 
     'src/shell/shell.cpp',
 ]

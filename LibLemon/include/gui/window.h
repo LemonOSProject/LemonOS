@@ -5,6 +5,7 @@
 #include <gfx/surface.h>
 #include <gfx/graphics.h>
 #include <gui/widgets.h>
+#include <gui/ctxentry.h>
 
 #define WINDOW_FLAGS_NODECORATION 0x1
 #define WINDOW_FLAGS_RESIZABLE 0x2
@@ -27,6 +28,7 @@ namespace Lemon::GUI {
         WMMinimize,
         WMMinimizeOther,
         WMInitializeShellConnection,
+        WMOpenContextMenu,
     };
 
     struct WMCreateWindowCommand{
@@ -36,6 +38,12 @@ namespace Lemon::GUI {
         unsigned long bufferKey; // Shared Memory Key
         unsigned short titleLength; // Length (in bytes) of the title;
         char title[];
+    };
+
+    struct WMContextMenuEntry{
+        unsigned short id;
+        unsigned char length;
+        char data[];
     };
 
     struct WMCommand{
@@ -56,6 +64,10 @@ namespace Lemon::GUI {
             struct {
             unsigned short titleLength;
             char title[];
+            };
+            struct {
+            unsigned char contextEntryCount;
+            WMContextMenuEntry contextEntries[];
             };
         };
     };
@@ -109,6 +121,8 @@ namespace Lemon::GUI {
 
         void AddWidget(Widget* w);
         void RemoveWidget(Widget* w);
+
+        void DisplayContextMenu(std::vector<ContextMenuEntry>& entries);
 
         uint32_t GetFlags() { return flags; }
         vector2i_t GetSize() { return {surface.width, surface.height}; };

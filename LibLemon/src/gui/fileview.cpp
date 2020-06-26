@@ -4,6 +4,7 @@
 #include <string>
 #include <math.h>
 #include <gui/colours.h>
+#include <gui/messagebox.h>
 #include <assert.h>
 
 #include <unistd.h>
@@ -29,6 +30,12 @@ namespace Lemon::GUI {
             FileView::icons.buffer = nullptr;
             FileView::icons.width = 0;
         }
+    }
+
+    void FileViewOnListSelect(ListItem& item, ListView* lv){
+        FileView* fv = (FileView*)lv->GetParent();
+
+        fv->OnFileSelected(item.details[0], fv);
     }
     
 	class FileButton : public Button{
@@ -80,7 +87,7 @@ namespace Lemon::GUI {
         pathBox->SetLayout(LayoutSize::Stretch, LayoutSize::Fixed, WidgetAlignment::WAlignLeft);
         pathBox->OnSubmit =  OnTextBoxSubmit;
 
-        int sideBar = open("/", O_RDONLY);
+        int sideBar = open("/", O_DIRECTORY);
         int ypos = pathBox->GetFixedBounds().height + 20;
         char str[150];
         int i = 0;
@@ -122,11 +129,9 @@ namespace Lemon::GUI {
         currentPath = rPath;
         free(rPath);
 
-        pathBox->LoadText(currentPath.c_str());
-
-        fileList->ClearItems();
-
         #ifdef __lemon__
+
+        close(currentDir);
 
         if(currentPath.back() != '/')
             currentPath.append("/");
@@ -135,9 +140,12 @@ namespace Lemon::GUI {
 
         if(currentDir <= 0){
             perror("GUI: FileView: open:");
-            assert(currentDir > 0);
             return;
         }
+
+        pathBox->LoadText(currentPath.c_str());
+
+        fileList->ClearItems();
 
         std::string absPath;
 
@@ -148,20 +156,9 @@ namespace Lemon::GUI {
             item.details.push_back(dirent.name);
 
             absPath = currentPath + dirent.name;
-            
-            int fileFd = open(absPath.c_str(), O_RDONLY);
-
-            if(fileFd <= 0){
-                perror("GUI: FileView: File: open:");
-                assert(fileFd > 0);
-                return;
-            }
 
             struct stat statResult;
-            int ret = fstat(fileFd, &statResult);
-
-            close(fileFd);
-
+            int ret = stat(absPath.c_str(), &statResult);
             if(ret){
                 perror("GUI: FileView: File: Stat:");
                 assert(!ret);
@@ -192,23 +189,15 @@ namespace Lemon::GUI {
         } else { // Relative Path
             absPath = currentPath + path;
         }
-        
-        int fileFd = open(absPath.c_str(), O_RDONLY);
-
-        if(fileFd <= 0){
-            perror("GUI: FileView: OnSubmit: File: open:");
-            assert(fileFd > 0);
-            return;
-        }
 
         struct stat statResult;
-        int ret = fstat(fileFd, &statResult);
-
-        close(fileFd);
+        int ret = stat(absPath.c_str(), &statResult);
 
         if(ret){
-            perror("GUI: FileView: OnSubmit: File: Stat:");
-            assert(!ret);
+            perror("GUI: FileView: OnSubmit: Stat:");
+            char msg[512];
+            sprintf(msg, "Error opening file %s (Error Code: %d)", absPath.c_str(), ret);
+            DisplayMessageBox("Open...", msg, MsgButtonsOK);
             return;
         }
 

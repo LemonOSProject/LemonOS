@@ -5,6 +5,7 @@
 #include <string>
 #include <math.h>
 #include <gui/colours.h>
+#include <gui/window.h>
 #include <assert.h>
 #include <algorithm>
 
@@ -28,6 +29,10 @@ namespace Lemon::GUI {
 
     void Widget::OnMouseUp(vector2i_t mousePos){}
 
+    void Widget::OnRightMouseDown(vector2i_t mousePos){}
+
+    void Widget::OnRightMouseUp(vector2i_t mousePos){}
+
     void Widget::OnHover(vector2i_t mousePos){}
 
     void Widget::OnMouseMove(vector2i_t mousePos) {}
@@ -35,6 +40,8 @@ namespace Lemon::GUI {
     void Widget::OnDoubleClick(vector2i_t mousePos) {}
 
     void Widget::OnKeyPress(int key) {}
+
+    void Widget::OnCommand(unsigned short key) {}
 
     void Widget::UpdateFixedBounds(){
         fixedBounds.pos = bounds.pos;
@@ -52,13 +59,24 @@ namespace Lemon::GUI {
             }
             
             if(sizeY == LayoutSize::Stretch){
-                fixedBounds.height = parent->GetFixedBounds().height - bounds.height - bounds.y;
+                if(verticalAlign == WidgetAlignment::WAlignBottom)
+                    fixedBounds.height = (parent->GetFixedBounds().height - bounds.y) - parent->GetFixedBounds().y;
+                else
+                    fixedBounds.height = parent->GetFixedBounds().height - bounds.height - bounds.y;
             } else {
                 fixedBounds.height = bounds.height;
             }
 
             if(align == WidgetAlignment::WAlignRight){
                 fixedBounds.pos.x = (parent->GetFixedBounds().pos.x + parent->GetFixedBounds().size.x) - bounds.pos.x - fixedBounds.width;
+            } else if(align == WAlignCentre){
+                fixedBounds.pos.x = parent->GetFixedBounds().width / 2 - fixedBounds.width / 2;
+            }
+
+            if(verticalAlign == WidgetAlignment::WAlignBottom){
+                fixedBounds.pos.y = (parent->GetFixedBounds().y + parent->GetFixedBounds().height) - bounds.y - fixedBounds.height;
+            } else if(verticalAlign == WAlignCentre){
+                fixedBounds.pos.y = parent->GetFixedBounds().height / 2 - fixedBounds.height / 2;
             }
         } else {
             fixedBounds.size = bounds.size;
@@ -107,6 +125,23 @@ namespace Lemon::GUI {
     void Container::OnMouseUp(vector2i_t mousePos){
         if(active){
             active->OnMouseUp(mousePos);
+        }
+    }
+
+    void Container::OnRightMouseDown(vector2i_t mousePos){
+        for(Widget* w : children){
+            if(Graphics::PointInRect(w->GetFixedBounds(), mousePos)){
+                active = w;
+                printf("right mouse\n");
+                w->OnRightMouseDown(mousePos);
+                break;
+            }
+        }
+    }
+
+    void Container::OnRightMouseUp(vector2i_t mousePos){
+        if(active){
+            active->OnRightMouseUp(mousePos);
         }
     }
 
@@ -249,12 +284,12 @@ namespace Lemon::GUI {
                     if(drawText) DrawButtonLabel(surface, true);
                     break;
                 default:
-                    Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + 1, bounds.size.x - 2, bounds.size.y - 2,{250,250,250,255},{235,235,230,255},surface);
+                    Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + 1, bounds.size.x - 2, bounds.size.y - 4,{250,250,250,255},{230,230,225,255},surface);
+                    Graphics::DrawRect(btnPos.x + 1, btnPos.y + bounds.size.y - 3, bounds.size.x - 2, 2, colours[Colour::ContentShadow],surface);
                     DrawButtonBorders(surface, false);
                     if(drawText) DrawButtonLabel(surface, false);
                     break;
             }
-            
         }
     }
 
@@ -375,34 +410,92 @@ namespace Lemon::GUI {
         this->multiline = multiline;
         font = Graphics::GetFont("default");
         contents.push_back(std::string());
+
+        {
+            ContextMenuEntry ctx;
+            ctx.id = TextboxCommandCut;
+            ctx.name = "Cut";
+
+            ctxEntries.push_back(ctx);
+        }
+
+        {
+            ContextMenuEntry ctx;
+            ctx.id = TextboxCommandCopy;
+            ctx.name = "Copy";
+
+            ctxEntries.push_back(ctx);
+        }
+
+        {
+            ContextMenuEntry ctx;
+            ctx.id = TextboxCommandPaste;
+            ctx.name = "Paste";
+
+            ctxEntries.push_back(ctx);
+        }
+
+        {
+            ContextMenuEntry ctx;
+            ctx.id = TextboxCommandDelete;
+            ctx.name = "Delete";
+
+            ctxEntries.push_back(ctx);
+        }
     }
 
     void TextBox::Paint(surface_t* surface){
-        Graphics::DrawRect(fixedBounds.pos.x, fixedBounds.pos.y, fixedBounds.size.x, fixedBounds.size.y, 255, 255, 255, surface);
+        Graphics::DrawRect(fixedBounds.pos.x + 1, fixedBounds.pos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2, 255, 255, 255, surface);
+        Graphics::DrawRectOutline(fixedBounds, colours[Colour::ContentShadow], surface);
         int xpos = 2;
         int ypos = 2;
-        for(size_t i = 0; i < contents.size(); i++){
-            for(size_t j = 0; j < contents[i].length(); j++){
-                if(contents[i][j] == '\t'){
+        int curYOffset = 0;
+
+        if(multiline){
+            curYOffset = cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos + 2;
+
+            for(size_t i = 0; i < contents.size(); i++){
+                for(size_t j = 0; j < contents[i].length(); j++){
+                    if(contents[i][j] == '\t'){
+                        xpos += font->tabWidth * font->width;
+                        continue;
+                    } else if (isspace(contents[i][j])) {
+                        xpos += font->width;
+                        continue;
+                    }
+                    else if (!isgraph(contents[i][j])) continue;
+
+                    xpos += Graphics::DrawChar(contents[i][j], fixedBounds.pos.x + xpos, fixedBounds.pos.y + ypos - sBar.scrollPos, textColour.r, textColour.g, textColour.b, surface, font);
+
+                    if((xpos > (fixedBounds.size.x - 8 - 16))){
+                        //xpos = 0;
+                        //ypos += font->height + lineSpacing;
+                        break;
+                    }
+                }
+                ypos += font->height + lineSpacing;
+                xpos = 0;
+                if(ypos - sBar.scrollPos + font->height + lineSpacing >= fixedBounds.size.y) break;
+            }
+
+            sBar.Paint(surface, {fixedBounds.pos.x + fixedBounds.size.x - 16, fixedBounds.pos.y});
+        } else {
+            ypos = fixedBounds.height / 2 - font->height / 2;
+            curYOffset = ypos;
+
+            std::string& line = contents.front();
+            for(size_t j = 0; j < contents[0].length(); j++){
+                if(line[j] == '\t'){
                     xpos += font->tabWidth * font->width;
                     continue;
-                } else if (isspace(contents[i][j])) {
+                } else if (isspace(line[j])) {
                     xpos += font->width;
                     continue;
                 }
-                else if (!isgraph(contents[i][j])) continue;
+                else if (!isgraph(line[j])) continue;
 
-                xpos += Graphics::DrawChar(contents[i][j], fixedBounds.pos.x + xpos, fixedBounds.pos.y + ypos - sBar.scrollPos, textColour.r, textColour.g, textColour.b, surface, font);
-
-                if((xpos > (fixedBounds.size.x - 8 - 16))){
-                    //xpos = 0;
-                    //ypos += font->height + lineSpacing;
-                    break;
-                }
+                xpos += Graphics::DrawChar(line[j], fixedBounds.pos.x + xpos, fixedBounds.pos.y + ypos, textColour.r, textColour.g, textColour.b, surface, font);
             }
-            ypos += font->height + lineSpacing;
-            xpos = 0;
-            if(ypos - sBar.scrollPos + font->height + lineSpacing >= fixedBounds.size.y) break;
         }
 
         if(parent->active == this){ // Only draw cursor if active
@@ -411,11 +504,8 @@ namespace Lemon::GUI {
 
             long msec = (t.tv_nsec / 1000000.0);
             if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
-                Graphics::DrawRect(fixedBounds.pos.x + Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font) + 2, fixedBounds.pos.y + cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos + 2, 2, font->height + 2, 0, 0, 0, surface);
+                Graphics::DrawRect(fixedBounds.pos.x + Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font) + 2, fixedBounds.pos.y + curYOffset, 2, font->height + 2, 0, 0, 0, surface);
         }
-
-        if(multiline)
-            sBar.Paint(surface, {fixedBounds.pos.x + fixedBounds.size.x - 16, fixedBounds.pos.y});
     }
 
     void TextBox::LoadText(const char* text){
@@ -471,6 +561,17 @@ namespace Lemon::GUI {
                 break;
             }
         }
+    }
+
+    void TextBox::OnRightMouseDown(vector2i_t mousePos){
+        printf("rmouse\n");
+        if(window){
+            window->DisplayContextMenu(ctxEntries);
+        }
+    }
+
+    void TextBox::OnCommand(unsigned short cmd){
+
     }
 
     void TextBox::OnMouseMove(vector2i_t mousePos){
@@ -592,15 +693,12 @@ namespace Lemon::GUI {
         unsigned index = 0;
 
         if(showScrollBar) index = sBar.scrollPos / itemHeight;
+        unsigned maxItem = index + fixedBounds.height / itemHeight;
 
-        for(; index < items.size(); index++){
+        for(; index < items.size() && index < maxItem; index++){
             ListItem item = items[index];
 
             xPos = fixedBounds.x;
-
-            if(index == selected){
-                Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::Foreground], surface);
-            }
 
             for(unsigned i = 0; i < item.details.size() && i < columns.size(); i++){
 
@@ -624,7 +722,13 @@ namespace Lemon::GUI {
                 }
 
                 vector2i_t textPos = {xPos + 2, yPos + itemHeight / 2 - font->height / 2};
-                Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour.r, textColour.g, textColour.b, surface);
+
+                if(index == selected){
+                    Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::Foreground], surface);
+                    Graphics::DrawString(str.c_str(), textPos.x, textPos.y, colours[Colour::TextLight], surface, fixedBounds);
+                } else {
+                    Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour.r, textColour.g, textColour.b, surface, fixedBounds);
+                }
 
                 xPos += columns[i].displayWidth + 2;
             }
@@ -665,6 +769,8 @@ namespace Lemon::GUI {
 
         if(selected < 0) selected = 0;
         if(selected >= items.size()) selected = items.size() - 1;
+
+        if(OnSelect) OnSelect(items[selected], this);
     }
 
     void ListView::OnDoubleClick(vector2i_t mousePos){

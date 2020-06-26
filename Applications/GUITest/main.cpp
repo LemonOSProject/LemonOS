@@ -13,6 +13,8 @@ surface_t fbSurface;
 
 rgba_colour_t backgroundColor = {64, 128, 128};
 
+std::vector<Lemon::GUI::ContextMenuEntry> cxt;
+
 void OnPaint(surface_t* surface){
     Lemon::Graphics::DrawRect(0, 0, 640, 480, 255, 0, 0, surface);
 }
@@ -47,7 +49,19 @@ int main(){
     lView->AddColumn(col1);
     lView->AddColumn(col2);
 
-    for(int i = 0; i < 10; i++){
+    Lemon::GUI::ContextMenuEntry ent;
+    ent.id = 1;
+    ent.name = std::string("Add Item...");
+
+    cxt.push_back(ent);
+
+    ent.id = 2;
+    ent.name = std::string("Exit");
+
+    cxt.push_back(ent);
+
+    int i = 0;
+    for(; i < 10; i++){
         Lemon::GUI::ListItem item;
         int randI = rand() % 1000;
         char buf[80];

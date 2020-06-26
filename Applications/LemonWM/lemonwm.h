@@ -12,6 +12,8 @@
 #define WINDOW_BORDER_COLOUR {32,32,32}
 #define WINDOW_TITLEBAR_HEIGHT 24
 #define WINDOW_BORDER_THICKNESS 2
+#define CONTEXT_ITEM_HEIGHT 24
+#define CONTEXT_ITEM_WIDTH 128
 
 using WindowBuffer = Lemon::GUI::WindowBuffer;
 
@@ -78,6 +80,27 @@ public:
     void RecalculateButtonRects();
 };
 
+class ContextMenuItem{
+public:
+    std::string name;
+    unsigned char index;
+    unsigned short id;
+
+    ContextMenuItem(const char* name, unsigned char index, unsigned short id){
+        this->name = name;
+        this->index = index;
+        this->id = id;
+    }
+};
+
+class ContextMenu{
+public:
+    std::vector<ContextMenuItem> items;
+    WMWindow* owner;
+
+    void Paint(surface_t surface);
+};
+
 struct MouseState {
     vector2i_t pos;
     bool left, middle, right;
@@ -119,8 +142,8 @@ protected:
 
     WMWindow* active;
     bool drag = false;
-    vector2i_t dragOffset;
     bool resize = false;
+    vector2i_t dragOffset;
     int resizePoint = Right;
     vector2i_t resizeStartPos;
 
@@ -134,6 +157,8 @@ protected:
     void SetActive(WMWindow* win);
 public:
     bool redrawBackground = true;
+    bool contextMenuActive = false;
+    rect_t contextMenuBounds;
 
     surface_t surface;
     surface_t screenSurface;
@@ -142,12 +167,14 @@ public:
 
     InputManager input = InputManager(this);
     CompositorInstance compositor = CompositorInstance(this);
+    ContextMenu menu;
 
     WMInstance(surface_t& surface, sockaddr_un address);
     
     void Update();
 
     void MouseDown();
+    void MouseRight(bool pressed);
     void MouseUp();
     void MouseMove();
     void KeyUpdate(int key, bool pressed);

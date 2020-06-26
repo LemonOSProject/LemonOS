@@ -1,1 +1,1 @@
-qemu-system-x86_64 -s -S Disks/Lemon.vhd -no-reboot -no-shutdown --enable-kvm -chardev stdio,id=gdb0 -device isa-debugcon,iobase=0x402,chardev=gdb0,id=d1 -d int
+qemu-system-x86_64 -s -S Disks/Lemon.vhd -no-reboot -no-shutdown --enable-kvm -chardev stdio,id=gdb0 -device isa-debugcon,iobase=0x402,chardev=gdb0,id=d1 -d int -m 512M -M q35 -smp 4

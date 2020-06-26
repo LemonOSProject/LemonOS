@@ -32,6 +32,7 @@
 #define SYS_MAP_FB 14
 #define SYS_ALLOC 15
 #define SYS_CHMOD 16
+#define SYS_FSTAT
 #define SYS_STAT 18
 #define SYS_LSEEK 19
 #define SYS_GETPID 20
@@ -247,8 +248,8 @@ open:
 			char* basename = fs::BaseName(filepath);
 
 			if(!parent) {
-				Log::Warning("sys_open: Could resolve parent directory of new file %s", basename);
-				return -EINVAL;
+				Log::Warning("sys_open: Could not resolve parent directory of new file %s", basename);
+				return -ENOENT;
 			}
 
 			DirectoryEntry ent;
@@ -261,8 +262,12 @@ open:
 			goto open;
 		} else {
 			Log::Warning("sys_open: Failed to open file %s", filepath);
-			return -EINVAL;
+			return -ENOENT;
 		}
+	}
+
+	if(flags & O_DIRECTORY && node->flags != FS_NODE_DIRECTORY){
+		return -ENOTDIR;
 	}
 
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
@@ -312,9 +317,12 @@ long SysUnlink(regs64_t* r){
 long SysChdir(regs64_t* r){
 	if(r->rbx){
 		char* path =  fs::CanonicalizePath((char*)r->rbx, Scheduler::GetCurrentProcess()->workingDir);
-		if(!fs::ResolvePath(path)) {
+		FsNode* n = fs::ResolvePath(path);
+		if(!n) {
 			Log::Warning("chdir: Could not find %s", path);
 			return -1;
+		} else if (n->flags != FS_NODE_DIRECTORY){
+			return -ENOTDIR;
 		}
 		strcpy(Scheduler::GetCurrentProcess()->workingDir, path);
 	} else Log::Warning("chdir: Invalid path string");
@@ -380,33 +388,30 @@ long SysChmod(regs64_t* r){
 	return 0;
 }
 
-long SysStat(regs64_t* r){
+long SysFStat(regs64_t* r){
 	stat_t* stat = (stat_t*)r->rbx;
 	int fd = r->rcx;
-	int* ret = (int*)r->rdx;
 
 	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
-		Log::Warning("sys_stat: Invalid File Descriptor, %d", fd);
-		*ret = EINVAL;
-		return -EINVAL;
+		Log::Warning("sys_fstat: Invalid File Descriptor, %d", fd);
+		return -EBADF;
 	}
 	FsNode* node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(fd)->node;
 	if(!node){
-		Log::Warning("sys_stat: Invalid File Descriptor, %d", fd);
-		*ret = EINVAL;
-		return -EINVAL;
+		Log::Warning("sys_fstat: Invalid File Descriptor, %d", fd);
+		return -EBADF;
 	}
 
 	stat->st_dev = 0;
 	stat->st_ino = node->inode;
 	stat->st_mode = 0;
 	
-	if(node->flags & FS_NODE_DIRECTORY) stat->st_mode |= S_IFDIR;
-	if(node->flags & FS_NODE_FILE) stat->st_mode |= S_IFREG;
-	if(node->flags & FS_NODE_BLKDEVICE) stat->st_mode |= S_IFBLK;
-	if(node->flags & FS_NODE_CHARDEVICE) stat->st_mode |= S_IFCHR;
-	if(node->flags & FS_NODE_SYMLINK) stat->st_mode |= S_IFLNK;
-	if(node->flags & FS_NODE_SOCKET) stat->st_mode |= S_IFSOCK;
+	if(node->flags == FS_NODE_DIRECTORY) stat->st_mode |= S_IFDIR;
+	if(node->flags == FS_NODE_FILE) stat->st_mode |= S_IFREG;
+	if(node->flags == FS_NODE_BLKDEVICE) stat->st_mode |= S_IFBLK;
+	if(node->flags == FS_NODE_CHARDEVICE) stat->st_mode |= S_IFCHR;
+	if(node->flags == FS_NODE_SYMLINK) stat->st_mode |= S_IFLNK;
+	if(node->flags == FS_NODE_SOCKET) stat->st_mode |= S_IFSOCK;
 
 	stat->st_nlink = 0;
 	stat->st_uid = node->uid;
@@ -416,7 +421,47 @@ long SysStat(regs64_t* r){
 	stat->st_blksize = 0;
 	stat->st_blocks = 0;
 
-	*ret = 0;
+	return 0;
+}
+
+long SysStat(regs64_t* r){
+	stat_t* stat = (stat_t*)r->rbx;
+	char* filepath = (char*)r->rcx;
+	process_t* proc = Scheduler::GetCurrentProcess();
+
+	if(!Memory::CheckUsermodePointer(r->rbx, sizeof(stat_t), proc->addressSpace)){
+		Log::Warning("sys_stat: stat structure points to invalid address %x", r->rbx);
+	}
+	
+	if(!Memory::CheckUsermodePointer(r->rcx, 1, proc->addressSpace)){
+		Log::Warning("sys_stat: filepath points to invalid address %x", r->rbx);
+	}
+
+	FsNode* node = fs::ResolvePath(filepath, proc->workingDir);
+
+	if(!node){
+		Log::Warning("sys_stat: Invalid filepath %s", filepath);
+		return -ENOENT;
+	}
+
+	stat->st_dev = 0;
+	stat->st_ino = node->inode;
+	stat->st_mode = 0;
+	
+	if(node->flags == FS_NODE_DIRECTORY) stat->st_mode |= S_IFDIR;
+	if(node->flags == FS_NODE_FILE) stat->st_mode |= S_IFREG;
+	if(node->flags == FS_NODE_BLKDEVICE) stat->st_mode |= S_IFBLK;
+	if(node->flags == FS_NODE_CHARDEVICE) stat->st_mode |= S_IFCHR;
+	if(node->flags == FS_NODE_SYMLINK) stat->st_mode |= S_IFLNK;
+	if(node->flags == FS_NODE_SOCKET) stat->st_mode |= S_IFSOCK;
+
+	stat->st_nlink = 0;
+	stat->st_uid = node->uid;
+	stat->st_gid = 0;
+	stat->st_rdev = 0;
+	stat->st_size = node->size;
+	stat->st_blksize = 0;
+	stat->st_blocks = 0;
 
 	return 0;
 }
@@ -1472,7 +1517,7 @@ syscall_t syscalls[]{
 	SysMapFB,
 	SysAlloc,					// 15
 	SysChmod,
-	nullptr,
+	SysFStat,
 	SysStat,
 	SysLSeek,
 	SysGetPID,					// 20

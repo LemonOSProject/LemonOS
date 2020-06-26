@@ -226,8 +226,6 @@ namespace fs{
 	}
     
 	int Dev::ReadDir(DirectoryEntry* dirent, uint32_t index){
-		Log::Info("readdir %d", index);
-
 		if(index >= deviceCount) return -1;
 		strcpy(dirent->name,devices[index]->name);
 

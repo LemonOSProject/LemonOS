@@ -186,6 +186,12 @@ namespace Lemon::GUI{
             case EventMouseReleased:
                 rootContainer.OnMouseUp(ev.mousePos);
                 break;
+            case EventRightMousePressed:
+                rootContainer.OnRightMouseDown(ev.mousePos);
+                break;
+            case EventRightMouseReleased:
+                rootContainer.OnRightMouseUp(ev.mousePos);
+                break;
             case EventMouseMoved:
                 rootContainer.OnMouseMove(ev.mousePos);
                 break;
@@ -211,5 +217,32 @@ namespace Lemon::GUI{
 
     void Window::RemoveWidget(Widget* w){
         rootContainer.RemoveWidget(w);
+    }
+
+    void Window::DisplayContextMenu(std::vector<ContextMenuEntry>& entries){
+        printf("ctx menu\n");
+        unsigned cmdSize = sizeof(WMCommand);
+        for(ContextMenuEntry& ent : entries){
+            cmdSize += sizeof(WMContextMenuEntry) + ent.name.length();
+        }
+
+        LemonMessage* msg = (LemonMessage*)malloc(sizeof(LemonMessage) + cmdSize);
+        msg->length = cmdSize;
+        msg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+
+        WMCommand* cmd = (WMCommand*)msg->data;
+        cmd->cmd = WMOpenContextMenu;
+        cmd->contextEntryCount = entries.size();
+        
+        WMContextMenuEntry* wment = cmd->contextEntries;
+        for(ContextMenuEntry& ent : entries){
+            strncpy(wment->data, ent.name.c_str(), ent.name.length());
+            wment->length = ent.name.length();
+            wment = (WMContextMenuEntry*)(((void*)wment) + sizeof(WMContextMenuEntry) + ent.name.length());
+        }
+
+        msgClient.Send(msg);
+
+        free(msg);
     }
 }

@@ -89,10 +89,11 @@ namespace fs::tar{
         dirNode->entryCount = 0;
 
         int i = blockIndex + GetBlockCount(dirHeader->ustar.size) + 1; // Next block
-        for(; i < blockCount; dirNode->entryCount++){
-            if(strncmp(blocks[i].ustar.name, dirHeader->ustar.name, strlen(dirHeader->ustar.name))){
+        while(i < blockCount){
+            if(strncmp(blocks[i].ustar.name, dirHeader->ustar.name, strlen(dirHeader->ustar.name)) || !strlen(blocks[i].ustar.name)){
                 break; // End of directory - header is not in directory
             }
+            dirNode->entryCount++;
             i += GetBlockCount(blocks[i].ustar.size) + 1;
         }
         
@@ -147,6 +148,8 @@ namespace fs::tar{
         int e = 0;
         for(int i = 0; i < blockCount; e++){
             tar_header_t header = blocks[i];
+            
+            if(!strlen(header.ustar.name)) break;
 
             if(header.ustar.type == TAR_TYPE_DIRECTORY){
                 volumeNode->children[e] = nextNode; // Directory will take next available node so add it to children

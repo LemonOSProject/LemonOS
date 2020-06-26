@@ -239,8 +239,15 @@ int LocalSocket::Listen(int backlog){
     pendingConnections.value = backlog;
     passive = true;
 
-    if(inbound) delete inbound;
-    if(outbound) delete outbound;
+    if(inbound) {
+        delete inbound;
+        inbound = nullptr;
+    }
+
+    if(outbound) {
+        delete outbound;
+        outbound = nullptr;
+    }
 
     return 0;
 }

@@ -148,7 +148,7 @@ public:
     int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
     int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
 
-    bool CanRead() { return inbound && !inbound->Empty(); }
+    bool CanRead() { if(inbound) return !inbound->Empty(); else return false; }
 };
 
 namespace SocketManager{
