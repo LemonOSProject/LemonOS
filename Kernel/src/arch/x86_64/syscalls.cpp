@@ -168,12 +168,12 @@ long SysRead(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	if(r->rbx > proc->fileDescriptors.get_length()){
 		Log::Warning("Invalid File Descriptor: %d", r->rbx);
-		return -1;
+		return -EBADF;
 	}
 	fs_fd_t* handle = proc->fileDescriptors[r->rbx];
 	if(!handle){
 		Log::Warning("Invalid File Descriptor: %d", r->rbx);
-		return -2;
+		return -EBADF;
 	}
 
 	uint8_t* buffer = (uint8_t*)r->rcx;
@@ -181,7 +181,7 @@ long SysRead(regs64_t* r){
 
 	if(!Memory::CheckUsermodePointer(r->rcx, count, proc->addressSpace)){
 		Log::Warning("Invalid Memory Buffer: %x", r->rcx);
-		return -3;
+		return -EFAULT;
 	}
 
 	ssize_t ret = fs::Read(handle, count, buffer);
@@ -193,12 +193,12 @@ long SysWrite(regs64_t* r){
 
 	if(r->rbx > proc->fileDescriptors.get_length()){
 		Log::Warning("Invalid File Descriptor: %d", r->rbx);
-		return -EINVAL;
+		return -EBADF;
 	}
 	fs_fd_t* handle = proc->fileDescriptors[r->rbx];
 	if(!handle){
 		Log::Warning("Invalid File Descriptor: %d", r->rbx);
-		return -EINVAL;
+		return -EBADF;
 	}
 
 	uint8_t* buffer = (uint8_t*)r->rcx;
@@ -210,7 +210,6 @@ long SysWrite(regs64_t* r){
 	}
 
 	ssize_t ret = fs::Write(handle, r->rdx, buffer);
-
 	return ret;
 }
 
@@ -467,11 +466,6 @@ long SysStat(regs64_t* r){
 }
 
 long SysLSeek(regs64_t* r){
-	if(!(r->rsi)){
-		Log::Warning("sys_lseek: Invalid Return Address");
-		return -2;
-	}
-
 	long ret = 0;
 	uint64_t fd = r->rbx;
 
@@ -498,7 +492,7 @@ long SysLSeek(regs64_t* r){
 		return -1; // Invalid seek mode
 		break;
 	}
-	*(int64_t*)r->rsi = ret;
+
 	return ret;
 }
 
@@ -1344,7 +1338,7 @@ long SysPoll(regs64_t* r){
 			}
 
 			for(unsigned i = 0; i < nfds; i++){
-				if(!files[i]) continue;
+				if(!files[i] || !files[i]->node) continue;
 
 				bool hasEvent = 0;
 

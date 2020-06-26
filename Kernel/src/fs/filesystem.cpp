@@ -319,8 +319,12 @@ namespace fs{
 	
     ssize_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer){
         if(handle->node){
-            off_t ret = Read(handle->node,handle->pos,size,buffer);
-			handle->pos += ret;
+            ssize_t ret = Read(handle->node,handle->pos,size,buffer);
+
+			if(ret >= 0){
+				handle->pos += ret;
+			}
+			
 			return ret;
 		}
         else return 0;
@@ -329,7 +333,11 @@ namespace fs{
     ssize_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer){
         if(handle->node){
             off_t ret = Write(handle->node,handle->pos,size,buffer);
-			handle->pos += ret;
+
+			if(ret >= 0){
+				handle->pos += ret;
+			}
+			
 			return ret;
 		} else return 0;
     }

@@ -181,8 +181,6 @@ namespace fs::tar{
     }
 
     ssize_t TarVolume::Write(TarNode* node, size_t offset, size_t size, uint8_t *buffer){
-        TarNode* tarNode = &nodes[node->inode];
-
         return -EROFS;
     }
 

@@ -119,40 +119,30 @@ namespace fs::Ext2{
             return ino.blocks[index];
         } else if(index < doublyIndirectStart){
             // Index lies within the singly indirect blocklist
-            uint32_t* buffer = (uint32_t*)kmalloc(blocksize);
+            uint32_t buffer[blocksize / sizeof(uint32_t)];
 
             if(int e = ReadBlock(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)){
-                kfree(buffer);
                 error = DiskReadError;
                 return 0;
             }
 
-            kfree(buffer);
-
             return buffer[index - singlyIndirectStart];
         } else if(index < triplyIndirectStart){
             // Index lies within the doubly indirect blocklist
-            uint32_t* blockPointers = (uint32_t*)kmalloc(blocksize);
-            uint32_t* buffer = (uint32_t*)kmalloc(blocksize);
+            uint32_t blockPointers[blocksize / sizeof(uint32_t)];
+            uint32_t buffer[blocksize / sizeof(uint32_t)];
 
             if(int e = ReadBlock(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)){
-                kfree(blockPointers);
-                kfree(buffer);
                 error = DiskReadError;
                 return 0;
             }
 
             uint32_t blockPointer = blockPointers[(index - doublyIndirectStart) / blocksPerPointer];
 
-            kfree(blockPointers);
-
             if(int e = ReadBlock(blockPointer, buffer)){
-                kfree(buffer);
                 error = DiskReadError;
                 return 0;
             }
-
-            kfree(buffer);
 
             return buffer[(index - doublyIndirectStart) % blocksPerPointer];
         } else {
@@ -174,10 +164,9 @@ namespace fs::Ext2{
             ino.blocks[index] = block;
         } else if(index < doublyIndirectStart){
             // Index lies within the singly indirect blocklist
-            uint32_t* buffer = (uint32_t*)kmalloc(blocksize);
+            uint32_t buffer[blocksize / sizeof(uint32_t)];
 
             if(int e = ReadBlock(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)){
-                kfree(buffer);
                 error = DiskReadError;
                 return;
             }
@@ -185,31 +174,23 @@ namespace fs::Ext2{
             buffer[index - singlyIndirectStart] = block;
             
             if(int e = WriteBlock(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)){
-                kfree(buffer);
                 error = DiskWriteError;
                 return;
             }
-
-            kfree(buffer);
             return;
         } else if(index < triplyIndirectStart){
             // Index lies within the doubly indirect blocklist
-            uint32_t* blockPointers = (uint32_t*)kmalloc(blocksize);
-            uint32_t* buffer = (uint32_t*)kmalloc(blocksize);
+            uint32_t blockPointers[blocksize / sizeof(uint32_t)];
+            uint32_t buffer[blocksize / sizeof(uint32_t)];
 
             if(int e = ReadBlock(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)){ // Read indirect block pointer list
-                kfree(blockPointers);
-                kfree(buffer);
                 error = DiskReadError;
                 return;
             }
 
             uint32_t blockPointer = blockPointers[(index - doublyIndirectStart) / blocksPerPointer];
 
-            kfree(blockPointers);
-
             if(int e = ReadBlock(blockPointer, buffer)){ // Read blocklist
-                kfree(buffer);
                 error = DiskReadError;
                 return;
             }
@@ -217,12 +198,9 @@ namespace fs::Ext2{
             buffer[(index - doublyIndirectStart) % blocksPerPointer] = block; // Update the index
             
             if(int e = WriteBlock(blockPointer, buffer)){ // Write our updated blocklist
-                kfree(buffer);
                 error = DiskWriteError;
                 return;
             }
-
-            kfree(buffer);
             return;
         } else {
             assert(!"Yet to support triply indirect");
@@ -706,16 +684,16 @@ namespace fs::Ext2{
     }
 
     ssize_t Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer){
-        if(offset >= node->size) return 0;
+        if(offset > node->size) return -1;
         if(offset + size > node->size) size = node->size - offset;
 
         uint32_t blockIndex = LocationToBlock(offset);
         uint32_t blockCount = LocationToBlock(size) + 1;
-        uint8_t* blockBuffer = (uint8_t*)kmalloc(blocksize);
+        uint8_t blockBuffer[blocksize];
 
-        Log::Info("[Ext2] Reading: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockCount, offset, size);
+        //Log::Info("[Ext2] Reading: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockCount, offset, size);
 
-        size_t ret = size;
+        ssize_t ret = size;
 
         for(unsigned i = 0; i < blockCount && size > 0; i++, blockIndex++){
             uint32_t block = GetInodeBlock(blockIndex, node->e2inode);
@@ -728,7 +706,11 @@ namespace fs::Ext2{
             if(offset % blocksize){
                 size_t readSize = blocksize - (offset % blocksize);
                 size_t readOffset = (offset % blocksize);
+
+                if(readSize > size) readSize = size;
+
                 memcpy(buffer, blockBuffer + readOffset, readSize);
+
                 size -= readSize;
                 buffer += readSize;
                 offset += readSize;
@@ -739,13 +721,12 @@ namespace fs::Ext2{
                 offset += blocksize;
             } else {
                 memcpy(buffer, blockBuffer, size);
+                size = 0;
                 break;
             }
         }
 
-        kfree(blockBuffer);
-
-        Log::Info("[Ext2] Returning %d", ret);
+        //Log::Info("[Ext2] Returning %d", ret);
 
         return ret;
     }
@@ -785,7 +766,7 @@ namespace fs::Ext2{
             SyncNode(node);
         }
 
-        Log::Info("[Ext2] Writing: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockCount, offset, size);
+        //Log::Info("[Ext2] Writing: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockCount, offset, size);
 
         size_t ret = size;
 
@@ -797,6 +778,8 @@ namespace fs::Ext2{
 
                 size_t writeSize = blocksize - (offset % blocksize);
                 size_t writeOffset = (offset % blocksize);
+                
+                if(writeSize > size) writeSize = size;
 
                 memcpy(blockBuffer + writeOffset, buffer, writeSize);
                 WriteBlock(block, buffer);
