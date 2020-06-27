@@ -14,10 +14,10 @@ ExtendedTextBox::ExtendedTextBox(rect_t bounds) : Lemon::GUI::TextBox(bounds, tr
 void ExtendedTextBox::Paint(surface_t* surface){
     char num[10];
     for(int i = floor(((double)sBar.scrollPos) / (font->height + lineSpacing)); i < contents.size(); i++){
-        int yPos = i * (lineSpacing + font->height) - sBar.scrollPos;
+        int yPos = fixedBounds.y + i * (lineSpacing + font->height) - sBar.scrollPos;
         sprintf(num, "%d", i);
         int textSz = Lemon::Graphics::GetTextLength(num);
-        Lemon::Graphics::DrawString(num, (LINE_NUM_PANEL_WIDTH / 2) - textSz / 2, yPos + lineSpacing / 2, 30, 30, 30, surface);
+        Lemon::Graphics::DrawString(num, fixedBounds.pos.x + (LINE_NUM_PANEL_WIDTH / 2) - textSz / 2, yPos + lineSpacing / 2, 30, 30, 30, surface);
     }
     fixedBounds = textBoxBounds;
     TextBox::Paint(surface);

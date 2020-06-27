@@ -130,7 +130,6 @@ void WMInstance::Poll(){
                 strcpy(shellAddr.sun_path, Lemon::Shell::shellSocketAddress);
                 shellAddr.sun_family = AF_UNIX;
                 shellClient.Connect(shellAddr, sizeof(sockaddr_un));
-                printf("Connected\n");
             } else if(cmd->cmd == Lemon::GUI::WMOpenContextMenu){
                 WMWindow* win = FindWindow(m->clientFd);
 
@@ -142,10 +141,14 @@ void WMInstance::Poll(){
                 menu.items.clear();
 
                 char buf[256];
-                contextMenuBounds = {input.mouse.pos, {CONTEXT_ITEM_WIDTH, 0}};
+                contextMenuBounds = {win->pos + cmd->contextMenuPosition, {CONTEXT_ITEM_WIDTH, 0}};
+
+                if(!(win->flags & WINDOW_FLAGS_NODECORATION)){
+                    contextMenuBounds.y += WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS;
+                }
                 
-                Lemon::GUI::WMContextMenuEntry* item = cmd->contextEntries;
-                for(int i = 0; i < cmd->contextEntryCount; i++){
+                Lemon::GUI::WMContextMenuEntry* item = cmd->contextMenu.contextEntries;
+                for(int i = 0; i < cmd->contextMenu.contextEntryCount; i++){
 
                     if(((uintptr_t)item) + sizeof(Lemon::GUI::WMContextMenuEntry) + item->length - (uintptr_t)(m->msg.data) > m->msg.length){
                         printf("[LemonWM] Invalid context menu item length: %d", item->length);
@@ -153,8 +156,6 @@ void WMInstance::Poll(){
                     }
 
                     strncpy(buf, item->data, item->length);
-                    printf("item: %s\n", buf);
-
                     menu.items.push_back(ContextMenuItem(buf, i, item->id));
 
                     contextMenuBounds.height += CONTEXT_ITEM_HEIGHT;
@@ -196,6 +197,10 @@ void WMInstance::PostEvent(Lemon::LemonEvent& ev, WMWindow* win){
 }
 
 void WMInstance::MouseDown(){
+    if(Lemon::Graphics::PointInRect(contextMenuBounds, input.mouse.pos)){
+        return;
+    }
+
     auto it = windows.end();
     do {
         WMWindow* win = *it;
@@ -287,6 +292,8 @@ void WMInstance::MouseUp(){
         ContextMenuItem item = menu.items[(input.mouse.pos.y - contextMenuBounds.y) / CONTEXT_ITEM_HEIGHT];
 
         ev.windowCmd = item.id;
+
+        printf("[LemonWM] Context Item: %s, ID: %d\n", item.name.c_str(), item.id);
         PostEvent(ev, menu.owner);
 
         contextMenuActive = false;

@@ -117,7 +117,12 @@ namespace Lemon::GUI{
         surface.buffer = buffer1;
         surface.width = size.x;
         surface.height = size.y;
-        rootContainer.SetBounds({{0, 0}, size});
+
+        if(menuBar){
+            rootContainer.SetBounds({{0, 16}, {size.x, size.y - WINDOW_MENUBAR_HEIGHT}});
+        } else {
+            rootContainer.SetBounds({{0, 0}, size});
+        }
 
         LemonMessage* msg = (LemonMessage*)malloc(sizeof(LemonMessage) + sizeof(WMCommand));
 
@@ -151,7 +156,13 @@ namespace Lemon::GUI{
 
         if(OnPaint) OnPaint(&surface);
         
-        if(windowType == WindowType::GUI) rootContainer.Paint(&surface);
+        if(windowType == WindowType::GUI) {
+            if(menuBar){
+                menuBar->Paint(&surface);
+            }
+
+            rootContainer.Paint(&surface);
+        }
 
         SwapBuffers();
     }
@@ -171,6 +182,15 @@ namespace Lemon::GUI{
         switch(ev.event){
             case EventMousePressed:
                 {
+                    lastMousePos = ev.mousePos;
+
+                    if(menuBar && ev.mousePos.y < menuBar->GetFixedBounds().height){
+                        rootContainer.active = nullptr;
+                        menuBar->OnMouseDown(ev.mousePos);
+                    } else if (menuBar){
+                        ev.mousePos.y -= menuBar->GetFixedBounds().height;
+                    }
+
                     timespec newClick;
                     clock_gettime(CLOCK_BOOTTIME, &newClick);
 
@@ -184,15 +204,50 @@ namespace Lemon::GUI{
                 }
                 break;
             case EventMouseReleased:
+                lastMousePos = ev.mousePos;
+                
+                if(menuBar && ev.mousePos.y < menuBar->GetFixedBounds().height){
+                    rootContainer.active = nullptr;
+                    menuBar->OnMouseDown(ev.mousePos);
+                } else if (menuBar){
+                    ev.mousePos.y -= menuBar->GetFixedBounds().height;
+                }
+
                 rootContainer.OnMouseUp(ev.mousePos);
                 break;
             case EventRightMousePressed:
+                lastMousePos = ev.mousePos;
+
+                if(menuBar && ev.mousePos.y < menuBar->GetFixedBounds().height){
+                    rootContainer.active = nullptr;
+                    menuBar->OnMouseDown(ev.mousePos);
+                } else if (menuBar){
+                    ev.mousePos.y -= menuBar->GetFixedBounds().height;
+                }
+
                 rootContainer.OnRightMouseDown(ev.mousePos);
                 break;
             case EventRightMouseReleased:
+                lastMousePos = ev.mousePos;
+
+                if(menuBar && ev.mousePos.y < menuBar->GetFixedBounds().height){
+                    rootContainer.active = nullptr;
+                    menuBar->OnMouseDown(ev.mousePos);
+                } else if (menuBar){
+                    ev.mousePos.y -= menuBar->GetFixedBounds().height;
+                }
+
                 rootContainer.OnRightMouseUp(ev.mousePos);
                 break;
             case EventMouseMoved:
+                lastMousePos = ev.mousePos;
+
+                if(menuBar && ev.mousePos.y < menuBar->GetFixedBounds().height){
+                    menuBar->OnMouseMove(ev.mousePos);
+                } else if (menuBar){
+                    ev.mousePos.y -= menuBar->GetFixedBounds().height;
+                }
+
                 rootContainer.OnMouseMove(ev.mousePos);
                 break;
             case EventKeyPressed:
@@ -208,6 +263,13 @@ namespace Lemon::GUI{
             case EventWindowClosed:
                 closed = true;
                 break;
+            case EventWindowCommand:
+                if(menuBar && !rootContainer.active && OnMenuCmd){
+                    OnMenuCmd(ev.windowCmd, this);
+                } else {
+                    rootContainer.OnCommand(ev.windowCmd);
+                }
+                break;
         }
     }
 
@@ -219,8 +281,11 @@ namespace Lemon::GUI{
         rootContainer.RemoveWidget(w);
     }
 
-    void Window::DisplayContextMenu(std::vector<ContextMenuEntry>& entries){
-        printf("ctx menu\n");
+    void Window::DisplayContextMenu(std::vector<ContextMenuEntry>& entries, vector2i_t pos){
+        if(pos.x == -1 && pos.y == -1){
+            pos = lastMousePos;
+        }
+
         unsigned cmdSize = sizeof(WMCommand);
         for(ContextMenuEntry& ent : entries){
             cmdSize += sizeof(WMContextMenuEntry) + ent.name.length();
@@ -232,17 +297,60 @@ namespace Lemon::GUI{
 
         WMCommand* cmd = (WMCommand*)msg->data;
         cmd->cmd = WMOpenContextMenu;
-        cmd->contextEntryCount = entries.size();
+        cmd->contextMenu.contextEntryCount = entries.size();
+        cmd->contextMenuPosition = pos;
         
-        WMContextMenuEntry* wment = cmd->contextEntries;
+        WMContextMenuEntry* wment = cmd->contextMenu.contextEntries;
         for(ContextMenuEntry& ent : entries){
             strncpy(wment->data, ent.name.c_str(), ent.name.length());
             wment->length = ent.name.length();
+            wment->id = ent.id;
             wment = (WMContextMenuEntry*)(((void*)wment) + sizeof(WMContextMenuEntry) + ent.name.length());
         }
 
         msgClient.Send(msg);
 
         free(msg);
+    }
+
+    void Window::CreateMenuBar(){
+        menuBar = new WindowMenuBar();
+        menuBar->window = this;
+
+        rootContainer.SetBounds({0, WINDOW_MENUBAR_HEIGHT, surface.width, surface.height - WINDOW_MENUBAR_HEIGHT});
+    }
+
+    void WindowMenuBar::Paint(surface_t* surface){
+        fixedBounds = {0, 0, window->GetSize().x, WINDOW_MENUBAR_HEIGHT};
+
+        Graphics::DrawRect(fixedBounds, colours[Colour::Background], surface);
+        Graphics::DrawRect(0, fixedBounds.height, fixedBounds.width, 1, colours[Colour::Foreground], surface);
+
+        int xpos = 0;
+        for(auto& item : items){
+            xpos += Graphics::DrawString(item.first.c_str(), xpos + 4, 4, colours[Colour::TextDark], surface) + 8;
+        }
+    }
+
+    void WindowMenuBar::OnMouseDown(vector2i_t mousePos){
+        fixedBounds = {0, 0, window->GetSize().x, WINDOW_MENUBAR_HEIGHT};
+
+        int xpos = 0;
+        for(auto& item : items){
+            int oldpos = xpos;
+            xpos += Graphics::GetTextLength(item.first.c_str()) + 8; // 4 pixels on each side of padding
+            if(xpos >= mousePos.x){
+                window->DisplayContextMenu(item.second, {oldpos, WINDOW_MENUBAR_HEIGHT});
+                break;
+            }
+        }
+    }
+
+    void WindowMenuBar::OnMouseUp(vector2i_t mousePos){
+        OnMouseDown(mousePos);
+    }
+
+    void WindowMenuBar::OnMouseMove(vector2i_t mousePos){
+
     }
 }

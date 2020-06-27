@@ -207,8 +207,8 @@ namespace Lemon::Graphics{
         return mainFont;
     }
 
-    void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font) {
-        if(y >= surface->height || x >= surface->width || y >= limits.height || x >= limits.width) return;
+    int DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font) {
+        if(y >= surface->height || x >= surface->width || y >= limits.height || x >= limits.width) return 0;
 
         if((fontState != 1 && fontState != -1) || !font->face) InitializeFonts();
         if(fontState == -1){
@@ -218,7 +218,7 @@ namespace Lemon::Graphics{
                 xOffset += 8;
                 str++;
             }
-            return;
+            return xOffset;
         }
 
         uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
@@ -246,7 +246,7 @@ namespace Lemon::Graphics{
             if(int err = FT_Load_Char(font->face, *str, FT_LOAD_RENDER)) {
                 //syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
                 fontState = 0;
-                return;
+                return 0;
             }
 
             for(int i = 0; i < font->face->glyph->bitmap.rows && i < maxHeight; i++){
@@ -271,18 +271,19 @@ namespace Lemon::Graphics{
             xOffset += font->face->glyph->advance.x >> 6;
             str++;
         }
+        return xOffset;
     }
 
-    void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font) {
-        DrawString(str, x, y, r, g, b, surface, {0, 0, surface->width, surface->height}, font);
+    int DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font) {
+        return DrawString(str, x, y, r, g, b, surface, {0, 0, surface->width, surface->height}, font);
     }
 
-    void DrawString(const char* str, unsigned int x, unsigned int y, rgba_colour_t col, surface_t* surface, rect_t limits, Font* font){
-        DrawString(str, x, y, col.r, col.g, col.b, surface, limits, font);
+    int DrawString(const char* str, unsigned int x, unsigned int y, rgba_colour_t col, surface_t* surface, rect_t limits, Font* font){
+        return DrawString(str, x, y, col.r, col.g, col.b, surface, limits, font);
     }
 
-    void DrawString(const char* str, unsigned int x, unsigned int y, rgba_colour_t col, surface_t* surface, Font* font){
-        DrawString(str, x, y, col.r, col.g, col.b, surface, font);
+    int DrawString(const char* str, unsigned int x, unsigned int y, rgba_colour_t col, surface_t* surface, Font* font){
+        return DrawString(str, x, y, col.r, col.g, col.b, surface, font);
     }
     
     int GetCharWidth(char c, Font* font){

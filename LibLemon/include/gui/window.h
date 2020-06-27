@@ -6,10 +6,13 @@
 #include <gfx/graphics.h>
 #include <gui/widgets.h>
 #include <gui/ctxentry.h>
+#include <utility>
 
 #define WINDOW_FLAGS_NODECORATION 0x1
 #define WINDOW_FLAGS_RESIZABLE 0x2
 #define WINDOW_FLAGS_NOSHELL 0x4
+
+#define WINDOW_MENUBAR_HEIGHT 20
 
 namespace Lemon::GUI {
     static const char* wmSocketAddress = "lemonwm";
@@ -31,6 +34,12 @@ namespace Lemon::GUI {
         WMOpenContextMenu,
     };
 
+    enum {
+        WMCxtEntryTypeCommand,
+        WMCxtEntryTypeDivider,
+        WMCxtEntryTypeExpand,
+    };
+
     struct WMCreateWindowCommand{
         vector2i_t size; // Window Size
         vector2i_t pos; // Window Position
@@ -44,6 +53,11 @@ namespace Lemon::GUI {
         unsigned short id;
         unsigned char length;
         char data[];
+    };
+
+    struct WMContextMenu{
+        unsigned char contextEntryCount;
+        WMContextMenuEntry contextEntries[];
     };
 
     struct WMCommand{
@@ -66,8 +80,8 @@ namespace Lemon::GUI {
             char title[];
             };
             struct {
-            unsigned char contextEntryCount;
-            WMContextMenuEntry contextEntries[];
+                vector2i_t contextMenuPosition;
+                WMContextMenu contextMenu;
             };
         };
     };
@@ -84,6 +98,18 @@ namespace Lemon::GUI {
         GUI,
     };
 
+    using WindowMenu = std::pair<std::string, std::vector<ContextMenuEntry>>;
+
+    class WindowMenuBar : public Widget{
+    public:
+        std::vector<WindowMenu> items;
+
+        void Paint(surface_t* surface);
+        void OnMouseDown(vector2i_t mousePos);
+        void OnMouseUp(vector2i_t mousePos);
+        void OnMouseMove(vector2i_t mousePos);
+    };
+
     class Window {
     private:
         MessageClient msgClient;
@@ -97,7 +123,9 @@ namespace Lemon::GUI {
         int windowType = WindowType::Basic;
 
         timespec lastClick;
+        vector2i_t lastMousePos = {0, 0};
     public:
+        WindowMenuBar* menuBar = nullptr;
         Container rootContainer;
         surface_t surface;
         bool closed = false; // Set to true when close button pressed
@@ -122,7 +150,9 @@ namespace Lemon::GUI {
         void AddWidget(Widget* w);
         void RemoveWidget(Widget* w);
 
-        void DisplayContextMenu(std::vector<ContextMenuEntry>& entries);
+        void DisplayContextMenu(std::vector<ContextMenuEntry>& entries, vector2i_t pos = {-1, -1});
+        void CreateMenuBar();
+        void (*OnMenuCmd)(unsigned short, Window*) = nullptr;
 
         uint32_t GetFlags() { return flags; }
         vector2i_t GetSize() { return {surface.width, surface.height}; };
