@@ -207,10 +207,12 @@ namespace fs::Ext2{
         void Close();
         void Sync();
 
+        List<uint32_t> cachedBlocks;
+
         Ext2Volume* vol;
         ext2_inode_t e2inode;
 
-        FilesystemLock flock;
+        FilesystemLock flock; // Lock on file data
     };
 
     class Ext2Volume : public FsVolume {
@@ -237,6 +239,9 @@ namespace fs::Ext2{
         uint32_t inodeSize = 128;
 
         HashMap<uint32_t, Ext2Node*> inodeCache;
+        HashMap<uint32_t, uint8_t*> blockCache;
+        HashMap<uint32_t, uint8_t*> bitmapCache;
+        unsigned blockCacheMemoryUsage;
 
         inline uint32_t LocationToBlock(uint64_t l){
             return (l >> super.logBlockSize) >> 10;
@@ -260,6 +265,9 @@ namespace fs::Ext2{
 
             return lba;
         }
+
+        void WriteSuperblock();
+        void WriteBlockGroupDescriptor(uint32_t index);
         
         uint32_t GetInodeBlock(uint32_t index, ext2_inode_t& inode);
         void SetInodeBlock(uint32_t index, ext2_inode_t& inode, uint32_t block);
@@ -268,7 +276,10 @@ namespace fs::Ext2{
         int WriteInode(uint32_t num, ext2_inode_t& inode);
 
         int ReadBlock(uint32_t block, void* buffer);
+        int ReadBlockCached(uint32_t block, void* buffer);
+        
         int WriteBlock(uint32_t block, void* buffer);
+        int WriteBlockCached(uint32_t block, void* buffer);
 
         Ext2Node* CreateNode();
         void EraseInode(ext2_inode_t& inode);

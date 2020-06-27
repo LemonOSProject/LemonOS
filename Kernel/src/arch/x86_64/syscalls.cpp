@@ -269,10 +269,9 @@ open:
 		return -ENOTDIR;
 	}
 
-	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
-
 	fs_fd_t* handle = fs::Open(node, r->rcx);
 
+	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(handle);
 	fs::Open(node, 0);
 
@@ -292,6 +291,8 @@ long SysClose(regs64_t* r){
 	if((handle = Scheduler::GetCurrentProcess()->fileDescriptors[fd])){
 		fs::Close(handle);
 	}
+
+	handle->node = nullptr;
 
 	Scheduler::GetCurrentProcess()->fileDescriptors.replace_at(fd, NULL);
 	return 0;
@@ -521,6 +522,8 @@ long SysMkdir(regs64_t* r){
 
 	FsNode* parentDirectory = fs::ResolveParent(path, proc->workingDir);
 	char* dirPath = fs::BaseName(path);
+	
+	Log::Info("sys_mkdir: Attempting to create %s at path %s", dirPath, path);
 
 	if(!parentDirectory){
 		Log::Warning("sys_mkdir: Could not resolve path: %s", path);
@@ -1297,7 +1300,7 @@ long SysPoll(regs64_t* r){
 
 		fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[fds[i].fd];
 
-		if(!handle){
+		if(!handle || !handle->node){
 			Log::Warning("sys_poll: Invalid File Descriptor: %d", fds[i].fd);
 			files[i] = 0;
 			fds[i].revents |= POLLNVAL;

@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #include <list.h>
+#include <lock.h>
 
 #include <types.h>
 
@@ -153,6 +154,8 @@ public:
 
     FsNode* link;
     FsNode* parent;
+
+    FilesystemLock nodeLock; // Lock on FsNode info
 };
 
 typedef struct fs_dirent {

@@ -198,18 +198,18 @@ namespace fs{
 	}
 
 	char* BaseName(const char* path){
-		char* pathCopy = (char*)kmalloc(strlen(path));
+		char* pathCopy = (char*)kmalloc(strlen(path) + 1);
 		strcpy(pathCopy, path);
 		
 		if(pathCopy[strlen(pathCopy) - 1] == '/'){ // Remove trailing slash
-			pathCopy[strlen(pathCopy) - 1] == 0;
+			pathCopy[strlen(pathCopy) - 1] = 0;
 		}
 
 		char* basename = nullptr;
 		char* temp;
 		if((temp = strrchr(pathCopy, '/'))){
-			basename = (char*)kmalloc(strlen(temp));
-			strcpy(basename, temp);
+			basename = (char*)kmalloc(strlen(temp) + 1);
+			strcpy(basename, temp + 1);
 
 			kfree(pathCopy);
 		} else {
