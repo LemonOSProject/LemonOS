@@ -104,8 +104,6 @@ namespace AHCI{
     int Port::Write(uint64_t lba, uint32_t count, void* buffer){
         uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
 
-        Log::Info("Writing to disk");
-
         while(blockCount-- && count){
             uint64_t size;
             if(count < 512) size = count;

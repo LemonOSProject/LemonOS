@@ -18,6 +18,8 @@ public:
     virtual int64_t Read(void* buffer, size_t len);
     virtual int64_t Peek(void* buffer, size_t len);
     virtual int64_t Write(void* buffer, size_t len);
+
+    virtual int64_t Pos() { return 0; }
     virtual int64_t Empty();
 
     virtual ~Stream();
@@ -37,6 +39,8 @@ public:
     int64_t Read(void* buffer, size_t len);
     int64_t Peek(void* buffer, size_t len);
     int64_t Write(void* buffer, size_t len);
+    
+    int64_t Pos() { return bufferPos; }
     virtual int64_t Empty();
 };
 

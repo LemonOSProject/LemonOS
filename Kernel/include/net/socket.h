@@ -20,6 +20,8 @@
 
 #define SOCK_NONBLOCK 0x10000
 
+#define STREAM_MAX_BUFSIZE 0x20000 // 128 KB
+
 typedef unsigned int sa_family_t;
 typedef uint32_t socklen_t;
 
@@ -127,6 +129,7 @@ public:
 };
 
 class LocalSocket : public Socket {
+    lock_t slock = 0;
 public:
     LocalSocket* peer = nullptr;
 

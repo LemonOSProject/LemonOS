@@ -192,7 +192,16 @@ namespace fs::Ext2{
 
     class Ext2Volume;
 
-    class Ext2Node : public FsNode{
+    class Ext2Node : public FsNode{ 
+    protected:
+        List<uint32_t> cachedBlocks;
+
+        Ext2Volume* vol;
+        ext2_inode_t e2inode;
+
+        FilesystemLock flock; // Lock on file data
+
+        friend class Ext2Volume;
     public:
         Ext2Node(Ext2Volume* vol) { this->vol = vol; }
         Ext2Node(Ext2Volume* vol, ext2_inode_t& ino, ino_t inode);
@@ -206,13 +215,6 @@ namespace fs::Ext2{
 
         void Close();
         void Sync();
-
-        List<uint32_t> cachedBlocks;
-
-        Ext2Volume* vol;
-        ext2_inode_t e2inode;
-
-        FilesystemLock flock; // Lock on file data
     };
 
     class Ext2Volume : public FsVolume {

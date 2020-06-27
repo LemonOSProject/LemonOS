@@ -112,7 +112,8 @@ fs_fd_t* Socket::Open(size_t flags){
 }
 
 void Socket::Close(){
-    delete this;
+    if(handleCount == 0)
+        delete this;
 }
 
 LocalSocket::LocalSocket(int type, int protocol) : Socket(type, protocol){
@@ -214,13 +215,13 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen){
         return -EOPNOTSUPP;
     }
 
-    if(type == StreamSocket){
-        inbound = new DataStream(1024);
-        outbound = new DataStream(1024);
-    } else if (type == DatagramSocket){
+    if (type == DatagramSocket){
         inbound = new PacketStream();
         outbound = new PacketStream();
-    }
+    } else {
+        inbound = new DataStream(1024);
+        outbound = new DataStream(1024);
+    } 
 
     role = ClientRole;
 
@@ -236,6 +237,7 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen){
 }
 
 int LocalSocket::Listen(int backlog){
+    acquireLock(&slock);
     pendingConnections.value = backlog;
     passive = true;
 
@@ -249,6 +251,7 @@ int LocalSocket::Listen(int backlog){
         outbound = nullptr;
     }
 
+    releaseLock(&slock);
     return 0;
 }
 
@@ -300,6 +303,12 @@ int64_t LocalSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr*
         return -ENOTCONN;
     }
 
+    if(type == StreamSocket && (flags & MSG_DONTWAIT) && outbound->Pos() + len >= STREAM_MAX_BUFSIZE){
+        return -EAGAIN;
+    } else while(type == StreamSocket && outbound->Pos() + len >= STREAM_MAX_BUFSIZE)  {
+        Scheduler::Yield();
+    }
+
     return outbound->Write(buffer, len);
 }
 
@@ -310,12 +319,15 @@ fs_fd_t* LocalSocket::Open(size_t flags){
     fDesc->mode = flags;
     fDesc->node = this;
 
+    handleCount++;
+
     return fDesc;
 }
 
 void LocalSocket::Close(){
     if(peer){
         peer->connected = false;
+        peer->peer = nullptr;
     }
 
     Socket::Close();

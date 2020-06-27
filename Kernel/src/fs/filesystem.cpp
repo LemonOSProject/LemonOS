@@ -209,7 +209,7 @@ namespace fs{
 		char* temp;
 		if((temp = strrchr(pathCopy, '/'))){
 			basename = (char*)kmalloc(strlen(temp) + 1);
-			strcpy(basename, temp + 1);
+			strcpy(basename, temp);
 
 			kfree(pathCopy);
 		} else {
@@ -297,6 +297,7 @@ namespace fs{
 		if(!fd) return;
 
         fd->node->Close();
+		fd->node = nullptr;
 
 		kfree(fd);
     }

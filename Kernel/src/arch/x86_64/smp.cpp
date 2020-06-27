@@ -29,6 +29,8 @@ volatile uint64_t* smpCR3 = (uint64_t*)SMP_TRAMPOLINE_CR3;
 volatile uint64_t* smpStack = (uint64_t*)SMP_TRAMPOLINE_STACK;
 volatile uint64_t* smpEntry2 = (uint64_t*)SMP_TRAMPOLINE_ENTRY2;
 
+volatile bool doneInit = false;
+
 extern gdt_ptr_t GDT64Pointer64;
 
 namespace SMP{
@@ -43,11 +45,13 @@ namespace SMP{
         cpu->currentThread = nullptr;
         cpu->runQueueLock = 0;
         SetCPULocal(cpu);
-        
+
         cpu->gdt = Memory::KernelAllocate4KPages(1);//kmalloc(GDT64Pointer64.limit + 1); // Account for the 1 subtracted from limit
         Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)cpu->gdt, 1);
         memcpy(cpu->gdt, (void*)GDT64Pointer64.base, GDT64Pointer64.limit + 1); // Make a copy of the GDT
         cpu->gdtPtr = {.limit = GDT64Pointer64.limit, .base = (uint64_t)cpu->gdt};
+        
+        doneInit = true;
 
         asm volatile("lgdt (%%rax)" :: "a"(&cpu->gdtPtr));
 
@@ -97,9 +101,14 @@ namespace SMP{
 
         if((*smpMagic) != 0xB33F){
             Log::Error("[SMP] Failed to start CPU #%d", id);
+            return;
         } else {
             Log::Info("[SMP] Successfully started CPU #%d ", id);
         }
+        
+        while(!doneInit);
+
+        doneInit = false;
     }
 
     void Initialize(){

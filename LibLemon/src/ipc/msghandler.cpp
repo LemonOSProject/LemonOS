@@ -191,7 +191,7 @@ namespace Lemon {
 
         msg->magic = LEMON_MESSAGE_MAGIC;
 
-        ssize_t sent = send(fd, msg, msg->length + sizeof(LemonMessage), 0);
+        ssize_t sent = send(fd, msg, msg->length + sizeof(LemonMessage), MSG_DONTWAIT);
 
         if(sent <= 0){
             perror("Warning: Send: ");

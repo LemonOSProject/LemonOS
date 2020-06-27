@@ -1,6 +1,7 @@
 #include <stream.h>
 
 #include <assert.h>
+#include <logging.h>
 
 int64_t Stream::Read(void* buffer, size_t len){
     assert(!"Stream::Read called from base class");
@@ -72,8 +73,11 @@ int64_t DataStream::Write(void* data, size_t len){
     if(bufferPos + len >= bufferSize){
         void* oldBuffer = buffer;
 
-        bufferSize += (len + 512);
-        void* buffer = kmalloc(bufferSize);
+        while(bufferPos + len >= bufferSize)
+            bufferSize *= 2;
+
+        Log::Info("[DataStream] Reallocating buffer to size %d", bufferSize);
+        buffer = kmalloc(bufferSize);
 
         memcpy(buffer, oldBuffer, bufferPos);
 
