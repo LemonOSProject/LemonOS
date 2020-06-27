@@ -156,7 +156,7 @@ namespace fs::Ext2{
             // Index lies within the singly indirect blocklist
             uint32_t buffer[blocksize / sizeof(uint32_t)];
 
-            if(int e = ReadBlock(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)){
+            if(int e = ReadBlockCached(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)){
                 error = DiskReadError;
                 return 0;
             }
@@ -167,14 +167,14 @@ namespace fs::Ext2{
             uint32_t blockPointers[blocksize / sizeof(uint32_t)];
             uint32_t buffer[blocksize / sizeof(uint32_t)];
 
-            if(int e = ReadBlock(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)){
+            if(int e = ReadBlockCached(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)){
                 error = DiskReadError;
                 return 0;
             }
 
             uint32_t blockPointer = blockPointers[(index - doublyIndirectStart) / blocksPerPointer];
 
-            if(int e = ReadBlock(blockPointer, buffer)){
+            if(int e = ReadBlockCached(blockPointer, buffer)){
                 error = DiskReadError;
                 return 0;
             }

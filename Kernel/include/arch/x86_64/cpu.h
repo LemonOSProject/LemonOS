@@ -17,6 +17,7 @@ struct CPU{
     void* gdt; // GDT
 	gdt_ptr_t gdtPtr;
 	thread_t* currentThread = nullptr;
+	process_t* idleProcess = nullptr;
 	volatile int runQueueLock = 0;
 	FastList<thread_t*>* runQueue;
     tss_t tss __attribute__((aligned(16))); 

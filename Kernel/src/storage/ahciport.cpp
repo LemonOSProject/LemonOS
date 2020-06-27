@@ -80,6 +80,23 @@ namespace AHCI{
 
     int Port::Read(uint64_t lba, uint32_t count, void* buffer){
         uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
+        
+        while(blockCount >= 2 && count){
+            uint64_t size;
+            if(count < 512 * 2) size = count;
+            else size = 512 * 2;
+
+            if(!size) continue;
+
+            if(Access(lba, 2, 0)){ // LBA, 2 blocks, read
+                return 1; // Error Reading Sectors
+            }
+
+            memcpy(buffer, bufVirt, size);
+            buffer += size;
+            lba += 2;
+            blockCount -= 2;
+        }
 
         while(blockCount-- && count){
             uint64_t size;
@@ -113,7 +130,7 @@ namespace AHCI{
 
             memcpy(bufVirt, buffer, size);
 
-            if(Access(lba, 1, 1)){
+            if(Access(lba, 1, 1)){ // LBA, 1 block, write
                 return 1; // Error Reading Sectors
             }
 
@@ -147,7 +164,7 @@ namespace AHCI{
 
         commandTable->prdt_entry[0].dba = bufPhys & 0xFFFFFFFF;
         commandTable->prdt_entry[0].dbau = (bufPhys >> 32) & 0xFFFFFFFF;
-        commandTable->prdt_entry[0].dbc = 511; // 512 bytes per sector
+        commandTable->prdt_entry[0].dbc = count * 512 - 1; // 512 bytes per sector
         commandTable->prdt_entry[0].i = 0;
 
         fis_reg_h2d_t* cmdfis = (fis_reg_h2d_t*)(commandTable->cfis); 

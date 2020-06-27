@@ -60,6 +60,7 @@ void KernelProcess(){
 	Log::Write("OK");
 
 	Scheduler::EndProcess(Scheduler::GetCurrentProcess());
+	for(;;);
 }
 
 typedef void (*ctor_t)(void);

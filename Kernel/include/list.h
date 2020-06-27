@@ -258,7 +258,7 @@ public:
 			obj->prev = back;
 		}
 		back = obj;
-		obj->next = nullptr;
+		obj->next = front;//obj->next = nullptr;
 		num++;
 	}
 
@@ -266,11 +266,12 @@ public:
 		if (!back) {
 			back = obj;
 		}
-		else {
+		else if(front) {
 			front->prev = obj;
 			obj->next = front;
 		}
 		front = obj;
+		obj->prev = back;
 		num++;
 	}
 

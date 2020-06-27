@@ -34,8 +34,6 @@ namespace Scheduler{
     unsigned processTableSize = 512;
     uint64_t nextPID = 0;
 
-    process_t* idleProcess;
-
     handle_t handles[INITIAL_HANDLE_TABLE_SIZE];
     uint64_t handleCount = 1; // We don't want null handles
     uint32_t handleTableSize = INITIAL_HANDLE_TABLE_SIZE;
@@ -65,8 +63,8 @@ namespace Scheduler{
         acquireLock(&cpu->runQueueLock);
         asm("cli");
         cpu->runQueue->add_back(thread);
-        asm("sti");
         releaseLock(&cpu->runQueueLock);
+        asm("sti");
     }
 
     void Initialize() {
@@ -76,9 +74,11 @@ namespace Scheduler{
 
         CPU* cpu = GetCPULocal();
 
-        idleProcess = CreateProcess((void*)IdleProc);
-
-        for(unsigned i = 0; i < SMP::processorCount; i++) SMP::cpus[i]->runQueue->clear();
+        for(unsigned i = 0; i < SMP::processorCount; i++) SMP::cpus[i]->idleProcess = CreateProcess((void*)IdleProc);
+        for(unsigned i = 0; i < SMP::processorCount; i++) {
+            SMP::cpus[i]->runQueue->clear();
+            releaseLock(&SMP::cpus[i]->runQueueLock);
+        }
         
         IDT::RegisterInterruptHandler(IPI_SCHEDULE, Schedule);
 
@@ -264,6 +264,12 @@ namespace Scheduler{
             }
         }
 
+        for(unsigned i = 0; i < process->fileDescriptors.get_length(); i++){
+            if(process->fileDescriptors[i]){
+                fs::Close(process->fileDescriptors[i]);
+            }
+        }
+
         CPU* cpu = GetCPULocal();
         asm("sti");
         acquireLock(&cpu->runQueueLock);
@@ -278,12 +284,6 @@ namespace Scheduler{
         for(unsigned i = 0; i < processes->get_length(); i++){
             if(processes->get_at(i) == process)
                 processes->remove_at(i);
-        }
-
-        for(unsigned i = 0; i < process->fileDescriptors.get_length(); i++){
-            if(process->fileDescriptors[i]){
-                fs::Close(process->fileDescriptors[i]);
-            }
         }
 
         process->fileDescriptors.clear();
@@ -361,7 +361,7 @@ namespace Scheduler{
             return;
         }
         
-        if(__builtin_expect(cpu->currentThread && cpu->currentThread->parent != idleProcess, 1)){
+        if(__builtin_expect(cpu->currentThread && cpu->currentThread->parent != cpu->idleProcess, 1)){
             cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
 
             asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
@@ -372,7 +372,7 @@ namespace Scheduler{
         }
         
         if (__builtin_expect(cpu->runQueue->get_length() <= 0, 0)){
-            cpu->currentThread = &idleProcess->threads[0];
+            cpu->currentThread = &cpu->idleProcess->threads[0];
         } else {
             cpu->currentThread = cpu->runQueue->remove_at(0);
         }
