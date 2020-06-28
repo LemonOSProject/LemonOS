@@ -74,7 +74,7 @@ namespace fs{
         return &root;
     }
 
-	FsNode* ResolvePath(char* path, char* workingDir){
+	FsNode* ResolvePath(const char* path, const char* workingDir){
 		Log::Info("Resolving: %s", path);
 
 		char* tempPath;
@@ -118,7 +118,7 @@ namespace fs{
 		return current_node;
 	}
 	
-	FsNode* ResolveParent(char* path, char* workingDir){
+	FsNode* ResolveParent(const char* path, const char* workingDir){
 		char* pathCopy = (char*)kmalloc(strlen(path) + 1);
 		strcpy(pathCopy, path);
 
@@ -288,6 +288,19 @@ namespace fs{
     fs_fd_t* Open(FsNode* node, uint32_t flags){
         return node->Open(flags);
     }
+	
+    int Link(FsNode* dir, FsNode* link, DirectoryEntry* ent){
+		assert(dir);
+		assert(link);
+
+		return dir->Link(link, ent);
+	}
+
+    int Unlink(FsNode* dir, DirectoryEntry* ent){
+		assert(dir);
+
+		return dir->Unlink(ent);
+	}
 
     void Close(FsNode* node){
         return node->Close();

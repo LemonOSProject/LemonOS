@@ -186,6 +186,7 @@ int main(){
 
 	path.add_back("/initrd");
 	path.add_back("/initrd/bin");
+	path.add_back("/system/bin");
 	
 	fflush(stdin);
 

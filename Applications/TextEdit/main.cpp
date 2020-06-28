@@ -65,6 +65,7 @@ void SaveFile(const char* path){
 	fseek(textFile, 0, SEEK_SET);
 
 	for(std::string& str : textBox->contents){
+		printf("Writing: %s", str.c_str());
 		fwrite(str.c_str(), 1, str.length(), textFile);
 		fwrite("\n", 1, 1, textFile); // Line ending
 	}

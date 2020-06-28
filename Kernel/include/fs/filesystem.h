@@ -173,8 +173,8 @@ namespace fs{
     FsNode* GetRoot();
     void RegisterDevice(DirectoryEntry* device);
 
-    FsNode* ResolvePath(char* path, char* workingDir = nullptr);
-    FsNode* ResolveParent(char* path, char* workingDir = nullptr);
+    FsNode* ResolvePath(const char* path, const char* workingDir = nullptr);
+    FsNode* ResolveParent(const char* path, const char* workingDir = nullptr);
     char* CanonicalizePath(const char* path, char* workingDir);
     char* BaseName(const char* path);
 
@@ -190,6 +190,9 @@ namespace fs{
     ssize_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer);
     int ReadDir(fs_fd_t* handle, DirectoryEntry* dirent, uint32_t index);
     FsNode* FindDir(fs_fd_t* handle, char* name);
+    
+    int Link(FsNode*, FsNode*, DirectoryEntry*);
+    int Unlink(FsNode*, DirectoryEntry*);
 
     int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg);
 }

@@ -1,15 +1,17 @@
 #include <fs/filesystem.h>
 
+#include <errno.h>
+
 FsNode::~FsNode(){
     
 }
 
 ssize_t FsNode::Read(size_t, size_t, uint8_t *){
-    return 0;
+    return -ENOSYS;
 }
 
 ssize_t FsNode::Write(size_t, size_t, uint8_t *){
-    return 0;
+    return -ENOSYS;
 }
 
 fs_fd_t* FsNode::Open(size_t flags){
@@ -29,7 +31,7 @@ void FsNode::Close(){
 }
 
 int FsNode::ReadDir(DirectoryEntry*, uint32_t){
-    return -1;
+    return -ENOSYS;
 }
 
 FsNode* FsNode::FindDir(char* name){
@@ -37,23 +39,23 @@ FsNode* FsNode::FindDir(char* name){
 }
 
 int FsNode::Create(DirectoryEntry*, uint32_t){
-    return -1;
+    return -ENOSYS;
 }
 
 int FsNode::CreateDirectory(DirectoryEntry*, uint32_t){
-    return -1;
+    return -ENOSYS;
 }
 
 int FsNode::Link(FsNode*, DirectoryEntry*){
-    return -1;
+    return -ENOSYS;
 }
 
 int FsNode::Unlink(DirectoryEntry*){
-    return -1;
+    return -ENOSYS;
 }
 
 int FsNode::Ioctl(uint64_t cmd, uint64_t arg){
-    return -1;
+    return -ENOSYS;
 }
 
 void FsNode::Sync(){

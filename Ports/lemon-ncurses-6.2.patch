@@ -1,0 +1,12 @@
+diff -ruN ncurses-6.2/config.sub lemon-ncurses/config.sub
+--- ncurses-6.2/config.sub	2019-09-12 09:56:40.000000000 +1000
++++ lemon-ncurses/config.sub	2020-06-27 18:04:15.438967200 +1000
+@@ -1363,7 +1363,7 @@
+ 	     | os2* | vos* | palmos* | uclinux* | nucleus* \
+ 	     | morphos* | superux* | rtmk* | windiss* \
+ 	     | powermax* | dnix* | nx6 | nx7 | sei* | dragonfly* \
+-	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
++	     | skyos* | haiku* | rdos* | toppers* | drops* | es* | lemon* \
+ 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
+ 	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
+ 	     | nsk* | powerunix)

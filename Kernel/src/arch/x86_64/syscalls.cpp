@@ -307,11 +307,68 @@ long SysCreate(regs64_t* r){
 }
 
 long SysLink(regs64_t* r){
-	return 0;
+	const char* oldpath = (const char*)r->rbx;
+	const char* newpath = (const char*)r->rcx;
+
+	process_t* proc = Scheduler::GetCurrentProcess();
+
+	if(!(Memory::CheckUsermodePointer(r->rbx, 1, proc->addressSpace) && Memory::CheckUsermodePointer(r->rcx, 1, proc->addressSpace))){
+		Log::Warning("sys_link: Invalid path pointer");
+		return -EFAULT;
+	}
+
+	FsNode* file = fs::ResolvePath(oldpath);
+	if(!file){
+		Log::Warning("sys_link: Could not resolve path: %s", oldpath);
+		return -ENOENT;
+	}
+	
+	FsNode* parentDirectory = fs::ResolveParent(newpath, proc->workingDir);
+	char* linkName = fs::BaseName(newpath);
+	
+	Log::Info("sys_link: Attempting to create link %s at path %s", linkName, newpath);
+
+	if(!parentDirectory){
+		Log::Warning("sys_link: Could not resolve path: %s", newpath);
+		return -ENOENT;
+	}
+
+	if((parentDirectory->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+		Log::Warning("sys_link: Could not resolve path: Parent not a directory: %s", newpath);
+		return -ENOTDIR;
+	}
+
+	DirectoryEntry entry;
+	strcpy(entry.name, linkName);
+	return parentDirectory->Link(file, &entry);
 }
 
 long SysUnlink(regs64_t* r){
-	return 0;
+	const char* path = (const char*)r->rbx;
+	
+	process_t* proc = Scheduler::GetCurrentProcess();
+
+	if(!Memory::CheckUsermodePointer(r->rbx, 1, proc->addressSpace)){
+		Log::Warning("sys_unlink: Invalid path pointer");
+		return -EFAULT;
+	}
+
+	FsNode* parentDirectory = fs::ResolveParent(path, proc->workingDir);
+	char* linkName = fs::BaseName(path);
+
+	if(!parentDirectory){
+		Log::Warning("sys_unlink: Could not resolve path: %s", path);
+		return -EINVAL;
+	}
+
+	if((parentDirectory->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+		Log::Warning("sys_unlink: Could not resolve path: Not a directory: %s", path);
+		return -ENOTDIR;
+	}
+
+	DirectoryEntry entry;
+	strcpy(entry.name, linkName);
+	return parentDirectory->Unlink(&entry);
 }
 
 long SysChdir(regs64_t* r){

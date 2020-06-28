@@ -212,6 +212,8 @@ namespace fs::Ext2{
         FsNode* FindDir(char* name);
         int Create(DirectoryEntry*, uint32_t);
         int CreateDirectory(DirectoryEntry*, uint32_t);
+        int Link(FsNode*, DirectoryEntry*);
+        int Unlink(DirectoryEntry*);
 
         void Close();
         void Sync();
@@ -284,9 +286,11 @@ namespace fs::Ext2{
         int WriteBlockCached(uint32_t block, void* buffer);
 
         Ext2Node* CreateNode();
-        void EraseInode(ext2_inode_t& inode);
+        int EraseInode(ext2_inode_t& e2inode, uint32_t inode);
+        void SyncInode(ext2_inode_t& e2ino, uint32_t inode);
 
         uint32_t AllocateBlock();
+        int FreeBlock(uint32_t block);
 
         int ListDir(Ext2Node* node, List<DirectoryEntry>& entries);
         int WriteDir(Ext2Node* node, List<DirectoryEntry>& entries);
@@ -301,6 +305,8 @@ namespace fs::Ext2{
         FsNode* FindDir(Ext2Node* node, char* name);
         int Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
         int CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
+        int Link(Ext2Node* dir, Ext2Node* node, DirectoryEntry* ent);
+        int Unlink(Ext2Node* dir, DirectoryEntry* ent);
 
         void SyncNode(Ext2Node* node);
         void CleanNode(Ext2Node* node);

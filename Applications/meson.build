@@ -1,6 +1,7 @@
 project('Lemon Applications')
 
 add_languages('c', 'cpp')
+subproject('LemonUtils')
 
 fileman_src = [
     'FileManager/main.cpp',
