@@ -8,11 +8,9 @@ Disks/Lemon.vhd
 *.so
 *.so.*
 *.a
-LibC
 serial.log
 Kernel/build
 Applications/build
-Applications/subprojects/LemonUtils
 LibLemon/build
 Scripts/build-win/mount.cfg
 Kernel/subprojects/lai
