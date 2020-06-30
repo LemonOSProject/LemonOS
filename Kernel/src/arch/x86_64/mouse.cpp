@@ -26,7 +26,7 @@ namespace Mouse{
 	short packetQueueStart = 0;
 	short packetCount = 0;
 
-	uint8_t mouseCycle;
+	uint8_t mouseCycle = 0;
 
 	bool dataUpdated = false;
 
@@ -35,6 +35,9 @@ namespace Mouse{
 		{
 		case 0:
 			mouseData[0] = inportb(0x60);
+
+			if(!(mouseData[0] & 0x8)) break;
+
 			mouseCycle++;
 			break;
 		case 1:
@@ -64,6 +67,9 @@ namespace Mouse{
 
 			packetCount++;
 			
+			break;
+		} default: {
+			mouseCycle = 0;
 			break;
 		}
 		}

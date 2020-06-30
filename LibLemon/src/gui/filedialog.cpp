@@ -11,11 +11,13 @@ namespace Lemon::GUI{
 	__thread int dflags = 0;
 
 	void FileDialogOnFileOpened(const char* path, FileView* fv){
-		if(selectedPth){
-			free(selectedPth);
-		}
+		if(!(dflags & FILE_DIALOG_CREATE) || DisplayMessageBox("Open...", "File already exists! Overwrite?", MsgButtonsOKCancel)) { // Only open if create flag not specified OR user responds ok to message
+			if(selectedPth){
+				free(selectedPth);
+			}
 
-		selectedPth = strdup(path);
+			selectedPth = strdup(path);
+		}
 	}
 
 	void FileDialogOnFileSelected(std::string& path, FileView* fv){

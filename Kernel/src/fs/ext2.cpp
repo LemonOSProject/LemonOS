@@ -909,13 +909,14 @@ namespace fs::Ext2{
 
         for(; blockIndex <= blockLimit && size > 0; blockIndex++){
             uint32_t block = GetInodeBlock(blockIndex, node->e2inode);
-            if(ReadBlockCached(block, blockBuffer)){
-                Log::Info("[Ext2] Error reading block %d", block);
-                error = DiskReadError;
-                return -1;
-            }
             
             if(offset % blocksize){
+                if(ReadBlockCached(block, blockBuffer)){
+                    Log::Info("[Ext2] Error reading block %d", block);
+                    error = DiskReadError;
+                    return -1;
+                }
+
                 size_t readSize = blocksize - (offset % blocksize);
                 size_t readOffset = (offset % blocksize);
 
@@ -927,11 +928,20 @@ namespace fs::Ext2{
                 buffer += readSize;
                 offset += readSize;
             } else if(size >= blocksize){
-                memcpy(buffer, blockBuffer, blocksize);
+                if(ReadBlockCached(block, buffer)){
+                    Log::Info("[Ext2] Error reading block %d", block);
+                    error = DiskReadError;
+                    return -1;
+                }
                 size -= blocksize;
                 buffer += blocksize;
                 offset += blocksize;
             } else {
+                if(ReadBlockCached(block, blockBuffer)){
+                    Log::Info("[Ext2] Error reading block %d", block);
+                    error = DiskReadError;
+                    return -1;
+                }
                 memcpy(buffer, blockBuffer, size);
                 size = 0;
                 break;
@@ -1155,6 +1165,7 @@ namespace fs::Ext2{
     }
 
     int Ext2Volume::Unlink(Ext2Node* node, DirectoryEntry* ent){
+        
         List<DirectoryEntry> entries;
         if(int e = ListDir(node, entries)){
             Log::Error("[Ext2] Unlink: Error listing directory!", ent->inode);
@@ -1178,6 +1189,10 @@ namespace fs::Ext2{
         }
 
         if(Ext2Node* file = inodeCache.get(ent->inode)){
+            if((file->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+                return -EISDIR;
+            }
+
             file->nlink--;
             file->e2inode.linkCount--;
 
@@ -1190,6 +1205,10 @@ namespace fs::Ext2{
             if(ReadInode(ent->inode, e2inode)){
                 Log::Error("[Ext2] Link: Error reading inode %d", ent->inode);
                 return -1;
+            }
+
+            if((e2inode.mode & EXT2_S_IFMT) == EXT2_S_IFDIR){
+                return -EISDIR;
             }
             
             e2inode.linkCount--;

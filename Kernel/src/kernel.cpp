@@ -41,8 +41,7 @@ void KernelProcess(){
 	Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Loading Init Process...");
-	FsNode* initrd = fs::FindDir(fs::GetRoot(), "initrd");
-	FsNode* initFsNode = fs::FindDir(initrd,"init.lef");
+	FsNode* initFsNode = fs::ResolvePath("/system/bin/init.lef");
 	if(!initFsNode){
 		const char* panicReasons[]{
 			"Failed to load init task (init.lef)!"
@@ -55,7 +54,7 @@ void KernelProcess(){
 
 	process_t* initProc = Scheduler::CreateELFProcess(initElf);
 	initProc->threads[0].priority = 8;
-	strcpy(initProc->workingDir, "/initrd");
+	strcpy(initProc->workingDir, "/system");
 
 	Log::Write("OK");
 

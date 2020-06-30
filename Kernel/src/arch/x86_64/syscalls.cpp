@@ -246,6 +246,8 @@ open:
 			FsNode* parent = fs::ResolveParent(filepath, proc->workingDir);
 			char* basename = fs::BaseName(filepath);
 
+			Log::Info("sys_open: Creating %s", basename);
+
 			if(!parent) {
 				Log::Warning("sys_open: Could not resolve parent directory of new file %s", basename);
 				return -ENOENT;

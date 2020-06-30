@@ -31,7 +31,7 @@ int main(){
     Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 0, 0, 0, &fbSurface);
     
     #ifdef __lemon__
-        lemon_spawn("/initrd/shell.lef", 0, nullptr, 0);
+        lemon_spawn("/system/bin/shell.lef", 0, nullptr, 0);
     #endif
 
     sockaddr_un srvAddr;

@@ -290,6 +290,11 @@ namespace Lemon::GUI {
                     if(drawText) DrawButtonLabel(surface, false);
                     break;
             }
+
+            if(Graphics::PointInRect(fixedBounds, window->lastMousePos)){
+                Graphics::DrawRectOutline(fixedBounds.x + 1, fixedBounds.y + 1, fixedBounds.width - 2, fixedBounds.height - 2, colours[Colour::Foreground], surface);
+                Graphics::DrawRectOutline(fixedBounds.x + 2, fixedBounds.y + 2, fixedBounds.width - 4, fixedBounds.height - 4, colours[Colour::Foreground], surface);
+            }
         }
     }
 

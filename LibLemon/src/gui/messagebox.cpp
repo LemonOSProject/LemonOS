@@ -6,22 +6,42 @@
 
 namespace Lemon::GUI
 {
-	int pressed = 0;
+	int pressed = 1;
 	void OnMessageBoxOKPressed(Lemon::GUI::Button* b){
+		pressed = 1;
+		b->window->closed = true;
+	}
+	
+	void OnMessageBoxCancelPressed(Lemon::GUI::Button* b){
 		pressed = 0;
 		b->window->closed = true;
 	}
 
 	int DisplayMessageBox(const char* title, const char* message, MsgBoxButtons buttons){
-		Window* win = new Window("Open...", {Graphics::GetTextLength(message) + 10, 80}, WINDOW_FLAGS_RESIZABLE, WindowType::GUI);
+		int width = Graphics::GetTextLength(message) + 10;
+		if(width < 220) width = 220;
+
+		Window* win = new Window("Open...", {width, 80}, 0, WindowType::GUI);
 		
 		Label* label = new Label(message, {10, 10, 180, 12});
 		win->AddWidget(label);
 
-		Button* okBtn = new Button("OK", {0, 5, 100, 24});
-		win->AddWidget(okBtn);
-		okBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignCentre, WAlignBottom);
-		okBtn->OnPress = OnMessageBoxOKPressed;
+		if(buttons == MsgButtonsOKCancel){
+			Button* okBtn = new Button("OK", {-105, 2, 100, 24});
+			win->AddWidget(okBtn);
+			okBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignCentre, WAlignBottom);
+			okBtn->OnPress = OnMessageBoxOKPressed;
+
+			Button* cancelBtn = new Button("Cancel", {2, 2, 100, 24});
+			win->AddWidget(cancelBtn);
+			cancelBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignCentre, WAlignBottom);
+			cancelBtn->OnPress = OnMessageBoxCancelPressed;
+		} else {
+			Button* okBtn = new Button("OK", {0, 5, 100, 24});
+			win->AddWidget(okBtn);
+			okBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignCentre, WAlignBottom);
+			okBtn->OnPress = OnMessageBoxOKPressed;
+		}
 
 		bool paint = true;
 

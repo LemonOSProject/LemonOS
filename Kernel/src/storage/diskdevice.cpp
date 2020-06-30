@@ -11,8 +11,22 @@ int DiskDevice::InitializePartitions(){
             auto vol = new fs::FAT32::Fat32Volume(partitions.get_at(i),name);
             fs::volumes->add_back(vol);
         } else if(fs::Ext2::Identify(partitions.get_at(i)) > 0) {
-            char name[] =  {'h', 'd', letter++, 0};
-            fs::Ext2::Ext2Volume* vol = new fs::Ext2::Ext2Volume(partitions.get_at(i),name);
+            bool systemFound = false;
+
+            for(auto& vol : *fs::volumes){ // First Ext2 partition is mounted as /system
+                if(strcmp(vol->mountPointDirent.name, "system") == 0){
+                    systemFound = true; // System partition found
+                }
+            }
+
+            fs::Ext2::Ext2Volume* vol = nullptr;
+
+            if(systemFound){
+                char name[] = {'h', 'd', letter++, 0};
+                vol = new fs::Ext2::Ext2Volume(partitions.get_at(i), name);
+            } else {
+                vol = new fs::Ext2::Ext2Volume(partitions.get_at(i), "system");
+            }
 
             if(!vol->Error())
                 fs::volumes->add_back(vol);

@@ -44,8 +44,18 @@ void WMWindow::Draw(surface_t* surface){
 	windowBufferInfo->drawing = 0;
 
 	surface_t* buttons = &wm->compositor.windowButtons;
-	Lemon::Graphics::surfacecpy(surface, buttons, pos + closeRect.pos, {{0, 0}, {19, 19}}); // Close button
-	Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {{19, 0},{19, 19}}); // Minimize button
+
+	if(Lemon::Graphics::PointInRect(closeRect, wm->input.mouse.pos)){
+		Lemon::Graphics::surfacecpy(surface, buttons, pos + closeRect.pos, {{0, 19}, {19, 19}}); // Close button
+	} else {
+		Lemon::Graphics::surfacecpy(surface, buttons, pos + closeRect.pos, {{0, 0}, {19, 19}}); // Close button
+	}
+
+	if(Lemon::Graphics::PointInRect(minimizeRect, wm->input.mouse.pos)){
+		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {{19, 19}, {19, 19}}); // Close button
+	} else {
+		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {{19, 0}, {19, 19}}); // Close button
+	}
 }
 
 void WMWindow::Minimize(bool state){

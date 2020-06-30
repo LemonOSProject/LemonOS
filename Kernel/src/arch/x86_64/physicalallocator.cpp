@@ -10,7 +10,6 @@
 extern void* _end;
 
 namespace Memory{
-
     uint32_t physicalMemoryBitmap[PHYSALLOC_BITMAP_SIZE_DWORDS];
 
     uint64_t usedPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS * 32;
@@ -62,7 +61,7 @@ namespace Memory{
         for (uint32_t i = 0; i < PHYSALLOC_BITMAP_SIZE_DWORDS; i++)
             if (physicalMemoryBitmap[i] != 0xffffffff) // If all 32 bits at the index are used then ignore them
                 for (uint32_t j = 0; j < 32; j++) // Test each bit in the dword
-                    if (!(physicalMemoryBitmap[i] & (1 << j)))
+                    if (!(physicalMemoryBitmap[i] & (1 << j)) && (i * 32 * j))
                         return i * 32 + j;
 
         // The first block is always reserved
@@ -77,7 +76,7 @@ namespace Memory{
 
     // Marks a region in physical memory as being free
     void MarkMemoryRegionFree(uint64_t base, size_t size) {
-        for (uint32_t blocks = size / PHYSALLOC_BLOCK_SIZE, align = base / PHYSALLOC_BLOCK_SIZE; blocks > 0; blocks--, usedPhysicalBlocks--)
+        for (uint32_t blocks = (size + (PHYSALLOC_BLOCK_SIZE - 1)) / PHYSALLOC_BLOCK_SIZE, align = base / PHYSALLOC_BLOCK_SIZE; blocks > 0; blocks--, usedPhysicalBlocks--)
             bit_clear(align++);
     }
 

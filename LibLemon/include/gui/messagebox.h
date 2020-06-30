@@ -4,5 +4,5 @@ namespace Lemon::GUI{
 		MsgButtonsOKCancel,
 	};
 
-	int DisplayMessageBox(const char* title, const char* message, MsgBoxButtons buttons);
+	int DisplayMessageBox(const char* title, const char* message, MsgBoxButtons buttons = MsgButtonsOK);
 }

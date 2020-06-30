@@ -18,6 +18,10 @@ initrd(){
 	Scripts/buildinitrd.sh
 }
 
+base(){
+	Scripts/buildbase.sh
+}
+
 kernel(){
 	ninja -C Kernel/build 
 }
@@ -34,6 +38,7 @@ userspace(){
 	liblemon
 	apps
 	initrd
+	base
 }
 
 all() {

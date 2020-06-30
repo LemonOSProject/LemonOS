@@ -73,4 +73,8 @@ public:
 
 		return T();
 	}
+
+	~HashMap(){
+		delete[](buckets);
+	}
 };

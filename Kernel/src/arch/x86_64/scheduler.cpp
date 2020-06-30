@@ -236,9 +236,9 @@ namespace Scheduler{
             Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)stack + PAGE_SIZE_4K * i, 1);//, proc->addressSpace);
         }
 
-        thread->stack = stack + PAGE_SIZE_4K * 32; // 128KB stack size
-        thread->registers.rsp = (uintptr_t)thread->stack;
-        thread->registers.rbp = (uintptr_t)thread->stack;
+        thread->stack = stack; // 128KB stack size
+        thread->registers.rsp = (uintptr_t)thread->stack + PAGE_SIZE_4K * 32;
+        thread->registers.rbp = (uintptr_t)thread->stack + PAGE_SIZE_4K * 32;
         thread->registers.rip = (uintptr_t)entry;
 
         InsertNewThreadIntoQueue(&proc->threads[0]);
@@ -440,15 +440,15 @@ namespace Scheduler{
 
         asm("cli");
         asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
-        void* _stack = (void*)Memory::Allocate4KPages(48, proc->addressSpace);
-        for(int i = 0; i < 48; i++){
+        void* _stack = (void*)Memory::Allocate4KPages(64, proc->addressSpace);
+        for(int i = 0; i < 64; i++){
             Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)_stack + PAGE_SIZE_4K * i, 1, proc->addressSpace);
         }
-        memset(_stack, 0, PAGE_SIZE_4K * 48);
+        memset(_stack, 0, PAGE_SIZE_4K * 64);
 
-        thread->stack = _stack + PAGE_SIZE_4K * 48; // 192KB stack size
-        thread->registers.rsp = (uintptr_t)thread->stack;
-        thread->registers.rbp = (uintptr_t)thread->stack;
+        thread->stack = _stack; // 256KB stack size
+        thread->registers.rsp = (uintptr_t)thread->stack + PAGE_SIZE_4K * 64;
+        thread->registers.rbp = (uintptr_t)thread->stack + PAGE_SIZE_4K * 64;
 
         // ABI Stuff
         uint64_t* stack = (uint64_t*)thread->registers.rsp;

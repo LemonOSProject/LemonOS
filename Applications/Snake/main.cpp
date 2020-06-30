@@ -4,7 +4,7 @@
 #include <gui/window.h>
 #include <core/keyboard.h>
 #include <stdlib.h>
-#include <list.h>
+#include <list>
 
 #define SNAKE_CELL_EMPTY 0
 #define SNAKE_CELL_SNAKE 1
@@ -54,22 +54,19 @@ void Wait(){
 	msCounter = 0;
 }
 
-List<vector2i_t>* snake;
+std::list<vector2i_t> snake;
 
 int direction;
 	
 uint8_t snakeMapCells[16][16];
-int powerUpTimer;
-int powerUpTimerDefault = 100;
-int fruitType = 0; // 0 - Apple, 1 - Lemon
 
 void Reset(){
-	snake->clear();
+	snake.clear();
 	//delete snake;
 	//snake = new List<vector2i_t>();
 	
-	snake->add_back({8,8});
-	snake->add_back({9,8});
+	snake.push_back({8,8});
+	snake.push_back({9,8});
 
 	gameOver = false;
 
@@ -92,8 +89,6 @@ vector2i_t applePos = {1,1};
 
 int main(){
 	Lemon::GUI::Window* window = new Lemon::GUI::Window("Snake", {256, 256});
-
-	snake = new List<vector2i_t>();
 
 	Reset();
 
@@ -143,15 +138,36 @@ int main(){
 		
 		if(gameOver) continue;
 
-		if(powerUp){
-			if(powerUpTimer){
-				powerUpTimer--;
-				snakeCellColours[0] = {255, 0, 0, 255};
-			} else {
-				powerUp = 0;
-				frameWaitTime = frameWaitTimeDefault;
-				snakeCellColours[0] = bgColourDefault;
+		switch(direction){
+			case 0:
+				snake.pop_back();
+				snake.push_front({snake.front().x, snake.front().y - 1});
+				break;
+			case 1:
+				snake.pop_back();
+				snake.push_front({snake.front().x - 1, snake.front().y});
+				break;
+			case 2:
+				snake.pop_back();
+				snake.push_front({snake.front().x + 1, snake.front().y});
+				break;
+			case 3:
+				snake.pop_back();
+				snake.push_front({snake.front().x, snake.front().y + 1});
+				break;
 			}
+
+		if(snakeMapCells[snake.front().x][snake.front().y] == SNAKE_CELL_SNAKE || snake.front().y < 0 || snake.front().x < 0 || snake.front().y >= 16 || snake.front().x >= 16){
+			gameOver = true;
+			Lemon::Graphics::DrawString("Game Over, Press any key to Reset", 0, 0, 255, 255, 255, &window->surface);
+			window->SwapBuffers();
+			continue;
+		} else if(snakeMapCells[snake.front().x][snake.front().y] == SNAKE_CELL_APPLE){
+			snakeMapCells[snake.front().x][snake.front().y] = SNAKE_CELL_EMPTY;
+			
+			applePos = { snakeRand() % 16, snakeRand() % 16 };
+
+			snake.push_back({0,0});
 		}
 
 		for(int i = 0; i < 16; i++){
@@ -160,59 +176,11 @@ int main(){
 			}
 		}
 
-		switch(direction){
-			case 0:
-				snake->remove_at(snake->get_length()-1);
-				snake->add_front({snake->get_at(0).x, snake->get_at(0).y - 1});
-				break;
-			case 1:
-				snake->remove_at(snake->get_length()-1);
-				snake->add_front({snake->get_at(0).x-1, snake->get_at(0).y});
-				break;
-			case 2:
-				snake->remove_at(snake->get_length()-1);
-				snake->add_front({snake->get_at(0).x+1, snake->get_at(0).y});
-				break;
-			case 3:
-				snake->remove_at(snake->get_length()-1);
-				snake->add_front({snake->get_at(0).x, snake->get_at(0).y + 1});
-				break;
-			}
-
-		if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_SNAKE || snake->get_at(0).y < 0 || snake->get_at(0).x < 0 || snake->get_at(0).y >= 16 || snake->get_at(0).x >= 16){
-			gameOver = true;
-			Lemon::Graphics::DrawString("Game Over, Press any key to Reset", 0, 0, 255, 255, 255, &window->surface);
-			window->SwapBuffers();
-			continue;
-		} else if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_APPLE){
-			snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] = SNAKE_CELL_EMPTY;
-			
-			applePos = { snakeRand() % 16, snakeRand() % 16 };
-			if(!(snakeRand() % 4))
-				fruitType = 1;
-			else fruitType = 0;
-
-			snake->add_back({0,0});
-		} else if(snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] == SNAKE_CELL_LEMON){
-			snakeMapCells[snake->get_at(0).x][snake->get_at(0).y] = SNAKE_CELL_EMPTY;
-			
-			powerUp = 1;
-			powerUpTimer = powerUpTimerDefault;
-			frameWaitTime /= 2;
-
-			applePos = { snakeRand() % 16, snakeRand() % 16 };
-			if(!(snakeRand() % 3))
-				fruitType = 1;
-			else fruitType = 0;
-
-			snake->add_back({0,0});
+		for(vector2i_t& pos : snake){
+			snakeMapCells[pos.x][pos.y] = SNAKE_CELL_SNAKE; 
 		}
 
-		snakeMapCells[applePos.x][applePos.y] = fruitType ? SNAKE_CELL_LEMON : SNAKE_CELL_APPLE;
-
-		for(int i = 0; i < snake->get_length();i++){
-			snakeMapCells[snake->get_at(i).x][snake->get_at(i).y] = SNAKE_CELL_SNAKE; 
-		}
+		snakeMapCells[applePos.x][applePos.y] = SNAKE_CELL_APPLE;
 
 		for(int i = 0; i < 16; i++){
 			for(int j = 0; j < 16; j++){

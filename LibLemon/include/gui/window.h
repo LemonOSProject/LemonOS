@@ -123,8 +123,8 @@ namespace Lemon::GUI {
         int windowType = WindowType::Basic;
 
         timespec lastClick;
-        vector2i_t lastMousePos = {0, 0};
     public:
+        vector2i_t lastMousePos = {0, 0};
         WindowMenuBar* menuBar = nullptr;
         Container rootContainer;
         surface_t surface;
