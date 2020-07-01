@@ -77,6 +77,7 @@ namespace SMP{
 
         CPU* cpu = new CPU;
         cpu->id = id;
+        cpu->runQueueLock = 0;
         cpus[id] = cpu;
         
         *smpMagic = 0; // Set magic to 0

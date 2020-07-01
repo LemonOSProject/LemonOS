@@ -50,7 +50,7 @@ namespace Scheduler{
     
     void InsertNewThreadIntoQueue(thread_t* thread){
         CPU* cpu = SMP::cpus[0];
-        for(unsigned i = 0; i < SMP::processorCount; i++){
+        for(unsigned i = 1; i < SMP::processorCount; i++){
             Log::Info("CPU %d has %d threads", i, SMP::cpus[i]->runQueue->get_length());
             
             if(SMP::cpus[i]->runQueue->get_length() < cpu->runQueue->get_length()) {
@@ -60,6 +60,7 @@ namespace Scheduler{
 
         Log::Info("Inserting thread into run queue of CPU %d", cpu->id);
 
+        asm("sti");
         acquireLock(&cpu->runQueueLock);
         asm("cli");
         cpu->runQueue->add_back(thread);
@@ -90,7 +91,7 @@ namespace Scheduler{
         for(;;);
     }
 
-    process_t* GetCurrentProcess(){ 
+    process_t* GetCurrentProcess(){
         asm("cli");
         CPU* cpu = GetCPULocal();
 
@@ -226,8 +227,6 @@ namespace Scheduler{
     }
 
     process_t* CreateProcess(void* entry) {
-        acquireLock(&schedulerLock);
-
         process_t* proc = InitializeProcessStructure();
         thread_t* thread = &proc->threads[0];
 
@@ -244,8 +243,6 @@ namespace Scheduler{
         InsertNewThreadIntoQueue(&proc->threads[0]);
 
         processes->add_back(proc);
-
-        releaseLock(&schedulerLock);
 
         return proc;
     }
@@ -291,12 +288,13 @@ namespace Scheduler{
         for(unsigned i = 0; i < SMP::processorCount; i++){
             if(i == cpu->id) continue; // Is current processor?
 
-            acquireLock(&SMP::cpus[i]->runQueueLock);
-
             if(SMP::cpus[i]->currentThread->parent == process){
                 SMP::cpus[i]->currentThread = nullptr;
-                APIC::Local::SendIPI(i, 0, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
             }
+
+            asm("sti");
+            //acquireLock(&SMP::cpus[i]->runQueueLock);
+            asm("cli");
             
             for(unsigned j = 0; j < SMP::cpus[i]->runQueue->get_length(); j++){
                 thread_t* thread = SMP::cpus[i]->runQueue->get_at(j);
@@ -309,6 +307,10 @@ namespace Scheduler{
             }
             
             releaseLock(&SMP::cpus[i]->runQueueLock);
+
+            if(SMP::cpus[i]->currentThread == nullptr){
+                APIC::Local::SendIPI(i, 0, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
+            }
         }
 
         if(cpu->currentThread->parent == process){
@@ -326,10 +328,9 @@ namespace Scheduler{
             kfree(process->threads);
             kfree(process);
             releaseLock(&cpu->runQueueLock);
+            asm("sti");
 
             Schedule(nullptr);
-
-            asm("sti");
             for(;;) {
                 asm("hlt");
                 Schedule(nullptr);
