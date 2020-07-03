@@ -132,7 +132,6 @@ namespace Lemon::GUI {
         for(Widget* w : children){
             if(Graphics::PointInRect(w->GetFixedBounds(), mousePos)){
                 active = w;
-                printf("right mouse\n");
                 w->OnRightMouseDown(mousePos);
                 break;
             }

@@ -46,6 +46,13 @@ int main(){
     if(int e = Lemon::Graphics::LoadImage("/initrd/mouse.png", &wm.compositor.mouseCursor)){
         printf("LemonWM: Warning: Error %d loading mouse cursor.\n", e);
     }
+
+    wm.compositor.backgroundImage = renderSurface;
+    wm.compositor.backgroundImage.buffer = new uint8_t[renderSurface.width * renderSurface.height * 4];
+    if(int e = Lemon::Graphics::LoadImage("/initrd/bg3.png", 0, 0, renderSurface.width, renderSurface.height, &wm.compositor.backgroundImage, true)){
+        printf("LemonWM: Warning: Error %d loading background image.\n", e);
+        wm.compositor.useImage = false;
+    }
     
 	timespec t;
 	clock_gettime(CLOCK_BOOTTIME, &t);

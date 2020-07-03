@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
+#include <stddef.h>
 
 namespace Lemon::Graphics{
     bool IsPNG(const void* data){
@@ -13,7 +14,7 @@ namespace Lemon::Graphics{
         char sig[8];
         fseek(f, 0, SEEK_SET);
 
-        if(!fread(sig, 8, 1, f)) {
+        if(fread(sig, 8, 1, f) <= 0) {
             return -2; // Could not read first 8 bytes of image
         }
 
@@ -83,6 +84,8 @@ namespace Lemon::Graphics{
         surface_t surf;
         int r = LoadImage(imageFile, &surf);
 
+        if(r) return r;
+
         double xScale = ((double)w) / surf.width;
         double yScale = (((double)h) / surf.height);
         double xOffset = 0;
@@ -112,27 +115,25 @@ namespace Lemon::Graphics{
             }
         }
 
-        free(surf.buffer);
+        free(srcBuffer);
         fclose(imageFile);
 
         return r;
     }
 
     int LoadPNGImage(FILE* f, surface_t* surface) {
-        static png_structp png = nullptr;
-        static png_infop info = nullptr;
-        static png_infop endInfo = nullptr;
+        png_structp png = nullptr;
+        png_infop info = nullptr;
         
-        if(!png) {
-            png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-            if(!png) return -10;
+        png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+        if(!png) return -10;
 
-            info = png_create_info_struct(png);
-            if(!info) return -11;
-        }
+        info = png_create_info_struct(png);
+        if(!info) return -11;
 
         int e = setjmp(png_jmpbuf(png));
         if(e){
+            printf("[LibLemon] LoadPNGImage: setjmp error %d\n", 0);
             return e;
         }
 
@@ -162,6 +163,8 @@ namespace Lemon::Graphics{
         }
 
         png_read_image(png, rowPointers);
+
+        png_destroy_read_struct(&png, &info, nullptr);
 
         return 0;
     }

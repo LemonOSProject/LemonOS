@@ -133,6 +133,9 @@ public:
 
     surface_t windowButtons;
     surface_t mouseCursor;
+
+    bool useImage = true;
+    surface_t backgroundImage;
 };
 
 class WMInstance {

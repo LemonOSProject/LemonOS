@@ -170,7 +170,7 @@ namespace Scheduler{
         FsNode* logDev = fs::ResolvePath("/dev/kernellog");
         proc->fileDescriptors.add_back(fs::Open(nullDev));          //(NULL);
         proc->fileDescriptors.add_back(fs::Open(logDev));   //(fs::Open(nullDev));  //(NULL);
-        proc->fileDescriptors.add_back(fs::Open(nullDev));          //(NULL);
+        proc->fileDescriptors.add_back(fs::Open(logDev));          //(NULL);
         proc->state = PROCESS_STATE_ACTIVE;
         proc->threadCount = 1;
         proc->parent = nullptr;

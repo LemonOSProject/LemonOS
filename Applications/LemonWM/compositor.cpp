@@ -25,7 +25,11 @@ void CompositorInstance::Paint(){
     surface_t* renderSurface = &wm->surface;
     
     if(wm->redrawBackground){
-        DrawRect(0, 0, renderSurface->width, renderSurface->height, backgroundColor, renderSurface);
+        if(useImage){
+            surfacecpy(renderSurface, &backgroundImage);
+        } else {
+            DrawRect(0, 0, renderSurface->width, renderSurface->height, backgroundColor, renderSurface);
+        }
         wm->redrawBackground = false;
     }
 
@@ -54,8 +58,17 @@ void CompositorInstance::Paint(){
     if(wm->screenSurface.buffer)
         surfacecpy(&wm->screenSurface, renderSurface);
 
-    if(wm->contextMenuActive)
-        DrawRect(wm->contextMenuBounds, backgroundColor, renderSurface);
+    if(wm->contextMenuActive){
+        if(useImage){
+            surfacecpy(renderSurface, &backgroundImage, wm->contextMenuBounds.pos, wm->contextMenuBounds);
+        } else {
+            DrawRect(wm->contextMenuBounds, backgroundColor, renderSurface);
+        }
+    }
     
-    DrawRect(wm->input.mouse.pos.x, wm->input.mouse.pos.y, mouseCursor.width, mouseCursor.height, backgroundColor, renderSurface);
+    if(useImage){
+        surfacecpy(renderSurface, &backgroundImage, wm->input.mouse.pos, {wm->input.mouse.pos, {mouseCursor.width, mouseCursor.height}});
+    } else {
+        DrawRect(wm->input.mouse.pos.x, wm->input.mouse.pos.y, mouseCursor.width, mouseCursor.height, backgroundColor, renderSurface);
+    }
 }
