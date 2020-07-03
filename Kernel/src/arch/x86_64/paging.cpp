@@ -109,8 +109,6 @@ namespace Memory{
 
 	address_space_t* CreateAddressSpace(){
 		address_space_t* addressSpace = (address_space_t*)kmalloc(sizeof(address_space_t));
-
-		asm("cli");
 		
 		pdpt_entry_t* pdpt = (pdpt_entry_t*)Memory::KernelAllocate4KPages(1); // PDPT;
 		uintptr_t pdptPhys = Memory::AllocatePhysicalMemoryBlock();
@@ -154,9 +152,6 @@ namespace Memory{
 
 		pml4[0] = pdptPhys | PML4_PRESENT | PML4_WRITABLE | PAGE_USER;
 
-		Log::Info(pml4Phys);
-
-		asm("sti");
 		return addressSpace;
 	}
 

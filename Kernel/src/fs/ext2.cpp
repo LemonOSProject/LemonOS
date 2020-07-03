@@ -761,7 +761,7 @@ namespace fs::Ext2{
 
         ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
 
-        if(ReadBlock(GetInodeBlock(currentBlockIndex, ino), buffer)){
+        if(ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
             Log::Info("[Ext2] Failed to read block %d", GetInodeBlock(currentBlockIndex, ino));
             error = DiskReadError;
             return -1;
@@ -787,7 +787,7 @@ namespace fs::Ext2{
                 }
 
                 blockOffset = 0;
-                if(ReadBlock(GetInodeBlock(currentBlockIndex, ino), buffer)){
+                if(ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
                     Log::Info("[Ext2] Failed to read block");
                     return -1;
                 }
@@ -825,7 +825,7 @@ namespace fs::Ext2{
 
         ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
 
-        if(ReadBlock(GetInodeBlock(currentBlockIndex, ino), buffer)){
+        if(ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
             Log::Info("[Ext2] Failed to read block %d", GetInodeBlock(currentBlockIndex, ino));
             return nullptr;
         }
@@ -856,7 +856,7 @@ namespace fs::Ext2{
 
                 blockOffset = 0;
 
-                if(ReadBlock(GetInodeBlock(currentBlockIndex, ino), buffer)){
+                if(ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
                     Log::Info("[Ext2] Failed to read block");
                     return nullptr;
                 }

@@ -177,6 +177,10 @@ namespace Lemon::GUI{
 
         return false;
     }
+    
+    void Window::WaitEvent(){
+        msgClient.Wait();
+    }
 
     void Window::GUIHandleEvent(LemonEvent& ev){
         switch(ev.event){

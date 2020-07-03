@@ -165,12 +165,12 @@ namespace Lemon::Graphics{
 
         int maxHeight = font->face->glyph->bitmap.rows;
 
-        if(y + maxHeight >= surface->height){
-            maxHeight = surface->height - y;
-        }
-
         if(y + maxHeight >= limits.y + limits.height){
             maxHeight = limits.y + limits.height - y;
+        }
+
+        if(y + maxHeight >= surface->height){
+            maxHeight = surface->height - y;
         }
         
         for(int i = 0; i < font->face->glyph->bitmap.rows && i < maxHeight; i++){
@@ -208,7 +208,7 @@ namespace Lemon::Graphics{
     }
 
     int DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font) {
-        if(y >= surface->height || x >= surface->width || y >= limits.height || x >= limits.width) return 0;
+        if(y >= surface->height || x >= surface->width || y >= limits.y + limits.height || x >= limits.x + limits.width) return 0;
 
         if((fontState != 1 && fontState != -1) || !font->face) InitializeFonts();
         if(fontState == -1){
@@ -226,12 +226,12 @@ namespace Lemon::Graphics{
 
         int maxHeight = font->height;
 
-        if(y + maxHeight >= surface->height){
-            maxHeight = surface->height - y;
-        }
-
         if(y + maxHeight >= limits.y + limits.height){
             maxHeight = limits.y + limits.height - y;
+        }
+
+        if(y + maxHeight >= surface->height){
+            maxHeight = surface->height - y;
         }
 
         int xOffset = 0;
@@ -249,7 +249,7 @@ namespace Lemon::Graphics{
                 return 0;
             }
 
-            for(int i = 0; i < font->face->glyph->bitmap.rows && i < maxHeight; i++){
+            for(int i = 0; i < font->face->glyph->bitmap.rows && i + (font->height - font->face->glyph->bitmap_top) < maxHeight; i++){
                 uint32_t yOffset = (i + y + (font->height - font->face->glyph->bitmap_top)) * (surface->width);
                 
                 for(int j = 0; j < font->face->glyph->bitmap.width && (x + xOffset + j) < surface->width; j++){

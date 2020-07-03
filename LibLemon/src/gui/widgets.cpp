@@ -70,13 +70,13 @@ namespace Lemon::GUI {
             if(align == WidgetAlignment::WAlignRight){
                 fixedBounds.pos.x = (parent->GetFixedBounds().pos.x + parent->GetFixedBounds().size.x) - bounds.pos.x - fixedBounds.width;
             } else if(align == WAlignCentre){
-                fixedBounds.pos.x = parent->GetFixedBounds().width / 2 - fixedBounds.width / 2;
+                fixedBounds.pos.x = parent->GetFixedBounds().width / 2 - fixedBounds.width / 2 + bounds.x;
             }
 
             if(verticalAlign == WidgetAlignment::WAlignBottom){
                 fixedBounds.pos.y = (parent->GetFixedBounds().y + parent->GetFixedBounds().height) - bounds.y - fixedBounds.height;
             } else if(verticalAlign == WAlignCentre){
-                fixedBounds.pos.y = parent->GetFixedBounds().height / 2 - fixedBounds.height / 2;
+                fixedBounds.pos.y = parent->GetFixedBounds().height / 2 - fixedBounds.height / 2 + bounds.y;
             }
         } else {
             fixedBounds.size = bounds.size;

@@ -253,6 +253,7 @@ public:
 	void add_back(T obj) {
 		if (!front) {
 			front = obj;
+			obj->prev = obj;
 		} else if (back) {
 			back->next = obj;
 			obj->prev = back;
@@ -318,7 +319,7 @@ public:
 
 		if(!num) front = back = nullptr;
 
-		current->next = current->prev = nullptr;
+		//current->next = current->prev = nullptr;
 
 		return current;
 	}
@@ -330,6 +331,8 @@ public:
 		if (back == obj) back = obj->prev;
 
 		--num;
+
+		if(!num) front = back = nullptr;
 	}
 
 	T get_front()

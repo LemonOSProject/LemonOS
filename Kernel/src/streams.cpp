@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <logging.h>
+#include <timer.h>
 
 int64_t Stream::Read(void* buffer, size_t len){
     assert(!"Stream::Read called from base class");
@@ -25,6 +26,10 @@ int64_t Stream::Empty(){
     return 1;
 }
 
+void Stream::Wait(){
+    assert(!"Stream::Wait called from base class");
+}
+
 Stream::~Stream(){
     
 }
@@ -42,9 +47,13 @@ DataStream::~DataStream(){
 
 int64_t DataStream::Read(void* data, size_t len){
     acquireLock(&streamLock);
+
     if(len >= bufferPos) len = bufferPos;
 
-    if(!len) return 0;
+    if(!len) {
+        releaseLock(&streamLock);
+        return 0;
+    }
 
     memcpy(data, buffer, len);
     
@@ -57,13 +66,18 @@ int64_t DataStream::Read(void* data, size_t len){
 }
 
 int64_t DataStream::Peek(void* data, size_t len){
+    acquireLock(&streamLock);
+
     if(len >= bufferPos) len = bufferPos;
 
-    if(!len) return 0;
+    if(!len) {
+        releaseLock(&streamLock);
+        return 0;
+    }
 
     memcpy(data, buffer, len);
-    
-    memcpy(buffer, buffer + len, bufferPos - len);
+
+    releaseLock(&streamLock);
     
     return len;
 }
@@ -87,6 +101,12 @@ int64_t DataStream::Write(void* data, size_t len){
     memcpy(buffer + bufferPos, data, len);
     bufferPos += len;
 
+    if(bufferPos > 0 && waiting.get_length() > 0) {
+        while(waiting.get_length()){
+            Scheduler::UnblockThread(waiting.remove_at(0));
+        }
+    }
+
     releaseLock(&streamLock);
 
     return len;
@@ -94,6 +114,14 @@ int64_t DataStream::Write(void* data, size_t len){
 
 int64_t DataStream::Empty(){
     return !bufferPos;
+}
+
+void DataStream::Wait(){
+    while(Empty()){
+        Scheduler::BlockCurrentThread(waiting);
+        Log::Info("looping");
+    }
+        Log::Info("exiting");
 }
 
 int64_t PacketStream::Read(void* buffer, size_t len){
@@ -130,9 +158,21 @@ int64_t PacketStream::Write(void* buffer, size_t len){
 
     packets.add_back(pkt);
 
+    if(packets.get_length() > 0 && waiting.get_length() > 0) {
+        while(waiting.get_length()){
+            Scheduler::UnblockThread(waiting.remove_at(0));
+        }
+    }
+
     return pkt.len;
 }
 
 int64_t PacketStream::Empty(){
     return !packets.get_length();
+}
+
+void PacketStream::Wait(){
+    while(Empty()){
+        Scheduler::BlockCurrentThread(waiting);
+    }
 }

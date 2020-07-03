@@ -157,7 +157,7 @@ namespace Lemon::GUI {
             ListItem item;
             item.details.push_back(dirent.name);
 
-            absPath = currentPath + dirent.name;
+            absPath = currentPath + "/" + dirent.name;
 
             struct stat statResult;
             int ret = stat(absPath.c_str(), &statResult);
@@ -167,7 +167,7 @@ namespace Lemon::GUI {
                 return;
             }
 
-            if(statResult.st_mode & S_IFDIR){
+            if(S_ISDIR(statResult.st_mode)){
                 fileList->AddItem(item);
                 continue;
             }
@@ -175,7 +175,7 @@ namespace Lemon::GUI {
             char buf[80];
             sprintf(buf, "%d KB", statResult.st_size / 1024);
 
-            item.details.push_back(buf);
+            item.details.push_back(std::string(buf));
 
             fileList->AddItem(item);
         }
@@ -203,7 +203,7 @@ namespace Lemon::GUI {
             return;
         }
 
-        if(statResult.st_mode & S_IFDIR){
+        if(S_ISDIR(statResult.st_mode)){
             currentPath = absPath;
 
             Refresh();

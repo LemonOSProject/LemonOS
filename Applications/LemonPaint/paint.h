@@ -4,7 +4,6 @@
 #include <gfx/surface.h>
 #include <gui/widgets.h>
 
-
 class Brush{
 public:
     surface_t data;
@@ -12,7 +11,7 @@ public:
     void Paint(int x, int y, uint8_t r, uint8_t g, uint8_t b, double scale, class Canvas* canvas);
 };
 
-class Canvas : public Lemon::GUI::Bitmap{
+class Canvas : public Lemon::GUI::Widget {
 protected:
     vector2i_t lastMousePos;
 
@@ -22,6 +21,8 @@ protected:
     Lemon::GUI::ScrollBarHorizontal sBarHor;
 public:
     Brush* currentBrush;
+
+    surface_t surface;
 
     rgba_colour_t colour;
     double brushScale = 1;

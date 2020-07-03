@@ -145,6 +145,7 @@ namespace Lemon::GUI {
         void SwapBuffers();
 
         bool PollEvent(LemonEvent& ev);
+        void WaitEvent();
         void GUIHandleEvent(LemonEvent& ev); // If the application decides to use the GUI they can pass events from PollEvent to here
 
         void AddWidget(Widget* w);

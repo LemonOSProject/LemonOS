@@ -24,7 +24,7 @@ namespace fs{
 	
 	class Null : public FsNode {
 	public:
-		Null() { flags = FS_NODE_FILE; }
+		Null() { flags = FS_NODE_CHARDEVICE; }
 
 		ssize_t Read(size_t, size_t, uint8_t *);
 		ssize_t Write(size_t, size_t, uint8_t *);
@@ -226,13 +226,19 @@ namespace fs{
 	}
     
 	int Dev::ReadDir(DirectoryEntry* dirent, uint32_t index){
-		if(index >= deviceCount) return -1;
-		strcpy(dirent->name,devices[index]->name);
+		if(index >= deviceCount + 2) return -1;
+
+		if(index == 0) { strcpy(dirent->name, "."); }
+		if(index == 1) { strcpy(dirent->name, ".."); }
+		else { strcpy(dirent->name,devices[index - 2]->name); }
 
 		return 0;
 	}
 
     FsNode* Dev::FindDir(char* name){
+		if(strcmp(name, ".") == 0) return this;
+		if(strcmp(name, "..") == 0) return &root;
+
 		for(unsigned i = 0; i < deviceCount; i++)
 			if(strcmp(devices[i]->name, name) == 0) return devices[i]->node;
 

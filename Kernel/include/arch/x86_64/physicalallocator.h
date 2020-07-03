@@ -40,4 +40,5 @@ namespace Memory{
 
     // Used Blocks of Memory
     extern uint64_t usedPhysicalBlocks;
+    extern uint64_t maxPhysicalBlocks;
 }

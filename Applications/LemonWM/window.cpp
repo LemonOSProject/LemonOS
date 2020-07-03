@@ -45,13 +45,13 @@ void WMWindow::Draw(surface_t* surface){
 
 	surface_t* buttons = &wm->compositor.windowButtons;
 
-	if(Lemon::Graphics::PointInRect(closeRect, wm->input.mouse.pos)){
+	if(Lemon::Graphics::PointInRect({{closeRect.x + pos.x, closeRect.y + pos.y}, closeRect.size}, wm->input.mouse.pos)){
 		Lemon::Graphics::surfacecpy(surface, buttons, pos + closeRect.pos, {{0, 19}, {19, 19}}); // Close button
 	} else {
 		Lemon::Graphics::surfacecpy(surface, buttons, pos + closeRect.pos, {{0, 0}, {19, 19}}); // Close button
 	}
 
-	if(Lemon::Graphics::PointInRect(minimizeRect, wm->input.mouse.pos)){
+	if(Lemon::Graphics::PointInRect({{pos.x + minimizeRect.x, pos.y + minimizeRect.y}, minimizeRect.size}, wm->input.mouse.pos)){
 		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {{19, 19}, {19, 19}}); // Close button
 	} else {
 		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {{19, 0}, {19, 19}}); // Close button

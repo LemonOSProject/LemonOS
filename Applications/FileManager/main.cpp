@@ -45,10 +45,9 @@ int main(int argc, char** argv){
 			window->GUIHandleEvent(ev);
 		}
 
-		if(repaint)
-			window->Paint();
+		window->Paint();
 
-		lemon_yield();
+		window->WaitEvent();
 	}
 
 	delete window;

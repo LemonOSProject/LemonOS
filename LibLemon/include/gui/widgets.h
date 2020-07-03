@@ -321,4 +321,11 @@ namespace Lemon::GUI {
 
         void (*OnFileSelected)(std::string& file, FileView* fv) = nullptr;
     };
+
+    class ScrollView : public Container{
+        ScrollBar sBarVertical;
+        ScrollBarHorizontal sBarHorizontal;
+    public:
+        void Paint(surface_t* surface);
+    };
 }

@@ -37,6 +37,8 @@ typedef struct thread {
 	uint8_t state; // Thread state
 
 	uint64_t fsBase;
+
+	bool blocked = false;
 } thread_t;
 
 typedef struct {
@@ -83,6 +85,10 @@ namespace Scheduler{
 	message_t RecieveMessage(process_t* proc);
 
 	process_t* FindProcessByPID(uint64_t pid);
+	void InsertNewThreadIntoQueue(thread_t* thread);
+
+	void BlockCurrentThread(FastList<thread_t*>& list);
+	void UnblockThread(thread_t* thread);
 
     void Initialize();
     void Tick(regs64_t* r);

@@ -276,8 +276,7 @@ int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* 
     }
 
     while(inbound->Empty()){
-        // TODO: Actually block
-        Scheduler::Yield();
+        Scheduler::Yield();//inbound->Wait();
     }
 
     if(flags & MSG_PEEK){

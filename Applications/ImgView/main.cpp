@@ -21,7 +21,7 @@ surface_t image;
 
 int LoadImage(char* path){
     if(!path){
-        Lemon::GUI::MessageBox("Invalid Filepath", MESSAGEBOX_OK);
+        Lemon::GUI::DisplayMessageBox("Image Viewer", "Invalid Filepath");
         return 1;
     }
 
@@ -30,7 +30,7 @@ int LoadImage(char* path){
     if(ret){
         char msg[128];
         sprintf(msg, "Failed to open image, Error Code: %d", ret);
-        Lemon::GUI::MessageBox(msg, MESSAGEBOX_OK);
+        Lemon::GUI::DisplayMessageBox("Image Viewer", msg);
         return ret;
     }
 
@@ -38,7 +38,7 @@ int LoadImage(char* path){
 }
 
 void OnOpen(Lemon::GUI::Button* btn){
-    LoadImage(Lemon::GUI::FileDialog("/initrd"));
+    LoadImage(Lemon::GUI::FileDialog("/"));
 }
 
 
@@ -63,44 +63,19 @@ retry:
     if(image.width > 640) winInfo.width = 640;
     if(image.height > 480) winInfo.height = 480;
 
-    window = Lemon::GUI::CreateWindow(&winInfo);
+    window = new Lemon::GUI::Window("Image Viewer", {800, 500}, 0, Lemon::GUI::WindowType::GUI);
 
     sv = new Lemon::GUI::ScrollView({{0, 0}, {winInfo.width, winInfo.height}});
     imgWidget = new Lemon::GUI::Bitmap({{0, 0}, {0, 0}}, &image);
 
     sv->AddWidget(imgWidget);
 
-    window->widgets.add_back(sv);
+    window->AddWidget(sv);
     
-	for(;;){
-		ipc_message_t msg;
-		while(Lemon::ReceiveMessage(&msg)){
-			if(msg.msg == WINDOW_EVENT_MOUSEDOWN){
-				uint32_t mouseX;
-				uint32_t mouseY;
-				mouseX = (msg.data >> 32);
-				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				Lemon::GUI::HandleMouseDown(window, {(int)mouseX, (int)mouseY});
-			}
-			else if(msg.msg == WINDOW_EVENT_MOUSEUP){	
-				uint32_t mouseX;
-				uint32_t mouseY;
-				mouseX = msg.data >> 32;
-				mouseY = (uint32_t)msg.data & 0xFFFFFFFF;
-				Lemon::GUI::HandleMouseUp(window, {(int)mouseX, (int)mouseY});
-			} else if (msg.msg == WINDOW_EVENT_MOUSEMOVE) {
-				uint32_t mouseX = msg.data >> 32;
-				uint32_t mouseY = msg.data & 0xFFFFFFFF;
-
-				Lemon::GUI::HandleMouseMovement(window, {mouseX, mouseY});
-			} else if (msg.msg == WINDOW_EVENT_KEY) {
-				Lemon::GUI::HandleKeyPress(window, msg.data);
-			} else if (msg.msg == WINDOW_EVENT_CLOSE) {
-				Lemon::GUI::DestroyWindow(window);
-				exit(0);
-			}
-		}
-
-		Lemon::GUI::PaintWindow(window);
+	while(!window->closed){
+        Lemon::LemonEvent ev;
+		while(window->PollEvent(ev)){
+            window->GUIHandleEvent(ev);
+        }
 	}
 }

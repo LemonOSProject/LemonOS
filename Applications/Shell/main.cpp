@@ -29,6 +29,7 @@ fb_info_t videoInfo;
 Lemon::GUI::Window* taskbar;
 Lemon::GUI::Window* menu;
 ShellInstance* shell;
+surface_t menuButton;
 
 bool showMenu = true;
 
@@ -55,7 +56,10 @@ public:
 
 	void Paint(surface_t* surface){
 		if(win->state == Lemon::Shell::ShellWindowStateActive || pressed){
-			Lemon::Graphics::DrawRect(fixedBounds, {96, 96, 96}, surface);
+			Lemon::Graphics::DrawRect(fixedBounds, {42, 50, 64}, surface);
+		} else {
+            Lemon::Graphics::DrawGradientVertical(fixedBounds.x + 1, fixedBounds.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 4,{90,90,90},{62, 70, 84},surface);
+            Lemon::Graphics::DrawRect(fixedBounds.x + 1, fixedBounds.y + fixedBounds.height - 3, bounds.size.x - 2, 2, {42, 50, 64},surface);
 		}
 
 		DrawButtonBorders(surface, false);
@@ -96,11 +100,9 @@ void OnTaskbarPaint(surface_t* surface){
 	Lemon::Graphics::DrawRect(100,24,surface->width - 100, surface->height - 24, {42,50,64},surface);
 
 	if(showMenu){
-		Lemon::Graphics::DrawGradientVertical(0,0,100, 24, {120,12,12}, {/*160*/60, /*16*/6, /*16*/6},surface);
-		Lemon::Graphics::DrawRect(0,24,100, surface->height - 24, {/*160*/60, /*16*/6, /*16*/6},surface);
+		Lemon::Graphics::surfacecpy(surface, &menuButton, {0, 0}, {0, 30, 100, 30});
 	} else {
-		Lemon::Graphics::DrawGradientVertical(0,0,100, 24, {220,/*24*/48,30}, {/*160*/120, /*16*/12, /*16*/12},surface);
-		Lemon::Graphics::DrawRect(0,24,100, surface->height - 24, {/*160*/120, /*16*/12, /*16*/12},surface);
+		Lemon::Graphics::surfacecpy(surface, &menuButton, {0, 0}, {0, 0, 100, 30});
 	}
 
 	sprintf(memString, "Used Memory: %d/%d KB", sysInfo.usedMem, sysInfo.totalMem);
@@ -108,12 +110,22 @@ void OnTaskbarPaint(surface_t* surface){
 }
 
 void OnMenuPaint(surface_t* surface){
-	Lemon::Graphics::DrawRect(0,32,surface->width, surface->height - 32, {64,64,64}, surface);
-	Lemon::Graphics::DrawGradientVertical(0,0,surface->width, 32, {220,/*24*/48,30}, {/*160*/120, /*16*/12, /*16*/12},surface);
+	Lemon::Graphics::DrawRect(2,32,surface->width - 4, surface->height - 64, {255, 255, 255}, surface);
+
+	Lemon::Graphics::DrawRect(0,0,2,surface->height, 64, 64, 64, surface);
+	Lemon::Graphics::DrawRect(surface->width - 2,0,2,surface->height, 64, 64, 64, surface);
+	Lemon::Graphics::DrawGradientVertical(0,0,surface->width, 32, {96, 96, 96}, {42, 50, 64}, surface);
+	Lemon::Graphics::DrawGradientVertical(0, surface->height - 32, surface->width, 32, {96, 96, 96}, {42, 50, 64}, surface);
+	
 	Lemon::Graphics::DrawString(versionString,5,MENU_ITEM_HEIGHT / 2 - 6,255,255,255,surface);
 
 	for(int i = 0; i < menuItemCount; i++){
-		Lemon::Graphics::DrawString(menuItems[i].name, 5, 42 + i * MENU_ITEM_HEIGHT /* 2 pixels padding */, 255, 255, 255, surface);
+		if(Lemon::Graphics::PointInRect({2, 42 + i * MENU_ITEM_HEIGHT, surface->width - 4, MENU_ITEM_HEIGHT - 4}, menu->lastMousePos)){
+			Lemon::Graphics::DrawRect(3, 40 + i * MENU_ITEM_HEIGHT /* 2 pixels padding */, surface->width - 6, MENU_ITEM_HEIGHT - 4, Lemon::colours[Lemon::Colour::Foreground], surface);
+			Lemon::Graphics::DrawString(menuItems[i].name, 5, 42 + i * MENU_ITEM_HEIGHT /* 2 pixels padding */, 255, 255, 255, surface);
+		} else {
+			Lemon::Graphics::DrawString(menuItems[i].name, 5, 42 + i * MENU_ITEM_HEIGHT /* 2 pixels padding */, 0, 0, 0, surface);
+		}
 	}
 }
 
@@ -183,6 +195,8 @@ int main(){
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
 	syscall(SYS_UNAME, (uintptr_t)versionString,0,0,0,0);
 
+	Lemon::Graphics::LoadImage("/initrd/menubuttons.bmp", &menuButton);
+
 	taskbar = new Lemon::GUI::Window("", {videoInfo.width, 30}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, videoInfo.height - 30});
 	taskbar->OnPaint = OnTaskbarPaint;
 	taskbar->rootContainer.background = {0, 0, 0, 0};
@@ -227,9 +241,12 @@ int main(){
 		}
 
 		while(menu->PollEvent(ev)){
-			if(ev.event == Lemon::EventMouseReleased){
+			if(ev.event == Lemon::EventMouseMoved){
+				menu->lastMousePos = ev.mousePos;
+				paint = true;
+			} else if(ev.event == Lemon::EventMouseReleased){
 				if(ev.mousePos.y > 42 && ev.mousePos.y < (menuItemCount*MENU_ITEM_HEIGHT + 42)){
-					char* const argv[] = {menuItems[(int)floor((double)(ev.mousePos.y - 42) / MENU_ITEM_HEIGHT)].path};
+					char* const argv[] = {menuItems[(int)floor((double)(ev.mousePos.y - 40) / MENU_ITEM_HEIGHT)].path};
 					lemon_spawn(argv[0], 1, argv, 0);
 
 					showMenu = false;

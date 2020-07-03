@@ -54,6 +54,10 @@ int FsNode::Unlink(DirectoryEntry*){
     return -ENOSYS;
 }
 
+int FsNode::Rename(FsNode*, DirectoryEntry*, FsNode*, DirectoryEntry*){
+    return -ENOSYS;
+}
+
 int FsNode::Ioctl(uint64_t cmd, uint64_t arg){
     return -ENOSYS;
 }

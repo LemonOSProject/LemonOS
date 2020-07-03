@@ -605,6 +605,10 @@ long SysRmdir(regs64_t* r){
 	return 0;
 }
 
+long SysRename(regs64_t* r){
+	return 0;
+}
+
 long SysYield(regs64_t* r){
 	Scheduler::Yield();
 	return 0;
@@ -867,7 +871,7 @@ long SysInfo(regs64_t* r){
 	}
 
 	s->usedMem = Memory::usedPhysicalBlocks * 4;
-	s->totalMem = HAL::mem_info.memory_high + HAL::mem_info.memory_low;
+	s->totalMem = Memory::maxPhysicalBlocks * 4;
 
 	return 0;
 }
@@ -1580,7 +1584,7 @@ syscall_t syscalls[]{
 	SysMount,
 	SysMkdir,
 	SysRmdir,
-	nullptr,
+	SysRename,
 	SysYield,					// 25
 	nullptr,
 	nullptr,

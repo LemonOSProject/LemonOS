@@ -222,8 +222,8 @@ namespace Scheduler{
         
         if(cpu->currentThread) {
             cpu->currentThread->timeSlice = 0;
-            APIC::Local::SendIPI(0, ICR_DSH_SELF, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE); // Send schedule IPI to self
         }
+        asm("int $0xFD"); // Send schedule IPI to self
     }
 
     process_t* CreateProcess(void* entry) {
@@ -272,15 +272,8 @@ namespace Scheduler{
         acquireLock(&cpu->runQueueLock);
         asm("cli");
 
-        for(uint32_t i = 0; i < process->threadCount; i++){
-            for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
-                if(cpu->runQueue->get_at(j) == &process->threads[i]) cpu->runQueue->remove(&process->threads[i]);
-            }
-        }
-
-        for(unsigned i = 0; i < processes->get_length(); i++){
-            if(processes->get_at(i) == process)
-                processes->remove_at(i);
+        for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
+            if(cpu->runQueue->get_at(j)->parent == process) cpu->runQueue->remove_at(j);
         }
 
         process->fileDescriptors.clear();
@@ -317,6 +310,11 @@ namespace Scheduler{
             asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE)); // If we are using the PML4 of the current process switch to the kernel's
         }
 
+        for(unsigned i = 0; i < processes->get_length(); i++){
+            if(processes->get_at(i) == process)
+                processes->remove_at(i);
+        }
+
         for(unsigned i = 0; i < process->sharedMemory.get_length(); i++){
             Memory::Free4KPages((void*)process->sharedMemory[i].base, process->sharedMemory[i].pageCount, process->addressSpace); // Make sure the physical memory does not get freed
         }
@@ -342,6 +340,27 @@ namespace Scheduler{
         asm("sti");
     }
 
+	void BlockCurrentThread(FastList<thread_t*>& list){
+        CPU* cpu = GetCPULocal();
+
+        acquireLock(&cpu->runQueueLock);
+        cpu->currentThread->blocked = true;
+        list.add_back(cpu->currentThread);
+        cpu->runQueue->remove(cpu->currentThread);
+        releaseLock(&cpu->runQueueLock);
+
+        Yield();
+    }
+
+	void UnblockThread(thread_t* thread){
+        if(thread->blocked){
+            thread->timeSlice = thread->timeSliceDefault;
+            InsertNewThreadIntoQueue(thread);
+        }
+
+        thread->blocked = false;
+    }
+
     void Tick(regs64_t* r){
         if(!schedulerReady) return;
 
@@ -350,7 +369,7 @@ namespace Scheduler{
         Schedule(r);
     }
 
-    void Schedule(regs64_t* r){
+    [[noreturn]] void Schedule(regs64_t* r){
         CPU* cpu = GetCPULocal();
 
         if(cpu->currentThread && cpu->currentThread->timeSlice > 0) {
@@ -361,24 +380,20 @@ namespace Scheduler{
         while(__builtin_expect(acquireTestLock(&cpu->runQueueLock), 0)) {
             return;
         }
-        
-        if(__builtin_expect(cpu->currentThread && cpu->currentThread->parent != cpu->idleProcess, 1)){
+        if (__builtin_expect(cpu->runQueue->get_length() <= 0 || !cpu->runQueue->front, 0)){
+                cpu->currentThread = &cpu->idleProcess->threads[0];
+        } else if(__builtin_expect(cpu->currentThread && cpu->currentThread->parent != cpu->idleProcess, 1)){
             cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
 
             asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 
             cpu->currentThread->registers = *r;
 
-            cpu->runQueue->add_back(cpu->currentThread);
-        }
-        
-        if (__builtin_expect(cpu->runQueue->get_length() <= 0, 0)){
-            cpu->currentThread = &cpu->idleProcess->threads[0];
+            cpu->currentThread = cpu->currentThread->next;
         } else {
-            cpu->currentThread = cpu->runQueue->remove_at(0);
+            cpu->currentThread = cpu->runQueue->front;
         }
         releaseLock(&cpu->runQueueLock);
-
         asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 
 	    asm volatile ("wrmsr" :: "a"(cpu->currentThread->fsBase & 0xFFFFFFFF) /*Value low*/, "d"((cpu->currentThread->fsBase >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
@@ -386,8 +401,6 @@ namespace Scheduler{
         TSS::SetKernelStack(&cpu->tss, (uintptr_t)cpu->currentThread->kernelStack);
 
         TaskSwitch(&cpu->currentThread->registers, cpu->currentThread->parent->addressSpace->pml4Phys);
-        
-        for(;;);
     }
 
     process_t* CreateELFProcess(void* elf, int argc, char** argv, int envc, char** envp) {

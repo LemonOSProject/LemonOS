@@ -27,12 +27,12 @@ namespace Lemon::GUI
 		win->AddWidget(label);
 
 		if(buttons == MsgButtonsOKCancel){
-			Button* okBtn = new Button("OK", {-105, 2, 100, 24});
+			Button* okBtn = new Button("OK", {-52, 2, 100, 24});
 			win->AddWidget(okBtn);
 			okBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignCentre, WAlignBottom);
 			okBtn->OnPress = OnMessageBoxOKPressed;
 
-			Button* cancelBtn = new Button("Cancel", {2, 2, 100, 24});
+			Button* cancelBtn = new Button("Cancel", {52, 2, 100, 24});
 			win->AddWidget(cancelBtn);
 			cancelBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignCentre, WAlignBottom);
 			cancelBtn->OnPress = OnMessageBoxCancelPressed;

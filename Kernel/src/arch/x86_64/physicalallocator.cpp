@@ -58,7 +58,7 @@ namespace Memory{
 
     // Finds the first free block in physical memory
     uint64_t GetFirstFreeMemoryBlock() {
-        for (uint32_t i = 0; i < PHYSALLOC_BITMAP_SIZE_DWORDS; i++)
+        for (uint32_t i = 0; i < maxPhysicalBlocks / 32; i++)
             if (physicalMemoryBitmap[i] != 0xffffffff) // If all 32 bits at the index are used then ignore them
                 for (uint32_t j = 0; j < 32; j++) // Test each bit in the dword
                     if (!(physicalMemoryBitmap[i] & (1 << j)) && (i * 32 * j))
@@ -85,7 +85,7 @@ namespace Memory{
         acquireLock(&allocatorLock);
 
         uint64_t index = GetFirstFreeMemoryBlock();
-        if (index == 0){
+        if (!index){
             Log::Error("Out of memory!");
             KernelPanic((const char**)(&"Out of memory!"),1);
             for(;;);

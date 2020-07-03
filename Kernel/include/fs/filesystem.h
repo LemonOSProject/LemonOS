@@ -145,6 +145,7 @@ public:
     
     virtual int Link(FsNode*, DirectoryEntry*);
     virtual int Unlink(DirectoryEntry*);
+    virtual int Rename(FsNode* olddir, DirectoryEntry* oldent, FsNode* newdir, DirectoryEntry* newent);
 
     virtual int Ioctl(uint64_t cmd, uint64_t arg); // I/O Control
     virtual void Sync(); // Sync node to device
