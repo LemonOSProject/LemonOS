@@ -8,7 +8,7 @@
 Socket* Socket::CreateSocket(int domain, int type, int protocol){
     if(type & SOCK_NONBLOCK) type &= ~SOCK_NONBLOCK;
 
-    if(domain != UnixDomain){
+    if(domain != UnixDomain && domain != InternetProtocol){
         Log::Warning("CreateSocket: domain %d is not supported", domain);
         return nullptr;
     }
@@ -22,6 +22,8 @@ Socket* Socket::CreateSocket(int domain, int type, int protocol){
     
     if(domain == UnixDomain){
         return new LocalSocket(type, protocol);
+    } else if (domain == InternetProtocol){
+        return new IPSocket(type, protocol);
     }
 
     return nullptr;
@@ -118,7 +120,6 @@ void Socket::Close(){
 
 LocalSocket::LocalSocket(int type, int protocol) : Socket(type, protocol){
     domain = UnixDomain;
-    type = type;
     flags = FS_NODE_SOCKET;
 
     assert(type == StreamSocket || type == DatagramSocket);

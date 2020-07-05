@@ -13,10 +13,10 @@
 
 namespace AHCI{
 	Port::Port(int num, hba_port_t* portStructure){
+        registers = portStructure;
+
 		registers->cmd &= ~HBA_PxCMD_ST;
 		registers->cmd &= ~HBA_PxCMD_FRE;
-
-        registers = portStructure;
 
         //stopCMD(registers);
 

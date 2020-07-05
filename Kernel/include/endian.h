@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 static inline uint16_t EndianLittleToBig16(uint16_t val){
     return ((val & 0xFF) << 8) | ((val >> 8) & 0xFF);
 }
@@ -16,6 +18,10 @@ static inline uint16_t EndianBigToLittle16(uint16_t val){
     return ((val & 0xFF) << 8) | ((val >> 8) & 0xFF);
 }
 
+static inline uint32_t EndianBigToLittle32(uint32_t val){
+    return (((uint32_t)EndianBigToLittle16(val & 0xFFFF) << 16)) | (EndianBigToLittle16((val >> 16) & 0xFFFF));
+}
+
 typedef struct BigEndianUInt16 {
     union{
         uint16_t value;
@@ -28,7 +34,35 @@ typedef struct BigEndianUInt16 {
         value = EndianLittleToBig16(newValue);
     }
     
-    uint16_t operator=(const BigEndianUInt16&){
+    operator uint16_t(){
         return EndianBigToLittle16(value);
     }
 } __attribute__((packed)) bige_uint16_t;
+
+typedef struct BigEndianUInt32 {
+    union{
+        uint32_t value;
+        struct{
+            union{
+                uint16_t high;
+                struct {
+                    uint8_t hhigh, hlow;
+                };
+            };
+            union{
+                uint16_t low;
+                struct {
+                    uint8_t lhigh, llow;
+                };
+            };
+        };
+    };
+    
+    BigEndianUInt16& operator=(const uint16_t newValue){
+        value = EndianLittleToBig32(newValue);
+    }
+    
+    operator uint32_t(){
+        return EndianBigToLittle32(value);
+    }
+} __attribute__((packed)) bige_uint32_t;

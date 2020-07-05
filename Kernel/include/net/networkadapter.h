@@ -1,8 +1,7 @@
 #pragma once
 
 #include <device.h>
-#include <net/mac.h>
-#include <net/packet.h>
+#include <net/net.h>
 
 enum {
     LinkDown,

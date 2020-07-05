@@ -93,8 +93,8 @@ namespace Network{
             uint16_t length;
             uint8_t cso; // Checksum Offset
             uint8_t cmd; // Command
-            uint8_t status : 4; // Status
             uint8_t reserved : 4; // Reserved
+            uint8_t status : 4; // Status
             uint8_t css; // Checksum start field
             uint16_t special; // Special
         } __attribute__((packed)) t_desc_t;

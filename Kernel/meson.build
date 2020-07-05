@@ -67,6 +67,7 @@ cpp_files = [
     'src/net/8254x.cpp',
     'src/net/socket.cpp',
     'src/net/net.cpp',
+    'src/net/interface.cpp',
 
     'src/storage/ahci.cpp',
     'src/storage/ahciport.cpp',

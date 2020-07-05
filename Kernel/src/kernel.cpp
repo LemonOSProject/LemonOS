@@ -36,6 +36,17 @@ void IdleProcess(){
 }
 
 void KernelProcess(){
+
+	Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+
+	NVMe::Initialize();
+	USB::XHCI::Initialize();
+	ATA::Init();
+	AHCI::Init();
+
+	Network::InitializeDrivers();
+	Network::InitializeConnections();
+
 	asm("sti");
 
 	Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
@@ -58,7 +69,7 @@ void KernelProcess(){
 
 	Log::Write("OK");
 
-	Scheduler::EndProcess(Scheduler::GetCurrentProcess());
+	//Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 	for(;;);
 }
 
@@ -149,15 +160,6 @@ extern "C"
 	Log::Write("OK");
 
 	Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
-
-	//Network::InitializeDrivers();
-	//Network::InitializeConnections();
-	NVMe::Initialize();
-	USB::XHCI::Initialize();
-	ATA::Init();
-	AHCI::Init();
-
-	Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Initializing Task Scheduler...");
 	Scheduler::Initialize();

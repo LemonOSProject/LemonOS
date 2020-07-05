@@ -5,6 +5,7 @@
 #include <fs/filesystem.h>
 #include <lock.h>
 #include <stream.h>
+#include <net/net.h>
 
 #define MSG_CTRUNC 0x1
 #define MSG_DONTROUTE 0x2
@@ -33,6 +34,17 @@ typedef struct sockaddr {
 struct sockaddr_un {
     sa_family_t sun_family;               /* AF_UNIX */
     char        sun_path[108];            /* Pathname */
+};
+
+struct in_addr {
+    uint32_t s_addr;
+};
+
+struct sockaddr_in {
+    short           sin_family;
+    unsigned short  sin_port;
+    in_addr         in_addr;
+    char            sin_zero[8];
 };
 
 struct iovec {
@@ -73,8 +85,8 @@ enum {
 };
 
 enum {
-    InternetProtcol = 1,
-    InternetProtcol6 = 2,
+    InternetProtocol = 1,
+    InternetProtocol6 = 2,
     UnixDomain = 3,
     LocalDomain = 3,
 };
@@ -152,6 +164,24 @@ public:
     int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
 
     bool CanRead() { if(inbound) return !inbound->Empty(); else return false; }
+};
+
+class IPSocket : public Socket {
+    IPv4Address address;
+    BigEndianUInt16 port;
+    
+public:
+    IPSocket(int type, int protocol);
+    
+    Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
+    int Bind(const sockaddr* addr, socklen_t addrlen);
+    int Connect(const sockaddr* addr, socklen_t addrlen);
+    int Listen(int backlog);
+
+    void Close();
+    
+    int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
+    int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
 };
 
 namespace SocketManager{

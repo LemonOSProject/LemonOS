@@ -9,7 +9,7 @@
 #include <timer.h>
 #include <acpi.h>
 #include <apic.h>
-#include <net/packet.h>
+#include <net/net.h>
 
 namespace Network{
     uint16_t supportedDevices[]{
@@ -176,7 +176,7 @@ namespace Network{
             rxd->status = 0;
 
             rxDescriptorsVirt[i] = Memory::KernelAllocate4KPages(1);
-            Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)txDescriptorsVirt[i], 1);
+            Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)rxDescriptorsVirt[i], 1);
         }
 
         WriteMem32(I8254_REGISTER_TCTRL, (TCTRL_ENABLE | TCTRL_PSP));
@@ -295,8 +295,6 @@ namespace Network{
 
         WriteMem32(I8254_REGISTER_INT_MASK, 0x1F6DF); // Set the interrupt mask to enable all interrupts
         UpdateLink();
-
-        while(linkState != LinkUp);
     }
     
     void Intel8254x::SendPacket(void* data, size_t len){

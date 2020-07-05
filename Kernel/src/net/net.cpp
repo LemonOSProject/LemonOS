@@ -2,7 +2,6 @@
 
 #include <net/networkadapter.h>
 #include <net/8254x.h>
-#include <net/arp.h>
 #include <endian.h>
 #include <logging.h>
 
@@ -16,5 +15,7 @@ namespace Network {
             Log::Info("No network adapter found!");
             return;
         }
+
+        Interface::Initialize();
     }
 }
