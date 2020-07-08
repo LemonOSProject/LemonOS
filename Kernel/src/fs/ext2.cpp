@@ -1056,6 +1056,11 @@ namespace fs::Ext2{
     int Ext2Volume::Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode){
         if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) return -ENOTDIR;
 
+        if(FindDir(node, ent->name)){
+            Log::Info("[Ext2] Create: Entry %s already exists!", ent->name);
+            return -EEXIST;
+        }
+
         Ext2Node* file = CreateNode();
         
         if(!file){
@@ -1082,6 +1087,11 @@ namespace fs::Ext2{
         if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
             Log::Info("[Ext2] Not a directory!");
             return -ENOTDIR;
+        }
+
+        if(FindDir(node, ent->name)){
+            Log::Info("[Ext2] CreateDirectory: Entry %s already exists!", ent->name);
+            return -EEXIST;
         }
 
         Ext2Node* dir = CreateNode();

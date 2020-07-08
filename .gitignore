@@ -20,3 +20,6 @@ initrd.tar
 Ports/*
 !Ports/*.sh
 !Ports/*.patch
+Toolchain/*
+!Toolchain/*.sh
+!Toolchain/*.patch
