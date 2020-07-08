@@ -7,8 +7,11 @@
 #include <list.h>
 #include <fs/filesystem.h>
 
-#define PROCESS_STATE_SUSPENDED 0
-#define PROCESS_STATE_ACTIVE 1
+enum {
+	ThreadStateRunning,
+	ThreadStateBlocked,
+};
+
 struct process;
 
 typedef void* handle_t;
@@ -37,8 +40,6 @@ typedef struct thread {
 	uint8_t state; // Thread state
 
 	uint64_t fsBase;
-
-	bool blocked = false;
 } thread_t;
 
 typedef struct {
@@ -87,7 +88,7 @@ namespace Scheduler{
 	process_t* FindProcessByPID(uint64_t pid);
 	void InsertNewThreadIntoQueue(thread_t* thread);
 
-	void BlockCurrentThread(FastList<thread_t*>& list);
+	void BlockCurrentThread(List<thread_t*>& list, lock_t& lock);
 	void UnblockThread(thread_t* thread);
 
     void Initialize();

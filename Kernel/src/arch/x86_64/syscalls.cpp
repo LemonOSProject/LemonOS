@@ -1476,6 +1476,11 @@ long SysSendMsg(regs64_t* r){
 		Log::Warning("sys_sendmsg: msg: Invalid iovec ptr");
 		return -EFAULT;
 	}
+	
+	if(msg->name && !Memory::CheckUsermodePointer((uintptr_t)msg->name, msg->namelen, proc->addressSpace)){
+		Log::Warning("sys_sendmsg: msg: Invalid name ptr and name not null");
+		return -EFAULT;
+	}
 
 	long sent = 0;
 	Socket* sock = (Socket*)handle->node;
@@ -1486,7 +1491,7 @@ long SysSendMsg(regs64_t* r){
 			return -EFAULT;
 		}
 
-		long ret = sock->Send(msg->iov[i].base, msg->iov[i].len, flags);
+		long ret = sock->SendTo(msg->iov[i].base, msg->iov[i].len, flags, (sockaddr*)msg->name, msg->namelen);
 
 		if(ret < 0) return ret;
 
@@ -1536,6 +1541,10 @@ long SysRecvMsg(regs64_t* r){
 	if(!Memory::CheckUsermodePointer((uintptr_t)msg->iov, sizeof(iovec) * msg->iovlen, proc->addressSpace)){
 		Log::Warning("sys_recvmsg: msg: Invalid iovec ptr");
 		return -EFAULT;
+	}
+
+	if(msg->name){
+		Log::Warning("sys_recvmsg: msg: name ignored");
 	}
 
 	long read = 0;

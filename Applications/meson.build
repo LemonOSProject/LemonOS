@@ -71,6 +71,10 @@ guitest_src = [
     'GUITest/main.cpp',
 ]
 
+netgov_src = [
+    'NetworkGovernor/main.cpp',
+]
+
 executable('fileman.lef', fileman_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('init.lef', lemonwm_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('lsh.lef', lsh_src, cpp_args : application_cpp_args, link_args : ['-llemon'], install : true)
@@ -82,3 +86,4 @@ executable('lemonpaint.lef', lemonpaint_src, cpp_args : application_cpp_args, li
 #executable('imgview.lef', imgview_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('sysinfo.lef', sysinfo_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('guitest.lef', guitest_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
+executable('netgov.lef', netgov_src, cpp_args : application_cpp_args, install : true)

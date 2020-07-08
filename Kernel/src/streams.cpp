@@ -117,11 +117,11 @@ int64_t DataStream::Empty(){
 }
 
 void DataStream::Wait(){
+    Scheduler::BlockCurrentThread(waiting, streamLock);
+
     while(Empty()){
-        Scheduler::BlockCurrentThread(waiting);
-        Log::Info("looping");
+        Scheduler::Yield();
     }
-        Log::Info("exiting");
 }
 
 int64_t PacketStream::Read(void* buffer, size_t len){
@@ -173,6 +173,6 @@ int64_t PacketStream::Empty(){
 
 void PacketStream::Wait(){
     while(Empty()){
-        Scheduler::BlockCurrentThread(waiting);
+        //Scheduler::BlockCurrentThread(waiting, );
     }
 }

@@ -31,7 +31,8 @@ int main(){
     Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 0, 0, 0, &fbSurface);
     
     #ifdef __lemon__
-        lemon_spawn("/system/bin/shell.lef", 0, nullptr, 0);
+        lemon_spawn("/system/bin/netgov.lef", 0, nullptr, 0); // (Temporary) Start NetworkGovernor Service
+        lemon_spawn("/system/bin/shell.lef", 0, nullptr, 0); // Start Graphical Shell
     #endif
 
     sockaddr_un srvAddr;

@@ -23,7 +23,9 @@ Socket* Socket::CreateSocket(int domain, int type, int protocol){
     if(domain == UnixDomain){
         return new LocalSocket(type, protocol);
     } else if (domain == InternetProtocol){
-        return new IPSocket(type, protocol);
+        if(type == DatagramSocket){
+            return new UDPSocket(type, protocol);
+        }
     }
 
     return nullptr;
@@ -39,12 +41,6 @@ Socket::~Socket(){
     if(bound){
         SocketManager::DestroySocket(this);
     }
-}
-
-int Socket::ConnectTo(Socket* client){
-    assert(!"ConnectTo has been called from socket base");
-
-    return -1; // We should not return but get the compiler to shut up
 }
 
 Socket* Socket::Accept(sockaddr* addr, socklen_t* addrlen){
@@ -232,7 +228,11 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen){
         return -ECONNREFUSED;
     }
 
-    sock->ConnectTo(this);
+    if(sock->GetDomain() != UnixDomain){
+        return -ENOSYS;
+    }
+
+    ((LocalSocket*)sock)->ConnectTo(this);
 
     return 0;
 }
@@ -274,10 +274,8 @@ int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* 
 
     if(inbound->Empty() && (flags & MSG_DONTWAIT)){
         return -EAGAIN;
-    }
-
-    while(inbound->Empty()){
-        Scheduler::Yield();//inbound->Wait();
+    } else while(inbound->Empty()){
+        inbound->Wait();
     }
 
     if(flags & MSG_PEEK){

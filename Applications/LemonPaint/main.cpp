@@ -186,6 +186,8 @@ int main(int argc, char** argv){
 		}
 
         window->Paint();
+
+        window->WaitEvent();
 	}
 
     return 0;

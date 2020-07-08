@@ -41,9 +41,9 @@ struct in_addr {
 };
 
 struct sockaddr_in {
-    short           sin_family;
+    sa_family_t     sin_family;
     unsigned short  sin_port;
-    in_addr         in_addr;
+    struct in_addr  in_addr;
     char            sin_zero[8];
 };
 
@@ -114,8 +114,6 @@ public:
 
     Socket(int type, int protocol);
     virtual ~Socket();
-    
-    virtual int ConnectTo(Socket* client);
 
     virtual Socket* Accept(sockaddr* addr, socklen_t* addrlen);
     virtual Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
@@ -167,11 +165,17 @@ public:
 };
 
 class IPSocket : public Socket {
-    IPv4Address address;
-    BigEndianUInt16 port;
-    
+protected:
+    IPv4Address address = 0;
+    BigEndianUInt16 port = 0;
+    BigEndianUInt16 destinationPort = 0;
+
+    List<NetworkPacket> pQueue;
+
+    virtual int64_t IPReceiveFrom(void* buffer, size_t len);
 public:
     IPSocket(int type, int protocol);
+    virtual ~IPSocket();
     
     Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
     int Bind(const sockaddr* addr, socklen_t addrlen);
@@ -181,6 +185,13 @@ public:
     void Close();
     
     int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
+    virtual int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
+};
+
+class UDPSocket : public IPSocket {
+    int64_t IPReceiveFrom(void* buffer, size_t len);
+public:
+    UDPSocket(int type, int protocol);
     int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
 };
 

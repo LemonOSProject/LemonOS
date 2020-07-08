@@ -171,7 +171,6 @@ namespace Scheduler{
         proc->fileDescriptors.add_back(fs::Open(nullDev));          //(NULL);
         proc->fileDescriptors.add_back(fs::Open(logDev));   //(fs::Open(nullDev));  //(NULL);
         proc->fileDescriptors.add_back(fs::Open(logDev));          //(NULL);
-        proc->state = PROCESS_STATE_ACTIVE;
         proc->threadCount = 1;
         proc->parent = nullptr;
         proc->uid = 0;
@@ -187,6 +186,7 @@ namespace Scheduler{
         thread->timeSliceDefault = 1;
         thread->timeSlice = thread->timeSliceDefault;
         thread->fsBase = 0;
+        thread->state = ThreadStateRunning;
 
         thread->next = nullptr;
         thread->prev = nullptr;
@@ -340,25 +340,21 @@ namespace Scheduler{
         asm("sti");
     }
 
-	void BlockCurrentThread(FastList<thread_t*>& list){
+	void BlockCurrentThread(List<thread_t*>& list, lock_t& lock){
         CPU* cpu = GetCPULocal();
 
+        acquireLock(&lock);
         acquireLock(&cpu->runQueueLock);
-        cpu->currentThread->blocked = true;
+        cpu->currentThread->state = ThreadStateBlocked;
         list.add_back(cpu->currentThread);
-        cpu->runQueue->remove(cpu->currentThread);
+        releaseLock(&lock);
         releaseLock(&cpu->runQueueLock);
 
         Yield();
     }
 
 	void UnblockThread(thread_t* thread){
-        if(thread->blocked){
-            thread->timeSlice = thread->timeSliceDefault;
-            InsertNewThreadIntoQueue(thread);
-        }
-
-        thread->blocked = false;
+        thread->state = ThreadStateRunning;
     }
 
     void Tick(regs64_t* r){
@@ -380,8 +376,13 @@ namespace Scheduler{
         while(__builtin_expect(acquireTestLock(&cpu->runQueueLock), 0)) {
             return;
         }
+        
+        /*if(processes->get_length() > 6) Log::Info("P\"%d\"", cpu->currentThread->parent->pid); /*&& cpu->currentThread->parent->pid == 4){
+            Log::Info("PID %d RIP %x", cpu->currentThread->parent->pid, r->rip);
+        }*/
+
         if (__builtin_expect(cpu->runQueue->get_length() <= 0 || !cpu->runQueue->front, 0)){
-                cpu->currentThread = &cpu->idleProcess->threads[0];
+            cpu->currentThread = &cpu->idleProcess->threads[0];
         } else if(__builtin_expect(cpu->currentThread && cpu->currentThread->parent != cpu->idleProcess, 1)){
             cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
 
@@ -393,6 +394,19 @@ namespace Scheduler{
         } else {
             cpu->currentThread = cpu->runQueue->front;
         }
+            
+        /*if(cpu->currentThread->state == ThreadStateBlocked){
+            thread_t* first = cpu->currentThread;
+
+            do {
+                cpu->currentThread = cpu->currentThread->next;
+            } while(cpu->currentThread->state == ThreadStateBlocked && cpu->currentThread != first);
+
+            if(cpu->currentThread->state == ThreadStateBlocked){
+                cpu->currentThread = &cpu->idleProcess->threads[0];
+            }
+        }*/
+
         releaseLock(&cpu->runQueueLock);
         asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 

@@ -56,8 +56,135 @@ public:
 	}
 };
 
+// Type is required to be a pointer with the members next and prev
+template<typename T>
+class FastList {
+public:
+	FastList()
+	{
+		front = NULL;
+		back = NULL;
+		num = 0;
+	}
+
+	~FastList() {
+	}
+
+	void clear() {
+		front = NULL;
+		back = NULL;
+		num = 0;
+	}
+
+	void add_back(T obj) {
+		if (!front) {
+			front = obj;
+			obj->prev = obj;
+		} else if (back) {
+			back->next = obj;
+			obj->prev = back;
+		}
+		back = obj;
+		obj->next = front;//obj->next = nullptr;
+		num++;
+	}
+
+	void add_front(T obj) {
+		if (!back) {
+			back = obj;
+		}
+		else if(front) {
+			front->prev = obj;
+			obj->next = front;
+		}
+		front = obj;
+		obj->prev = back;
+		num++;
+	}
+
+	T operator[](unsigned pos) {
+		return get_at(pos);
+	}
+
+	T get_at(unsigned pos) {
+		assert(num > 0 && pos < num && front);
+		/*if (num <= 0 || pos >= num || front == NULL) {
+			return nullptr;
+		}*/
+
+		T current = front;
+
+		for (unsigned int i = 0; i < pos && i < num && current->next; i++) current = current->next;
+
+		return current;
+	}
+
+	unsigned get_length() {
+		return num;
+	}
+
+	T remove_at(unsigned pos) {
+		assert(num > 0 && pos < num && front);
+		/*if (num <= 0 || pos >= num || front == NULL){
+			return nullptr;
+		}*/
+
+		T current = front;
+
+		for (unsigned int i = 0; i < pos && current; i++) current = current->next;
+
+		/*if(!current){
+			return nullptr;
+		}*/
+		assert(current);
+
+		if (current->next) current->next->prev = current->prev;
+		if (current->prev) current->prev->next = current->next;
+		if (front == current) front = current->next;
+		if (back == current) back = current->prev;
+
+		if(!(--num)) front = back = nullptr;
+
+		//current->next = current->prev = nullptr;
+
+		return current;
+	}
+
+	void remove(T obj){
+		if (obj->next) obj->next->prev = obj->prev;
+		if (obj->prev) obj->prev->next = obj->next;
+		if (front == obj) front = obj->next;
+		if (back == obj) back = obj->prev;
+
+		--num;
+
+		if(!num) front = back = nullptr;
+	}
+
+	T get_front()
+	{
+		return front;
+	}
+
+	T get_back()
+	{
+		return back;
+	}
+public:
+	T front;
+	T back;
+	unsigned num;
+};
+
 template<typename T>
 class List {
+private:
+	ListNode<T>* front;
+	ListNode<T>* back;
+	unsigned num;
+
+	const int maxCache = 4;
+	FastList<ListNode<T>*> cache; // Prevent allocations by caching ListNodes
 public:
 	volatile int lock = 0;
 	
@@ -90,7 +217,14 @@ public:
 	}
 
 	void add_back(T obj) {
-		ListNode<T>* node = new ListNode<T>();
+		ListNode<T>* node;
+		if(!cache.get_length()){
+			node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
+		} else {
+			node = cache.remove_at(0);
+		}
+
+		*node = ListNode<T>();
 		node->obj = obj;
 		
 		//acquireLock(&lock);
@@ -109,7 +243,13 @@ public:
 	}
 
 	void add_front(T obj) {
-		ListNode<T>* node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
+		ListNode<T>* node;
+		if(!cache.get_length()){
+			node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
+		} else {
+			node = cache.remove_at(0);
+		}
+
 		*node = ListNode<T>();
 		node->obj = obj;
 		node->back = node->front = nullptr;
@@ -198,7 +338,11 @@ public:
 
 		releaseLock(&lock);
 
-		kfree(current);
+		if(cache.get_length() >= maxCache){
+			kfree(current);
+		} else {
+			cache.add_back(current);
+		}
 
 		return obj;
 	}
@@ -224,128 +368,4 @@ public:
 		it.node = nullptr;
 		return it;
 	}
-public:
-	ListNode<T>* front;
-	ListNode<T>* back;
-	unsigned num;
-};
-
-// Type is required to be a pointer with the members next and prev
-template<typename T>
-class FastList {
-public:
-	FastList()
-	{
-		front = NULL;
-		back = NULL;
-		num = 0;
-	}
-
-	~FastList() {
-	}
-
-	void clear() {
-		front = NULL;
-		back = NULL;
-		num = 0;
-	}
-
-	void add_back(T obj) {
-		if (!front) {
-			front = obj;
-			obj->prev = obj;
-		} else if (back) {
-			back->next = obj;
-			obj->prev = back;
-		}
-		back = obj;
-		obj->next = front;//obj->next = nullptr;
-		num++;
-	}
-
-	void add_front(T obj) {
-		if (!back) {
-			back = obj;
-		}
-		else if(front) {
-			front->prev = obj;
-			obj->next = front;
-		}
-		front = obj;
-		obj->prev = back;
-		num++;
-	}
-
-	T operator[](unsigned pos) {
-		return get_at(pos);
-	}
-
-	T get_at(unsigned pos) {
-		assert(num > 0 && pos < num && front);
-		/*if (num <= 0 || pos >= num || front == NULL) {
-			return nullptr;
-		}*/
-
-		T current = front;
-
-		for (unsigned int i = 0; i < pos && i < num && current->next; i++) current = current->next;
-
-		return current;
-	}
-
-	unsigned get_length() {
-		return num;
-	}
-
-	T remove_at(unsigned pos) {
-		assert(num > 0 && pos < num && front);
-		/*if (num <= 0 || pos >= num || front == NULL){
-			return nullptr;
-		}*/
-
-		T current = front;
-
-		for (unsigned int i = 0; i < pos && current; i++) current = current->next;
-
-		/*if(!current){
-			return nullptr;
-		}*/
-		assert(current);
-
-		if (current->next) current->next->prev = current->prev;
-		if (current->prev) current->prev->next = current->next;
-		if (pos == 0) front = current->next;
-		if (pos == --num) back = current->prev;
-
-		if(!num) front = back = nullptr;
-
-		//current->next = current->prev = nullptr;
-
-		return current;
-	}
-
-	void remove(T obj){
-		if (obj->next) obj->next->prev = obj->prev;
-		if (obj->prev) obj->prev->next = obj->next;
-		if (front == obj) front = obj->next;
-		if (back == obj) back = obj->prev;
-
-		--num;
-
-		if(!num) front = back = nullptr;
-	}
-
-	T get_front()
-	{
-		return front->obj;
-	}
-
-	T get_back()
-	{
-		return back->obj;
-	}
-public:
-	T front;
-	T back;
-	unsigned num;
 };

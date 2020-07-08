@@ -49,11 +49,19 @@ namespace Network{
     }
 
     void Intel8254x::WriteMem32(uintptr_t address, uint32_t data){
-        *((uint32_t*)(memBaseVirt + address)) = data;
+        if(useIO){
+            outportl(ioBase + address, data);
+        } else {
+            *((uint32_t*)(memBaseVirt + address)) = data;
+        }
     }
 
     uint32_t Intel8254x::ReadMem32(uintptr_t address){
-        return *((uint32_t*)(memBaseVirt + address));
+        if(useIO){
+            return inportl(ioBase + address);
+        } else {
+            return *((uint32_t*)(memBaseVirt + address));
+        }
     }
 
     uint16_t Intel8254x::ReadEEPROM(uint8_t addr) {
@@ -94,7 +102,14 @@ namespace Network{
 
             UpdateLink();
         } else if(status & 0x80){
-            while(rxDescriptors[rxTail].status & 0x1){
+
+            do {
+                rxTail = ReadMem32(I8254_REGISTER_RDESC_TAIL);
+                if(rxTail == ReadMem32(I8254_REGISTER_RDESC_HEAD)) return;
+                rxTail = (rxTail + 1) % RX_DESC_COUNT;
+
+                if(!(rxDescriptors[rxTail].status & 0x1)) break;
+
                 Log::Info("Recieved Packet");
 
                 rxDescriptors[rxTail].status = 0;
@@ -104,16 +119,11 @@ namespace Network{
                 pack.length = rxDescriptors[rxTail].length;
                 memcpy(pack.data, rxDescriptorsVirt[rxTail], pack.length);
 
-                for(size_t i = 0; i < pack.length; i++){
-                    //Log::Info("Byte: %d, ", ((uint8_t*)pack.data)[i]);
-                }
-
                 queue.add_back(pack);
                 Log::Info("Ethertype: %x", (*((uint16_t*)pack.data + 12)));
 
                 WriteMem32(I8254_REGISTER_RDESC_TAIL, rxTail);
-                rxTail = (rxTail + 1) % TX_DESC_COUNT;
-            }
+            } while(1);
         }
     }
 
@@ -239,7 +249,7 @@ namespace Network{
         memBaseVirt = (void*)Memory::GetIOMapping(memBase);
         hasEEPROM = CheckForEEPROM();
 
-        Log::Info("[i8254x]    Base Address: %x, Base Address (virtual): %x, EEPROM Present: %s, Base Address 1: %x, Base Address 2: %x", device.header0.baseAddress0, memBaseVirt, (hasEEPROM ? "true" : "false"), device.header0.baseAddress1, device.header0.baseAddress2);
+        Log::Info("[i8254x]    Base Address: %x, Base Address (virtual): %x, IO Base: %x, EEPROM Present: %s, Base Address 1: %x, Base Address 2: %x", device.header0.baseAddress0, memBaseVirt, ioBase, (hasEEPROM ? "true" : "false"), device.header0.baseAddress1, device.header0.baseAddress2);
 
         if(!hasEEPROM){
             Log::Error("[i8254x] No EEPROM Present!");

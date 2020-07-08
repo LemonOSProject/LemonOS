@@ -78,6 +78,8 @@ int main(){
         }
 
         win->Paint();
+
+        win->WaitEvent();
     }
 
     delete win;
