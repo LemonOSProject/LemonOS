@@ -325,7 +325,17 @@ namespace Lemon::GUI {
     class ScrollView : public Container{
         ScrollBar sBarVertical;
         ScrollBarHorizontal sBarHorizontal;
+
+        rect_t scrollBounds = {0, 0, 0, 0};
     public:
+        ScrollView(rect_t b) : Container(b) {}
         void Paint(surface_t* surface);
+        void AddWidget(Widget* w);
+
+        void OnMouseDown(vector2i_t mousePos);
+        void OnMouseUp(vector2i_t mousePos);
+        void OnMouseMove(vector2i_t mousePos);
+
+        void UpdateFixedBounds();
     };
 }

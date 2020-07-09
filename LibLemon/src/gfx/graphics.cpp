@@ -178,8 +178,10 @@ namespace Lemon::Graphics{
         }
 
         int rowSize = ((offset.x + src->width) > dest->width) ? dest->width - offset.x : src->width;
-        
+        int rowOffset = 0;
+
         if(offset.x < 0){
+            rowOffset = -offset.x * 4;
             rowSize += offset.x;
             offset.x = 0;
         }
@@ -187,13 +189,14 @@ namespace Lemon::Graphics{
         int i = 0;
 
         if(offset.y < 0){
-            i = -offset.y;
+            i += offset.y;
+            offset.y = 0;
         }
 
         for(int i = 0; i < src->height && i < dest->height - offset.y; i++){
             if(rowSize <= 0) return;
 
-            memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4) + offset.x*4), src->buffer + i*src->width*4, rowSize*4);
+            memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4) + offset.x*4), src->buffer + i*src->width*4 + rowOffset, rowSize*4);
         }
     }
 

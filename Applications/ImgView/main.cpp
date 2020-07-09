@@ -3,20 +3,14 @@
 #include <gui/messagebox.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <lemon/ipc.h>
 #include <gui/filedialog.h>
 
-win_info_t winInfo{
-    .x = 0,
-    .y  = 0,
-    .width = 640,
-    .height = 480,
-    .flags = 0,
-};
+#define IMGVIEW_OPEN 1
 
 Lemon::GUI::Window* window;
 Lemon::GUI::ScrollView* sv;
 Lemon::GUI::Bitmap* imgWidget;
+Lemon::GUI::WindowMenu fileMenu;
 surface_t image;
 
 int LoadImage(char* path){
@@ -37,35 +31,37 @@ int LoadImage(char* path){
     return 0;
 }
 
-void OnOpen(Lemon::GUI::Button* btn){
-    LoadImage(Lemon::GUI::FileDialog("/"));
+void OnWindowCmd(unsigned short cmd, Lemon::GUI::Window* win){
+    if(cmd == IMGVIEW_OPEN){
+        free(image.buffer);
+        if(LoadImage(Lemon::GUI::FileDialog("/"))){
+            exit(-1);
+        }
+        sv->RemoveWidget(imgWidget);
+        delete imgWidget;
+        imgWidget = new Lemon::GUI::Bitmap({{0, 0}, {0, 0}}, &image);
+        sv->AddWidget(imgWidget);
+    }
 }
 
-
 int main(int argc, char** argv){
-    strcpy(winInfo.title, "Image Viewer");
-
-    int ret;
     if(argc > 1){
-        ret = LoadImage(argv[1]);
-    }
-    
-retry:
-    if (argc < 2 || ret) {
-        if(LoadImage(Lemon::GUI::FileDialog("."))) goto retry;
+        if(LoadImage(argv[1])){
+            return -1;
+        }
+    } else if(LoadImage(Lemon::GUI::FileDialog("."))){
+        return -1;
     }
 
-    winInfo.width = image.width + 16;
-    winInfo.height = image.height + 16;
-
-    if(image.width < 100) winInfo.width = 100;
-    if(image.height < 100) winInfo.height = 100;
-    if(image.width > 640) winInfo.width = 640;
-    if(image.height > 480) winInfo.height = 480;
+    fileMenu.first = "File";
+	fileMenu.second.push_back({.id = IMGVIEW_OPEN, .name = std::string("Open...")});
 
     window = new Lemon::GUI::Window("Image Viewer", {800, 500}, 0, Lemon::GUI::WindowType::GUI);
+    window->CreateMenuBar();
+    window->menuBar->items.push_back(fileMenu);
+	window->OnMenuCmd = OnWindowCmd;
 
-    sv = new Lemon::GUI::ScrollView({{0, 0}, {winInfo.width, winInfo.height}});
+    sv = new Lemon::GUI::ScrollView({{0, 0}, {window->GetSize().x, window->GetSize().y}});
     imgWidget = new Lemon::GUI::Bitmap({{0, 0}, {0, 0}}, &image);
 
     sv->AddWidget(imgWidget);
@@ -77,5 +73,8 @@ retry:
 		while(window->PollEvent(ev)){
             window->GUIHandleEvent(ev);
         }
+
+        window->Paint();
+        window->WaitEvent();
 	}
 }

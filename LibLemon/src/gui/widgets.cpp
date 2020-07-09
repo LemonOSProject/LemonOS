@@ -95,6 +95,8 @@ namespace Lemon::GUI {
 
         w->SetParent(this);
         w->window = window;
+        
+        UpdateFixedBounds();
     }
 
     void Container::RemoveWidget(Widget* w){
@@ -318,8 +320,10 @@ namespace Lemon::GUI {
     }
     
     Bitmap::Bitmap(rect_t _bounds, surface_t* surf){
-        bounds = {bounds.pos, (vector2i_t){surf->width, surf->height}};
+        bounds = {_bounds.pos, (vector2i_t){surf->width, surf->height}};
         surface = *surf;
+
+        Widget(bounds);
     }
 
     void Bitmap::Paint(surface_t* surface){
@@ -833,5 +837,82 @@ namespace Lemon::GUI {
         Widget::UpdateFixedBounds();
 
         ResetScrollBar();
+    }
+
+    void ScrollView::Paint(surface_t* surface){
+        for(Widget* w : children){
+            w->Paint(surface);
+        }
+
+        sBarVertical.Paint(surface, fixedBounds.pos + (vector2i_t){fixedBounds.size.x - 16, 0});
+        sBarHorizontal.Paint(surface, fixedBounds.pos + (vector2i_t){0, fixedBounds.size.y - 16});
+    }
+
+    void ScrollView::AddWidget(Widget* w){
+        children.push_back(w);
+
+        w->SetParent(this);
+        w->window = window;
+
+        UpdateFixedBounds();
+    }
+
+    void ScrollView::OnMouseDown(vector2i_t mousePos){
+        if(mousePos.x >= fixedBounds.width - 16){
+            sBarVertical.OnMouseDownRelative(mousePos - (vector2i_t){fixedBounds.width - 16, 0});
+        } else if(mousePos.y >= fixedBounds.height - 16){
+            sBarHorizontal.OnMouseDownRelative(mousePos - (vector2i_t){0, fixedBounds.height - 16});
+        } else for(Widget* w : children){
+            if(Graphics::PointInRect(w->GetFixedBounds(), mousePos)){
+                active = w;
+                w->OnMouseDown(mousePos);
+                break;
+            }
+        }
+    }
+
+    void ScrollView::OnMouseUp(vector2i_t mousePos){
+        sBarHorizontal.pressed = sBarVertical.pressed = false;
+
+        if(active){
+            active->OnMouseUp(mousePos);
+        }
+    }
+
+    void ScrollView::OnMouseMove(vector2i_t mousePos){
+        if(sBarVertical.pressed){
+            sBarVertical.OnMouseMoveRelative(mousePos - (vector2i_t){fixedBounds.width - 16, 0});
+            UpdateFixedBounds();
+        } else if(sBarHorizontal.pressed){
+            sBarHorizontal.OnMouseMoveRelative(mousePos - (vector2i_t){0, fixedBounds.height - 16});
+            UpdateFixedBounds();
+        } else if(active){
+            active->OnMouseMove(mousePos);
+        }
+    }
+
+    void ScrollView::UpdateFixedBounds(){
+        Widget::UpdateFixedBounds();
+
+        rect_t realFixedBounds = fixedBounds;
+        fixedBounds.pos += {-sBarHorizontal.scrollPos, -sBarVertical.scrollPos};
+        fixedBounds.size += {sBarHorizontal.scrollPos, sBarVertical.scrollPos};
+
+        for(Widget* w : children){
+            w->UpdateFixedBounds();
+
+            if(w->GetFixedBounds().width + w->GetFixedBounds().x > scrollBounds.width){
+                scrollBounds.width = w->GetFixedBounds().width + w->GetFixedBounds().x;
+            }
+
+            if(w->GetFixedBounds().height + w->GetFixedBounds().y > scrollBounds.height){
+                scrollBounds.height = w->GetFixedBounds().height + w->GetFixedBounds().y;
+            }
+        }
+
+        fixedBounds = realFixedBounds;
+
+        sBarVertical.ResetScrollBar(fixedBounds.height - 16, scrollBounds.height);
+        sBarHorizontal.ResetScrollBar(fixedBounds.width - 16, scrollBounds.width);
     }
 }
