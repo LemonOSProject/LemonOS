@@ -605,8 +605,6 @@ namespace fs::Ext2{
             strncpy(dirent.name, e2dirent->name, e2dirent->nameLength);
             dirent.name[e2dirent->nameLength] = 0;
             dirent.inode = e2dirent->inode;
-            
-            Log::Info("Adding directory entry: %s (inode %d, type: %d)", dirent.name, dirent.inode, dirent.flags);
 
             entries.add_back(dirent);
 
@@ -683,7 +681,7 @@ namespace fs::Ext2{
             totalOffset += e2dirent->recordLength;
 
             if(blockOffset >= blocksize){
-                if(WriteBlock(GetInodeBlock(currentBlockIndex, ino), buffer)){
+                if(WriteBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
                     Log::Error("[Ext2] WriteDir: Failed to write directory block");
                     error = DiskWriteError;
                     return -1;

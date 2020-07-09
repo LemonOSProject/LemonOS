@@ -2,17 +2,21 @@
 
 The Lemon Operating System
 
-Lemon OS is a 64-bit operating system written in C++.
+Lemon OS is a UNIX-like 64-bit operating system written in C++.
 
 (https://lemonos.org)
+
+![Lemon OS Screenshot](Screenshots/image.png)
+
+### Building
+See [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-OS)
 
 ### Features
 - Symmetric Multiprocessing (SMP)
 - UNIX Domain Sockets
-- Window Manager and Server (LemonWM)
+- Window Manager/Server (LemonWM)
 - Graphical Shell
 - Writable Ext2 Filesystem
-- Readable FAT32 Filesystem
 - IDE and AHCI Driver
 - Dynamic Linking
 - Terminal Emulator w/ 256 colour support
@@ -56,4 +60,3 @@ Lemon OS is a 64-bit operating system written in C++.
 
 ![Lemon OS Screenshot](Screenshots/image3.png)
 ![Lemon OS Screenshot](Screenshots/image2.png)
-![Lemon OS Screenshot](Screenshots/image.png)

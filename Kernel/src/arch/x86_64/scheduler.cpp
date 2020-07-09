@@ -368,7 +368,6 @@ namespace Scheduler{
     }
 
 	void UnblockThread(thread_t* thread){
-        Log::Info("unblocking");
         for(List<thread_t*>* l : thread->waiting){
             l->remove(thread);
         }
