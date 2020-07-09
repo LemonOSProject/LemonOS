@@ -6,21 +6,25 @@
 #include <string.h>
 #include <idt.h>
 
-[[noreturn]] void KernelAssertionFailed(const char* msg, const char* file, int line){
-    asm("cli");
+extern "C"{
 
-	APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
+    [[noreturn]] void KernelAssertionFailed(const char* msg, const char* file, int line){
+        asm("cli");
 
-    unlockSerial();
-    Log::Error("Kernel Assertion Failed (%s) - file: %s, line: %d", msg, file, line);
+        APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
 
-    char buf[16];
-    itoa(line, buf, 10);
+        unlockSerial();
+        Log::Error("Kernel Assertion Failed (%s) - file: %s, line: %d", msg, file, line);
 
-    asm("ud2");
+        char buf[16];
+        itoa(line, buf, 10);
 
-    const char* panic[] = {"Kernel Assertion Failed", msg, "File: ", file, "Line:", buf};
-    KernelPanic(panic, 6);
+        asm("ud2");
 
-    asm("hlt");
+        const char* panic[] = {"Kernel Assertion Failed", msg, "File: ", file, "Line:", buf};
+        KernelPanic(panic, 6);
+
+        asm("hlt");
+    }
+
 }

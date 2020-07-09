@@ -779,7 +779,14 @@ long SysGetCWD(regs64_t* r){
 long SysWaitPID(regs64_t* r){
 	uint64_t pid = r->rbx;
 
-	while(Scheduler::FindProcessByPID(pid)) { asm("hlt"); Scheduler::Yield(); }
+	lock_t unused = 0;
+	process_t* proc = nullptr;
+
+	if(proc = Scheduler::FindProcessByPID(pid)){
+		Scheduler::BlockCurrentThread(proc->blocking, unused);
+	}
+
+	while(proc = Scheduler::FindProcessByPID(pid)) { Scheduler::Yield(); }
 
 	return 0;
 }

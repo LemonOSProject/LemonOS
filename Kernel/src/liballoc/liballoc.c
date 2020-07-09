@@ -1,5 +1,7 @@
 #include <liballoc.h>
 
+#include <assert.h>
+
 /**  Durand's Amazing Super Duper Memory functions.  */
 
 #define VERSION 	"1.1"
@@ -577,7 +579,7 @@ void PREFIX(free)(void *ptr)
 		{
 			l_possibleOverruns += 1;
 #if defined DEBUG || defined INFO
-			kprintf("liballoc: ERROR: Possible 1-3 byte overrun\n");
+			assert(!"liballoc: ERROR: Possible 1-3 byte overrun\n");
 			halt();
 			FLUSH();
 #endif
@@ -587,8 +589,7 @@ void PREFIX(free)(void *ptr)
 		if (min->magic == LIBALLOC_DEAD)
 		{
 #if defined DEBUG || defined INFO
-			kprintf("liballoc: ERROR: multiple PREFIX(free)() attempt \n");
-			asm("int $0x1");
+			assert(!"liballoc: ERROR: multiple PREFIX(free)() attempt \n");
 			halt();
 			FLUSH();
 #endif
@@ -596,7 +597,7 @@ void PREFIX(free)(void *ptr)
 		else
 		{
 #if defined DEBUG || defined INFO
-			kprintf("liballoc: ERROR: Bad PREFIX(free)( %x ) \n");
+			assert(!"liballoc: ERROR: Bad PREFIX(free)( %x ) \n");
 			halt();
 			FLUSH();
 #endif

@@ -768,12 +768,7 @@ namespace fs::Ext2{
         }
 
         for(int i = 0; i < index; i++){
-            if(e2dirent->recordLength == 0) return -2;
-
-            /*char buf[e2dirent->nameLength + 1];
-            strncpy(buf, e2dirent->name, e2dirent->nameLength);
-            buf[e2dirent->nameLength] = 0;
-            Log::Info("Found directory entry: %s", buf);*/
+            if(e2dirent->recordLength == 0) return -ENOENT;
 
             blockOffset += e2dirent->recordLength;
             totalOffset += e2dirent->recordLength;
@@ -783,7 +778,7 @@ namespace fs::Ext2{
 
                 if(currentBlockIndex >= ino.blockCount / (blocksize / 512)){
                     // End of dir
-                    return -2;
+                    return -ENOENT;
                 }
 
                 blockOffset = 0;
@@ -799,8 +794,6 @@ namespace fs::Ext2{
         strncpy(dirent->name, e2dirent->name, e2dirent->nameLength);
         dirent->name[e2dirent->nameLength] = 0; // Null terminate
         dirent->flags = e2dirent->fileType;
-        
-        Log::Info("Found directory entry: %s", dirent->name);
 
         return 0;
     }

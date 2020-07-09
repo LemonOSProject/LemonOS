@@ -5,9 +5,8 @@
 #include <assert.h>
 
 template<typename T>
-class ListNode
+struct ListNode
 {
-public:
 	ListNode* next = nullptr;
 	ListNode* prev = nullptr;
 	T obj;
@@ -36,10 +35,14 @@ public:
 	}
 
 	T& operator*() {
+		assert(node);
+
 		return node->obj;
 	}
 
 	T* operator->() {
+		assert(node);
+
 		return &node->obj;
 	}
 
@@ -52,7 +55,11 @@ public:
 	}
 
 	friend bool operator!=(const ListIterator& l, const ListIterator& r){
-		return !(operator==(l, r));
+		if(l.node != r.node){
+			return true;
+		} else {
+			return false;
+		}
 	}
 };
 
@@ -125,17 +132,11 @@ public:
 
 	T remove_at(unsigned pos) {
 		assert(num > 0 && pos < num && front);
-		/*if (num <= 0 || pos >= num || front == NULL){
-			return nullptr;
-		}*/
 
 		T current = front;
 
 		for (unsigned int i = 0; i < pos && current; i++) current = current->next;
 
-		/*if(!current){
-			return nullptr;
-		}*/
 		assert(current);
 
 		if (current->next) current->next->prev = current->prev;
@@ -144,8 +145,6 @@ public:
 		if (back == current) back = current->prev;
 
 		if(!(--num)) front = back = nullptr;
-
-		//current->next = current->prev = nullptr;
 
 		return current;
 	}
@@ -182,11 +181,11 @@ private:
 	ListNode<T>* front;
 	ListNode<T>* back;
 	unsigned num;
+	volatile int lock = 0;
 
 	const int maxCache = 4;
 	FastList<ListNode<T>*> cache; // Prevent allocations by caching ListNodes
 public:
-	volatile int lock = 0;
 	
 	List()
 	{
@@ -198,6 +197,10 @@ public:
 
 	~List() {
 		clear();
+
+		while(cache.get_length()){
+			kfree(cache.remove_at(0));
+		}
 	}
 
 	void clear() {
@@ -217,6 +220,8 @@ public:
 	}
 
 	void add_back(T obj) {
+		acquireLock(&lock);
+
 		ListNode<T>* node;
 		if(!cache.get_length()){
 			node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
@@ -224,10 +229,8 @@ public:
 			node = cache.remove_at(0);
 		}
 
-		*node = ListNode<T>();
 		node->obj = obj;
-		
-		//acquireLock(&lock);
+		node->next = node->prev = nullptr;
 
 		if (!front) {
 			front = node;
@@ -239,10 +242,12 @@ public:
 		back = node;
 		num++;
 		
-		//releaseLock(&lock);
+		releaseLock(&lock);
 	}
 
 	void add_front(T obj) {
+		acquireLock(&lock);
+
 		ListNode<T>* node;
 		if(!cache.get_length()){
 			node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
@@ -250,11 +255,8 @@ public:
 			node = cache.remove_at(0);
 		}
 
-		*node = ListNode<T>();
 		node->obj = obj;
 		node->back = node->front = nullptr;
-
-		acquireLock(&lock);
 
 		if (!back) {
 			back = node;
@@ -309,11 +311,6 @@ public:
 
 	T remove_at(unsigned pos) {
 		assert(num > 0 && pos < num && front != nullptr);
-		/*if (num <= 0 || pos >= num || front == NULL){
-			T obj; // Need to do something when item not in list
-			memset(&obj, 0, sizeof(T));
-			return obj;
-		}*/
 
 		acquireLock(&lock);
 
@@ -322,12 +319,6 @@ public:
 		for (unsigned int i = 0; i < pos && current; i++) current = current->next;
 
 		assert(current);
-		/*if(!current){
-			T t;
-			memset(&t, 0, sizeof(T));
-			releaseLock(&lock);
-			return t;
-		}*/
 
 		T obj = current->obj;
 
@@ -336,15 +327,44 @@ public:
 		if (pos == 0) front = current->next;
 		if (pos == --num) back = current->prev;
 
-		releaseLock(&lock);
-
 		if(cache.get_length() >= maxCache){
 			kfree(current);
 		} else {
 			cache.add_back(current);
 		}
 
+		releaseLock(&lock);
+
 		return obj;
+	}
+
+	void remove(T val){
+		if(num <= 0 || !front){
+			return;
+		}
+
+		acquireLock(&lock);
+
+		ListNode<T>* current = front;
+
+		while(current && current != back && current->obj != val) current = current->next;
+
+		if(current){
+			current->prev->next = current->next;
+			current->next->prev = current->prev;
+			if (front == current) front = current->next;
+			if (back == current) back = current->prev;
+
+			num--;
+
+			if(cache.get_length() >= maxCache){
+				kfree(current);
+			} else {
+				cache.add_back(current);
+			}
+		}
+
+		releaseLock(&lock);
 	}
 
 	T get_front()
@@ -359,7 +379,13 @@ public:
 
 	ListIterator<T> begin(){
 		ListIterator<T> it;
-		it.node = front;
+
+		if(!num || !front){
+			it.node = nullptr;
+		} else {
+			it.node = front;
+		}
+
 		return it;
 	}
 	

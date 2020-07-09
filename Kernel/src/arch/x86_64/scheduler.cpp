@@ -121,8 +121,8 @@ namespace Scheduler{
     }
 
     process_t* FindProcessByPID(uint64_t pid){
-        for(unsigned i = 0; i < processes->get_length(); i++){
-            if(processes->get_at(i)->pid == pid) return processes->get_at(i);
+        for(process_t* proc : *processes){
+            if(proc->pid == pid) return proc;
         }
 
         return nullptr;
@@ -162,8 +162,10 @@ namespace Scheduler{
         proc->fileDescriptors.clear();
         proc->sharedMemory.clear();
         proc->children.clear();
+        proc->blocking.clear();
 
-        proc->threads = (thread_t*)kmalloc(sizeof(thread_t) * 1);
+        proc->threads = new thread_t;
+        proc->threadCount = 1;
 
         // Reserve 3 file descriptors for stdin, out and err
         FsNode* nullDev = fs::ResolvePath("/dev/null");
@@ -171,7 +173,6 @@ namespace Scheduler{
         proc->fileDescriptors.add_back(fs::Open(nullDev));          //(NULL);
         proc->fileDescriptors.add_back(fs::Open(logDev));   //(fs::Open(nullDev));  //(NULL);
         proc->fileDescriptors.add_back(fs::Open(logDev));          //(NULL);
-        proc->threadCount = 1;
         proc->parent = nullptr;
         proc->uid = 0;
 
@@ -253,12 +254,26 @@ namespace Scheduler{
         }
 
         if(process->parent){
-            for(unsigned i = 0; i < process->parent->children.get_length(); i++){
-                if(process->parent->children[i] == process){
-                    process->parent->children.remove_at(i);
-                    break;
-                }
+            process->parent->children.remove(process);
+        }
+
+        processes->remove(process);
+
+        for(thread_t* t : process->blocking){
+            UnblockThread(t);
+        }
+
+        for(unsigned i = 0; i < process->threadCount; i++){
+            thread_t* thread = &process->threads[i];
+
+            for(List<thread_t*>* queue : thread->waiting){
+                queue->remove(thread);
             }
+            
+            process->threads[i].waiting.clear();
+
+            thread->state = ThreadStateBlocked;
+            thread->timeSlice = thread->timeSliceDefault = 0;
         }
 
         for(unsigned i = 0; i < process->fileDescriptors.get_length(); i++){
@@ -299,7 +314,7 @@ namespace Scheduler{
                 }
             }
             
-            releaseLock(&SMP::cpus[i]->runQueueLock);
+            //releaseLock(&SMP::cpus[i]->runQueueLock);
 
             if(SMP::cpus[i]->currentThread == nullptr){
                 APIC::Local::SendIPI(i, 0, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
@@ -310,20 +325,18 @@ namespace Scheduler{
             asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE)); // If we are using the PML4 of the current process switch to the kernel's
         }
 
-        for(unsigned i = 0; i < processes->get_length(); i++){
-            if(processes->get_at(i) == process)
-                processes->remove_at(i);
-        }
-
         for(unsigned i = 0; i < process->sharedMemory.get_length(); i++){
             Memory::Free4KPages((void*)process->sharedMemory[i].base, process->sharedMemory[i].pageCount, process->addressSpace); // Make sure the physical memory does not get freed
         }
 
         Memory::DestroyAddressSpace(process->addressSpace);
 
+        for(unsigned i = 0; i < process->threadCount; i++){
+            process->threads[i].waiting.~List();
+        }
+
         if(cpu->currentThread->parent == process){
             cpu->currentThread = nullptr; // Force reschedule
-            kfree(process->threads);
             kfree(process);
             releaseLock(&cpu->runQueueLock);
             asm("sti");
@@ -345,8 +358,9 @@ namespace Scheduler{
 
         acquireLock(&lock);
         acquireLock(&cpu->runQueueLock);
-        cpu->currentThread->state = ThreadStateBlocked;
         list.add_back(cpu->currentThread);
+        cpu->currentThread->state = ThreadStateBlocked;
+        cpu->currentThread->waiting.add_back(&list);
         releaseLock(&lock);
         releaseLock(&cpu->runQueueLock);
 
@@ -354,6 +368,11 @@ namespace Scheduler{
     }
 
 	void UnblockThread(thread_t* thread){
+        Log::Info("unblocking");
+        for(List<thread_t*>* l : thread->waiting){
+            l->remove(thread);
+        }
+
         thread->state = ThreadStateRunning;
     }
 
@@ -376,10 +395,6 @@ namespace Scheduler{
         while(__builtin_expect(acquireTestLock(&cpu->runQueueLock), 0)) {
             return;
         }
-        
-        /*if(processes->get_length() > 6) Log::Info("P\"%d\"", cpu->currentThread->parent->pid); /*&& cpu->currentThread->parent->pid == 4){
-            Log::Info("PID %d RIP %x", cpu->currentThread->parent->pid, r->rip);
-        }*/
 
         if (__builtin_expect(cpu->runQueue->get_length() <= 0 || !cpu->runQueue->front, 0)){
             cpu->currentThread = &cpu->idleProcess->threads[0];
@@ -395,7 +410,7 @@ namespace Scheduler{
             cpu->currentThread = cpu->runQueue->front;
         }
             
-        /*if(cpu->currentThread->state == ThreadStateBlocked){
+        if(cpu->currentThread->state == ThreadStateBlocked){
             thread_t* first = cpu->currentThread;
 
             do {
@@ -405,7 +420,7 @@ namespace Scheduler{
             if(cpu->currentThread->state == ThreadStateBlocked){
                 cpu->currentThread = &cpu->idleProcess->threads[0];
             }
-        }*/
+        }
 
         releaseLock(&cpu->runQueueLock);
         asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");

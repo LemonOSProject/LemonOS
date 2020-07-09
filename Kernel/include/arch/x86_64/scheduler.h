@@ -13,6 +13,7 @@ enum {
 };
 
 struct process;
+struct thread;
 
 typedef void* handle_t;
 typedef uint64_t pid_t;
@@ -40,6 +41,8 @@ typedef struct thread {
 	uint8_t state; // Thread state
 
 	uint64_t fsBase;
+
+	List<List<thread*>*> waiting; // Thread is waiting in these queues
 } thread_t;
 
 typedef struct {
@@ -66,6 +69,7 @@ typedef struct process {
 
 	List<fs_fd_t*> fileDescriptors;
 	List<message_t> messageQueue;
+	List<thread_t*> blocking; // Threads blocking awaiting a state change
 } process_t;
 
 namespace Scheduler{
