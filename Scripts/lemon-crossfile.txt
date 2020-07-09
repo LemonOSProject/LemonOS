@@ -12,4 +12,4 @@ cpu = 'x86_64'
 endian = 'little'
 
 [paths]
-prefix = '~/.local/share/lemon/sysroot'
+prefix = '~/.local/share/lemon/sysroot/system'

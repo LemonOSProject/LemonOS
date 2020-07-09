@@ -1,15 +1,23 @@
+SPATH=$(dirname $(readlink -f "$0"))
+
+cd $SPATH/..
+export LEMONDIR=$(pwd)
+cd $SPATH
+
+export JOBCOUNT=$(nproc)
+
 _unpack_binutils(){
-    wget "ftpmirror.gnu.org/binutils/binutils-2.32.tar.gz"
+    wget "http://ftpmirror.gnu.org/binutils/binutils-2.32.tar.gz"
     tar -xzvf binutils-2.32.tar.gz
  	export BINUTILS_SRC_DIR=binutils-2.32
  	rm binutils-2.32.tar.gz
 }
 
 _unpack_gcc(){
-    wget "http://ftpmirror.gnu.org/gcc/gcc-8.2.0/gcc-8.2.0.tar.gz"
-    tar -xzvf gcc-8.2.0.tar.gz
- 	export GCC_SRC_DIR=gcc-8.2.0
- 	rm gcc-8.2.0.tar.gz
+    wget "http://ftpmirror.gnu.org/gcc/gcc-10.1.0/gcc-10.1.0.tar.gz"
+    tar -xzvf gcc-10.1.0.tar.gz
+ 	export GCC_SRC_DIR=gcc-10.1.0
+ 	rm gcc-10.1.0.tar.gz
 }
 
 _build_binutils(){
@@ -20,18 +28,20 @@ _build_binutils(){
     automake
     cd ..
     ./configure --target=x86_64-lemon --prefix=$TOOLCHAIN_PREFIX --with-sysroot=$LEMON_SYSROOT --disable-werror --enable-shared
-    make -j5
+    make -j $JOBCOUNT
     make install
 }
 
 _build_gcc(){
 	mkdir build-gcc
     cd $GCC_SRC_DIR
-    patch -p1 < ../lemon-gcc-8.2.0.patch
+    patch -p1 < ../lemon-gcc-10.1.0.patch
     cd ../build-gcc
     ../$GCC_SRC_DIR/configure --target=x86_64-lemon --prefix=$TOOLCHAIN_PREFIX --with-sysroot=$LEMON_SYSROOT --enable-languages=c,c++ --enable-shared
-    make all-gcc all-target-libgcc $JOBCOUNT
+    make all-gcc all-target-libgcc -j $JOBCOUNT
     make install-gcc install-target-libgcc
+    
+    cp $TOOLCHAIN_PREFIX/x86_64-lemon/lib/*.so* $LEMON_SYSROOT/system/lib/
 }
 
 _build_libstdcpp(){
@@ -39,13 +49,27 @@ _build_libstdcpp(){
 	autoconf
 	cd ../../
     cd build-gcc
-    make all-target-libstdc++-v3 $JOBCOUNT
+    make all-target-libstdc++-v3 -j $JOBCOUNT
     make install-target-libstdc++-v3
 }
 
 _binutils(){
     _unpack_binutils
     _build_binutils
+}
+
+_prepare(){
+	mkdir -p $LEMON_SYSROOT/system
+	mkdir -p $LEMON_SYSROOT/system/include
+	mkdir -p $LEMON_SYSROOT/system/lib
+	mkdir -p $LEMON_SYSROOT/system/bin
+	
+	cd $LEMONDIR/LibC
+	meson build --cross $LEMONDIR/Scripts/lemon-crossfile.txt -Dheaders_only=true
+	meson install -Cbuild
+	rm -rf build
+	
+	cd $SPATH
 }
 
 _gcc(){
@@ -57,6 +81,17 @@ _libstdcpp(){
     _build_libstdcpp
 }
 
+_build(){
+	_prepare
+	cd $SPATH
+	_binutils
+	cd $SPATH
+	_gcc
+	cd $SPATH
+	
+	echo "Binutils and GCC have been built, after the C library has been built run \"$0 libstdcpp\""
+}
+
 if [ -z "$LEMON_SYSROOT" -o -z "$TOOLCHAIN_PREFIX" ]; then
     export TOOLCHAIN_PREFIX=$HOME/.local/share/lemon
     export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
@@ -64,14 +99,9 @@ if [ -z "$LEMON_SYSROOT" -o -z "$TOOLCHAIN_PREFIX" ]; then
     read
 fi
 
-if [ -z "$JOBCOUNT" ]; then
-	echo "Set \$JOBCOUNT to parallelize build, setting to -j1"
-	export JOBCOUNT="-j1"
-	read
-fi
-
 if [ -z "$1" ]; then
-    echo "Usage: $0 (binutils/gcc/libstdcpp)"
+    echo "Usage: $0 (prepare/binutils/gcc/libstdcpp/build)"
 else
+	cd $SPATH
     _$1
 fi

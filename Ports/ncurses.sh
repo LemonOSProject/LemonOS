@@ -8,7 +8,7 @@ unpack(){
 buildp(){
  	cd $BUILD_DIR
  	patch -p1 < ../lemon-ncurses-6.2.patch
- 	./configure --prefix=/initrd/ --host=x86_64-lemon --with-termlib --without-ada
+ 	./configure --prefix=$LEMON_PREFIX --host=x86_64-lemon --with-termlib --without-ada
  	make -j$JOBCOUNT
  	make install DESTDIR=$LEMON_SYSROOT
 }

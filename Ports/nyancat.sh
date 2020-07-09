@@ -7,5 +7,5 @@ buildp(){
  	cd $BUILD_DIR
  	export CC=x86_64-lemon-gcc
  	make -j$JOBCOUNT
-	cp src/nyancat $LEMON_SYSROOT/bin/nyancat.lef
+	cp src/nyancat $LEMON_PREFIX/bin/nyancat.lef
 }

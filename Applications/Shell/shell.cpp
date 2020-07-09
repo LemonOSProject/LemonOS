@@ -1,6 +1,7 @@
 #include <core/shell.h>
 #include <core/msghandler.h>
 #include <string.h>
+#include <stdexcept>
 
 #include "shell.h"
 

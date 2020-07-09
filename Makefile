@@ -25,6 +25,21 @@ base: applications
 disk: kernel initrd base
 	Scripts/build-nix/copytodisk.sh
 	
+clean:
+	ninja -C LibC/build clean
+	ninja -C LibLemon/build clean
+	ninja -C Applications/build clean
+	ninja -C Kernel/build clean
+	rm -rf Base/*
+	rm -rf Initrd/*
+	rm initrd.tar
+	
+cleanall:
+	rm -rf LibC/build LibLemon/build Applications/build Kernel/build
+	rm -rf Base/*
+	rm -rf Initrd/*
+	rm initrd.tar
+	
 run:
 	Scripts/run.sh
 

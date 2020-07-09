@@ -1,0 +1,121 @@
+diff -ruN gcc-10.1.0/config.sub lemon-gcc/config.sub
+--- gcc-10.1.0/config.sub	2020-05-07 20:49:58.000000000 +1000
++++ lemon-gcc/config.sub	2020-07-09 12:13:29.776276293 +1000
+@@ -1364,7 +1364,7 @@
+ 	     | morphos* | superux* | rtmk* | windiss* \
+ 	     | powermax* | dnix* | nx6 | nx7 | sei* | dragonfly* \
+ 	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
+-	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
++	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* | lemon* \
+ 	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
+ 	     | nsk* | powerunix)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+diff -ruN gcc-10.1.0/fixincludes/mkfixinc.sh lemon-gcc/fixincludes/mkfixinc.sh
+--- gcc-10.1.0/fixincludes/mkfixinc.sh	2020-05-07 20:49:59.000000000 +1000
++++ lemon-gcc/fixincludes/mkfixinc.sh	2020-07-09 12:14:01.986037784 +1000
+@@ -19,6 +19,7 @@
+     powerpc-*-rtems*   | \
+     powerpcle-*-eabisim* | \
+     powerpcle-*-eabi* | \
++    *-lemon* | \
+     *-*-vxworks7* | \
+     *-musl* )
+ 	#  IF there is no include fixing,
+diff -ruN gcc-10.1.0/gcc/config/lemon.h lemon-gcc/gcc/config/lemon.h
+--- gcc-10.1.0/gcc/config/lemon.h	1970-01-01 10:00:00.000000000 +1000
++++ lemon-gcc/gcc/config/lemon.h	2020-07-09 12:31:34.960948232 +1000
+@@ -0,0 +1,34 @@
++/* Useful if you wish to make target-specific GCC changes. */
++#undef TARGET_LEMON
++#define TARGET_LEMON 1
++ 
++/* Default arguments you want when running your
++   i686-myos-gcc/x86_64-myos-gcc toolchain */
++#undef LIB_SPEC
++#define LIB_SPEC "-lc" /* link against C standard library */
++ 
++/* Files that are linked before user code.
++   The %s tells GCC to look for these files in the library directory. */
++#undef STARTFILE_SPEC
++#define STARTFILE_SPEC "%{!shared:crt0.o%s} crti.o%s %{shared:crtbeginS.o%s;:crtbegin.o%s}"
++ 
++/* Files that are linked after user code. */
++#undef ENDFILE_SPEC
++#define ENDFILE_SPEC "%{shared:crtendS.o%s;:crtend.o%s} crtn.o%s"
++
++#undef LINK_SPEC
++#define LINK_SPEC "%{shared:-shared} %{static:-static} %{!shared: %{!static: %{rdynamic:-export-dynamic}}}"
++
++#undef STANDARD_STARTFILE_PREFIX
++#define STANDARD_STARTFILE_PREFIX "/system/lib/"
++ 
++/* Additional predefined macros. */
++#undef TARGET_OS_CPP_BUILTINS
++#define TARGET_OS_CPP_BUILTINS()      \
++  do {                                \
++    builtin_define ("__lemon__");      \
++    builtin_define ("__unix__");      \
++    builtin_assert ("system=lemon");   \
++    builtin_assert ("system=unix");   \
++    builtin_assert ("system=posix");   \
++  } while(0); 
+diff -ruN gcc-10.1.0/gcc/config.gcc lemon-gcc/gcc/config.gcc
+--- gcc-10.1.0/gcc/config.gcc	2020-05-07 20:49:59.000000000 +1000
++++ lemon-gcc/gcc/config.gcc	2020-07-09 12:22:40.733775677 +1000
+@@ -773,6 +773,15 @@
+   esac
+   use_gcc_stdint=wrap
+   ;;
++*-*-lemon*)
++  extra_options="$extra_options gnu-user.opt"
++  gas=yes
++  gnu_ld=yes
++  default_use_cxa_atexit=yes
++  use_gcc_stdint=wrap
++  tmake_file="${tmake_file} t-slibgcc"
++  native_system_header_dir=/system/include
++  ;;
+ *-*-fuchsia*)
+   native_system_header_dir=/include
+   ;;
+@@ -1913,6 +1922,9 @@
+ 	gas=yes
+ 	gnu_ld=yes
+ 	;;
++x86_64-*-lemon*)
++    tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h glibc-stdint.h i386/i386elf.h i386/x86-64.h gnu-user.h i386/gnu-user-common.h i386/gnu-user64.h lemon.h"
++    ;;
+ i[34567]86-*-linux* | i[34567]86-*-kfreebsd*-gnu | i[34567]86-*-gnu* | i[34567]86-*-kopensolaris*-gnu)
+ 			# Intel 80386's running GNU/*
+ 			# with ELF format using glibc 2
+diff -ruN gcc-10.1.0/libgcc/config.host lemon-gcc/libgcc/config.host
+--- gcc-10.1.0/libgcc/config.host	2020-05-07 20:50:02.000000000 +1000
++++ lemon-gcc/libgcc/config.host	2020-07-09 12:24:48.942844645 +1000
+@@ -708,6 +708,10 @@
+ 	    ;;
+ 	esac
+ 	;;
++x86_64-*-lemon*)
++	extra_parts="$extra_parts crti.o crtbegin.o crtbeginS.o crtend.o crtendS.o crtn.o"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic t-slibgcc t-slibgcc-gld t-slibgcc-elf-ver t-libgcc-pic"
++	;;
+ x86_64-*-fuchsia*)
+ 	tmake_file="$tmake_file t-libgcc-pic"
+ 	;;
+diff -ruN gcc-10.1.0/libstdc++-v3/crossconfig.m4 lemon-gcc/libstdc++-v3/crossconfig.m4
+--- gcc-10.1.0/libstdc++-v3/crossconfig.m4	2020-05-07 20:50:02.000000000 +1000
++++ lemon-gcc/libstdc++-v3/crossconfig.m4	2020-07-09 12:26:10.229750757 +1000
+@@ -136,6 +136,13 @@
+     AC_SUBST(SECTION_FLAGS)
+     ;;
+ 
++  *-lemon*)
++    GLIBCXX_CHECK_COMPILER_FEATURES
++    GLIBCXX_CHECK_LINKER_FEATURES
++    GLIBCXX_CHECK_MATH_SUPPORT
++    GLIBCXX_CHECK_STDLIB_SUPPORT
++    ;;
++
+   *-hpux*)
+     SECTION_FLAGS='-ffunction-sections -fdata-sections'
+     AC_SUBST(SECTION_FLAGS)

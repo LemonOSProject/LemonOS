@@ -1,1 +1,0 @@
-./a.out initrd-x86_64.img Contents/*

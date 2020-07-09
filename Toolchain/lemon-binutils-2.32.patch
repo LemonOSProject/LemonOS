@@ -62,7 +62,7 @@ diff -ruN binutils-2.32/ld/configure.tgt lemon-binutils/ld/configure.tgt
    ;;
  
 +*-*-lemon*)
-+  NATIVE_LIB_DIRS='/lib /sys/lib'
++  NATIVE_LIB_DIRS='/lib /system/lib'
 +  ;;
 +
  *-*-freebsd*)

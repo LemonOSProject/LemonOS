@@ -8,10 +8,7 @@ if ! [ -x "$(command -v x86_64-lemon-gcc)" ]; then
 	exit 1
 fi
 
-cd LibC
-meson build --cross $SPATH/lemon-crossfile.txt
-
-cd ../LibLemon
+cd LibLemon
 meson build --cross $SPATH/lemon-crossfile.txt
 
 cd ../Applications
@@ -20,7 +17,7 @@ meson build --cross $SPATH/lemon-crossfile.txt
 cd ../Kernel
 meson build --cross $SPATH/lemon-crossfile.txt
 
-if [ -z "$LEMON_SYSROOT" -o -z "$TOOLCHAIN_PREFIX" ]; then
+if [ -z "$LEMON_SYSROOT" ]; then
     export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
     echo "LEMON_SYSROOT not set, continuing will use defaults:\n$LEMON_SYSROOT\n"
     read

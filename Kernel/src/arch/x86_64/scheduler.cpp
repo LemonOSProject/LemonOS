@@ -38,7 +38,7 @@ namespace Scheduler{
     uint64_t handleCount = 1; // We don't want null handles
     uint32_t handleTableSize = INITIAL_HANDLE_TABLE_SIZE;
     
-    void Schedule(regs64_t* r);
+    [[noreturn]] void Schedule(regs64_t* r);
     
     inline void InsertThreadIntoQueue(thread_t* thread){
         GetCPULocal()->runQueue->add_back(thread);

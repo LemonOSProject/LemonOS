@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 #pragma GCC push_options
-#pragma GCC optimize ("O2")
+#pragma GCC optimize ("O1")
 
 void reverse(char *str, int length)
 {

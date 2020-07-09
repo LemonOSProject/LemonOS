@@ -70,7 +70,6 @@ namespace Memory{
 		return address;
 	}
 
-
 	void InitializeVirtualMemory()
 	{
 		IDT::RegisterInterruptHandler(14,PageFaultHandler);
