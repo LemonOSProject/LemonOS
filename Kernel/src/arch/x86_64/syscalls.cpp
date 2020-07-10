@@ -230,7 +230,7 @@ long SysOpen(regs64_t* r){
 
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	Log::Info("Opening: %s", filepath);
+	//Log::Info("Opening: %s", filepath);
 	long fd;
 	if(strcmp(filepath,"/") == 0){
 		fd = proc->fileDescriptors.get_length();
@@ -1003,7 +1003,6 @@ long SysSocket(regs64_t* r){
 	int protocol = r->rdx;
 
 	Socket* sock = Socket::CreateSocket(domain, type, protocol);
-	Log::Info("Socket: Domain: %d", sock->GetDomain());
 
 	if(!sock) return -1;
 	

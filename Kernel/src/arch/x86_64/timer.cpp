@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include <timer.h>
 #include <idt.h>
 #include <scheduler.h>
 #include <system.h>
@@ -6,8 +6,8 @@
 
 namespace Timer{
     uint32_t frequency; // Timer frequency
-    uint32_t ticks; // Timer tick counter
-    uint64_t uptime; // System uptime in seconds since the timer was initialized
+    int ticks = 0; // Timer tick counter
+    long long uptime; // System uptime in seconds since the timer was initialized
 
     uint64_t GetSystemUptime(){
         return uptime;
@@ -19,6 +19,20 @@ namespace Timer{
 
     uint32_t GetFrequency(){
         return frequency;
+    }
+
+    timeval_t GetSystemUptimeStruct(){
+        timeval_t tval;
+        tval.seconds = uptime;
+        tval.milliseconds = ticks * 1000 / frequency;
+        return tval;
+    }
+
+    int TimeDifference(timeval_t& newTime, timeval_t& oldTime){
+        long seconds = newTime.seconds - oldTime.seconds;
+        int milliseconds = newTime.milliseconds - oldTime.milliseconds;
+
+        return seconds * 1000 + milliseconds;
     }
 
     // Timer handler

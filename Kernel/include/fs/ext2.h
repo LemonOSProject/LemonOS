@@ -3,6 +3,7 @@
 #include <device.h>
 #include <hash.h>
 #include <lock.h>
+#include <vector.h>
 
 #include <stdint.h>
 
@@ -274,6 +275,7 @@ namespace fs::Ext2{
         void WriteBlockGroupDescriptor(uint32_t index);
         
         uint32_t GetInodeBlock(uint32_t index, ext2_inode_t& inode);
+        Vector<uint32_t> GetInodeBlocks(uint32_t index, uint32_t count, ext2_inode_t& inode);
         void SetInodeBlock(uint32_t index, ext2_inode_t& inode, uint32_t block);
 
         int ReadInode(uint32_t num, ext2_inode_t& inode);

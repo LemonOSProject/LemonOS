@@ -47,7 +47,7 @@ void KernelProcess(){
 	Network::InitializeDrivers();
 	Network::InitializeConnections();
 
-	asm("sti");
+	asm("cli");
 
 	Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 

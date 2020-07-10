@@ -185,6 +185,78 @@ namespace fs::Ext2{
             return 0;
         }
     }
+
+    Vector<uint32_t> Ext2Volume::GetInodeBlocks(uint32_t index, uint32_t count, ext2_inode_t& ino){
+        uint32_t blocksPerPointer = blocksize / sizeof(uint32_t); // Amount of blocks in a indirect block table
+        uint32_t singlyIndirectStart = EXT2_DIRECT_BLOCK_COUNT;
+        uint32_t doublyIndirectStart = singlyIndirectStart + blocksPerPointer;
+        uint32_t triplyIndirectStart = doublyIndirectStart + blocksPerPointer * blocksPerPointer;
+
+        assert(index + count < triplyIndirectStart + blocksPerPointer * blocksPerPointer * blocksPerPointer); // Make sure that an invalid index was not passed
+
+        int i = index;
+        Vector<uint32_t> blocks;
+
+        while(i < EXT2_DIRECT_BLOCK_COUNT && i < index + count){
+            // Index lies within the direct blocklist
+            blocks.add_back(ino.blocks[i++]);
+        }
+        
+        if(i < doublyIndirectStart && i < index + count){
+            // Index lies within the singly indirect blocklist
+            uint32_t buffer[blocksize / sizeof(uint32_t)];
+
+            if(int e = ReadBlockCached(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)){
+                error = DiskReadError;
+
+                blocks.clear();
+                return blocks;
+            }
+
+            while(i < doublyIndirectStart && i < index + count){
+                blocks.add_back(buffer[(i++) - singlyIndirectStart]);
+            }
+        }
+        
+        if(i < triplyIndirectStart && i < index + count){
+            // Index lies within the doubly indirect blocklist
+            uint32_t blockPointers[blocksize / sizeof(uint32_t)];
+            uint32_t buffer[blocksize / sizeof(uint32_t)];
+
+            if(int e = ReadBlockCached(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)){
+                error = DiskReadError;
+
+                blocks.clear();
+                return blocks;
+            }
+
+            while(i < triplyIndirectStart && i < index + count){
+                uint32_t blockPointer = blockPointers[(i - doublyIndirectStart) / blocksPerPointer];
+
+                if(int e = ReadBlockCached(blockPointer, buffer)){
+                    error = DiskReadError;
+
+                    blocks.clear();
+                    return blocks;
+                }
+
+                uint32_t blockPointerEnd = i + (blocksPerPointer - (i - doublyIndirectStart) % blocksPerPointer);
+                while(i < blockPointerEnd && i < index + count){
+                    blocks.add_back(buffer[(i - doublyIndirectStart) % blocksPerPointer]);
+                    i++;
+                }
+            }
+        } 
+        
+        if(i < index + count) {
+            assert(!"Yet to support triply indirect");
+
+            blocks.clear();
+            return blocks;
+        }
+
+        return blocks;
+    }
     
     void Ext2Volume::SetInodeBlock(uint32_t index, ext2_inode_t& ino, uint32_t block){
         uint32_t blocksPerPointer = blocksize / sizeof(uint32_t); // Amount of blocks in a indirect block table
@@ -897,9 +969,10 @@ namespace fs::Ext2{
         //Log::Info("[Ext2] Reading: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockCount, offset, size);
 
         ssize_t ret = size;
+        Vector<uint32_t> blocks = GetInodeBlocks(blockIndex, blockLimit - blockIndex + 1, node->e2inode);
 
-        for(; blockIndex <= blockLimit && size > 0; blockIndex++){
-            uint32_t block = GetInodeBlock(blockIndex, node->e2inode);
+        for(uint32_t block : blocks){
+            if(size <= 0) break;
             
             if(offset % blocksize){
                 if(ReadBlockCached(block, blockBuffer)){
@@ -940,7 +1013,7 @@ namespace fs::Ext2{
         }
 
         if(size){
-            //Log::Info("[Ext2] Requested %d bytes, read %d bytes (offset: %d)", ret, ret - size, offset);
+            Log::Info("[Ext2] Requested %d bytes, read %d bytes (offset: %d)", ret, ret - size, offset);
             return ret - size;
         }
 

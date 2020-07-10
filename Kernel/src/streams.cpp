@@ -117,6 +117,8 @@ int64_t DataStream::Empty(){
 }
 
 void DataStream::Wait(){
+    if(!Empty()) return;
+    
     Scheduler::BlockCurrentThread(waiting, streamLock);
 
     while(Empty()){

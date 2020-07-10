@@ -35,7 +35,7 @@ class HashMap{
 	};
 
 	List<KeyValuePair>* buckets;
-	int bucketCount = 1024;
+	int bucketCount = 2048;
 
 public:
 	HashMap(){

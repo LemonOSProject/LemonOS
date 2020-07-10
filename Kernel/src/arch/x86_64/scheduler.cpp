@@ -16,6 +16,7 @@
 #include <lock.h>
 #include <smp.h>
 #include <apic.h>
+#include <timer.h>
 
 #define INITIAL_HANDLE_TABLE_SIZE 0xFFFF
 
@@ -360,7 +361,7 @@ namespace Scheduler{
         acquireLock(&cpu->runQueueLock);
         list.add_back(cpu->currentThread);
         cpu->currentThread->state = ThreadStateBlocked;
-        cpu->currentThread->waiting.add_back(&list);
+        //cpu->currentThread->waiting.add_back(&list);
         releaseLock(&lock);
         releaseLock(&cpu->runQueueLock);
 
@@ -368,11 +369,11 @@ namespace Scheduler{
     }
 
 	void UnblockThread(thread_t* thread){
-        for(List<thread_t*>* l : thread->waiting){
-            l->remove(thread);
-        }
-
         thread->state = ThreadStateRunning;
+
+        /*for(List<thread_t*>* l : thread->waiting){
+            l->remove(thread);
+        }*/
     }
 
     void Tick(regs64_t* r){
@@ -449,17 +450,12 @@ namespace Scheduler{
         elf_info_t elfInfo = LoadELFSegments(proc, elf, 0);
         
         thread->registers.rip = elfInfo.entry;
-
+        
         if(elfInfo.linkerPath){
             char* linkPath = elfInfo.linkerPath;
             uintptr_t linkerBaseAddress = 0x7FC0000000; // Linker base address
 
-            char temp[32];
-            strcpy(temp, "/initrd/ld.so");
-            FsNode* node = fs::ResolvePath(temp);
-            
-            Log::Info("Dynamic Linker: ");
-            Log::Write(node->name);
+            FsNode* node = fs::ResolvePath("/initrd/ld.so");
 
             void* linkerElf = kmalloc(node->size);
 
@@ -475,6 +471,8 @@ namespace Scheduler{
             elf_info_t linkerELFInfo = LoadELFSegments(proc, linkerElf, linkerBaseAddress);
 
             thread->registers.rip = linkerELFInfo.entry;
+
+            kfree(linkerElf);
         }
 
         char** tempArgv = (char**)kmalloc(argc * sizeof(char*));
@@ -560,9 +558,7 @@ namespace Scheduler{
         thread->registers.rbp = (uintptr_t) stack;
         
         assert(!(thread->registers.rsp & 0xF));
-
-        Log::Info("Entry: %x, Stack: %x", thread->registers.rip, stack);
-
+        
         processes->add_back(proc);
 
         InsertNewThreadIntoQueue(&proc->threads[0]);
