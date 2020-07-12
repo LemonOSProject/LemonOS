@@ -10,5 +10,5 @@ buildp(){
  	export CC=x86_64-lemon-gcc
  	./configure --prefix=$LEMON_PREFIX --static
  	make -j$JOBCOUNT
- 	make install
+ 	make install DESTDIR=$LEMON_SYSROOT
 }

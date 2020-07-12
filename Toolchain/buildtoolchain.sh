@@ -6,17 +6,18 @@ cd $SPATH
 
 export JOBCOUNT=$(nproc)
 
+export BINUTILS_SRC_DIR=binutils-2.32
+export GCC_SRC_DIR=gcc-10.1.0
+ 	
 _unpack_binutils(){
     wget "http://ftpmirror.gnu.org/binutils/binutils-2.32.tar.gz"
     tar -xzvf binutils-2.32.tar.gz
- 	export BINUTILS_SRC_DIR=binutils-2.32
  	rm binutils-2.32.tar.gz
 }
 
 _unpack_gcc(){
     wget "http://ftpmirror.gnu.org/gcc/gcc-10.1.0/gcc-10.1.0.tar.gz"
     tar -xzvf gcc-10.1.0.tar.gz
- 	export GCC_SRC_DIR=gcc-10.1.0
  	rm gcc-10.1.0.tar.gz
 }
 
@@ -26,6 +27,7 @@ _build_binutils(){
     cd ld
     aclocal
     automake
+    autoreconf
     cd ..
     ./configure --target=x86_64-lemon --prefix=$TOOLCHAIN_PREFIX --with-sysroot=$LEMON_SYSROOT --disable-werror --enable-shared
     make -j $JOBCOUNT
@@ -81,6 +83,10 @@ _libstdcpp(){
     _build_libstdcpp
 }
 
+_clean(){
+	rm -rf $GCC_SRC_DIR $BINUTILS_SRC_DIR *.tar.*
+}
+
 _build(){
 	_prepare
 	cd $SPATH
@@ -100,7 +106,7 @@ if [ -z "$LEMON_SYSROOT" -o -z "$TOOLCHAIN_PREFIX" ]; then
 fi
 
 if [ -z "$1" ]; then
-    echo "Usage: $0 (prepare/binutils/gcc/libstdcpp/build)"
+    echo "Usage: $0 (clean/prepare/binutils/gcc/libstdcpp/build)"
 else
 	cd $SPATH
     _$1

@@ -203,16 +203,16 @@ namespace fs::tar{
     int TarVolume::ReadDir(TarNode* node, DirectoryEntry* dirent, uint32_t index){
         TarNode* tarNode = &nodes[node->inode];
         
-        if(!(node->flags & FS_NODE_DIRECTORY)) return -1;
+        if(!(node->flags & FS_NODE_DIRECTORY)) return -ENOTDIR;
 
-        if(index >= tarNode->entryCount + 2) return -2;
+        if(index >= tarNode->entryCount + 2) return 0;
 
         if(index == 0){
             strcpy(dirent->name, ".");
-            return 0;
+            return 1;
         } else if(index == 1){
             strcpy(dirent->name, "..");
-            return 0;
+            return 1;
         }
 
         TarNode* dir = &nodes[tarNode->children[index - 2]];
@@ -221,7 +221,7 @@ namespace fs::tar{
         dirent->flags = dir->flags;
         dirent->node = dir;
 
-        return 0;
+        return 1;
     }
 
     FsNode* TarVolume::FindDir(TarNode* node, char* name){

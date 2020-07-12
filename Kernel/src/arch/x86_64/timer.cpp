@@ -7,7 +7,7 @@
 namespace Timer{
     uint32_t frequency; // Timer frequency
     int ticks = 0; // Timer tick counter
-    long long uptime; // System uptime in seconds since the timer was initialized
+    long long uptime = 0; // System uptime in seconds since the timer was initialized
 
     uint64_t GetSystemUptime(){
         return uptime;

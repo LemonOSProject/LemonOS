@@ -209,7 +209,7 @@ namespace fs::FAT32{
         }
 
         if(dirEntryIndex == -1){
-            return -2;
+            return 0;
         }
 
         lfnEntries = (fat_lfn_entry_t**)kmalloc(sizeof(fat_lfn_entry_t*) * lfnCount);
@@ -234,7 +234,7 @@ namespace fs::FAT32{
         if(dirEntry->attributes & FAT_ATTR_DIRECTORY) dirent->flags = FS_NODE_DIRECTORY;
         else dirent->flags = FS_NODE_FILE;
 
-        return 0;
+        return 1;
     }
 
     FsNode* Fat32Volume::FindDir(Fat32Node* node, char* name){

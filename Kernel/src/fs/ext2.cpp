@@ -3,6 +3,7 @@
 #include <logging.h>
 #include <errno.h>
 #include <assert.h>
+#include <timer.h>
 
 namespace fs::Ext2{
     int Identify(PartitionDevice* part){
@@ -838,7 +839,7 @@ namespace fs::Ext2{
         }
 
         for(int i = 0; i < index; i++){
-            if(e2dirent->recordLength == 0) return -ENOENT;
+            if(e2dirent->recordLength == 0) return 0;
 
             blockOffset += e2dirent->recordLength;
             totalOffset += e2dirent->recordLength;
@@ -848,7 +849,7 @@ namespace fs::Ext2{
 
                 if(currentBlockIndex >= ino.blockCount / (blocksize / 512)){
                     // End of dir
-                    return -ENOENT;
+                    return 0;
                 }
 
                 blockOffset = 0;
@@ -865,7 +866,7 @@ namespace fs::Ext2{
         dirent->name[e2dirent->nameLength] = 0; // Null terminate
         dirent->flags = e2dirent->fileType;
 
-        return 0;
+        return 1;
     }
 
     FsNode* Ext2Volume::FindDir(Ext2Node* node, char* name){
@@ -968,9 +969,12 @@ namespace fs::Ext2{
 
         //Log::Info("[Ext2] Reading: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockCount, offset, size);
 
+        timeval_t blktv1 = Timer::GetSystemUptimeStruct();
         ssize_t ret = size;
         Vector<uint32_t> blocks = GetInodeBlocks(blockIndex, blockLimit - blockIndex + 1, node->e2inode);
+        timeval_t blktv2 = Timer::GetSystemUptimeStruct();
 
+        timeval_t readtv1 = Timer::GetSystemUptimeStruct();
         for(uint32_t block : blocks){
             if(size <= 0) break;
             
@@ -1011,6 +1015,9 @@ namespace fs::Ext2{
                 break;
             }
         }
+        timeval_t readtv2 = Timer::GetSystemUptimeStruct();
+
+        Log::Info("[Ext2] Retrieving inode blocks took %d ms, Reading inode blocks took %d ms", Timer::TimeDifference(blktv2, blktv1), Timer::TimeDifference(readtv2, readtv1));
 
         if(size){
             Log::Info("[Ext2] Requested %d bytes, read %d bytes (offset: %d)", ret, ret - size, offset);
@@ -1138,6 +1145,7 @@ namespace fs::Ext2{
         inodeCache.insert(file->inode, file);
         ent->node = file;
         ent->inode = file->inode;
+        ent->flags = EXT2_FT_REG_FILE;
 
         SyncNode(file);
         return InsertDir(node, *ent);

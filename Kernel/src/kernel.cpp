@@ -52,7 +52,7 @@ void KernelProcess(){
 	Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Loading Init Process...");
-	FsNode* initFsNode = fs::ResolvePath("/system/bin/init.lef");
+	FsNode* initFsNode = fs::ResolvePath("/system/lemon/init.lef");
 	if(!initFsNode){
 		const char* panicReasons[]{
 			"Failed to load init task (init.lef)!"

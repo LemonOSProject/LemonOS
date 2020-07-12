@@ -14,6 +14,9 @@ meson build --cross $SPATH/lemon-crossfile.txt
 cd ../Applications
 meson build --cross $SPATH/lemon-crossfile.txt
 
+cd ../System
+meson build --cross $SPATH/lemon-crossfile.txt
+
 cd ../Kernel
 meson build --cross $SPATH/lemon-crossfile.txt
 
@@ -27,4 +30,5 @@ cd ../Ports
 ./buildport.sh zlib
 ./buildport.sh libpng
 ./buildport.sh freetype
+./buildport.sh lemon-binutils
 ./buildport.sh nyancat

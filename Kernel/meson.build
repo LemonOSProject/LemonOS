@@ -1,5 +1,7 @@
 project('Lemon Kernel')
 
+lai = subproject('lai')
+
 kernel_include_dirs = [
     include_directories('include'),
     include_directories('subprojects/lai/include'),
@@ -118,8 +120,6 @@ asm_files_x86_64 = [
 asm_bin_files_x86_64 = [
     'src/arch/x86_64/smptrampoline.asm',
 ]
-
-lai = subproject('lai')
 
 kernel_link_args = [
     '-m64',

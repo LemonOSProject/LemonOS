@@ -33,7 +33,7 @@ void WMInstance::MinimizeWindow(WMWindow* win, bool state){
             SetActive(nullptr);
         }
 
-        if(!(win->flags & WINDOW_FLAGS_NOSHELL))
+        if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL))
             Lemon::Shell::SetWindowState(win->clientFd, Lemon::Shell::ShellWindowStateMinimized, shellClient);
     }
 }
@@ -51,14 +51,14 @@ void WMInstance::MinimizeWindow(int id, bool state){
 void WMInstance::SetActive(WMWindow* win){
     if(active == win) return;
 
-    if(active && !(active->flags & WINDOW_FLAGS_NOSHELL) && !active->minimized){
+    if(shellConnected && active && !(active->flags & WINDOW_FLAGS_NOSHELL) && !active->minimized){
         Lemon::Shell::SetWindowState(active->clientFd, Lemon::Shell::ShellWindowStateNormal, shellClient);
     }
 
     active = win;
 
     if(win){
-        if(!(win->flags & WINDOW_FLAGS_NOSHELL)){
+        if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
             Lemon::Shell::SetWindowState(win->clientFd, Lemon::Shell::ShellWindowStateActive, shellClient);
         }
         
@@ -89,7 +89,7 @@ void WMInstance::Poll(){
 
                 windows.push_back(win);
 
-                if(!(win->flags & WINDOW_FLAGS_NOSHELL)){
+                if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
                     Lemon::Shell::AddWindow(m->clientFd, Lemon::Shell::ShellWindowState::ShellWindowStateNormal, title, shellClient);
                 }
                 SetActive(win);
@@ -115,7 +115,9 @@ void WMInstance::Poll(){
                     SetActive(nullptr);
                 }
                 
-                Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
+                if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
+                    Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
+                }
 
                 windows.remove(win);
                 redrawBackground = true;
@@ -130,6 +132,8 @@ void WMInstance::Poll(){
                 strcpy(shellAddr.sun_path, Lemon::Shell::shellSocketAddress);
                 shellAddr.sun_family = AF_UNIX;
                 shellClient.Connect(shellAddr, sizeof(sockaddr_un));
+
+                shellConnected = true;
             } else if(cmd->cmd == Lemon::GUI::WMOpenContextMenu){
                 WMWindow* win = FindWindow(m->clientFd);
 
@@ -177,7 +181,9 @@ void WMInstance::Poll(){
                 SetActive(nullptr);
             }
 
-            Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
+            if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
+                Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
+            }
             
             windows.remove(win);
             redrawBackground = true;
@@ -357,7 +363,7 @@ void WMInstance::MouseMove(){
 }
 
 void WMInstance::KeyUpdate(int key, bool pressed){
-    if(key == KEY_GUI && pressed){
+    if(shellConnected && key == KEY_GUI && pressed){
         Lemon::Shell::ToggleMenu(shellClient);
     } else if(active){
         Lemon::LemonEvent ev;

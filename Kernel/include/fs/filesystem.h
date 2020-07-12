@@ -161,8 +161,8 @@ public:
 
 typedef struct fs_dirent {
 	uint32_t inode; // Inode number
-	char name[128]; // Filename
     uint32_t type;
+	char name[NAME_MAX]; // Filename
 } fs_dirent_t;
 
 namespace fs{

@@ -12,6 +12,7 @@ serial.log
 Kernel/build
 Applications/build
 LibLemon/build
+System/build
 Scripts/build-win/mount.cfg
 Kernel/subprojects/lai
 Initrd/*

@@ -150,6 +150,8 @@ protected:
     int resizePoint = Right;
     vector2i_t resizeStartPos;
 
+    bool shellConnected = false;
+
     void Poll();
     void PostEvent(Lemon::LemonEvent& ev, WMWindow* win);
     WMWindow* FindWindow(int id);

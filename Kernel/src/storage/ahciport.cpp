@@ -81,6 +81,23 @@ namespace AHCI{
     int Port::Read(uint64_t lba, uint32_t count, void* buffer){
         uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
         
+        while(blockCount >= 8 && count){
+            uint64_t size;
+            if(count < 512 * 8) size = count;
+            else size = 512 * 8;
+
+            if(!size) continue;
+
+            if(Access(lba, 8, 0)){ // LBA, 2 blocks, read
+                return 1; // Error Reading Sectors
+            }
+
+            memcpy(buffer, bufVirt, size);
+            buffer += size;
+            lba += 8;
+            blockCount -= 8;
+        }
+
         while(blockCount >= 2 && count){
             uint64_t size;
             if(count < 512 * 2) size = count;

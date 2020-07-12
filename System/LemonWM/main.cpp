@@ -24,21 +24,17 @@ extern rgba_colour_t backgroundColor;
 
 int main(){
     printf("Starting WM\n");
+
     CreateFramebufferSurface(fbSurface);
     renderSurface = fbSurface;
     renderSurface.buffer = new uint8_t[fbSurface.width * fbSurface.height * 4];
-
-    Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 0, 0, 0, &fbSurface);
-
+    
     sockaddr_un srvAddr;
     strcpy(srvAddr.sun_path, Lemon::GUI::wmSocketAddress);
     srvAddr.sun_family = AF_UNIX;
     WMInstance wm = WMInstance(renderSurface, srvAddr);
 
-    #ifdef __lemon__
-        //lemon_spawn("/system/bin/netgov.lef", 0, nullptr, 0); // (Temporary) Start NetworkGovernor Service
-        lemon_spawn("/system/bin/shell.lef", 0, nullptr, 0); // Start Graphical Shell
-    #endif
+    Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 0, 0, 0, &fbSurface);
 
     if(int e = Lemon::Graphics::LoadImage("/initrd/winbuttons.bmp", &wm.compositor.windowButtons)){
         printf("LemonWM: Warning: Error %d loading buttons.\n", e);

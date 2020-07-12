@@ -75,8 +75,6 @@ namespace fs{
     }
 
 	FsNode* ResolvePath(const char* path, const char* workingDir){
-		Log::Info("Resolving: %s", path);
-
 		char* tempPath;
 		if(workingDir && path[0] != '/'){
 			tempPath = (char*)kmalloc(strlen(path) + strlen(workingDir) + 2);
@@ -226,13 +224,13 @@ namespace fs{
 	}
     
 	int Dev::ReadDir(DirectoryEntry* dirent, uint32_t index){
-		if(index >= deviceCount + 2) return -1;
+		if(index >= deviceCount + 2) return 0;
 
 		if(index == 0) { strcpy(dirent->name, "."); }
 		if(index == 1) { strcpy(dirent->name, ".."); }
 		else { strcpy(dirent->name,devices[index - 2]->name); }
 
-		return 0;
+		return 1;
 	}
 
     FsNode* Dev::FindDir(char* name){
@@ -248,11 +246,11 @@ namespace fs{
 	int Root::ReadDir(DirectoryEntry* dirent, uint32_t index){
 		if(index == 0){
 			*dirent = devDirent;
-			return 0;
+			return 1;
 		} else if (index < fs::volumes->get_length() + 1){
 			*dirent = (volumes->get_at(index - 1)->mountPointDirent);
-			return 0;
-		} else return -1;
+			return 1;
+		} else return 0;
 	}
 
     FsNode* Root::FindDir(char* name){
@@ -359,7 +357,7 @@ namespace fs{
 			}
 			
 			return ret;
-		} else return 0;
+		} else return -1;
     }
 
     int ReadDir(fs_fd_t* handle, DirectoryEntry* dirent, uint32_t index){

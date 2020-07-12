@@ -3,6 +3,8 @@
 #include <sys/stat.h>
 #include <gui/filedialog.h>
 #include <gui/messagebox.h>
+#include <unistd.h>
+#include <errno.h>
 
 namespace Lemon::GUI{
 	__thread char* selectedPth = nullptr; // TODO: Better solution
@@ -11,7 +13,7 @@ namespace Lemon::GUI{
 	__thread int dflags = 0;
 
 	void FileDialogOnFileOpened(const char* path, FileView* fv){
-		if(!(dflags & FILE_DIALOG_CREATE) || DisplayMessageBox("Open...", "File already exists! Overwrite?", MsgButtonsOKCancel)) { // Only open if create flag not specified OR user responds ok to message
+		if(!(dflags & FILE_DIALOG_CREATE) || access(path, W_OK) == ENOENT || DisplayMessageBox("Open...", "File already exists! Overwrite?", MsgButtonsOKCancel)) { // Only open if create flag not specified OR user responds ok to message
 			if(selectedPth){
 				free(selectedPth);
 			}
@@ -110,10 +112,8 @@ namespace Lemon::GUI{
 				paint = true;
 			}
 
-			if(paint){
-				win->Paint();
-				paint = false;
-			}
+			win->Paint();
+			win->WaitEvent();
 		}
 
 		delete win;

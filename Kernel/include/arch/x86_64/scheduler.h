@@ -61,6 +61,7 @@ typedef struct process {
 	thread_t* threads;
 	uint32_t threadCount; // Amount of threads
 	int32_t uid;
+	int32_t gid;
 
 	process* parent;
 	List<process*> children;

@@ -11,6 +11,9 @@ liblemon:
 applications: liblemon
 	ninja -C Applications/build install -j $(JOBS)
 
+system: liblemon
+	ninja -C System/build install -j $(JOBS)
+
 kernel:
 	ninja -C Kernel/build
 	
@@ -19,7 +22,7 @@ userspace: liblemon applications
 initrd: libc liblemon
 	Scripts/buildinitrd.sh
 	
-base: applications
+base: applications system
 	Scripts/buildbase.sh
 
 disk: kernel initrd base

@@ -103,7 +103,7 @@ void ParseLine(){
 	}
 	
 	for(int j = 0; j < path.get_length(); j++){
-		if(fd = open(path.get_at(j), O_RDONLY | O_DIRECTORY)){
+		if((fd = open(path.get_at(j), O_RDONLY | O_DIRECTORY)) > 0){
 			lemon_dirent_t dirent;
 
 			int i = 0;

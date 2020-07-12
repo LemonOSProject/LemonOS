@@ -10,5 +10,5 @@ buildp(){
  	patch -p1 < ../lemon-libpng-1.6.37.patch
  	./configure --prefix=$LEMON_PREFIX --host=x86_64-lemon
  	make -j$JOBCOUNT
- 	make install
+ 	make install DESTDIR=$LEMON_SYSROOT
 }

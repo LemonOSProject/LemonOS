@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 #include <sys/types.h>
+#include <limits.h>
 #include <stdint.h>
 
 #define FS_NODE_FILE 0x1
@@ -18,8 +19,8 @@
 
 typedef struct lemon_dirent {
 	uint32_t inode; // Inode number
-	char name[128]; // Filename
     uint32_t type;
+	char name[NAME_MAX]; // Filename
 } lemon_dirent_t;
 
 int lemon_open(const char* filename, int flags);

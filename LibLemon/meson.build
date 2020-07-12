@@ -41,6 +41,9 @@ cpp_files = [
     'src/gui/messagebox.cpp',
 
     'src/shell/shell.cpp',
+
+    'src/cfgparser.cpp',
+    'src/sha.cpp',
 ]
 
 asm_files = [

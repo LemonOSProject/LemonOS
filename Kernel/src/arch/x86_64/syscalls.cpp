@@ -16,6 +16,7 @@
 #include <cpu.h>
 #include <net/socket.h>
 #include <errno.h>
+#include <timer.h>
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -32,14 +33,16 @@
 #define SYS_MAP_FB 14
 #define SYS_ALLOC 15
 #define SYS_CHMOD 16
-#define SYS_FSTAT
+#define SYS_FSTAT 17
 #define SYS_STAT 18
 #define SYS_LSEEK 19
 #define SYS_GETPID 20
 #define SYS_MOUNT 21
 #define SYS_MKDIR 22
 #define SYS_RMDIR 23
+#define SYS_RENAME 24
 #define SYS_YIELD 25
+#define SYS_READDIR_NEXT 26
 #define SYS_SEND_MESSAGE 28
 #define SYS_RECEIVE_MESSAGE 29
 #define SYS_UPTIME 30
@@ -75,8 +78,10 @@
 #define SYS_POLL 60
 #define SYS_SENDMSG 61
 #define SYS_RECVMSG 62
+#define SYS_GETEUID 63
+#define SYS_SETEUID 64
 
-#define NUM_SYSCALLS 63
+#define NUM_SYSCALLS 65
 
 #define EXEC_CHILD 1
 
@@ -102,20 +107,22 @@ long SysExec(regs64_t* r){
 	uint64_t flags = r->rsi;
 	char** envp = (char**)r->rdi;
 
-	Log::Info("Executing: %s", (char*)r->rbx);
-
 	FsNode* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
 
 	if(!current_node){
 		return 1;
 	}
 
+	Log::Info("Loading: %s", (char*)r->rbx);
+	timeval_t tv = Timer::GetSystemUptimeStruct();
 	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
 	size_t read = fs::Read(current_node, 0, current_node->size, buffer);
 	if(!read){
 		Log::Warning("Could not read file: %s", current_node->name);
 		return 0;
 	}
+	timeval_t tvnew = Timer::GetSystemUptimeStruct();
+	Log::Info("Done (took %d ms)", Timer::TimeDifference(tvnew, tv));
 
 	char** kernelArgv = (char**)kmalloc(argc * sizeof(char*));
 	for(int i = 0; i < argc; i++){
@@ -602,16 +609,58 @@ long SysMkdir(regs64_t* r){
 }
 
 long SysRmdir(regs64_t* r){
-	return 0;
+	return -ENOSYS;
 }
 
 long SysRename(regs64_t* r){
-	return 0;
+	return -ENOSYS;
 }
 
 long SysYield(regs64_t* r){
 	Scheduler::Yield();
 	return 0;
+}
+
+/*
+ * SysReadDirNext(fd, direntPointer) - Read directory using the file descriptor offset as an index
+ * 
+ * fd - File descriptor of directory
+ * direntPointer - Pointer to fs_dirent_t
+ * 
+ * Return Value:
+ * 1 on Success
+ * 0 on End of directory
+ * Negative value on failure
+ * 
+ */
+long SysReadDirNext(regs64_t* r){
+	unsigned int fd = r->rbx;
+	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+		return -EBADF;
+	} 
+	
+	fs_dirent_t* direntPointer = (fs_dirent_t*)r->rcx;
+	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[fd];
+
+	if(!handle){
+		return -EBADF;
+	}
+
+	if(!Memory::CheckUsermodePointer((uintptr_t)direntPointer, sizeof(fs_dirent_t), Scheduler::GetCurrentProcess()->addressSpace)){
+		return -EFAULT;
+	}
+
+	if((Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+		return -ENOTDIR;
+	}
+
+	DirectoryEntry tempent;
+	int ret = fs::ReadDir(handle, &tempent, handle->pos++);
+
+	strcpy(direntPointer->name, tempent.name);
+	direntPointer->type = tempent.flags;
+
+	return ret;
 }
 
 // SendMessage(message_t* msg) - Sends an IPC message to a process
@@ -683,13 +732,10 @@ long SysUName(regs64_t* r){
 }
 
 long SysReadDir(regs64_t* r){
-	if(!(r->rbx && r->rcx)) return 1;
-
 	unsigned int fd = r->rbx;
 
 	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
-		if(r->rsi) *((int*)r->rsi) = 0;
-		return -1;
+		return -EBADF;
 	} 
 	
 	fs_dirent_t* direntPointer = (fs_dirent_t*)r->rcx;
@@ -697,7 +743,6 @@ long SysReadDir(regs64_t* r){
 	unsigned int count = r->rdx;
 
 	if((Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
-		if(r->rsi) *((int*)r->rsi) = 0;
 		return -ENOTDIR;
 	}
 
@@ -707,7 +752,6 @@ long SysReadDir(regs64_t* r){
 	strcpy(direntPointer->name, tempent.name);
 	direntPointer->type = tempent.flags;
 
-	if(r->rsi) *((int*)r->rsi) = ret;
 	return ret;
 }
 
@@ -805,47 +849,41 @@ long SysNanoSleep(regs64_t* r){
 
 long SysPRead(regs64_t* r){
 	if(r->rbx > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
-		*((int*)r->rsi) = -1; // Return -1
-		return -1;
+		return -EBADF;
 	}
 	FsNode* node;
 	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx)->node)){ 
 		Log::Warning("sys_pread: Invalid file descriptor: %d", r->rbx);
-		return 1; 
+		return -EBADF; 
 	}
+	
+	if(!Memory::CheckUsermodePointer(r->rcx, r->rdx, Scheduler::GetCurrentProcess()->addressSpace)) {
+		return -EFAULT;
+	}
+
 	uint8_t* buffer = (uint8_t*)r->rcx;
-	if(!buffer) { return 1; }
 	uint64_t count = r->rdx;
 	uint64_t off = r->rdi;
-	int ret = fs::Read(node, off, count, buffer);
-	*(int*)r->rsi = ret;
-	return 0;
+	return fs::Read(node, off, count, buffer);
 }
 
 long SysPWrite(regs64_t* r){
 	if(r->rbx > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
-		*((int*)r->rsi) = -1; // Return -1
-		return -1;
+		return -EBADF;
 	}
 	FsNode* node;
 	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx)->node)){ 
 		Log::Warning("sys_pwrite: Invalid file descriptor: %d", r->rbx);
-		return 1; 
+		return -EBADF;
 	}
 
-	if(!(r->rcx)) {
-		*((int*)r->rsi) = -1;
-		return 1;
+	if(!Memory::CheckUsermodePointer(r->rcx, r->rdx, Scheduler::GetCurrentProcess()->addressSpace)) {
+		return -EFAULT;
 	}
+
 	uint64_t off = r->rdi;
 
-	int ret = fs::Write(node, off, r->rdx, (uint8_t*)r->rcx);
-
-	if(r->rsi){
-		*((int*)r->rsi) = ret;
-	}
-
-	return 0;
+	return fs::Write(node, off, r->rdx, (uint8_t*)r->rcx);
 }
 
 long SysIoctl(regs64_t* r){
@@ -1329,8 +1367,14 @@ long SysGetUID(regs64_t* r){
 	return Scheduler::GetCurrentProcess()->uid;
 }
 
+/* 
+ * SetSetUID () - Set Process UID
+ * 
+ * On Success - Return process UID
+ * On Failure - Return negative value
+ */
 long SysSetUID(regs64_t* r){
-	return 0;
+	return -ENOSYS;
 }
 
 /* 
@@ -1574,6 +1618,26 @@ long SysRecvMsg(regs64_t* r){
 	return read;
 }
 
+/* 
+ * SetGetEUID () - Get effective process user id
+ * 
+ * On Success - Return process UID
+ * On Failure - Does not fail
+ */
+long SysGetEUID(regs64_t* r){
+	return Scheduler::GetCurrentProcess()->uid;
+}
+
+/* 
+ * SetSetEUID () - Set effective process UID
+ * 
+ * On Success - Return 0
+ * On Failure - Return negative value
+ */
+long SysSetEUID(regs64_t* r){
+	return -ENOSYS;
+}
+
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -1601,7 +1665,7 @@ syscall_t syscalls[]{
 	SysRmdir,
 	SysRename,
 	SysYield,					// 25
-	nullptr,
+	SysReadDirNext,
 	nullptr,
 	SysSendMessage,
 	SysReceiveMessage,
@@ -1638,6 +1702,8 @@ syscall_t syscalls[]{
 	SysPoll,					// 60
 	SysSendMsg,
 	SysRecvMsg,
+	SysGetEUID,
+	SysSetEUID,
 };
 
 int lastSyscall = 0;
