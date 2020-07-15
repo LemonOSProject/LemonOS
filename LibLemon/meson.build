@@ -1,4 +1,4 @@
-project('LibLemon')
+project('LibLemon', default_options : ['cpp_std=c++17', 'optimization=3'])
 
 liblemon_include_dirs = [
     include_directories('include'),
@@ -18,9 +18,7 @@ asmg = generator(nasm,
 liblemon_cpp_args = ['-Wno-write-strings', '-Wno-pointer-arith', '-Wall', '-Wextra', '-Wno-address',
     '-fPIC',
     '-m64',
-    '-O3',
-    '-fno-exceptions', '-std=c++14',
-    '-I/usr/include/freetype2/']
+    '-fno-exceptions',]
 
 add_project_arguments(liblemon_cpp_args, language : ['c', 'cpp'])
 
@@ -32,6 +30,7 @@ cpp_files = [
     'src/gfx/text.cpp',
 
     'src/ipc/msghandler.cpp',
+    'src/ipc/message.cpp',
 
     'src/gui/window.cpp',
     'src/gui/widgets.cpp',
@@ -52,8 +51,6 @@ asm_files = [
 
 if host_machine.system() == 'lemon'
     subdir('src/lemon')
-elif host_machine.system() == 'linux'
-    subdir('src/linux')
 else
     error('System ' + host_machine.system() + ' not supported!')
 endif

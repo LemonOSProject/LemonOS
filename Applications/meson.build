@@ -1,4 +1,4 @@
-project('Lemon Applications')
+project('Lemon Applications', default_options : ['cpp_std=c++17', 'optimization=3'])
 
 add_languages('c', 'cpp')
 subproject('LemonUtils')
@@ -56,7 +56,7 @@ solitaire_src = [
 ]
 
 application_cpp_args = [
-    '-O3',
+    
 ]
 
 guitest_src = [

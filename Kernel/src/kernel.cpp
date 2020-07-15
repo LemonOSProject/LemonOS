@@ -43,7 +43,7 @@ void KernelProcess(){
 	USB::XHCI::Initialize();
 	ATA::Init();
 	AHCI::Init();
-
+	
 	Network::InitializeDrivers();
 	Network::InitializeConnections();
 

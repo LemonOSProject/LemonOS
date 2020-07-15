@@ -89,7 +89,6 @@ namespace Memory{
 
 		kernelPDPT[KERNEL_HEAP_PDPT_INDEX] = 0x3;
 		SetPageFrame(&(kernelPDPT[KERNEL_HEAP_PDPT_INDEX]), (uint64_t)kernelHeapDir - KERNEL_VIRTUAL_BASE);
-		kernelPDPT[0] = 0x83;//kernelPDPT[KERNEL_HEAP_PDPT_INDEX]; // Its important that we identity map low memory for SMP
 
 		for(int i = 0; i < 4; i++){
 			kernelPDPT[PDPT_GET_INDEX(IO_VIRTUAL_BASE) + i] = ((uint64_t)ioDirs[i] - KERNEL_VIRTUAL_BASE) | 0x3;//(PAGE_SIZE_1G * i) | 0x83;
@@ -97,6 +96,8 @@ namespace Memory{
 				ioDirs[i][j] = (PAGE_SIZE_1G * i + PAGE_SIZE_2M * j) | 0x83;
 			}
 		}
+		
+		kernelPDPT[0] = kernelPDPT[PDPT_GET_INDEX(KERNEL_VIRTUAL_BASE)]; // Its important that we identity map low memory for SMP
 
 		for(int i = 0; i < TABLES_PER_DIR; i++){
 			memset(&(kernelHeapDirTables[i]),0,sizeof(page_t)*PAGES_PER_TABLE);

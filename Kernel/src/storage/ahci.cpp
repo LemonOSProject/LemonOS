@@ -52,10 +52,7 @@ namespace AHCI{
 
 		ahciHBA = (hba_mem_t*)ahciVirtualAddress;
 
-		Log::Info("[AHCI]: Base Address: ");
-		Log::Write(ahciBaseAddress);
-		Log::Write(", Virtual Base Address:");
-		Log::Write(ahciVirtualAddress);
+		Log::Info("[AHCI]: Base Address: %x, Virtual Base Address: %x", ahciBaseAddress, ahciVirtualAddress);
 
 		uint32_t pi = ahciHBA->pi;
 		Log::Info(pi);
@@ -73,9 +70,6 @@ namespace AHCI{
 					Log::Info(ahciHBA->ports[i].sig);
 
 					ports[i] = new Port(i, &ahciHBA->ports[i]);
-
-					uint8_t buf[512];
-					ports[i]->Read(0, 512, buf);
 					
 					DeviceManager::devices->add_back(ports[i]);
 				}

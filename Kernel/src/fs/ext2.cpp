@@ -3,7 +3,10 @@
 #include <logging.h>
 #include <errno.h>
 #include <assert.h>
-#include <timer.h>
+ 
+#ifdef EXT2_ENABLE_TIMER
+    #include <timer.h>
+#endif
 
 namespace fs::Ext2{
     int Identify(PartitionDevice* part){
@@ -969,12 +972,18 @@ namespace fs::Ext2{
 
         //Log::Info("[Ext2] Reading: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockCount, offset, size);
 
+        #ifdef EXT2_ENABLE_TIMER
         timeval_t blktv1 = Timer::GetSystemUptimeStruct();
+        #endif
+
         ssize_t ret = size;
         Vector<uint32_t> blocks = GetInodeBlocks(blockIndex, blockLimit - blockIndex + 1, node->e2inode);
+        
+        #ifdef EXT2_ENABLE_TIMER
         timeval_t blktv2 = Timer::GetSystemUptimeStruct();
-
         timeval_t readtv1 = Timer::GetSystemUptimeStruct();
+        #endif
+
         for(uint32_t block : blocks){
             if(size <= 0) break;
             
@@ -1015,9 +1024,12 @@ namespace fs::Ext2{
                 break;
             }
         }
+
+        #ifdef EXT2_ENABLE_TIMER
         timeval_t readtv2 = Timer::GetSystemUptimeStruct();
 
         Log::Info("[Ext2] Retrieving inode blocks took %d ms, Reading inode blocks took %d ms", Timer::TimeDifference(blktv2, blktv1), Timer::TimeDifference(readtv2, readtv1));
+        #endif
 
         if(size){
             Log::Info("[Ext2] Requested %d bytes, read %d bytes (offset: %d)", ret, ret - size, offset);

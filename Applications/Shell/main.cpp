@@ -210,7 +210,7 @@ int main(){
 	Lemon::LemonMessage* msg = (Lemon::LemonMessage*)malloc(sizeof(Lemon::LemonMessage) + sizeof(Lemon::GUI::WMCommand));
 	Lemon::GUI::WMCommand* cmd = (Lemon::GUI::WMCommand*)msg->data;
 	cmd->cmd = Lemon::GUI::WMInitializeShellConnection;
-	msg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+	msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
 	msg->length = sizeof(Lemon::GUI::WMCommand);
 	taskbar->SendWMMsg(msg);
 	free(msg);

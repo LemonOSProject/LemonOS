@@ -1,9 +1,11 @@
+#include <core/message.h>
 #include <core/msghandler.h>
 
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
 namespace Lemon {
     MessageClient::MessageClient(){
@@ -252,6 +254,21 @@ namespace Lemon {
         }
     }
 
+    void MessageServer::Send(const Message& msg, int fd){
+        if(fd < 0) {
+            printf("Invalid fd: %d\n", fd);
+            return;
+        }
+
+        ssize_t sent = send(fd, msg.data(), msg.length(), MSG_DONTWAIT);
+
+        if(sent < 0){
+            perror("Warning: Send: ");
+        } else if(sent < msg.length()){
+            printf("Warning: Tried to send %d bytes, but only sent %d bytes", msg.length(), sent);
+        }
+    }
+
     void MessageClient::Send(LemonMessage* msg){
         msg->magic = LEMON_MESSAGE_MAGIC;
 
@@ -261,6 +278,16 @@ namespace Lemon {
             perror("Warning: Send: ");
         } else if(sent < msg->length + sizeof(LemonMessage)){
             printf("Warning: Tried to send %d bytes, but only sent %d bytes", msg->length + sizeof(LemonMessage), sent);
+        }
+    }
+
+    void MessageClient::Send(const Message& msg){
+        ssize_t sent = send(sock.fd, msg.data(), msg.length(), 0);
+
+        if(sent <= 0){
+            perror("Warning: Send: ");
+        } else if(sent < msg.length()){
+            printf("Warning: Tried to send %d bytes, but only sent %d bytes", msg.length(), sent);
         }
     }
 
@@ -291,4 +318,6 @@ namespace Lemon {
 
         return false;
     }
+
+    MessageBusInterface* MessageBusInterface::instance = nullptr;
 }

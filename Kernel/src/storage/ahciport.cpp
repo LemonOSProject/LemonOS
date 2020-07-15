@@ -18,7 +18,7 @@ namespace AHCI{
 		registers->cmd &= ~HBA_PxCMD_ST;
 		registers->cmd &= ~HBA_PxCMD_FRE;
 
-        //stopCMD(registers);
+        stopCMD(registers);
 
         uintptr_t phys;
         
@@ -54,7 +54,7 @@ namespace AHCI{
 
             commandTables[i] = (hba_cmd_tbl_t*)Memory::KernelAllocate4KPages(1);
             Memory::KernelMapVirtualMemory4K(phys,(uintptr_t)commandTables[i], 1);
-            memset(commandTables[i],1,PAGE_SIZE_4K);
+            memset(commandTables[i],0,PAGE_SIZE_4K);
         }
 
         registers->is = 0;
@@ -182,7 +182,7 @@ namespace AHCI{
         commandTable->prdt_entry[0].dba = bufPhys & 0xFFFFFFFF;
         commandTable->prdt_entry[0].dbau = (bufPhys >> 32) & 0xFFFFFFFF;
         commandTable->prdt_entry[0].dbc = count * 512 - 1; // 512 bytes per sector
-        commandTable->prdt_entry[0].i = 0;
+        commandTable->prdt_entry[0].i = 1;
 
         fis_reg_h2d_t* cmdfis = (fis_reg_h2d_t*)(commandTable->cfis); 
         memset(commandTable->cfis, 0, sizeof(fis_reg_h2d_t));

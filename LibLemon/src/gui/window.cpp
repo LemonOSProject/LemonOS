@@ -44,7 +44,7 @@ namespace Lemon::GUI{
         cmd->create.titleLength = strlen(title);
 
         createMsg->length = sizeof(WMCommand) + strlen(title);
-        createMsg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+        createMsg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
         
         msgClient.Send(createMsg);
 
@@ -60,7 +60,7 @@ namespace Lemon::GUI{
         cmd->cmd = WMDestroyWindow;
 
         destroyMsg->length = sizeof(WMCommand);
-        destroyMsg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+        destroyMsg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
 
         msgClient.Send(destroyMsg);
 
@@ -77,7 +77,7 @@ namespace Lemon::GUI{
         cmd->minimized = minimized;
 
         msg->length = sizeof(WMCommand);
-        msg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+        msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
 
         msgClient.Send(msg);
 
@@ -93,7 +93,7 @@ namespace Lemon::GUI{
         cmd->minimizeWindowID = windowID;
 
         msg->length = sizeof(WMCommand);
-        msg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+        msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
 
         msgClient.Send(msg);
 
@@ -133,7 +133,7 @@ namespace Lemon::GUI{
         cmd->bufferKey = windowBufferKey;
 
         msg->length = sizeof(WMCommand);
-        msg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+        msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
 
         msgClient.Send(msg);
 
@@ -169,7 +169,7 @@ namespace Lemon::GUI{
     
     bool Window::PollEvent(LemonEvent& ev){
         if(auto m = msgClient.Poll()){
-            if(m->protocol == LEMON_MESSAGE_PROTCOL_WMEVENT){
+            if(m->protocol == LEMON_MESSAGE_PROTOCOL_WMEVENT){
                 ev = *((LemonEvent*)m->data);
                 return true;
             }
@@ -297,7 +297,7 @@ namespace Lemon::GUI{
 
         LemonMessage* msg = (LemonMessage*)malloc(sizeof(LemonMessage) + cmdSize);
         msg->length = cmdSize;
-        msg->protocol = LEMON_MESSAGE_PROTCOL_WMCMD;
+        msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
 
         WMCommand* cmd = (WMCommand*)msg->data;
         cmd->cmd = WMOpenContextMenu;

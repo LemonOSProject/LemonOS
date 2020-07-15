@@ -6,6 +6,7 @@
 #include <core/msghandler.h>
 #include <core/systemservice.h>
 #include <vector>
+#include <core/message.h>
 
 class LemonUser{
 	std::string username;
@@ -69,19 +70,12 @@ int main(int argc, char** argv){
 		users.push_back(LemonUser(username, uid, gid));
 	}
 
-	for(;;){
-		while(auto m = systemServer.Poll()){
-			if(m->msg.protocol == LEMON_MESSAGE_PROTOCOL_SESSIONCMD && m->msg.length >= sizeof(Lemon::SessionCommand)){
-				Lemon::SessionCommand* sCmd = (Lemon::SessionCommand*)m->msg.data;
+	Lemon::Message msg = Lemon::Message(1, msg.EncodeString(std::string("test")), 3, 5, 6);
+	for(int i = 0; i < msg.length(); i++){
+		printf("%c (%d), ", msg.data()[i], msg.data()[i]);
+	}printf("\n");
 
-				if(sCmd->cmd == Lemon::LemonSystemLaunchUserSession){
-					for(LemonUser& user : users){
-						if(user == sCmd->id){
-							
-						}
-					}
-				}
-			}
-		}
+	for(;;){
+		
 	}
 }

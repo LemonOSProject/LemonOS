@@ -1,13 +1,7 @@
 #pragma once
 
 #include <core/message.h>
-
-#include <vector>
-#include <deque>
-#include <memory>
-#include <poll.h>
-#include <sys/socket.h>
-#include <sys/un.h>
+#include <string.h>
 
 namespace Lemon{
     struct LemonMessageInfo {
@@ -37,7 +31,8 @@ namespace Lemon{
         std::shared_ptr<LemonMessage> Poll();
         std::shared_ptr<LemonMessage> PollSync();
         void Wait();
-        void Send(LemonMessage* ev);
+        void Send(LemonMessage* msg);
+        void Send(const Message& msg);
     };
 
     class MessageServer{
@@ -51,7 +46,8 @@ namespace Lemon{
         MessageServer(sockaddr_un& address, socklen_t len);
 
         std::shared_ptr<LemonMessageInfo> Poll();
-        void Send(LemonMessage* ev, int fd);
+        void Send(LemonMessage* msg, int fd);
+        void Send(const Message& msg, int fd);
     };
 
     class MessageMultiplexer {
@@ -59,5 +55,27 @@ namespace Lemon{
     public:
         void AddSource(MessageHandler& handler);
         bool PollSync();
+    };
+
+    class MessageBusInterface : public MessageClient{
+    private:
+        static constexpr const char* messageBusSocketAddress = "lemond";
+        static MessageBusInterface* instance;
+
+    public:
+        MessageBusInterface(){
+            sockaddr_un sAddress;
+            strcpy(sAddress.sun_path, messageBusSocketAddress);
+            sAddress.sun_family = AF_UNIX;
+            Connect(sAddress, sizeof(sockaddr_un));
+        }
+
+        static MessageBusInterface& Instance(){
+            if(!instance){
+                instance = new MessageBusInterface();
+            } 
+
+            return *instance;
+        }
     };
 }

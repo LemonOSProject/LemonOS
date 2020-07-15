@@ -69,7 +69,7 @@ void WMInstance::SetActive(WMWindow* win){
 
 void WMInstance::Poll(){
     while(auto m = server.Poll()){
-        if(m && m->msg.protocol == LEMON_MESSAGE_PROTCOL_WMCMD){
+        if(m && m->msg.protocol == LEMON_MESSAGE_PROTOCOL_WMCMD){
             auto cmd = (Lemon::GUI::WMCommand*)m->msg.data;
 
             if(cmd->cmd == Lemon::GUI::WMCreateWindow){
@@ -194,12 +194,7 @@ void WMInstance::Poll(){
 }
 
 void WMInstance::PostEvent(Lemon::LemonEvent& ev, WMWindow* win){
-    Lemon::LemonMessage* msg = (Lemon::LemonMessage*)malloc(sizeof(Lemon::LemonMessage) + sizeof(Lemon::LemonEvent));
-    msg->length = sizeof(Lemon::LemonEvent);
-    msg->protocol = LEMON_MESSAGE_PROTCOL_WMEVENT;
-    *((Lemon::LemonEvent*)msg->data) = ev;
-
-    server.Send(msg, win->clientFd);
+    server.Send(Lemon::Message(LEMON_MESSAGE_PROTOCOL_WMEVENT, ev), win->clientFd);
 }
 
 void WMInstance::MouseDown(){

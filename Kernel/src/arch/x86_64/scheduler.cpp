@@ -52,10 +52,12 @@ namespace Scheduler{
     void InsertNewThreadIntoQueue(thread_t* thread){
         CPU* cpu = SMP::cpus[0];
         for(unsigned i = 1; i < SMP::processorCount; i++){
-            Log::Info("CPU %d has %d threads", i, SMP::cpus[i]->runQueue->get_length());
-            
             if(SMP::cpus[i]->runQueue->get_length() < cpu->runQueue->get_length()) {
                 cpu = SMP::cpus[i];
+            }
+
+            if(!cpu->runQueue->get_length()){
+                break;
             }
         }
 
@@ -441,7 +443,7 @@ namespace Scheduler{
         thread_t* thread = &proc->threads[0];
         thread->registers.cs = 0x1B; // We want user mode so use user mode segments, make sure RPL is 3
         thread->registers.ss = 0x23;
-        thread->timeSliceDefault = 5;
+        thread->timeSliceDefault = 6;
         thread->timeSlice = thread->timeSliceDefault;
         thread->priority = 4;
 

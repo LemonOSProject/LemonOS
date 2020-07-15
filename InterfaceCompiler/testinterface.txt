@@ -1,0 +1,9 @@
+interface LemonWM {
+    sync CreateWindow(const char* title, rect_t bounds, uint32_t flags) response empty
+    async DestroyWindow()
+
+    async SetTitle(const char* title)
+    async Relocate(vector2i_t pos)
+    async Resize(vector2i_t size)
+    async Minimize(int windowID, bool minimized)
+}
