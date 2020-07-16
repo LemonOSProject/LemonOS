@@ -21,7 +21,7 @@ namespace Lemon::GUI
 		int width = Graphics::GetTextLength(message) + 10;
 		if(width < 220) width = 220;
 
-		Window* win = new Window("Open...", {width, 80}, 0, WindowType::GUI);
+		Window* win = new Window(title, {width, 80}, 0, WindowType::GUI);
 		
 		Label* label = new Label(message, {10, 10, 180, 12});
 		win->AddWidget(label);

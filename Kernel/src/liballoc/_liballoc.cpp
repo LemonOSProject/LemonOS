@@ -44,7 +44,7 @@ void* liballoc_alloc(size_t pages) {
 }
 
 int liballoc_free(void* addr, size_t pages) {
-	for(int i = 0; i < pages; i++){
+	for(size_t i = 0; i < pages; i++){
 		uint64_t phys = Memory::VirtualToPhysicalAddress((uintptr_t)addr + i);
 		Memory::FreePhysicalMemoryBlock(phys);
 	}

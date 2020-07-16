@@ -3,7 +3,7 @@
 #include <lemon/filesystem.h>
 
 int lemon_open(const char* filename, int flags){
-    return syscall(SYS_OPEN, (uintptr_t)filename, 0, 0, 0, 0);
+    return syscall(SYS_OPEN, (uintptr_t)filename, flags, 0, 0, 0);
 }
 
 void lemon_close(int fd){

@@ -13,7 +13,9 @@ namespace Lemon{
     protected:
         friend class MessageMultiplexer;
 
-        virtual std::vector<pollfd>& GetFileDescriptors() = 0;
+        virtual std::vector<pollfd> GetFileDescriptors() = 0;
+
+        virtual ~MessageHandler() = default;
     };
 
     class MessageClient : public MessageHandler{
@@ -21,7 +23,7 @@ namespace Lemon{
         
         pollfd sock;
 
-        std::vector<pollfd>& GetFileDescriptors();
+        std::vector<pollfd> GetFileDescriptors();
     public:
         MessageClient();
         ~MessageClient();
@@ -41,7 +43,7 @@ namespace Lemon{
 
         int sock = 0;
 
-        std::vector<pollfd>& GetFileDescriptors();
+        std::vector<pollfd> GetFileDescriptors();
     public:
         MessageServer(sockaddr_un& address, socklen_t len);
 
@@ -77,5 +79,7 @@ namespace Lemon{
 
             return *instance;
         }
+
+        virtual ~MessageBusInterface() = default;
     };
 }

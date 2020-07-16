@@ -44,7 +44,7 @@ void SHA256::Transform(uint8_t* data){
 		t[0] = temp1 + temp2;
 	}
 
-	for(int i = 0; i < SHA256_HASH_SIZE / sizeof(uint32_t); i++){
+	for(unsigned i = 0; i < SHA256_HASH_SIZE / sizeof(uint32_t); i++){
 		hash[i] += t[i];
 	}
 }

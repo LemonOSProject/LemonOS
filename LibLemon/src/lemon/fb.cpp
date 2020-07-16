@@ -23,9 +23,7 @@ void CreateFramebufferSurface(surface_t& surface){
     surface.buffer = (uint8_t*)LemonMapFramebuffer(fbInfo);
     assert(surface.buffer);
 
-    surface.x = surface.y = 0;
     surface.width = fbInfo.width;
     surface.height = fbInfo.height;
     surface.depth = fbInfo.bpp;
-    surface.pitch = fbInfo.pitch;
 }

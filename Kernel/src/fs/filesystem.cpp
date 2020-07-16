@@ -103,7 +103,7 @@ namespace fs{
 				continue;
 			}
 
-			if(file = strtok(NULL, "/")){
+			if((file = strtok(NULL, "/"))){
 				Log::Warning("Found file in the path however we were not finished");
 				return nullptr;
 			}
@@ -161,7 +161,7 @@ namespace fs{
 
 		int newLength = 2; // Separator and null terminator
 		newLength += strlen(path) + strlen(workingDir);
-		for(int i = 0; i < tokens->get_length(); i++){
+		for(unsigned i = 0; i < tokens->get_length(); i++){
 			if(strlen(tokens->get_at(i)) == 0){
 				tokens->remove_at(i--);
 				continue;
@@ -184,7 +184,7 @@ namespace fs{
 		outPath[0] = 0;
 
 		if(!tokens->get_length()) strcpy(outPath + strlen(outPath), "/");
-		else for(int i = 0; i < tokens->get_length(); i++){
+		else for(unsigned i = 0; i < tokens->get_length(); i++){
 			strcpy(outPath + strlen(outPath), "/");
 			strcpy(outPath + strlen(outPath), tokens->get_at(i));
 		}
@@ -262,7 +262,7 @@ namespace fs{
     FsNode* Root::FindDir(char* name){
 		if(strcmp(name,devDirent.name) == 0) return &dev;
 
-		for(int i = 0; i < fs::volumes->get_length(); i++){
+		for(unsigned i = 0; i < fs::volumes->get_length(); i++){
 			if(strcmp(fs::volumes->get_at(i)->mountPointDirent.name,name) == 0) return (fs::volumes->get_at(i)->mountPointDirent.node);
 		}
 

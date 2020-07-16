@@ -87,6 +87,7 @@ namespace PCI{
 		for(; offset < sizeof(pci_device_header_type1_t); offset++){
 			*((uint8_t*)(&header) + offset) = Config_ReadByte(bus, slot, func, offset);
 		}
+		return header;
 	}
 
 	uint16_t GetVendor(uint8_t bus, uint8_t slot, uint8_t func){
@@ -117,6 +118,8 @@ namespace PCI{
 				return true;
 			}
 		}
+
+		return false;
 	}
 
 	void RegsiterPCIVendor(pci_vendor_t vendor){

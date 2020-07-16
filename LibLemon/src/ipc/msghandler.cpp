@@ -89,14 +89,14 @@ namespace Lemon {
                 LemonMessage msg;
 
                 ssize_t len = recv(fds[i].fd, &msg, sizeof(LemonMessage), 0);
-                if(len < (ssize_t)sizeof(LemonMessage)){
-                    printf("invalid length: %d\n", len);
+                if(len < static_cast<ssize_t>(sizeof(LemonMessage))){
+                    printf("invalid length: %ld\n", len);
                     continue;
                 }
 
                 if(msg.magic != LEMON_MESSAGE_MAGIC){
                     printf("Invalid magic: %x, discarding data.\n", msg.magic);
-                    while(msg.magic != LEMON_MESSAGE_MAGIC && len >= sizeof(msg)){
+                    while(msg.magic != LEMON_MESSAGE_MAGIC && len >= static_cast<ssize_t>(sizeof(LemonMessage))){
                         len = recv(fds[i].fd, &msg, sizeof(msg), MSG_DONTWAIT); // Discard everything until we find a message
                     }
                 }
@@ -113,7 +113,7 @@ namespace Lemon {
                 len = recv(fds[i].fd, newMsg->msg.data, msg.length, 0);
 
                 if(len < msg.length){
-                    printf("Warning: invalid message length %u. Only read %d bytes\n", msg.length, len);
+                    printf("Warning: invalid message length %u. Only read %ld bytes\n", msg.length, len);
                     continue;
                 }
 
@@ -158,7 +158,7 @@ namespace Lemon {
 
         if(msg.magic != LEMON_MESSAGE_MAGIC){
             printf("Invalid magic: %x, discarding data.\n", msg.magic);
-            while(msg.magic != LEMON_MESSAGE_MAGIC && len >= sizeof(msg)){
+            while(msg.magic != LEMON_MESSAGE_MAGIC && len >= static_cast<ssize_t>(sizeof(msg))){
                 len = recv(sock.fd, &msg, sizeof(msg), MSG_DONTWAIT); // Discard everything until we find a message
             }
         }
@@ -175,7 +175,7 @@ namespace Lemon {
         len = recv(sock.fd, newMsg->data, msg.length, 0);
 
         if(len < msg.length){
-            printf("Warning: invalid message length %u. Only read %d bytes\n", msg.length, len);
+            printf("Warning: invalid message length %u. Only read %ld bytes\n", msg.length, len);
             
             return std::shared_ptr<LemonMessage>(nullptr);
         }
@@ -205,7 +205,7 @@ namespace Lemon {
 
         if(msg.magic != LEMON_MESSAGE_MAGIC){
             printf("Invalid magic: %x, discarding data.\n", msg.magic);
-            while(msg.magic != LEMON_MESSAGE_MAGIC && len >= sizeof(msg)){
+            while(msg.magic != LEMON_MESSAGE_MAGIC && len >= static_cast<ssize_t>(sizeof(msg))){
                 len = recv(sock.fd, &msg, sizeof(msg), MSG_DONTWAIT); // Discard everything until we find a message
             }
         }
@@ -222,7 +222,7 @@ namespace Lemon {
         len = recv(sock.fd, newMsg->data, msg.length, 0);
 
         if(len < msg.length){
-            printf("Warning: invalid message length %u. Only read %d bytes\n", msg.length, len);
+            printf("Warning: invalid message length %u. Only read %ld bytes\n", msg.length, len);
             
             return std::shared_ptr<LemonMessage>(nullptr);
         }
@@ -239,7 +239,7 @@ namespace Lemon {
 
     void MessageServer::Send(LemonMessage* msg, int fd){
         if(fd < 0) {
-            printf("Invalid fd: %d\n", fd);
+            printf("Invalid fd: %i\n", fd);
             return;
         }
 
@@ -249,14 +249,14 @@ namespace Lemon {
 
         if(sent <= 0){
             perror("Warning: Send: ");
-        } else if(sent < msg->length + sizeof(LemonMessage)){
-            printf("Warning: Tried to send %d bytes, but only sent %d bytes", msg->length + sizeof(LemonMessage), sent);
+        } else if(sent < msg->length + static_cast<short>(sizeof(LemonMessage))){
+            printf("Warning: Tried to send %lu bytes, but only sent %ld bytes", msg->length + sizeof(LemonMessage), sent);
         }
     }
 
     void MessageServer::Send(const Message& msg, int fd){
         if(fd < 0) {
-            printf("Invalid fd: %d\n", fd);
+            printf("Invalid fd: %i\n", fd);
             return;
         }
 
@@ -265,7 +265,7 @@ namespace Lemon {
         if(sent < 0){
             perror("Warning: Send: ");
         } else if(sent < msg.length()){
-            printf("Warning: Tried to send %d bytes, but only sent %d bytes", msg.length(), sent);
+            printf("Warning: Tried to send %u bytes, but only sent %ld bytes", msg.length(), sent);
         }
     }
 
@@ -276,8 +276,8 @@ namespace Lemon {
 
         if(sent <= 0){
             perror("Warning: Send: ");
-        } else if(sent < msg->length + sizeof(LemonMessage)){
-            printf("Warning: Tried to send %d bytes, but only sent %d bytes", msg->length + sizeof(LemonMessage), sent);
+        } else if(sent < msg->length + static_cast<short>(sizeof(LemonMessage))){
+            printf("Warning: Tried to send %lu bytes, but only sent %ld bytes", msg->length + sizeof(LemonMessage), sent);
         }
     }
 
@@ -287,15 +287,15 @@ namespace Lemon {
         if(sent <= 0){
             perror("Warning: Send: ");
         } else if(sent < msg.length()){
-            printf("Warning: Tried to send %d bytes, but only sent %d bytes", msg.length(), sent);
+            printf("Warning: Tried to send %u bytes, but only sent %ld bytes", msg.length(), sent);
         }
     }
 
-    std::vector<pollfd>& MessageServer::GetFileDescriptors(){
+    std::vector<pollfd> MessageServer::GetFileDescriptors(){
         return fds;
     }
 
-    std::vector<pollfd>& MessageClient::GetFileDescriptors(){
+    std::vector<pollfd> MessageClient::GetFileDescriptors(){
         std::vector<pollfd> v;
         v.push_back(sock);
         return v;

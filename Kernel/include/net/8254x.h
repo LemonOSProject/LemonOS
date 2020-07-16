@@ -104,8 +104,8 @@ namespace Network{
         void** txDescriptorsVirt;
         void** rxDescriptorsVirt;
 
-        int txTail = 0;
-        int rxTail = 0;
+        unsigned txTail = 0;
+        unsigned rxTail = 0;
 
         uint64_t memBase;
         void* memBaseVirt;

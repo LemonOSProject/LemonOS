@@ -27,7 +27,8 @@ char GetNextPTY(){
 	nextPTY++;
 	if(nextPTY < 'a' && nextPTY > '9') nextPTY = 'a';
 	else if (nextPTY < 'A' && nextPTY > 'z') nextPTY = 'A';
-	else return nextPTY;
+	
+	return nextPTY;
 }
 
 List<PTY*>* ptys = NULL;

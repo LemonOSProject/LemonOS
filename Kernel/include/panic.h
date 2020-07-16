@@ -1,3 +1,3 @@
 #pragma once
 
-void KernelPanic(const char** reasons, int reasonCount);
+[[noreturn]] void KernelPanic(const char** reasons, int reasonCount);

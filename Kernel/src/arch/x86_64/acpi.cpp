@@ -193,7 +193,7 @@ extern "C"{
 	}
 
 	/* Reports a fatal error, and halts. */
-	__attribute__((noreturn)) void laihost_panic(const char *msg){
+	[[noreturn]] void laihost_panic(const char *msg){
 		const char* panicReasons[]{"ACPI Error:", msg};
 		KernelPanic(panicReasons,2);
 
@@ -275,7 +275,7 @@ void laihost_pci_writew(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, ui
 
 /*void laihost_pci_writed(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset, uint32_t val){
 
-}
+}*/
 
 /* Read a byte/word/dword from the given device's PCI configuration space
    at the given offset. * /

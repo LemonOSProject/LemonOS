@@ -33,11 +33,10 @@ namespace Memory{
 		uint64_t address = 0;
 
 		uint32_t pml4Index = PML4_GET_INDEX(addr);
-		uint32_t pdptIndex = PDPT_GET_INDEX(addr);
 		uint32_t pageDirIndex = PAGE_DIR_GET_INDEX(addr);
 		uint32_t pageTableIndex = PAGE_TABLE_GET_INDEX(addr);
 
-		if(pml4Index == 0){ // From Process Address Space
+		if(pml4Index < 511){ // From Process Address Space
 			
 		} else { // From Kernel Address Space
 			if(kernelHeapDir[pageDirIndex] & 0x80){
@@ -431,12 +430,10 @@ namespace Memory{
 	}
 	
 	void KernelFree4KPages(void* addr, uint64_t amount){
-		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
+		uint64_t pageDirIndex, pageIndex;
 		uint64_t virt = (uint64_t)addr;
 
 		while(amount--){
-			pml4Index = PML4_GET_INDEX(virt);
-			pdptIndex = PDPT_GET_INDEX(virt);
 			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
 			pageIndex = PAGE_TABLE_GET_INDEX(virt);
 			kernelHeapDirTables[pageDirIndex][pageIndex] = 0;
@@ -478,8 +475,6 @@ namespace Memory{
 	}
 
 	void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount){
-		uint64_t pml4Index = PML4_GET_INDEX(virt);
-		uint64_t pdptIndex = PDPT_GET_INDEX(virt);
 		uint64_t pageDirIndex = PAGE_DIR_GET_INDEX(virt);
 
 		while(amount--){
@@ -492,11 +487,9 @@ namespace Memory{
 	}
 
 	void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags){
-		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
+		uint64_t pageDirIndex, pageIndex;
 
 		while(amount--){
-			pml4Index = PML4_GET_INDEX(virt);
-			pdptIndex = PDPT_GET_INDEX(virt);
 			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
 			pageIndex = PAGE_TABLE_GET_INDEX(virt);
 			SetPageFrame(&(kernelHeapDirTables[pageDirIndex][pageIndex]), phys);
@@ -572,8 +565,6 @@ namespace Memory{
 		int reserved = err_code & 0x8;     // Overwritten CPU-reserved bits of page entry
 		int id = err_code & 0x10;          // Caused by an instruction fetch
 
-		char* msg = "Page fault ";
-		char* reason;
 		if (present)
 			Log::Info("Page not present"); // Print fault to serial
 		if (rw)

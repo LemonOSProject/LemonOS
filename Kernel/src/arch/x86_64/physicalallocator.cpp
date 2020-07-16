@@ -61,7 +61,7 @@ namespace Memory{
         for (uint32_t i = 0; i < maxPhysicalBlocks / 32; i++)
             if (physicalMemoryBitmap[i] != 0xffffffff) // If all 32 bits at the index are used then ignore them
                 for (uint32_t j = 0; j < 32; j++) // Test each bit in the dword
-                    if (!(physicalMemoryBitmap[i] & (1 << j)) && (i * 32 * j))
+                    if (!(physicalMemoryBitmap[i] & (1 << j)) && (i || j))
                         return i * 32 + j;
 
         // The first block is always reserved
@@ -103,7 +103,7 @@ namespace Memory{
     // Allocates a block of 2MB physical memory
     /*uint64_t AllocateLargePhysicalMemoryBlock() {
         uint64_t index = GetFirstFreeMemoryBlock();
-        uint64_t blockCount = 0x200000 /* 2MB * / / PHYSALLOC_BLOCK_SIZE;
+        uint64_t blockCount = 0x200000
         uint64_t counter = 0;
         while(counter < blockCount){
             if(bit_test(index)){

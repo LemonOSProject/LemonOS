@@ -35,10 +35,14 @@ struct IPv4Address{
 
     IPv4Address& operator=(const uint8_t newData[]){
         memcpy(data, newData, 4);
+
+        return *this;
     }
 
     IPv4Address& operator=(const uint32_t address){
         *((uint32_t*)data) = address;
+
+        return *this;
     }
 } __attribute__((packed));
 
@@ -64,6 +68,8 @@ typedef struct MACAddress {
 
     MACAddress& operator=(const uint8_t newData[]){
         memcpy(data, newData, 6);
+
+        return *this;
     }
 
     bool operator==(const MACAddress& r){

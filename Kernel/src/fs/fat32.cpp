@@ -104,7 +104,7 @@ namespace fs::FAT32{
         void* buf = kmalloc(clusterChain->get_length() * clusterSizeBytes);
         void* _buf = buf;
 
-        for(int i = 0; i < clusterChain->get_length() && maxCluster; i++){
+        for(unsigned i = 0; i < clusterChain->get_length() && maxCluster; i++){
             part->Read(ClusterToLBA(clusterChain->get_at(i)), clusterSizeBytes, buf);
 
             buf += clusterSizeBytes;
@@ -127,7 +127,7 @@ namespace fs::FAT32{
         void* buf = kmalloc(clusterChain->get_length() * clusterSizeBytes);
         void* _buf = buf;
 
-        for(int i = 0; i < clusterChain->get_length(); i++){
+        for(unsigned i = 0; i < clusterChain->get_length(); i++){
             part->Read(ClusterToLBA(clusterChain->get_at(i)), clusterSizeBytes, buf);
 
             buf += clusterSizeBytes;
@@ -147,7 +147,7 @@ namespace fs::FAT32{
         int count;
         void* _buf = ReadClusterChain(node->inode, &count, size);
 
-        if(count * bootRecord->bpb.sectorsPerCluster * part->parentDisk->blocksize < size) return 0;
+        if(static_cast<unsigned>(count) * bootRecord->bpb.sectorsPerCluster * part->parentDisk->blocksize < size) return 0;
 
         memcpy(buffer, _buf, size);
         return size;
@@ -173,8 +173,8 @@ namespace fs::FAT32{
     }
 
     int Fat32Volume::ReadDir(Fat32Node* node, DirectoryEntry* dirent, uint32_t index){
-        int lfnCount = 0;
-        int entryCount = 0;
+        unsigned lfnCount = 0;
+        unsigned entryCount = 0;
 
         uint32_t cluster = node->inode;
         int clusterCount = 0;
@@ -186,7 +186,7 @@ namespace fs::FAT32{
 
         fat_lfn_entry_t** lfnEntries;
 
-        for(int i = 0; i < clusterCount * clusterSizeBytes; i++){
+        for(unsigned i = 0; i < static_cast<unsigned>(clusterCount) * clusterSizeBytes; i++){
             if(dirEntries[i].filename[0] == 0) return -1; // No Directory Entry at index
             else if (dirEntries[i].filename[0] == 0xE5) {
                 lfnCount = 0;
@@ -214,7 +214,7 @@ namespace fs::FAT32{
 
         lfnEntries = (fat_lfn_entry_t**)kmalloc(sizeof(fat_lfn_entry_t*) * lfnCount);
 
-        for(int i = 0; i < lfnCount; i++){
+        for(unsigned i = 0; i < lfnCount; i++){
             fat_lfn_entry_t* lfnEntry = (fat_lfn_entry_t*)(&dirEntries[dirEntryIndex -  i - 1]);
 
             lfnEntries[i] = lfnEntry; 
@@ -238,8 +238,7 @@ namespace fs::FAT32{
     }
 
     FsNode* Fat32Volume::FindDir(Fat32Node* node, char* name){
-        int lfnCount = 0;
-        int entryCount = 0;
+        unsigned lfnCount = 0;
 
         uint32_t cluster = node->inode;
         int clusterCount = 0;
@@ -254,7 +253,7 @@ namespace fs::FAT32{
         fat_lfn_entry_t** lfnEntries;
         Fat32Node* _node = nullptr;
 
-        for(int i = 0; i < clusterCount * clusterSizeBytes; i++){
+        for(unsigned i = 0; i < static_cast<unsigned>(clusterCount) * clusterSizeBytes; i++){
             if(dirEntries[i].filename[0] == 0) return nullptr; // No Directory Entry at index
             else if (dirEntries[i].filename[0] == 0xE5) {
                 lfnCount = 0;
@@ -269,7 +268,7 @@ namespace fs::FAT32{
                 if(lfnCount){
                     lfnEntries = (fat_lfn_entry_t**)kmalloc(sizeof(fat_lfn_entry_t*) * lfnCount);
                     
-                    for(int k = 0; k < lfnCount; k++){
+                    for(unsigned k = 0; k < lfnCount; k++){
                         fat_lfn_entry_t* lfnEntry = (fat_lfn_entry_t*)(&dirEntries[i -  k - 1]);
 
                         lfnEntries[k] = lfnEntry; 

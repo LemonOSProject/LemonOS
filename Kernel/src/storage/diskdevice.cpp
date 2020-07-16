@@ -5,7 +5,7 @@
 
 int DiskDevice::InitializePartitions(){
     static char letter = 'a';
-    for(int i = 0; i < partitions.get_length(); i++){
+    for(unsigned i = 0; i < partitions.get_length(); i++){
         if(fs::FAT32::Identify(partitions.get_at(i)) > 0) {
             char name[] =  {'h', 'd', letter++, 0};
             auto vol = new fs::FAT32::Fat32Volume(partitions.get_at(i),name);

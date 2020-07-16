@@ -25,7 +25,7 @@ size_t CharacterBuffer::Write(char* _buffer, size_t size){
 
     size_t written = 0;
 
-    for(int i = 0; i < size; i++){
+    for(unsigned i = 0; i < size; i++){
         if(_buffer[i] == '\b' /*Backspace*/ && !ignoreBackspace){
             if(bufferPos > 0) {
                 bufferPos--;
@@ -57,7 +57,7 @@ size_t CharacterBuffer::Read(char* _buffer, size_t count){
         return 0;
     }
 
-    for(int i = 0; i < count; i++){
+    for(unsigned i = 0; i < count; i++){
         if(buffer[i] == '\0') {
             lines--;
             continue;
@@ -68,7 +68,7 @@ size_t CharacterBuffer::Read(char* _buffer, size_t count){
         if(buffer[i] == '\n') lines--;
     }
 
-    for(int i = 0; i < bufferSize - count; i++){
+    for(unsigned i = 0; i < bufferSize - count; i++){
         buffer[i] = buffer[count + i];
     }
 

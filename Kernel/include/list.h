@@ -183,7 +183,7 @@ private:
 	unsigned num;
 	volatile int lock = 0;
 
-	const int maxCache = 4;
+	const unsigned maxCache = 4;
 	FastList<ListNode<T>*> cache; // Prevent allocations by caching ListNodes
 public:
 	

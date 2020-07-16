@@ -47,12 +47,12 @@ namespace Lemon::Graphics{
         mainFont = new Font;
 
         if(int err = FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &mainFont->face)){
-            //syscall(0,(uintptr_t)"Error loading font from memory /initrd/montserrat.ttf",err,0,0,0);
+            printf("Freetype Error (%d) loading font from memory /initrd/montserrat.ttf\n",err);
             return;
         }
 
         if(int err = FT_Set_Pixel_Sizes(mainFont->face, 0, 12)){
-            //syscall(0,(uintptr_t)"Error Setting Font Size", err, 0, 0, 0);
+            printf("Freetype Error (%d) Setting Font Size\n", err);
             return;
         }
 
@@ -93,12 +93,12 @@ namespace Lemon::Graphics{
         Font* font = new Font;
 
         if(int err = FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &font->face)){
-            //syscall(0,(uintptr_t)"Error loading custom font from memory",err,0,0,0);
+            printf("Freetype Error (%d) loading custom font from memory\n",err);
             return nullptr;
         }
 
         if(int err = FT_Set_Pixel_Sizes(font->face, 0, sz)){
-            //syscall(0,(uintptr_t)"Error Setting Font Size", err, 0, 0, 0);
+            printf("Freetype Error (%d) Setting Font Size\n", err);
             return nullptr;
         }
 
@@ -126,7 +126,7 @@ namespace Lemon::Graphics{
     }
 
     Font* GetFont(const char* id){
-        for(int i = 0; i < fonts.get_length(); i++){
+        for(unsigned i = 0; i < fonts.get_length(); i++){
             if(strcmp(fonts[i]->id, id) == 0) return fonts[i];
         }
         return mainFont;
@@ -158,7 +158,7 @@ namespace Lemon::Graphics{
         uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
         uint32_t* buffer = (uint32_t*)surface->buffer; 
         if(int err = FT_Load_Char(font->face, character, FT_LOAD_RENDER)) {
-            //syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
+            printf("Freetype Error (%d)\n", err);
             fontState = 0;
             return 0;
         }
@@ -173,12 +173,12 @@ namespace Lemon::Graphics{
             maxHeight = surface->height - y;
         }
         
-        for(int i = 0; i < font->face->glyph->bitmap.rows && i < maxHeight; i++){
+        for(int i = 0; i < static_cast<int>(font->face->glyph->bitmap.rows) && i < maxHeight; i++){
             if(y + i < 0) continue;
 
             uint32_t yOffset = (i + y + (12/*font->glyph->bitmap.rows*/ - font->face->glyph->bitmap_top)) * (surface->width);
-            for(int j = 0; j < font->face->glyph->bitmap.width && j + x < surface->width; j++){
-                if(x + j < 0) continue;
+            for(unsigned int j = 0; j < font->face->glyph->bitmap.width && static_cast<long>(j) + x < surface->width; j++){
+                if(x + static_cast<long>(j) < 0) continue;
                 if(font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] == 255)
                     buffer[yOffset + (j + x)] = colour_i;
                 else if(font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] > 0){
@@ -207,7 +207,7 @@ namespace Lemon::Graphics{
         return mainFont;
     }
 
-    int DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font) {
+    int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font) {
         if(y >= surface->height || x >= surface->width || y >= limits.y + limits.height || x >= limits.x + limits.width) return 0;
 
         if((fontState != 1 && fontState != -1) || !font->face) InitializeFonts();
@@ -224,13 +224,17 @@ namespace Lemon::Graphics{
         uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
         uint32_t* buffer = (uint32_t*)surface->buffer; 
 
-        int maxHeight = font->height;
+        unsigned int maxHeight = font->height;
 
-        if(y + maxHeight >= limits.y + limits.height){
+        if(y < 0 && static_cast<unsigned>(-y) > maxHeight){
+            return 0;
+        }
+
+        if(y + static_cast<int>(maxHeight) >= limits.y + limits.height){
             maxHeight = limits.y + limits.height - y;
         }
 
-        if(y + maxHeight >= surface->height){
+        if(y + static_cast<int>(maxHeight) >= surface->height){
             maxHeight = surface->height - y;
         }
 
@@ -244,15 +248,25 @@ namespace Lemon::Graphics{
             }
 
             if(int err = FT_Load_Char(font->face, *str, FT_LOAD_RENDER)) {
-                //syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
+                printf("Freetype Error (%d)\n", err);
                 fontState = 0;
                 return 0;
             }
 
-            for(int i = 0; i < font->face->glyph->bitmap.rows && i + (font->height - font->face->glyph->bitmap_top) < maxHeight; i++){
+            unsigned i = 0;
+            if(y < 0){
+                i = -y;
+            }
+
+            for(; i < font->face->glyph->bitmap.rows && i + (font->height - font->face->glyph->bitmap_top) < maxHeight; i++){
                 uint32_t yOffset = (i + y + (font->height - font->face->glyph->bitmap_top)) * (surface->width);
                 
-                for(int j = 0; j < font->face->glyph->bitmap.width && (x + xOffset + j) < surface->width; j++){
+                unsigned j = 0;
+                if(x < 0){
+                    j = -x;
+                }
+
+                for(; j < font->face->glyph->bitmap.width && (x + xOffset + static_cast<long>(j)) < surface->width; j++){
                     unsigned off = yOffset + (j + x + xOffset);
                     if(font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] == 255)
                         buffer[off] = colour_i;
@@ -274,15 +288,15 @@ namespace Lemon::Graphics{
         return xOffset;
     }
 
-    int DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font) {
+    int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font) {
         return DrawString(str, x, y, r, g, b, surface, {0, 0, surface->width, surface->height}, font);
     }
 
-    int DrawString(const char* str, unsigned int x, unsigned int y, rgba_colour_t col, surface_t* surface, rect_t limits, Font* font){
+    int DrawString(const char* str, int x, int y, rgba_colour_t col, surface_t* surface, rect_t limits, Font* font){
         return DrawString(str, x, y, col.r, col.g, col.b, surface, limits, font);
     }
 
-    int DrawString(const char* str, unsigned int x, unsigned int y, rgba_colour_t col, surface_t* surface, Font* font){
+    int DrawString(const char* str, int x, int y, rgba_colour_t col, surface_t* surface, Font* font){
         return DrawString(str, x, y, col.r, col.g, col.b, surface, font);
     }
     
@@ -297,7 +311,7 @@ namespace Lemon::Graphics{
         }
 
         if(int err = FT_Load_Char(font->face, c, FT_LOAD_ADVANCE_ONLY)) {
-            //syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
+            printf("Freetype Error (%d)\n", err);
             fontState = 0;
             return 0;
         }
@@ -316,7 +330,7 @@ namespace Lemon::Graphics{
         }
 
         size_t len = 0;
-        int i = 0;
+        size_t i = 0;
         while (*str && i++ < n) {
             if(*str == '\n'){
                 break;
@@ -334,7 +348,7 @@ namespace Lemon::Graphics{
             }
 
             if(int err = FT_Load_Char(font->face, *str, FT_LOAD_ADVANCE_ONLY)) {
-                //syscall(0, (uintptr_t)"Freetype Error!", err, 0, 0, 0);
+                printf("Freetype Error (%d)\n", err);
                 fontState = 0;
                 return 0;
             }

@@ -16,7 +16,11 @@ namespace Lemon::Shell {
         shCmd->windowID = id;
         shCmd->titleLength = strlen(title);
         shCmd->windowState = state;
-        strncpy(shCmd->windowTitle, title, shCmd->titleLength);
+
+        #pragma GCC diagnostic push
+        #pragma GCC diagnostic ignored "-Wstringop-overflow"
+            strncpy(shCmd->windowTitle, title, shCmd->titleLength);
+        #pragma GCC diagnostic pop
 
         client.Send(msg); // Tell the Shell to add the window to its list
     }
@@ -47,11 +51,12 @@ namespace Lemon::Shell {
     }
     
     void Open(const char* path, MessageClient& client){
-
+        (void)path;
+        (void)client;
     }
 
     void Open(const char* path){
-
+        (void)path;
     }
 
     void ToggleMenu(MessageClient& client){

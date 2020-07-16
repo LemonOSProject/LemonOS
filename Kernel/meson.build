@@ -26,16 +26,23 @@ bing = generator(bintoelf,
 output : '@BASENAME@.bin.o',
 arguments : ['@INPUT@','@OUTPUT@', meson.current_source_dir() + '/src/arch/x86_64/', '@BASENAME@'])
 
-kernel_cpp_args = ['-Wno-write-strings', '-Wno-pointer-arith',
+kernel_c_args = [
+    '-Wno-write-strings', '-Wno-pointer-arith',
     '-DLemon64',
     '-O0',
     '-ffreestanding', '-nostdlib',
     '-mcmodel=large', '-mno-red-zone', '-fno-pic',
     '-mno-mmx', '-mno-sse', '-mno-sse2',
     '-z', 'max-page-size=0x1000',
-    '-fno-stack-protector', '-fno-exceptions', '-fno-rtti']
+    '-fno-stack-protector',
+]
 
-add_project_arguments(kernel_cpp_args, language : ['c', 'cpp'])
+kernel_cpp_args = [
+    '-fno-exceptions', '-fno-rtti', '-std=c++17',
+]
+
+add_project_arguments(kernel_c_args, language : ['c', 'cpp'])
+add_project_arguments(kernel_cpp_args, language : 'cpp')
 
 cpp_files = [
     'src/kernel.cpp',
@@ -127,7 +134,7 @@ kernel_link_args = [
     '-lgcc'
 ]
 
-kernel_link_args += kernel_cpp_args
+kernel_link_args += kernel_c_args
 
 executable('kernel.sys',
     [asmg.process(asm_files_x86_64), bing.process(asm_bin_files_x86_64), cpp_files, cpp_files_x86_64, lai.get_variable('sources')],

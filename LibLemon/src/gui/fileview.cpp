@@ -18,7 +18,7 @@
 #endif
 
 namespace Lemon::GUI {
-    surface_t FileView::icons = { .width = 0, .buffer = nullptr };
+    surface_t FileView::icons;
 
     __attribute__((constructor))
     void InitializeFVIcons(){
@@ -91,7 +91,7 @@ namespace Lemon::GUI {
 
         int sideBar = open("/", O_DIRECTORY);
         int ypos = pathBox->GetFixedBounds().height + 20;
-        char str[150];
+        char str[270];
         int i = 0;
         lemon_dirent_t dirent;
         while(lemon_readdir(sideBar, i++, &dirent) > 0){
@@ -173,7 +173,7 @@ namespace Lemon::GUI {
             }
 
             char buf[80];
-            sprintf(buf, "%d KB", statResult.st_size / 1024);
+            sprintf(buf, "%lu KB", statResult.st_size / 1024);
 
             item.details.push_back(std::string(buf));
 

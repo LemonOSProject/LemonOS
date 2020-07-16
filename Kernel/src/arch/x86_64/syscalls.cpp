@@ -290,7 +290,7 @@ open:
 long SysClose(regs64_t* r){
 	int fd = r->rbx;
 	
-	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
 		Log::Warning("sys_close: Invalid File Descriptor, %d", fd);
 		return -EINVAL;
 	}
@@ -458,7 +458,7 @@ long SysFStat(regs64_t* r){
 	stat_t* stat = (stat_t*)r->rbx;
 	int fd = r->rcx;
 
-	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
 		Log::Warning("sys_fstat: Invalid File Descriptor, %d", fd);
 		return -EBADF;
 	}
@@ -534,9 +534,9 @@ long SysStat(regs64_t* r){
 
 long SysLSeek(regs64_t* r){
 	long ret = 0;
-	uint64_t fd = r->rbx;
+	int fd = r->rbx;
 
-	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length() || !Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
+	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length()) || !Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
 		Log::Warning("sys_lseek: Invalid File Descriptor, %d", fd);
 		return -1;
 	}
@@ -732,9 +732,9 @@ long SysUName(regs64_t* r){
 }
 
 long SysReadDir(regs64_t* r){
-	unsigned int fd = r->rbx;
+	int fd = r->rbx;
 
-	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
 		return -EBADF;
 	} 
 	
@@ -830,11 +830,11 @@ long SysWaitPID(regs64_t* r){
 	lock_t unused = 0;
 	process_t* proc = nullptr;
 
-	if(proc = Scheduler::FindProcessByPID(pid)){
+	if((proc = Scheduler::FindProcessByPID(pid))){
 		Scheduler::BlockCurrentThread(proc->blocking, unused);
 	}
 
-	while(proc = Scheduler::FindProcessByPID(pid)) { Scheduler::Yield(); }
+	while((proc = Scheduler::FindProcessByPID(pid))) { Scheduler::Yield(); }
 
 	return 0;
 }
@@ -891,12 +891,12 @@ long SysPWrite(regs64_t* r){
 }
 
 long SysIoctl(regs64_t* r){
-	uint64_t fd = r->rbx;
+	int fd = r->rbx;
 	uint64_t request = r->rcx;
 	uint64_t arg = r->rdx;
 	int* result = (int*)r->rsi;
 
-	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
 		return -1;
 	}
 	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];

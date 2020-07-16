@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stddef.h>
+#include <assert.h>
 
 namespace Lemon::Graphics{
     bool IsPNG(const void* data){
@@ -153,12 +154,15 @@ namespace Lemon::Graphics{
 
         png_set_bgr(png);
 
-        surface_t _surface = {.width = width, .height = height, .buffer = (uint8_t*)malloc(width * height * 4)};
+        assert(width < INT_MAX);
+        assert(height < INT_MAX);
+
+        surface_t _surface = {.width = static_cast<int>(width), .height = static_cast<int>(height), .depth = 32, .buffer = (uint8_t*)malloc(width * height * 4)};
         *surface = _surface;
 
         png_bytepp rowPointers = new png_bytep[height];
 
-        for(int i = 0; i < height; i++){
+        for(png_uint_32 i = 0; i < height; i++){
             rowPointers[i] = surface->buffer + i * surface->width * 4;
         }
 
@@ -183,7 +187,7 @@ namespace Lemon::Graphics{
         uint8_t bpp = infoHeader.bpp;
         int width = infoHeader.width;
         int height = infoHeader.height;
-        *surface = (surface_t){.width = width, .height = height, .buffer = (uint8_t*)malloc(width * height * 4)};
+        *surface = (surface_t){.width = width, .height = height, .depth = 32, .buffer = (uint8_t*)malloc(width * height * 4)};
 
         uint32_t rowSize = floor((bpp*width + 31) / 32) * 4;
         uint8_t* row = new uint8_t[rowSize];

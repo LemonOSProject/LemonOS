@@ -75,7 +75,7 @@ void VideoConsole::Print(const char* str, uint8_t r, uint8_t g, uint8_t b){
 }
 
 void VideoConsole::PrintN(const char* str, unsigned n, uint8_t r, uint8_t g, uint8_t b){
-    int i = 0;
+    unsigned i = 0;
     while (*str && i < n){
 		Print(*str++, r, g, b);
         i++;

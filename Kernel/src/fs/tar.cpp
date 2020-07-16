@@ -88,7 +88,7 @@ namespace fs::tar{
         MakeNode(dirHeader, dirNode, dirInode, parent);
         dirNode->entryCount = 0;
 
-        int i = blockIndex + GetBlockCount(dirHeader->ustar.size) + 1; // Next block
+        unsigned i = blockIndex + GetBlockCount(dirHeader->ustar.size) + 1; // Next block
         while(i < blockCount){
             if(strncmp(blocks[i].ustar.name, dirHeader->ustar.name, strlen(dirHeader->ustar.name)) || !strlen(blocks[i].ustar.name)){
                 break; // End of directory - header is not in directory
@@ -146,7 +146,7 @@ namespace fs::tar{
         volumeNode->children = (ino_t*)kmalloc(sizeof(ino_t) * entryCount);
         volumeNode->entryCount = entryCount;
         int e = 0;
-        for(int i = 0; i < blockCount; e++){
+        for(unsigned i = 0; i < blockCount; e++){
             tar_header_t header = blocks[i];
             
             if(!strlen(header.ustar.name)) break;
@@ -192,12 +192,12 @@ namespace fs::tar{
         return -EROFS;
     }
 
-    void TarVolume::Open(TarNode* node, uint32_t flags){
-        TarNode* tarNode = &nodes[node->inode];
+    void TarVolume::Open(__attribute__((unused)) TarNode* node, __attribute__((unused)) uint32_t flags){
+
     }
 
-    void TarVolume::Close(TarNode* node){
-        TarNode* tarNode = &nodes[node->inode];
+    void TarVolume::Close(__attribute__((unused)) TarNode* node){
+
     }
 
     int TarVolume::ReadDir(TarNode* node, DirectoryEntry* dirent, uint32_t index){
@@ -205,7 +205,7 @@ namespace fs::tar{
         
         if(!(node->flags & FS_NODE_DIRECTORY)) return -ENOTDIR;
 
-        if(index >= tarNode->entryCount + 2) return 0;
+        if(index >= static_cast<unsigned>(tarNode->entryCount + 2)) return 0;
 
         if(index == 0){
             strcpy(dirent->name, ".");

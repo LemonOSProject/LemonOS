@@ -41,6 +41,7 @@ void CFGParser::Parse(){
 			}
 		case '#':
 			while((c = fgetc(cfgFile)) != EOF && c != '\n');
+			[[fallthrough]];
 		case '\n':
 			if(state == ParserStateValue){
 				CFGItem item;
@@ -58,7 +59,7 @@ void CFGParser::Parse(){
 				item.name = "";
 				item.value = name;
 			} else if(state == ParserStateHeading){
-				printf("CFGParser: Potentially malformed heading [%s\n", headingName);
+				printf("CFGParser: Potentially malformed heading [%s\n", headingName.c_str());
 				headingName.clear();
 			}
 
@@ -76,11 +77,10 @@ void CFGParser::Parse(){
 				}
 				headingName.clear();
 				values.clear();
-				break;
 			} else if(c == ']' && state == ParserStateHeading){
 				state = ParserStateName;
-				break;
 			}
+			break;
 		default:
 			if(state == ParserStateHeading){
 				headingName += c;

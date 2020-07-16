@@ -47,7 +47,7 @@ namespace Keyboard{
 
             if(!size) return 0;
 
-            for(short i = 0; i < size; i++){
+            for(unsigned short i = 0; i < size; i++){
                 ReadKey(buffer++); // Insert key and increment
             }
 

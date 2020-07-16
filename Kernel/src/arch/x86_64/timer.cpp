@@ -5,7 +5,7 @@
 #include <apic.h>
 
 namespace Timer{
-    uint32_t frequency; // Timer frequency
+    int frequency; // Timer frequency
     int ticks = 0; // Timer tick counter
     long long uptime = 0; // System uptime in seconds since the timer was initialized
 

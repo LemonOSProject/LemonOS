@@ -12,7 +12,7 @@ namespace Lemon::GUI{
 	__thread TextBox* dialogFileBox = nullptr;
 	__thread int dflags = 0;
 
-	void FileDialogOnFileOpened(const char* path, FileView* fv){
+	void FileDialogOnFileOpened(const char* path, __attribute__((unused)) FileView* fv){
 		if(!(dflags & FILE_DIALOG_CREATE) || access(path, W_OK) == ENOENT || DisplayMessageBox("Open...", "File already exists! Overwrite?", MsgButtonsOKCancel)) { // Only open if create flag not specified OR user responds ok to message
 			if(selectedPth){
 				free(selectedPth);
@@ -22,7 +22,7 @@ namespace Lemon::GUI{
 		}
 	}
 
-	void FileDialogOnFileSelected(std::string& path, FileView* fv){
+	void FileDialogOnFileSelected(std::string& path, __attribute__((unused)) FileView* fv){
 		dialogFileBox->contents.front() = std::string(path);
 	}
 
@@ -46,13 +46,13 @@ namespace Lemon::GUI{
 			return;
 		} else if(e && errno == ENOENT) {
 			char buf[512];
-			sprintf(buf, "File %s not found!", path);
+			sprintf(buf, "File %s not found!", path.c_str());
 			DisplayMessageBox("Open...", buf, MsgButtonsOK);
 			return;
 		} else if(e){
 			perror("GUI: FileDialog: ");
 			char buf[512];
-			sprintf(buf, "Error opening file %s (Error code: %d)", path, errno);
+			sprintf(buf, "Error opening file %s (Error code: %d)", path.c_str(), errno);
 			DisplayMessageBox("Open...", buf, MsgButtonsOK);
 			return;
 		} else if((sResult.st_mode & S_IFMT) == S_IFDIR && !(dflags & FILE_DIALOG_DIRECTORIES)) {
@@ -63,7 +63,7 @@ namespace Lemon::GUI{
 		}
 	}
 
-	void FileDialogOnOKPress(Lemon::GUI::Button* btn){
+	void FileDialogOnOKPress(__attribute__((unused)) Lemon::GUI::Button* btn){
 		FileDialogOnFileBoxSubmit(dialogFileBox);
 	}
 
@@ -103,13 +103,10 @@ namespace Lemon::GUI{
 		fileBox->OnSubmit = FileDialogOnFileBoxSubmit;
 		dialogFileBox = fileBox;
 
-		bool paint = true;
-
 		while(!win->closed && !selectedPth){
 			LemonEvent ev;
 			while(win->PollEvent(ev)){
 				win->GUIHandleEvent(ev);
-				paint = true;
 			}
 
 			win->Paint();

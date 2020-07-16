@@ -167,27 +167,27 @@ namespace Video{
         return videoMode;
     }
 
-    void DrawPixel(int x, int y, uint8_t r, uint8_t g, uint8_t b){
+    void DrawPixel(unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b){
         uint32_t colour = r << 16 | g << 8 | b;
         ((uint32_t*)videoMemory)[(y * screenWidth) + x] = colour;
     }
 
-    void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b){
+    void DrawRect(unsigned int x, unsigned int y, unsigned int width, unsigned int height, uint8_t r, uint8_t g, uint8_t b){
         uint32_t colour = r << 16 | g << 8 | b;
 
-        for(int i = 0; i < height; i++){
-            for(int j = 0; j < width; j++){
-            ((uint32_t*)videoMemory)[((i + y) * screenWidth) + j + x] = colour;
+        for(unsigned i = 0; i < height; i++){
+            for(unsigned j = 0; j < width; j++){
+                ((uint32_t*)videoMemory)[((i + y) * screenWidth) + j + x] = colour;
             }
         }
     }
 
     void DrawChar(char c, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b) {
         uint32_t colour = r << 16 | g << 8 | b;
-		for (int i = 0; i < 8; i++)
+		for (unsigned i = 0; i < 8; i++)
 		{
 			int row = defaultFont[(int)c][i];
-			for (int j = 0; j < 8; j++)
+			for (unsigned j = 0; j < 8; j++)
 			{
 				if ((row & (1 << j)) >> j){
 				    ((uint32_t*)videoMemory)[((y + i) * screenWidth) + x + j] = colour;
@@ -196,7 +196,7 @@ namespace Video{
 		}
 	}
 
-    void DrawBitmapImage(int x, int y, int w, int h, uint8_t *data) {
+    void DrawBitmapImage(unsigned int x, unsigned int y, unsigned int w, unsigned int h, uint8_t *data) {
         bitmap_file_header_t bmpHeader = *(bitmap_file_header_t*)data;
         data += bmpHeader.offset;
 
@@ -206,8 +206,8 @@ namespace Video{
         uint32_t bmp_buffer_offset = 0;
 
         uint32_t pixelSize = 4;
-        for (int i = 0; i < h && i + y < videoMode.height; i++) {
-            for (int j = 0; j < w && j + x < videoMode.width; j++) {
+        for (unsigned i = 0; i < h && i + y < videoMode.height; i++) {
+            for (unsigned j = 0; j < w && j + x < videoMode.width; j++) {
                 if(data[bmp_offset + j * (bmpBpp / 8)] == 1 && data[bmp_offset + j * (bmpBpp / 8) + 1] == 1 && data[bmp_offset + j * (bmpBpp / 8) + 2] == 1) continue;
                 uint32_t offset = (y + i)*(videoMode.width*pixelSize) + (x + j) * pixelSize;
                 videoMemory[offset] = data[bmp_offset + j * (bmpBpp / 8)];

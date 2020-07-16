@@ -56,7 +56,7 @@ namespace Lemon::GUI {
     };
 
     struct WMContextMenu{
-        unsigned char contextEntryCount;
+        unsigned int contextEntryCount;
         WMContextMenuEntry contextEntries[];
     };
 
@@ -79,7 +79,7 @@ namespace Lemon::GUI {
             struct{
             bool minimized;
             int minimizeWindowID;
-            }; __attribute__((packed))
+            } __attribute__((packed));
             struct {
             unsigned short titleLength;
             char title[];
@@ -87,7 +87,7 @@ namespace Lemon::GUI {
             struct {
                 vector2i_t contextMenuPosition;
                 WMContextMenu contextMenu;
-            } __attribute__((packed));
+            };
         };
     } __attribute__((packed));
 

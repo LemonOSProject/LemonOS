@@ -51,7 +51,7 @@ public:
 	T remove(K key){
 		auto& bucket = buckets[hash(key) % bucketCount];
 
-		for(int i = 0; i < bucket.get_length(); i++){
+		for(unsigned i = 0; i < bucket.get_length(); i++){
 			if(bucket[i].key == key){
 				return bucket.remove_at(i).value;
 			}
@@ -63,7 +63,7 @@ public:
 	T get(K key){
 		auto& bucket = buckets[hash(key) % bucketCount];
 
-		for(int i = 0; i < bucket.get_length(); i++){
+		for(unsigned i = 0; i < bucket.get_length(); i++){
 			KeyValuePair& val = bucket[i];
 
 			if(val.key == key){

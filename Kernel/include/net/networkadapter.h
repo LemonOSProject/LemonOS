@@ -27,6 +27,8 @@ namespace Network{
                 return {nullptr, 0};
             }
         }
+
+        virtual ~NetworkAdapter() = default;
     };
 
     extern NetworkAdapter* mainAdapter;

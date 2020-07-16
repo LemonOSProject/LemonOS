@@ -68,16 +68,6 @@ typedef struct {
     uint32_t importantColours; // Number of important colours - usually ignored
 } __attribute__((packed)) bitmap_info_header_t;
 
-typedef struct{
-    uint32_t width; // Resolution width
-    uint32_t height; // Resolution height
-    uint16_t bpp; // Resolution depth/bits per pixel
-
-    uint32_t pitch; // Video mode pitch
-
-    uint32_t address; // Video memory address
-} video_mode_t;
-
 typedef struct {
     uint32_t        hdrSize;
     int32_t         width;
@@ -149,10 +139,10 @@ namespace Lemon::Graphics{
     int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font = DefaultFont());
     int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font = DefaultFont());
     int DrawChar(char c, int x, int y, rgba_colour_t col, surface_t* surface, Font* font = DefaultFont());
-    int DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font = DefaultFont());
-    int DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font = DefaultFont());
-    int DrawString(const char* str, unsigned int x, unsigned int y, rgba_colour_t colour, surface_t* surface, rect_t limits, Font* font = DefaultFont());
-    int DrawString(const char* str, unsigned int x, unsigned int y, rgba_colour_t colour, surface_t* surface, Font* font = DefaultFont());
+    int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font = DefaultFont());
+    int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font = DefaultFont());
+    int DrawString(const char* str, int x, int y, rgba_colour_t colour, surface_t* surface, rect_t limits, Font* font = DefaultFont());
+    int DrawString(const char* str, int x, int y, rgba_colour_t colour, surface_t* surface, Font* font = DefaultFont());
     int GetTextLength(const char* str, Font* font);
     int GetTextLength(const char* str, size_t n, Font* font);
     int GetTextLength(const char* str);
@@ -177,8 +167,6 @@ namespace Lemon::Graphics{
     void RefreshFonts();
     Font* LoadFont(const char* path, const char* id = nullptr, int sz = 12);
     Font* GetFont(const char* id);
-
-    video_mode_t GetVideoMode();
 
     void DrawGradient(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
     void DrawGradientVertical(rect_t rect, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);

@@ -20,7 +20,7 @@
 
 #define INITIAL_HANDLE_TABLE_SIZE 0xFFFF
 
-extern "C" void TaskSwitch(regs64_t* r, uint64_t pml4);
+extern "C" [[noreturn]] void TaskSwitch(regs64_t* r, uint64_t pml4);
 
 extern "C"
 void IdleProc();
@@ -39,7 +39,7 @@ namespace Scheduler{
     uint64_t handleCount = 1; // We don't want null handles
     uint32_t handleTableSize = INITIAL_HANDLE_TABLE_SIZE;
     
-    [[noreturn]] void Schedule(regs64_t* r);
+    void Schedule(regs64_t* r);
     
     inline void InsertThreadIntoQueue(thread_t* thread){
         GetCPULocal()->runQueue->add_back(thread);
@@ -387,7 +387,7 @@ namespace Scheduler{
         Schedule(r);
     }
 
-    [[noreturn]] void Schedule(regs64_t* r){
+    void Schedule(regs64_t* r){
         CPU* cpu = GetCPULocal();
 
         if(cpu->currentThread && cpu->currentThread->timeSlice > 0) {
@@ -455,7 +455,7 @@ namespace Scheduler{
         thread->registers.rip = elfInfo.entry;
         
         if(elfInfo.linkerPath){
-            char* linkPath = elfInfo.linkerPath;
+            //char* linkPath = elfInfo.linkerPath;
             uintptr_t linkerBaseAddress = 0x7FC0000000; // Linker base address
 
             FsNode* node = fs::ResolvePath("/initrd/ld.so");

@@ -251,7 +251,7 @@ namespace Lemon::GUI {
             colour = colours[Colour::TextDark];
         }
 
-        if(labelAlignment = TextAlignment::Centre){
+        if(labelAlignment == TextAlignment::Centre){
             Graphics::DrawString(label.c_str(), btnPos.x + (fixedBounds.size.x / 2) - (labelLength / 2), btnPos.y + (bounds.size.y / 2 - 8), colour.r, colour.g, colour.b, surface);
         } else {
             Graphics::DrawString(label.c_str(), btnPos.x + 2, btnPos.y + (fixedBounds.size.y / 2 - 6), colour.r, colour.g, colour.b, surface);
@@ -299,7 +299,7 @@ namespace Lemon::GUI {
         }
     }
 
-    void Button::OnMouseDown(vector2i_t mousePos){
+    void Button::OnMouseDown(__attribute__((unused)) vector2i_t mousePos){
         pressed = true;
     }
 
@@ -319,11 +319,8 @@ namespace Lemon::GUI {
         surface.height = fixedBounds.size.y;
     }
     
-    Bitmap::Bitmap(rect_t _bounds, surface_t* surf){
-        bounds = {_bounds.pos, (vector2i_t){surf->width, surf->height}};
+    Bitmap::Bitmap(rect_t _bounds, surface_t* surf) : Widget({_bounds.pos, (vector2i_t){surf->width, surf->height}}){
         surface = *surf;
-
-        Widget(bounds);
     }
 
     void Bitmap::Paint(surface_t* surface){
@@ -532,7 +529,7 @@ namespace Lemon::GUI {
             for(int i = 0; i < lineCount; i++){
                 char* end = strchr(text2, '\n');
                 if(end){
-                    int len = (uintptr_t)(end - text2);
+                    size_t len = (uintptr_t)(end - text2);
                     if(len > strlen(text2)) break;
 
                     contents.push_back(std::string(text2, len));
@@ -551,6 +548,8 @@ namespace Lemon::GUI {
     }
 
     void TextBox::OnMouseDown(vector2i_t mousePos){
+        assert(contents.size() <= INT_MAX);
+
         mousePos.x -= fixedBounds.pos.x;
         mousePos.y -= fixedBounds.pos.y;
 
@@ -560,10 +559,10 @@ namespace Lemon::GUI {
         }
 
         cursorPos.y = (sBar.scrollPos + mousePos.y) / (font->height + lineSpacing);
-        if(cursorPos.y >= contents.size()) cursorPos.y = contents.size() - 1;
+        if(cursorPos.y >= static_cast<int>(contents.size())) cursorPos.y = contents.size() - 1;
 
         int dist = 0;
-        for(cursorPos.x = 0; cursorPos.x < contents[cursorPos.y].length(); cursorPos.x++){
+        for(cursorPos.x = 0; cursorPos.x < static_cast<int>(contents[cursorPos.y].length()); cursorPos.x++){
             dist += Graphics::GetCharWidth(contents[cursorPos.y][cursorPos.x], font);
             if(dist >= mousePos.x){
                 break;
@@ -571,24 +570,23 @@ namespace Lemon::GUI {
         }
     }
 
-    void TextBox::OnRightMouseDown(vector2i_t mousePos){
-        printf("rmouse\n");
+    void TextBox::OnRightMouseDown(__attribute__((unused)) vector2i_t mousePos){
         if(window){
             window->DisplayContextMenu(ctxEntries);
         }
     }
 
     void TextBox::OnCommand(unsigned short cmd){
-
+        (void)cmd;
     }
 
-    void TextBox::OnMouseMove(vector2i_t mousePos){
+    void TextBox::OnMouseMove(__attribute__((unused)) vector2i_t mousePos){
         if(multiline && sBar.pressed){
             sBar.OnMouseMoveRelative({0, mousePos.y - fixedBounds.pos.y});
         }
     }
 
-    void TextBox::OnMouseUp(vector2i_t mousePos){
+    void TextBox::OnMouseUp(__attribute__((unused)) vector2i_t mousePos){
         sBar.pressed = false;
     }
 
@@ -607,17 +605,17 @@ namespace Lemon::GUI {
         } else if(key == '\b' || key == KEY_DELETE){
             if(key == KEY_DELETE){ // Delete is essentially backspace but on the character in front so just increment the cursor pos.
                 cursorPos.x++;
-                if(cursorPos.x > (int)contents[cursorPos.y].length()){
-                    if(cursorPos.y < (int)contents.size()){
-                        cursorPos.x = (int)contents[++cursorPos.y].length();
-                    } else cursorPos.x = (int)contents[cursorPos.y].length();
+                if(cursorPos.x > static_cast<int>(contents[cursorPos.y].length())){
+                    if(cursorPos.y < static_cast<int>(contents.size())){
+                        cursorPos.x = static_cast<int>(contents[++cursorPos.y].length());
+                    } else cursorPos.x = static_cast<int>(contents[cursorPos.y].length());
                 }
             }
 
             if(cursorPos.x) {
                 contents[cursorPos.y].erase(--cursorPos.x, 1);
             } else if(cursorPos.y) { // Delete line if not at start of file
-                cursorPos.x = contents[cursorPos.y - 1].length(); // Move cursor horizontally to end of previous line
+                cursorPos.x = static_cast<int>(contents[cursorPos.y - 1].length()); // Move cursor horizontally to end of previous line
                 contents[cursorPos.y - 1] += contents[cursorPos.y]; // Append contents of current line to previous
                 contents.erase(contents.begin() + cursorPos.y--); // Remove line and move to previous line
 
@@ -637,30 +635,30 @@ namespace Lemon::GUI {
             cursorPos.x--;
             if(cursorPos.x < 0){
                 if(cursorPos.y){
-                    cursorPos.x = contents[--cursorPos.y].length();
+                    cursorPos.x = static_cast<int>(contents[--cursorPos.y].length());
                 } else cursorPos.x = 0;
             }
         } else if (key == KEY_ARROW_RIGHT){ // Move cursor right
             cursorPos.x++;
-            if(cursorPos.x > contents[cursorPos.y].length()){
-                if(cursorPos.y < contents.size()){
+            if(cursorPos.x > static_cast<int>(contents[cursorPos.y].length())){
+                if(cursorPos.y < static_cast<int>(contents.size())){
                     cursorPos.x = contents[++cursorPos.y].length();
                 } else cursorPos.x = contents[cursorPos.y].length();
             }
         } else if (key == KEY_ARROW_UP){ // Move cursor up
             if(cursorPos.y){
                 cursorPos.y--;
-                if(cursorPos.x > contents[cursorPos.y].length()){
-                    cursorPos.x = contents[cursorPos.y].length();
+                if(cursorPos.x > static_cast<int>(contents[cursorPos.y].length())){
+                    cursorPos.x = static_cast<int>(contents[cursorPos.y].length());
                 }
             } else cursorPos.x = 0;
         } else if (key == KEY_ARROW_DOWN){ // Move cursor down
-            if(cursorPos.y < (int)contents.size()){
+            if(cursorPos.y < static_cast<int>(contents.size())){
                 cursorPos.y++;
-                if(cursorPos.x > contents[cursorPos.y].length()){
-                    cursorPos.x = contents[cursorPos.y].length();
+                if(cursorPos.x > static_cast<int>(contents[cursorPos.y].length())){
+                    cursorPos.x = static_cast<int>(contents[cursorPos.y].length());
                 }
-            } else cursorPos.x = contents[cursorPos.y].length();;
+            } else cursorPos.x = contents[cursorPos.y].length();
         }
     }
 
@@ -678,6 +676,8 @@ namespace Lemon::GUI {
     }
 
     void ListView::Paint(surface_t* surface){
+        assert(items.size() < INT_MAX);
+
         Graphics::DrawRect(fixedBounds.x, fixedBounds.y, fixedBounds.width, columnDisplayHeight, colours[Colour::Background], surface);
         rgba_colour_t textColour = colours[Colour::TextDark];
         
@@ -705,7 +705,7 @@ namespace Lemon::GUI {
         if(showScrollBar) index = sBar.scrollPos / itemHeight;
         int maxItem = index + fixedBounds.height / itemHeight;
 
-        for(; index < items.size() && index < maxItem; index++){
+        for(; index < static_cast<int>(items.size()) && index < maxItem; index++){
             ListItem item = items[index];
 
             xPos = fixedBounds.x;

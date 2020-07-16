@@ -68,7 +68,7 @@ namespace Lemon{
 
         const uint8_t* data() const { return mdata; }
 
-        const uint16_t length() const { return sizeof(LemonMessage) + header.length; }
+        uint16_t length() const { return sizeof(LemonMessage) + header.length; }
 
         ~Message(){
             delete mdata;

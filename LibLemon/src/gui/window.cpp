@@ -39,7 +39,7 @@ namespace Lemon::GUI{
         cmd->create.size = size;
         cmd->create.flags = flags;
         cmd->create.bufferKey = windowBufferKey;
-        strncpy(cmd->create.title, title, strlen(title));
+        memcpy(cmd->create.title, title, strlen(title));
         cmd->create.titleLength = strlen(title);
 
         createMsg->length = sizeof(WMCommand) + strlen(title);
@@ -353,11 +353,11 @@ namespace Lemon::GUI{
         }
     }
 
-    void WindowMenuBar::OnMouseUp(vector2i_t mousePos){
-        OnMouseDown(mousePos);
+    void WindowMenuBar::OnMouseUp(__attribute__((unused)) vector2i_t mousePos){
+        
     }
 
-    void WindowMenuBar::OnMouseMove(vector2i_t mousePos){
-
+    void WindowMenuBar::OnMouseMove(__attribute__((unused)) vector2i_t mousePos){
+        
     }
 }
