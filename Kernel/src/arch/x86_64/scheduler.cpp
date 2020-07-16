@@ -210,6 +210,7 @@ namespace Scheduler{
         for(int i = 0; i < 24; i++){
             Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)kernelStack + PAGE_SIZE_4K * i, 1);
         }
+
         thread->kernelStack = kernelStack + PAGE_SIZE_4K * 24;
 
         ((fx_state_t*)thread->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State

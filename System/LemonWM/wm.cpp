@@ -123,6 +123,20 @@ void WMInstance::Poll(){
                 redrawBackground = true;
 
                 delete win;
+            } else if(cmd->cmd == Lemon::GUI::WMSetTitle){
+                WMWindow* win = FindWindow(m->clientFd);
+
+                if(!win){
+                    printf("[LemonWM] Warning: Unknown Window ID: %d\n", m->clientFd);
+                    continue;
+                }
+                
+                char* title = (char*)malloc(cmd->titleLength + 1);
+                strncpy(title, cmd->title, cmd->titleLength);
+                title[cmd->titleLength] = 0;
+
+                if(win->title) free(win->title);
+                win->title = title;
             } else if(cmd->cmd == Lemon::GUI::WMMinimize){
                 MinimizeWindow(m->clientFd, cmd->minimized);
             } else if(cmd->cmd == Lemon::GUI::WMMinimizeOther){

@@ -9,6 +9,7 @@
 #include <physicalallocator.h>
 #include <panic.h>
 #include <apic.h>
+#include <strace.h>
 
 //extern uint32_t kernel_end;
 
@@ -625,16 +626,7 @@ namespace Memory{
 
 		Log::Info("Last syscall: %d", lastSyscall);
 			
-		uint64_t* stack = (uint64_t*)regs->rbp;
-		
-		uint64_t* rbp = (uint64_t*)regs->rbp;
-		uint64_t rip = 0;
-		while(stack){
-			rip = *(stack + 1);
-			Log::Info(rip);
-			rbp = (uint64_t*)(*stack);
-			stack = rbp;
-		}
+		PrintStackTrace(regs->rbp);
 
 		char temp[16];
 		char temp2[16];

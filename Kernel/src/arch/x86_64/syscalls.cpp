@@ -734,11 +734,15 @@ long SysUName(regs64_t* r){
 long SysReadDir(regs64_t* r){
 	unsigned int fd = r->rbx;
 
-	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+	if(fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 		return -EBADF;
 	} 
 	
 	fs_dirent_t* direntPointer = (fs_dirent_t*)r->rcx;
+
+	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(fs_dirent_t), Scheduler::GetCurrentProcess()->addressSpace)){
+		return -EFAULT;
+	}
 
 	unsigned int count = r->rdx;
 

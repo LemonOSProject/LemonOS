@@ -36,7 +36,6 @@ void IdleProcess(){
 }
 
 void KernelProcess(){
-
 	Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	NVMe::Initialize();
@@ -100,14 +99,14 @@ extern "C"
 	fs::Initialize();
 	//Log::EnableBuffer();
 
-	Video::DrawRect(0, 0, videoMode.width, videoMode.height, 0, 0, 0);
-
 	Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
 
 	if(videoMode.height < 600)
 		Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");
 	if(videoMode.bpp != 32)
 		Log::Warning("Unsupported Colour Depth expect issues.");
+
+	Video::DrawRect(0, 0, videoMode.width, videoMode.height, 0, 0, 0);
 
 	Log::Info("System RAM: %d MB", (HAL::multibootInfo.memoryHi + HAL::multibootInfo.memoryLo) / 1024);
 	Log::Info("Reserved RAM: %d MB", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);

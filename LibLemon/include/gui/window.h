@@ -15,7 +15,7 @@
 #define WINDOW_MENUBAR_HEIGHT 20
 
 namespace Lemon::GUI {
-    static const char* wmSocketAddress = "lemonwm";
+    __attribute__((unused)) static const char* wmSocketAddress = "lemonwm";
 
 	typedef void(*WindowPaintHandler)(surface_t*);
     typedef void(*MessageReceiveHandler)();
@@ -60,31 +60,36 @@ namespace Lemon::GUI {
         WMContextMenuEntry contextEntries[];
     };
 
+    struct WMSetTitleCommand{
+        short cmd;
+        unsigned short titleLength;
+        char title[];
+    } __attribute__((packed));
+
     struct WMCommand{
         short cmd;
-        unsigned short length;
         union{
             vector2i_t position;
             struct {
             vector2i_t size;
             unsigned long bufferKey;
-            };
+            } __attribute__((packed));
             uint32_t flags;
             WMCreateWindowCommand create;
             struct{
             bool minimized;
             int minimizeWindowID;
-            };
+            }; __attribute__((packed))
             struct {
             unsigned short titleLength;
             char title[];
-            };
+            } __attribute__((packed));
             struct {
                 vector2i_t contextMenuPosition;
                 WMContextMenu contextMenu;
-            };
+            } __attribute__((packed));
         };
-    };
+    } __attribute__((packed));
 
     struct WindowBuffer {
         uint64_t currentBuffer;

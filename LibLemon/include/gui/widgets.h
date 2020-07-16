@@ -259,7 +259,7 @@ namespace Lemon::GUI {
         std::vector<ListItem> items;
 
         int selected = 0;
-        int itemHeight = 20;
+        short itemHeight = 20;
         int columnDisplayHeight = 20;
 
         bool showScrollBar = false;

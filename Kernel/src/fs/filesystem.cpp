@@ -2,7 +2,7 @@
 
 #include <fs/fsvolume.h>
 #include <logging.h>
-
+#include <errno.h>
 
 namespace fs{
 	
@@ -224,11 +224,17 @@ namespace fs{
 	}
     
 	int Dev::ReadDir(DirectoryEntry* dirent, uint32_t index){
-		if(index >= deviceCount + 2) return 0;
+		if(index >= deviceCount + 2) return -ENOENT;
 
-		if(index == 0) { strcpy(dirent->name, "."); }
-		if(index == 1) { strcpy(dirent->name, ".."); }
-		else { strcpy(dirent->name,devices[index - 2]->name); }
+		if(index == 0) {
+			strcpy(dirent->name, ".");
+		} else if(index == 1) {
+			strcpy(dirent->name, "..");
+		} else if(devices[index - 2]){
+			strcpy(dirent->name,devices[index - 2]->name);
+		} else {
+			return -ENOENT;
+		}
 
 		return 1;
 	}

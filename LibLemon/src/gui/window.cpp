@@ -34,7 +34,6 @@ namespace Lemon::GUI{
         surface.height = size.y;
 
         WMCommand* cmd = (WMCommand*)createMsg->data;
-        cmd->length = sizeof(WMCreateWindowCommand) + strlen(title);
         cmd->cmd = WMCreateWindow;
         cmd->create.pos = pos;
         cmd->create.size = size;
@@ -67,6 +66,10 @@ namespace Lemon::GUI{
         free(destroyMsg);
 
         usleep(100);
+    }
+
+    void Window::SetTitle(const char* title){
+        msgClient.Send(Lemon::Message(LEMON_MESSAGE_PROTOCOL_WMCMD, static_cast<unsigned short>(WMSetTitle), Lemon::Message::EncodeString(title)));
     }
 
     void Window::Minimize(bool minimized){

@@ -103,7 +103,7 @@ struct pollfd {
 
 class DirectoryEntry{
 public:
-    char name[256];
+    char name[NAME_MAX];
 
     FsNode* node = nullptr;
     uint32_t inode = 0;

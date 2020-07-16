@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 if [ -z $1 ]; then
 	sudo Scripts/build-nix/mount.sh
 else

@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <string>
+#include <string.h>
 
 #define LEMON_MESSAGE_MAGIC 0xBEEF
 

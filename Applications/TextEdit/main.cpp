@@ -15,10 +15,12 @@
 
 #define TEXTEDIT_OPEN 1
 #define TEXTEDIT_SAVEAS 2
+#define TEXTEDIT_SAVE 3
 
 ExtendedTextBox* textBox;
 Lemon::GUI::Window* window;
 Lemon::GUI::WindowMenu fileMenu;
+std::string openPath;
 
 void LoadFile(const char* path){
 	textBox->contents.clear();
@@ -26,7 +28,7 @@ void LoadFile(const char* path){
 	FILE* textFile = fopen(path, "r");
 
 	if(!textFile){
-		Lemon::GUI::DisplayMessageBox("TextEdit", "Failed to open file!", Lemon::GUI::MsgButtonsOK);
+		Lemon::GUI::DisplayMessageBox("Text Editor", "Failed to open file!", Lemon::GUI::MsgButtonsOK);
 		return;
 	}
 
@@ -43,6 +45,13 @@ void LoadFile(const char* path){
 	textBox->LoadText(textBuffer);
 	
 	free(textBuffer);
+
+	openPath = path;
+
+	char title[256];
+	sprintf(title, "Text Editor: %s", openPath.c_str());
+
+	window->SetTitle(title);
 }
 
 void SaveFile(const char* path){
@@ -51,29 +60,31 @@ void SaveFile(const char* path){
 	if(!ret && !S_ISDIR(sResult.st_mode)){ // File exists and is not a directory
 		unlink(path);
 	} else if(S_ISDIR(sResult.st_mode)){
-		Lemon::GUI::DisplayMessageBox("TextEdit", "File is a directory!", Lemon::GUI::MsgButtonsOK);
+		Lemon::GUI::DisplayMessageBox("Text Editor", "File is a directory!", Lemon::GUI::MsgButtonsOK);
 		return;
 	}
 
-	FILE* textFile = fopen(path, "w");
+	FILE* textFile = fopen(path, "w+");
 
 	if(!textFile){
-		Lemon::GUI::DisplayMessageBox("TextEdit", "Failed to open file for writing!", Lemon::GUI::MsgButtonsOK);
+		Lemon::GUI::DisplayMessageBox("Text Editor", "Failed to open file for writing!", Lemon::GUI::MsgButtonsOK);
 		return;
 	}
 
 	fseek(textFile, 0, SEEK_SET);
 
 	for(std::string& str : textBox->contents){
-		printf("Writing: %s", str.c_str());
 		fwrite(str.c_str(), 1, str.length(), textFile);
 		fwrite("\n", 1, 1, textFile); // Line ending
 	}
 
 	fclose(textFile);
+
+	openPath = path;
 }
 
 void OpenFile(){
+
 	char* filePath = Lemon::GUI::FileDialog("/");
 
 	if(!filePath){
@@ -95,6 +106,14 @@ void SaveFileAs(){
 	SaveFile(filePath);
 }
 
+void SaveOpenFile(){
+	if(!openPath.length()){
+		SaveFileAs();
+	} else {
+		SaveFile(openPath.c_str());
+	}
+}
+
 void OnWindowPaint(surface_t* surface){
 	Lemon::Graphics::DrawRect(0, window->GetSize().y - 20, window->GetSize().x, 20, 160, 160, 160, surface);
 
@@ -109,19 +128,21 @@ void OnWindowCmd(unsigned short cmd, Lemon::GUI::Window* win){
 		OpenFile();
 	} else if(cmd == TEXTEDIT_SAVEAS){
 		SaveFileAs();
+	} else if(cmd == TEXTEDIT_SAVE){
+		SaveOpenFile();
 	}
 }
 
 int main(int argc, char** argv){
 	char* filePath;
 
-	window = new Lemon::GUI::Window("TextEdit", {512, 256}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
+	window = new Lemon::GUI::Window("Text Editor", {512, 256}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
 	window->CreateMenuBar();
 
 	fileMenu.first = "File";
 	fileMenu.second.push_back({.id = TEXTEDIT_OPEN, .name = std::string("Open...")});
 	fileMenu.second.push_back({.id = TEXTEDIT_SAVEAS, .name = std::string("Save As...")});
-	fileMenu.second.push_back({.id = 0, .name = std::string("")});
+	fileMenu.second.push_back({.id = TEXTEDIT_SAVE, .name = std::string("Save...")});
 
 	window->menuBar->items.push_back(fileMenu);
 

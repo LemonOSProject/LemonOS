@@ -23,25 +23,25 @@ namespace Lemon::GUI {
 
     Widget::~Widget(){}
 
-    void Widget::Paint(surface_t* surface){}
+    void Widget::Paint(__attribute__((unused)) surface_t* surface){}
 
-    void Widget::OnMouseDown(vector2i_t mousePos){}
+    void Widget::OnMouseDown(__attribute__((unused)) vector2i_t mousePos){}
 
-    void Widget::OnMouseUp(vector2i_t mousePos){}
+    void Widget::OnMouseUp(__attribute__((unused)) vector2i_t mousePos){}
 
-    void Widget::OnRightMouseDown(vector2i_t mousePos){}
+    void Widget::OnRightMouseDown(__attribute__((unused)) vector2i_t mousePos){}
 
-    void Widget::OnRightMouseUp(vector2i_t mousePos){}
+    void Widget::OnRightMouseUp(__attribute__((unused)) vector2i_t mousePos){}
 
-    void Widget::OnHover(vector2i_t mousePos){}
+    void Widget::OnHover(__attribute__((unused)) vector2i_t mousePos){}
 
-    void Widget::OnMouseMove(vector2i_t mousePos) {}
+    void Widget::OnMouseMove(__attribute__((unused)) vector2i_t mousePos) {}
     
-    void Widget::OnDoubleClick(vector2i_t mousePos) {}
+    void Widget::OnDoubleClick(__attribute__((unused)) vector2i_t mousePos) {}
 
-    void Widget::OnKeyPress(int key) {}
+    void Widget::OnKeyPress(__attribute__((unused)) int key) {}
 
-    void Widget::OnCommand(unsigned short key) {}
+    void Widget::OnCommand(__attribute__((unused)) unsigned short key) {}
 
     void Widget::UpdateFixedBounds(){
         fixedBounds.pos = bounds.pos;
@@ -600,15 +600,17 @@ namespace Lemon::GUI {
     void TextBox::OnKeyPress(int key){
         if(!editable) return;
 
+        assert(contents.size() < INT_MAX);
+
         if(isprint(key)){
             contents[cursorPos.y].insert(cursorPos.x++, 1, key);
         } else if(key == '\b' || key == KEY_DELETE){
             if(key == KEY_DELETE){ // Delete is essentially backspace but on the character in front so just increment the cursor pos.
                 cursorPos.x++;
-                if(cursorPos.x > contents[cursorPos.x].length()){
-                    if(cursorPos.y < contents.size()){
-                        cursorPos.x = contents[++cursorPos.y].length();
-                    } else cursorPos.x = contents[cursorPos.y].length();
+                if(cursorPos.x > (int)contents[cursorPos.y].length()){
+                    if(cursorPos.y < (int)contents.size()){
+                        cursorPos.x = (int)contents[++cursorPos.y].length();
+                    } else cursorPos.x = (int)contents[cursorPos.y].length();
                 }
             }
 
@@ -653,7 +655,7 @@ namespace Lemon::GUI {
                 }
             } else cursorPos.x = 0;
         } else if (key == KEY_ARROW_DOWN){ // Move cursor down
-            if(cursorPos.y < contents.size()){
+            if(cursorPos.y < (int)contents.size()){
                 cursorPos.y++;
                 if(cursorPos.x > contents[cursorPos.y].length()){
                     cursorPos.x = contents[cursorPos.y].length();
@@ -698,10 +700,10 @@ namespace Lemon::GUI {
 
         Graphics::DrawRect(fixedBounds.x, fixedBounds.y + columnDisplayHeight, fixedBounds.width, fixedBounds.height - 20, colours[Colour::ContentBackground], surface);
 
-        unsigned index = 0;
+        int index = 0;
 
         if(showScrollBar) index = sBar.scrollPos / itemHeight;
-        unsigned maxItem = index + fixedBounds.height / itemHeight;
+        int maxItem = index + fixedBounds.height / itemHeight;
 
         for(; index < items.size() && index < maxItem; index++){
             ListItem item = items[index];
@@ -768,6 +770,8 @@ namespace Lemon::GUI {
     }
     
     void ListView::OnMouseDown(vector2i_t mousePos){
+        assert(items.size() < INT32_MAX);
+
         if(showScrollBar && mousePos.x > fixedBounds.pos.x + fixedBounds.size.x - 16){
             sBar.OnMouseDownRelative({mousePos.x - fixedBounds.pos.x + fixedBounds.size.x - 16, mousePos.y - columnDisplayHeight - fixedBounds.pos.y});
             return;
@@ -776,12 +780,14 @@ namespace Lemon::GUI {
         selected = floor(((double)mousePos.y + sBar.scrollPos - fixedBounds.pos.y - columnDisplayHeight) / itemHeight);
 
         if(selected < 0) selected = 0;
-        if(selected >= items.size()) selected = items.size() - 1;
+        if(selected >= (int)items.size()) selected = (int)items.size() - 1;
 
         if(OnSelect) OnSelect(items[selected], this);
     }
 
     void ListView::OnDoubleClick(vector2i_t mousePos){
+        assert(items.size() < INT32_MAX);
+
         if(!Graphics::PointInRect({fixedBounds.x, fixedBounds.y + columnDisplayHeight, fixedBounds.width - (showScrollBar ? 16 : 0), fixedBounds.height - columnDisplayHeight}, mousePos)){
             OnMouseDown(mousePos);
             return;
@@ -794,7 +800,7 @@ namespace Lemon::GUI {
                 selected = clickedItem;
 
                 if(selected < 0) selected = 0;
-                if(selected >= items.size()) selected = items.size() - 1;
+                if(selected >= (int)items.size()) selected = items.size() - 1;
             }
         }
     }
@@ -805,11 +811,13 @@ namespace Lemon::GUI {
         }
     }
 
-    void ListView::OnMouseUp(vector2i_t mousePos){
+    void ListView::OnMouseUp(__attribute__((unused)) vector2i_t mousePos){
         sBar.pressed = false;
     }
 
     void ListView::OnKeyPress(int key){
+        assert(items.size() < INT32_MAX);
+
         switch(key){
             case KEY_ARROW_UP:
                 selected--;
@@ -823,11 +831,13 @@ namespace Lemon::GUI {
         }
 
         if(selected < 0) selected = 0;
-        if(selected >= items.size()) selected = items.size() - 1;
+        if(selected >= (int)items.size()) selected = items.size() - 1;
     }
     
     void ListView::ResetScrollBar(){
-        if((items.size() * itemHeight) > (fixedBounds.size.y - columnDisplayHeight)) showScrollBar = true;
+        assert(items.size() < INT32_MAX);
+
+        if(((int)items.size() * itemHeight) > (fixedBounds.size.y - columnDisplayHeight)) showScrollBar = true;
         else showScrollBar = false;
 
         sBar.ResetScrollBar(fixedBounds.size.y - columnDisplayHeight, items.size() * itemHeight);
