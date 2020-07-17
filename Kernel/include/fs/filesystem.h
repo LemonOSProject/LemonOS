@@ -73,6 +73,7 @@ typedef int32_t uid_t;
 typedef int64_t off_t;
 typedef int32_t mode_t;
 typedef int32_t nlink_t;
+typedef int64_t volume_id_t;
 
 typedef struct {
 	dev_t st_dev;
@@ -126,13 +127,14 @@ public:
     size_t size = 0; // Node size
     int nlink = 0; // Amount of references/hard links
     unsigned handleCount = 0; // Amount of file handles that point to this node
+    volume_id_t volumeID;
 
     int error = 0;
 
     virtual ~FsNode();
 
-    virtual ssize_t Read(size_t, size_t, uint8_t *); // Read Data
-    virtual ssize_t Write(size_t, size_t, uint8_t *); // Write Data
+    virtual ssize_t Read(size_t off, size_t size, uint8_t* buffer); // Read Data
+    virtual ssize_t Write(size_t off, size_t size, uint8_t* buffer); // Write Data
 
     virtual fs_fd_t* Open(size_t flags); // Open
     virtual void Close(); // Close
@@ -145,7 +147,8 @@ public:
     
     virtual int Link(FsNode*, DirectoryEntry*);
     virtual int Unlink(DirectoryEntry*);
-    virtual int Rename(FsNode* olddir, DirectoryEntry* oldent, FsNode* newdir, DirectoryEntry* newent);
+    
+    virtual int Truncate(off_t length);
 
     virtual int Ioctl(uint64_t cmd, uint64_t arg); // I/O Control
     virtual void Sync(); // Sync node to device
@@ -196,4 +199,6 @@ namespace fs{
     int Unlink(FsNode*, DirectoryEntry*);
 
     int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg);
+
+    int Rename(FsNode* olddir, char* oldpath, FsNode* newdir, char* newpath);
 }

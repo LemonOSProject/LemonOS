@@ -54,7 +54,7 @@ int FsNode::Unlink(DirectoryEntry*){
     return -ENOSYS;
 }
 
-int FsNode::Rename(FsNode*, DirectoryEntry*, FsNode*, DirectoryEntry*){
+int FsNode::Truncate(off_t length){
     return -ENOSYS;
 }
 

@@ -57,14 +57,12 @@ void LoadFile(const char* path){
 void SaveFile(const char* path){
 	struct stat sResult;
 	int ret = stat(path, &sResult);
-	if(!ret && !S_ISDIR(sResult.st_mode)){ // File exists and is not a directory
-		unlink(path);
-	} else if(S_ISDIR(sResult.st_mode)){
+	if(S_ISDIR(sResult.st_mode)){
 		Lemon::GUI::DisplayMessageBox("Text Editor", "File is a directory!", Lemon::GUI::MsgButtonsOK);
 		return;
 	}
 
-	FILE* textFile = fopen(path, "w+");
+	FILE* textFile = fopen(path, "w");
 
 	if(!textFile){
 		Lemon::GUI::DisplayMessageBox("Text Editor", "Failed to open file for writing!", Lemon::GUI::MsgButtonsOK);

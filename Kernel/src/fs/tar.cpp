@@ -70,6 +70,7 @@ namespace fs::tar{
         n->uid = OctToDec(header->ustar.uid, 8);
         n->flags = TarTypeToFilesystemFlags(header->ustar.type);
         n->vol = this;
+        n->volumeID = volumeID;
 
         char* name = header->ustar.name;
         char* _name = strtok(header->ustar.name, "/");

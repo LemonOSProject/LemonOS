@@ -5,6 +5,7 @@
 #include <errno.h>
 
 namespace fs{
+	volume_id_t nextVID = 1; // Next volume ID
 	
 	class Root : public FsNode {
 	public:
@@ -65,8 +66,13 @@ namespace fs{
         RegisterDevice(&nullDirent);
     }
 
+	volume_id_t GetVolumeID(){
+		return nextVID++;
+	}
+
 	void RegisterVolume(FsVolume* vol){
 		vol->mountPoint->parent = &root;
+		vol->volumeID = GetVolumeID();
 		volumes->add_back(vol);
 	}
 
@@ -116,6 +122,44 @@ namespace fs{
 		return current_node;
 	}
 	
+	FsNode* ResolvePath(const char* path, FsNode* workingDir){
+		FsNode* root = fs::GetRoot();
+		FsNode* current_node = root;
+
+		char* tempPath = (char*)kmalloc(strlen(path) + 1);
+		strcpy(tempPath, path);
+
+		if(workingDir && path[0] != '/'){
+			current_node = workingDir;
+		}
+
+		char* file = strtok(tempPath,"/");
+
+		while(file != NULL){ // Iterate through the directories to find the file
+			FsNode* node = fs::FindDir(current_node,file);
+			if(!node) {
+				Log::Warning("%s not found!", path);
+				return nullptr;
+			}
+			if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+				current_node = node;
+				file = strtok(NULL, "/");
+				continue;
+			}
+
+			if((file = strtok(NULL, "/"))){
+				Log::Warning("Found file in the path however we were not finished");
+				return nullptr;
+			}
+
+			current_node = node;
+			break;
+		}
+
+		kfree(tempPath);
+		return current_node;
+	}
+	
 	FsNode* ResolveParent(const char* path, const char* workingDir){
 		char* pathCopy = (char*)kmalloc(strlen(path) + 1);
 		strcpy(pathCopy, path);
@@ -130,6 +174,29 @@ namespace fs{
 
 		if(dirPath == nullptr){
 			parentDirectory = fs::ResolvePath(workingDir);
+		} else {
+			*(dirPath - 1) = 0; // Cut off the directory name from the path copy
+			parentDirectory = fs::ResolvePath(pathCopy, workingDir);
+		}
+
+		kfree(pathCopy);
+		return parentDirectory;
+	}
+	
+	FsNode* ResolveParent(const char* path, FsNode* workingDir){
+		char* pathCopy = (char*)kmalloc(strlen(path) + 1);
+		strcpy(pathCopy, path);
+
+		if(pathCopy[strlen(pathCopy) - 1] == '/'){ // Remove trailing slash
+			pathCopy[strlen(pathCopy) - 1] = 0;
+		}
+
+		char* dirPath = strrchr(pathCopy, '/');
+
+		FsNode* parentDirectory = nullptr;
+
+		if(dirPath == nullptr){
+			parentDirectory = workingDir;
 		} else {
 			*(dirPath - 1) = 0; // Cut off the directory name from the path copy
 			parentDirectory = fs::ResolvePath(pathCopy, workingDir);
@@ -381,5 +448,105 @@ namespace fs{
 	int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg){
 		if(handle->node) return handle->node->Ioctl(cmd, arg);
 		else return -1;
+	}
+
+	int Rename(FsNode* olddir, char* oldpath, FsNode* newdir, char* newpath){
+		assert(olddir && newdir);
+
+		if((olddir->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+			return -ENOTDIR;
+		}
+		
+		if((newdir->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+			return -ENOTDIR;
+		}
+
+		FsNode* oldnode = ResolvePath(oldpath, olddir);
+
+		if(!oldnode){
+			return -ENOENT;
+		}
+
+		if((oldnode->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+			Log::Warning("Filesystem: Rename: We do not support using rename on directories yet!");
+			return -ENOSYS;
+		}
+		
+		FsNode* newpathParent = ResolveParent(newpath, newdir); 
+
+		if(!newpathParent){
+			return -ENOENT;
+		} else if((newpathParent->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+				return -ENOTDIR; // Parent of newpath is not a directory
+		}
+
+		FsNode* newnode = ResolvePath(newpath, newdir);
+
+		if(newnode){
+			if((newnode->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+				return -EISDIR; // If it exists newpath must not be a directory
+			}
+		}
+
+		DirectoryEntry oldpathDirent;
+		strncpy(oldpathDirent.name, fs::BaseName(oldpath), NAME_MAX);
+
+		DirectoryEntry newpathDirent;
+		strncpy(newpathDirent.name, fs::BaseName(newpath), NAME_MAX);
+
+		if((oldnode->flags & FS_NODE_TYPE) != FS_NODE_SYMLINK && oldnode->volumeID == newpathParent->volumeID){ // Easy shit we can just link and unlink
+			FsNode* oldpathParent = fs::ResolveParent(oldpath, olddir);
+			assert(oldpathParent); // If this is null something went horribly wrong
+
+			if(newnode){
+				if(auto e = newpathParent->Unlink(&newpathDirent)){
+					return e; // Unlink error
+				}
+			}
+
+			if(auto e = newpathParent->Link(oldnode, &newpathDirent)){
+				return e; // Link error
+			}
+			
+			if(auto e = oldpathParent->Unlink(&oldpathDirent)){
+				return e; // Unlink error
+			}
+		} else if((oldnode->flags & FS_NODE_TYPE) != FS_NODE_SYMLINK) { // Aight we have to copy it
+			FsNode* oldpathParent = fs::ResolveParent(oldpath, olddir);
+			assert(oldpathParent); // If this is null something went horribly wrong
+
+			if(auto e = newpathParent->Create(&newpathDirent, 0)){
+				return e; // Create error
+			}
+
+			newnode = ResolvePath(newpath, newdir);
+			if(!newnode){
+				Log::Warning("Filesystem: Rename: newpath was created with no error returned however it was unable to be found.");
+				return -ENOENT;
+			}
+
+			uint8_t* buffer = (uint8_t*)kmalloc(oldnode->size);
+
+			ssize_t rret = oldnode->Read(0, oldnode->size, buffer);
+			if(rret < 0){
+				Log::Warning("Filesystem: Rename: Error reading oldpath");
+				return rret;
+			}
+
+			ssize_t wret = oldnode->Write(0, rret, buffer);
+			if(wret < 0){
+				Log::Warning("Filesystem: Rename: Error reading oldpath");
+				return wret;
+			}
+			
+			if(auto e = oldpathParent->Unlink(&oldpathDirent)){
+				return e; // Unlink error
+			}
+		} else {
+			Log::Warning("Filesystem: Rename: We do not support using rename on symlinks yet!"); // TODO: Rename the symlink
+			return -ENOSYS;
+		}
+
+		return 0;
 	}
 }

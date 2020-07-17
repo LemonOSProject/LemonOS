@@ -6,6 +6,7 @@ namespace fs{
 
     class FsVolume{
     public:
+        volume_id_t volumeID;
         FsNode* mountPoint;
         DirectoryEntry mountPointDirent;
     };    

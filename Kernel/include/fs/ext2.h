@@ -204,7 +204,6 @@ namespace fs::Ext2{
 
         friend class Ext2Volume;
     public:
-        Ext2Node(Ext2Volume* vol) { this->vol = vol; }
         Ext2Node(Ext2Volume* vol, ext2_inode_t& ino, ino_t inode);
 
         ssize_t Read(size_t, size_t, uint8_t *);
@@ -215,6 +214,7 @@ namespace fs::Ext2{
         int CreateDirectory(DirectoryEntry*, uint32_t);
         int Link(FsNode*, DirectoryEntry*);
         int Unlink(DirectoryEntry*);
+        int Truncate(off_t length);
 
         void Close();
         void Sync();
@@ -309,6 +309,7 @@ namespace fs::Ext2{
         int CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
         int Link(Ext2Node* dir, Ext2Node* node, DirectoryEntry* ent);
         int Unlink(Ext2Node* dir, DirectoryEntry* ent);
+        int Truncate(Ext2Node* node, off_t length);
 
         void SyncNode(Ext2Node* node);
         void CleanNode(Ext2Node* node);

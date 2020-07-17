@@ -136,7 +136,7 @@ namespace Lemon::GUI {
         surface_t surface;
         bool closed = false; // Set to true when close button pressed
 
-        Window(const char* title, vector2i_t size, uint32_t flags = 0, int type = WindowType::Basic, vector2i_t pos = {0, 0});
+        Window(const char* title, vector2i_t size, uint32_t flags = 0, int type = WindowType::Basic, vector2i_t pos = {20, 20});
         ~Window();
 
         void SetTitle(const char* title);

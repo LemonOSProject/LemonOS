@@ -203,13 +203,21 @@ namespace Lemon::Graphics{
     void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion){
         int srcWidth = (srcRegion.pos.x + srcRegion.size.x) > src->width ? (src->width - srcRegion.pos.x) : srcRegion.size.x;
         int srcHeight = (srcRegion.pos.y + srcRegion.size.y) > src->height ? (src->height - srcRegion.pos.y) : srcRegion.size.y;
-        int rowSize = ((offset.x + srcRegion.width) > dest->width) ? dest->width - offset.x : srcRegion.width;
         int rowOffset = srcRegion.pos.x * 4;
+        int rowSize = srcRegion.width;
 
         if(offset.x < 0){
-            rowOffset += -offset.x * 4;
+            rowOffset += abs(offset.x) * 4;
             rowSize += offset.x;
             offset.x = 0;
+        }
+
+        if(rowSize > srcWidth){
+            rowSize = srcWidth;
+        }
+
+        if(offset.x + rowSize > dest->width){
+            rowSize = dest->width - offset.x;
         }
 
         int i = 0;

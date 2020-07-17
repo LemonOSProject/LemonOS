@@ -49,43 +49,47 @@ void CompositorInstance::Paint(){
     surface_t* renderSurface = &wm->surface;
     
     if(wm->redrawBackground){
-        for(WMWindow* win : wm->windows){
-            win->clips.clear();
-        }
+        #ifdef LEMONWM_USE_CLIPPING
+            auto doClipping = [&](rect_t newRect){
+                retry:
+                for(WMWindow* win : wm->windows){
+                    auto& clips = win->clips;
+                    for(auto it = clips.begin(); it != clips.end(); it++){
+                        rect_t rect = *it;
+                        if(rect.left() < newRect.right() && rect.right() > newRect.left() && rect.top() < newRect.bottom() && rect.bottom() > newRect.top()){
+                            clips.erase(it);
 
-        auto doClipping = [&](rect_t newRect){
-            retry:
-            for(WMWindow* win : wm->windows){
-                auto& clips = win->clips;
-                for(auto it = clips.begin(); it != clips.end(); it++){
-                    rect_t rect = *it;
-                    if(rect.left() < newRect.right() && rect.right() > newRect.left() && rect.top() < newRect.bottom() && rect.bottom() > newRect.top()){
-                        clips.erase(it);
-
-                        clips.splice(clips.end(), rect.Split(newRect));
-                        goto retry;
+                            clips.splice(clips.end(), rect.Split(newRect));
+                            goto retry;
+                        }
                     }
                 }
-            }
-        };
+            };
 
-        for(WMWindow* win : wm->windows){
-            if(win->minimized) continue;
-
-            if(win->flags & WINDOW_FLAGS_NODECORATION) {
-                doClipping({win->pos, win->size});
-                win->clips.push_back({win->pos, win->size});
-            } else {
-                doClipping({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
-                win->clips.push_back({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
+            for(WMWindow* win : wm->windows){
+                win->clips.clear();
             }
-        }
+
+            for(WMWindow* win : wm->windows){
+                if(win->minimized) continue;
+
+                if(win->flags & WINDOW_FLAGS_NODECORATION) {
+                    doClipping({win->pos, win->size});
+                    win->clips.push_back({win->pos, win->size});
+                } else {
+                    doClipping({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
+                    win->clips.push_back({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
+                }
+            }
+
+        #endif
 
         if(useImage){
             surfacecpy(renderSurface, &backgroundImage);
         } else {
             DrawRect(0, 0, renderSurface->width, renderSurface->height, backgroundColor, renderSurface);
         }
+
         wm->redrawBackground = false;
     }
 

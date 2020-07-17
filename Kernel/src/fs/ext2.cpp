@@ -1063,7 +1063,7 @@ namespace fs::Ext2{
         uint8_t* blockBuffer = (uint8_t*)kmalloc(blocksize); // block buffer
         bool sync = false; // Need to sync the inode?
 
-        if(blockLimit > fileBlockCount){
+        if(blockLimit >= fileBlockCount){
             Log::Info("[Ext2] Allocating blocks for inode %d", node->inode);
             for(unsigned i = fileBlockCount; i <= blockLimit; i++){
                 uint32_t block = AllocateBlock();
@@ -1086,7 +1086,7 @@ namespace fs::Ext2{
             SyncNode(node);
         }
 
-        //Log::Info("[Ext2] Writing: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockCount, offset, size);
+        //Log::Info("[Ext2] Writing: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockLimit - blockIndex + 1, offset, size);
 
         size_t ret = size;
 
@@ -1329,6 +1329,29 @@ namespace fs::Ext2{
         return WriteDir(node, entries);
     }
 
+    int Ext2Volume::Truncate(Ext2Node* node, off_t length){
+        if(length < 0){
+            return -EINVAL;
+        }
+
+        if(length > node->e2inode.blockCount * 512){ // We need to allocate blocks
+            uint64_t blocksNeeded = (length + blocksize - 1) / blocksize;
+            uint64_t blocksAllocated = node->e2inode.blockCount / (blocksize / 512);
+
+            while(blocksAllocated < blocksNeeded){
+                SetInodeBlock(blocksAllocated++, node->e2inode, AllocateBlock());
+            }
+
+            node->e2inode.blockCount = blocksNeeded * (blocksize / 512);
+        }
+
+        node->size = node->e2inode.size = length; // TODO: Actually free blocks in inode if possible
+
+        SyncNode(node);
+
+        return 0;
+    }
+
     void Ext2Volume::CleanNode(Ext2Node* node){
         if(node->handleCount > 0){
             Log::Warning("[Ext2] CleanNode: Node (inode %d) is referenced by %d handles", node->inode, node->handleCount);
@@ -1345,6 +1368,7 @@ namespace fs::Ext2{
 
     Ext2Node::Ext2Node(Ext2Volume* vol, ext2_inode_t& ino, ino_t inode){
         this->vol = vol;
+        volumeID = vol->volumeID;
 
         uid = ino.uid;
         size = ino.size;
@@ -1432,6 +1456,13 @@ namespace fs::Ext2{
     int Ext2Node::Unlink(DirectoryEntry* d){
         flock.AcquireWrite();
         auto ret = vol->Unlink(this, d);
+        flock.ReleaseWrite();
+        return ret;
+    }
+
+    int Ext2Node::Truncate(off_t length){
+        flock.AcquireWrite();
+        auto ret = vol->Truncate(this, length);
         flock.ReleaseWrite();
         return ret;
     }

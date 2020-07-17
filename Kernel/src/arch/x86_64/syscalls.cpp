@@ -1,5 +1,6 @@
 #include <syscalls.h>
 
+#include <errno.h>
 #include <idt.h>
 #include <scheduler.h>
 #include <logging.h>
@@ -15,7 +16,6 @@
 #include <sharedmem.h>
 #include <cpu.h>
 #include <net/socket.h>
-#include <errno.h>
 #include <timer.h>
 
 #define SYS_EXIT 1
@@ -278,11 +278,15 @@ open:
 		return -ENOTDIR;
 	}
 
+	if(flags & O_TRUNC && ((flags & O_ACCESS) == O_RDWR || (flags & O_ACCESS) == O_WRONLY)){
+		node->Truncate(0);
+	}
+
 	fs_fd_t* handle = fs::Open(node, r->rcx);
 
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(handle);
-	fs::Open(node, 0);
+	fs::Open(node, flags);
 
 	return fd;
 }
@@ -609,11 +613,34 @@ long SysMkdir(regs64_t* r){
 }
 
 long SysRmdir(regs64_t* r){
+	Log::Warning("SysRmdir is a stub!");
 	return -ENOSYS;
 }
 
 long SysRename(regs64_t* r){
-	return -ENOSYS;
+	char* oldpath = (char*)r->rbx;
+	char* newpath = (char*)r->rcx;
+
+	process_t* proc = Scheduler::GetCurrentProcess();
+
+	if(!Memory::CheckUsermodePointer(r->rbx, 0, proc->addressSpace)){
+		Log::Warning("sys_rename: Invalid oldpath pointer %x", r->rbx);
+		return -EFAULT;
+	}
+	
+	if(!Memory::CheckUsermodePointer(r->rcx, 0, proc->addressSpace)){
+		Log::Warning("sys_rename: Invalid newpath pointer %x", r->rbx);
+		return -EFAULT;
+	}
+
+	FsNode* olddir = fs::ResolveParent(oldpath, proc->workingDir);
+	FsNode* newdir = fs::ResolveParent(newpath, proc->workingDir);
+
+	if(!(olddir && newdir)){
+		return -ENOENT;
+	}
+
+	return fs::Rename(olddir, fs::BaseName(oldpath), newdir, fs::BaseName(newpath));
 }
 
 long SysYield(regs64_t* r){
@@ -661,6 +688,11 @@ long SysReadDirNext(regs64_t* r){
 	direntPointer->type = tempent.flags;
 
 	return ret;
+}
+
+long SysRenameAt(regs64_t* r){
+	Log::Warning("SysRenameAt is a stub!");
+	return -ENOSYS;
 }
 
 // SendMessage(message_t* msg) - Sends an IPC message to a process
@@ -1670,7 +1702,7 @@ syscall_t syscalls[]{
 	SysRename,
 	SysYield,					// 25
 	SysReadDirNext,
-	nullptr,
+	SysRenameAt,
 	SysSendMessage,
 	SysReceiveMessage,
 	SysUptime,					// 30

@@ -15,6 +15,8 @@
 #define CONTEXT_ITEM_HEIGHT 24
 #define CONTEXT_ITEM_WIDTH 128
 
+//#define LEMONWM_USE_CLIPPING
+
 using WindowBuffer = Lemon::GUI::WindowBuffer;
 
 class WMInstance;
@@ -53,7 +55,9 @@ public:
     WMWindow(WMInstance* wm, unsigned long key);
     ~WMWindow();
 
-    std::list<rect_t> clips;
+    #ifdef LEMONWM_USE_CLIPPING
+        std::list<rect_t> clips;
+    #endif
 
     vector2i_t pos;
     vector2i_t size;
