@@ -2,6 +2,13 @@
 
 #include <gui/colours.h>
 
+//#define LEMONWM_FRAMERATE_COUNTER
+#ifdef LEMONWM_FRAMERATE_COUNTER
+    static unsigned int fCount = 0;
+    static unsigned int avgFrametime = 0;
+    static unsigned int fRate = 0;
+#endif
+
 using namespace Lemon::Graphics;
 
 rgba_colour_t backgroundColor = {64, 128, 128};
@@ -18,13 +25,62 @@ CompositorInstance::CompositorInstance(WMInstance* wm){
 void CompositorInstance::Paint(){
     timespec cTime;
     clock_gettime(CLOCK_BOOTTIME, &cTime);
-    if((cTime - lastRender) < (16666667 / 2)) return; // Cap at 120 FPS
+
+    #ifdef LEMONWM_FRAMERATE_COUNTER
+        unsigned int renderTime = (cTime - lastRender);
+
+        if(avgFrametime)
+            avgFrametime = (avgFrametime + renderTime) / 2;
+        else
+            avgFrametime = renderTime;
+
+        if(++fCount >= 200){
+            if(avgFrametime)
+                fRate = 1000000000 / avgFrametime;
+            fCount = 0;
+            avgFrametime = renderTime;
+        }
+    #else
+        if((cTime - lastRender) < (16666667 / 2)) return; // Cap at 120 FPS
+    #endif
 
     lastRender = cTime;
 
     surface_t* renderSurface = &wm->surface;
     
     if(wm->redrawBackground){
+        for(WMWindow* win : wm->windows){
+            win->clips.clear();
+        }
+
+        auto doClipping = [&](rect_t newRect){
+            retry:
+            for(WMWindow* win : wm->windows){
+                auto& clips = win->clips;
+                for(auto it = clips.begin(); it != clips.end(); it++){
+                    rect_t rect = *it;
+                    if(rect.left() < newRect.right() && rect.right() > newRect.left() && rect.top() < newRect.bottom() && rect.bottom() > newRect.top()){
+                        clips.erase(it);
+
+                        clips.splice(clips.end(), rect.Split(newRect));
+                        goto retry;
+                    }
+                }
+            }
+        };
+
+        for(WMWindow* win : wm->windows){
+            if(win->minimized) continue;
+
+            if(win->flags & WINDOW_FLAGS_NODECORATION) {
+                doClipping({win->pos, win->size});
+                win->clips.push_back({win->pos, win->size});
+            } else {
+                doClipping({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
+                win->clips.push_back({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
+            }
+        }
+
         if(useImage){
             surfacecpy(renderSurface, &backgroundImage);
         } else {
@@ -54,6 +110,13 @@ void CompositorInstance::Paint(){
     }
 
     surfacecpyTransparent(renderSurface, &mouseCursor, wm->input.mouse.pos);
+
+    #ifdef LEMONWM_FRAMERATE_COUNTER
+    {
+        DrawRect(0, 0, 80, 16, 0, 0 ,0, renderSurface);
+        DrawString(std::to_string(fRate).c_str(), 2, 2, 255, 255, 255, renderSurface);
+    }
+    #endif
 
     if(wm->screenSurface.buffer)
         surfacecpy(&wm->screenSurface, renderSurface);

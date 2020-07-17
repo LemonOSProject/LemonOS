@@ -34,7 +34,19 @@ int main(){
     win->AddWidget(tBox);
     tBox->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Fixed, Lemon::GUI::WidgetAlignment::WAlignLeft);
 
-    Lemon::GUI::ListView* lView = new Lemon::GUI::ListView({10, 80, 10, 10});
+    Lemon::GUI::Bitmap* drawBox = new Lemon::GUI::Bitmap({10, 70, 400, 100}); // Rectangle clip test
+    win->AddWidget(drawBox);
+    rect_t r1 = {10, 20, 300, 70};
+    rect_t r2 = {50, 10, 100, 60};
+    auto rClips = r1.Split(r2);
+    for(auto rect : rClips){
+        Lemon::Graphics::DrawRect(rect, (rgba_colour_t){255, 255, 0, 255}, &drawBox->surface);
+        Lemon::Graphics::DrawString("r1 clip", rect.x, rect.y, 0, 0, 0, &drawBox->surface);
+    }
+
+    Lemon::Graphics::DrawRect(r2, {0, 255, 255, 255}, &drawBox->surface);
+
+    Lemon::GUI::ListView* lView = new Lemon::GUI::ListView({10, 180, 10, 10});
     win->AddWidget(lView);
     lView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft);
 

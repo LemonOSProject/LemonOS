@@ -93,6 +93,8 @@ void WMInstance::Poll(){
                     Lemon::Shell::AddWindow(m->clientFd, Lemon::Shell::ShellWindowState::ShellWindowStateNormal, title, shellClient);
                 }
                 SetActive(win);
+
+                redrawBackground = true;
             } else if (cmd->cmd == Lemon::GUI::WMResize){
                 WMWindow* win = FindWindow(m->clientFd);
 

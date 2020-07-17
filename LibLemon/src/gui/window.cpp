@@ -153,6 +153,8 @@ namespace Lemon::GUI{
             windowBufferInfo->currentBuffer = 1;
             surface.buffer = buffer1;
         }
+
+        windowBufferInfo->dirty = 1;
     }
 
     void Window::Paint(){

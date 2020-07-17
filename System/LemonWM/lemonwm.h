@@ -37,6 +37,7 @@ enum ResizePoint {
 };
 
 class WMWindow {
+    friend class CompositorInstance;
 protected:
     unsigned long sharedBufferKey;
 
@@ -51,6 +52,8 @@ protected:
 public:
     WMWindow(WMInstance* wm, unsigned long key);
     ~WMWindow();
+
+    std::list<rect_t> clips;
 
     vector2i_t pos;
     vector2i_t size;

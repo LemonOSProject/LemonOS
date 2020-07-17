@@ -95,7 +95,8 @@ namespace Lemon::GUI {
         uint64_t currentBuffer;
         uint64_t buffer1Offset;
         uint64_t buffer2Offset;
-        uint64_t drawing; // Is being drawn?
+        uint32_t drawing; // Is being drawn?
+        uint32_t dirty; // Does it need to be drawn?
     };
 
     enum WindowType {

@@ -49,7 +49,7 @@ void memset64_optimized(void* dest, uint64_t c, size_t count) {
     }
 }
 
-void memcpy_optimized(void* dest, void* src, size_t count) {
+inline void memcpy_optimized(void* dest, void* src, size_t count) {
     size_t overflow = (count & 0xF); // Amount of overflow bytes
     size_t size_aligned = (count - overflow); // Size rounded DOWN to lowest multiple of 128 bits
 
@@ -193,7 +193,7 @@ namespace Lemon::Graphics{
             offset.y = 0;
         }
 
-        for(int i = 0; i < src->height && i < dest->height - offset.y; i++){
+        for(; i < src->height && i < dest->height - offset.y; i++){
             if(rowSize <= 0) return;
 
             memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4) + offset.x*4), src->buffer + i*src->width*4 + rowOffset, rowSize*4);
@@ -203,15 +203,29 @@ namespace Lemon::Graphics{
     void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion){
         int srcWidth = (srcRegion.pos.x + srcRegion.size.x) > src->width ? (src->width - srcRegion.pos.x) : srcRegion.size.x;
         int srcHeight = (srcRegion.pos.y + srcRegion.size.y) > src->height ? (src->height - srcRegion.pos.y) : srcRegion.size.y;
-        int rowSize = ((offset.x + srcWidth) > dest->width) ? dest->width - offset.x : srcWidth;
+        int rowSize = ((offset.x + srcRegion.width) > dest->width) ? dest->width - offset.x : srcRegion.width;
+        int rowOffset = srcRegion.pos.x * 4;
+
+        if(offset.x < 0){
+            rowOffset += -offset.x * 4;
+            rowSize += offset.x;
+            offset.x = 0;
+        }
+
+        int i = 0;
+
+        if(offset.y < 0){
+            i += offset.y;
+            offset.y = 0;
+        }
 
         if(rowSize <= 0) return;
 
         unsigned destPitch = dest->width << 2;
         unsigned srcPitch = src->width << 2;
 
-        for(int i = 0; i < srcHeight && i < dest->height - offset.y; i++){
-            memcpy_optimized(dest->buffer + ((i+offset.y)*destPitch + offset.x*4), src->buffer + (i + srcRegion.pos.y)*srcPitch + srcRegion.pos.x * 4, rowSize*4);
+        for(; i < srcHeight && i < dest->height - offset.y; i++){
+            memcpy_optimized(dest->buffer + ((i+offset.y)*destPitch + offset.x*4), src->buffer + (i + srcRegion.pos.y)*srcPitch + rowOffset, rowSize << 2);
         }
     }
 
