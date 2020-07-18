@@ -91,6 +91,13 @@ namespace Lemon::GUI {
         };
     } __attribute__((packed));
 
+    /*class WMCommand : Message {
+        template<typename ...T>
+        WMCommand(unsigned short cmd, T... objects) : Message<unsigned short, T...>(LEMON_MESSAGE_PROTOCOL_WMCMD, cmd, objects){
+
+        }
+    };*/
+
     struct WindowBuffer {
         uint64_t currentBuffer;
         uint64_t buffer1Offset;

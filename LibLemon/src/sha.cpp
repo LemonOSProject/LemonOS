@@ -9,11 +9,11 @@ SHA256::SHA256(){
 	memcpy(hash, initialHash, SHA256_HASH_SIZE);
 }
 
-void SHA256::Transform(uint8_t* data){
+void SHA256::Transform(const uint8_t* data){
 	uint32_t w[64];
 
 	for(int i = 0; i < 16; i++){
-		w[i] = __builtin_bswap32(((uint32_t*)data)[i]); // data is big endian so convert to little endian
+		w[i] = __builtin_bswap32(reinterpret_cast<const uint32_t*>(data)[i]); // data is big endian so convert to little endian
 	} // Copy chunk (512 bits/64 bytes) into first 16 bytes of w
 
 	for(int i = 16; i < 64; i++){
@@ -49,7 +49,8 @@ void SHA256::Transform(uint8_t* data){
 	}
 }
 
-void SHA256::Update(uint8_t* data, size_t count){
+void SHA256::Update(const void* _data, size_t count){
+	const uint8_t* data = static_cast<const uint8_t*>(_data);
 	memcpy(hash, initialHash, SHA256_HASH_SIZE);
 
 	unsigned index = count;

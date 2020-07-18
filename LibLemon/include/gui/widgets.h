@@ -212,6 +212,7 @@ namespace Lemon::GUI {
         ScrollBar sBar;
 
         std::vector<ContextMenuEntry> ctxEntries;
+        bool masked;
     public:
         bool editable =  true;
         bool multiline = false;
@@ -234,6 +235,7 @@ namespace Lemon::GUI {
         void OnKeyPress(int key);
         void OnRightMouseDown(vector2i_t mousePos);
         void OnCommand(unsigned short cmd);
+        void MaskText(bool state);
 
         void ResetScrollBar();
 

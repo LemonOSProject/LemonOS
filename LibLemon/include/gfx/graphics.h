@@ -225,6 +225,7 @@ namespace Lemon::Graphics{
     // LoadImage (const char* path, surface_t* surface) - Attempt to load image at path and create a new surface
     int LoadImage(const char* path, surface_t* surface);
     int LoadPNGImage(FILE* f, surface_t* surface);
+    int SavePNGImage(FILE* f, surface_t* surface, bool writeTransparency);
     int LoadBitmapImage(FILE* f, surface_t* surface);
     int DrawImage(int x, int y, int w, int h, uint8_t *data, size_t dataSz, surface_t* surface, bool preserveAspectRatio);
     int DrawBitmapImage(int x, int y, int w, int h, uint8_t *data, surface_t* surface, bool preserveAspectRatio = false);

@@ -7,6 +7,7 @@ unpack(){
  
 buildp(){
  	cd $BUILD_DIR
+ 	patch -p1 < ../lemon-nasm-2.15.02.patch
  	./configure --prefix=$LEMON_PREFIX --host=x86_64-lemon
  	make -j$JOBCOUNT
  	make install DESTDIR=$LEMON_SYSROOT

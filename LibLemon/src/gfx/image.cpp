@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <assert.h>
+#include <zlib.h>
 
 namespace Lemon::Graphics{
     bool IsPNG(const void* data){
@@ -169,6 +170,52 @@ namespace Lemon::Graphics{
         png_read_image(png, rowPointers);
 
         png_destroy_read_struct(&png, &info, nullptr);
+
+        return 0;
+    }
+
+    int SavePNGImage(FILE* f, surface_t* surface, bool writeTransparency) {
+        png_structp png = nullptr;
+        png_infop info = nullptr;
+        
+        png = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+        if(!png) return -10;
+
+        info = png_create_info_struct(png);
+        if(!info) return -11;
+
+        int e = setjmp(png_jmpbuf(png));
+        if(e){
+            printf("[LibLemon] LoadPNGImage: setjmp error\n");
+            return e;
+        }
+
+        png_init_io(png, f);
+        png_set_compression_level(png, Z_BEST_COMPRESSION);
+
+        png_uint_32 width = surface->width;
+        png_uint_32 height = surface->height;
+
+        png_set_IHDR(png, info, width, height, 8 /*32 bits per pixel*/, PNG_COLOR_TYPE_RGB_ALPHA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+
+        png_set_packing(png);
+
+        surface_t _surface = {.width = static_cast<int>(width), .height = static_cast<int>(height), .depth = 32, .buffer = (uint8_t*)malloc(width * height * 4)};
+        *surface = _surface;
+
+        png_bytepp rowPointers = new png_bytep[height];
+
+        for(png_uint_32 i = 0; i < height; i++){
+            rowPointers[i] = surface->buffer + i * surface->width * 4;
+        }
+
+        png_set_rows(png, info, rowPointers);
+
+        png_write_png(png, info, 0, nullptr);
+
+        png_destroy_write_struct(&png, &info);
+
+        delete rowPointers;
 
         return 0;
     }

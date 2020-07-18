@@ -35,13 +35,13 @@ private:
 		0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 	};
 
+	void Transform(const uint8_t* data);
+protected:
 	uint32_t hash[8];
 
-	void Transform(uint8_t* data);
 public:
-
 	SHA256();
 
-	void Update(uint8_t* data, size_t count);
+	void Update(const void* data, size_t count);
 	std::string GetHash();
 };

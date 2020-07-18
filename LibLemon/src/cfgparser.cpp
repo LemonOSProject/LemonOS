@@ -49,6 +49,12 @@ void CFGParser::Parse(){
 				item.name = name;
 				item.value = value;
 
+				// Trim whitespaces, tabs and carriage returns
+				item.name.erase(0, name.find_first_not_of(" \t\r"));
+				item.name.erase(name.find_last_not_of(" \t\r") + 1);
+				item.value.erase(0, value.find_first_not_of(" \t\r"));
+				item.value.erase(value.find_last_not_of(" \t\r") + 1);
+
 				values.push_back(item);
 			} else if(state == ParserStateName) {
 				if(!name.length()){

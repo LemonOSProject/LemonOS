@@ -32,8 +32,7 @@ enum TokenType{
 
 enum StatementType {
     StatementDeclareInterface,
-    StatementEnterScope,
-    StatementExitScope,
+    StatementExitInterfaceScope,
     StatementAsyncCallDeclaration,
     StatementSyncCallDeclaration,
     StatementParameterList,
@@ -48,6 +47,23 @@ enum {
 };
 
 #define IsDeclaration(x) ((x == ParserStateDeclarationSync) || (x == ParserStateDeclarationAsync) || (x == ParserStateDeclarationInterface))
+
+struct Statement
+{
+    StatementType type;
+
+    Statement() = default;
+    Statement(StatementType t) { type = t; }
+};
+
+struct InterfaceDeclarationStatment : Statement {
+    std::string interfaceName;
+
+    InterfaceDeclarationStatment(std::string& name){
+        interfaceName = name;
+        type = StatementDeclareInterface;
+    }
+};
 
 struct Token{
     TokenType type;
@@ -78,6 +94,8 @@ struct ParserState{
     }
 };
 
+using ParameterList = std::vector<std::pair<std::string, std::string>>; // Type and name
+
 std::map<std::string, TokenType> keywords = {
     {"interface", KeywordInterface},
     {"sync", KeywordSync},
@@ -86,6 +104,7 @@ std::map<std::string, TokenType> keywords = {
 };
 
 std::vector<Token> tokens;
+std::vector<Statement*> statements;
 
 void BuildTokens(std::string& input){
     int lineNum = 0;
@@ -168,6 +187,8 @@ int main(int argc, char** argv){
 
     BuildTokens(input);
 
+    ParameterList parameters;
+    std::pair<std::string, std::string> currentParameter;
     std::stack<ParserState> parserState;
     parserState.push(ParserState(ParserStateNone));
 
@@ -194,7 +215,28 @@ int main(int argc, char** argv){
                 if(IsDeclaration(parserState.top().state)){
                     parserState.top().identifier = tok;
                     parserState.top().identified = true;
+                } else {
+                    if(!currentParameter.first.length()){ // type name
+                        currentParameter.first = tok.value;
+                    } else if(!currentParameter.second.length()){
+                        currentParameter.second = tok.value;
+                    } else {
+                        printf("error: [line %d] Unexpected identifier: %s.\n", tok.lineNum, tok.value.c_str());
+                        exit(1);
+                    }
                 }
+                break;
+            case TokenLeftBrace:
+                if(parserState.top().state == ParserStateDeclarationInterface){
+                    statements.push_back(new InterfaceDeclarationStatment(parserState.top().identifier.value));
+                    parserState.pop();
+                } else {
+                    printf("error: [line %d] Unexpected '{'.\n", tok.lineNum);
+                    exit(1);
+                }
+                break;
+            case TokenRightBrace:
+                statements.push_back(new Statement(StatementExitInterfaceScope));
                 break;
             case TokenLeftParens:
                 if(IsDeclaration(parserState.top().state) && parserState.top().state != ParserStateDeclarationInterface){
@@ -202,9 +244,20 @@ int main(int argc, char** argv){
                         printf("error: [line %d] Expected identifier before '('.\n", tok.lineNum);
                         exit(1);
                     }
+
+                    parameters.clear();
+                    parserState.push(ParserState(ParserStateParameterList));
                 } else {
                     printf("error: [line %d] Unexpected '('\n", tok.lineNum);
                     exit(1);
+                }
+                break;
+            case TokenRightParens:
+                if(parserState.top().state != ParserStateParameterList){
+                    printf("error: [line %d] Unexpected ')'\n", tok.lineNum);
+                    exit(1);
+                } else {
+                    parserState.pop();
                 }
                 break;
         }

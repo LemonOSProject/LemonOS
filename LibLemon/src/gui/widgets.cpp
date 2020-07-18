@@ -490,16 +490,24 @@ namespace Lemon::GUI {
 
             std::string& line = contents.front();
             for(size_t j = 0; j < contents[0].length(); j++){
-                if(line[j] == '\t'){
-                    xpos += font->tabWidth * font->width;
-                    continue;
-                } else if (isspace(line[j])) {
-                    xpos += font->width;
-                    continue;
-                }
-                else if (!isgraph(line[j])) continue;
+                char ch;
+                
+                if(masked){
+                    ch = '*';
+                } else {
+                    ch = line[j];
 
-                xpos += Graphics::DrawChar(line[j], fixedBounds.pos.x + xpos, fixedBounds.pos.y + ypos, textColour.r, textColour.g, textColour.b, surface, font);
+                    if(ch == '\t'){
+                        xpos += font->tabWidth * font->width;
+                        continue;
+                    } else if (isspace(ch)) {
+                        xpos += font->width;
+                        continue;
+                    }
+                    else if (!isgraph(ch)) continue;
+                }
+
+                xpos += Graphics::DrawChar(ch, fixedBounds.pos.x + xpos, fixedBounds.pos.y + ypos, textColour.r, textColour.g, textColour.b, surface, font);
             }
         }
 
@@ -659,6 +667,14 @@ namespace Lemon::GUI {
                     cursorPos.x = static_cast<int>(contents[cursorPos.y].length());
                 }
             } else cursorPos.x = contents[cursorPos.y].length();
+        }
+    }
+
+    void TextBox::MaskText(bool state){
+        if(!multiline){
+            masked = state;
+        } else {
+            masked = false;
         }
     }
 

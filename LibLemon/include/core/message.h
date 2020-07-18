@@ -29,6 +29,7 @@ namespace Lemon{
     using MessageRawDataObject = std::pair<uint8_t*, uint16_t>; // length, data
 
     class Message{
+        friend class MessageIterator;
     private:
         LemonMessage header;
         uint8_t* mdata;
@@ -66,12 +67,33 @@ namespace Lemon{
             (void)std::initializer_list<int>{ ((void)Insert(pos, objects), 0)... }; // HACK: Call insert for each object
         }
 
+        Message(uint8_t* data){
+            mdata = data;
+        }
+
         const uint8_t* data() const { return mdata; }
 
         uint16_t length() const { return sizeof(LemonMessage) + header.length; }
 
         ~Message(){
             delete mdata;
+        }
+    };
+
+    class MessageIterator {
+        friend class Message;
+    protected:
+        Message* m;
+        size_t off = 0;
+    public:
+        MessageIterator(Message* m){
+            this->m = m;
+        }
+
+        template<typename T>
+        void Consume(T& ref){
+            memcpy(&ref, m->mdata, m->GetSize(ref));
+            off += m->GetSize(ref);
         }
     };
 

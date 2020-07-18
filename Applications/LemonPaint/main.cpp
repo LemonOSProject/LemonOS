@@ -72,48 +72,49 @@ void LoadImage(char* path){
         return;
     }
 
-    FILE* image = fopen(path, "r");
+    if(canvas->surface.buffer){
+        free(canvas->surface.buffer);
+    }
 
-    if(!image){
-        Lemon::GUI::DisplayMessageBox("LemonPaint", "Failed to open image!");
+    Lemon::Graphics::LoadImage(path, &canvas->surface);
+    
+    canvas->ResetScrollbars();
+}
+
+void SaveImage(char* path){
+    if(!path){
+        Lemon::GUI::DisplayMessageBox("LemonPaint", "Could not save: Invalid Filepath");
         return;
     }
 
-    fseek(image, 0, SEEK_END);
-    size_t imageSize = ftell(image);
-    fseek(image, 0, SEEK_SET);
+    char* ext = strrchr(path, '.');
+    if(!ext || strcmp(ext, ".png")){
+        Lemon::GUI::DisplayMessageBox("LemonPaint", "Could not save: Can only save images in PNG format!");
+        return;
+    }
 
-    uint8_t* imageBuffer = (uint8_t*)malloc(imageSize);
-    fread(imageBuffer, imageSize, 1, image);
+    FILE* image = fopen(path, "wb");
+    if(!image){
+        Lemon::GUI::DisplayMessageBox("LemonPaint", "Failed to open file for writing!");
+        return;
+    }
 
-    bitmap_info_header_t* infoHeader = ((bitmap_info_header_t*)(imageBuffer + sizeof(bitmap_file_header_t)));
-
-    if(canvas->surface.buffer){
-        free(canvas->surface.buffer);
-        canvas->surface.buffer = (uint8_t*)malloc(infoHeader->width * infoHeader->height * 4);
-    } else
-        canvas->surface.buffer = (uint8_t*)malloc(infoHeader->width * infoHeader->height * 4);
-    canvas->surface.width = infoHeader->width;
-    canvas->surface.height = infoHeader->height;
-
-	Lemon::Graphics::DrawBitmapImage(0, 0, infoHeader->width, infoHeader->height, imageBuffer, &canvas->surface);
-    
-    canvas->ResetScrollbars();
-
-    free(imageBuffer);
-    fclose(image);
+    Lemon::Graphics::SavePNGImage(image, &canvas->surface, true);
 }
 
 void OnOpen(Lemon::GUI::Button* btn){
     LoadImage(Lemon::GUI::FileDialog("/"));
 }
 
+void OnSave(Lemon::GUI::Button* btn){
+    SaveImage(Lemon::GUI::FileDialog("/", FILE_DIALOG_CREATE));
+}
 
 int main(int argc, char** argv){
     window = new Lemon::GUI::Window("LemonPaint", {800, 500}, 0, Lemon::GUI::WindowType::GUI);
 
     canvas = new Canvas({{80,0},{656, 496}}, {640, 480});
-    memset(canvas->surface.buffer, 255, 640*480*4);
+    memset(canvas->surface.buffer, 0, 640*480*4);
 
     Brush* brush = new Brush();
     brush->data = (surface_t){.width = 1, .height = 1, .buffer = brush0};
@@ -143,6 +144,11 @@ int main(int argc, char** argv){
     openButton->OnPress = OnOpen;
 
     window->AddWidget(openButton);
+
+    yPos += 26;
+    Lemon::GUI::Button* saveButton = new Lemon::GUI::Button("Save...", {{2, yPos}, {76, 24}});
+    saveButton->OnPress = OnSave;
+    window->AddWidget(saveButton);
 
     yPos += 26;
     Lemon::GUI::Button* brush0Button = new Lemon::GUI::Button("Brush 0", {{2, yPos}, {76, 24}});
