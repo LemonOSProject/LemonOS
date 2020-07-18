@@ -16,6 +16,7 @@
 #define CONTEXT_ITEM_WIDTH 128
 
 //#define LEMONWM_USE_CLIPPING
+//#define LEMONWM_FRAMERATE_COUNTER
 
 using WindowBuffer = Lemon::GUI::WindowBuffer;
 
@@ -134,6 +135,10 @@ protected:
     WMInstance* wm;
 
     timespec lastRender;
+
+    #ifdef LEMONWM_USE_CLIPPING
+        std::list<rect_t> cclips;
+    #endif
 public:
     CompositorInstance(WMInstance* wm);
     void Paint();

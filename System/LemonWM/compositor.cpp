@@ -2,7 +2,6 @@
 
 #include <gui/colours.h>
 
-//#define LEMONWM_FRAMERATE_COUNTER
 #ifdef LEMONWM_FRAMERATE_COUNTER
     static unsigned int fCount = 0;
     static unsigned int avgFrametime = 0;
@@ -41,7 +40,7 @@ void CompositorInstance::Paint(){
             avgFrametime = renderTime;
         }
     #else
-        if((cTime - lastRender) < (16666667 / 2)) return; // Cap at 120 FPS
+        if((cTime - lastRender) < (11111111 / 2)) return; // Cap at 90 FPS
     #endif
 
     lastRender = cTime;
@@ -58,8 +57,10 @@ void CompositorInstance::Paint(){
                         rect_t rect = *it;
                         if(rect.left() < newRect.right() && rect.right() > newRect.left() && rect.top() < newRect.bottom() && rect.bottom() > newRect.top()){
                             clips.erase(it);
+                            cclips.erase(it);
 
                             clips.splice(clips.end(), rect.Split(newRect));
+                            cclips.splice(cclips.end(), rect.Split(newRect));
                             goto retry;
                         }
                     }
@@ -76,9 +77,11 @@ void CompositorInstance::Paint(){
                 if(win->flags & WINDOW_FLAGS_NODECORATION) {
                     doClipping({win->pos, win->size});
                     win->clips.push_back({win->pos, win->size});
+                    cclips.push_back({win->pos, win->size});
                 } else {
                     doClipping({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
                     win->clips.push_back({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
+                    cclips.push_back({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
                 }
             }
 
@@ -122,8 +125,17 @@ void CompositorInstance::Paint(){
     }
     #endif
 
-    if(wm->screenSurface.buffer)
-        surfacecpy(&wm->screenSurface, renderSurface);
+    if(wm->screenSurface.buffer){
+        #ifdef LEMONWM_USE_CLIPPING
+            for(rect_t& r : cclips){
+                surfacecpy(&wm->screenSurface, renderSurface, r.pos, r);
+            }
+
+            surfacecpy(&wm->screenSurface, renderSurface, wm->input.mouse.pos, {wm->input.mouse.pos, {mouseCursor.width, mouseCursor.height}});
+        #else
+            surfacecpy(&wm->screenSurface, renderSurface);
+        #endif
+    }
 
     if(wm->contextMenuActive){
         if(useImage){

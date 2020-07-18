@@ -121,7 +121,7 @@ namespace fs::Ext2{
 
         memcpy(buffer + (EXT2_SUPERBLOCK_LOCATION % blocksize), &super, sizeof(ext2_superblock_t) + sizeof(ext2_superblock_extended_t));
         
-        if(WriteBlock(superindex, buffer)){
+        if(WriteBlockCached(superindex, buffer)){
             Log::Info("[Ext2] WriteBlock: Error writing block %d", superindex);
             return;
         }
@@ -556,7 +556,7 @@ namespace fs::Ext2{
             ino.blocks[0] = AllocateBlock(); // Give it one block
             ino.uid = 0;
             ino.mode = 0;
-            ino.accessTime = ino.createTime = ino.modTime = 0;
+            ino.accessTime = ino.createTime = ino.deleteTime = ino.modTime = 0;
             ino.gid = 0;
             ino.blockCount = blocksize / 512;
             ino.linkCount = 0;
@@ -569,6 +569,7 @@ namespace fs::Ext2{
 
             Ext2Node* node = new Ext2Node(this, ino, inode);
             WriteSuperblock();
+            WriteBlockGroupDescriptor(i);
 
             Log::Info("[Ext2] Created inode %d", node->inode);
 
@@ -1069,7 +1070,7 @@ namespace fs::Ext2{
                 uint32_t block = AllocateBlock();
                 SetInodeBlock(i, node->e2inode, block);
             }
-            node->e2inode.blockCount = fileBlockCount * (blocksize / 512);
+            node->e2inode.blockCount = (blockLimit + 1) * (blocksize / 512);
 
             WriteSuperblock();
             sync = true;
@@ -1118,8 +1119,16 @@ namespace fs::Ext2{
                 ReadBlockCached(block, blockBuffer);
                 memcpy(blockBuffer, buffer, size);
                 WriteBlockCached(block, blockBuffer);
+
+                buffer += size;
+                offset += size;
+                size = 0;
                 break;
             }
+        }
+
+        if(size > 0){
+            ret -= size;
         }
 
         return ret;
