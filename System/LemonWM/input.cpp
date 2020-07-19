@@ -24,7 +24,7 @@ int keymap_us[128] =
 	KEY_F10,	/* < ... F10 */
 	0,	/* 69 - Num lock*/
 	0,	/* Scroll Lock */
-	0,	/* Home key */
+	KEY_HOME,	/* Home key */
 	KEY_ARROW_UP,	/* Up Arrow */
 	0,	/* Page Up */
 	'-',
@@ -32,7 +32,7 @@ int keymap_us[128] =
 	0,
 	KEY_ARROW_RIGHT,	/* Right Arrow */
 	'+',
-	0,	/* 79 - End key*/
+	KEY_END,	/* 79 - End key*/
 	KEY_ARROW_DOWN,	/* Down Arrow */
 	0,	/* Page Down */
 	0,	/* Insert Key */

@@ -87,9 +87,11 @@ void ReadLine(){
 					}
 					break;
 				case 'F': // End
+					printf("\e[%dC", ln.length() - lnPos);
 					lnPos = ln.length();
 					break;
 				case 'H': // Home
+					printf("\e[%dD", lnPos);
 					lnPos = 0;
 					break;
 			}
@@ -101,6 +103,7 @@ void ReadLine(){
 				putc(ch, stdout);
 			}
 		} else if(ch == '\n'){
+			putc(ch, stdout);
 			break;
 		} else if(ch == '\e'){
 			esc = true;
@@ -121,6 +124,7 @@ void ReadLine(){
 
 		fflush(stdout);
 	}
+	fflush(stdout);
 
 	tcsetattr(STDOUT_FILENO, TCSANOW, &execAttributes);
 }

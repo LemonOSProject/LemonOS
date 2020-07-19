@@ -186,29 +186,53 @@ void DoAnsiCSI(char ch){
 		DoAnsiSGR(); // Set Graphics Rendition
 		break;
 	case ANSI_CSI_CUU:
-		curPos.y--;
-		if(curPos.y < 0) curPos.y = 0;
-		break;
+		{
+			int amount = 1;
+			if(strlen(escBuf)){
+				amount = atoi(escBuf);
+			}
+			curPos.y -= amount;
+			if(curPos.y < 0) curPos.y = 0;
+			break;
+		}
 	case ANSI_CSI_CUD:
-		curPos.y++;
-		Scroll();
-		break;
-	case ANSI_CSI_CUF:
-		curPos.x++;
-		if(curPos.x > columnCount) {
-			curPos.x = 0;
-			curPos.y++;
+		{
+			int amount = 1;
+			if(strlen(escBuf)){
+				amount = atoi(escBuf);
+			}
+			curPos.y += amount;
 			Scroll();
+			break;
 		}
-		break;
+	case ANSI_CSI_CUF:
+		{
+			int amount = 1;
+			if(strlen(escBuf)){
+				amount = atoi(escBuf);
+			}
+			curPos.x += amount;
+			if(curPos.x > columnCount) {
+				curPos.x = 0;
+				curPos.y++;
+				Scroll();
+			}
+			break;
+		}
 	case ANSI_CSI_CUB:
-		curPos.x--;
-		if(curPos.x < 0) {
-			curPos.x = columnCount - 1;
-			curPos.y--;
+		{
+			int amount = 1;
+			if(strlen(escBuf)){
+				amount = atoi(escBuf);
+			}
+			curPos.x -= amount;
+			if(curPos.x < 0) {
+				curPos.x = columnCount - 1;
+				curPos.y--;
+			}
+			if(curPos.y < 0) curPos.y = 0;
+			break;
 		}
-		if(curPos.y < 0) curPos.y = 0;
-		break;
 	case ANSI_CSI_CUP: // Set cursor position
 		{
 			char* scolon = strchr(escBuf, ';');
