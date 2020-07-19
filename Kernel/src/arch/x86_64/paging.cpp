@@ -604,7 +604,7 @@ namespace Memory{
 		Log::Write(regs->rbp);
 
 		if((regs->ss & 0x3)){
-			Log::Warning("Process crashed, PID: ");
+			Log::Warning("Process %s crashed, PID: ", Scheduler::GetCurrentProcess()->name);
 			Log::Write(Scheduler::GetCurrentProcess()->pid);
 			Log::Write(", RIP: ");
 			Log::Write(regs->rip);

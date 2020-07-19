@@ -2,6 +2,9 @@
 
 #define ANSI_ESC 27
 
+#define ESC_SAVE_CURSOR '7'
+#define ESC_RESTORE_CURSOR '8'
+
 #define ANSI_DCS 'P' // Device Control String
 #define ANSI_CSI '[' // Control 
 #define ANSI_ST '\\' // String Terminator
@@ -21,6 +24,8 @@
 #define ANSI_CSI_CUP 'H' // Cursor Position
 #define ANSI_CSI_ED  'J' // Erase in Display
 #define ANSI_CSI_EL  'K' // Erase in Line
+#define ANSI_CSI_IL  'L' // Insert n Blank Lines
+#define ANSI_CSI_DL  'M' // Delete n Lines
 #define ANSI_CSI_SU  'S' // Scroll Up
 #define ANSI_CSI_SD  'T' // Scroll Down
 

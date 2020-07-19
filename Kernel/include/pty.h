@@ -45,6 +45,17 @@ typedef unsigned int tcflag_t;
 #define TCIOFLUSH 2
 #define TCOFLUSH 3
 
+// c_lflag
+#define ECHO    0x0001
+#define ECHOE   0x0002
+#define ECHOK   0x0004
+#define ECHONL  0x0008
+#define ICANON  0x0010
+#define IEXTEN  0x0020
+#define ISIG    0x0040
+#define NOFLSH  0x0080
+#define TOSTOP  0x0100
+
 struct termios {
 	tcflag_t c_iflag;
 	tcflag_t c_oflag;
@@ -97,10 +108,10 @@ public:
     winsz wSz;
     termios tios;
 
-    bool canonical = true;
-    bool echo = true;
-
     PTY();
+
+    bool Echo() { return tios.c_lflag & ECHO; }
+    bool IsCanonical() { return tios.c_lflag & ICANON; }
     
     void UpdateLineCount();
 

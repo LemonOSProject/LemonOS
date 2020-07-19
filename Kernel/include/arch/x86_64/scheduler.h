@@ -67,6 +67,7 @@ typedef struct process {
 	List<process*> children;
 
 	char workingDir[PATH_MAX];
+	char name[NAME_MAX];
 
 	List<fs_fd_t*> fileDescriptors;
 	List<message_t> messageQueue;

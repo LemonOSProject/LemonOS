@@ -218,6 +218,7 @@ namespace Scheduler{
         ((fx_state_t*)thread->fxState)->fcw = 0x33f; // Default FPU Control Word State
 
         strcpy(proc->workingDir, "/"); // set root as default working dir
+        strcpy(proc->name, "unknown process");
 
         return proc;
     }

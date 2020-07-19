@@ -87,6 +87,7 @@ int PTYDevice::Ioctl(uint64_t cmd, uint64_t arg){
 			break;
 		case TIOCSATTR:
 			pty->tios = *((termios*)arg);
+			pty->slave.ignoreBackspace = !pty->IsCanonical();
 			break;
 		case TIOCFLUSH:
 			if(arg == TCIFLUSH || arg == TCIOFLUSH){
@@ -103,7 +104,7 @@ int PTYDevice::Ioctl(uint64_t cmd, uint64_t arg){
 	return 0;
 }
 
-bool PTYDevice::CanRead() { return !(pty->canonical && !pty->slave.lines); };
+bool PTYDevice::CanRead() { return !(pty->IsCanonical() && !pty->slave.lines); };
 
 PTY::PTY(){
 	slaveFile.flags = FS_NODE_CHARDEVICE;
@@ -116,7 +117,7 @@ PTY::PTY(){
 	slave.ignoreBackspace = false;
 	master.Flush();
 	slave.Flush();
-	canonical = true;
+	tios.c_lflag = ECHO | ICANON;
 
 	masterFile.pty = this;
 	masterFile.device = PTYMasterDevice;
@@ -136,7 +137,7 @@ size_t PTY::Master_Read(char* buffer, size_t count){
 }
 
 size_t PTY::Slave_Read(char* buffer, size_t count){
-	while(canonical && !slave.lines) Scheduler::Yield();
+	while(IsCanonical() && !slave.lines) Scheduler::Yield();
 
 	return slave.Read(buffer, count);
 }
@@ -144,8 +145,15 @@ size_t PTY::Slave_Read(char* buffer, size_t count){
 size_t PTY::Master_Write(char* buffer, size_t count){
 	size_t ret = slave.Write(buffer, count);
 
-	if(echo && ret)
-		master.Write(buffer, count);
+	if(Echo() && ret){
+		for(unsigned i = 0; i < count; i++){
+			if(buffer[i] == '\e'){ // Escape
+				master.Write("^[", 2);
+			} else {
+				master.Write(&buffer[i], 1);
+			}
+		}
+	}
 
 	return ret;
 }

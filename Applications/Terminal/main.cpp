@@ -13,6 +13,8 @@
 #include <sys/ioctl.h>
 #include <lemon/util.h>
 #include <vector>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "escape.h"
 #include "colours.h"
@@ -59,11 +61,13 @@ int escapeType = 0;
 surface_t menuSurface;
 surface_t windowSurface;
 
+int bufferOffset = 0;
 int columnCount = 80;
 int rowCount = 25;
 std::vector<std::vector<TerminalChar>> buffer;
 
 vector2i_t curPos = {0, 0};
+vector2i_t storedCurPos = {0, 0};
 
 const int escBufMax = 256;
 
@@ -71,17 +75,25 @@ char escBuf[escBufMax];
 
 char charactersPerLine;
 
+void Scroll(){
+	if(curPos.y >= rowCount){
+		bufferOffset += curPos.y - (rowCount - 1);
+		curPos.y = rowCount - 1;
+	}
+			
+	while(bufferOffset + rowCount >= buffer.size()) buffer.push_back(std::vector<TerminalChar>());
+}
+
 void OnPaint(surface_t* surface){
 	Lemon::Graphics::DrawRect(0, 0, window->GetSize().x, window->GetSize().y, 0, 0, 0, surface);
 
 	int line = 0;
 	int i = 0;
 	int fontHeight = terminalFont->height;
-	int _currentLine = (curPos.y < rowCount) ? 0 : (curPos.y - (rowCount - 1));
 
-	for(int i = 0; i < rowCount && i <= curPos.y; i++){
-		for(int j = 0; j < buffer[_currentLine + i].size(); j++){
-			TerminalChar ch = buffer[_currentLine + i][j];
+	for(int i = 0; i < rowCount && (bufferOffset + i) < buffer.size(); i++){
+		for(int j = 0; j < buffer[bufferOffset + i].size(); j++){
+			TerminalChar ch = buffer[bufferOffset + i][j];
 			rgba_colour_t fg = colours[ch.s.fgColour];
 			rgba_colour_t bg = colours[ch.s.bgColour];
 			Lemon::Graphics::DrawRect(j * 8, i * fontHeight, 8, fontHeight, bg.r, bg.g, bg.b, surface);
@@ -94,7 +106,7 @@ void OnPaint(surface_t* surface){
 
 	long msec = (t.tv_nsec / 1000000.0);
 	if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
-		Lemon::Graphics::DrawRect(curPos.x * 8, (curPos.y - _currentLine) * fontHeight + (fontHeight / 4 * 3), 8, fontHeight / 4, colours[0x7] /* Grey */, surface);
+		Lemon::Graphics::DrawRect(curPos.x * 8, curPos.y * fontHeight + (fontHeight / 4 * 3), 8, fontHeight / 4, colours[0x7] /* Grey */, surface);
 }
 
 void DoAnsiSGR(){
@@ -179,12 +191,14 @@ void DoAnsiCSI(char ch){
 		break;
 	case ANSI_CSI_CUD:
 		curPos.y++;
+		Scroll();
 		break;
 	case ANSI_CSI_CUF:
 		curPos.x++;
-		if(curPos.x >= columnCount) {
+		if(curPos.x > columnCount) {
 			curPos.x = 0;
 			curPos.y++;
+			Scroll();
 		}
 		break;
 	case ANSI_CSI_CUB:
@@ -195,6 +209,86 @@ void DoAnsiCSI(char ch){
 		}
 		if(curPos.y < 0) curPos.y = 0;
 		break;
+	case ANSI_CSI_CUP: // Set cursor position
+		{
+			char* scolon = strchr(escBuf, ';');
+			if(scolon){
+				*scolon = 0;
+
+				curPos.y = atoi(escBuf);
+				Scroll();
+
+				if(*(scolon + 1) == 0){
+					curPos.x = 0;
+				} else {
+					curPos.x = atoi(scolon + 1);
+				}
+			}
+		}
+		break;
+	case ANSI_CSI_ED:
+		{
+			int num = atoi(escBuf);
+			switch(num){
+				case 0: // Clear entire screen from cursor
+					for(int i = curPos.y + 1; i < rowCount && i + bufferOffset < buffer.size(); i++){
+						buffer[bufferOffset + i].clear();
+					}
+					break;
+				case 1: // Clear screen and move cursor
+				case 2: // Same as 1 but delete everything in the scrollback buffer
+					buffer.clear();
+					curPos = {0, 0};
+					bufferOffset = 0;
+					for(int i = 0; i < rowCount; i++){
+						buffer.push_back(std::vector<TerminalChar>());
+					}
+					break;
+			}
+		}
+		break;
+	case ANSI_CSI_EL:
+		buffer[bufferOffset + curPos.y].erase(buffer[bufferOffset + curPos.y].begin() + curPos.x, buffer[bufferOffset + curPos.y].end());
+		break;
+	case ANSI_CSI_IL: // Insert blank lines
+		{
+			int amount = atoi(escBuf);
+			buffer.insert(buffer.begin() + bufferOffset + curPos.y, amount, std::vector<TerminalChar>());
+			break;
+		}
+	case ANSI_CSI_DL:
+		{
+			int amount = atoi(escBuf);
+			buffer.erase(buffer.begin() + bufferOffset + curPos.y - amount, buffer.begin() + bufferOffset + curPos.y);
+
+			while(buffer.size() - bufferOffset < rowCount){
+				buffer.push_back(std::vector<TerminalChar>());
+			}
+			break;
+		}
+	case ANSI_CSI_SU: // Scroll Down
+		if(strlen(escBuf)){
+			bufferOffset += atoi(escBuf);
+		} else {
+			bufferOffset++;
+		}
+
+		while(buffer.size() - bufferOffset < rowCount){
+			buffer.push_back(std::vector<TerminalChar>());
+		}
+		break;
+	case ANSI_CSI_SD: // Scroll up
+		if(strlen(escBuf)){
+			buffer.insert(buffer.begin() + bufferOffset, atoi(escBuf), std::vector<TerminalChar>());
+			bufferOffset -= atoi(escBuf);
+		} else {
+			buffer.insert(buffer.begin() + bufferOffset, std::vector<TerminalChar>());
+			bufferOffset--;
+		}
+		break;
+	default:
+		//fprintf(stderr, "Unknown Control Sequence Introducer (CSI) '%c'\n", ch);
+		break;
 	}
 }
 
@@ -204,6 +298,10 @@ void DoAnsiOSC(char ch){
 
 void PrintChar(char ch){
 	if(escapeSequence){
+		if(isspace(ch)){
+			return;
+		}
+
 		if(!escapeType){
 			escapeType = ch;
 			ch = 0;
@@ -229,6 +327,16 @@ void PrintChar(char ch){
 			state = defaultState;
 			buffer.clear();
 			curPos = {0, 0};
+			bufferOffset = 0;
+			for(int i = 0; i < rowCount; i++){
+				buffer.push_back(std::vector<TerminalChar>());
+			}
+		} else if(escapeType == ESC_SAVE_CURSOR) {
+			storedCurPos = curPos;	
+		} else if(escapeType == ESC_RESTORE_CURSOR) {
+			curPos = storedCurPos;	
+		} else {
+			//fprintf(stderr, "Unknown ANSI escape code '%c'\n", ch);
 		}
 		escapeSequence = 0;
 		escapeType = 0;
@@ -244,29 +352,40 @@ void PrintChar(char ch){
 		case '\n':
 			curPos.y++;
 			curPos.x = 0;
-			if(curPos.y >= buffer.size()) buffer.push_back(std::vector<TerminalChar>());
+			Scroll();
 			break;
 		case '\b':
 			if(curPos.x > 0) curPos.x--;
 			else if(curPos.y > 0) {
 				curPos.y--;
-				curPos.x = buffer[curPos.y].size();
+				curPos.x = buffer[bufferOffset + curPos.y].size();
 			}
 			
-			buffer[curPos.y].pop_back();
+			buffer[bufferOffset + curPos.y].erase(buffer[bufferOffset + curPos.y].begin() + curPos.x);
 			break;
 		case ' ':
 		default:
 			if(!(isgraph(ch) || isspace(ch))) break;
 
-			if(curPos.x >= columnCount){
+			if(curPos.x > columnCount){
 				curPos.y++;
 				curPos.x = 0;
+				Scroll();
+			}
+
+			if(curPos.x >= buffer[bufferOffset + curPos.y].size())
+				buffer[bufferOffset + curPos.y].push_back({.s = state, .c = ch});
+			else
+				buffer[bufferOffset + curPos.y][curPos.x] = {.s = state, .c = ch};
+
+			curPos.x++;
+
+			if(curPos.x > columnCount){
+				curPos.x = 0;
+				curPos.y++;
+				Scroll();
 			}
 			
-			if(curPos.y >= buffer.size()) buffer.push_back(std::vector<TerminalChar>());
-			buffer[curPos.y].push_back({.s = state, .c = ch});
-			curPos.x++;
 			break;
 		}
 	}
@@ -276,12 +395,16 @@ extern "C"
 int main(char argc, char** argv){
 	curPos = {0, 0};
 
+	for(int i = 0; i < rowCount; i++){
+		buffer.push_back(std::vector<TerminalChar>());
+	}
+
 	window = new Lemon::GUI::Window("Terminal", {640, 312});
 
 	int masterPTYFd;
 	syscall(SYS_GRANT_PTY, (uintptr_t)&masterPTYFd, 0, 0, 0, 0);
 
-	setenv("TERM", "xterm", 1); // the Lemon OS terminal is (fairly) xterm compatible (256 colour, etc.)
+	setenv("TERM", "xterm-256color", 1); // the Lemon OS terminal is (fairly) xterm compatible (256 colour, etc.)
 
 	char* const _argv[] = {"/system/bin/lsh.lef"};
 	lemon_spawn("/system/bin/lsh.lef", 1, _argv, 1);
@@ -310,9 +433,30 @@ int main(char argc, char** argv){
 		Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){
 			if(ev.event == Lemon::EventKeyPressed){
-				if(ev.key < 128){
-					char key = (char)ev.key;
-					lemon_write(masterPTYFd, &key, 1);
+				if(ev.key == KEY_ARROW_UP){
+					const char* esc = "\e[A";
+					write(masterPTYFd, esc, strlen(esc));
+				} else if(ev.key == KEY_ARROW_DOWN){
+					const char* esc = "\e[B";
+					write(masterPTYFd, esc, strlen(esc));
+				} else if(ev.key == KEY_ARROW_RIGHT){
+					const char* esc = "\e[C";
+					write(masterPTYFd, esc, strlen(esc));
+				} else if(ev.key == KEY_ARROW_LEFT){
+					const char* esc = "\e[D";
+					write(masterPTYFd, esc, strlen(esc));
+				} else if(ev.key == KEY_END){
+					const char* esc = "\e[F";
+					write(masterPTYFd, esc, strlen(esc));
+				} else if(ev.key == KEY_HOME){
+					const char* esc = "\e[H";
+					write(masterPTYFd, esc, strlen(esc));
+				} else if(ev.key == KEY_ESCAPE){
+					const char* esc = "\e\e";
+					write(masterPTYFd, esc, strlen(esc));
+				} else if(ev.key < 128){
+					const char key = (char)ev.key;
+					write(masterPTYFd, &key, 1);
 				}
 			} else if (ev.event == Lemon::EventWindowClosed){
 				delete window;
@@ -333,7 +477,7 @@ int main(char argc, char** argv){
 			}
 		}
 
-		while(int len = lemon_read(masterPTYFd, _buf, 512)){
+		while(int len = read(masterPTYFd, _buf, 512)){
 			for(int i = 0; i < len; i++){
 				PrintChar(_buf[i]);
 			}

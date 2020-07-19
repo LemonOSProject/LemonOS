@@ -298,7 +298,7 @@ extern "C"
 			KernelPanic(reasons, 7);
 			for (;;);
 		} else {
-			Log::Warning("Process crashed, PID: ");
+			Log::Warning("Process %s crashed, PID: ", Scheduler::GetCurrentProcess()->name);
 			Log::Write(Scheduler::GetCurrentProcess()->pid);
 			Log::Write(", RIP: ");
 			Log::Write(regs->rip);

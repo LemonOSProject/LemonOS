@@ -8,9 +8,13 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <lemon/syscall.h>
+#include <string>
+#include <termios.h>
 
-size_t bufSz = 512;
-char* ln = nullptr;
+termios execAttributes; // Set before executing
+termios readAttributes; // Set on ReadLine
+
+std::string ln;
 
 typedef void(*builtin_call_t)(int, char**);
 
@@ -45,31 +49,89 @@ void LShBuiltin_Pwd(int argc, char** argv){
 builtin_t builtinCd = {.name = "cd", .func = LShBuiltin_Cd};
 builtin_t builtinPwd = {.name = "pwd", .func = LShBuiltin_Pwd};
 
-char* ReadLine(){
+void ReadLine(){
+	tcsetattr(STDOUT_FILENO, TCSANOW, &readAttributes);
+
+	bool esc = false;
+	bool csi = false;
+	int lnPos = 0;
+	ln.clear();
+
 	for(int i = 0; ; i++){
-		if(i >= bufSz){
-			bufSz += 64;
-			ln = (char*)realloc(ln, bufSz);
-		}
+		char ch;
+		while((ch = getchar()) == EOF);
 
-		char ch = getchar();
-
-		if(ch == '\n' || ch == EOF){
-			ln[i] = 0;
+		if(esc){
+			if(ch == '['){
+				csi = true;
+			}
+			esc = false;
+		} else if (csi) {
+			switch(ch){
+				case 'A': // Cursor Up
+					break;
+				case 'B': // Cursor Down
+					break;
+				case 'C': // Cursor Right
+					if(lnPos < ln.length()){
+						lnPos++;
+						printf("\e[C");
+					}
+					break;
+				case 'D': // Cursor Left
+					lnPos--;
+					if(lnPos < 0){
+						lnPos = 0;
+					} else {
+						printf("\e[D");
+					}
+					break;
+				case 'F': // End
+					lnPos = ln.length();
+					break;
+				case 'H': // Home
+					lnPos = 0;
+					break;
+			}
+			csi = false;
+		} else if(ch == '\b'){
+			if(lnPos > 0){
+				lnPos--;
+				ln.erase(lnPos, 1);
+				putc(ch, stdout);
+			}
+		} else if(ch == '\n'){
 			break;
+		} else if(ch == '\e'){
+			esc = true;
+			csi = false;
 		} else {
-			ln[i] = ch;
+			ln.insert(lnPos, 1, ch);
+			putc(ch, stdout);
+			lnPos++;
 		}
+
+		if(lnPos < ln.length()){
+			printf("\e[K%s", &ln[lnPos]); // Clear past cursor, print everything in front of the cursor
+
+			for(int i = 0; i < ln.length() - lnPos; i++){
+						printf("\e[D");
+			}
+		}
+
+		fflush(stdout);
 	}
-	
-	return ln;
+
+	tcsetattr(STDOUT_FILENO, TCSANOW, &execAttributes);
 }
 
 void ParseLine(){
 	int argc = 0;
 	char* argv[128];
 
-	char* tok = strtok(ln, " \t\n");
+	char* lnC = new char[ln.size() + 1];
+	std::copy(ln.begin(), ln.end(), lnC);
+	char* tok = strtok(lnC, " \t\n");
 	argv[argc++] = tok;
 
 	while((tok = strtok(NULL, " \t\n")) && argc < 128){
@@ -133,16 +195,17 @@ void ParseLine(){
 		}
 	}
 
-	printf("Unknown Command: %s\n", argv[0]);
+	printf("\nUnknown Command: %s\n", argv[0]);
 }
 
 int main(){
 	printf("Lemon SHell\n");
 
 	getcwd(currentDir, PATH_MAX);
-
-	ln = (char*)malloc(bufSz);
-
+	tcgetattr(STDOUT_FILENO, &execAttributes);
+	readAttributes = execAttributes;
+	readAttributes.c_lflag &= ~(ICANON | ECHO); // Disable canonical mode and echo when reading user input 
+	
 	builtins.add_back(builtinCd);
 	builtins.add_back(builtinPwd);
 
@@ -154,7 +217,7 @@ int main(){
 	fflush(stdin);
 
 	for(;;) {
-		printf("\n\033[33mLemon \033[91m%s\033[m$ ", currentDir);
+		printf("\n\e[33mLemon \e[91m%s\e[m$ ", currentDir);
 		fflush(stdout);
 
 		ReadLine();

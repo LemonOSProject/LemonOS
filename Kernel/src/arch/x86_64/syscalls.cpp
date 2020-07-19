@@ -147,6 +147,7 @@ long SysExec(regs64_t* r){
 	}
 
 	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp);
+	strncpy(proc->name, fs::BaseName(kernelArgv[0]), NAME_MAX);
 
 	for(int i = 0; i < argc; i++){
 		kfree(kernelArgv[i]);
@@ -173,7 +174,7 @@ long SysExec(regs64_t* r){
 
 long SysRead(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	if(r->rbx > proc->fileDescriptors.get_length()){
+	if(r->rbx >= proc->fileDescriptors.get_length()){
 		Log::Warning("Invalid File Descriptor: %d", r->rbx);
 		return -EBADF;
 	}
