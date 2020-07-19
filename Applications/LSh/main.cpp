@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <list.h>
+#include <list>
 #include <lemon/spawn.h>
 #include <lemon/filesystem.h>
 #include <unistd.h>
@@ -25,9 +25,9 @@ typedef struct {
 
 char currentDir[PATH_MAX];
 
-List<char*> path;
+std::list<char*> path;
 
-List<builtin_t> builtins;
+std::list<builtin_t> builtins;
 
 void LShBuiltin_Cd(int argc, char** argv){
 	if(argc > 3){
@@ -142,9 +142,9 @@ void ParseLine(){
 		argv[argc++] = tok;
 	}
 
-	for(int i = 0; i < builtins.get_length(); i++){
-		if(strcmp(builtins.get_at(i).name, argv[0]) == 0){
-			builtins.get_at(i).func(argc, argv);
+	for(builtin_t builtin : builtins){
+		if(strcmp(builtin.name, argv[0]) == 0){
+			builtin.func(argc, argv);
 			return;
 		}
 	}
@@ -168,16 +168,16 @@ void ParseLine(){
 		close(fd);
 	}
 	
-	for(int j = 0; j < path.get_length(); j++){
-		if((fd = open(path.get_at(j), O_RDONLY | O_DIRECTORY)) > 0){
+	for(char* path : path){
+		if((fd = open(path, O_RDONLY | O_DIRECTORY)) > 0){
 			lemon_dirent_t dirent;
 
 			int i = 0;
 			while (lemon_readdir(fd, i++, &dirent)){
 				// Check exact filenames and try omitting extension of .lef files
 				if(strcmp(argv[0], dirent.name) == 0 || (strcmp(dirent.name + strlen(dirent.name) - 4, ".lef") == 0 && strncmp(argv[0], dirent.name, strlen(dirent.name) - 4) == 0)){
-					char* tempPath = (char*)malloc(strlen(path.get_at(j)) + strlen(dirent.name) + 2);
-					strcpy(tempPath, path.get_at(j));
+					char* tempPath = (char*)malloc(strlen(path) + strlen(dirent.name) + 2);
+					strcpy(tempPath, path);
 					strcat(tempPath, "/");
 					strcat(tempPath, dirent.name);
 					
@@ -210,13 +210,11 @@ int main(){
 	readAttributes = execAttributes;
 	readAttributes.c_lflag &= ~(ICANON | ECHO); // Disable canonical mode and echo when reading user input 
 	
-	builtins.add_back(builtinCd);
-	builtins.add_back(builtinPwd);
+	builtins.push_back(builtinPwd);
+	builtins.push_back(builtinCd);
 
-	path.add_back("/initrd");
-	path.add_back("/initrd/bin");
-	path.add_back("/system/bin");
-	path.add_back("/system");
+	path.push_back("/initrd");
+	path.push_back("/system/bin");
 
 	fflush(stdin);
 

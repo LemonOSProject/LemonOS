@@ -17,6 +17,7 @@ Scripts/build-win/mount.cfg
 Kernel/subprojects/lai
 Initrd/*
 Base/*
+!Base/lemon
 initrd.tar
 Ports/*
 !Ports/*.sh

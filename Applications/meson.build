@@ -55,6 +55,10 @@ solitaire_src = [
     'Solitaire/main.cpp',
 ]
 
+run_src = [
+    'Run/main.cpp',
+]
+
 application_cpp_args = [
     
 ]
@@ -77,3 +81,4 @@ executable('lemonpaint.lef', lemonpaint_src, cpp_args : application_cpp_args, li
 executable('imgview.lef', imgview_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('sysinfo.lef', sysinfo_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('guitest.lef', guitest_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
+executable('run.lef', run_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
