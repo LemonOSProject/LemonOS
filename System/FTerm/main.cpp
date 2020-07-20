@@ -33,7 +33,7 @@ TermState defaultState {
 
 struct TerminalChar {
 	TermState s = defaultState;
-	char c;
+	char c = ' ';
 };
 
 int masterPTYFd;
@@ -74,12 +74,10 @@ void Paint(){
 			rgba_colour_t fg = colours[ch.s.fgColour];
 			rgba_colour_t bg = colours[ch.s.bgColour];
 
-			uint16_t r = (bg.r + colours[defaultState.bgColour].r) / 2;
-			uint16_t g = (bg.g + colours[defaultState.bgColour].g) / 2;
-			uint16_t b = (bg.b + colours[defaultState.bgColour].b) / 2;
+			Lemon::Graphics::DrawRect(j * 8, lnPos * fontHeight, 8, fontHeight, bg.r, bg.g, bg.b, &renderSurface);
 
-			Lemon::Graphics::DrawRect(j * 8, lnPos * fontHeight, 8, fontHeight, r, g, b, &renderSurface);
-			Lemon::Graphics::DrawChar(ch.c, j * 8, lnPos * fontHeight, fg.r, fg.g, fg.b, &renderSurface, {0, 0, renderSurface.width, renderSurface.height}, terminalFont);
+			if(isprint(ch.c))
+				Lemon::Graphics::DrawChar(ch.c, j * 8, lnPos * fontHeight, fg.r, fg.g, fg.b, &renderSurface, {0, 0, renderSurface.width, renderSurface.height}, terminalFont);
         }
 
         if(++lnPos >= wSize.ws_row){
@@ -361,13 +359,16 @@ void PrintChar(char ch){
 			Scroll();
 			break;
 		case '\b':
-			if(curPos.x > 0) curPos.x--;
-			else if(curPos.y > 0) {
+			if(curPos.x > 0) {
+				curPos.x--;
+			} else if(curPos.y > 0) {
 				curPos.y--;
 				curPos.x = screenBuffer[curPos.y].size();
 			}
 			
-			screenBuffer[curPos.y].erase(screenBuffer[curPos.y].begin() + curPos.x);
+			if(curPos.x < screenBuffer[curPos.y].size())
+				screenBuffer[curPos.y].erase(screenBuffer[curPos.y].begin() + curPos.x);
+
 			break;
 		case ' ':
 		default:
@@ -456,6 +457,7 @@ int main(int argc, char** argv){
     lemon_spawn(*args, 1, args, 1);
 
     char _buf[512];
+	bool paint = true;
 
     for(;;){
         input.Poll();
@@ -464,8 +466,11 @@ int main(int argc, char** argv){
 			for(int i = 0; i < len; i++){
 				PrintChar(_buf[i]);
 			}
+			paint = true;
 		}
 
-        Paint();
+		if(paint){
+        	Paint();
+		}
     }
 }

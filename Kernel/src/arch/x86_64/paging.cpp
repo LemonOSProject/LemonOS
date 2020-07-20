@@ -608,6 +608,8 @@ namespace Memory{
 			Log::Write(Scheduler::GetCurrentProcess()->pid);
 			Log::Write(", RIP: ");
 			Log::Write(regs->rip);
+			Log::Info("Stack trace:");
+			UserPrintStackTrace(regs->rbp, Scheduler::GetCurrentProcess()->addressSpace);
 			Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 			return;
 		};

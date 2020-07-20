@@ -417,13 +417,22 @@ void PrintChar(char ch){
 
 extern "C"
 int main(char argc, char** argv){
+	window = new Lemon::GUI::Window("Terminal", {720, 480});
+
+	terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
+	if(!terminalFont){
+		terminalFont = Lemon::Graphics::GetFont("default");
+	}
+
+	rowCount = 480 / terminalFont->height - 1;
+	columnCount = 720 / 8;
+
 	curPos = {0, 0};
 
 	for(int i = 0; i < rowCount; i++){
 		buffer.push_back(std::vector<TerminalChar>());
 	}
 
-	window = new Lemon::GUI::Window("Terminal", {640, 312});
 
 	int masterPTYFd;
 	syscall(SYS_GRANT_PTY, (uintptr_t)&masterPTYFd, 0, 0, 0, 0);
@@ -438,11 +447,6 @@ int main(char argc, char** argv){
 	char* _buf = (char*)malloc(512);
 
 	bool paint = true;
-
-	terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
-	if(!terminalFont){
-		terminalFont = Lemon::Graphics::GetFont("default");
-	}
 
 	winsize wSz = {
 		.ws_row = rowCount,

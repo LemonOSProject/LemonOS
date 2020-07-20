@@ -163,7 +163,7 @@ namespace Lemon::Graphics{
             return 0;
         }
 
-        int maxHeight = font->face->glyph->bitmap.rows;
+        int maxHeight = font->height - (font->height - font->face->glyph->bitmap_top);
 
         if(y + maxHeight >= limits.y + limits.height){
             maxHeight = limits.y + limits.height - y;
@@ -176,7 +176,7 @@ namespace Lemon::Graphics{
         for(int i = 0; i < static_cast<int>(font->face->glyph->bitmap.rows) && i < maxHeight; i++){
             if(y + i < 0) continue;
 
-            uint32_t yOffset = (i + y + (12/*font->glyph->bitmap.rows*/ - font->face->glyph->bitmap_top)) * (surface->width);
+            uint32_t yOffset = (i + y + (font->height - font->face->glyph->bitmap_top)) * (surface->width);
             for(unsigned int j = 0; j < font->face->glyph->bitmap.width && static_cast<long>(j) + x < surface->width; j++){
                 if(x + static_cast<long>(j) < 0) continue;
                 if(font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] == 255)

@@ -6,6 +6,7 @@
 #include <panic.h>
 #include <scheduler.h>
 #include <apic.h>
+#include <strace.h>
 
 idt_entry_t idt[256];
 
@@ -281,15 +282,7 @@ extern "C"
 			Log::Write(regs->rbp);
 
 			Log::Info("Stack Trace:");
-			
-			uint64_t* stack = (uint64_t*)regs->rbp;
-			
-			while(stack){
-				uint64_t* rbp = (uint64_t*)(*stack);
-				uint64_t rip = *(stack + 1);
-				Log::Info(rip);
-				stack = rbp;
-			}
+			PrintStackTrace(regs->rbp);
 
 			char temp[16];
 			char temp2[16];
@@ -304,6 +297,8 @@ extern "C"
 			Log::Write(regs->rip);
 			Log::Write(", Exception: ");
 			Log::Write(int_num);
+			Log::Info("Stack trace:");
+			UserPrintStackTrace(regs->rbp, Scheduler::GetCurrentProcess()->addressSpace);
 			Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 		}
 	}
