@@ -133,8 +133,7 @@ void ParseLine(){
 	int argc = 0;
 	char* argv[128];
 
-	char* lnC = new char[ln.size() + 1];
-	std::copy(ln.begin(), ln.end(), lnC);
+	char* lnC = strdup(ln.c_str());
 	char* tok = strtok(lnC, " \t\n");
 	argv[argc++] = tok;
 
@@ -161,6 +160,7 @@ void ParseLine(){
 				syscall(SYS_WAIT_PID, pid, 0, 0, 0, 0);
 
 				close(fd);
+				free(lnC);
 				return;
 			}
 		}
@@ -191,6 +191,7 @@ void ParseLine(){
 
 					close(fd);
 					free(tempPath);
+					free(lnC);
 					return;
 				}
 			}
@@ -200,6 +201,7 @@ void ParseLine(){
 	}
 
 	printf("\nUnknown Command: %s\n", argv[0]);
+	free(lnC);
 }
 
 int main(){

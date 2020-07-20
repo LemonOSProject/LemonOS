@@ -5,9 +5,10 @@
 #include <string.h>
 
 namespace Lemon{
-    int PollMouse(MousePacket& pkt){
-        static int mouseFd = 0;
+    static int mouseFd = 0;
+    static int keyboardFd = 0;
 
+    int PollMouse(MousePacket& pkt){
         if(!mouseFd) mouseFd = open("/dev/mouse0", O_RDONLY);
 
         memset(&pkt, 0, sizeof(MousePacket));
@@ -16,8 +17,6 @@ namespace Lemon{
     }
 
     ssize_t PollKeyboard(uint8_t* buffer, size_t count){
-        static int keyboardFd = 0;
-
         if(!keyboardFd) keyboardFd = open("/dev/keyboard0", O_RDONLY);
 
         return read(keyboardFd, buffer, count);

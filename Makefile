@@ -25,7 +25,7 @@ initrd: libc liblemon
 base: applications system
 	Scripts/buildbase.sh
 
-disk: kernel initrd base
+disk: kernel base initrd
 	Scripts/build-nix/copytodisk.sh
 	
 clean:

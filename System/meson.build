@@ -22,7 +22,13 @@ login_src = [
     'Login/main.cpp',
 ]
 
+fterm_src = [
+    'FTerm/main.cpp',
+    'FTerm/input.cpp',
+]
+
 executable('init.lef', lemond_src, link_args : ['-llemon'], install_dir : 'lemon/', install : true)
 executable('lemonwm.lef', lemonwm_src, cpp_args : '-O3', link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install_dir : 'lemon/', install : true)
 executable('netgov.lef', netgov_src, install_dir : 'lemon/', install : true)
 executable('login.lef', login_src, cpp_args : '-O3', link_args : ['-llemon', '-lfreetype'], install_dir : 'lemon/', install : true)
+executable('fterm.lef', fterm_src, cpp_args : '-O3', link_args : ['-llemon', '-lfreetype'], install_dir : meson.current_source_dir() + '/../Initrd', install : true)

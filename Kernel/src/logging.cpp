@@ -16,10 +16,11 @@ namespace Log{
 	char* logBuffer = nullptr;
 	size_t logBufferPos = 0;
 	size_t logBufferSize = 0;
+	size_t logBufferMaxSize = 0x100000; // 1MB
 
 	int logLock = 0;
 	
-	void WriteN(const char* str, int n);
+	void WriteN(const char* str, size_t n);
 
 	class LogDevice : public FsNode{
 	public:
@@ -34,6 +35,7 @@ namespace Log{
 
 		ssize_t Read(size_t offset, size_t size, uint8_t *buffer){
 			if(!logBuffer) return 0;
+			if(offset > logBufferPos) return 0;
 
 			if(size + offset > logBufferPos) size = logBufferPos - offset;
 			memcpy(buffer, logBuffer + offset, size);
@@ -72,10 +74,25 @@ namespace Log{
 		logBufferPos = 0;
 	}
 
-	void WriteN(const char* str, int n){
+	void WriteN(const char* str, size_t n){
 		write_serial_n(str, n);
+		
+		if(console){
+			console->PrintN(str, n, 255, 255, 255);
+		}
 
 		if(logBuffer){
+			if(n >= logBufferMaxSize){
+				n -= (n - logBufferMaxSize);
+			}
+
+			if(n + logBufferPos > logBufferMaxSize){
+				size_t discard = (n + logBufferPos) - logBufferMaxSize; // Amount of bytes to discard
+
+				logBufferPos -= discard;
+				memcpy(logBuffer, logBuffer + discard, logBufferPos); 
+			}
+
 			if(n + logBufferPos > logBufferSize){
 				logBufferSize += 4096;
 				char* oldBuf = logBuffer;
@@ -88,10 +105,6 @@ namespace Log{
 			logBufferPos += n;
 
 			logDevice->size = logBufferPos;
-		}
-		
-		if(console){
-			console->PrintN(str, n, 255, 255, 255);
 		}
 	}
 

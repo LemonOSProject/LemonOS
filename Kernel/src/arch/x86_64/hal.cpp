@@ -86,6 +86,8 @@ namespace HAL{
         Log::Info("Initializing System Timer...");
         Timer::Initialize(1000);
         Log::Write("OK");
+
+        Log::EnableBuffer();
     } 
 
     void InitVideo(){

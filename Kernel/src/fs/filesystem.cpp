@@ -328,6 +328,8 @@ namespace fs{
 
     FsNode* Root::FindDir(char* name){
 		if(strcmp(name,devDirent.name) == 0) return &dev;
+		if(strcmp(name, ".") == 0) return this;
+		if(strcmp(name, "..") == 0) return this;
 
 		for(unsigned i = 0; i < fs::volumes->get_length(); i++){
 			if(strcmp(fs::volumes->get_at(i)->mountPointDirent.name,name) == 0) return (fs::volumes->get_at(i)->mountPointDirent.node);

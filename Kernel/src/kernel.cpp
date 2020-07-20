@@ -23,7 +23,7 @@
 #include <sharedmem.h>
 #include <net/net.h>
 
-uint8_t* progressBuffer;
+uint8_t* progressBuffer = nullptr;
 video_mode_t videoMode;
 
 extern "C"
@@ -36,7 +36,8 @@ void IdleProcess(){
 }
 
 void KernelProcess(){
-	Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+	if(progressBuffer)
+		Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	NVMe::Initialize();
 	USB::XHCI::Initialize();
@@ -48,15 +49,20 @@ void KernelProcess(){
 
 	asm("cli");
 
-	Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+	if(progressBuffer)
+		Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Loading Init Process...");
 	FsNode* initFsNode = fs::ResolvePath("/system/lemon/init.lef");
-	if(!initFsNode){
-		const char* panicReasons[]{
-			"Failed to load init task (init.lef)!"
-		};
-		KernelPanic(panicReasons,1);
+	if(!initFsNode){ // Attempt to start fterm
+		initFsNode = fs::ResolvePath("/initrd/fterm.lef");
+
+		if(!initFsNode){ // Shit has really hit the fan and fterm is not on the ramdisk
+			const char* panicReasons[]{
+				"Failed to load either init task (init.lef) or fterm (fterm.lef)!"
+			};
+			KernelPanic(panicReasons,1);
+		}
 	}
 
 	void* initElf = (void*)kmalloc(initFsNode->size);
@@ -64,7 +70,7 @@ void KernelProcess(){
 
 	process_t* initProc = Scheduler::CreateELFProcess(initElf);
 	initProc->threads[0].priority = 8;
-	strcpy(initProc->workingDir, "/system");
+	strcpy(initProc->workingDir, "/");
 
 	Log::Write("OK");
 
@@ -119,27 +125,32 @@ extern "C"
 	Log::Write("OK");
 
 	FsNode* initrd = fs::FindDir(fs::GetRoot(), "initrd");
+	FsNode* splashFile = nullptr;
 
-	FsNode* splashFile;
-	if((splashFile = fs::FindDir(initrd,"splash.bmp"))){
-		uint32_t size = splashFile->size;
-		uint8_t* buffer = (uint8_t*)kmalloc(size);
-		if(fs::Read(splashFile, 0, size, buffer))
-			Video::DrawBitmapImage(videoMode.width/2 - 484/2, videoMode.height/2 - 292/2, 484, 292, buffer);
-	} else Log::Warning("Could not load splash image");
+	if(initrd){
+		if((splashFile = fs::FindDir(initrd,"splash.bmp"))){
+			uint32_t size = splashFile->size;
+			uint8_t* buffer = (uint8_t*)kmalloc(size);
+			if(fs::Read(splashFile, 0, size, buffer))
+				Video::DrawBitmapImage(videoMode.width/2 - 484/2, videoMode.height/2 - 292/2, 484, 292, buffer);
+		} else Log::Warning("Could not load splash image");
 
-	if((splashFile = fs::FindDir(initrd,"pbar.bmp"))){
-		uint32_t size = splashFile->size;
-		progressBuffer = (uint8_t*)kmalloc(size);
-		if(fs::Read(splashFile, 0, size, progressBuffer)){
-			Video::DrawBitmapImage(videoMode.width/2 - 24*6, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
-			Video::DrawBitmapImage(videoMode.width/2 - 24*5, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
-		}
-	} else Log::Warning("Could not load progress bar image");
+		if((splashFile = fs::FindDir(initrd,"pbar.bmp"))){
+			uint32_t size = splashFile->size;
+			progressBuffer = (uint8_t*)kmalloc(size);
+			if(fs::Read(splashFile, 0, size, progressBuffer)){
+				Video::DrawBitmapImage(videoMode.width/2 - 24*6, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+				Video::DrawBitmapImage(videoMode.width/2 - 24*5, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+			}
+		} else Log::Warning("Could not load progress bar image");
+	} else {
+		Log::Warning("Failed to find initrd!");
+	}
 
 	Video::DrawString("Copyright 2018-2020 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
 
-	Video::DrawBitmapImage(videoMode.width/2 - 24*4, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+	if(progressBuffer)
+		Video::DrawBitmapImage(videoMode.width/2 - 24*4, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	DeviceManager::Init();
 	
@@ -150,7 +161,8 @@ extern "C"
 
 	Log::Info("OK");
 	
-	Video::DrawBitmapImage(videoMode.width/2 - 24*3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+	if(progressBuffer)
+		Video::DrawBitmapImage(videoMode.width/2 - 24*3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Registering Syscall Handler...");
 
@@ -158,7 +170,8 @@ extern "C"
 
 	Log::Write("OK");
 
-	Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+	if(progressBuffer)
+		Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Initializing Task Scheduler...");
 	Scheduler::Initialize();
