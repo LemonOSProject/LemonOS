@@ -93,8 +93,10 @@ namespace Lemon::Graphics{
         double xOffset = 0;
 
         if(preserveAspectRatio){
-            xScale = ((double)h * (((double)surf.width) / surf.height)) / surf.width;
-        // if((xScale * originalWidth) < originalWidth) xOffset = (originalWidth - (xScale * originalWidth)) / 2;
+            if(yScale > xScale)
+                xScale = yScale;
+            else
+                yScale = xScale;
         }
 
         uint8_t* srcBuffer = surf.buffer;
@@ -177,6 +179,8 @@ namespace Lemon::Graphics{
     int SavePNGImage(FILE* f, surface_t* surface, bool writeTransparency) {
         png_structp png = nullptr;
         png_infop info = nullptr;
+
+        (void)writeTransparency;
         
         png = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
         if(!png) return -10;

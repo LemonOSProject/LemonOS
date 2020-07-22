@@ -146,7 +146,11 @@ void CompositorInstance::Paint(){
     }
     
     if(useImage){
-        surfacecpy(renderSurface, &backgroundImage, wm->input.mouse.pos, {wm->input.mouse.pos, {mouseCursor.width, mouseCursor.height}});
+        if(wm->input.mouse.pos.x + mouseCursor.width >= renderSurface->width){
+            surfacecpy(renderSurface, &backgroundImage, wm->input.mouse.pos, {wm->input.mouse.pos, {renderSurface->width - wm->input.mouse.pos.x, mouseCursor.height}});
+        } else {
+            surfacecpy(renderSurface, &backgroundImage, wm->input.mouse.pos, {wm->input.mouse.pos, {mouseCursor.width, mouseCursor.height}});
+        }
     } else {
         DrawRect(wm->input.mouse.pos.x, wm->input.mouse.pos.y, mouseCursor.width, mouseCursor.height, backgroundColor, renderSurface);
     }

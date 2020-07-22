@@ -51,7 +51,7 @@ void memset64_optimized(void* dest, uint64_t c, size_t count) {
 
 inline void memcpy_optimized(void* dest, void* src, size_t count) {
     size_t overflow = (count & 0xF); // Amount of overflow bytes
-    size_t size_aligned = (count - overflow); // Size rounded DOWN to lowest multiple of 128 bits
+    size_t size_aligned = (count & (~0xFULL)); // Size rounded DOWN to lowest multiple of 128 bits
 
     if(((size_t)dest & 0xF) || ((size_t)src & 0xF))
         memcpy_sse2_unaligned(dest, src, size_aligned >> 4);
@@ -201,29 +201,31 @@ namespace Lemon::Graphics{
     }
 
     void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion){
-        int srcWidth = (srcRegion.pos.x + srcRegion.size.x) > src->width ? (src->width - srcRegion.pos.x) : srcRegion.size.x;
-        int srcHeight = (srcRegion.pos.y + srcRegion.size.y) > src->height ? (src->height - srcRegion.pos.y) : srcRegion.size.y;
-        int rowOffset = srcRegion.pos.x * 4;
-        int rowSize = srcRegion.width;
+        if(offset.x >= dest->width || offset.y >= dest->height || srcRegion.pos.x >= src->width || srcRegion.pos.y >= src->height) return;
+
+        int srcWidth = (srcRegion.pos.x + srcRegion.size.x) >= src->width ? (src->width - srcRegion.pos.x - 1) : srcRegion.size.x;
+        int srcHeight = (srcRegion.pos.y + srcRegion.size.y) >= src->height ? (src->height - srcRegion.pos.y - 1) : srcRegion.size.y;
+        int rowOffset = srcRegion.pos.x;
+        int rowSize = srcWidth;
 
         if(offset.x < 0){
-            rowOffset += abs(offset.x) * 4;
+            rowOffset += abs(offset.x);
             rowSize += offset.x;
             offset.x = 0;
         }
 
-        if(rowSize > srcWidth){
-            rowSize = srcWidth;
+        if(offset.x + rowSize >= dest->width){
+            rowSize = dest->width - offset.x;
         }
 
-        if(offset.x + rowSize > dest->width){
-            rowSize = dest->width - offset.x;
+        if(rowOffset + rowSize > src->width){
+            rowSize = src->width - rowOffset;
         }
 
         int i = 0;
 
         if(offset.y < 0){
-            i += offset.y;
+            i += abs(offset.y);
             offset.y = 0;
         }
 
@@ -233,7 +235,7 @@ namespace Lemon::Graphics{
         unsigned srcPitch = src->width << 2;
 
         for(; i < srcHeight && i < dest->height - offset.y; i++){
-            memcpy_optimized(dest->buffer + ((i+offset.y)*destPitch + offset.x*4), src->buffer + (i + srcRegion.pos.y)*srcPitch + rowOffset, rowSize << 2);
+            memcpy_optimized(dest->buffer + ((i + offset.y) * destPitch + offset.x * 4), src->buffer + (i + srcRegion.pos.y) * srcPitch + (rowOffset << 2), rowSize << 2);
         }
     }
 

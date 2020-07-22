@@ -7,7 +7,7 @@ enum ParserState {
 };
 
 CFGParser::CFGParser(const char* path){
-	cfgFile = fopen(path, "rw");
+	cfgFile = fopen(path, "r");
 
 	if(!cfgFile){
 		printf("CFGParser: Failed to open %s!", path);
