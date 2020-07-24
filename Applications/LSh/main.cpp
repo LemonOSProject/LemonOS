@@ -130,10 +130,19 @@ void ReadLine(){
 }
 
 void ParseLine(){
+	if(!ln.length()){
+		return;
+	}
+
 	int argc = 0;
 	char* argv[128];
 
 	char* lnC = strdup(ln.c_str());
+
+	if(!lnC){
+		return;
+	}
+
 	char* tok = strtok(lnC, " \t\n");
 	argv[argc++] = tok;
 
@@ -160,7 +169,9 @@ void ParseLine(){
 				syscall(SYS_WAIT_PID, pid, 0, 0, 0, 0);
 
 				close(fd);
-				free(lnC);
+
+				if(lnC)
+					free(lnC);
 				return;
 			}
 		}

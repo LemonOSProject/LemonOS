@@ -171,7 +171,6 @@ namespace Lemon::Graphics{
     }
 
     void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset){
-
         if(dest->height == src->height && dest->width == src->width && offset.x == 0 && offset.y == 0) {
             memcpy_optimized(dest->buffer, src->buffer, dest->width * dest->height * 4);
             return;
@@ -203,8 +202,8 @@ namespace Lemon::Graphics{
     void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion){
         if(offset.x >= dest->width || offset.y >= dest->height || srcRegion.pos.x >= src->width || srcRegion.pos.y >= src->height) return;
 
-        int srcWidth = (srcRegion.pos.x + srcRegion.size.x) >= src->width ? (src->width - srcRegion.pos.x - 1) : srcRegion.size.x;
-        int srcHeight = (srcRegion.pos.y + srcRegion.size.y) >= src->height ? (src->height - srcRegion.pos.y - 1) : srcRegion.size.y;
+        int srcWidth = (srcRegion.pos.x + srcRegion.size.x) > src->width ? (src->width - srcRegion.pos.x) : srcRegion.size.x;
+        int srcHeight = (srcRegion.pos.y + srcRegion.size.y) > src->height ? (src->height - srcRegion.pos.y) : srcRegion.size.y;
         int rowOffset = srcRegion.pos.x;
         int rowSize = srcWidth;
 
@@ -229,7 +228,7 @@ namespace Lemon::Graphics{
             offset.y = 0;
         }
 
-        if(rowSize <= 0) return;
+        if(rowSize <= 0 || rowOffset >= src->width) return;
 
         unsigned destPitch = dest->width << 2;
         unsigned srcPitch = src->width << 2;

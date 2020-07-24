@@ -17,6 +17,7 @@
 #include <cpu.h>
 #include <net/socket.h>
 #include <timer.h>
+#include <lock.h>
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -162,9 +163,9 @@ long SysExec(regs64_t* r){
 		Scheduler::GetCurrentProcess()->children.add_back(proc);
 		proc->parent = Scheduler::GetCurrentProcess();
 
-		proc->fileDescriptors.replace_at(0, new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0)));
-		proc->fileDescriptors.replace_at(1, new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1)));
-		proc->fileDescriptors.replace_at(2, new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2)));
+		proc->fileDescriptors[0] = new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));
+		proc->fileDescriptors[1] = new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1));
+		proc->fileDescriptors[2] = new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2));
 	}
 
 	strncpy(proc->workingDir, Scheduler::GetCurrentProcess()->workingDir, PATH_MAX);
@@ -308,7 +309,7 @@ long SysClose(regs64_t* r){
 
 	handle->node = nullptr;
 
-	Scheduler::GetCurrentProcess()->fileDescriptors.replace_at(fd, NULL);
+	Scheduler::GetCurrentProcess()->fileDescriptors[fd] = nullptr;
 	return 0;
 }
 
@@ -833,9 +834,9 @@ long SysGrantPTY(regs64_t* r){
 
 	*((int*)r->rbx) = currentProcess->fileDescriptors.get_length();
 	
-	currentProcess->fileDescriptors.replace_at(0, fs::Open(&pty->slaveFile)); // Stdin
-	currentProcess->fileDescriptors.replace_at(1, fs::Open(&pty->slaveFile)); // Stdout
-	currentProcess->fileDescriptors.replace_at(2, fs::Open(&pty->slaveFile)); // Stderr
+	currentProcess->fileDescriptors[0] = fs::Open(&pty->slaveFile); // Stdin
+	currentProcess->fileDescriptors[1] = fs::Open(&pty->slaveFile); // Stdout
+	currentProcess->fileDescriptors[2] = fs::Open(&pty->slaveFile); // Stderr
 
 	currentProcess->fileDescriptors.add_back(fs::Open(&pty->masterFile));
 
@@ -1752,7 +1753,11 @@ void SyscallHandler(regs64_t* regs) {
 
 	if(!syscalls[regs->rax]) return;
 
+	acquireLock(&GetCPULocal()->currentThread->lock);
+
 	regs->rax = syscalls[regs->rax](regs); // Call syscall
+
+	releaseLock(&GetCPULocal()->currentThread->lock);
 }
 
 void InitializeSyscalls() {

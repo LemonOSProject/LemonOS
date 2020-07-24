@@ -62,11 +62,19 @@ public:
 		return data[pos];
 	}
 
+	T& get_at(size_t pos){
+		return at(pos);
+	}
+
 	T& operator[](size_t pos){
 		return at(pos);
 	}
 
 	size_t size(){
+		return count;
+	}
+
+	size_t get_length(){
 		return count;
 	}
 

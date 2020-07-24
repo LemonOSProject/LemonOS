@@ -5,7 +5,9 @@
 #include <system.h>
 #include <memory.h>
 #include <list.h>
+#include <vector.h>
 #include <fs/filesystem.h>
+#include <lock.h>
 
 enum {
 	ThreadStateRunning,
@@ -25,6 +27,8 @@ typedef struct HandleIndex {
 } handle_index_t;
 
 typedef struct thread {
+	lock_t lock = 0; // Thread lock
+
 	process* parent; // Parent Process
 	void* stack; // Pointer to the initial stack
 	void* stackLimit; // The limit of the stack
@@ -69,7 +73,7 @@ typedef struct process {
 	char workingDir[PATH_MAX];
 	char name[NAME_MAX];
 
-	List<fs_fd_t*> fileDescriptors;
+	Vector<fs_fd_t*> fileDescriptors;
 	List<message_t> messageQueue;
 	List<thread_t*> blocking; // Threads blocking awaiting a state change
 } process_t;

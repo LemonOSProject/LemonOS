@@ -49,7 +49,6 @@ cpp_files = [
     'src/characterbuffer.cpp',
     'src/devicemanager.cpp',
     'src/gpt.cpp',
-    'src/gui.cpp',
     'src/lemon.cpp',
     'src/logging.cpp',
     'src/math.cpp',

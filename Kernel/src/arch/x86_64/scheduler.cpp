@@ -206,12 +206,12 @@ namespace Scheduler{
         Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)thread->fxState, 1);
         memset(thread->fxState, 0, 1024);
 
-        void* kernelStack = (void*)Memory::KernelAllocate4KPages(24); // Allocate Memory For Kernel Stack (96KB)
-        for(int i = 0; i < 24; i++){
+        void* kernelStack = (void*)Memory::KernelAllocate4KPages(32); // Allocate Memory For Kernel Stack (128KB)
+        for(int i = 0; i < 32; i++){
             Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)kernelStack + PAGE_SIZE_4K * i, 1);
         }
 
-        thread->kernelStack = kernelStack + PAGE_SIZE_4K * 24;
+        thread->kernelStack = kernelStack + PAGE_SIZE_4K * 32;
 
         ((fx_state_t*)thread->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
         ((fx_state_t*)thread->fxState)->mxcsrMask = 0xffbf;
@@ -254,14 +254,23 @@ namespace Scheduler{
     }
 
     void EndProcess(process_t* process){
+        asm("sti");
         for(unsigned i = 0; i < process->children.get_length(); i++){
             EndProcess(process->children.get_at(i));
         }
-
+        
+        CPU* cpu = GetCPULocal();
+        
+        for(unsigned i = 0; i < process->threadCount; i++){
+            if(&process->threads[i] != cpu->currentThread){
+                acquireLock(&process->threads[i].lock); // Make sure we acquire a lock on all threads to ensure that they are not in a syscall and are not retaining a lock
+            }
+        }
+        
         if(process->parent){
             process->parent->children.remove(process);
         }
-
+        
         processes->remove(process);
 
         for(thread_t* t : process->blocking){
@@ -287,8 +296,6 @@ namespace Scheduler{
             }
         }
 
-        CPU* cpu = GetCPULocal();
-        asm("sti");
         acquireLock(&cpu->runQueueLock);
         asm("cli");
 
