@@ -5,6 +5,7 @@
 #include <core/keyboard.h>
 #include <stdlib.h>
 #include <list>
+#include <unistd.h>
 
 #define SNAKE_CELL_EMPTY 0
 #define SNAKE_CELL_SNAKE 1
@@ -20,15 +21,11 @@ rgba_colour_t snakeCellColours[]{
 
 rgba_colour_t bgColourDefault = {96,128,96,255};
 
-uint64_t frameWaitTime = 90; // For ~10 FPS (in ms)
-uint64_t frameWaitTimeDefault = 90;
+uint64_t frameWaitTime = 90000; // For ~10 FPS (in us)
 
 int powerUp = 0;
 
-uint64_t lastUptimeSeconds;
-uint64_t lastUptimeMs;
-
-uint64_t msCounter;
+timespec timer;
 
 bool gameOver = true;
 
@@ -41,17 +38,13 @@ unsigned int snakeRand()
 }
 
 void Wait(){
-	while(msCounter < frameWaitTime){
-		uint64_t seconds;
-		uint64_t milliseconds;
+	timespec nTimer;
+	clock_gettime(CLOCK_BOOTTIME, &nTimer);
 
-		syscall(SYS_UPTIME, (uint64_t)&seconds, (uint64_t)&milliseconds,0,0,0);
+	time_t elapsed = (nTimer.tv_sec - timer.tv_sec) * 1000000 + (nTimer.tv_nsec - timer.tv_nsec) / 1000;
+	usleep(frameWaitTime - elapsed);
 
-		msCounter += (seconds - lastUptimeSeconds)*1000 + (milliseconds - lastUptimeMs);
-		lastUptimeSeconds = seconds;
-		lastUptimeMs = milliseconds;
-	}
-	msCounter = 0;
+	clock_gettime(CLOCK_BOOTTIME, &timer);
 }
 
 std::list<vector2i_t> snake;
@@ -71,7 +64,6 @@ void Reset(){
 	gameOver = false;
 
 	powerUp = 0;
-	frameWaitTime = frameWaitTimeDefault;
 	snakeCellColours[0] = bgColourDefault;
 
 	direction = 0;
@@ -82,7 +74,7 @@ void Reset(){
 		}
 	}
 
-	syscall(SYS_UPTIME, (uintptr_t)&lastUptimeSeconds, (uintptr_t)&lastUptimeMs, 0,0,0 );
+	clock_gettime(CLOCK_BOOTTIME, &timer);
 }
 
 vector2i_t applePos = {1,1};
