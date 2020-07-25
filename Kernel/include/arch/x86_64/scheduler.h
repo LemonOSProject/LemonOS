@@ -79,6 +79,28 @@ typedef struct process {
 } process_t;
 
 namespace Scheduler{
+	class ThreadBlocker{
+		public:
+		virtual void Block(thread_t* thread) = 0;
+		virtual void Remove(thread_t* thread) = 0;
+
+		virtual ~ThreadBlocker() = default;
+	};
+
+	class GenericThreadBlocker : ThreadBlocker{
+		private:
+		List<thread_t*> blocked;
+		public:
+		void Block(thread_t* th) final {
+			assert(th);
+			blocked.add_back(th);
+		}
+
+		void Remove(thread_t* th) final {
+			assert(th);
+			blocked.remove(th);
+		}
+	};
 
     process_t* CreateProcess(void* entry);
 	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr, int envc = 0, char** envp = nullptr);
@@ -98,6 +120,7 @@ namespace Scheduler{
 	process_t* FindProcessByPID(uint64_t pid);
 	void InsertNewThreadIntoQueue(thread_t* thread);
 
+	void BlockCurrentThread(ThreadBlocker& blocker, lock_t& lock);
 	void BlockCurrentThread(List<thread_t*>& list, lock_t& lock);
 	void UnblockThread(thread_t* thread);
 

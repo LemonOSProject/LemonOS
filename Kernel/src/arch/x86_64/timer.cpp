@@ -1,13 +1,70 @@
 #include <timer.h>
+
 #include <idt.h>
 #include <scheduler.h>
 #include <system.h>
 #include <apic.h>
+#include <list.h>
+#include <cpu.h>
+#include <logging.h>
 
 namespace Timer{
+
     int frequency; // Timer frequency
     int ticks = 0; // Timer tick counter
     long long uptime = 0; // System uptime in seconds since the timer was initialized
+
+    struct SleepCounter{
+        thread_t* thread;
+        long ticksLeft;
+    };
+
+    lock_t sleepQueueLock = 0; // Prevent deadlocks
+    List<SleepCounter> sleeping; // Sleeping threads
+
+    class SleepBlocker : public Scheduler::ThreadBlocker {
+        private:
+            uint64_t ticks = 0;
+        public:
+        SleepBlocker(uint64_t ticks){
+            this->ticks = ticks;
+        }
+
+        void Block(thread_t* thread) final {
+            if(!sleeping.get_length()){
+                sleeping.add_back({.thread = thread, .ticksLeft = ticks});
+                return;
+            }
+
+            uint64_t total = 0;
+            for(unsigned i = 0; i < sleeping.get_length(); i++){
+                if(total + sleeping[i].ticksLeft >= ticks){
+                    ticks -= total;
+                    sleeping[i].ticksLeft -= ticks;
+                    sleeping.insert({.thread = thread, .ticksLeft = ticks}, i);
+                    return;
+                }
+
+                total += sleeping[i].ticksLeft;
+            }
+
+            sleeping.add_back({.thread = thread, .ticksLeft = ticks - sleeping.get_back().ticksLeft});
+        }
+
+        void Remove(thread_t* thread) final {
+            for(auto it = sleeping.begin(); it != sleeping.end(); it++){
+                SleepCounter& cnt = *it;
+                if(cnt.thread == thread){
+                    auto next = it;
+                    next++;
+
+                    next->ticksLeft += cnt.ticksLeft;
+
+                    sleeping.remove(it);
+                }
+            }
+        }
+    };
 
     uint64_t GetSystemUptime(){
         return uptime;
@@ -19,6 +76,10 @@ namespace Timer{
 
     uint32_t GetFrequency(){
         return frequency;
+    }
+
+    inline uint64_t MsToTicks(long ms){
+        return ms * frequency / 1000;
     }
 
     timeval_t GetSystemUptimeStruct(){
@@ -35,6 +96,16 @@ namespace Timer{
         return seconds * 1000 + milliseconds;
     }
 
+    void SleepCurrentThread(timeval_t& time){
+        uint64_t ticks = time.seconds * frequency + MsToTicks(time.milliseconds);
+        SleepCurrentThread(ticks);
+    }
+
+    void SleepCurrentThread(uint64_t ticks){
+        SleepBlocker blocker = SleepBlocker(ticks);
+        Scheduler::BlockCurrentThread(blocker, sleepQueueLock);
+    }
+
     // Timer handler
     void Handler(regs64_t *r) {
         ticks++;
@@ -42,6 +113,17 @@ namespace Timer{
             uptime++;
             ticks -= frequency;
         }
+
+        if(sleeping.get_length() && !(acquireTestLock(&sleepQueueLock))){
+            sleeping.get_front().ticksLeft--;
+
+            while(sleeping.get_length() && sleeping.get_front().ticksLeft <= 0){
+                Scheduler::UnblockThread(sleeping.remove_at(0).thread);
+            }
+
+            releaseLock(&sleepQueueLock);
+        }
+
         Scheduler::Tick(r);
     }
 

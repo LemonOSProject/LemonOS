@@ -28,6 +28,15 @@ public:
 		return *this;
 	}
 
+	ListIterator operator++(int){ // Post decrement
+		ListIterator<T> v = ListIterator<T>(*this);
+
+		if(node)
+			node = node->next;
+
+		return v;
+	}
+
 	ListIterator& operator=(const ListIterator& other){
 		node = other.node;
 
@@ -256,7 +265,7 @@ public:
 		}
 
 		node->obj = obj;
-		node->back = node->front = nullptr;
+		node->next = node->prev = nullptr;
 
 		if (!back) {
 			back = node;
@@ -266,6 +275,39 @@ public:
 			node->next = front;
 		}
 		front = node;
+		num++;
+
+		releaseLock(&lock);
+	}
+
+	void insert(T obj, size_t pos){
+		if(!num){
+			add_back(obj);
+			return;
+		}
+
+		if(!pos){
+			add_front(obj);
+			return;
+		}
+
+		acquireLock(&lock);
+		ListNode<T>* current = front;
+
+		for (unsigned int i = 0; i < pos - 1 && i < num && current->next; i++) current = current->next;
+
+		ListNode<T>* node;
+		if(!cache.get_length()){
+			node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
+		} else {
+			node = cache.remove_at(0);
+		}
+
+		node->obj = obj;
+		node->prev = current;
+		node->next = current->next;
+		current->next = node;
+
 		num++;
 
 		releaseLock(&lock);
@@ -367,13 +409,40 @@ public:
 		releaseLock(&lock);
 	}
 
-	T get_front()
+
+	void remove(ListIterator<T>& it){
+		assert(it.node);
+
+		acquireLock(&lock);
+
+		it.node->prev->next = it.node->next;
+		it.node->next->prev = it.node->prev;
+
+		if (front == it.node) front = it.node->next;
+		if (back == it.node) back = it.node->prev;
+
+		num--;
+
+		if(cache.get_length() >= maxCache){
+			kfree(it.node);
+		} else {
+			cache.add_back(it.node);
+		}
+
+		it.node = nullptr;
+
+		releaseLock(&lock);
+	}
+
+	T& get_front()
 	{
+		assert(front);
 		return front->obj;
 	}
 
-	T get_back()
+	T& get_back()
 	{
+		assert(back);
 		return back->obj;
 	}
 

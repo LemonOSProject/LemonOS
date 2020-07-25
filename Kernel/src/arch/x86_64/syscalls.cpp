@@ -876,11 +876,8 @@ long SysWaitPID(regs64_t* r){
 long SysNanoSleep(regs64_t* r){
 	uint64_t nanoseconds = r->rbx;
 
-	uint64_t seconds = Timer::GetSystemUptime();
-	uint64_t ticks = seconds * Timer::GetFrequency() + Timer::GetTicks();
-	uint64_t ticksEnd = ticks + (int)(nanoseconds / (1000000000.0 / Timer::GetFrequency()));
-
-	while((Timer::GetSystemUptime() * Timer::GetFrequency() + Timer::GetTicks()) < ticksEnd) { Scheduler::Yield(); }
+	uint64_t ticks = nanoseconds * Timer::GetFrequency() / 1000000000;
+	Timer::SleepCurrentThread(ticks);
 
 	return 0;
 }

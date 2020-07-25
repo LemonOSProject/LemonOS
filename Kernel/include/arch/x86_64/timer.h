@@ -7,6 +7,8 @@ typedef struct {
     long milliseconds;
 } timeval_t;
 
+struct thread;
+
 namespace Timer{
 
     timeval_t GetSystemUptimeStruct();
@@ -15,6 +17,9 @@ namespace Timer{
     uint64_t GetSystemUptime();
     uint32_t GetTicks();
     uint32_t GetFrequency();
+
+    void SleepCurrentThread(timeval_t& time);
+    void SleepCurrentThread(uint64_t ticks);
 
     // Initialize
     void Initialize(uint32_t freq);

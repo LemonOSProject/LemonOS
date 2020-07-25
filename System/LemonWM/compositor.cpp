@@ -77,11 +77,9 @@ void CompositorInstance::Paint(){
                 if(win->flags & WINDOW_FLAGS_NODECORATION) {
                     doClipping({win->pos, win->size});
                     win->clips.push_back({win->pos, win->size});
-                    cclips.push_back({win->pos, win->size});
                 } else {
                     doClipping({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
                     win->clips.push_back({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
-                    cclips.push_back({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
                 }
             }
 
@@ -122,6 +120,10 @@ void CompositorInstance::Paint(){
     {
         DrawRect(0, 0, 80, 16, 0, 0 ,0, renderSurface);
         DrawString(std::to_string(fRate).c_str(), 2, 2, 255, 255, 255, renderSurface);
+
+        #ifdef LEMONWM_USE_CLIPPING
+                surfacecpy(&wm->screenSurface, renderSurface, {0, 0}, {0, 0, 80, 16});
+        #endif
     }
     #endif
 
@@ -130,8 +132,6 @@ void CompositorInstance::Paint(){
             for(rect_t& r : cclips){
                 surfacecpy(&wm->screenSurface, renderSurface, r.pos, r);
             }
-
-            surfacecpy(&wm->screenSurface, renderSurface, wm->input.mouse.pos, {wm->input.mouse.pos, {mouseCursor.width, mouseCursor.height}});
         #else
             surfacecpy(&wm->screenSurface, renderSurface);
         #endif
@@ -154,4 +154,8 @@ void CompositorInstance::Paint(){
     } else {
         DrawRect(wm->input.mouse.pos.x, wm->input.mouse.pos.y, mouseCursor.width, mouseCursor.height, backgroundColor, renderSurface);
     }
+
+    #ifdef LEMONWM_USE_CLIPPING
+        surfacecpy(&wm->screenSurface, renderSurface, wm->input.mouse.pos, {wm->input.mouse.pos, {mouseCursor.width, mouseCursor.height}});
+    #endif
 }

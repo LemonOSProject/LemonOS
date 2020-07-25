@@ -372,13 +372,25 @@ namespace Scheduler{
         acquireLock(&cpu->runQueueLock);
         list.add_back(cpu->currentThread);
         cpu->currentThread->state = ThreadStateBlocked;
-        //cpu->currentThread->waiting.add_back(&list);
         releaseLock(&lock);
         releaseLock(&cpu->runQueueLock);
 
         Yield();
     }
 
+	void BlockCurrentThread(ThreadBlocker& blocker, lock_t& lock){
+        CPU* cpu = GetCPULocal();
+
+        acquireLock(&lock);
+        acquireLock(&cpu->runQueueLock);
+        blocker.Block(cpu->currentThread);
+        cpu->currentThread->state = ThreadStateBlocked;
+        releaseLock(&lock);
+        releaseLock(&cpu->runQueueLock);
+
+        Yield();
+    }
+    
 	void UnblockThread(thread_t* thread){
         thread->state = ThreadStateRunning;
 
