@@ -24,21 +24,21 @@ namespace Timer{
 
     class SleepBlocker : public Scheduler::ThreadBlocker {
         private:
-            uint64_t ticks = 0;
+            long ticks = 0;
         public:
-        SleepBlocker(uint64_t ticks){
+        SleepBlocker(long ticks){
             this->ticks = ticks;
         }
 
         void Block(thread_t* thread) final {
             if(!sleeping.get_length()){
-                sleeping.add_back({.thread = thread, .ticksLeft = ticks});
+                sleeping.add_back({.thread = thread, .ticksLeft = ticks}); // No sleeping threads in queue, just add
                 return;
             }
 
-            uint64_t total = 0;
+            long total = 0;
             for(unsigned i = 0; i < sleeping.get_length(); i++){
-                if(total + sleeping[i].ticksLeft >= ticks){
+                if(total + sleeping[i].ticksLeft >= ticks){ // See if we need to insert in middle of queue
                     ticks -= total;
                     sleeping[i].ticksLeft -= ticks;
                     sleeping.insert({.thread = thread, .ticksLeft = ticks}, i);
@@ -48,7 +48,7 @@ namespace Timer{
                 total += sleeping[i].ticksLeft;
             }
 
-            sleeping.add_back({.thread = thread, .ticksLeft = ticks - sleeping.get_back().ticksLeft});
+            sleeping.add_back({.thread = thread, .ticksLeft = ticks - sleeping.get_back().ticksLeft}); // Add to back
         }
 
         void Remove(thread_t* thread) final {
@@ -97,11 +97,11 @@ namespace Timer{
     }
 
     void SleepCurrentThread(timeval_t& time){
-        uint64_t ticks = time.seconds * frequency + MsToTicks(time.milliseconds);
+        long ticks = time.seconds * frequency + MsToTicks(time.milliseconds);
         SleepCurrentThread(ticks);
     }
 
-    void SleepCurrentThread(uint64_t ticks){
+    void SleepCurrentThread(long ticks){
         SleepBlocker blocker = SleepBlocker(ticks);
         Scheduler::BlockCurrentThread(blocker, sleepQueueLock);
     }

@@ -19,7 +19,7 @@ namespace Timer{
     uint32_t GetFrequency();
 
     void SleepCurrentThread(timeval_t& time);
-    void SleepCurrentThread(uint64_t ticks);
+    void SleepCurrentThread(long ticks);
 
     // Initialize
     void Initialize(uint32_t freq);

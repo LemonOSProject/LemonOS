@@ -42,6 +42,7 @@ namespace AHCI{
 			Log::Warning("No AHCI Controller Found");
 			return true; // No AHCI Controller Found
 		}
+		
 
 		Log::Info("Initializing AHCI Controller...");
 
@@ -52,11 +53,12 @@ namespace AHCI{
 
 		ahciHBA = (hba_mem_t*)ahciVirtualAddress;
 
+		ahciHBA->ghc |= AHCI_GHC_ENABLE;
+
 		Log::Info("[AHCI]: Base Address: %x, Virtual Base Address: %x", ahciBaseAddress, ahciVirtualAddress);
+		Log::Info("[AHCI] Enabled? %Y, BOHC? %Y", ahciHBA->ghc & AHCI_GHC_ENABLE, ahciHBA->cap2 & AHCI_CAP2_BOHC);
 
 		uint32_t pi = ahciHBA->pi;
-		Log::Info(pi);
-		
 		for(int i = 0; i < 32; i++){
 			if((pi >> i) & 1){
 				if(((ahciHBA->ports[i].ssts >> 8) & 0x0F) != HBA_PORT_IPM_ACTIVE || (ahciHBA->ports[i].ssts & 0x0F) != HBA_PORT_DET_PRESENT) continue;
@@ -66,8 +68,6 @@ namespace AHCI{
 				else if(ahciHBA->ports[i].sig == SATA_SIG_SEMB) ;
 				else {
 					Log::Info("Found SATA Drive - Port: %d", i);
-
-					Log::Info(ahciHBA->ports[i].sig);
 
 					ports[i] = new Port(i, &ahciHBA->ports[i]);
 					

@@ -145,6 +145,11 @@ namespace Log{
 					auto arg = (char) va_arg(args, int /* char promotes to int */);
 					WriteN(&arg, 1);
 					break;
+				} case 'Y': {
+					format++;
+					auto arg = (char) va_arg(args, int);
+					Write(arg ? "yes" : "no");
+					break;
 				} case 's': {
 					format++;
 					auto arg = va_arg(args, const char*);

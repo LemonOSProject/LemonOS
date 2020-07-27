@@ -291,6 +291,14 @@ typedef struct tagHBA_CMD_TBL
 	hba_prdt_entry_t	prdt_entry[1];	// Physical region descriptor table entries, 0 ~ 65535
 } __attribute__((packed)) hba_cmd_tbl_t;
 
+#define AHCI_GHC_ENABLE (1 << 31)
+
+#define AHCI_CAP2_NVMHCI (1 << 1) // NVMHCI Present
+#define AHCI_CAP2_BOHC (1 << 0) // BIOS/OS Handoff
+
+#define AHCI_BOHC_BIOS_BUSY (1 << 4) // BIOS Busy
+#define AHCI_BOHC_OS_OWNERSHIP (1 << 3) // OS Ownership Change
+
 #define	SATA_SIG_SATA	0x00000101	// SATA drive
 #define	SATA_SIG_ATAPI	0xEB140101	// SATAPI drive
 #define	SATA_SIG_SEMB	0xC33C0101	// Enclosure management bridge

@@ -294,7 +294,7 @@ public:
 		acquireLock(&lock);
 		ListNode<T>* current = front;
 
-		for (unsigned int i = 0; i < pos - 1 && i < num && current->next; i++) current = current->next;
+		for (unsigned int i = 0; i < pos && i < num && current->next; i++) current = current->next;
 
 		ListNode<T>* node;
 		if(!cache.get_length()){
@@ -364,16 +364,20 @@ public:
 
 		T obj = current->obj;
 
+		num--;
+
 		if (current->next) current->next->prev = current->prev;
 		if (current->prev) current->prev->next = current->next;
 		if (pos == 0) front = current->next;
-		if (pos == --num) back = current->prev;
+		if (pos == num) back = current->prev;
 
 		if(cache.get_length() >= maxCache){
 			kfree(current);
 		} else {
 			cache.add_back(current);
 		}
+
+		if(!num) front = back = nullptr;
 
 		releaseLock(&lock);
 

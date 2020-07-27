@@ -6,9 +6,6 @@ global memcpy_sse2_unaligned:function
 section .text
 
 memcpy_sse2:
-	push rbp    ; save the prior rbp value
-    mov rbp, rsp
-
 	xor rax, rax
 	mov rcx, rdx
 .loop:
@@ -18,15 +15,9 @@ memcpy_sse2:
 
 	add rax, 0x10
 	loop .loop
-
-	mov rsp, rbp
-	pop rbp
 	ret
 
 memcpy_sse2_unaligned:
-	push rbp    ; save the prior rbp value
-    mov rbp, rsp
-
 	xor rax, rax
 	mov rcx, rdx
 .loop:
@@ -36,9 +27,7 @@ memcpy_sse2_unaligned:
 
 	add rax, 0x10
 	loop .loop
-
-	mov rsp, rbp
-	pop rbp
+	
 	ret
 
 memset32_sse2:

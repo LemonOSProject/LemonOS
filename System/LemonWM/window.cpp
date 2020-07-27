@@ -55,7 +55,7 @@ void WMWindow::Draw(surface_t* surface){
 	
 	vector2i_t clipOffset =  pos + (vector2i_t){WINDOW_BORDER_THICKNESS, WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT};
 	
-	#ifdef LEMONWM_USE_CLIPPING
+	#ifdef _LEMONWM_USE_CLIPPING
 		for(rect_t& clip : clips){
 			Lemon::Graphics::surfacecpy(surface, &wSurface, clip.pos, {clip.pos - clipOffset, clip.size});
 		}

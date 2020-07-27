@@ -16,6 +16,7 @@ namespace AHCI{
         registers = portStructure;
 
 		registers->cmd &= ~HBA_PxCMD_ST;
+
 		registers->cmd &= ~HBA_PxCMD_FRE;
 
         stopCMD(registers);
@@ -59,12 +60,16 @@ namespace AHCI{
 
         registers->is = 0;
 
+		while (registers->cmd & HBA_PxCMD_CR);
+
 		registers->cmd |= HBA_PxCMD_FRE;
 		registers->cmd |= HBA_PxCMD_ST; 
 
         bufPhys = Memory::AllocatePhysicalMemoryBlock();
         bufVirt = Memory::KernelAllocate4KPages(1);
         Memory::KernelMapVirtualMemory4K(bufPhys, (uintptr_t)bufVirt, 1);
+
+        Log::Info("[AHCI] Port - SSTS: %x, SCTL: %x, SERR: %x, SACT: %x", registers->ssts, registers->sctl, registers->serr, registers->sact);
 
         switch(GPT::Parse(this)){
         case 0:

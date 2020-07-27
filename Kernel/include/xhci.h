@@ -35,6 +35,38 @@ namespace USB{
             uint32_t dbOff; // Doorbell offset
             uint32_t rtsOff; // Runtime registers space offset
             uint32_t hccParams2;
+
+            inline uint8_t MaxSlots(){ // Number of Device Slots
+                return hcsParams1 & 0xFF;
+            }
+
+            inline uint16_t MaxIntrs(){ // Number of Interrupters
+                return (hcsParams1 >> 8) & 0x3FF;
+            } 
+
+            inline uint8_t MaxPorts(){ // Number of Ports
+                return (hcsParams1 >> 24) & 0xFF;
+            }
+
+            inline uint8_t IST(){ // Isochronous Scheduling Threshold
+                return hcsParams2 & 0xF;
+            }
+
+            inline uint8_t ERSTMax(){ // Event Ring Segment Table Max
+                return (hcsParams2 >> 4) & 0xF;
+            }
+
+            inline uint16_t MaxScratchpadBuffers(){
+                return (((hcsParams2 >> 21) & 0x1F) << 5) | ((hcsParams2 >> 27) & 0x1F);
+            }
+
+            inline uint8_t U1DeviceExitLatency(){
+                return hcsParams3 & 0xFF;
+            }
+
+            inline uint16_t U2DeviceExitLatency(){
+                return (hcsParams3 >> 16) & 0xFFFF;
+            }
         } __attribute__ ((packed)) xhci_cap_regs_t; // Capability Registers
 
         typedef struct {
@@ -55,6 +87,37 @@ namespace USB{
             uint32_t portLinkInfo; // Port Link Info
             uint32_t portHardwareLPMCtl; // Port Hardware LPM Control
         } __attribute__((packed)) xhci_port_regs_t; // Port Registers
+
+        enum {
+            SlotStateDisabledEnabled = 0, // Disabled / Enabled
+            SlotStateDefault = 1,
+            SlotStateAddressed = 2,
+            SlotStateConfigured = 3,
+        };
+
+        typedef struct {
+            // Offset 00h
+            uint32_t routeString : 20; // Route string
+            uint32_t speed : 4; // Speed (deprecated)
+            uint32_t resvd : 1;
+            uint32_t mtt : 1; // Multi TT
+            uint32_t hub : 1; // Hub (1) or Function (0)
+            uint32_t ctxEntries : 5; // Index of the last valid Endpoint Context
+            // Offset 04h
+            uint32_t maxExitLatency : 16;
+            uint32_t rootHubPortNumber : 8; // Root Hub Port Number
+            uint32_t numberOfPorts : 8; // If Hub then set to number of downstream facing ports
+            // Offset 08h
+            uint32_t parentHubSlotID : 8;
+            uint32_t parentPortNumber : 8; // Parent Port Number
+            uint32_t ttt : 2; // TT Think Time
+            uint32_t resvdZ : 4;
+            uint32_t interrupterTarget : 10; 
+            // Offset 0Ch
+            uint32_t usbDeviceAddress : 8; // Address assigned to USB device by the Host Controller
+            uint32_t resvdZ_2 : 19;
+            uint32_t slotState; : 5;
+        } __attribute__((packed)) xhci_slot_context_t;
 
         int Initialize();
     }

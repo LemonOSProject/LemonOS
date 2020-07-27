@@ -70,16 +70,17 @@ void CompositorInstance::Paint(){
             for(WMWindow* win : wm->windows){
                 win->clips.clear();
             }
+            cclips.clear();
 
             for(WMWindow* win : wm->windows){
                 if(win->minimized) continue;
 
                 if(win->flags & WINDOW_FLAGS_NODECORATION) {
                     doClipping({win->pos, win->size});
-                    win->clips.push_back({win->pos, win->size});
+                    cclips.push_back({win->pos, win->size});
                 } else {
                     doClipping({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
-                    win->clips.push_back({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
+                    cclips.push_back({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
                 }
             }
 
@@ -91,7 +92,7 @@ void CompositorInstance::Paint(){
             DrawRect(0, 0, renderSurface->width, renderSurface->height, backgroundColor, renderSurface);
         }
 
-        wm->redrawBackground = false;
+        //wm->redrawBackground = false;
     }
 
     for(WMWindow* win : wm->windows){
@@ -127,7 +128,11 @@ void CompositorInstance::Paint(){
     }
     #endif
 
-    if(wm->screenSurface.buffer){
+    
+    if(wm->redrawBackground && wm->screenSurface.buffer){
+        surfacecpy(&wm->screenSurface, renderSurface);
+        wm->redrawBackground = false;
+    } else if(wm->screenSurface.buffer){
         #ifdef LEMONWM_USE_CLIPPING
             for(rect_t& r : cclips){
                 surfacecpy(&wm->screenSurface, renderSurface, r.pos, r);
@@ -146,16 +151,14 @@ void CompositorInstance::Paint(){
     }
     
     if(useImage){
-        if(wm->input.mouse.pos.x + mouseCursor.width >= renderSurface->width){
-            surfacecpy(renderSurface, &backgroundImage, wm->input.mouse.pos, {wm->input.mouse.pos, {renderSurface->width - wm->input.mouse.pos.x, mouseCursor.height}});
-        } else {
-            surfacecpy(renderSurface, &backgroundImage, wm->input.mouse.pos, {wm->input.mouse.pos, {mouseCursor.width, mouseCursor.height}});
-        }
+        surfacecpy(renderSurface, &backgroundImage, wm->input.mouse.pos, {wm->input.mouse.pos, {mouseCursor.width, mouseCursor.height}});
     } else {
         DrawRect(wm->input.mouse.pos.x, wm->input.mouse.pos.y, mouseCursor.width, mouseCursor.height, backgroundColor, renderSurface);
     }
 
     #ifdef LEMONWM_USE_CLIPPING
         surfacecpy(&wm->screenSurface, renderSurface, wm->input.mouse.pos, {wm->input.mouse.pos, {mouseCursor.width, mouseCursor.height}});
+    #else
+
     #endif
 }

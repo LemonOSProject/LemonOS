@@ -42,7 +42,9 @@ void Wait(){
 	clock_gettime(CLOCK_BOOTTIME, &nTimer);
 
 	time_t elapsed = (nTimer.tv_sec - timer.tv_sec) * 1000000 + (nTimer.tv_nsec - timer.tv_nsec) / 1000;
-	usleep(frameWaitTime - elapsed);
+
+	if(elapsed < frameWaitTime)
+		usleep(frameWaitTime - elapsed);
 
 	clock_gettime(CLOCK_BOOTTIME, &timer);
 }
@@ -50,7 +52,6 @@ void Wait(){
 std::list<vector2i_t> snake;
 
 int direction;
-	
 uint8_t snakeMapCells[16][16];
 
 void Reset(){
@@ -128,7 +129,10 @@ int main(){
 			}
 		}
 		
-		if(gameOver) continue;
+		if(gameOver) {
+			window->WaitEvent();
+			continue;
+		}
 
 		switch(direction){
 			case 0:
@@ -153,6 +157,7 @@ int main(){
 			gameOver = true;
 			Lemon::Graphics::DrawString("Game Over, Press any key to Reset", 0, 0, 255, 255, 255, &window->surface);
 			window->SwapBuffers();
+			window->WaitEvent();
 			continue;
 		} else if(snakeMapCells[snake.front().x][snake.front().y] == SNAKE_CELL_APPLE){
 			snakeMapCells[snake.front().x][snake.front().y] = SNAKE_CELL_EMPTY;
