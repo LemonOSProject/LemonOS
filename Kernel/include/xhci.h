@@ -116,7 +116,7 @@ namespace USB{
             // Offset 0Ch
             uint32_t usbDeviceAddress : 8; // Address assigned to USB device by the Host Controller
             uint32_t resvdZ_2 : 19;
-            uint32_t slotState; : 5;
+            uint32_t slotState : 5;
         } __attribute__((packed)) xhci_slot_context_t;
 
         int Initialize();

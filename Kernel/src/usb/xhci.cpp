@@ -40,7 +40,7 @@ namespace USB{
             xhciBaseAddress = (uint64_t)(xhciControllerPci.header0.baseAddress0 & 0xFFFFFFF0) | (((uint64_t)xhciControllerPci.header0.baseAddress1) << 32);
             xhciVirtualAddress = Memory::GetIOMapping(xhciBaseAddress);
 
-            IDT::RegisterInterruptHandler(IRQ0 + 11, IRQHandler);
+            //IDT::RegisterInterruptHandler(IRQ0 + 11, IRQHandler);
 
             Log::Info(xhciVirtualAddress);
 

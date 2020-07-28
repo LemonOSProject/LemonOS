@@ -61,7 +61,7 @@ namespace Scheduler{
             }
         }
 
-        Log::Info("Inserting thread into run queue of CPU %d", cpu->id);
+        //Log::Info("Inserting thread into run queue of CPU %d", cpu->id);
 
         asm("sti");
         acquireLock(&cpu->runQueueLock);

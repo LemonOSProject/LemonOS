@@ -238,6 +238,7 @@ namespace Lemon::Graphics{
     void DrawGradient(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
     void DrawGradientVertical(rect_t rect, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
     void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
+    void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface, rect_t limits);
 
     void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset = {0,0});
     void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion);

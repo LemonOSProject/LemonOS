@@ -33,17 +33,8 @@ See [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon
 - 256 MB RAM (512 is more optimal)
 - x86_64 Processor
 - VESA VBE support
-- 2 cores/CPUs recommended (more than 2-3 can make the system unstable)
+- 2 cores/CPUs recommended
 - I/O APIC (mostly relevant for Virtual Machines)
-
-### Build Requirements
-- UNIX-like system (e.g. Linux or Windows under WSL)
-- GNU binutils, make and GCC
-- git, meson (see crossfile in Scripts) and ninja
-- Freetype
-- Libpng
-- zLib
-- [mlibc](https://github.com/managarm/mlibc) C Library
 
 ## Repo Structure
 

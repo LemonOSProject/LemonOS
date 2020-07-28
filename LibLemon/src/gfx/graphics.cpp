@@ -170,6 +170,38 @@ namespace Lemon::Graphics{
         }
     }
 
+    void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface, rect_t limits){
+        if(x < 0){
+            width += x;
+            x = 0;
+        }
+
+        if(y < 0){
+            height += y;
+            y = 0;
+        }
+        
+        width = (width + x > surface->width) ? (surface->width - x) : width;
+
+        int j = 0;
+        if(limits.pos.y > y){
+            j = limits.pos.y - y; // Its important that we change j instead of y for the gradient calculation
+        }
+
+        if(limits.pos.x > x){
+            width -= (limits.pos.x - x);
+            x = limits.pos.x;
+        }
+
+        if(x + width > limits.pos.x + limits.size.x){
+            width = limits.pos.x - x + limits.size.x;
+        }
+
+        for(; j < height && (y + j) < surface->height && (y + j) < limits.pos.y + limits.size.y; j++){
+            DrawRect(x, y + j, width, 1, (uint8_t)(j*(((double)c2.r - (double)c1.r)/height)+c1.r),(uint8_t)(j*(((double)c2.g - (double)c1.g)/height)+c1.g),(uint8_t)(j*(((double)c2.b - (double)c1.b)/height)+c1.b),surface);
+        }
+    }
+
     void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset){
         if(dest->height == src->height && dest->width == src->width && offset.x == 0 && offset.y == 0) {
             memcpy_optimized(dest->buffer, src->buffer, dest->width * dest->height * 4);

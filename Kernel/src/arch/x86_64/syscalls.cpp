@@ -143,7 +143,6 @@ long SysExec(regs64_t* r){
 		for(int i = 0; i < envCount; i++){
 			kernelEnvp[i] = (char*)kmalloc(strlen(envp[i] + 1));
 			strcpy(kernelEnvp[i], envp[i]);
-			Log::Info("Environment Variable %s", envp[i]);
 		}
 	}
 
