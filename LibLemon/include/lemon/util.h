@@ -21,6 +21,7 @@ typedef struct {
 	char name[NAME_MAX]; // Process Name
 
 	uint64_t runningTime; // Amount of time in seconds that the process has been running
+    uint64_t activeUs; // Microseconds the process has been active for
 } lemon_process_info_t;
 
 namespace Lemon{

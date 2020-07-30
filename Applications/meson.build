@@ -67,8 +67,8 @@ guitest_src = [
     'GUITest/main.cpp',
 ]
 
-netgov_src = [
-    'NetworkGovernor/main.cpp',
+lemonmonitor_src = [
+    'LemonMonitor/main.cpp',
 ]
 
 executable('fileman.lef', fileman_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
@@ -82,3 +82,4 @@ executable('imgview.lef', imgview_src, cpp_args : application_cpp_args, link_arg
 executable('sysinfo.lef', sysinfo_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('guitest.lef', guitest_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('run.lef', run_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
+executable('lemonmonitor.lef', lemonmonitor_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)

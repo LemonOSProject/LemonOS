@@ -1,4 +1,5 @@
 #include <lemon/spawn.h>
+#include <lemon/util.h>
 #include <core/cfgparser.h>
 #include <core/sha.h>
 #include <string.h>
@@ -39,7 +40,9 @@ int main(int argc, char** argv){
 	lemon_spawn("/system/bin/shell.lef", 1, (char* const[1]){"/system/bin/shell.lef"});
 	//lemon_spawn("/system/lemon/login.lef", 1, (char* const[1]){"/system/lemon/login.lef"});
 	
+	return 0;
+
 	for(;;){
-		
+		Lemon::Yield();
 	}
 }

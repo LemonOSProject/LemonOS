@@ -18,6 +18,7 @@
 #include <net/socket.h>
 #include <timer.h>
 #include <lock.h>
+#include <smp.h>
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -953,6 +954,7 @@ long SysInfo(regs64_t* r){
 
 	s->usedMem = Memory::usedPhysicalBlocks * 4;
 	s->totalMem = Memory::maxPhysicalBlocks * 4;
+	s->cpuCount = static_cast<uint16_t>(SMP::processorCount);
 
 	return 0;
 }
@@ -1759,6 +1761,7 @@ long SysGetNextProcessInfo(regs64_t* r){
 	strcpy(pInfo->name, reqProcess->name);
 
 	pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.seconds;
+	pInfo->activeUs = reqProcess->activeTicks * 1000000 / Timer::GetFrequency();
 
 	return 0;
 }

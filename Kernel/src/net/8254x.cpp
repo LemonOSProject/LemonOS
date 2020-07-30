@@ -120,10 +120,15 @@ namespace Network{
                 memcpy(pack.data, rxDescriptorsVirt[rxTail], pack.length);
 
                 queue.add_back(pack);
+
                 Log::Info("Ethertype: %x", (*((uint16_t*)pack.data + 12)));
 
                 WriteMem32(I8254_REGISTER_RDESC_TAIL, rxTail);
             } while(1);
+
+            for(auto& t : blocker.blocked){
+                Scheduler::UnblockThread(t);
+            }
         }
     }
 

@@ -75,6 +75,7 @@ typedef struct process {
 	char name[NAME_MAX];
 
 	timeval_t creationTime; // When the process was created
+	uint64_t activeTicks; // How many ticks this process has been active
 
 	Vector<fs_fd_t*> fileDescriptors;
 	List<message_t> messageQueue;
@@ -94,6 +95,7 @@ typedef struct {
 	char name[NAME_MAX]; // Process Name
 
 	uint64_t runningTime; // Amount of time in seconds that the process has been running
+	uint64_t activeUs;
 } process_info_t;
 
 namespace Scheduler{
@@ -105,9 +107,10 @@ namespace Scheduler{
 		virtual ~ThreadBlocker() = default;
 	};
 
-	class GenericThreadBlocker : ThreadBlocker{
-		private:
+	class GenericThreadBlocker : public ThreadBlocker{
+		public:
 		List<thread_t*> blocked;
+		
 		public:
 		void Block(thread_t* th) final {
 			assert(th);

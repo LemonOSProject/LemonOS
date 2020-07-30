@@ -46,6 +46,8 @@ void OnOKPress(__attribute__((unused)) Lemon::GUI::Button* b){
 		char* const args[] = {const_cast<char*>("/system/bin/shell.lef")};
 		lemon_spawn(*args, 1, args, 0);
 
+		delete window;
+
 		exit(0);
 	} catch (std::out_of_range& e){
 		char buf[100];

@@ -74,7 +74,7 @@ namespace Network::Interface{
 
 		for(;;){
 			NetworkPacket p;
-			while((p = mainAdapter->Dequeue()).length){
+			while((p = mainAdapter->DequeueBlocking()).length){
 				if(p.length < sizeof(EthernetFrame)){
 					Log::Warning("[Network] Discarding packet (too short)");
 					continue;
@@ -95,12 +95,13 @@ namespace Network::Interface{
 					Log::Warning("[Network] Discarding packet (invalid EtherType %x)", etherFrame->etherType);
 					break;
 				}
-			}	
+			}
 		}
 	}
 
 	void Initialize(){
-		Scheduler::CreateProcess((void*)InterfaceProcess);
+		auto proc = Scheduler::CreateProcess((void*)InterfaceProcess);
+		strcpy(proc->name, "KNetworkInterface");
 	}
 
 	void Send(void* data, size_t length){

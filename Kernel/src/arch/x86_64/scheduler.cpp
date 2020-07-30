@@ -78,7 +78,11 @@ namespace Scheduler{
 
         CPU* cpu = GetCPULocal();
 
-        for(unsigned i = 0; i < SMP::processorCount; i++) SMP::cpus[i]->idleProcess = CreateProcess((void*)IdleProc);
+        for(unsigned i = 0; i < SMP::processorCount; i++) {
+            SMP::cpus[i]->idleProcess = CreateProcess((void*)IdleProc);
+            strcpy(SMP::cpus[i]->idleProcess->name, "IdleProcess");
+        }
+
         for(unsigned i = 0; i < SMP::processorCount; i++) {
             SMP::cpus[i]->runQueue->clear();
             releaseLock(&SMP::cpus[i]->runQueueLock);
@@ -86,7 +90,8 @@ namespace Scheduler{
         
         IDT::RegisterInterruptHandler(IPI_SCHEDULE, Schedule);
 
-        CreateProcess((void*)KernelProcess);
+        auto kproc = CreateProcess((void*)KernelProcess);
+        strcpy(kproc->name, "Kernel");
 
         cpu->currentThread = nullptr;
         schedulerReady = true;
@@ -427,9 +432,12 @@ namespace Scheduler{
     void Schedule(regs64_t* r){
         CPU* cpu = GetCPULocal();
 
-        if(cpu->currentThread && cpu->currentThread->timeSlice > 0) {
-            cpu->currentThread->timeSlice--;
-            return;
+        if(cpu->currentThread) {
+            cpu->currentThread->parent->activeTicks++;
+            if(cpu->currentThread->timeSlice > 0) {
+                cpu->currentThread->timeSlice--;
+                return;
+            }
         }
 
         while(__builtin_expect(acquireTestLock(&cpu->runQueueLock), 0)) {

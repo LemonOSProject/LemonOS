@@ -2,6 +2,7 @@
 
 #include <device.h>
 #include <net/net.h>
+#include <scheduler.h>
 
 enum {
     LinkDown,
@@ -11,9 +12,11 @@ enum {
 namespace Network{
     class NetworkAdapter : public Device {
     protected:
-
         int linkState = LinkDown;
         List<NetworkPacket> queue;
+
+        lock_t threadLock = 0;
+        Scheduler::GenericThreadBlocker blocker;
     public:
         MACAddress mac;
         virtual void SendPacket(void* data, size_t len);
@@ -22,6 +25,15 @@ namespace Network{
         virtual int QueueSize() { return queue.get_length(); }
         virtual NetworkPacket Dequeue() { 
             if(queue.get_length()) {
+                return queue.remove_at(0); 
+            } else {
+                return {nullptr, 0};
+            }
+        }
+        virtual NetworkPacket DequeueBlocking() {
+            Scheduler::BlockCurrentThread(blocker, threadLock);
+
+            if(queue.get_length()){
                 return queue.remove_at(0); 
             } else {
                 return {nullptr, 0};

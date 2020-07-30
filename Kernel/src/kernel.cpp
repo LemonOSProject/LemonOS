@@ -54,6 +54,7 @@ void KernelProcess(){
 
 	Log::Info("Loading Init Process...");
 	FsNode* initFsNode = fs::ResolvePath("/system/lemon/init.lef");
+
 	if(!initFsNode){ // Attempt to start fterm
 		initFsNode = fs::ResolvePath("/initrd/fterm.lef");
 
@@ -68,14 +69,16 @@ void KernelProcess(){
 	void* initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 
-	process_t* initProc = Scheduler::CreateELFProcess(initElf);
-	initProc->threads[0].priority = 8;
+	char* argv[] = {"init.lef"};
+	process_t* initProc = Scheduler::CreateELFProcess(initElf, 1, argv);
+
 	strcpy(initProc->workingDir, "/");
+	strcpy(initProc->name, "Init");
 
 	Log::Write("OK");
 
 	//Scheduler::EndProcess(Scheduler::GetCurrentProcess());
-	for(;;);
+	for(;;) Scheduler::Yield();
 }
 
 typedef void (*ctor_t)(void);
