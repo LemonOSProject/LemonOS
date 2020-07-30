@@ -81,8 +81,10 @@
 #define SYS_RECVMSG 62
 #define SYS_GETEUID 63
 #define SYS_SETEUID 64
+#define SYS_GET_PROCESS_INFO 65
+#define SYS_GET_NEXT_PROCESS_INFO 66
 
-#define NUM_SYSCALLS 65
+#define NUM_SYSCALLS 67
 
 #define EXEC_CHILD 1
 
@@ -1653,7 +1655,7 @@ long SysRecvMsg(regs64_t* r){
 }
 
 /* 
- * SetGetEUID () - Get effective process user id
+ * SysGetEUID () - Get effective process user id
  * 
  * On Success - Return process UID
  * On Failure - Does not fail
@@ -1663,13 +1665,102 @@ long SysGetEUID(regs64_t* r){
 }
 
 /* 
- * SetSetEUID () - Set effective process UID
+ * SysSetEUID () - Set effective process UID
  * 
  * On Success - Return 0
  * On Failure - Return negative value
  */
 long SysSetEUID(regs64_t* r){
 	return -ENOSYS;
+}
+
+/*
+ * SysGetProcessInfo (pid, pInfo)
+ * 
+ * pid - Process PID
+ * pInfo - Pointer to process_info_t structure
+ * 
+ * On Success - Return 0
+ * On Failure - Return error as negative value
+ */
+long SysGetProcessInfo(regs64_t* r){
+	uint64_t pid = r->rbx;
+	process_info_t* pInfo = reinterpret_cast<process_info_t*>(r->rcx);
+
+	process_t* cProcess = Scheduler::GetCurrentProcess();
+	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(process_info_t), cProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	process_t* reqProcess;
+	if(!(reqProcess = Scheduler::FindProcessByPID(pid))){
+		return -EINVAL;
+	}
+
+	pInfo->pid = pid;
+
+	pInfo->threadCount = reqProcess->threadCount;
+
+	pInfo->uid = reqProcess->uid;
+	pInfo->gid = reqProcess->gid;
+
+	pInfo->state = reqProcess->state;
+
+	strcpy(pInfo->name, reqProcess->name);
+
+	pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.seconds;
+
+	return 0;
+}
+
+/*
+ * SysGetNextProcessInfo (pidP, pInfo)
+ * 
+ * pidP - Pointer to an unsigned integer holding a PID
+ * pInfo - Pointer to process_info_t struct
+ * 
+ * On Success - Return 0
+ * No more processes - Return 1
+ * On Failure - Return error as negative value
+ */
+long SysGetNextProcessInfo(regs64_t* r){
+	uint64_t* pidP = reinterpret_cast<uint64_t*>(r->rbx);
+	process_info_t* pInfo = reinterpret_cast<process_info_t*>(r->rcx);
+
+	process_t* cProcess = Scheduler::GetCurrentProcess();
+	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(process_info_t), cProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	if(!Memory::CheckUsermodePointer(r->rbx, sizeof(uint64_t), cProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	*pidP = Scheduler::GetNextProccessPID(*pidP);
+
+	if(!(*pidP)){
+		return 1; // No more processes
+	}
+
+	process_t* reqProcess;
+	if(!(reqProcess = Scheduler::FindProcessByPID(*pidP))){
+		return -EINVAL;
+	}
+
+	pInfo->pid = *pidP;
+
+	pInfo->threadCount = reqProcess->threadCount;
+
+	pInfo->uid = reqProcess->uid;
+	pInfo->gid = reqProcess->gid;
+
+	pInfo->state = reqProcess->state;
+
+	strcpy(pInfo->name, reqProcess->name);
+
+	pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.seconds;
+
+	return 0;
 }
 
 syscall_t syscalls[]{
@@ -1738,6 +1829,8 @@ syscall_t syscalls[]{
 	SysRecvMsg,
 	SysGetEUID,
 	SysSetEUID,
+	SysGetProcessInfo,			// 65
+	SysGetNextProcessInfo,
 };
 
 int lastSyscall = 0;

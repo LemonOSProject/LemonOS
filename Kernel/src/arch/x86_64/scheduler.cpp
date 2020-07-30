@@ -33,7 +33,7 @@ namespace Scheduler{
 
     List<process_t*>* processes;
     unsigned processTableSize = 512;
-    uint64_t nextPID = 0;
+    uint64_t nextPID = 1;
 
     handle_t handles[INITIAL_HANDLE_TABLE_SIZE];
     uint64_t handleCount = 1; // We don't want null handles
@@ -131,6 +131,21 @@ namespace Scheduler{
         return nullptr;
     }
 
+    uint64_t GetNextProccessPID(uint64_t pid){
+        uint64_t newPID = UINT64_MAX;
+        for(process_t* proc : *processes){
+            if(proc->pid > pid && proc->pid < newPID){
+                newPID = proc->pid;
+            }
+        }
+
+        if(newPID == UINT64_MAX){
+            return 0;
+        }
+
+        return newPID;
+    }
+
     int SendMessage(message_t msg){
         process_t* proc = FindProcessByPID(msg.recieverPID);
         if(!proc) return 1; // Failed to find process with specified PID
@@ -169,6 +184,8 @@ namespace Scheduler{
 
         proc->threads = new thread_t;
         proc->threadCount = 1;
+
+        proc->creationTime = Timer::GetSystemUptimeStruct();
 
         // Reserve 3 file descriptors for stdin, out and err
         FsNode* nullDev = fs::ResolvePath("/dev/null");
@@ -218,7 +235,7 @@ namespace Scheduler{
         ((fx_state_t*)thread->fxState)->fcw = 0x33f; // Default FPU Control Word State
 
         strcpy(proc->workingDir, "/"); // set root as default working dir
-        strcpy(proc->name, "unknown process");
+        strcpy(proc->name, "unknown");
 
         return proc;
     }

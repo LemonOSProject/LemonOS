@@ -272,7 +272,7 @@ int main(){
 		}
 		taskbar->Paint();
 
-		lemon_yield();
+		Lemon::Yield();
 	}
 
 	for(;;);

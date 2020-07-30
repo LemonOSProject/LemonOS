@@ -8,6 +8,7 @@
 #include <vector.h>
 #include <fs/filesystem.h>
 #include <lock.h>
+#include <timer.h>
 
 enum {
 	ThreadStateRunning,
@@ -73,10 +74,27 @@ typedef struct process {
 	char workingDir[PATH_MAX];
 	char name[NAME_MAX];
 
+	timeval_t creationTime; // When the process was created
+
 	Vector<fs_fd_t*> fileDescriptors;
 	List<message_t> messageQueue;
 	List<thread_t*> blocking; // Threads blocking awaiting a state change
 } process_t;
+
+typedef struct {
+	pid_t pid; // Process ID
+
+	uint32_t threadCount; // Process Thread Count
+
+	int32_t uid; // User ID
+	int32_t gid; // Group ID
+
+	uint8_t state; // Process State
+
+	char name[NAME_MAX]; // Process Name
+
+	uint64_t runningTime; // Amount of time in seconds that the process has been running
+} process_info_t;
 
 namespace Scheduler{
 	class ThreadBlocker{
@@ -118,6 +136,7 @@ namespace Scheduler{
 	message_t RecieveMessage(process_t* proc);
 
 	process_t* FindProcessByPID(uint64_t pid);
+    uint64_t GetNextProccessPID(uint64_t pid);
 	void InsertNewThreadIntoQueue(thread_t* thread);
 
 	void BlockCurrentThread(ThreadBlocker& blocker, lock_t& lock);

@@ -517,7 +517,7 @@ int main(char argc, char** argv){
 			//paint = false;
 		//}
 
-		lemon_yield();
+		Lemon::Yield();
 	}
 	for(;;);
 }
