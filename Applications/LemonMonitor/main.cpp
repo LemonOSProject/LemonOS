@@ -19,10 +19,10 @@ std::map<uint64_t, ProcessCPUTime> processTimer;
 Lemon::GUI::Window* window;
 
 Lemon::GUI::ListView* listView;
-Lemon::GUI::ListColumn procName = {.name = "Process", .displayWidth = 160};
+Lemon::GUI::ListColumn procName = {.name = "Process", .displayWidth = 168};
 Lemon::GUI::ListColumn procID = {.name = "PID", .displayWidth = 48};
 Lemon::GUI::ListColumn procUptime = {.name = "Uptime", .displayWidth = 64};
-Lemon::GUI::ListColumn procCPUUsage = {.name = "CPU Usage", .displayWidth = 64};
+Lemon::GUI::ListColumn procCPUUsage = {.name = "CPU Usage", .displayWidth = 80};
 
 int main(int argc, char** argv){
     window = new Lemon::GUI::Window("LemonMonitor", {360, 400}, 0, Lemon::GUI::WindowType::GUI);

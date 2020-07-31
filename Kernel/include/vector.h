@@ -126,6 +126,7 @@ public:
 		if(data){
 			delete data;
 		}
+		data = nullptr;
 	}
 
 	VectorIterator begin(){

@@ -1515,6 +1515,7 @@ long SysPoll(regs64_t* r){
 
 				if(hasEvent) eventCount++;
 			}
+			Scheduler::Yield();
 		}
 	}
 
