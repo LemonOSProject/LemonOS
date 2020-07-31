@@ -33,13 +33,13 @@ clean:
 	ninja -C LibLemon/build clean
 	ninja -C Applications/build clean
 	ninja -C Kernel/build clean
-	rm -rf Base/*
+	find Base/ -type f -not -name '*.cfg' -delete
 	rm -rf Initrd/*
 	rm initrd.tar
 	
 cleanall:
 	rm -rf LibC/build LibLemon/build Applications/build Kernel/build
-	rm -rf Base/*
+	find Base/ -type f -not -name '*.cfg' -delete
 	rm -rf Initrd/*
 	rm initrd.tar
 	

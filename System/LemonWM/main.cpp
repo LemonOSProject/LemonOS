@@ -8,6 +8,7 @@
 #include <gui/window.h>
 #include <core/fb.h>
 #include <core/input.h>
+#include <core/cfgparser.h>
 
 #include <time.h>
 
@@ -36,6 +37,25 @@ int main(){
 
     Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 0, 0, 0, &fbSurface);
 
+	CFGParser cfgParser = CFGParser("/system/config/lemonwm.cfg");
+    cfgParser.Parse();
+
+    std::string bgPath = "none";
+
+    for(auto item : cfgParser.GetItems()){
+        for(auto entry : item.second){
+            if(!entry.name.compare("useBackgroundImage")){
+                if(!(entry.value.compare("yes") && entry.value.compare("true"))){
+                    wm.compositor.useImage = true;
+                } else {
+                    wm.compositor.useImage = false;
+                }
+            } else if(!entry.name.compare("backgroundImage")){
+                bgPath = entry.value;
+            }
+        }
+    }
+
     if(int e = Lemon::Graphics::LoadImage("/initrd/winbuttons.bmp", &wm.compositor.windowButtons)){
         printf("LemonWM: Warning: Error %d loading buttons.\n", e);
     }
@@ -46,8 +66,9 @@ int main(){
 
     wm.compositor.backgroundImage = renderSurface;
     wm.compositor.backgroundImage.buffer = new uint8_t[renderSurface.width * renderSurface.height * 4];
-    if(int e = Lemon::Graphics::LoadImage("/initrd/bg3.png", 0, 0, renderSurface.width, renderSurface.height, &wm.compositor.backgroundImage, true)){
-        printf("LemonWM: Warning: Error %d loading background image.\n", e);
+    int bgError;
+    if(wm.compositor.useImage && (!bgPath.compare("none") || (bgError = Lemon::Graphics::LoadImage(bgPath.c_str(), 0, 0, renderSurface.width, renderSurface.height, &wm.compositor.backgroundImage, true)))){
+        printf("LemonWM: Warning: Error %d loading background image.\n", bgError);
         wm.compositor.useImage = false;
     }
     

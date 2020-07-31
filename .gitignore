@@ -18,6 +18,7 @@ Kernel/subprojects/lai
 Initrd/*
 Base/*
 !Base/lemon
+!Base/config
 initrd.tar
 Ports/*
 !Ports/*.sh

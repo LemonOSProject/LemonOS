@@ -10,7 +10,7 @@ CFGParser::CFGParser(const char* path){
 	cfgFile = fopen(path, "r");
 
 	if(!cfgFile){
-		printf("CFGParser: Failed to open %s!", path);
+		printf("CFGParser: Failed to open %s!\n", path);
 	}
 }
 
@@ -21,6 +21,8 @@ CFGParser::~CFGParser(){
 }
 
 void CFGParser::Parse(){
+	if(!cfgFile) return;
+
 	int c;
 	int state = ParserStateName;
 
