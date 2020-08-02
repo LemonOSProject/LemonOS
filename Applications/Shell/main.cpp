@@ -130,7 +130,7 @@ void OnMenuPaint(surface_t* surface){
 }
 
 void LoadConfig(){
-	FILE* menuConfig = fopen("/system/config/menu.cfg","r");
+	FILE* menuConfig = fopen("/system/lemon/menu.cfg","r");
 
 	if(!menuConfig){
 		return;

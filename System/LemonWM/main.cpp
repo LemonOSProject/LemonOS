@@ -37,10 +37,10 @@ int main(){
 
     Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 0, 0, 0, &fbSurface);
 
-	CFGParser cfgParser = CFGParser("/system/config/lemonwm.cfg");
+	CFGParser cfgParser = CFGParser("/system/lemon/lemonwm.cfg");
     cfgParser.Parse();
 
-    std::string bgPath = "none";
+    std::string bgPath = "/initrd/bg3.png";
 
     for(auto item : cfgParser.GetItems()){
         for(auto entry : item.second){
@@ -66,8 +66,8 @@ int main(){
 
     wm.compositor.backgroundImage = renderSurface;
     wm.compositor.backgroundImage.buffer = new uint8_t[renderSurface.width * renderSurface.height * 4];
-    int bgError;
-    if(wm.compositor.useImage && (!bgPath.compare("none") || (bgError = Lemon::Graphics::LoadImage(bgPath.c_str(), 0, 0, renderSurface.width, renderSurface.height, &wm.compositor.backgroundImage, true)))){
+    int bgError = -1;
+    if(wm.compositor.useImage && (bgError = Lemon::Graphics::LoadImage(bgPath.c_str(), 0, 0, renderSurface.width, renderSurface.height, &wm.compositor.backgroundImage, true))){
         printf("LemonWM: Warning: Error %d loading background image.\n", bgError);
         wm.compositor.useImage = false;
     }

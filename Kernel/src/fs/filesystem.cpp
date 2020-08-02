@@ -100,7 +100,7 @@ namespace fs{
 		while(file != NULL){ // Iterate through the directories to find the file
 			FsNode* node = fs::FindDir(current_node,file);
 			if(!node) {
-				Log::Warning("%s not found!", path);
+				Log::Warning("%s not found!", file);
 				return nullptr;
 			}
 			if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
@@ -110,7 +110,7 @@ namespace fs{
 			}
 
 			if((file = strtok(NULL, "/"))){
-				Log::Warning("Found file in the path however we were not finished");
+				Log::Warning("%s is not a directory!", file);
 				return nullptr;
 			}
 
