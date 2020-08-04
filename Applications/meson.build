@@ -43,18 +43,6 @@ imgview_src = [
     'ImgView/main.cpp',
 ]
 
-solitaire_src = [
-    'Solitaire/main.cpp',
-]
-
-fstest_src = [
-    'FSTest/main.cpp',
-]
-
-solitaire_src = [
-    'Solitaire/main.cpp',
-]
-
 run_src = [
     'Run/main.cpp',
 ]

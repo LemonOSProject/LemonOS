@@ -1,1 +1,1 @@
-cp -rL $HOME/.local/share/lemon/sysroot/system/* Base/
+cp -ruL $HOME/.local/share/lemon/sysroot/system/* Base/

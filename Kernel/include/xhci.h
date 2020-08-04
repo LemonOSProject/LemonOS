@@ -14,6 +14,10 @@
 #define USB_STS_CNR (1 << 11) // Controller Not Ready - 0 = Ready, 1 = Not Ready
 #define USB_STS_HCE (1 << 12) // Host Controller Error
 
+#define USB_CFG_MAXSLOTSEN (0xFF) // Max slots enabled
+#define USB_CFG_U3E (1 << 8) // U3 Entry Enable
+#define USB_CFG_CIE (1 << 9) // Configuration Information Enable
+
 #define USB_CCR_RCS (1 << 0) // Ring Cycle State
 #define USB_CCR_CS (1 << 1) // Command Stop
 #define USB_CCR_CA (1 << 2) // Command Abort
@@ -79,6 +83,19 @@ namespace USB{
             uint8_t rsvd2[16];
             uint64_t devContextBaseAddrArrayPtr; // Device Context Base Address Array Pointer
             uint32_t configure; // Configure
+
+            inline void SetMaxSlotsEnabled(uint8_t value){
+                uint32_t temp = configure;
+
+                temp &= ~((uint32_t)USB_CFG_MAXSLOTSEN);
+                temp |= temp & USB_CFG_MAXSLOTSEN;
+
+                configure = temp;
+            }
+
+            inline uint8_t MaxSlotsEnabled(){
+                return configure & USB_CFG_MAXSLOTSEN;
+            }
         } __attribute__((packed)) xhci_op_regs_t; // Operational Registers
         
         typedef struct {

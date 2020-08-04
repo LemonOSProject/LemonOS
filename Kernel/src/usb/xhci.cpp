@@ -23,6 +23,9 @@ namespace USB{
         xhci_op_regs_t* opRegs;
         xhci_port_regs_t* portRegs;
 
+        uint64_t devContextBaseAddressArrayPhys;
+        uint64_t* devContextBaseAddressArray;
+
         void IRQHandler(regs64_t* r){
 
         }
@@ -42,8 +45,6 @@ namespace USB{
 
             //IDT::RegisterInterruptHandler(IRQ0 + 11, IRQHandler);
 
-            Log::Info(xhciVirtualAddress);
-
             capRegs = (xhci_cap_regs_t*)xhciVirtualAddress;
             opRegs = (xhci_op_regs_t*)(xhciVirtualAddress + capRegs->capLength);
 
@@ -51,9 +52,19 @@ namespace USB{
 
             while(timer-- && (opRegs->usbStatus & USB_STS_CNR));
             if((opRegs->usbStatus & USB_STS_CNR)){
-                Log::Error("XHCI: Controller Timed Out");
+                Log::Error("[XHCI] Controller Timed Out");
                 return 2;
             }
+
+            //opRegs->SetMaxSlotsEnabled(255);
+
+            devContextBaseAddressArray = reinterpret_cast<uint64_t*>(Memory::KernelAllocate4KPages(1));
+            devContextBaseAddressArrayPhys = Memory::AllocatePhysicalMemoryBlock();
+            Memory::KernelMapVirtualMemory4K(devContextBaseAddressArrayPhys, reinterpret_cast<uintptr_t>(devContextBaseAddressArray), 1);
+
+            memset(devContextBaseAddressArray, 0, PAGE_SIZE_4K);
+
+            Log::Info("[XHCI] Interface version: %d, Page size: %d", capRegs->hciVersion, opRegs->pageSize);
             
             return 0;
         }
