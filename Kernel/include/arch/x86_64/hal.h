@@ -11,6 +11,7 @@ namespace HAL{
     extern boot_module_t bootModules[];
     extern bool debugMode;
     extern bool disableSMP;
+    extern bool useKCon;
 
     void InitCore(multiboot_info_t mb_info);
 

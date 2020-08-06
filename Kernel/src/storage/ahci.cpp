@@ -71,7 +71,7 @@ namespace AHCI{
 
 					ports[i] = new Port(i, &ahciHBA->ports[i]);
 					
-					DeviceManager::devices->add_back(ports[i]);
+					DeviceManager::RegisterDevice(*ports[i]);
 				}
 			}
 		}

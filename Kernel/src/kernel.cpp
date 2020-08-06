@@ -53,9 +53,9 @@ void KernelProcess(){
 		Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Loading Init Process...");
-	FsNode* initFsNode = fs::ResolvePath("/system/lemon/init.lef");
+	FsNode* initFsNode = nullptr;
 
-	if(!initFsNode){ // Attempt to start fterm
+	if(HAL::useKCon || !(initFsNode = fs::ResolvePath("/system/lemon/init.lef"))){ // Attempt to start fterm
 		initFsNode = fs::ResolvePath("/initrd/fterm.lef");
 
 		if(!initFsNode){ // Shit has really hit the fan and fterm is not on the ramdisk
@@ -99,14 +99,18 @@ extern "C"
 [[noreturn]] void kmain(multiboot_info_t* mb_info){
 	HAL::Init(*mb_info);
 
+	fs::Initialize();
+	
 	InitializeConstructors(); // Call global constructors
+
+	Log::LateInitialize();
+    Log::EnableBuffer();
+
+	DeviceManager::InitializeBasicDevices();
 
 	videoMode = Video::GetVideoMode();
 
 	Memory::InitializeSharedMemory();
-
-	fs::Initialize();
-	//Log::EnableBuffer();
 
 	Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
 
@@ -155,8 +159,6 @@ extern "C"
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 - 24*4, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
-	DeviceManager::Init();
-	
 	Log::Info("Initializing HID...");
 
 	Mouse::Install();

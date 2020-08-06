@@ -12,6 +12,8 @@ enum {
 namespace Network{
     class NetworkAdapter : public Device {
     protected:
+        static int nextDeviceNumber;
+    
         int linkState = LinkDown;
         List<NetworkPacket> queue;
 
@@ -19,6 +21,9 @@ namespace Network{
         Scheduler::GenericThreadBlocker blocker;
     public:
         MACAddress mac;
+        
+        NetworkAdapter();
+        
         virtual void SendPacket(void* data, size_t len);
 
         virtual int GetLink() { return linkState; }

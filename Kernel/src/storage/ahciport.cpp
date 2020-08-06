@@ -12,11 +12,10 @@
 #define HBA_PxIS_TFES   (1 << 30)
 
 namespace AHCI{
-	Port::Port(int num, hba_port_t* portStructure){
+	Port::Port(int num, hba_port_t* portStructure) : DiskDevice(){
         registers = portStructure;
 
 		registers->cmd &= ~HBA_PxCMD_ST;
-
 		registers->cmd &= ~HBA_PxCMD_FRE;
 
         stopCMD(registers);

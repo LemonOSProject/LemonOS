@@ -119,7 +119,6 @@ public:
 
 class FsNode{
 public:
-    char name[256]; // Filename
     uint32_t flags = 0; // Flags
     uint32_t pmask = 0; // Permission mask
     uid_t uid = 0; // User id
@@ -133,7 +132,28 @@ public:
 
     virtual ~FsNode();
 
+    /////////////////////////////
+    /// \brief Read data from filesystem node
+    ///
+    /// Read data from filesystem node
+    ///
+    /// \param off Offset of data to read
+    /// \param size Amount of data (in bytes) to read
+    /// 
+    /// \return Bytes read or if negative an error code
+    /////////////////////////////
     virtual ssize_t Read(size_t off, size_t size, uint8_t* buffer); // Read Data
+    
+    /////////////////////////////
+    /// \brief Write data to filesystem node
+    ///
+    /// Write data to filesystem node
+    ///
+    /// \param off Offset where data should be written
+    /// \param size Amount of data (in bytes) to write
+    /// 
+    /// \return Bytes written or if negative an error code
+    /////////////////////////////
     virtual ssize_t Write(size_t off, size_t size, uint8_t* buffer); // Write Data
 
     virtual fs_fd_t* Open(size_t flags); // Open
@@ -176,13 +196,35 @@ namespace fs{
     void Initialize();
     FsNode* GetRoot();
     void RegisterDevice(DirectoryEntry* device);
+	void RegisterVolume(FsVolume* vol);
 
     FsNode* ResolvePath(const char* path, const char* workingDir = nullptr);
     FsNode* ResolveParent(const char* path, const char* workingDir = nullptr);
     char* CanonicalizePath(const char* path, char* workingDir);
     char* BaseName(const char* path);
 
+    /////////////////////////////
+    /// \brief Read data from filesystem node
+    ///
+    /// Read data from filesystem node
+    ///
+    /// \param off Offset of data to read
+    /// \param size Amount of data (in bytes) to read
+    /// 
+    /// \return Bytes read or if negative an error code
+    /////////////////////////////
     ssize_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer);
+    
+    /////////////////////////////
+    /// \brief Write data to filesystem node
+    ///
+    /// Write data to filesystem node
+    ///
+    /// \param off Offset where data should be written
+    /// \param size Amount of data (in bytes) to write
+    /// 
+    /// \return Bytes written or if negative an error code
+    /////////////////////////////
     ssize_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer);
     fs_fd_t* Open(FsNode* node, uint32_t flags = 0);
     void Close(FsNode* node);

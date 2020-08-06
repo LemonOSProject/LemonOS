@@ -8,6 +8,7 @@
 #include <string.h>
 #include <fs/filesystem.h>
 #include <pty.h>
+#include <device.h>
 
 namespace Log{
 
@@ -22,15 +23,10 @@ namespace Log{
 	
 	void WriteN(const char* str, size_t n);
 
-	class LogDevice : public FsNode{
+	class LogDevice : public Device{
 	public:
-		DirectoryEntry dirent;
-
-		LogDevice(char* name){
+		LogDevice(char* name) : Device(name, TypeGenericDevice){
 			flags = FS_NODE_FILE;
-			strcpy(dirent.name, name);
-			dirent.node = this;
-			dirent.flags = flags;
 		}
 
 		ssize_t Read(size_t offset, size_t size, uint8_t *buffer){
@@ -61,8 +57,11 @@ namespace Log{
 		initialize_serial();
 
 		logDevice = new LogDevice("kernellog");
-		fs::RegisterDevice(&logDevice->dirent);
     }
+
+	void LateInitialize(){
+		DeviceManager::RegisterDevice(*logDevice);
+	}
 
 	void SetVideoConsole(VideoConsole* con){
 		console = con;

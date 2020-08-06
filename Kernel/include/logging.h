@@ -6,6 +6,7 @@
 
 namespace Log{
     void Initialize();
+    void LateInitialize();
     void SetVideoConsole(VideoConsole* con);
     void EnableBuffer();
 

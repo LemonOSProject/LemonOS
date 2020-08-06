@@ -47,7 +47,7 @@ add_project_arguments(kernel_cpp_args, language : 'cpp')
 cpp_files = [
     'src/kernel.cpp',
     'src/characterbuffer.cpp',
-    'src/devicemanager.cpp',
+    'src/device.cpp',
     'src/gpt.cpp',
     'src/lemon.cpp',
     'src/logging.cpp',

@@ -39,7 +39,7 @@ namespace GPT{
             if((entry.endLBA - entry.startLBA)){
                 PartitionDevice* part = new PartitionDevice(entry.startLBA, entry.endLBA, disk);
                 disk->partitions.add_back(part);
-                DeviceManager::devices->add_back(part);
+                DeviceManager::RegisterDevice(*part);
             }
         }
 

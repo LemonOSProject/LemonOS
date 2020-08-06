@@ -336,8 +336,6 @@ namespace AHCI{
 
 		uint64_t bufPhys;
 		void* bufVirt;
-
-        char* name = "Generic AHCI Disk Device";
 	};
 
 	int Init();

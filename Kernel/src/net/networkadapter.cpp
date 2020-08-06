@@ -9,6 +9,8 @@ namespace Network {
 
     List<NetworkAdapter*> adapters;
 
+    int NetworkAdapter::nextDeviceNumber = 0;
+
     void AddAdapter(NetworkAdapter* a){
         adapters.add_back(a);
     }
@@ -20,6 +22,14 @@ namespace Network {
                 return;
             }
         }
+    }
+
+    NetworkAdapter::NetworkAdapter(){
+        char buf[16];
+        strcpy(buf, "eth");
+        itoa(nextDeviceNumber++, buf + 3, 10);
+
+        Device(buf, TypeNetworkAdapterDevice);
     }
 
     void NetworkAdapter::SendPacket(void* data, size_t len){

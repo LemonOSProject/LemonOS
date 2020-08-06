@@ -7,6 +7,8 @@
 #include <system.h>
 #include <logging.h>
 #include <apic.h>
+#include <device.h>
+#include <devicemanager.h>
 
 #define PACKET_QUEUE_SIZE 64
 
@@ -111,12 +113,11 @@ namespace Mouse{
 		return updated;
 	}
 
-	class MouseDevice : public FsNode{
+	class MouseDevice : public Device{
 	public:
 		DirectoryEntry dirent;
 
-		MouseDevice(char* name){
-			strcpy(this->name, name);
+		MouseDevice(char* name) : Device(name, TypeInputDevice){
 			flags = FS_NODE_CHARDEVICE;
 			strcpy(dirent.name, name);
 			dirent.flags = flags;
@@ -149,7 +150,7 @@ namespace Mouse{
 	{
 		uint8_t status;
 
-		fs::RegisterDevice(&mouseDev.dirent);
+		//fs::RegisterDevice(&mouseDev.dirent);
 
 		Wait(1);
 		outportb(0x64, 0xA8);
@@ -172,6 +173,8 @@ namespace Mouse{
 
 		IDT::RegisterInterruptHandler(IRQ0 + 12, Handler);
 		APIC::IO::MapLegacyIRQ(12);
+
+		DeviceManager::RegisterDevice(mouseDev);
 	}
 
 	int8_t* GetData() {

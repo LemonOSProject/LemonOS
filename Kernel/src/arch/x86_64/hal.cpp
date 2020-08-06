@@ -25,6 +25,7 @@ namespace HAL{
     int bootModuleCount;
     bool debugMode = false;
     bool disableSMP = false;
+    bool useKCon = false;
     VideoConsole* con;
 
     void InitCore(multiboot_info_t mb_info){ // ALWAYS call this first
@@ -56,6 +57,7 @@ namespace HAL{
         while(cmdLine){
             if(strcmp(cmdLine, "debug") == 0) debugMode = true;
             else if(strcmp(cmdLine, "nosmp") == 0) disableSMP = true;
+            else if(strcmp(cmdLine, "kcon") == 0) useKCon = true;
             cmdLine = strtok(NULL, " ");
         }
         
@@ -86,8 +88,6 @@ namespace HAL{
         Log::Info("Initializing System Timer...");
         Timer::Initialize(1000);
         Log::Write("OK");
-
-        Log::EnableBuffer();
     } 
 
     void InitVideo(){

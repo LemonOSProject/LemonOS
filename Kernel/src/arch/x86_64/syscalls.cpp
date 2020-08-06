@@ -122,7 +122,7 @@ long SysExec(regs64_t* r){
 	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
 	size_t read = fs::Read(current_node, 0, current_node->size, buffer);
 	if(!read){
-		Log::Warning("Could not read file: %s", current_node->name);
+		Log::Warning("Could not read file: %s", filepath);
 		return 0;
 	}
 	timeval_t tvnew = Timer::GetSystemUptimeStruct();
@@ -563,7 +563,7 @@ long SysLSeek(regs64_t* r){
 		return ret;
 		break;
 	default:
-		Log::Info("Invalid seek: %s, mode: %d", Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->name, r->rdx);
+		Log::Info("Invalid seek: %d, mode: %d", fd, r->rdx);
 		return -1; // Invalid seek mode
 		break;
 	}

@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include <stdint.h>
+#include <liballoc.h>
 
 #pragma GCC push_options
 #pragma GCC optimize ("O1")
@@ -239,6 +240,14 @@ char* strnupr(char* s, size_t n){
 	}
 
 	return s;
+}
+
+char* strdup(const char* s){
+	char* buf = new char[strlen(s) + 1];
+
+	strcpy(buf, s);
+
+	return buf;
 }
 
 #pragma GCC pop_options

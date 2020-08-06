@@ -58,6 +58,7 @@ namespace fs::tar {
 
     class TarNode : public FsNode {
     public:
+        char name[256];
         tar_header_t* header;
 
         ino_t parentInode;

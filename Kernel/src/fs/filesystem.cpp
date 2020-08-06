@@ -9,36 +9,31 @@ namespace fs{
 	
 	class Root : public FsNode {
 	public:
-		Root() { flags = FS_NODE_DIRECTORY; }
+		Root() {
+			inode = 0;
+			flags = FS_NODE_DIRECTORY;
+		}
 
 		int ReadDir(DirectoryEntry*, uint32_t);
 		FsNode* FindDir(char* name);
 	};
 	
-	class Dev : public FsNode {
+	/*class Dev : public FsNode {
 	public:
 		Dev() { flags = FS_NODE_DIRECTORY; }
 
 		int ReadDir(DirectoryEntry*, uint32_t);
 		FsNode* FindDir(char* name);
-	};
-	
-	class Null : public FsNode {
-	public:
-		Null() { flags = FS_NODE_CHARDEVICE; }
-
-		ssize_t Read(size_t, size_t, uint8_t *);
-		ssize_t Write(size_t, size_t, uint8_t *);
-	};
+	};*/
 
     Root root;
 	DirectoryEntry rootDirent = DirectoryEntry(&root, "");
 
-	Dev dev;
-	DirectoryEntry devDirent = DirectoryEntry(&dev, "dev");
+	/*Dev dev;
+	DirectoryEntry devDirent = DirectoryEntry(&dev, "dev");*/
 
-	Null null;
-	DirectoryEntry nullDirent = DirectoryEntry(&dev, "null");
+	/*Null null;
+	DirectoryEntry nullDirent = DirectoryEntry(&dev, "null");*/
 
 	List<FsVolume*>* volumes;
     
@@ -48,12 +43,7 @@ namespace fs{
     void Initialize(){
 		volumes = new List<FsVolume*>();
 
-		root.flags = FS_NODE_DIRECTORY;
-		root.inode = 0;
-		rootDirent.flags = FS_NODE_DIRECTORY;
-		strcpy(rootDirent.name, "");
-
-		dev.flags = FS_NODE_DIRECTORY;
+		/*dev.flags = FS_NODE_DIRECTORY;
 		dev.inode = 0;
 		strcpy(devDirent.name, "dev");
 		devDirent.flags = FS_NODE_DIRECTORY;
@@ -63,7 +53,7 @@ namespace fs{
 		null.inode = 0;
 		null.size = 1;
 
-        RegisterDevice(&nullDirent);
+        RegisterDevice(&nullDirent);*/
     }
 
 	volume_id_t GetVolumeID(){
@@ -290,7 +280,7 @@ namespace fs{
 		devices[deviceCount++] = device;
 	}
     
-	int Dev::ReadDir(DirectoryEntry* dirent, uint32_t index){
+	/*int Dev::ReadDir(DirectoryEntry* dirent, uint32_t index){
 		if(index >= deviceCount + 2) return -ENOENT;
 
 		if(index == 0) {
@@ -314,20 +304,16 @@ namespace fs{
 			if(strcmp(devices[i]->name, name) == 0) return devices[i]->node;
 
         return NULL;
-	}
+	}*/
 
 	int Root::ReadDir(DirectoryEntry* dirent, uint32_t index){
-		if(index == 0){
-			*dirent = devDirent;
-			return 1;
-		} else if (index < fs::volumes->get_length() + 1){
-			*dirent = (volumes->get_at(index - 1)->mountPointDirent);
+		if (index < fs::volumes->get_length()){
+			*dirent = (volumes->get_at(index)->mountPointDirent);
 			return 1;
 		} else return 0;
 	}
 
     FsNode* Root::FindDir(char* name){
-		if(strcmp(name,devDirent.name) == 0) return &dev;
 		if(strcmp(name, ".") == 0) return this;
 		if(strcmp(name, "..") == 0) return this;
 
@@ -336,16 +322,6 @@ namespace fs{
 		}
 
         return NULL;
-	}
-
-	ssize_t Null::Read(size_t offset, size_t size, uint8_t *buffer){
-
-		memset(buffer, -1, size);
-		return size;
-	}
-	
-	ssize_t Null::Write(size_t offset, size_t size, uint8_t *buffer){
-		return size;
 	}
 
     ssize_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer){

@@ -3,6 +3,16 @@
 #include <fs/fat32.h>
 #include <fs/ext2.h>
 
+static int nextDeviceNumber = 0;
+
+DiskDevice::DiskDevice(){
+    char buf[16];
+    strcpy(buf, "hd");
+    itoa(nextDeviceNumber++, buf + 2, 10);
+
+    Device(buf, TypeDiskDevice);
+}
+
 int DiskDevice::InitializePartitions(){
     static char letter = 'a';
     for(unsigned i = 0; i < partitions.get_length(); i++){

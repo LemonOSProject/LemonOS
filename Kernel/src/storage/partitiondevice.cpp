@@ -1,9 +1,18 @@
 #include <device.h>
 
+#include <string.h>
+
 PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk){
     this->startLBA = startLBA;
     this->endLBA = endLBA;
     this->parentDisk = disk;
+
+    char buf[18];
+    strcpy(buf, parentDisk->GetName());
+    strcat(buf, "p");
+    itoa(parentDisk->nextPartitionNumber++, buf + strlen(buf), 10);
+
+    Device(buf, TypePartitionDevice);
 }
 
 int PartitionDevice::ReadAbsolute(uint64_t offset, uint32_t count, void* buffer){

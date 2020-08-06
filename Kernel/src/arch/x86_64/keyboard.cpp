@@ -5,6 +5,7 @@
 #include <gui.h>
 #include <apic.h>
 #include <fs/filesystem.h>
+#include <device.h>
 
 #define KEY_QUEUE_SIZE 256
 
@@ -31,11 +32,11 @@ namespace Keyboard{
         return true;
     }
 
-	class KeyboardDevice : public FsNode{
+	class KeyboardDevice : public Device{
 	public:
         DirectoryEntry dirent;
 
-		KeyboardDevice(char* name){
+		KeyboardDevice(char* name) : Device(name, TypeInputDevice){
             flags = FS_NODE_CHARDEVICE;
             strcpy(dirent.name, name);
             dirent.flags = flags;
@@ -83,5 +84,7 @@ namespace Keyboard{
 
         IDT::RegisterInterruptHandler(IRQ0 + 1, Handler);
 		APIC::IO::MapLegacyIRQ(1);
+
+        DeviceManager::RegisterDevice(kbDev);
     }
 }

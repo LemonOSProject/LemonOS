@@ -30,3 +30,5 @@ char* strnupr(char* s, size_t n);
 
 char* strchr(const char *s, int c);
 char* strrchr(const char *s, int c);
+
+char* strdup(const char* s);

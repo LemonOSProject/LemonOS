@@ -121,7 +121,7 @@ namespace ATA{
 					Log::Write(j ? "slave" : "master");
 
 					drives[i * 2 + j] = new ATADiskDevice(i, j);
-					DeviceManager::devices->add_back(drives[i * 2 + j]);
+					DeviceManager::RegisterDevice(*drives[i * 2 + j]);
 				}
 			}
 		}

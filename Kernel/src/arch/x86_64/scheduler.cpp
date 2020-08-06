@@ -195,9 +195,25 @@ namespace Scheduler{
         // Reserve 3 file descriptors for stdin, out and err
         FsNode* nullDev = fs::ResolvePath("/dev/null");
         FsNode* logDev = fs::ResolvePath("/dev/kernellog");
-        proc->fileDescriptors.add_back(fs::Open(nullDev));          //(NULL);
-        proc->fileDescriptors.add_back(fs::Open(logDev));   //(fs::Open(nullDev));  //(NULL);
-        proc->fileDescriptors.add_back(fs::Open(logDev));          //(NULL);
+
+        if(nullDev){
+            proc->fileDescriptors.add_back(fs::Open(nullDev));
+        } else {
+            proc->fileDescriptors.add_back(nullptr);
+            
+            Log::Warning("Failed to find /dev/null");
+        }
+        
+        if(logDev){
+            proc->fileDescriptors.add_back(fs::Open(logDev));
+            proc->fileDescriptors.add_back(fs::Open(logDev));
+        } else {
+            proc->fileDescriptors.add_back(nullptr);
+            proc->fileDescriptors.add_back(nullptr);
+
+            Log::Warning("Failed to find /dev/kernellog");
+        }
+
         proc->parent = nullptr;
         proc->uid = 0;
 

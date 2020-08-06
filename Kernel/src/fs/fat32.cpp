@@ -55,8 +55,6 @@ namespace fs::FAT32{
         fat32MountPoint.vol = this;
         fat32MountPoint.size = 0;
 
-        strcpy(fat32MountPoint.name, name);
-
         mountPoint = &fat32MountPoint;
 
         mountPointDirent.flags = FS_NODE_DIRECTORY;
@@ -159,7 +157,7 @@ namespace fs::FAT32{
         List<uint32_t>* clusters = GetClusterChain(node->inode);
         if(offset + size > clusters->get_length() * bootRecord->bpb.sectorsPerCluster * part->parentDisk->blocksize){
             // TODO: Allocate clusters
-            Log::Info("[FAT32] Allocating Clusters for %s", node->name);
+            Log::Info("[FAT32] Allocating Clusters");
             
         }
     }
@@ -296,7 +294,6 @@ namespace fs::FAT32{
                     _node->inode = clusterNum;
                     if(dirEntries[i].attributes & FAT_ATTR_DIRECTORY) _node->flags = FS_NODE_DIRECTORY;
                     else _node->flags = FS_NODE_FILE;
-                    strcpy(_node->name, _name);
                     break;
                 }
                 lfnCount = 0;
