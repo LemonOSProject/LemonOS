@@ -24,12 +24,14 @@ namespace Network {
         }
     }
 
-    NetworkAdapter::NetworkAdapter(){
+    NetworkAdapter::NetworkAdapter() : Device(TypeNetworkAdapterDevice) {
+        flags = FS_NODE_CHARDEVICE;
+
         char buf[16];
         strcpy(buf, "eth");
         itoa(nextDeviceNumber++, buf + 3, 10);
 
-        Device(buf, TypeNetworkAdapterDevice);
+        SetName(buf);
     }
 
     void NetworkAdapter::SendPacket(void* data, size_t len){

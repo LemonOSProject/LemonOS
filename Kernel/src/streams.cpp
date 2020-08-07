@@ -90,7 +90,6 @@ int64_t DataStream::Write(void* data, size_t len){
         while(bufferPos + len >= bufferSize)
             bufferSize *= 2;
 
-        Log::Info("[DataStream] Reallocating buffer to size %d", bufferSize);
         buffer = kmalloc(bufferSize);
 
         memcpy(buffer, oldBuffer, bufferPos);

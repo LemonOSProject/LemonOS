@@ -86,6 +86,7 @@ namespace Network{
         for(int i = 0; i < supportedDeviceCount; i++){
             if(PCI::FindDevice(supportedDevices[i],INTEL_VENDOR_ID)){
                 card = new Intel8254x(INTEL_VENDOR_ID, supportedDevices[i]);
+                DeviceManager::RegisterDevice(*card);
                 return;
             }
         }

@@ -6,6 +6,7 @@
 #include <fs/fsvolume.h>
 #include <math.h>
 #include <timer.h>
+    #include <logging.h>
 	
 class URandom : public Device {
 public:
@@ -38,7 +39,7 @@ ssize_t Null::Write(size_t offset, size_t size, uint8_t *buffer){
 }
 
 ssize_t URandom::Read(size_t offset, size_t size, uint8_t *buffer){
-    unsigned int num = rand() ^ ((Timer::GetSystemUptime() / 2) * Timer::GetFrequency()) + rand();
+    unsigned int num = (rand() ^ ((Timer::GetSystemUptime() / 2) * Timer::GetFrequency())) + rand();
     
     size_t ogSize = size;
 
@@ -120,6 +121,7 @@ namespace DeviceManager{
     }
 
     void RegisterDevice(Device& dev){
+        Log::Info("registering %s", dev.GetName());
         devices.add_back(&dev);
     }
 

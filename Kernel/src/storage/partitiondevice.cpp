@@ -2,17 +2,19 @@
 
 #include <string.h>
 
-PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk){
+PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk) : Device(TypePartitionDevice){
     this->startLBA = startLBA;
     this->endLBA = endLBA;
     this->parentDisk = disk;
+
+    flags = FS_NODE_BLKDEVICE;
 
     char buf[18];
     strcpy(buf, parentDisk->GetName());
     strcat(buf, "p");
     itoa(parentDisk->nextPartitionNumber++, buf + strlen(buf), 10);
 
-    Device(buf, TypePartitionDevice);
+    SetName(buf);
 }
 
 int PartitionDevice::ReadAbsolute(uint64_t offset, uint32_t count, void* buffer){

@@ -70,8 +70,9 @@ namespace AHCI{
 					Log::Info("Found SATA Drive - Port: %d", i);
 
 					ports[i] = new Port(i, &ahciHBA->ports[i]);
+					Log::Info("name: %s", ports[i]->GetName());
 					
-					DeviceManager::RegisterDevice(*ports[i]);
+					DeviceManager::RegisterDevice(*(ports[i]));
 				}
 			}
 		}

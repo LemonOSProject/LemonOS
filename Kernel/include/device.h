@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <list.h>
 #include <fs/filesystem.h>
+#include <logging.h>
 
 enum DeviceType{
     TypeGenericDevice,
@@ -14,8 +15,10 @@ enum DeviceType{
 
 class Device : public FsNode {
 public:
-    Device(){
-        
+    Device(DeviceType type){
+        name = "";
+
+        this->type = type;
     }
 
     Device(const char* name, DeviceType type){
@@ -27,7 +30,11 @@ public:
         return name;
     }
 protected:
-    char* name = "";
+    void SetName(const char* name){
+        this->name = strdup(name);
+    }
+
+    char* name;
     DeviceType type = TypeGenericDevice;
 };
 

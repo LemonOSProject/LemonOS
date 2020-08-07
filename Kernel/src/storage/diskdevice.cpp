@@ -2,23 +2,26 @@
 
 #include <fs/fat32.h>
 #include <fs/ext2.h>
+#include <logging.h>
 
 static int nextDeviceNumber = 0;
 
-DiskDevice::DiskDevice(){
+DiskDevice::DiskDevice() : Device(TypeDiskDevice){
+    flags = FS_NODE_BLKDEVICE;
+
     char buf[16];
     strcpy(buf, "hd");
     itoa(nextDeviceNumber++, buf + 2, 10);
 
-    Device(buf, TypeDiskDevice);
+    SetName(buf);
 }
 
 int DiskDevice::InitializePartitions(){
     static char letter = 'a';
     for(unsigned i = 0; i < partitions.get_length(); i++){
         if(fs::FAT32::Identify(partitions.get_at(i)) > 0) {
-            char name[] =  {'h', 'd', letter++, 0};
-            auto vol = new fs::FAT32::Fat32Volume(partitions.get_at(i),name);
+            char vname[] =  {'h', 'd', letter++, 0};
+            auto vol = new fs::FAT32::Fat32Volume(partitions.get_at(i),vname);
             fs::volumes->add_back(vol);
         } else if(fs::Ext2::Identify(partitions.get_at(i)) > 0) {
             bool systemFound = false;
@@ -32,8 +35,8 @@ int DiskDevice::InitializePartitions(){
             fs::Ext2::Ext2Volume* vol = nullptr;
 
             if(systemFound){
-                char name[] = {'h', 'd', letter++, 0};
-                vol = new fs::Ext2::Ext2Volume(partitions.get_at(i), name);
+                char vname[] = {'h', 'd', letter++, 0};
+                vol = new fs::Ext2::Ext2Volume(partitions.get_at(i), vname);
             } else {
                 vol = new fs::Ext2::Ext2Volume(partitions.get_at(i), "system");
             }
