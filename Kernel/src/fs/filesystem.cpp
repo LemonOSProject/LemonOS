@@ -17,23 +17,9 @@ namespace fs{
 		int ReadDir(DirectoryEntry*, uint32_t);
 		FsNode* FindDir(char* name);
 	};
-	
-	/*class Dev : public FsNode {
-	public:
-		Dev() { flags = FS_NODE_DIRECTORY; }
-
-		int ReadDir(DirectoryEntry*, uint32_t);
-		FsNode* FindDir(char* name);
-	};*/
 
     Root root;
 	DirectoryEntry rootDirent = DirectoryEntry(&root, "");
-
-	/*Dev dev;
-	DirectoryEntry devDirent = DirectoryEntry(&dev, "dev");*/
-
-	/*Null null;
-	DirectoryEntry nullDirent = DirectoryEntry(&dev, "null");*/
 
 	List<FsVolume*>* volumes;
     
@@ -42,18 +28,6 @@ namespace fs{
 
     void Initialize(){
 		volumes = new List<FsVolume*>();
-
-		/*dev.flags = FS_NODE_DIRECTORY;
-		dev.inode = 0;
-		strcpy(devDirent.name, "dev");
-		devDirent.flags = FS_NODE_DIRECTORY;
-
-		strcpy(nullDirent.name,"null");
-		null.flags = FS_NODE_CHARDEVICE;
-		null.inode = 0;
-		null.size = 1;
-
-        RegisterDevice(&nullDirent);*/
     }
 
 	volume_id_t GetVolumeID(){
@@ -279,32 +253,6 @@ namespace fs{
 		Log::Write(device->name);
 		devices[deviceCount++] = device;
 	}
-    
-	/*int Dev::ReadDir(DirectoryEntry* dirent, uint32_t index){
-		if(index >= deviceCount + 2) return -ENOENT;
-
-		if(index == 0) {
-			strcpy(dirent->name, ".");
-		} else if(index == 1) {
-			strcpy(dirent->name, "..");
-		} else if(devices[index - 2]){
-			strcpy(dirent->name,devices[index - 2]->name);
-		} else {
-			return -ENOENT;
-		}
-
-		return 1;
-	}
-
-    FsNode* Dev::FindDir(char* name){
-		if(strcmp(name, ".") == 0) return this;
-		if(strcmp(name, "..") == 0) return &root;
-
-		for(unsigned i = 0; i < deviceCount; i++)
-			if(strcmp(devices[i]->name, name) == 0) return devices[i]->node;
-
-        return NULL;
-	}*/
 
 	int Root::ReadDir(DirectoryEntry* dirent, uint32_t index){
 		if (index < fs::volumes->get_length()){
