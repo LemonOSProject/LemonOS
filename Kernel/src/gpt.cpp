@@ -9,7 +9,7 @@ namespace GPT{
     int Parse(DiskDevice* disk){
         gpt_header_t* header = (gpt_header_t*)kmalloc(disk->blocksize);
 
-        if(disk->Read(1,disk->blocksize,(uint8_t*)header)){
+        if(disk->ReadDiskBlock(1,disk->blocksize,(uint8_t*)header)){
             return -1; // Disk Error
         }
 
@@ -27,7 +27,7 @@ namespace GPT{
         int partNum = 4;//header->partNum;
 
         gpt_entry_t* partitionTable = (gpt_entry_t*)kmalloc(partNum * header->partEntrySize);
-        if(disk->Read(tableLBA,partNum * header->partEntrySize,(uint8_t*)partitionTable)){
+        if(disk->ReadDiskBlock(tableLBA,partNum * header->partEntrySize,(uint8_t*)partitionTable)){
             return -1; // Disk Error
         }
 

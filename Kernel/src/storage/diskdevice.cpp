@@ -3,11 +3,12 @@
 #include <fs/fat32.h>
 #include <fs/ext2.h>
 #include <logging.h>
+#include <errno.h>
 
 static int nextDeviceNumber = 0;
 
 DiskDevice::DiskDevice() : Device(TypeDiskDevice){
-    flags = FS_NODE_BLKDEVICE;
+    flags = FS_NODE_CHARDEVICE;
 
     char buf[16];
     strcpy(buf, "hd");
@@ -51,12 +52,30 @@ int DiskDevice::InitializePartitions(){
     return 0;
 }
 
-int DiskDevice::Read(uint64_t lba, uint32_t count, void* buffer){
+int DiskDevice::ReadDiskBlock(uint64_t lba, uint32_t count, void* buffer){
     return -1;
 }
 
-int DiskDevice::Write(uint64_t lba, uint32_t count, void* buffer){
+int DiskDevice::WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer){
     return -1;
+}
+
+ssize_t DiskDevice::Read(size_t off, size_t size, uint8_t* buffer){
+    if(off % blocksize){
+        return -EINVAL; // Block aligned reads only
+    }
+
+    int e = ReadDiskBlock(off / blocksize, size, buffer);
+
+    if(e){
+        return -EIO;
+    }
+
+    return size;
+}
+
+ssize_t DiskDevice::Write(size_t off, size_t size, uint8_t* buffer){
+    return -ENOSYS;
 }
 
 DiskDevice::~DiskDevice(){

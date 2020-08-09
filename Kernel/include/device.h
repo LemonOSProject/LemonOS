@@ -49,8 +49,11 @@ public:
 
     int InitializePartitions();
 
-    virtual int Read(uint64_t lba, uint32_t count, void* buffer);
-    virtual int Write(uint64_t lba, uint32_t count, void* buffer);
+    virtual int ReadDiskBlock(uint64_t lba, uint32_t count, void* buffer);
+    virtual int WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer);
+
+    virtual ssize_t Read(size_t off, size_t size, uint8_t* buffer);
+    virtual ssize_t Write(size_t off, size_t size, uint8_t* buffer);
 
     virtual ~DiskDevice();
     

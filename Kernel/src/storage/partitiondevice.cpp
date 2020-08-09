@@ -36,13 +36,13 @@ int PartitionDevice::ReadAbsolute(uint64_t offset, uint32_t count, void* buffer)
 int PartitionDevice::Read(uint64_t lba, uint32_t count, void* buffer){
     if(lba * parentDisk->blocksize + count > (endLBA - startLBA) * parentDisk->blocksize) return 2;
 
-    return parentDisk->Read(lba + startLBA, count, buffer);
+    return parentDisk->ReadDiskBlock(lba + startLBA, count, buffer);
 }
 
 int PartitionDevice::Write(uint64_t lba, uint32_t count, void* buffer){
     if(lba * parentDisk->blocksize + count > (endLBA - startLBA) * parentDisk->blocksize) return 2;
 
-    return parentDisk->Write(lba + startLBA, count, buffer);
+    return parentDisk->WriteDiskBlock(lba + startLBA, count, buffer);
 }
 
 PartitionDevice::~PartitionDevice(){

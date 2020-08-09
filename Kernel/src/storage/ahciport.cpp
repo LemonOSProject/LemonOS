@@ -83,7 +83,7 @@ namespace AHCI{
         InitializePartitions();
     }
 
-    int Port::Read(uint64_t lba, uint32_t count, void* buffer){
+    int Port::ReadDiskBlock(uint64_t lba, uint32_t count, void* buffer){
         uint64_t blockCount = ((count + 511) / 512);
         
         while(blockCount >= 8 && count){
@@ -142,7 +142,7 @@ namespace AHCI{
     }
 
     
-    int Port::Write(uint64_t lba, uint32_t count, void* buffer){
+    int Port::WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer){
         uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
 
         while(blockCount-- && count){

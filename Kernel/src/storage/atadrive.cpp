@@ -40,7 +40,7 @@ namespace ATA{
         InitializePartitions();
     }
 
-    int ATADiskDevice::Read(uint64_t lba, uint32_t count, void* buffer){
+    int ATADiskDevice::ReadDiskBlock(uint64_t lba, uint32_t count, void* buffer){
         uint8_t* buf = (uint8_t*)kmalloc(512);
 
         uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
@@ -67,7 +67,7 @@ namespace ATA{
         return 0;
     }
     
-    int ATADiskDevice::Write(uint64_t lba, uint32_t count, void* buffer){
+    int ATADiskDevice::WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer){
         uint8_t* buf = (uint8_t*)kmalloc(512);
 
         uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);

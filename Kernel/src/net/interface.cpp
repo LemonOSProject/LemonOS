@@ -101,7 +101,7 @@ namespace Network::Interface{
 
 	void Initialize(){
 		auto proc = Scheduler::CreateProcess((void*)InterfaceProcess);
-		strcpy(proc->name, "KNetworkInterface");
+		strcpy(proc->name, "KeNetworkInterface");
 	}
 
 	void Send(void* data, size_t length){
