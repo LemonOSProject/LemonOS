@@ -15,13 +15,6 @@ global GDT64.TSS.high32
 
 global GDT64Pointer64
 
-MBALIGN     equ 1<<0
-MEMINFO     equ 1<<1
-VIDINFO		equ 1<<2
-MAGIC       equ 0x1BADB002
-FLAGS       equ MBALIGN | MEMINFO | VIDINFO
-CHECKSUM    equ -(MAGIC + FLAGS)
-
 KERNEL_VIRTUAL_BASE equ 0xFFFFFFFF80000000
 KERNEL_BASE_PML4_INDEX equ (((KERNEL_VIRTUAL_BASE) >> 39) & 0x1FF)
 KERNEL_BASE_PDPT_INDEX equ  (((KERNEL_VIRTUAL_BASE) >> 30) & 0x1FF)
@@ -99,22 +92,39 @@ GDT64Pointer64:                    ; The GDT-pointer.
     dw GDT64Pointer - GDT64 - 1             ; Limit.
     dq GDT64 + KERNEL_VIRTUAL_BASE; Base.
 
+MAGIC       equ 0xE85250D6
+ARCH        equ 0 ; x86
+LENGTH      equ (multiboot_header_end - multiboot_header)
+CHECKSUM    equ -(MAGIC + ARCH + LENGTH)
+
 section .boot.text
-align 4 ; Multiboot Header
+align 8 ; Multiboot Header
 multiboot_header:
 dd MAGIC
-dd FLAGS
+dd ARCH
+dd LENGTH
 dd CHECKSUM
-dd 0
-dd 0
-dd 0
-dd 0
-dd 0
 
-dd 0
-dd 0
-dd 0
-dd 32
+align 8
+; Framebuffer tag
+dw 5  ; Type - framebuffer
+dw 0  ; Flags
+dd 20 ; Size - 20
+dd 0  ; Width
+dd 0  ; Height
+dd 32  ; Depth
+
+align 8
+; Module alignment tag
+dw 6  ; Type - module alignment
+dw 0  ; Flags
+dd 8  ; Size
+
+; End tag
+dw 0
+dw 0
+dd 8
+multiboot_header_end:
 
 no64:
   mov ecx, dword [fb_pitch]

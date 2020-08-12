@@ -62,5 +62,7 @@ namespace ACPI{
 	extern acpi_rsdt_t* rsdtHeader;
 
 	void Init();
+  void SetRSDP(acpi_rsdp_t* p);
+
   void Reset();
 }

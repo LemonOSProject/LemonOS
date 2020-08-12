@@ -412,7 +412,7 @@ long SysMapFB(regs64_t *r){
 
 	uint64_t pageCount = (vMode.height * vMode.pitch + 0xFFF) >> 12;
 	uintptr_t fbVirt = (uintptr_t)Memory::Allocate4KPages(pageCount, Scheduler::GetCurrentProcess()->addressSpace);
-	Memory::MapVirtualMemory4K(HAL::multibootInfo.framebufferAddr,fbVirt,pageCount,Scheduler::GetCurrentProcess()->addressSpace);
+	Memory::MapVirtualMemory4K((uintptr_t)HAL::videoMode.physicalAddress,fbVirt,pageCount,Scheduler::GetCurrentProcess()->addressSpace);
 
 	mem_region_t memR;
 	memR.base = fbVirt;
@@ -953,7 +953,7 @@ long SysInfo(regs64_t* r){
 	}
 
 	s->usedMem = Memory::usedPhysicalBlocks * 4;
-	s->totalMem = Memory::maxPhysicalBlocks * 4;
+	s->totalMem = HAL::mem_info.memory_high + HAL::mem_info.memory_low;
 	s->cpuCount = static_cast<uint16_t>(SMP::processorCount);
 
 	return 0;

@@ -117,6 +117,10 @@ namespace ACPI{
 	}
 
 	void Init(){
+		if(desc){
+			goto success; // Already found
+		}
+
 		for(int i = 0; i <= 0x7BFF; i += 16){ // Search first KB for RSDP, the RSDP is aligned on a 16 byte boundary
 			if(memcmp((void*)Memory::GetIOMapping(i),signature,8) == 0){
 				desc =  ((acpi_rsdp_t*)Memory::GetIOMapping(i));
@@ -169,6 +173,10 @@ namespace ACPI{
 		ReadMADT();
 
 		asm("sti");
+	}
+
+	void SetRSDP(acpi_rsdp_t* p){
+		desc = p;
 	}
 
 	void Reset(){

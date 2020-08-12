@@ -7,8 +7,6 @@
 #include <panic.h>
 #include <lock.h>
 
-extern void* _end;
-
 namespace Memory{
     uint32_t physicalMemoryBitmap[PHYSALLOC_BITMAP_SIZE_DWORDS];
 
@@ -21,24 +19,9 @@ namespace Memory{
     void InitializePhysicalAllocator(memory_info_t* mem_info)
     {
         memset(physicalMemoryBitmap, 0xFFFFFFFF, PHYSALLOC_BITMAP_SIZE_DWORDS * sizeof(uint32_t));
-        
-        multiboot_memory_map_t* mem_map = mem_info->mem_map;
-        multiboot_memory_map_t* mem_map_end = (multiboot_memory_map_t*)(mem_info->mem_map + mem_info->memory_map_len);
 
-        maxPhysicalBlocks = (mem_info->memory_high + mem_info->memory_low) * 1024 / PHYSALLOC_BLOCK_SIZE;
+        maxPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS;
         usedPhysicalBlocks = maxPhysicalBlocks;
-
-        while (mem_map < mem_map_end)
-        {
-            Log::Info("Memory Region: [%x - %x] (Type %d)", mem_map->base, mem_map->base + mem_map->length, mem_map->type);
-
-            if (mem_map->type == 1){
-                MarkMemoryRegionFree(mem_map->base, mem_map->length);
-            } else if (!mem_map->type) break;
-            mem_map = (multiboot_memory_map_t*)(((uint64_t)mem_map) + mem_map->size + sizeof(mem_map->size));
-        }
-
-        MarkMemoryRegionUsed(0, (uintptr_t)&_end - KERNEL_VIRTUAL_BASE);
     }
 
     // Sets a bit in the physical memory bitmap
@@ -70,7 +53,7 @@ namespace Memory{
 
     // Marks a region in physical memory as being used
     void MarkMemoryRegionUsed(uint64_t base, size_t size) {
-        for (uint32_t blocks = size / PHYSALLOC_BLOCK_SIZE, align = base / PHYSALLOC_BLOCK_SIZE; blocks > 0; blocks--, usedPhysicalBlocks++)
+        for (uint32_t blocks = (size + (PHYSALLOC_BLOCK_SIZE - 1)) / PHYSALLOC_BLOCK_SIZE, align = base / PHYSALLOC_BLOCK_SIZE; blocks > 0; blocks--, usedPhysicalBlocks++)
             bit_set(align++);
     }
 
