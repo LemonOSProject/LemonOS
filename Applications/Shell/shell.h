@@ -29,6 +29,7 @@ public:
     void SetTaskbar(Lemon::GUI::Window* taskbar);
 
     void Update();
+    Lemon::MessageHandler& GetServer() { return shellSrv; }
     void Open(char* path);
 
     void SetWindowState(ShellWindow* win);

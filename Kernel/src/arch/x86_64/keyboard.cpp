@@ -85,6 +85,8 @@ namespace Keyboard{
         IDT::RegisterInterruptHandler(IRQ0 + 1, Handler);
 		APIC::IO::MapLegacyIRQ(1);
 
+        outportb(0xF0, 1); // Set scan code 1
+
         DeviceManager::RegisterDevice(kbDev);
     }
 }

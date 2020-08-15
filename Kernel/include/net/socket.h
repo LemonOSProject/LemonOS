@@ -136,6 +136,8 @@ public:
     virtual int IsListening() { return passive; }
     virtual int IsBlocking() { return blocking; }
     virtual int IsConnected() { return connected; }
+
+    virtual int PendingConnections() { return pending.get_length(); }
 };
 
 class LocalSocket : public Socket {

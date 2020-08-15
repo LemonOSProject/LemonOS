@@ -1427,21 +1427,22 @@ long SysSetUID(regs64_t* r){
 long SysPoll(regs64_t* r){
 	pollfd* fds = (pollfd*)r->rbx;
 	unsigned nfds = r->rcx;
-	int timeout = r->rdx;
+	long timeout = r->rdx;
 
 	process_t* proc = Scheduler::GetCurrentProcess();
 	if(!Memory::CheckUsermodePointer(r->rbx, nfds * sizeof(pollfd), proc->addressSpace)){
 		Log::Warning("sys_poll: Invalid pointer to file descriptor array");
+		return -EFAULT;
 	}
 
 	fs_fd_t** files = (fs_fd_t**)kmalloc(sizeof(fs_fd_t*) * nfds);
 
-	unsigned eventCount = 0; // Amount of fds with evetns
+	unsigned eventCount = 0; // Amount of fds with events
 	for(unsigned i = 0; i < nfds; i++){
 		fds[i].revents = 0;
 		if(fds[i].fd < 0) continue;
 
-		if((uint64_t)fds[i].fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+		if((uint64_t)fds[i].fd >= Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 			Log::Warning("sys_poll: Invalid File Descriptor: %d", fds[i].fd);
 			files[i] = 0;
 			fds[i].revents |= POLLNVAL;
@@ -1483,10 +1484,9 @@ long SysPoll(regs64_t* r){
 		if(hasEvent) eventCount++;
 	}
 
-	if(timeout){
-		int ticksPerMs = (1000 / Timer::GetFrequency());
-		unsigned endMs = Timer::GetSystemUptime() * 1000 + ticksPerMs * (Timer::GetTicks() + timeout);
-		while(((Timer::GetSystemUptime() * 1000 + ticksPerMs * Timer::GetTicks()) < endMs) || (timeout < 0)){ // Wait until timeout, unless timeout is negative in which wait infinitely
+	if(!eventCount && timeout){
+		timeval_t tVal = Timer::GetSystemUptimeStruct();
+		while(timeout < 0 || Timer::TimeDifference(Timer::GetSystemUptimeStruct(), tVal) < timeout){ // Wait until timeout, unless timeout is negative in which wait infinitely
 			if(eventCount > 0){
 				break;
 			}
@@ -1496,9 +1496,14 @@ long SysPoll(regs64_t* r){
 
 				bool hasEvent = 0;
 
-				if(files[i]->node->flags & FS_NODE_SOCKET){
+				if((files[i]->node->flags & FS_NODE_TYPE) == FS_NODE_SOCKET){
 					if(!((Socket*)files[i]->node)->IsConnected()){
 						fds[i].revents |= POLLHUP;
+						hasEvent = 1;
+					}
+
+					if(((Socket*)files[i]->node)->PendingConnections() && (fds[i].events & POLLIN)){
+						fds[i].revents |= POLLIN;
 						hasEvent = 1;
 					}
 				}
@@ -1712,6 +1717,7 @@ long SysGetProcessInfo(regs64_t* r){
 	strcpy(pInfo->name, reqProcess->name);
 
 	pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.seconds;
+	pInfo->activeUs = reqProcess->activeTicks * 1000000 / Timer::GetFrequency();
 
 	return 0;
 }

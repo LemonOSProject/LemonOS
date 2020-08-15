@@ -29,6 +29,7 @@ typedef struct HandleIndex {
 
 typedef struct thread {
 	lock_t lock = 0; // Thread lock
+	lock_t stateLock = 0; // Thread state lock
 
 	process* parent; // Parent Process
 	void* stack; // Pointer to the initial stack

@@ -37,11 +37,11 @@ namespace Lemon{
         void Send(const Message& msg);
     };
 
-    class MessageServer{
+    class MessageServer : public MessageHandler{
         std::vector<pollfd> fds;
         std::deque<std::shared_ptr<LemonMessageInfo>> queue;
 
-        int sock = 0;
+        pollfd sock;
 
         std::vector<pollfd> GetFileDescriptors();
     public:
@@ -53,7 +53,7 @@ namespace Lemon{
     };
 
     class MessageMultiplexer {
-        std::vector<MessageHandler> handlers;
+        std::vector<MessageHandler*> handlers;
     public:
         void AddSource(MessageHandler& handler);
         bool PollSync();

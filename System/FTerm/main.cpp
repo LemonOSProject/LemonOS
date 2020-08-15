@@ -63,6 +63,8 @@ void Scroll(){
 
         curPos.y--;
 	}
+
+	Lemon::Graphics::DrawRect({0, 0, renderSurface.width, renderSurface.height}, colours[state.bgColour], &renderSurface);
 }
 
 void Paint(){

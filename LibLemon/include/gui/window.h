@@ -167,6 +167,8 @@ namespace Lemon::GUI {
         void DisplayContextMenu(std::vector<ContextMenuEntry>& entries, vector2i_t pos = {-1, -1});
         void CreateMenuBar();
         void (*OnMenuCmd)(unsigned short, Window*) = nullptr;
+        
+        MessageHandler& GetHandler() { return msgClient; }
 
         uint32_t GetFlags() { return flags; }
         vector2i_t GetSize() { return {surface.width, surface.height}; };

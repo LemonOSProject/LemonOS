@@ -12,7 +12,7 @@ struct thread;
 namespace Timer{
 
     timeval_t GetSystemUptimeStruct();
-    int TimeDifference(timeval_t& newTime, timeval_t& oldTime);
+    int TimeDifference(timeval_t newTime, timeval_t oldTime);
 
     uint64_t GetSystemUptime();
     uint32_t GetTicks();

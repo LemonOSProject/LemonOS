@@ -397,6 +397,6 @@ void WMInstance::Update(){
 
         redrawBackground = true;
     }
-    
+
     compositor.Paint(); // Render the frame
 }

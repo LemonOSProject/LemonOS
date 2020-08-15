@@ -1,5 +1,6 @@
 #include <core/message.h>
 #include <core/msghandler.h>
+#include <lemon/util.h>
 
 #include <assert.h>
 #include <stdlib.h>
@@ -21,28 +22,27 @@ namespace Lemon {
     }
 
     MessageServer::MessageServer(sockaddr_un& address, socklen_t len){
-        sock = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
-        assert(sock > 0);
+        sock.fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0);
+        assert(sock.fd > 0);
 
-        int e = bind(sock, (sockaddr*)&address, len);
+        int e = bind(sock.fd, (sockaddr*)&address, len);
         
         if(e){
             perror("Bind: ");
-            close(sock);
+            close(sock.fd);
             assert(!e);
         }
 
-        e = listen(sock, 16);
+        e = listen(sock.fd, 16);
 
         if(e){
             perror("Listen: ");
-            close(sock);
+            close(sock.fd);
             assert(!e);
         }
     }
 
     void MessageClient::Connect(sockaddr_un& address, socklen_t len){
-        printf("connecting\r\n");
         int e = connect(sock.fd, (sockaddr*)&address, len);
         printf("connected\r\n");
         
@@ -62,7 +62,7 @@ namespace Lemon {
         }
 
         int fd = 0;
-        while((fd = accept(sock, nullptr, nullptr)) > 0){
+        while((fd = accept(sock.fd, nullptr, nullptr)) > 0){
             fds.push_back({ .fd = fd, .events = POLLIN, .revents = 0 });
         }
 
@@ -292,7 +292,9 @@ namespace Lemon {
     }
 
     std::vector<pollfd> MessageServer::GetFileDescriptors(){
-        return fds;
+        std::vector<pollfd> rfds = fds;
+        rfds.push_back(sock);
+        return rfds;
     }
 
     std::vector<pollfd> MessageClient::GetFileDescriptors(){
@@ -301,16 +303,22 @@ namespace Lemon {
         return v;
     }
 
+    void MessageMultiplexer::AddSource(MessageHandler& handler){
+        handlers.push_back(&handler);
+    }
+
     bool MessageMultiplexer::PollSync(){
         std::vector<pollfd> fds;
 
-        for(MessageHandler& h : handlers){
-            for(pollfd& f : h.GetFileDescriptors()){
+        for(MessageHandler* h : handlers){
+            for(pollfd& f : h->GetFileDescriptors()){
                 fds.push_back(f);
             }
         }
 
-        int evCount = poll(fds.data(), fds.size(), -1);
+        int evCount = 0;
+        
+        evCount = poll(fds.data(), fds.size(), -1);
 
         if(evCount > 0){
             return true;

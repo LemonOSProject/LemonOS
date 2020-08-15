@@ -89,7 +89,7 @@ namespace Timer{
         return tval;
     }
 
-    int TimeDifference(timeval_t& newTime, timeval_t& oldTime){
+    int TimeDifference(timeval_t newTime, timeval_t oldTime){
         long seconds = newTime.seconds - oldTime.seconds;
         int milliseconds = newTime.milliseconds - oldTime.milliseconds;
 

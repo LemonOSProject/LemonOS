@@ -220,6 +220,11 @@ int main(){
 	shell->AddWindow = AddWindow;
 	shell->RemoveWindow = RemoveWindow;
 
+	Lemon::MessageMultiplexer mp;
+	mp.AddSource(taskbar->GetHandler());
+	mp.AddSource(menu->GetHandler());
+	mp.AddSource(shell->GetServer());
+
 	for(;;){
 		shell->Update();
 
@@ -230,14 +235,13 @@ int main(){
 					showMenu = !showMenu;
 
 					menu->Minimize(!showMenu);
-
-					paint = true;
 				} else {
 					taskbar->GUIHandleEvent(ev);
 				}
 			} else {
 				taskbar->GUIHandleEvent(ev);
 			}
+			paint = true;
 		}
 
 		while(menu->PollEvent(ev)){
@@ -263,16 +267,16 @@ int main(){
 		if(sysInfo.usedMem != usedMemLast) paint = true;
 
 		if(paint){
-
 			if(showMenu){
 				menu->Paint();
 			}
+			
+			taskbar->Paint();
 
 			paint = false;
 		}
-		taskbar->Paint();
 
-		Lemon::Yield();
+		mp.PollSync();
 	}
 
 	for(;;);

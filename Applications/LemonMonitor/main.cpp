@@ -42,18 +42,17 @@ int main(int argc, char** argv){
     while(!window->closed){
         Lemon::GetProcessList(processes);
 
-        listView->ClearItems();
-
         timespec time;
         clock_gettime(CLOCK_BOOTTIME, &time);
 
+        listView->ClearItems();
         for(lemon_process_info_t proc : processes){
 
             char uptime[17];
             snprintf(uptime, 16, "%lum %lus", proc.runningTime / 60, proc.runningTime % 60);
 
             char usage[6];
-            try{
+            try{    
                 ProcessCPUTime& pTime = processTimer.at(proc.pid);
 
                 if(pTime.recordTime.tv_sec != time.tv_sec){
@@ -61,8 +60,8 @@ int main(int argc, char** argv){
                     uint64_t timeDiff = (time.tv_sec - pTime.recordTime.tv_sec) * 1000000 + (time.tv_nsec - pTime.recordTime.tv_nsec) / 1000; // Get the difference between the times in microseconds
                     
                     if(diff && timeDiff){
-                        snprintf(usage, 5, "%3lu%%", (diff * 100) / timeDiff / cpuCount); // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
-                        pTime.lastUsage = static_cast<short>((diff * 100) / timeDiff / cpuCount);
+                        snprintf(usage, 5, "%3lu%%", (diff * 1) / timeDiff); // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
+                        pTime.lastUsage = static_cast<short>((diff * 1) / timeDiff);
                     } else {
                         strcpy(usage, "0%");
                         pTime.lastUsage = 0;

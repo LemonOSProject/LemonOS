@@ -421,8 +421,10 @@ namespace Scheduler{
 
         acquireLock(&lock);
         acquireLock(&cpu->runQueueLock);
+        acquireLock(&cpu->currentThread->stateLock);
         blocker.Block(cpu->currentThread);
         cpu->currentThread->state = ThreadStateBlocked;
+        releaseLock(&cpu->currentThread->stateLock);
         releaseLock(&lock);
         releaseLock(&cpu->runQueueLock);
 
@@ -430,7 +432,9 @@ namespace Scheduler{
     }
     
 	void UnblockThread(thread_t* thread){
+        acquireLock(&thread->stateLock);
         thread->state = ThreadStateRunning;
+        releaseLock(&thread->stateLock);
 
         /*for(List<thread_t*>* l : thread->waiting){
             l->remove(thread);
