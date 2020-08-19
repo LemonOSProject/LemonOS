@@ -305,8 +305,14 @@ namespace Lemon::Graphics{
         if(fontState == -1){
             return 8;
         }
-
-        if (!isprint(c)) {
+        
+        if(c == '\n'){
+            return 0;
+        } else if (c == ' ') {
+            return font->width;
+        }  else if (c == '\t') {
+            return font->tabWidth * font->width;
+        } else if (!isprint(c)) {
             return 0;
         }
 
@@ -339,7 +345,7 @@ namespace Lemon::Graphics{
                 str++;
                 continue;
             }  else if (*str == '\t') {
-                len += font->tabWidth;
+                len += font->tabWidth * font->width;
                 str++;
                 continue;
             } else if (!isprint(*str)) {

@@ -102,6 +102,13 @@ void SaveFileAs(){
 	}
 
 	SaveFile(filePath);
+
+	openPath = filePath;
+
+	char title[256];
+	sprintf(title, "Text Editor: %s", filePath);
+
+	window->SetTitle(title);
 }
 
 void SaveOpenFile(){

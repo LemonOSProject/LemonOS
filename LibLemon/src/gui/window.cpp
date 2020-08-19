@@ -205,6 +205,9 @@ namespace Lemon::GUI{
 
                     if((newClick.tv_nsec / 1000000 + newClick.tv_sec * 1000) - (lastClick.tv_nsec / 1000000 + lastClick.tv_sec * 1000) < 600){ // Douuble click if clicks less than 600ms apart
                         rootContainer.OnDoubleClick(ev.mousePos);
+                        
+                        newClick.tv_nsec = 0;
+                        newClick.tv_sec = 0; // Prevent a third click from being registerd as a double click
                     } else {
                         rootContainer.OnMouseDown(ev.mousePos);
                     }
