@@ -427,16 +427,9 @@ long SysMapFB(regs64_t *r){
 
 	if(HAL::debugMode) fbInfo.height = vMode.height / 3 * 2;
 
-	Log::Info("Mapping Framebuffer to:");
-	Log::Info(fbVirt);
-
 	*((uintptr_t*)r->rbx) = fbVirt;
 	*((fb_info_t*)r->rcx) = fbInfo;
-
-	Log::Info(r->rbx);
-	Log::Info(r->rcx);
-	Log::Info(*((uint64_t*)r->rbx));
-
+	
 	return 0;
 }
 

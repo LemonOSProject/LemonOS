@@ -79,7 +79,17 @@ namespace USB{
             uint32_t pageSize; // Page Size
             uint8_t rsvd1[8];
             uint32_t deviceNotificationControl; // Device Notification Control
-            uint64_t cmdRingCtl; // Command Ring Control
+            union{
+                uint64_t cmdRingCtl; // Command Ring Control
+                struct {
+                    uint64_t cmdRingCtlRCS : 1; // Ring cycle state
+                    uint64_t cmdRingCtlCS : 1; // Command stop
+                    uint64_t cmdRingCtlCA : 1; // Command Abort
+                    uint64_t cmdRingCtlCRR : 1; // Command Ring Running
+                    uint64_t cmdRingCtlReserved : 2;
+                    uint64_t cmdRingCtlPointer : 58;
+                } __attribute__((packed));
+            }  __attribute__((packed));
             uint8_t rsvd2[16];
             uint64_t devContextBaseAddrArrayPtr; // Device Context Base Address Array Pointer
             uint32_t configure; // Configure
@@ -98,6 +108,8 @@ namespace USB{
             }
         } __attribute__((packed)) xhci_op_regs_t; // Operational Registers
         
+
+
         typedef struct {
             uint32_t portSC; // Port Status and Control
             uint32_t portPMSC; // Power Management Status and Control

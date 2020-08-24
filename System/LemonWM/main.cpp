@@ -24,8 +24,6 @@ surface_t renderSurface;
 extern rgba_colour_t backgroundColor;
 
 int main(){
-    printf("Starting WM\n");
-
     CreateFramebufferSurface(fbSurface);
     renderSurface = fbSurface;
     renderSurface.buffer = new uint8_t[fbSurface.width * fbSurface.height * 4];

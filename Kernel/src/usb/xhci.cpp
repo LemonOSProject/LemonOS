@@ -26,6 +26,9 @@ namespace USB{
         uint64_t devContextBaseAddressArrayPhys;
         uint64_t* devContextBaseAddressArray;
 
+        uint64_t cmdRingPointerPhys;
+        uint64_t* cmdRingPointer;
+
         void IRQHandler(regs64_t* r){
 
         }
@@ -56,15 +59,24 @@ namespace USB{
                 return 2;
             }
 
-            //opRegs->SetMaxSlotsEnabled(255);
-
             devContextBaseAddressArray = reinterpret_cast<uint64_t*>(Memory::KernelAllocate4KPages(1));
             devContextBaseAddressArrayPhys = Memory::AllocatePhysicalMemoryBlock();
             Memory::KernelMapVirtualMemory4K(devContextBaseAddressArrayPhys, reinterpret_cast<uintptr_t>(devContextBaseAddressArray), 1);
 
             memset(devContextBaseAddressArray, 0, PAGE_SIZE_4K);
 
-            Log::Info("[XHCI] Interface version: %d, Page size: %d", capRegs->hciVersion, opRegs->pageSize);
+            opRegs->devContextBaseAddrArrayPtr = devContextBaseAddressArrayPhys;
+
+            cmdRingPointer = reinterpret_cast<uint64_t*>(Memory::KernelAllocate4KPages(1));
+            cmdRingPointerPhys = Memory::AllocatePhysicalMemoryBlock();
+            Memory::KernelMapVirtualMemory4K(cmdRingPointerPhys, reinterpret_cast<uintptr_t>(cmdRingPointer), 1);
+
+            memset(cmdRingPointer, 0, PAGE_SIZE_4K);
+
+            opRegs->cmdRingCtl = 0; // Clear everything
+            opRegs->cmdRingCtl = cmdRingPointerPhys;
+
+            Log::Info("[XHCI] Interface version: %x, Page size: %d, Operational registers offset: %x, Runtime registers offset: %x, Doorbell registers offset: %x", capRegs->hciVersion, opRegs->pageSize, capRegs->capLength, capRegs->rtsOff, capRegs->dbOff);
             
             return 0;
         }
