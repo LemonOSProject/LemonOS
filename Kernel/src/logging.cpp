@@ -146,7 +146,7 @@ namespace Log{
 					break;
 				} case 'Y': {
 					format++;
-					auto arg = (char) va_arg(args, int);
+					auto arg = (bool)va_arg(args, unsigned int);
 					Write(arg ? "yes" : "no");
 					break;
 				} case 's': {

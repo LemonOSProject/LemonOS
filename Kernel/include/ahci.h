@@ -14,6 +14,11 @@ enum
 	FIS_TYPE_DEV_BITS	= 0xA1,	// Set device bits FIS - device to host
 };
 
+enum{
+	SCTL_PORT_IPM_NOPART = 0x100, // No partial state
+	SCTL_PORT_IPM_NOSLUM = 0x200, // No slumber state
+};
+
 typedef struct tagFIS_REG_H2D
 {
 	// DWORD 0
@@ -293,6 +298,13 @@ typedef struct tagHBA_CMD_TBL
 
 #define AHCI_GHC_ENABLE (1 << 31)
 
+#define AHCI_CAP_S64A (1 << 31) // 64-bit addressing
+#define AHCI_CAP_NCQ (1 << 30) // Support for Native Command Queueing?
+#define AHCI_CAP_SSS (1 << 27) // Supports staggered Spin-up?
+#define AHCI_CAP_FBSS (1 << 16) // FIS-based switching supported?
+#define AHCI_CAP_SSC (1 << 14) // Slumber state capable?
+#define AHCI_CAP_PSC (1 << 13) // Partial state capable
+
 #define AHCI_CAP2_NVMHCI (1 << 1) // NVMHCI Present
 #define AHCI_CAP2_BOHC (1 << 0) // BIOS/OS Handoff
 
@@ -305,6 +317,8 @@ typedef struct tagHBA_CMD_TBL
 #define	SATA_SIG_PM	0x96690101	// Port multiplier
 
 #define HBA_PxCMD_ST    0x0001
+#define HBA_PxCMD_SUD	0x0002
+#define HBA_PxCMD_POD	0x0004
 #define HBA_PxCMD_FRE   0x0010
 #define HBA_PxCMD_FR    0x4000
 #define HBA_PxCMD_CR    0x8000

@@ -6,9 +6,6 @@
 #include <gpt.h>
 #include <ata.h>
 
-#define ATA_DEV_BUSY 0x80
-#define ATA_DEV_DRQ 0x08
-
 #define HBA_PxIS_TFES   (1 << 30)
 
 namespace AHCI{
@@ -58,18 +55,25 @@ namespace AHCI{
             memset(commandTables[i],0,PAGE_SIZE_4K);
         }
 
-        registers->is = 0;
+        registers->sctl |= (SCTL_PORT_IPM_NOPART | SCTL_PORT_IPM_NOSLUM);
 
-		while (registers->cmd & HBA_PxCMD_CR);
+        registers->is = 0; // Clear interrupts
+
+        registers->cmd |= HBA_PxCMD_POD;
+        registers->cmd |= HBA_PxCMD_SUD;
 
 		registers->cmd |= HBA_PxCMD_FRE;
+
+		while (registers->cmd & HBA_PxCMD_CR);
+        
 		registers->cmd |= HBA_PxCMD_ST; 
+        registers->fbs &= ~(0xFFFFF000U);
 
         bufPhys = Memory::AllocatePhysicalMemoryBlock();
         bufVirt = Memory::KernelAllocate4KPages(1);
         Memory::KernelMapVirtualMemory4K(bufPhys, (uintptr_t)bufVirt, 1);
 
-        Log::Info("[AHCI] Port - SSTS: %x, SCTL: %x, SERR: %x, SACT: %x", registers->ssts, registers->sctl, registers->serr, registers->sact);
+        Log::Info("[AHCI] Port - SSTS: %x, SCTL: %x, SERR: %x, SACT: %x, Cmd/Status: %x, FBS: %x", registers->ssts, registers->sctl, registers->serr, registers->sact, registers->cmd, registers->fbs);
 
         switch(GPT::Parse(this)){
         case 0:
@@ -178,12 +182,15 @@ namespace AHCI{
 
         hba_cmd_header_t* commandHeader = &commandList[slot];
 
-        commandHeader->cfl = sizeof(fis_reg_h2d_t) / 4;
+        commandHeader->cfl = sizeof(fis_reg_h2d_t) / sizeof(uint32_t);
 
         commandHeader->a = 0;
         commandHeader->w = write;
         commandHeader->c = 1;
         commandHeader->p = 1;
+
+        commandHeader->prdbc = 0;
+        commandHeader->pmp = 0;
 
         hba_cmd_tbl_t* commandTable = commandTables[slot];
 
@@ -217,6 +224,8 @@ namespace AHCI{
         cmdfis->countl = count & 0xff;
         cmdfis->counth = count >> 8;
 
+        cmdfis->control = 0;
+
         while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < 1000000) {
             spin++;
         }
@@ -234,13 +243,13 @@ namespace AHCI{
                         break;
                 if (registers->is & HBA_PxIS_TFES)   // Task file error
                 {
-                    Log::Warning("[SATA] Disk Error");
+                    Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
                     return 1;
                 }
         }
         
         if (registers->is & HBA_PxIS_TFES) {
-            Log::Warning("[SATA] Disk Error");
+            Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
             return 1;
         }
 

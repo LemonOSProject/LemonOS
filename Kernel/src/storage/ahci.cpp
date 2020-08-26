@@ -56,7 +56,7 @@ namespace AHCI{
 		ahciHBA->ghc |= AHCI_GHC_ENABLE;
 
 		Log::Info("[AHCI]: Base Address: %x, Virtual Base Address: %x", ahciBaseAddress, ahciVirtualAddress);
-		Log::Info("[AHCI] Enabled? %Y, BOHC? %Y", ahciHBA->ghc & AHCI_GHC_ENABLE, ahciHBA->cap2 & AHCI_CAP2_BOHC);
+		Log::Info("[AHCI] Enabled? %Y, BOHC? %Y, 64-bit addressing? %Y, Staggered Spin-up? %Y, Slumber State Capable? %Y, Partial State Capable? %Y, FIS-based switching? %Y", ahciHBA->ghc & AHCI_GHC_ENABLE, ahciHBA->cap2 & AHCI_CAP2_BOHC, ahciHBA->cap & AHCI_CAP_S64A, ahciHBA->cap & AHCI_CAP_SSS, ahciHBA->cap & AHCI_CAP_SSC, ahciHBA->cap & AHCI_CAP_PSC, ahciHBA->cap & AHCI_CAP_FBSS);
 
 		uint32_t pi = ahciHBA->pi;
 		for(int i = 0; i < 32; i++){
