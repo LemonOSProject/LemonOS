@@ -85,8 +85,10 @@
 #define SYS_GET_PROCESS_INFO 65
 #define SYS_GET_NEXT_PROCESS_INFO 66
 #define SYS_READLINK 67
+#define SYS_SPAWN_THREAD 68
+#define SYS_EXIT_THREAD 69
 
-#define NUM_SYSCALLS 68
+#define NUM_SYSCALLS 70
 
 #define EXEC_CHILD 1
 
@@ -1811,6 +1813,34 @@ long SysReadLink(regs64_t* r){
 	return link->ReadLink(buffer, bufferSize);
 }
 
+/////////////////////////////
+/// \brief SysSpawnThread(entry, stack) Spawn a new thread under current process
+///
+/// \param entry - (uintptr_t) Thread entry point
+/// \param stack - (uintptr_t) Thread's stack
+///
+/// \return (pid_t) thread id
+/////////////////////////////
+long SysSpawnThread(regs64_t* r){
+	return Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), r->rbx, r->rcx);
+}
+
+/////////////////////////////
+/// \brief SysExitThread(retval) Exit a thread
+///
+/// \param retval - (void*) Return value pointer
+///
+/// \return Undefined, always succeeds
+/////////////////////////////
+[[noreturn]]
+long SysExitThread(regs64_t* r){
+	Log::Warning("SysExitThread is unimplemented! Hanging!");
+	
+	releaseLock(&GetCPULocal()->currentThread->lock);
+
+	for(;;) Scheduler::Yield();
+}
+
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -1880,6 +1910,8 @@ syscall_t syscalls[]{
 	SysGetProcessInfo,			// 65
 	SysGetNextProcessInfo,
 	SysReadLink,
+	SysSpawnThread,
+	SysExitThread,
 };
 
 int lastSyscall = 0;

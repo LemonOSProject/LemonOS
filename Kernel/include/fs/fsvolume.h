@@ -19,5 +19,12 @@ namespace fs{
             mountPointDirent.flags = link->mountPoint->flags;
             mountPointDirent.node->nlink++;
         }
+
+        LinkVolume(FsNode* link, char* name){
+            strcpy(mountPointDirent.name, name);
+            mountPointDirent.node = link;
+            mountPointDirent.flags = link->flags;
+            mountPointDirent.node->nlink++;
+        }
     };
 }

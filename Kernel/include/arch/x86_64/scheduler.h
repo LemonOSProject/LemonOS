@@ -10,6 +10,8 @@
 #include <lock.h>
 #include <timer.h>
 
+#define THREAD_TIMESLICE_DEFAULT 7
+
 enum {
 	ThreadStateRunning,
 	ThreadStateBlocked,
@@ -64,7 +66,7 @@ typedef struct process {
 	address_space_t* addressSpace; // Pointer to page directory and tables
 	List<mem_region_t> sharedMemory; // Used to ensure these memory regions don't get freed when a process is terminated
 	uint8_t state; // Process state
-	thread_t* threads;
+	Vector<thread_t*> threads;
 	uint32_t threadCount; // Amount of threads
 	int32_t uid;
 	int32_t gid;
@@ -123,6 +125,8 @@ namespace Scheduler{
 			blocked.remove(th);
 		}
 	};
+
+    pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack);
 
     process_t* CreateProcess(void* entry);
 	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr, int envc = 0, char** envp = nullptr);

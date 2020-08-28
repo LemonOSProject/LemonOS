@@ -186,9 +186,12 @@ namespace Scheduler{
         proc->sharedMemory.clear();
         proc->children.clear();
         proc->blocking.clear();
+        proc->threads.clear();
 
-        proc->threads = new thread_t;
+        proc->threads.add_back(new thread_t);
         proc->threadCount = 1;
+
+        memset(proc->threads[0], 0, sizeof(thread_t));
 
         proc->creationTime = Timer::GetSystemUptimeStruct();
 
@@ -221,7 +224,7 @@ namespace Scheduler{
         proc->pid = nextPID++; // Set Process ID to the next availiable
 
         // Create structure for the main thread
-        thread_t* thread = proc->threads;
+        thread_t* thread = proc->threads[0];
 
         thread->stack = 0;
         thread->priority = 1;
@@ -272,7 +275,7 @@ namespace Scheduler{
 
     process_t* CreateProcess(void* entry) {
         process_t* proc = InitializeProcessStructure();
-        thread_t* thread = &proc->threads[0];
+        thread_t* thread = proc->threads[0];
 
         void* stack = (void*)Memory::KernelAllocate4KPages(32);//, proc->addressSpace);
         for(int i = 0; i < 32; i++){
@@ -284,11 +287,48 @@ namespace Scheduler{
         thread->registers.rbp = (uintptr_t)thread->stack + PAGE_SIZE_4K * 32;
         thread->registers.rip = (uintptr_t)entry;
 
-        InsertNewThreadIntoQueue(&proc->threads[0]);
+        InsertNewThreadIntoQueue(proc->threads[0]);
 
         processes->add_back(proc);
 
         return proc;
+    }
+
+    pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack){
+        pid_t threadID = process->threadCount++;
+        process->threads.add_back(new thread_t);
+        thread_t& thread = *process->threads[threadID];
+
+        memset(&thread, 0, sizeof(thread_t));
+        
+        thread.parent = process;
+        thread.registers.rip = entry;
+        thread.registers.rsp = stack;
+        thread.state = ThreadStateRunning;
+        thread.stack = thread.stackLimit = reinterpret_cast<void*>(stack);
+
+        thread.fxState = Memory::KernelAllocate4KPages(1); // Allocate Memory for the FPU/Extended Register State
+        Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)thread.fxState, 1);
+        memset(thread.fxState, 0, 1024);
+
+        void* kernelStack = (void*)Memory::KernelAllocate4KPages(32); // Allocate Memory For Kernel Stack (128KB)
+        for(int i = 0; i < 32; i++){
+            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)kernelStack + PAGE_SIZE_4K * i, 1);
+        }
+
+        thread.kernelStack = kernelStack + PAGE_SIZE_4K * 32;
+        
+        regs64_t* registers = &thread.registers;
+        registers->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
+        thread.registers.cs = 0x1B; // We want user mode so use user mode segments, make sure RPL is 3
+        thread.registers.ss = 0x23;
+        thread.timeSliceDefault = THREAD_TIMESLICE_DEFAULT;
+        thread.timeSlice = thread.timeSliceDefault;
+        thread.priority = 4;
+
+        InsertNewThreadIntoQueue(&thread);
+
+        return threadID;
     }
 
     void EndProcess(process_t* process){
@@ -299,9 +339,9 @@ namespace Scheduler{
         
         CPU* cpu = GetCPULocal();
         
-        for(unsigned i = 0; i < process->threadCount; i++){
-            if(&process->threads[i] != cpu->currentThread){
-                acquireLock(&process->threads[i].lock); // Make sure we acquire a lock on all threads to ensure that they are not in a syscall and are not retaining a lock
+        for(unsigned i = 0; i < process->threads.get_length(); i++){
+            if(process->threads[i] != cpu->currentThread && process->threads[i]){
+                acquireLock(&process->threads[i]->lock); // Make sure we acquire a lock on all threads to ensure that they are not in a syscall and are not retaining a lock
             }
         }
         
@@ -315,14 +355,14 @@ namespace Scheduler{
             UnblockThread(t);
         }
 
-        for(unsigned i = 0; i < process->threadCount; i++){
-            thread_t* thread = &process->threads[i];
+        for(unsigned i = 0; i < process->threads.get_length(); i++){
+            thread_t* thread = process->threads[i];
 
             for(List<thread_t*>* queue : thread->waiting){
                 queue->remove(thread);
             }
             
-            process->threads[i].waiting.clear();
+            process->threads[i]->waiting.clear();
 
             thread->state = ThreadStateBlocked;
             thread->timeSlice = thread->timeSliceDefault = 0;
@@ -382,7 +422,7 @@ namespace Scheduler{
         Memory::DestroyAddressSpace(process->addressSpace);
 
         for(unsigned i = 0; i < process->threadCount; i++){
-            process->threads[i].waiting.~List();
+            process->threads[i]->waiting.~List();
         }
 
         if(cpu->currentThread->parent == process){
@@ -465,7 +505,7 @@ namespace Scheduler{
         }
 
         if (__builtin_expect(cpu->runQueue->get_length() <= 0 || !cpu->runQueue->front, 0)){
-            cpu->currentThread = &cpu->idleProcess->threads[0];
+            cpu->currentThread = cpu->idleProcess->threads[0];
         } else if(__builtin_expect(cpu->currentThread && cpu->currentThread->parent != cpu->idleProcess, 1)){
             cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
 
@@ -486,7 +526,7 @@ namespace Scheduler{
             } while(cpu->currentThread->state == ThreadStateBlocked && cpu->currentThread != first);
 
             if(cpu->currentThread->state == ThreadStateBlocked){
-                cpu->currentThread = &cpu->idleProcess->threads[0];
+                cpu->currentThread = cpu->idleProcess->threads[0];
             }
         }
 
@@ -506,10 +546,10 @@ namespace Scheduler{
         // Create process structure
         process_t* proc = InitializeProcessStructure();
 
-        thread_t* thread = &proc->threads[0];
+        thread_t* thread = proc->threads[0];
         thread->registers.cs = 0x1B; // We want user mode so use user mode segments, make sure RPL is 3
         thread->registers.ss = 0x23;
-        thread->timeSliceDefault = 6;
+        thread->timeSliceDefault = THREAD_TIMESLICE_DEFAULT;
         thread->timeSlice = thread->timeSliceDefault;
         thread->priority = 4;
 
@@ -629,7 +669,7 @@ namespace Scheduler{
         
         processes->add_back(proc);
 
-        InsertNewThreadIntoQueue(&proc->threads[0]);
+        InsertNewThreadIntoQueue(proc->threads[0]);
 
         return proc;
     }

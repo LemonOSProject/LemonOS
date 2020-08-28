@@ -59,6 +59,10 @@ lemonmonitor_src = [
     'LemonMonitor/main.cpp',
 ]
 
+threadtest_src = [
+    'PosixThreadTest/main.cpp'
+]
+
 executable('fileman.lef', fileman_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('lsh.lef', lsh_src, cpp_args : application_cpp_args, link_args : ['-llemon'], install : true)
 executable('shell.lef', shell_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
@@ -71,3 +75,4 @@ executable('sysinfo.lef', sysinfo_src, cpp_args : application_cpp_args, link_arg
 executable('guitest.lef', guitest_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('run.lef', run_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('lemonmonitor.lef', lemonmonitor_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
+executable('pthreadtest.lef', threadtest_src, cpp_args : application_cpp_args, install : true)
