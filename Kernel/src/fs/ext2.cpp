@@ -3,6 +3,7 @@
 #include <logging.h>
 #include <errno.h>
 #include <assert.h>
+#include <math.h>
  
 #ifdef EXT2_ENABLE_TIMER
     #include <timer.h>
@@ -1249,6 +1250,21 @@ namespace fs::Ext2{
         return 0;
     }
     
+    ssize_t Ext2Volume::ReadLink(Ext2Node* node, char* pathBuffer, size_t bufSize){
+        if((node->flags & S_IFMT) != S_IFLNK){
+            return -EINVAL; // Not a symbolic link
+        }
+
+        if(node->size <= 60){
+            size_t copySize = MIN(bufSize, node->size);
+            strncpy(pathBuffer, (const char*)node->e2inode.blocks, copySize); // Symlinks up to 60 bytes are stored in the blocklist
+
+            return copySize;
+        } else {
+            return this->Read(node, 0, bufSize, (uint8_t*)pathBuffer);
+        }
+    }
+
     int Ext2Volume::Link(Ext2Node* node, Ext2Node* file, DirectoryEntry* ent){
         ent->inode = file->inode;
         if(!ent->inode){
@@ -1447,6 +1463,13 @@ namespace fs::Ext2{
         flock.AcquireWrite();
         auto ret = vol->CreateDirectory(this, ent, mode);
         flock.ReleaseWrite();
+        return ret;
+    }
+
+    ssize_t Ext2Node::ReadLink(char* pathBuffer, size_t bufSize){
+        flock.AcquireRead();
+        auto ret = vol->ReadLink(this, pathBuffer, bufSize);
+        flock.ReleaseRead();
         return ret;
     }
     

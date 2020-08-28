@@ -115,6 +115,10 @@ namespace HAL{
                     auto rsdp = &(reinterpret_cast<multiboot2_acpi1_rsdp_t*>(tag)->rsdp);
                     ACPI::SetRSDP(rsdp);
                 }
+                case Mboot2ACPI2RSDP: {
+                    auto rsdp = &(reinterpret_cast<multiboot2_acpi2_rsdp_t*>(tag)->rsdp);
+                    ACPI::SetRSDP(rsdp);
+                }
                 default: {
                     Log::Info("Ignoring boot tag %d", tag->type);
                     break;

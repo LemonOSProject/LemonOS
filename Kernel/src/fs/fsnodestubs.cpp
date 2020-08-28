@@ -46,6 +46,14 @@ int FsNode::CreateDirectory(DirectoryEntry*, uint32_t){
     return -ENOSYS;
 }
 
+ssize_t FsNode::ReadLink(char* pathBuffer, size_t bufSize){
+    if((flags & S_IFMT) != S_IFLNK){
+        return -EINVAL; // Not a symlink
+    }
+
+    return -ENOSYS;
+}
+
 int FsNode::Link(FsNode*, DirectoryEntry*){
     return -ENOSYS;
 }

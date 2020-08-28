@@ -58,11 +58,12 @@ namespace ACPI{
   
 	extern List<apic_iso_t*>* isos;
 
-	extern acpi_rsdp_t* desc;
+	extern acpi_xsdp_t* desc;
 	extern acpi_rsdt_t* rsdtHeader;
 
 	void Init();
-  void SetRSDP(acpi_rsdp_t* p);
+  void SetRSDP(acpi_xsdp_t* p);
+  void SetRSDP(acpi_xsdp_t* p);
 
   void Reset();
 }

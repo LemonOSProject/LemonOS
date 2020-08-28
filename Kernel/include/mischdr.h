@@ -152,9 +152,18 @@ typedef union {
 	struct{
 		uint32_t type = Mboot2ACPI1RSDP;
 		uint32_t size;
-		struct acpi_rsdp_t rsdp;
+		struct acpi_xsdp_t rsdp;
 	};
 } __attribute__((packed)) multiboot2_acpi1_rsdp_t;
+
+typedef union {
+	multiboot2_tag_t tag;
+	struct{
+		uint32_t type = Mboot2ACPI2RSDP;
+		uint32_t size;
+		struct acpi_xsdp_t rsdp;
+	};
+} __attribute__((packed)) multiboot2_acpi2_rsdp_t;
 
 typedef union {
 	multiboot2_tag_t tag;

@@ -22,7 +22,7 @@ namespace ACPI{
 
 	List<apic_iso_t*>* isos;
 
-	acpi_rsdp_t* desc;
+	acpi_xsdp_t* desc;
 	acpi_rsdt_t* rsdtHeader;
 	acpi_xsdt_t* xsdtHeader;
 	acpi_fadt_t* fadt;
@@ -31,8 +31,24 @@ namespace ACPI{
 
 	void* FindSDT(const char* signature, int index)
 	{
-		int entries = (rsdtHeader->header.length - sizeof(acpi_header_t)) / 4;
-		uint32_t* sdtPointers = rsdtHeader->tables;//(uint32_t*)(((uintptr_t)rsdtHeader) + sizeof(RSDTHeader));
+		int entries = 0;
+		
+		if(desc->revision == 2){
+			entries = (rsdtHeader->header.length - sizeof(acpi_header_t)) / sizeof(uint64_t); // ACPI 2.0
+		} else {
+			entries = (rsdtHeader->header.length - sizeof(acpi_header_t)) / sizeof(uint32_t); // ACPI 1.0
+		}
+
+		auto getEntry = [](unsigned index) -> uintptr_t { // This will handle differences in ACPI revisions
+			if(desc->revision == 2){
+				uint64_t* sdtPointers = xsdtHeader->tables;
+				return sdtPointers[index];
+			} else {
+				uint32_t* sdtPointers = rsdtHeader->tables;//(uint32_t*)(((uintptr_t)rsdtHeader) + sizeof(RSDTHeader));
+				return sdtPointers[index];
+			}
+		};
+
 		int _index = 0;
 
 		Log::Info("Finding: ");
@@ -42,7 +58,7 @@ namespace ACPI{
 	
 		for (int i = 0; i < entries; i++)
 		{
-			acpi_header_t* h = (acpi_header_t*)Memory::GetIOMapping(sdtPointers[i]);
+			acpi_header_t* h = (acpi_header_t*)Memory::GetIOMapping(getEntry(i));
 			if (memcmp(h->signature, signature, 4) == 0 && _index++ == index)
 				return h;
 		}
@@ -123,7 +139,7 @@ namespace ACPI{
 
 		for(int i = 0; i <= 0x7BFF; i += 16){ // Search first KB for RSDP, the RSDP is aligned on a 16 byte boundary
 			if(memcmp((void*)Memory::GetIOMapping(i),signature,8) == 0){
-				desc =  ((acpi_rsdp_t*)Memory::GetIOMapping(i));
+				desc = ((acpi_xsdp_t*)Memory::GetIOMapping(i));
 
 				goto success;
 			}
@@ -131,7 +147,7 @@ namespace ACPI{
 
 		for(int i = 0x80000; i <= 0x9FFFF; i += 16){ // Search further for RSDP
 			if(memcmp((void*)Memory::GetIOMapping(i),signature,8) == 0){
-				desc = ((acpi_rsdp_t*)Memory::GetIOMapping(i));
+				desc = ((acpi_xsdp_t*)Memory::GetIOMapping(i));
 
 				goto success;
 			}
@@ -139,7 +155,7 @@ namespace ACPI{
 
 		for(int i = 0xE0000; i <= 0xFFFFF; i += 16){ // Search further for RSDP
 			if(memcmp((void*)Memory::GetIOMapping(i),signature,8) == 0){
-				desc = ((acpi_rsdp_t*)Memory::GetIOMapping(i));
+				desc = ((acpi_xsdp_t*)Memory::GetIOMapping(i));
 
 				goto success;
 			}
@@ -155,12 +171,17 @@ namespace ACPI{
 
 		isos = new List<apic_iso_t*>();
 
-		rsdtHeader = ((acpi_rsdt_t*)Memory::GetIOMapping(desc->rsdt));
+		if(desc->revision == 2){
+			rsdtHeader = ((acpi_rsdt_t*)Memory::GetIOMapping(desc->xsdt));
+			xsdtHeader = ((acpi_xsdt_t*)Memory::GetIOMapping(desc->xsdt));
+		} else{
+			rsdtHeader = ((acpi_rsdt_t*)Memory::GetIOMapping(desc->rsdt));
+		}
 
 		memcpy(oem,rsdtHeader->header.oem,6);
 		oem[6] = 0; // Zero OEM String
 
-		Log::Info("[ACPI] Revision: %d", rsdtHeader->header.revision);
+		Log::Info("[ACPI] Revision: %d", desc->revision);
 		Log::Info("[ACPI] OEM ID: %s", oem);
 
 		fadt = (acpi_fadt_t*)FindSDT("FACP", 0);
@@ -175,8 +196,8 @@ namespace ACPI{
 		asm("sti");
 	}
 
-	void SetRSDP(acpi_rsdp_t* p){
-		desc = p;
+	void SetRSDP(acpi_xsdp_t* p){
+		desc = reinterpret_cast<acpi_xsdp_t*>(p);
 	}
 
 	void Reset(){

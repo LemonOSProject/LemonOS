@@ -212,6 +212,8 @@ namespace fs::Ext2{
         FsNode* FindDir(char* name);
         int Create(DirectoryEntry*, uint32_t);
         int CreateDirectory(DirectoryEntry*, uint32_t);
+
+        ssize_t ReadLink(char* pathBuffer, size_t bufSize);
         int Link(FsNode*, DirectoryEntry*);
         int Unlink(DirectoryEntry*);
         int Truncate(off_t length);
@@ -307,6 +309,7 @@ namespace fs::Ext2{
         FsNode* FindDir(Ext2Node* node, char* name);
         int Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
         int CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
+        ssize_t ReadLink(Ext2Node* node, char* pathBuffer, size_t bufSize);
         int Link(Ext2Node* dir, Ext2Node* node, DirectoryEntry* ent);
         int Unlink(Ext2Node* dir, DirectoryEntry* ent);
         int Truncate(Ext2Node* node, off_t length);

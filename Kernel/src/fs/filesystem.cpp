@@ -44,9 +44,31 @@ namespace fs{
         return &root;
     }
 
-	FsNode* ResolvePath(const char* path, const char* workingDir){
+	FsNode* FollowLink(FsNode* link){
+		assert(link);
+
+		char buffer[PATH_MAX + 1];
+
+		auto bytesRead = link->ReadLink(buffer, PATH_MAX);
+		if(bytesRead < 0){
+			Log::Warning("FollowLink: Readlink error %d", -bytesRead);
+			return nullptr;
+		}
+		buffer[bytesRead] = 0; // Null terminate
+
+		FsNode* node = ResolvePath(buffer, link);
+
+		if(!node){
+			Log::Warning("FollowLink: Failed to resolve symlink %s!", buffer);
+		}
+		return node;
+	}
+
+	FsNode* ResolvePath(const char* path, const char* workingDir, bool followSymlinks){
+		assert(path);
+
 		char* tempPath;
-		if(workingDir && path[0] != '/'){
+		if(workingDir && path[0] != '/'){ // If the path starts with '/' then treat as an absolute path
 			tempPath = (char*)kmalloc(strlen(path) + strlen(workingDir) + 2);
 			strcpy(tempPath, workingDir);
 			strcpy(tempPath + strlen(tempPath), "/");
@@ -57,56 +79,107 @@ namespace fs{
 		}
 
 		FsNode* root = fs::GetRoot();
-		FsNode* current_node = root;
+		FsNode* currentNode = root;
 
 		char* file = strtok(tempPath,"/");
 
 		while(file != NULL){ // Iterate through the directories to find the file
-			FsNode* node = fs::FindDir(current_node,file);
+			FsNode* node = fs::FindDir(currentNode,file);
 			if(!node) {
 				Log::Warning("%s not found!", file);
+				kfree(tempPath);
 				return nullptr;
 			}
+
+			size_t amountOfSymlinks = 0;
+			while(((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)){ // Check for symlinks
+				if(amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT){
+					Log::Warning("ResolvePath: Reached maximum number of symlinks");
+					return nullptr;
+				}
+
+				node = FollowLink(node);
+
+				if(!node){
+					Log::Warning("ResolvePath: Unresolved symlink!");
+					kfree(tempPath);
+					return node;
+				}
+			}
+
 			if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
-				current_node = node;
+				currentNode = node;
 				file = strtok(NULL, "/");
 				continue;
 			}
 
 			if((file = strtok(NULL, "/"))){
 				Log::Warning("%s is not a directory!", file);
+				kfree(tempPath);
 				return nullptr;
 			}
 
-			current_node = node;
+			currentNode = node;
+
+			amountOfSymlinks = 0;
+			while(followSymlinks && ((currentNode->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)){ // Check for symlinks
+				if(amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT){
+					Log::Warning("ResolvePath: Reached maximum number of symlinks");
+					return nullptr;
+				}
+
+				currentNode = FollowLink(currentNode);
+
+				if(!node){
+					Log::Warning("ResolvePath: Unresolved symlink!");
+					kfree(tempPath);
+					return currentNode;
+				}
+			}
 			break;
 		}
-
 		kfree(tempPath);
-		return current_node;
+		return currentNode;
 	}
 	
-	FsNode* ResolvePath(const char* path, FsNode* workingDir){
+	FsNode* ResolvePath(const char* path, FsNode* workingDir, bool followSymlinks){
 		FsNode* root = fs::GetRoot();
-		FsNode* current_node = root;
+		FsNode* currentNode = root;
 
 		char* tempPath = (char*)kmalloc(strlen(path) + 1);
 		strcpy(tempPath, path);
 
 		if(workingDir && path[0] != '/'){
-			current_node = workingDir;
+			currentNode = workingDir;
 		}
 
 		char* file = strtok(tempPath,"/");
 
 		while(file != NULL){ // Iterate through the directories to find the file
-			FsNode* node = fs::FindDir(current_node,file);
+			FsNode* node = fs::FindDir(currentNode,file);
 			if(!node) {
 				Log::Warning("%s not found!", path);
 				return nullptr;
 			}
+
+			size_t amountOfSymlinks = 0;
+			while(((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)){ // Check for symlinks
+				if(amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT){
+					Log::Warning("ResolvePath: Reached maximum number of symlinks");
+					return nullptr;
+				}
+
+				node = FollowLink(node);
+
+				if(!node){
+					Log::Warning("ResolvePath: Unresolved symlink!");
+					kfree(tempPath);
+					return node;
+				}
+			}
+
 			if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
-				current_node = node;
+				currentNode = node;
 				file = strtok(NULL, "/");
 				continue;
 			}
@@ -116,12 +189,26 @@ namespace fs{
 				return nullptr;
 			}
 
-			current_node = node;
+			amountOfSymlinks = 0;
+			while(followSymlinks && ((currentNode->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)){ // Check for symlinks
+				if(amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT){
+					Log::Warning("ResolvePath: Reached maximum number of symlinks");
+					return nullptr;
+				}
+
+				currentNode = FollowLink(currentNode);
+
+				if(!node){
+					Log::Warning("ResolvePath: Unresolved symlink!");
+					kfree(tempPath);
+					return currentNode;
+				}
+			}
 			break;
 		}
 
 		kfree(tempPath);
-		return current_node;
+		return currentNode;
 	}
 	
 	FsNode* ResolveParent(const char* path, const char* workingDir){
@@ -289,6 +376,23 @@ namespace fs{
     }
 
     fs_fd_t* Open(FsNode* node, uint32_t flags){
+		/*if((node->flags & S_IFMT) == S_IFLNK){
+			char pathBuffer[PATH_MAX];
+
+			ssize_t bytesRead = node->ReadLink(pathBuffer, PATH_MAX);
+			if(bytesRead < 0){
+				Log::Warning("fs::Open: Readlink error");
+				return nullptr;
+			}
+			pathBuffer[bytesRead] = 0; // Null terminate
+
+			FsNode* link = fs::ResolvePath(pathBuffer);
+			if(!link){
+				Log::Warning("fs::Open: Invalid symbolic link");
+			}
+			return link->Open(flags);
+		}*/
+
         return node->Open(flags);
     }
 	

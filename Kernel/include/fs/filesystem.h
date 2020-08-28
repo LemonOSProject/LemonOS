@@ -67,6 +67,14 @@
 #define POLLNVAL 0x40
 #define POLLWRNORM 0x80
 
+#define AT_EMPTY_PATH 1
+#define AT_SYMLINK_FOLLOW 2
+#define AT_SYMLINK_NOFOLLOW 4
+#define AT_REMOVEDIR 8
+#define AT_EACCESS 512
+
+#define MAXIMUM_SYMLINK_AMOUNT 10
+
 typedef int64_t ino_t;
 typedef uint64_t dev_t;
 typedef int32_t uid_t;
@@ -165,6 +173,7 @@ public:
     virtual int Create(DirectoryEntry*, uint32_t);
     virtual int CreateDirectory(DirectoryEntry*, uint32_t);
     
+    virtual ssize_t ReadLink(char* pathBuffer, size_t bufSize);
     virtual int Link(FsNode*, DirectoryEntry*);
     virtual int Unlink(DirectoryEntry*);
     
@@ -198,7 +207,44 @@ namespace fs{
     void RegisterDevice(DirectoryEntry* device);
 	void RegisterVolume(FsVolume* vol);
 
-    FsNode* ResolvePath(const char* path, const char* workingDir = nullptr);
+    /////////////////////////////
+    /// \brief Follow symbolic link
+    ///
+    /// \param link FsNode pointing to the link to be followed
+    /// 
+    /// \return FsNode of node in which the link points to on success, nullptr on failure
+    /////////////////////////////
+    FsNode* FollowLink(FsNode* link);
+
+    /////////////////////////////
+    /// \brief Resolve a path.
+    ///
+    /// \param path Path to resolve
+    /// \param workingDir Path of working directory
+    /// 
+    /// \return FsNode which path points to, nullptr on failure
+    /////////////////////////////
+    FsNode* ResolvePath(const char* path, const char* workingDir = nullptr, bool followSymlinks = true);
+
+
+    /////////////////////////////
+    /// \brief Resolve a path.
+    ///
+    /// \param path Path to resolve
+    /// \param workingDir Node of working directory
+    /// 
+    /// \return FsNode which path points to, nullptr on failure
+    /////////////////////////////
+	FsNode* ResolvePath(const char* path, FsNode* workingDir, bool followSymlinks = true);
+
+    /////////////////////////////
+    /// \brief Resolve parent directory of path.
+    ///
+    /// \param path Path of child for parent to resolve
+    /// \param workingDir Path of working directory
+    /// 
+    /// \return FsNode of parent, nullptr on failure
+    /////////////////////////////
     FsNode* ResolveParent(const char* path, const char* workingDir = nullptr);
     char* CanonicalizePath(const char* path, char* workingDir);
     char* BaseName(const char* path);

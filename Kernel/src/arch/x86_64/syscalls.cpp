@@ -84,8 +84,9 @@
 #define SYS_SETEUID 64
 #define SYS_GET_PROCESS_INFO 65
 #define SYS_GET_NEXT_PROCESS_INFO 66
+#define SYS_READLINK 67
 
-#define NUM_SYSCALLS 67
+#define NUM_SYSCALLS 68
 
 #define EXEC_CHILD 1
 
@@ -287,6 +288,15 @@ open:
 	}
 
 	fs_fd_t* handle = fs::Open(node, r->rcx);
+
+	if(!handle){
+		Log::Warning("SysOpen: Error retrieving file handle for node. Dangling symlink?");
+		return -ENOENT;
+	}
+
+	if(flags & O_APPEND){
+		handle->pos = handle->node->size;
+	}
 
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(handle);
@@ -494,6 +504,7 @@ long SysFStat(regs64_t* r){
 long SysStat(regs64_t* r){
 	stat_t* stat = (stat_t*)r->rbx;
 	char* filepath = (char*)r->rcx;
+	uint64_t flags = r->rdx;
 	process_t* proc = Scheduler::GetCurrentProcess();
 
 	if(!Memory::CheckUsermodePointer(r->rbx, sizeof(stat_t), proc->addressSpace)){
@@ -504,7 +515,8 @@ long SysStat(regs64_t* r){
 		Log::Warning("sys_stat: filepath points to invalid address %x", r->rbx);
 	}
 
-	FsNode* node = fs::ResolvePath(filepath, proc->workingDir);
+	bool followSymlinks = !(flags & AT_SYMLINK_NOFOLLOW);
+	FsNode* node = fs::ResolvePath(filepath, proc->workingDir, followSymlinks);
 
 	if(!node){
 		Log::Warning("sys_stat: Invalid filepath %s", filepath);
@@ -1675,15 +1687,15 @@ long SysSetEUID(regs64_t* r){
 	return -ENOSYS;
 }
 
-/*
- * SysGetProcessInfo (pid, pInfo)
- * 
- * pid - Process PID
- * pInfo - Pointer to process_info_t structure
- * 
- * On Success - Return 0
- * On Failure - Return error as negative value
- */
+/////////////////////////////
+/// \brief SysGetProcessInfo (pid, pInfo)
+///
+/// \param pid - Process PID
+/// \param pInfo - Pointer to process_info_t structure
+///
+/// \return On Success - Return 0
+/// \return On Failure - Return error as negative value
+/////////////////////////////
 long SysGetProcessInfo(regs64_t* r){
 	uint64_t pid = r->rbx;
 	process_info_t* pInfo = reinterpret_cast<process_info_t*>(r->rcx);
@@ -1715,16 +1727,16 @@ long SysGetProcessInfo(regs64_t* r){
 	return 0;
 }
 
-/*
- * SysGetNextProcessInfo (pidP, pInfo)
- * 
- * pidP - Pointer to an unsigned integer holding a PID
- * pInfo - Pointer to process_info_t struct
- * 
- * On Success - Return 0
- * No more processes - Return 1
- * On Failure - Return error as negative value
- */
+/////////////////////////////
+/// \brief SysGetNextProcessInfo (pidP, pInfo)
+///
+/// \param pidP - Pointer to an unsigned integer holding a PID
+/// \param pInfo - Pointer to process_info_t struct
+///
+/// \return On Success - Return 0
+/// \return No more processes - Return 1
+/// On Failure - Return error as negative value
+/////////////////////////////
 long SysGetNextProcessInfo(regs64_t* r){
 	uint64_t* pidP = reinterpret_cast<uint64_t*>(r->rbx);
 	process_info_t* pInfo = reinterpret_cast<process_info_t*>(r->rcx);
@@ -1764,6 +1776,39 @@ long SysGetNextProcessInfo(regs64_t* r){
 	pInfo->activeUs = reqProcess->activeTicks * 1000000 / Timer::GetFrequency();
 
 	return 0;
+}
+
+/////////////////////////////
+/// \brief SysReadLink(pathname, buf, bufsize) Read a symbolic link
+///
+/// \param pathname - const char*, Path of the symbolic link
+/// \param buf - char*, Buffer to store the link data
+/// \param bufsize - size_t, Size of buf
+///
+/// \return Amount of bytes read on success
+/// \return Negative value on failure
+/////////////////////////////
+long SysReadLink(regs64_t* r){
+	process_t* proc = Scheduler::GetCurrentProcess();
+
+	if(!Memory::CheckUsermodePointer(r->rbx, 0, proc->addressSpace)){
+		return -EFAULT; // Invalid path pointer
+	}
+
+	if(!Memory::CheckUsermodePointer(r->rcx, r->rdx, proc->addressSpace)){
+		return -EFAULT; // Invalid buffer
+	}
+
+	const char* path = reinterpret_cast<const char*>(r->rbx);
+	char* buffer = reinterpret_cast<char*>(r->rcx);
+	size_t bufferSize = r->rdx;
+
+	FsNode* link = fs::ResolvePath(path);
+	if(!link){
+		return -ENOENT; // path does not exist
+	}
+
+	return link->ReadLink(buffer, bufferSize);
 }
 
 syscall_t syscalls[]{
@@ -1834,6 +1879,7 @@ syscall_t syscalls[]{
 	SysSetEUID,
 	SysGetProcessInfo,			// 65
 	SysGetNextProcessInfo,
+	SysReadLink,
 };
 
 int lastSyscall = 0;
@@ -1841,14 +1887,12 @@ void SyscallHandler(regs64_t* regs) {
 	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
 		return;
 		
-	asm("sti");
+	asm("sti"); // By reenabling interrupts a thread in a syscall can be preempted
 
 	if(!syscalls[regs->rax]) return;
 
 	acquireLock(&GetCPULocal()->currentThread->lock);
-
 	regs->rax = syscalls[regs->rax](regs); // Call syscall
-
 	releaseLock(&GetCPULocal()->currentThread->lock);
 }
 
