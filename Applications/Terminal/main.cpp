@@ -239,14 +239,17 @@ void DoAnsiCSI(char ch){
 			if(scolon){
 				*scolon = 0;
 
-				curPos.y = atoi(escBuf);
+				curPos.y = atoi(escBuf) - 1;
 				Scroll();
 
 				if(*(scolon + 1) == 0){
 					curPos.x = 0;
 				} else {
-					curPos.x = atoi(scolon + 1);
+					curPos.x = atoi(scolon + 1) - 1;
 				}
+			} else {
+				curPos.x = 0;
+				curPos.y = 0;
 			}
 		}
 		break;
@@ -272,8 +275,30 @@ void DoAnsiCSI(char ch){
 		}
 		break;
 	case ANSI_CSI_EL:
-		buffer[bufferOffset + curPos.y].erase(buffer[bufferOffset + curPos.y].begin() + curPos.x, buffer[bufferOffset + curPos.y].end());
-		break;
+		{
+			int n = 0;
+			if(strlen(escBuf)){
+				n = atoi(escBuf);
+			}
+
+			switch (n)
+			{
+			case 2: // Clear entire screen
+				curPos.y = 0;
+				curPos.x = 0;
+
+				buffer.erase(buffer.begin() + bufferOffset);
+				break;
+			case 1: // Clear from cursor to beginning of line
+				buffer[bufferOffset + curPos.y].erase(buffer[bufferOffset + curPos.y].begin(), buffer[bufferOffset + curPos.y].begin() + curPos.x);
+				break;
+			case 0: // Clear from cursor to end of line
+			default:
+				buffer[bufferOffset + curPos.y].erase(buffer[bufferOffset + curPos.y].begin() + curPos.x, buffer[bufferOffset + curPos.y].end());
+				break;
+			}
+			break;
+		}
 	case ANSI_CSI_IL: // Insert blank lines
 		{
 			int amount = atoi(escBuf);
@@ -290,7 +315,7 @@ void DoAnsiCSI(char ch){
 			}
 			break;
 		}
-	case ANSI_CSI_SU: // Scroll Down
+	case ANSI_CSI_SU: // Scroll Up
 		if(strlen(escBuf)){
 			bufferOffset += atoi(escBuf);
 		} else {
@@ -301,13 +326,13 @@ void DoAnsiCSI(char ch){
 			buffer.push_back(std::vector<TerminalChar>());
 		}
 		break;
-	case ANSI_CSI_SD: // Scroll up
+	case ANSI_CSI_SD: // Scroll Down
 		if(strlen(escBuf)){
 			buffer.insert(buffer.begin() + bufferOffset, atoi(escBuf), std::vector<TerminalChar>());
-			bufferOffset -= atoi(escBuf);
+			//bufferOffset -= atoi(escBuf);
 		} else {
-			buffer.insert(buffer.begin() + bufferOffset, std::vector<TerminalChar>());
-			bufferOffset--;
+			buffer.insert(buffer.begin() + bufferOffset, 1, std::vector<TerminalChar>());
+			//bufferOffset--;
 		}
 		break;
 	default:
@@ -372,6 +397,9 @@ void PrintChar(char ch){
 			escapeSequence = true;
 			escapeType = 0;
 			escBuf[0] = 0;
+			break;
+		case '\r':
+			curPos.x = 0;
 			break;
 		case '\n':
 			curPos.y++;
