@@ -176,11 +176,8 @@ namespace Scheduler{
     }
 
     process_t* InitializeProcessStructure(){
-
         // Create process structure
-        process_t* proc = (process_t*)kmalloc(sizeof(process_t));
-
-        memset(proc,0,sizeof(process_t));
+        process_t* proc = new process_t;
 
         proc->fileDescriptors.clear();
         proc->sharedMemory.clear();

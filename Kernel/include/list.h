@@ -205,6 +205,8 @@ public:
 	}
 
 	~List() {
+		releaseLock(&lock);
+
 		clear();
 
 		while(cache.get_length()){

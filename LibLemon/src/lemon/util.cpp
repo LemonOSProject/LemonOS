@@ -22,6 +22,8 @@ namespace Lemon{
             errno = -ret;
             return -1;
         }
+
+        return ret;
     }
 
     int GetNextProcessInfo(uint64_t* pid, lemon_process_info_t& pInfo){

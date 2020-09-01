@@ -3,7 +3,7 @@ if [ -z $LEMOND ]; then
 fi
 
 qemu(){
-	qemu-system-x86_64 --enable-kvm $LEMOND/Disks/Lemon.vhd -no-reboot -no-shutdown -m 512M -netdev user,id=net0 -device e1000,netdev=net0,mac=DE:AD:BE:EF:69:69 -device qemu-xhci -M q35 -smp 2 -serial stdio
+	qemu-system-x86_64 --enable-kvm $LEMOND/Disks/Lemon.vhd -no-reboot -no-shutdown -m 512M -device qemu-xhci -M q35 -smp 2 -serial stdio
 }
 
 vbox(){

@@ -87,8 +87,10 @@
 #define SYS_READLINK 67
 #define SYS_SPAWN_THREAD 68
 #define SYS_EXIT_THREAD 69
+#define SYS_FUTEX_WAKE 70
+#define SYS_FUTEX_WAIT 71
 
-#define NUM_SYSCALLS 70
+#define NUM_SYSCALLS 72
 
 #define EXEC_CHILD 1
 
@@ -1669,22 +1671,20 @@ long SysRecvMsg(regs64_t* r){
 	return read;
 }
 
-/* 
- * SysGetEUID () - Get effective process user id
- * 
- * On Success - Return process UID
- * On Failure - Does not fail
- */
+/////////////////////////////
+/// \brief SysGetEUID () - Set effective process UID
+/// 
+/// \return Process EUID (int)
+/////////////////////////////
 long SysGetEUID(regs64_t* r){
 	return Scheduler::GetCurrentProcess()->uid;
 }
 
-/* 
- * SysSetEUID () - Set effective process UID
- * 
- * On Success - Return 0
- * On Failure - Return negative value
- */
+/////////////////////////////
+/// \brief SysSetEUID () - Set effective process UID
+/// 
+/// \return On success return 0, otherwise return negative error code
+/////////////////////////////
 long SysSetEUID(regs64_t* r){
 	return -ENOSYS;
 }
@@ -1838,7 +1838,83 @@ long SysExitThread(regs64_t* r){
 	
 	releaseLock(&GetCPULocal()->currentThread->lock);
 
+	GetCPULocal()->currentThread->state = ThreadStateBlocked;
+
 	for(;;) Scheduler::Yield();
+}
+
+/////////////////////////////
+/// \brief SysFutexWake(futex) Wake a thread waiting on a futex
+///
+/// \param futex - (int*) Futex pointer
+///
+/// \return 0 on success, error code on failure
+/////////////////////////////
+long SysFutexWake(regs64_t* r){
+	int* futex = reinterpret_cast<int*>(r->rbx);
+
+	if(!Memory::CheckUsermodePointer(r->rbx, sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)){
+		return EFAULT;
+	}
+
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	Scheduler::FutexThreadBlocker* blocker = currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex));
+
+	if(!blocker){
+		return 0;
+	}
+
+	auto front = blocker->blocked.get_front();
+
+	if(front){
+		blocker->Remove(front);
+
+		Scheduler::UnblockThread(front);
+	}
+
+	return 0;
+}
+
+/////////////////////////////
+/// \brief SysFutexWait(futex, expected) Wait on a futex.
+///
+/// Will wait on the futex if the value is equal to expected
+///
+/// \param futex (void*) Futex pointer
+/// \param expected (int) Expected futex value
+///
+/// \return 0 on success, error code on failure
+/////////////////////////////
+long SysFutexWait(regs64_t* r){
+	int* futex = reinterpret_cast<int*>(r->rbx);
+
+	if(!Memory::CheckUsermodePointer(r->rbx, sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)){
+		return EFAULT;
+	}
+
+	int expected = static_cast<int>(r->rcx);
+
+	if(*futex != expected){
+		return 0;
+	}
+
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	Scheduler::FutexThreadBlocker* blocker = currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex));
+
+	if(!blocker){
+		blocker = new Scheduler::FutexThreadBlocker();
+
+		currentProcess->futexWaitQueue.insert(reinterpret_cast<uintptr_t>(futex), blocker);
+	}
+
+	releaseLock(&GetCPULocal()->currentThread->lock);
+
+	lock_t temp = 0;
+	Scheduler::BlockCurrentThread(*blocker, temp);
+
+	return 0;
 }
 
 syscall_t syscalls[]{
@@ -1912,6 +1988,8 @@ syscall_t syscalls[]{
 	SysReadLink,
 	SysSpawnThread,
 	SysExitThread,
+	SysFutexWake,				// 70
+	SysFutexWait,
 };
 
 int lastSyscall = 0;

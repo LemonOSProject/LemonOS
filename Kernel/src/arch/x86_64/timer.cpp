@@ -20,7 +20,11 @@ namespace Timer{
     };
 
     lock_t sleepQueueLock = 0; // Prevent deadlocks
-    List<SleepCounter> sleeping; // Sleeping threads
+
+    // In the sleep queue, all waiting threads have a counter as an offset from the previous waiting thread.
+    // For example there are 2 threads, thread 1 is waiting for 10 ticks and thread 2 is waiting for 15 ticks.
+    // Thread 1's ticks value will be 10, and as 15 - 10 is 5, thread 2's value will be 5 so it waits 5 ticks after thread 1
+    List<SleepCounter> sleeping;
 
     class SleepBlocker : public Scheduler::ThreadBlocker {
         private:

@@ -25,8 +25,11 @@ inline static unsigned hash(const char* str){
 
 template<typename K, typename T> // Key, Value
 class HashMap{
+private:
 	class KeyValuePair{
-	public:
+		friend class HashMap;
+
+	protected:
 		T value;
 		K key;
 
@@ -35,11 +38,17 @@ class HashMap{
 	};
 
 	List<KeyValuePair>* buckets;
-	int bucketCount = 2048;
+	unsigned bucketCount = 2048;
 
 public:
 	HashMap(){
 		buckets = new List<KeyValuePair>[bucketCount];
+	}
+
+	HashMap(unsigned bCount){
+		bucketCount = bCount;
+
+		HashMap();
 	}
 
 	void insert(K key, T& value){
@@ -63,9 +72,7 @@ public:
 	T get(K key){
 		auto& bucket = buckets[hash(key) % bucketCount];
 
-		for(unsigned i = 0; i < bucket.get_length(); i++){
-			KeyValuePair& val = bucket[i];
-
+		for(KeyValuePair& val : bucket){
 			if(val.key == key){
 				return val.value;
 			}
