@@ -8,6 +8,7 @@
 #include <core/systemservice.h>
 #include <vector>
 #include <core/message.h>
+#include <unistd.h>
 
 class LemonUser{
 	std::string username;
@@ -35,6 +36,8 @@ int main(int argc, char** argv){
     strcpy(srvAddr.sun_path, Lemon::systemServiceSocketAddress);
     srvAddr.sun_family = AF_UNIX;
 	Lemon::MessageServer systemServer = Lemon::MessageServer(srvAddr, sizeof(sockaddr_un));
+
+	putenv("HOME=/system");
 
 	lemon_spawn("/system/lemon/lemonwm.lef", 1, (char* const[1]){"/system/lemon/lemonwm.lef"});
 	lemon_spawn("/system/bin/shell.lef", 1, (char* const[1]){"/system/bin/shell.lef"});

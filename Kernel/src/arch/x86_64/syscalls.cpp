@@ -89,8 +89,11 @@
 #define SYS_EXIT_THREAD 69
 #define SYS_FUTEX_WAKE 70
 #define SYS_FUTEX_WAIT 71
+#define SYS_DUP 72
+#define SYS_GET_FILE_STATUS_FLAGS 73
+#define SYS_SET_FILE_STATUS_FLAGS 74
 
-#define NUM_SYSCALLS 72
+#define NUM_SYSCALLS 75
 
 #define EXEC_CHILD 1
 
@@ -1917,6 +1920,76 @@ long SysFutexWait(regs64_t* r){
 	return 0;
 }
 
+/////////////////////////////
+/// \brief SysDup(fd) Duplicate a file descriptor
+///
+/// \param fd (int) file descriptor to duplicate
+///
+/// \return new file descriptor (int) on success, negative error code on failure
+/////////////////////////////
+long SysDup(regs64_t* r){
+	int fd = static_cast<int>(r->rbx);
+	fs_fd_t* handle;
+
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	if(fd > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
+		return -EBADF;
+	}
+
+	fs_fd_t* newHandle = new fs_fd_t;
+	*newHandle = *handle;
+	newHandle->node->handleCount++;
+
+	int newFd = currentProcess->fileDescriptors.get_length();
+	currentProcess->fileDescriptors.add_back(newHandle);
+
+	return 0;
+}
+
+/////////////////////////////
+/// \brief SysGetFileStatusFlags(fd) Get a file handle's mode/status flags
+///
+/// \param fd (int) file descriptor
+///
+/// \return flags on success, negative error code on failure
+/////////////////////////////
+long SysGetFileStatusFlags(regs64_t* r){
+	int fd = static_cast<int>(r->rbx);
+	fs_fd_t* handle;
+
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	if(fd > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
+		return -EBADF;
+	}
+
+	return handle->mode;
+}
+
+/////////////////////////////
+/// \brief SysSetFileStatusFlags(fd, flags) Set a file handle's mode/status flags
+///
+/// \param fd (int) file descriptor
+/// \param flags (int) new status flags
+///
+/// \return 0 on success, negative error code on failure
+/////////////////////////////
+long SysSetFileStatusFlags(regs64_t* r){
+	int fd = static_cast<int>(r->rbx);
+	int nFlags = static_cast<int>(r->rcx);
+	fs_fd_t* handle;
+
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	if(fd > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
+		return -EBADF;
+	}
+
+	int mask = (O_APPEND | O_NONBLOCK); // Only update append or nonblock
+	
+	handle->mode = (handle->mode & ~mask) | (nFlags & mask);
+
+	return 0;
+}
+
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -1990,6 +2063,9 @@ syscall_t syscalls[]{
 	SysExitThread,
 	SysFutexWake,				// 70
 	SysFutexWait,
+	SysDup,
+	SysGetFileStatusFlags,
+	SysSetFileStatusFlags,
 };
 
 int lastSyscall = 0;

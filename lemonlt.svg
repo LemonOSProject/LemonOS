@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   version="1.1"
+   id="svg78"
+   width="1250"
+   height="300"
+   viewBox="0 0 1250 300"
+   sodipodi:docname="lemonlt.svg"
+   inkscape:version="1.0 (4035a4fb49, 2020-05-01)">
+  <metadata
+     id="metadata84">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <defs
+     id="defs82" />
+  <sodipodi:namedview
+     inkscape:guide-bbox="true"
+     showguides="true"
+     inkscape:document-rotation="0"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1920"
+     inkscape:window-height="1014"
+     id="namedview80"
+     showgrid="false"
+     inkscape:zoom="0.9145964"
+     inkscape:cx="506.34562"
+     inkscape:cy="104.24755"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g86"
+     inkscape:snap-text-baseline="true">
+    <sodipodi:guide
+       id="guide21"
+       orientation="0,-1"
+       position="35.225638,149.26704" />
+  </sodipodi:namedview>
+  <g
+     inkscape:groupmode="layer"
+     inkscape:label="Image"
+     id="g86">
+    <path
+       style="fill:#ffd400;fill-opacity:1;stroke-width:0.83557"
+       d="m 202.74083,281.68274 c -11.60964,5.33566 -18.10682,7.1411 -34.06523,9.46606 -36.46999,5.31328 -51.06729,4.30685 -69.149923,-4.76756 -3.943748,-1.9791 -14.158229,-7.94979 -22.69882,-13.2682 -18.39874,-11.45728 -25.047036,-14.49112 -36.812505,-16.79885 -9.162016,-1.79705 -19.199283,-5.55672 -20.412173,-7.6458 -1.066318,-1.83665 1.246129,-6.04416 8.822086,-16.05178 8.116999,-10.72232 10.903409,-15.3646 11.088141,-18.47329 0.07462,-1.25577 -0.575118,-10.10765 -1.443856,-19.67088 C 34.166504,151.5183 37.980709,125.93365 51.645825,103.39968 65.266693,80.938666 81.154427,66.510616 113.83096,46.927794 140.17428,31.140417 160.65614,21.827415 186.55129,13.862203 238.28151,-2.049761 273.44213,1.4387794 327.77912,27.87445 l 12.87594,6.264316 6.93523,-0.902613 c 8.38305,-1.091038 17.58981,-1.293153 22.04361,-0.483928 4.09773,0.744535 6.0568,3.708422 5.00548,7.572778 -0.40221,1.478417 -2.68808,5.622074 -5.07972,9.20813 -5.53615,8.300976 -9.45863,16.821759 -10.38689,22.563391 -0.40028,2.475889 -1.31866,10.471642 -2.04082,17.768327 -2.82993,28.592989 -7.93891,53.854409 -14.1923,70.174079 -11.13038,29.0473 -31.59355,52.30308 -71.78207,81.57823 -8.71205,6.34624 -58.54242,35.52745 -68.41675,40.06558 z"
+       id="path100" />
+    <path
+       style="fill:#ffd400;fill-opacity:1;stroke-width:0.306224"
+       d=""
+       id="path112" />
+    <text
+       id="text19"
+       y="215.06891"
+       x="401.02991"
+       style="font-size:192px;line-height:1.25;font-family:Cairo;-inkscape-font-specification:Cairo;fill:#000000;"
+       xml:space="preserve"><tspan
+         style="font-size:192px;fill:#000000;"
+         y="215.06891"
+         x="401.02991"
+         id="tspan17"
+         sodipodi:role="line">Lemon OS</tspan></text>
+  </g>
+</svg>
