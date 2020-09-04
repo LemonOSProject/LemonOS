@@ -44,7 +44,7 @@ namespace ACPI{
 				uint64_t* sdtPointers = xsdtHeader->tables;
 				return sdtPointers[index];
 			} else {
-				uint32_t* sdtPointers = rsdtHeader->tables;//(uint32_t*)(((uintptr_t)rsdtHeader) + sizeof(RSDTHeader));
+				uint32_t* sdtPointers = rsdtHeader->tables;
 				return sdtPointers[index];
 			}
 		};

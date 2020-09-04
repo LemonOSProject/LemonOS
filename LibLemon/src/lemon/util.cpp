@@ -23,7 +23,7 @@ namespace Lemon{
             return -1;
         }
 
-        return ret;
+        return 0;
     }
 
     int GetNextProcessInfo(uint64_t* pid, lemon_process_info_t& pInfo){

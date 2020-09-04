@@ -46,8 +46,20 @@ void LShBuiltin_Pwd(int argc, char** argv){
 	printf("%s\n", currentDir);
 }
 
+void LShBuiltin_Export(int argc, char** argv){
+	for(unsigned i = 1; i < argc; i++){
+		putenv(argv[i]);
+	}
+}
+
+void LShBuiltin_Clear(int argc, char** argv){
+	printf("\033c");
+}
+
 builtin_t builtinCd = {.name = "cd", .func = LShBuiltin_Cd};
 builtin_t builtinPwd = {.name = "pwd", .func = LShBuiltin_Pwd};
+builtin_t builtinExport = {.name = "export", .func = LShBuiltin_Export};
+builtin_t builtinClear = {.name = "clear", .func = LShBuiltin_Clear};
 
 void ReadLine(){
 	tcsetattr(STDOUT_FILENO, TCSANOW, &readAttributes);
@@ -225,6 +237,8 @@ int main(){
 	
 	builtins.push_back(builtinPwd);
 	builtins.push_back(builtinCd);
+	builtins.push_back(builtinExport);
+	builtins.push_back(builtinClear);
 
 	path.push_back("/initrd");
 	path.push_back("/system/bin");

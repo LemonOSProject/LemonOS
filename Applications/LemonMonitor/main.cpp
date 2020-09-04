@@ -60,8 +60,8 @@ int main(int argc, char** argv){
                     uint64_t timeDiff = (time.tv_sec - pTime.recordTime.tv_sec) * 1000000 + (time.tv_nsec - pTime.recordTime.tv_nsec) / 1000; // Get the difference between the times in microseconds
                     
                     if(diff && timeDiff){
-                        snprintf(usage, 5, "%3lu%%", (diff * 1) / timeDiff); // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
-                        pTime.lastUsage = static_cast<short>((diff * 1) / timeDiff);
+                        snprintf(usage, 5, "%3lu%%", (diff * 100) / timeDiff); // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
+                        pTime.lastUsage = static_cast<short>((diff * 100) / timeDiff);
                     } else {
                         strcpy(usage, "0%");
                         pTime.lastUsage = 0;

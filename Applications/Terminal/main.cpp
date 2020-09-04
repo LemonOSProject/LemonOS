@@ -101,12 +101,7 @@ void OnPaint(surface_t* surface){
 		}
 	}
 
-	timespec t;
-	clock_gettime(CLOCK_BOOTTIME, &t);
-
-	long msec = (t.tv_nsec / 1000000.0);
-	if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
-		Lemon::Graphics::DrawRect(curPos.x * 8, curPos.y * fontHeight + (fontHeight / 4 * 3), 8, fontHeight / 4, colours[0x7] /* Grey */, surface);
+	Lemon::Graphics::DrawRect(curPos.x * 8, curPos.y * fontHeight + (fontHeight / 4 * 3), 8, fontHeight / 4, colours[0x7] /* Grey */, surface);
 }
 
 void DoAnsiSGR(){
@@ -531,6 +526,7 @@ int main(char argc, char** argv){
 				
 				ioctl(masterPTYFd, TIOCSWINSZ, &wSz);
 			}
+			paint = true;
 		}
 
 		while(int len = read(masterPTYFd, _buf, 512)){
@@ -539,11 +535,8 @@ int main(char argc, char** argv){
 			}
 			paint = true;
 		}
-		
-		//if(paint){
-			window->Paint();
-			//paint = false;
-		//}
+
+		window->Paint();
 
 		Lemon::Yield();
 	}

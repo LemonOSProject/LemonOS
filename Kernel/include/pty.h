@@ -2,6 +2,7 @@
 
 #include <characterbuffer.h>
 #include <types.h>
+#include <scheduler.h>
 
 typedef unsigned int cc_t;
 typedef unsigned int speed_t;
@@ -98,6 +99,8 @@ public:
 };
 
 class PTY{
+private:
+    Scheduler::GenericThreadBlocker slaveBlocker;
 public:
     CharacterBuffer master;
     CharacterBuffer slave;

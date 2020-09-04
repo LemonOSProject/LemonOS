@@ -137,13 +137,28 @@ size_t PTY::Master_Read(char* buffer, size_t count){
 }
 
 size_t PTY::Slave_Read(char* buffer, size_t count){
-	while(IsCanonical() && !slave.lines) Scheduler::Yield();
+	lock_t temp = 0;
+
+	while(IsCanonical() && !slave.lines) Scheduler::BlockCurrentThread(slaveBlocker, temp);
+	while(!IsCanonical() && !slave.bufferPos) Scheduler::BlockCurrentThread(slaveBlocker, temp);
 
 	return slave.Read(buffer, count);
 }
 
 size_t PTY::Master_Write(char* buffer, size_t count){
 	size_t ret = slave.Write(buffer, count);
+
+	if(slaveBlocker.blocked.get_length()){
+		if(IsCanonical()){
+			while(slave.lines && slaveBlocker.blocked.get_length()){
+				Scheduler::UnblockThread(slaveBlocker.blocked.remove_at(0));
+			}
+		} else {
+			while(slave.bufferPos && slaveBlocker.blocked.get_length()){
+				Scheduler::UnblockThread(slaveBlocker.blocked.remove_at(0));
+			}
+		}
+	}
 
 	if(Echo() && ret){
 		for(unsigned i = 0; i < count; i++){

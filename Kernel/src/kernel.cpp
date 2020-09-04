@@ -22,6 +22,7 @@
 #include <fs/tar.h>
 #include <sharedmem.h>
 #include <net/net.h>
+#include <cpu.h>
 
 uint8_t* progressBuffer = nullptr;
 video_mode_t videoMode;
@@ -78,7 +79,10 @@ void KernelProcess(){
 	Log::Write("OK");
 
 	//Scheduler::EndProcess(Scheduler::GetCurrentProcess());
-	for(;;) Scheduler::Yield();
+	for(;;) {
+		GetCPULocal()->currentThread->state = ThreadStateBlocked;
+		Scheduler::Yield();
+	}
 }
 
 typedef void (*ctor_t)(void);
