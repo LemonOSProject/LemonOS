@@ -19,6 +19,7 @@
 #include <timer.h>
 #include <lock.h>
 #include <smp.h>
+#include <pair.h>
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -92,8 +93,9 @@
 #define SYS_DUP 72
 #define SYS_GET_FILE_STATUS_FLAGS 73
 #define SYS_SET_FILE_STATUS_FLAGS 74
+#define SYS_SELECT 75
 
-#define NUM_SYSCALLS 75
+#define NUM_SYSCALLS 76
 
 #define EXEC_CHILD 1
 
@@ -1932,7 +1934,7 @@ long SysDup(regs64_t* r){
 	fs_fd_t* handle;
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
-	if(fd > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
+	if(static_cast<unsigned>(fd) > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
 		return -EBADF;
 	}
 
@@ -1943,7 +1945,7 @@ long SysDup(regs64_t* r){
 	int newFd = currentProcess->fileDescriptors.get_length();
 	currentProcess->fileDescriptors.add_back(newHandle);
 
-	return 0;
+	return newFd;
 }
 
 /////////////////////////////
@@ -1958,7 +1960,7 @@ long SysGetFileStatusFlags(regs64_t* r){
 	fs_fd_t* handle;
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
-	if(fd > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
+	if(static_cast<unsigned>(fd) > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
 		return -EBADF;
 	}
 
@@ -1979,7 +1981,7 @@ long SysSetFileStatusFlags(regs64_t* r){
 	fs_fd_t* handle;
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
-	if(fd > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
+	if(static_cast<unsigned>(fd) > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
 		return -EBADF;
 	}
 
@@ -1988,6 +1990,145 @@ long SysSetFileStatusFlags(regs64_t* r){
 	handle->mode = (handle->mode & ~mask) | (nFlags & mask);
 
 	return 0;
+}
+
+/////////////////////////////
+/// \brief SysSelect(nfds, readfds, writefds, exceptfds, timeout) Set a file handle's mode/status flags
+///
+/// \param nfds (int) number of file descriptors
+/// \param readfds (fd_set) check for readable fds
+/// \param writefds (fd_set) check for writable fds
+/// \param exceptfds (fd_set) check for exceptions on fds
+/// \param timeout (timespec) timeout period
+///
+/// \return 0 on success, negative error code on failure
+/////////////////////////////
+long SysSelect(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	int nfds = static_cast<int>(r->rbx);
+	fd_set_t* readFdsMask = reinterpret_cast<fd_set_t*>(r->rcx);
+	fd_set_t* writeFdsMask = reinterpret_cast<fd_set_t*>(r->rdx);
+	fd_set_t* exceptFdsMask = reinterpret_cast<fd_set_t*>(r->rsi);
+	timespec_t* timeout = reinterpret_cast<timespec_t*>(r->rdi);
+
+	if(!((!readFdsMask || Memory::CheckUsermodePointer(r->rcx, sizeof(fd_set_t), currentProcess->addressSpace))
+		&& (!writeFdsMask || Memory::CheckUsermodePointer(r->rdx, sizeof(fd_set_t), currentProcess->addressSpace))
+		&& (!exceptFdsMask || Memory::CheckUsermodePointer(r->rsi, sizeof(fd_set_t), currentProcess->addressSpace))
+		&& Memory::CheckUsermodePointer(r->rdi, sizeof(timespec_t), currentProcess->addressSpace))){
+		return -EFAULT; // Only return EFAULT if read/write/exceptfds is not null
+	}
+
+	List<Pair<fs_fd_t*, int>> readfds;
+	List<Pair<fs_fd_t*, int>> writefds;
+	List<Pair<fs_fd_t*, int>> exceptfds;
+
+	auto getHandleSafe = [&](int fd) -> fs_fd_t* {
+		if(static_cast<unsigned>(fd) > currentProcess->fileDescriptors.get_length()){
+			return nullptr;
+		}
+		return currentProcess->fileDescriptors[fd]; // If fd is null then this will return null as if out of range
+	};
+
+	for(int i = 0; i < 128 && i * 8 < nfds; i++){
+		char read = 0, write = 0, except = 0;
+		if(readFdsMask) {
+			read = readFdsMask->fds_bits[i];
+			readFdsMask->fds_bits[i] = 0; // With select the fds are cleared to 0 unless they are ready
+		}
+
+		if(writeFdsMask){
+			write = writeFdsMask->fds_bits[i];
+			writeFdsMask->fds_bits[i] = 0;
+		}
+		
+		if(exceptFdsMask){
+			except = exceptFdsMask->fds_bits[i];
+			exceptFdsMask->fds_bits[i] = 0;
+		}
+
+		for(int j = 0; j < 8 && (i * 8 + j) < nfds; j++){
+			if((read >> j) & 0x1){
+				fs_fd_t* h = getHandleSafe(i * 8 + j);
+				if(!h){
+					return -EBADF;
+				}
+
+				readfds.add_back(Pair<fs_fd_t*, int>(h, i * 8 + j));
+			}
+			
+			if((write >> j) & 0x1){
+				fs_fd_t* h = getHandleSafe(i * 8 + j);
+				if(!h){
+					return -EBADF;
+				}
+
+				writefds.add_back(Pair<fs_fd_t*, int>(h, i * 8 + j));
+			}
+			
+			if((except >> j) & 0x1){
+				fs_fd_t* h = getHandleSafe(i * 8 + j);
+				if(!h){
+					return -EBADF;
+				}
+
+				exceptfds.add_back(Pair<fs_fd_t*, int>(h, i * 8 + j));
+			}
+		}
+	}
+
+	if(exceptfds.get_length()){
+		//Log::Warning("SysSelect: ExceptFds ignored!");
+	}
+
+	int evCount = 0;
+	
+	for(auto& handle : readfds){
+		if(handle.item1->node->CanRead()){
+			FD_SET(handle.item2, readFdsMask);
+			evCount++;
+		}
+	}
+
+	for(auto& handle : writefds){
+		if(handle.item1->node->CanWrite()){
+			FD_SET(handle.item2, writeFdsMask);
+			evCount++;
+		}
+	}
+
+	if(evCount){
+		return evCount;
+	}
+
+	timeval_t timeEnd = {.seconds = timeout->tv_sec + Timer::GetSystemUptimeStruct().seconds, .milliseconds = timeout->tv_nsec / 1000000 + Timer::GetSystemUptimeStruct().milliseconds};
+	while(Timer::GetSystemUptimeStruct() < timeEnd){
+		evCount = 0;
+
+		for(auto& handle : readfds){
+			if(handle.item1->node->CanRead()){
+				FD_SET(handle.item2, readFdsMask);
+				evCount++;
+			}
+		}
+
+		for(auto& handle : writefds){
+			if(handle.item1->node->CanWrite()){
+				FD_SET(handle.item2, writeFdsMask);
+				evCount++;
+			}
+		}
+
+		//for(fs_fd_t* handle : exceptfds);
+
+		if(evCount){
+			break;
+		}
+
+		Scheduler::Yield();
+	}
+
+	return evCount;
 }
 
 syscall_t syscalls[]{
@@ -2066,6 +2207,7 @@ syscall_t syscalls[]{
 	SysDup,
 	SysGetFileStatusFlags,
 	SysSetFileStatusFlags,
+	SysSelect,
 };
 
 int lastSyscall = 0;

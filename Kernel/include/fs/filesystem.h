@@ -8,6 +8,8 @@
 
 #include <types.h>
 
+#define FD_SETSIZE 1024
+
 #define PATH_MAX 4096
 #define NAME_MAX 255
 
@@ -109,6 +111,25 @@ struct pollfd {
     short events;
     short revents;
 };
+typedef struct {
+	char fds_bits[128];
+} fd_set_t;
+
+static inline void FD_CLR(int fd, fd_set_t* fds) {
+	assert(fd < FD_SETSIZE);
+	fds->fds_bits[fd / 8] &= ~(1 << (fd % 8));
+}
+static inline int FD_ISSET(int fd, fd_set_t* fds) {
+	assert(fd < FD_SETSIZE);
+	return fds->fds_bits[fd / 8] & (1 << (fd % 8));
+}
+static inline void FD_SET(int fd, fd_set_t* fds) {
+	assert(fd < FD_SETSIZE);
+	fds->fds_bits[fd / 8] |= 1 << (fd % 8);
+}
+static inline void FD_ZERO(fd_set_t* fds) {
+	memset(fds, 0, sizeof(fd_set_t));
+}
 
 class DirectoryEntry{
 public:

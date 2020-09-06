@@ -1,11 +1,21 @@
 #pragma once
 
 #include <stdint.h>
+#include <bits/ansi/time_t.h>
 
 typedef struct {
     long seconds;
     long milliseconds;
 } timeval_t;
+
+static inline bool operator<(timeval_t l, timeval_t r){
+    return (l.seconds < r.seconds) || (l.seconds == r.seconds && l.milliseconds < r.milliseconds);
+}
+
+typedef struct timespec {
+	time_t tv_sec;
+	long tv_nsec;
+} timespec_t;
 
 struct thread;
 
