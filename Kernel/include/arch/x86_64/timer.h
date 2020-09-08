@@ -28,6 +28,8 @@ namespace Timer{
     uint32_t GetTicks();
     uint32_t GetFrequency();
 
+    void Wait(long ms);
+
     void SleepCurrentThread(timeval_t& time);
     void SleepCurrentThread(long ticks);
 

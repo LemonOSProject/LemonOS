@@ -4,6 +4,7 @@
 #include <paging.h>
 #include <logging.h>
 #include <memory.h>
+#include <timer.h>
 
 namespace AHCI{
 
@@ -43,7 +44,6 @@ namespace AHCI{
 			return true; // No AHCI Controller Found
 		}
 		
-
 		Log::Info("Initializing AHCI Controller...");
 
 		PCI::Config_WriteWord(controllerDevice.bus, controllerDevice.slot, controllerDevice.func, 0x4, controllerDevice.header0.command | PCI_CMD_BUS_MASTER); // Enable Bus Mastering
@@ -53,15 +53,24 @@ namespace AHCI{
 
 		ahciHBA = (hba_mem_t*)ahciVirtualAddress;
 
-		ahciHBA->ghc |= AHCI_GHC_ENABLE;
-
-		Log::Info("[AHCI]: Base Address: %x, Virtual Base Address: %x", ahciBaseAddress, ahciVirtualAddress);
-		Log::Info("[AHCI] Enabled? %Y, BOHC? %Y, 64-bit addressing? %Y, Staggered Spin-up? %Y, Slumber State Capable? %Y, Partial State Capable? %Y, FIS-based switching? %Y", ahciHBA->ghc & AHCI_GHC_ENABLE, ahciHBA->cap2 & AHCI_CAP2_BOHC, ahciHBA->cap & AHCI_CAP_S64A, ahciHBA->cap & AHCI_CAP_SSS, ahciHBA->cap & AHCI_CAP_SSC, ahciHBA->cap & AHCI_CAP_PSC, ahciHBA->cap & AHCI_CAP_FBSS);
+		Log::Info("[AHCI] Base Address: %x, Virtual Base Address: %x", ahciBaseAddress, ahciVirtualAddress);
+		Log::Info("[AHCI] (Cap: %x, Cap2: %x) Enabled? %Y, BOHC? %Y, 64-bit addressing? %Y, Staggered Spin-up? %Y, Slumber State Capable? %Y, Partial State Capable? %Y, FIS-based switching? %Y", ahciHBA->cap, ahciHBA->cap2, ahciHBA->ghc & AHCI_GHC_ENABLE, ahciHBA->cap2 & AHCI_CAP2_BOHC, ahciHBA->cap & AHCI_CAP_S64A, ahciHBA->cap & AHCI_CAP_SSS, ahciHBA->cap & AHCI_CAP_SSC, ahciHBA->cap & AHCI_CAP_PSC, ahciHBA->cap & AHCI_CAP_FBSS);
 
 		uint32_t pi = ahciHBA->pi;
+
+		while(!(ahciHBA->ghc & AHCI_GHC_ENABLE)){
+			ahciHBA->ghc |= AHCI_GHC_ENABLE;
+			Timer::Wait(1);
+		}
+
+		/*ahciHBA->ghc |= 1;
+		while(ahciHBA->ghc & 1){
+			Timer::Wait(1);
+		}*/
+
 		for(int i = 0; i < 32; i++){
 			if((pi >> i) & 1){
-				if(((ahciHBA->ports[i].ssts >> 8) & 0x0F) != HBA_PORT_IPM_ACTIVE || (ahciHBA->ports[i].ssts & 0x0F) != HBA_PORT_DET_PRESENT) continue;
+				if(((ahciHBA->ports[i].ssts >> 8) & 0x0F) != HBA_PORT_IPM_ACTIVE || (ahciHBA->ports[i].ssts & HBA_PxSSTS_DET) != HBA_PxSSTS_DET_PRESENT) continue;
 
 				if(ahciHBA->ports[i].sig == SATA_SIG_ATAPI) ;
 				else if(ahciHBA->ports[i].sig == SATA_SIG_PM) ;
@@ -69,7 +78,7 @@ namespace AHCI{
 				else {
 					Log::Info("Found SATA Drive - Port: %d", i);
 
-					ports[i] = new Port(i, &ahciHBA->ports[i]);
+					ports[i] = new Port(i, &ahciHBA->ports[i], ahciHBA);
 					Log::Info("name: %s", ports[i]->GetName());
 					
 					DeviceManager::RegisterDevice(*(ports[i]));

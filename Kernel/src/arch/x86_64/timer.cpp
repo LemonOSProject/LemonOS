@@ -105,6 +105,13 @@ namespace Timer{
         SleepCurrentThread(ticks);
     }
 
+    void Wait(long ms){
+        uint64_t ticksPerMs = (Timer::GetFrequency() / 1000);
+        uint64_t timeMs = Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * ticksPerMs);
+    
+        while((Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * ticksPerMs)) - timeMs <= ms);
+    }
+
     void SleepCurrentThread(long ticks){
         SleepBlocker blocker = SleepBlocker(ticks);
         Scheduler::BlockCurrentThread(blocker, sleepQueueLock);

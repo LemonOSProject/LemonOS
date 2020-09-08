@@ -15,8 +15,10 @@ enum
 };
 
 enum{
+	SCTL_PORT_DET_INIT 	 = 0x1,
 	SCTL_PORT_IPM_NOPART = 0x100, // No partial state
 	SCTL_PORT_IPM_NOSLUM = 0x200, // No slumber state
+	SCTL_PORT_IPM_NODSLP = 0x400, // No devslp state
 };
 
 typedef struct tagFIS_REG_H2D
@@ -149,23 +151,22 @@ typedef struct tagFIS_DMA_SETUP
 	uint8_t  i:1;		// Interrupt bit
 	uint8_t  a:1;            // Auto-activate. Specifies if DMA Activate FIS is needed
  
-        uint8_t  rsved[2];       // Reserved
+    uint8_t  rsved[2];       // Reserved
  
 	//DWORD 1&2
- 
-        uint64_t DMAbufferID;    // DMA Buffer Identifier. Used to Identify DMA buffer in host memory. SATA Spec says host specific and not in Spec. Trying AHCI spec might work.
- 
-        //DWORD 3
-        uint32_t rsvd;           //More reserved
- 
-        //DWORD 4
-        uint32_t DMAbufOffset;   //Byte offset into buffer. First 2 bits must be 0
- 
-        //DWORD 5
-        uint32_t TransferCount;  //Number of bytes to transfer. Bit 0 must be 0
- 
-        //DWORD 6
-        uint32_t resvd;          //Reserved
+	uint64_t DMAbufferID;    // DMA Buffer Identifier. Used to Identify DMA buffer in host memory. SATA Spec says host specific and not in Spec. Trying AHCI spec might work.
+
+	//DWORD 3
+	uint32_t rsvd;           //More reserved
+
+	//DWORD 4
+	uint32_t DMAbufOffset;   //Byte offset into buffer. First 2 bits must be 0
+
+	//DWORD 5
+	uint32_t TransferCount;  //Number of bytes to transfer. Bit 0 must be 0
+
+	//DWORD 6
+	uint32_t resvd;          //Reserved
  
 } __attribute__((packed)) fis_dma_setup_t;
 
@@ -304,6 +305,7 @@ typedef struct tagHBA_CMD_TBL
 #define AHCI_CAP_FBSS (1 << 16) // FIS-based switching supported?
 #define AHCI_CAP_SSC (1 << 14) // Slumber state capable?
 #define AHCI_CAP_PSC (1 << 13) // Partial state capable
+#define AHCI_CAP_SALP (1 << 26) // Supports aggressive link power management
 
 #define AHCI_CAP2_NVMHCI (1 << 1) // NVMHCI Present
 #define AHCI_CAP2_BOHC (1 << 0) // BIOS/OS Handoff
@@ -322,16 +324,22 @@ typedef struct tagHBA_CMD_TBL
 #define HBA_PxCMD_FRE   0x0010
 #define HBA_PxCMD_FR    0x4000
 #define HBA_PxCMD_CR    0x8000
+#define HBA_PxCMD_ASP	0x4000000 // Aggressive Slumber/Partial
+#define HBA_PxCMD_ICC 	(0xf << 28)
+#define HBA_PxCMD_ICC_ACTIVE (1 << 28)
 
 #define HBA_PORT_IPM_ACTIVE 1
-#define HBA_PORT_DET_PRESENT 3
+
+#define HBA_PxSSTS_DET 0xf
+#define HBA_PxSSTS_DET_INIT 1
+#define HBA_PxSSTS_DET_PRESENT 3
 
 #include <devicemanager.h>
 
 namespace AHCI{
 	class Port : public DiskDevice{
 	public:
-		Port(int num, hba_port_t* portStructure);
+		Port(int num, hba_port_t* portStructure, hba_mem_t* hbaMem);
 
 		int ReadDiskBlock(uint64_t lba, uint32_t count, void* buffer);
 		int WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer);
