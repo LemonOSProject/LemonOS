@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <assert.h>
+
 extern "C" void memcpy_sse2(void* dest, void* src, size_t count);
 extern "C" void memcpy_sse2_unaligned(void* dest, void* src, size_t count);
 extern "C" void memset32_sse2(void* dest, uint32_t c, uint64_t count);
@@ -68,11 +70,6 @@ namespace Lemon::Graphics{
     bool PointInRect(rect_t rect, vector2i_t point){
         return (point.x >= rect.pos.x && point.x < rect.pos.x + rect.size.x && point.y >= rect.pos.y && point.y < rect.pos.y + rect.size.y);
     }
-
-    /*int floor(double num) {
-        int x = (int)num;
-        return num < x ? x - 1 : x;
-    }*/
 
     void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface){
         DrawRect(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour, surface);
@@ -245,12 +242,12 @@ namespace Lemon::Graphics{
             offset.x = 0;
         }
 
-        if(offset.x + rowSize >= dest->width){
-            rowSize = dest->width - offset.x;
+        if(rowOffset + rowSize >= src->width){
+            rowSize = src->width - rowOffset;
         }
 
-        if(rowOffset + rowSize > src->width){
-            rowSize = src->width - rowOffset;
+        if(offset.x + rowSize >= dest->width){
+            rowSize = dest->width - offset.x;
         }
 
         int i = 0;
@@ -261,12 +258,12 @@ namespace Lemon::Graphics{
         }
 
         if(rowSize <= 0 || rowOffset >= src->width) return;
-
+        
         unsigned destPitch = dest->width << 2;
         unsigned srcPitch = src->width << 2;
 
-        for(; i < srcHeight && i < dest->height - offset.y; i++){
-            memcpy_optimized(dest->buffer + ((i + offset.y) * destPitch + offset.x * 4), src->buffer + (i + srcRegion.pos.y) * srcPitch + (rowOffset << 2), rowSize << 2);
+        for(; i < srcHeight && (i + offset.y) < dest->height; i++){
+            memcpy_optimized(dest->buffer + ((i + offset.y) * destPitch + (offset.x << 2)), src->buffer + (i + srcRegion.pos.y) * srcPitch + (rowOffset << 2), rowSize << 2);
         }
     }
 

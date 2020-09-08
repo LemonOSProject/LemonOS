@@ -45,9 +45,9 @@ void WMWindow::Draw(surface_t* surface){
 	}
 
 	if(Lemon::Graphics::PointInRect({{pos.x + minimizeRect.x, pos.y + minimizeRect.y}, minimizeRect.size}, wm->input.mouse.pos)){
-		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {{19, 19}, {19, 19}}); // Close button
+		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {{19, 19}, {19, 19}}); // Minimize button
 	} else {
-		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {{19, 0}, {19, 19}}); // Close button
+		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {{19, 0}, {19, 19}}); // Minimize button
 	}
 
 	windowBufferInfo->drawing = 1;

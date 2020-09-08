@@ -256,7 +256,7 @@ namespace AHCI{
 
         registers->ci |= 1 << slot;
 
-        Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
+        //Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
 
         while(registers->ci & (1 << slot)) {
             if (registers->is & HBA_PxIS_TFES)   // Task file error
@@ -266,7 +266,7 @@ namespace AHCI{
             }
         }
         
-        Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
+        //Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
         
         if (registers->is & HBA_PxIS_TFES) {
             Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);

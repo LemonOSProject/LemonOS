@@ -8,6 +8,9 @@ section .text
 memcpy_sse2:
 	xor rax, rax
 	mov rcx, rdx
+	
+	test rcx, rcx
+	jz .ret
 .loop:
 	movdqa xmm0, [rsi + rax]
 
@@ -15,6 +18,7 @@ memcpy_sse2:
 
 	add rax, 0x10
 	loop .loop
+.ret:
 	ret
 
 memcpy_sse2_unaligned:
