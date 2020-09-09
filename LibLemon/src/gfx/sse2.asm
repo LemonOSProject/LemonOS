@@ -24,6 +24,9 @@ memcpy_sse2:
 memcpy_sse2_unaligned:
 	xor rax, rax
 	mov rcx, rdx
+	
+	test rcx, rcx
+	jz .ret
 .loop:
 	movdqu xmm0, [rsi + rax]
 
@@ -32,6 +35,7 @@ memcpy_sse2_unaligned:
 	add rax, 0x10
 	loop .loop
 	
+.ret:
 	ret
 
 memset32_sse2:

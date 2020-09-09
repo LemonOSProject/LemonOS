@@ -480,7 +480,14 @@ int main(char argc, char** argv){
 
 	ioctl(masterPTYFd, TIOCSWINSZ, &wSz);
 
+	std::vector<pollfd> fds;
+	fds.push_back({.fd = masterPTYFd, .events = POLLIN});
+
+	auto& wMHandler = window->GetHandler();
+	fds.insert(fds.begin(), wMHandler.GetFileDescriptors().begin(), wMHandler.GetFileDescriptors().end());
 	for(;;){
+		poll(fds.data(), fds.size(), -1);
+
 		Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){
 			if(ev.event == Lemon::EventKeyPressed){

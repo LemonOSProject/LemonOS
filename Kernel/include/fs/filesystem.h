@@ -204,7 +204,7 @@ public:
     virtual void Sync(); // Sync node to device
 
     virtual bool CanRead() { return true; }
-    virtual bool CanWrite() { return false; }
+    virtual bool CanWrite() { return true; }
 
     FsNode* link;
     FsNode* parent;

@@ -104,7 +104,16 @@ int PTYDevice::Ioctl(uint64_t cmd, uint64_t arg){
 	return 0;
 }
 
-bool PTYDevice::CanRead() { return !(pty->IsCanonical() && !pty->slave.lines); };
+bool PTYDevice::CanRead() {
+	if(device == PTYMasterDevice){
+		return !!pty->master.bufferPos;
+	} else if(device == PTYSlaveDevice){
+		if(pty->IsCanonical())
+			return !!pty->slave.lines;
+		else 
+			return !!pty->slave.bufferPos;
+	}
+}
 
 PTY::PTY(){
 	slaveFile.flags = FS_NODE_CHARDEVICE;

@@ -10,10 +10,10 @@ namespace Lemon{
     };
 
     class MessageHandler {
+    public:
+        virtual std::vector<pollfd> GetFileDescriptors() = 0;
     protected:
         friend class MessageMultiplexer;
-
-        virtual std::vector<pollfd> GetFileDescriptors() = 0;
 
         virtual ~MessageHandler() = default;
     };
