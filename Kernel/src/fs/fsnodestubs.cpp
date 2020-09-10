@@ -1,6 +1,7 @@
 #include <fs/filesystem.h>
 
 #include <errno.h>
+#include <logging.h>
 
 FsNode::~FsNode(){
     
@@ -69,6 +70,17 @@ int FsNode::Truncate(off_t length){
 int FsNode::Ioctl(uint64_t cmd, uint64_t arg){
     return -ENOSYS;
 }
+
+void FsNode::Watch(FilesystemWatcher& watcher, int events){
+    Log::Warning("FsNode::Watch base called");
+    
+    watcher.Signal();
+}
+
+void FsNode::Unwatch(FilesystemWatcher& watcher){
+    Log::Warning("FsNode::Unwatch base called");
+}
+
 
 void FsNode::Sync(){
     

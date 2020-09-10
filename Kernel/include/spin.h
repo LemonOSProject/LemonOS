@@ -3,6 +3,8 @@
 #define CHECK_DEADLOCK
 #ifdef CHECK_DEADLOCK
 
+typedef volatile int lock_t;
+
 #define acquireLock(lock) ({ \
     volatile unsigned i = 0; \
     while(__sync_lock_test_and_set(lock, 1) && ++i < 0xFFFFFFF) asm("pause"); \

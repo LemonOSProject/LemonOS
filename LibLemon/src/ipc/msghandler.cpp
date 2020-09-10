@@ -44,7 +44,6 @@ namespace Lemon {
 
     void MessageClient::Connect(sockaddr_un& address, socklen_t len){
         int e = connect(sock.fd, (sockaddr*)&address, len);
-        printf("connected\r\n");
         
         if(e){
             close(sock.fd);
@@ -71,7 +70,6 @@ namespace Lemon {
         }
 
         int evCount = poll(fds.data(), fds.size(), 0);
-
         if(evCount > 0){
             for(size_t i = 0; i < fds.size(); i++){
                 if(fds[i].revents & (POLLNVAL | POLLHUP)){
@@ -105,11 +103,10 @@ namespace Lemon {
                     printf("invalid magic: %x\n", msg.magic);
                     continue;
                 }
-
+                
                 std::shared_ptr<LemonMessageInfo> newMsg((LemonMessageInfo*)malloc(sizeof(LemonMessageInfo) + msg.length));
                 newMsg->msg = msg;
                 newMsg->clientFd = fds[i].fd;
-
                 len = recv(fds[i].fd, newMsg->msg.data, msg.length, 0);
 
                 if(len < msg.length){

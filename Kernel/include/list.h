@@ -140,7 +140,9 @@ public:
 	}
 
 	T remove_at(unsigned pos) {
-		assert(num > 0 && pos < num && front);
+		assert(num > 0);
+		assert(pos < num);
+		assert(front != nullptr);
 
 		T current = front;
 
@@ -192,7 +194,7 @@ private:
 	unsigned num;
 	volatile int lock = 0;
 
-	const unsigned maxCache = 4;
+	const unsigned maxCache = 6;
 	FastList<ListNode<T>*> cache; // Prevent allocations by caching ListNodes
 public:
 	
@@ -234,11 +236,13 @@ public:
 		acquireLock(&lock);
 
 		ListNode<T>* node;
-		if(!cache.get_length()){
+		if(cache.get_length() <= 0){
 			node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
 		} else {
 			node = cache.remove_at(0);
 		}
+		
+		assert(node);
 
 		node->obj = obj;
 		node->next = node->prev = nullptr;
@@ -305,6 +309,8 @@ public:
 			node = cache.remove_at(0);
 		}
 
+		assert(node);
+
 		node->obj = obj;
 		node->prev = current;
 		node->next = current->next;
@@ -354,7 +360,9 @@ public:
 	}
 
 	T remove_at(unsigned pos) {
-		assert(num > 0 && pos < num && front != nullptr);
+		assert(num > 0);
+		assert(pos < num);
+		assert(front != nullptr);
 
 		acquireLock(&lock);
 

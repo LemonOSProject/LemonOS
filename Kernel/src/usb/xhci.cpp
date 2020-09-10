@@ -4,6 +4,7 @@
 #include <logging.h>
 #include <paging.h>
 #include <idt.h>
+#include <memory.h>
 
 #include <video.h>
 

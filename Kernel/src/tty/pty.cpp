@@ -54,6 +54,8 @@ ssize_t PTYDevice::Read(size_t offset, size_t size, uint8_t *buffer){
 		return pty->Slave_Read((char*)buffer,size);
 	else if(pty && device == PTYMasterDevice){
 		return pty->Master_Read((char*)buffer,size);
+	} else {
+		assert(!"PTYDevice::Read: PTYDevice is designated neither slave nor master");
 	}
 
 	return 0;
@@ -67,6 +69,8 @@ ssize_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
 		return pty->Slave_Write((char*)buffer,size);
 	else if(pty && device == PTYMasterDevice){
 		return pty->Master_Write((char*)buffer,size);
+	} else {
+		assert(!"PTYDevice::Write: PTYDevice is designated neither slave nor master");
 	}
 
 	return 0;
@@ -104,6 +108,26 @@ int PTYDevice::Ioctl(uint64_t cmd, uint64_t arg){
 	return 0;
 }
 
+void PTYDevice::Watch(FilesystemWatcher& watcher, int events){
+	if(device == PTYMasterDevice){
+		pty->WatchMaster(watcher, events);
+	} else if(device == PTYSlaveDevice) {
+		pty->WatchSlave(watcher, events);
+	} else {
+		assert(!"PTYDevice::Watch: PTYDevice is designated neither slave nor master");
+	}
+}
+
+void PTYDevice::Unwatch(FilesystemWatcher& watcher){
+	if(device == PTYMasterDevice){
+		pty->UnwatchMaster(watcher);
+	} else if(device == PTYSlaveDevice) {
+		pty->UnwatchSlave(watcher);
+	} else {
+		assert(!"PTYDevice::Unwatch: PTYDevice is designated neither slave nor master");
+	}
+}
+
 bool PTYDevice::CanRead() {
 	if(device == PTYMasterDevice){
 		return !!pty->master.bufferPos;
@@ -112,6 +136,8 @@ bool PTYDevice::CanRead() {
 			return !!pty->slave.lines;
 		else 
 			return !!pty->slave.bufferPos;
+	} else {
+		assert(!"PTYDevice::CanRead: PTYDevice is designated neither slave nor master");
 	}
 }
 
@@ -179,9 +205,63 @@ size_t PTY::Master_Write(char* buffer, size_t count){
 		}
 	}
 
+	if(IsCanonical()){
+		if(slave.lines && watchingSlave.get_length()){
+			while(watchingSlave.get_length()){
+				watchingSlave.remove_at(0)->Signal(); // Signal all watching
+			}
+		}
+	} else {
+		if(slave.bufferPos && watchingSlave.get_length()){
+			while(watchingSlave.get_length()){
+				watchingSlave.remove_at(0)->Signal(); // Signal all watching
+			}
+		}
+	}
+
 	return ret;
 }
 
 size_t PTY::Slave_Write(char* buffer, size_t count){
-	return master.Write(buffer, count);
+	size_t written = master.Write(buffer, count);
+
+	if(master.bufferPos && watchingMaster.get_length()){
+		while(watchingMaster.get_length()){
+			watchingMaster.remove_at(0)->Signal(); // Signal all watching
+		}
+	}
+	
+	return written;
+}
+
+void PTY::WatchMaster(FilesystemWatcher& watcher, int events){
+	if(!(events & (POLLIN))){ // We don't really block on writes and nothing else applies except POLLIN
+		watcher.Signal();
+		return;
+	} else if(masterFile.CanRead()){
+		watcher.Signal();
+		return;
+	}
+
+	watchingMaster.add_back(&watcher);
+}
+
+void PTY::WatchSlave(FilesystemWatcher& watcher, int events){
+	if(!(events & (POLLIN))){ // We don't really block on writes and nothing else applies except POLLIN
+		watcher.Signal();
+		return;
+	} else if(slaveFile.CanRead()){
+		watcher.Signal();
+		return;
+	}
+
+	watchingSlave.add_back(&watcher);
+}
+
+void PTY::UnwatchMaster(FilesystemWatcher& watcher){
+	watchingMaster.remove(&watcher);
+}
+
+void PTY::UnwatchSlave(FilesystemWatcher& watcher){
+	watchingSlave.remove(&watcher);
 }

@@ -146,6 +146,8 @@ public:
     DirectoryEntry() {}
 };
 
+class FilesystemWatcher;
+
 class FsNode{
 public:
     uint32_t flags = 0; // Flags
@@ -206,10 +208,36 @@ public:
     virtual bool CanRead() { return true; }
     virtual bool CanWrite() { return true; }
 
+    virtual void Watch(FilesystemWatcher& watcher, int events);
+    virtual void Unwatch(FilesystemWatcher& watcher);
+
     FsNode* link;
     FsNode* parent;
 
     FilesystemLock nodeLock; // Lock on FsNode info
+};
+
+// FilesystemWatcher is a semaphore initialized to 0.
+// A thread can wait on it like any semaphore,
+// and when a file is ready it will signal and waiting thread(s) will get woken
+class FilesystemWatcher : public Semaphore{
+    List<FsNode*> watching;
+public:
+    FilesystemWatcher() : Semaphore(0){
+
+    }
+
+    void WatchNode(FsNode* node, int events){
+        node->Watch(*this, events);
+
+        watching.add_back(node);
+    }
+
+    ~FilesystemWatcher(){
+        for(auto& node : watching){
+            node->Unwatch(*this);
+        }
+    }
 };
 
 typedef struct fs_dirent {

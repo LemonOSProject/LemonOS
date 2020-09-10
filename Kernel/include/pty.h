@@ -95,12 +95,18 @@ public:
     ssize_t Write(size_t, size_t, uint8_t *);
     int Ioctl(uint64_t cmd, uint64_t arg);
 
+    void Watch(FilesystemWatcher& watcher, int events);
+    void Unwatch(FilesystemWatcher& watcher);
+
     bool CanRead();
 };
 
 class PTY{
 private:
     Scheduler::GenericThreadBlocker slaveBlocker;
+
+    List<FilesystemWatcher*> watchingSlave;
+    List<FilesystemWatcher*> watchingMaster;
 public:
     CharacterBuffer master;
     CharacterBuffer slave;
@@ -123,6 +129,11 @@ public:
 
     size_t Master_Write(char* buffer, size_t count);
     size_t Slave_Write(char* buffer, size_t count);
+
+    void WatchMaster(FilesystemWatcher& watcher, int events);
+    void WatchSlave(FilesystemWatcher& watcher, int events);
+    void UnwatchMaster(FilesystemWatcher& watcher);
+    void UnwatchSlave(FilesystemWatcher& watcher);
 };
 
 PTY* GrantPTY(uint64_t pid);

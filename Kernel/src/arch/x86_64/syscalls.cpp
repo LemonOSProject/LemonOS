@@ -1500,7 +1500,19 @@ long SysPoll(regs64_t* r){
 
 	if(!eventCount && timeout){
 		timeval_t tVal = Timer::GetSystemUptimeStruct();
-		while(timeout < 0 || Timer::TimeDifference(Timer::GetSystemUptimeStruct(), tVal) < timeout){ // Wait until timeout, unless timeout is negative in which wait infinitely
+
+		FilesystemWatcher fsWatcher;
+		for(unsigned i = 0; i < nfds; i++){
+			fsWatcher.WatchNode(files[i]->node, fds[i].events);
+		}
+
+		if(timeout > 0){
+			fsWatcher.WaitTimeout(timeout);
+		} else {
+			fsWatcher.Wait();
+		}
+
+		do{
 			if(eventCount > 0){
 				break;
 			}
@@ -1535,11 +1547,11 @@ long SysPoll(regs64_t* r){
 				if(hasEvent) eventCount++;
 			}
 			Scheduler::Yield();
-		}
+		} while(timeout < 0 || Timer::TimeDifference(Timer::GetSystemUptimeStruct(), tVal) < timeout); // Wait until timeout, unless timeout is negative in which wait infinitely
 	}
 
 	kfree(files);
-
+	
 	return eventCount;
 }
 

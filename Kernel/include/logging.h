@@ -2,7 +2,6 @@
 
 #include <videoconsole.h>
 #include <stdarg.h>
-#include <fs/filesystem.h>
 
 namespace Log{
     void Initialize();

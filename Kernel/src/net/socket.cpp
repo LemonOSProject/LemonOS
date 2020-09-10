@@ -33,7 +33,6 @@ Socket* Socket::CreateSocket(int domain, int type, int protocol){
 
 Socket::Socket(int type, int protocol){
     this->type = type;
-    pendingConnections.value = CONNECTION_BACKLOG;
     flags = FS_NODE_SOCKET;
 }
 
@@ -114,6 +113,14 @@ void Socket::Close(){
         delete this;
 }
 
+void Socket::Watch(FilesystemWatcher& watcher, int events){
+    assert(!"Socket::Watch called from socket base");
+}
+
+void Socket::Unwatch(FilesystemWatcher& watcher){
+    assert(!"Socket::Unwatch called from socket base");
+}
+
 LocalSocket::LocalSocket(int type, int protocol) : Socket(type, protocol){
     domain = UnixDomain;
     flags = FS_NODE_SOCKET;
@@ -124,18 +131,36 @@ LocalSocket::LocalSocket(int type, int protocol) : Socket(type, protocol){
 int LocalSocket::ConnectTo(Socket* client){
     assert(passive);
 
-    SemaphoreWait(&pendingConnections);
+    pendingConnections.Wait();
 
     pending.add_back(client);
 
+    Log::Info("waiting for connection");
     while(!client->connected){
         // TODO: Actually block the task
         Scheduler::Yield();
     }
+    Log::Info("connected");
 
-    SemaphoreSignal(&pendingConnections);
+    pendingConnections.Signal();
 
     return 0;
+}
+
+void LocalSocket::DisconnectPeer(){
+    assert(peer);
+
+    peer->OnDisconnect();
+
+    peer = nullptr;
+}
+
+void LocalSocket::OnDisconnect(){
+    while(watching.get_length()){
+        watching.remove_at(0)->Signal(); // Signal all watching on disconnect
+    }
+
+    peer = nullptr;
 }
 
 Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen, int mode){
@@ -239,7 +264,7 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen){
 
 int LocalSocket::Listen(int backlog){
     acquireLock(&slock);
-    pendingConnections.value = backlog;
+    pendingConnections.SetValue(backlog);
     passive = true;
 
     if(inbound) {
@@ -307,7 +332,15 @@ int64_t LocalSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr*
         Scheduler::Yield();
     }
 
-    return outbound->Write(buffer, len);
+    int64_t written = outbound->Write(buffer, len);
+
+    if(peer && peer->CanRead()){
+        while(peer->watching.get_length()){
+            peer->watching.remove_at(0)->Signal();
+        }
+    }
+
+    return written;
 }
 
 fs_fd_t* LocalSocket::Open(size_t flags){
@@ -324,11 +357,26 @@ fs_fd_t* LocalSocket::Open(size_t flags){
 
 void LocalSocket::Close(){
     if(peer){
-        peer->connected = false;
-        peer->peer = nullptr;
+        DisconnectPeer();
     }
 
     Socket::Close();
+}
+
+void LocalSocket::Watch(FilesystemWatcher& watcher, int events){
+    if(!(events & (POLLIN | POLLPRI))){
+        return;
+    }
+
+    if(CanRead() | !IsConnected()){ // POLLHUP does not care if it is requested
+        return;
+    }
+
+    watching.add_back(&watcher);
+}
+
+void LocalSocket::Unwatch(FilesystemWatcher& watcher){
+    watching.remove(&watcher);
 }
 
 namespace SocketManager{

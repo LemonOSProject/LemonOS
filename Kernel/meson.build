@@ -60,6 +60,7 @@ cpp_files = [
     'src/sharedmem.cpp',
     'src/assert.cpp',
     'src/streams.cpp',
+    'src/lock.cpp',
 
     'src/fs/fat32.cpp',
     'src/fs/ext2.cpp',

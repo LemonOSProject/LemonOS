@@ -100,7 +100,7 @@ class Socket : public FsNode {
 protected:
     int type = 0; // Type (Stream, Datagram, etc.)
     int domain = 0; // Domain (UNIX, INET, etc.)
-    semaphore_t pendingConnections; // Pending Connections semaphore
+    Semaphore pendingConnections = Semaphore(CONNECTION_BACKLOG); // Pending Connections semaphore
     List<Socket*> pending; // Pending Connections
 
     bool bound = false; // Has it been bound to an address>
@@ -132,6 +132,9 @@ public:
     virtual fs_fd_t* Open(size_t flags);
     virtual void Close();
 
+    virtual void Watch(FilesystemWatcher& watcher, int events);
+    virtual void Unwatch(FilesystemWatcher& watcher);
+
     virtual int GetDomain() { return domain; }
     virtual int IsListening() { return passive; }
     virtual int IsBlocking() { return blocking; }
@@ -142,6 +145,8 @@ public:
 
 class LocalSocket : public Socket {
     lock_t slock = 0;
+
+    List<FilesystemWatcher*> watching;
 public:
     LocalSocket* peer = nullptr;
 
@@ -151,6 +156,9 @@ public:
     LocalSocket(int type, int protocol);
 
     int ConnectTo(Socket* client);
+    void DisconnectPeer();
+
+    void OnDisconnect();
     
     Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
     int Bind(const sockaddr* addr, socklen_t addrlen);
@@ -162,6 +170,9 @@ public:
     
     int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
     int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
+    
+    void Watch(FilesystemWatcher& watcher, int events);
+    void Unwatch(FilesystemWatcher& watcher);
 
     bool CanRead() { if(inbound) return !inbound->Empty(); else return false; }
 };

@@ -467,6 +467,16 @@ namespace Scheduler{
 
         Yield();
     }
+
+	void BlockCurrentThread(ThreadBlocker& blocker){
+        lock_t none = 0;
+        BlockCurrentThread(blocker, none);
+    }
+
+	void BlockCurrentThread(List<thread_t*>& list){
+        lock_t none = 0;
+        BlockCurrentThread(list, none);
+    }
     
 	void UnblockThread(thread_t* thread){
         acquireLock(&thread->stateLock);
