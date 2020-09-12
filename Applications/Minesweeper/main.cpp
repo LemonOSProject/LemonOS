@@ -229,7 +229,7 @@ public:
     void OnRightMouseUp(vector2i_t pos){
         pos -= fixedBounds.pos;
         int x = pos.x / 16;
-        int y = pos.y / 16 + 1;
+        int y = pos.y / 16;
 
         if(x < 0 || x >= mapSize.x || y < 0 || y > mapSize.y) return;
 

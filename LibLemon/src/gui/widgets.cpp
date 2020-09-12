@@ -567,7 +567,7 @@ namespace Lemon::GUI {
         }
 
         if(multiline){
-            cursorPos.y = (sBar.scrollPos + mousePos.y - 2 + lineSpacing / 2) / (font->height + lineSpacing) + 1;
+            cursorPos.y = (sBar.scrollPos + mousePos.y - 2 + lineSpacing / 2) / (font->height + lineSpacing);
             if(cursorPos.y >= static_cast<int>(contents.size())) cursorPos.y = contents.size() - 1;
         }
 

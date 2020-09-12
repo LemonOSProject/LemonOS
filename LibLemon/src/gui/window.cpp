@@ -160,9 +160,6 @@ namespace Lemon::GUI{
     }
 
     void Window::Paint(){
-
-        if(OnPaint) OnPaint(&surface);
-        
         if(windowType == WindowType::GUI) {
             if(menuBar){
                 menuBar->Paint(&surface);
@@ -170,6 +167,8 @@ namespace Lemon::GUI{
 
             rootContainer.Paint(&surface);
         }
+
+        if(OnPaint) OnPaint(&surface);
 
         SwapBuffers();
     }
@@ -199,7 +198,7 @@ namespace Lemon::GUI{
                         rootContainer.active = nullptr;
                         menuBar->OnMouseDown(ev.mousePos);
                     } else if (menuBar){
-                        ev.mousePos.y -= menuBar->GetFixedBounds().height;
+                        //ev.mousePos.y -= menuBar->GetFixedBounds().height;
                     }
 
                     timespec newClick;
@@ -224,7 +223,7 @@ namespace Lemon::GUI{
                     rootContainer.active = nullptr;
                     menuBar->OnMouseDown(ev.mousePos);
                 } else if (menuBar){
-                    ev.mousePos.y -= menuBar->GetFixedBounds().height;
+                    //ev.mousePos.y -= menuBar->GetFixedBounds().height;
                 }
 
                 rootContainer.OnMouseUp(ev.mousePos);
@@ -236,7 +235,7 @@ namespace Lemon::GUI{
                     rootContainer.active = nullptr;
                     menuBar->OnMouseDown(ev.mousePos);
                 } else if (menuBar){
-                    ev.mousePos.y -= menuBar->GetFixedBounds().height;
+                    //ev.mousePos.y -= menuBar->GetFixedBounds().height;
                 }
 
                 rootContainer.OnRightMouseDown(ev.mousePos);
@@ -248,7 +247,7 @@ namespace Lemon::GUI{
                     rootContainer.active = nullptr;
                     menuBar->OnMouseDown(ev.mousePos);
                 } else if (menuBar){
-                    ev.mousePos.y -= menuBar->GetFixedBounds().height;
+                    //ev.mousePos.y -= menuBar->GetFixedBounds().height;
                 }
 
                 rootContainer.OnRightMouseUp(ev.mousePos);
@@ -259,7 +258,7 @@ namespace Lemon::GUI{
                 if(menuBar && ev.mousePos.y < menuBar->GetFixedBounds().height){
                     menuBar->OnMouseMove(ev.mousePos);
                 } else if (menuBar){
-                    ev.mousePos.y -= menuBar->GetFixedBounds().height;
+                    //ev.mousePos.y -= menuBar->GetFixedBounds().height;
                 }
 
                 rootContainer.OnMouseMove(ev.mousePos);
