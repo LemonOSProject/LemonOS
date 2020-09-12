@@ -43,6 +43,8 @@ void Run(){
                     if(!pid){
                         goto err;
                     } else {
+                        delete window;
+
                         exit(0);
                     }
                 }
@@ -54,6 +56,8 @@ void Run(){
         if(!pid){
             goto err;
         } else {
+            delete window;
+
             exit(0);
         }
     }

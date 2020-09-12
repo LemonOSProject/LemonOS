@@ -121,9 +121,7 @@ void InputManager::Poll(){
         if((!!(mousePacket.buttons & Lemon::MouseButton::Right)) != mouse.right){ /* Use a double negative to make the statement 0 or 1*/
             mouse.right = !!(mousePacket.buttons & Lemon::MouseButton::Right);
 
-            if(mouse.right){
-                wm->MouseRight(mouse.right);
-            }
+            wm->MouseRight(mouse.right);
 		}
 
 		wm->MouseMove();

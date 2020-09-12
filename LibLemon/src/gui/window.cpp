@@ -141,6 +141,8 @@ namespace Lemon::GUI{
         msgClient.Send(msg);
 
         free(msg);
+
+        rootContainer.UpdateFixedBounds();
     }
 
     void Window::SwapBuffers(){

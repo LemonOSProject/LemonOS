@@ -81,7 +81,7 @@ std::map<ShellWindow*, WindowButton*> taskbarWindows;
 Lemon::GUI::LayoutContainer* taskbarWindowsContainer;
 
 void AddWindow(ShellWindow* win){
-	WindowButton* btn = new WindowButton(win, {0, 0, 0, 0} /* The LayoutContainer will handle boudns for us*/);
+	WindowButton* btn = new WindowButton(win, {0, 0, 0, 0} /* The LayoutContainer will handle bounds for us*/);
 	taskbarWindows.insert(std::pair<ShellWindow*, WindowButton*>(win, btn));
 
 	taskbarWindowsContainer->AddWidget(btn);

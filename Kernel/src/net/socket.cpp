@@ -135,12 +135,10 @@ int LocalSocket::ConnectTo(Socket* client){
 
     pending.add_back(client);
 
-    Log::Info("waiting for connection");
     while(!client->connected){
         // TODO: Actually block the task
         Scheduler::Yield();
     }
-    Log::Info("connected");
 
     pendingConnections.Signal();
 

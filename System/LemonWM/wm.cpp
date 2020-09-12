@@ -4,6 +4,7 @@
 #include <sys/un.h>
 #include <core/shell.h>
 #include <core/keyboard.h>
+#include <algorithm>
 
 WMInstance::WMInstance(surface_t& surface, sockaddr_un address) : server(address, sizeof(sockaddr_un)){
 
@@ -175,7 +176,9 @@ void WMInstance::Poll(){
                         continue;
                     }
 
-                    strncpy(buf, item->data, item->length);
+                    strncpy(buf, item->data, std::min<int>(static_cast<int>(item->length), 255));
+                    buf[std::min<int>(static_cast<int>(item->length), 255)] = 0;
+
                     menu.items.push_back(ContextMenuItem(buf, i, item->id));
 
                     contextMenuBounds.height += CONTEXT_ITEM_HEIGHT;

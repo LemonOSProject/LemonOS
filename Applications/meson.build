@@ -62,6 +62,9 @@ lemonmonitor_src = [
 threadtest_src = [
     'PosixThreadTest/main.cpp'
 ]
+minesweeper_src = [
+    'Minesweeper/main.cpp'
+]
 
 executable('fileman.lef', fileman_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('lsh.lef', lsh_src, cpp_args : application_cpp_args, link_args : ['-llemon'], install : true)
@@ -76,3 +79,4 @@ executable('guitest.lef', guitest_src, cpp_args : application_cpp_args, link_arg
 executable('run.lef', run_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('lemonmonitor.lef', lemonmonitor_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('pthreadtest.lef', threadtest_src, cpp_args : application_cpp_args, install : true)
+executable('minesweeper.lef', minesweeper_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)

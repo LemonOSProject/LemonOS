@@ -337,8 +337,9 @@ namespace Scheduler{
         CPU* cpu = GetCPULocal();
         
         for(unsigned i = 0; i < process->threads.get_length(); i++){
-            if(process->threads[i] != cpu->currentThread && process->threads[i]){
-                acquireLock(&process->threads[i]->lock); // Make sure we acquire a lock on all threads to ensure that they are not in a syscall and are not retaining a lock
+            thread_t* thread = process->threads[i];
+            if(thread != cpu->currentThread && thread){
+                acquireLock(&thread->lock); // Make sure we acquire a lock on all threads to ensure that they are not in a syscall and are not retaining a lock
             }
         }
         
