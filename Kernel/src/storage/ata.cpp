@@ -17,6 +17,9 @@ namespace ATA{
 	int controlPort0 = 0x3f6;
 	int controlPort1 = 0x376;
 
+	lock_t irqWatcherLock = 0;
+	Semaphore irqWatcher = Semaphore(0);
+
 	ATADiskDevice* drives[4];
 
 	uint32_t busMasterPort;
@@ -58,6 +61,8 @@ namespace ATA{
 
 		for(int i = 0; i < 4; i++) inportb(0x3f6);
 
+		while(ReadRegister(port, ATA_REGISTER_STATUS) & 0x80);
+
 		WriteRegister(port, ATA_REGISTER_SECTOR_COUNT, 0);
 		WriteRegister(port, ATA_REGISTER_LBA_LOW, 0);
 		WriteRegister(port, ATA_REGISTER_LBA_MID, 0);
@@ -65,26 +70,35 @@ namespace ATA{
 
 		WriteRegister(port, ATA_REGISTER_COMMAND, 0xec); // Identify
 
-		while(ReadRegister(port, ATA_REGISTER_STATUS) & 0x80);
-
 		if(!ReadRegister(port, ATA_REGISTER_STATUS)){
 			return 0;
 		}
-
-		int timer = 0xFFFFFF;
-		while(timer--){
-			if(!(ReadRegister(port, ATA_REGISTER_STATUS) & 0x80)) goto c1;
+		
+		{
+			int timer = 0xFFFFFF;
+			while(timer--){
+				uint8_t status = ReadRegister(port, ATA_REGISTER_STATUS);
+				if(status & ATA_DEV_ERR) return 0;
+				if(!(status & 0x80) && (status & ATA_DEV_DRQ)) goto c1;
+			}
+			return 0;
 		}
-		return 0;
 
 	c1:
 		if(ReadRegister(port, ATA_REGISTER_LBA_MID) || ReadRegister(port, ATA_REGISTER_LBA_HIGH)) return 0;
 
-		return 1;
+		int timer2 = 0xFFFFFF;
+		while(timer2--){
+			uint8_t status = ReadRegister(port, ATA_REGISTER_STATUS);
+			if((status & ATA_DEV_ERR)) return 0;
+			if((status & ATA_DEV_DRQ)) return 1;
+		}
+		return 0;
 	}
 
 	void IRQHandler(regs64_t* r){
-		Log::Info("Drive IRQ!");
+		Log::Info("Disk IRQ");
+		//irqWatcher.Signal();
 	}
 
 	int Init(){
@@ -99,12 +113,15 @@ namespace ATA{
         Log::Info("Initializing ATA:");
 
         busMasterPort = controllerDevice.header0.baseAddress4 & 0xFFFFFFFC;
+		PCI::Config_WriteWord(controllerDevice.bus, controllerDevice.slot, controllerDevice.func, 0x4, controllerDevice.header0.command | PCI_CMD_BUS_MASTER);
 
 		Log::Write(" Bus Master: ");
 		Log::Write(busMasterPort);
 
 		IDT::RegisterInterruptHandler(IRQ0 + 14, IRQHandler);
-		APIC::IO::MapLegacyIRQ(IRQ0 + 14);
+		APIC::IO::MapLegacyIRQ(14);
+		IDT::RegisterInterruptHandler(IRQ0 + 15, IRQHandler);
+		APIC::IO::MapLegacyIRQ(15);
 
 		for(int i = 0; i < 2; i++){ // Port
 			WriteControlRegister(i, 0, ReadControlRegister(i, 0) | 4); // Software Reset
@@ -169,6 +186,8 @@ namespace ATA{
 
 		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80 || !(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x40));
 
+		for(int i = 0; i < 4; i++) inportb(0x3f6);
+
 		if(write){
 			WriteRegister(drive->port, ATA_REGISTER_COMMAND, 0x35); // 48-bit write DMA
 		} else {
@@ -182,9 +201,11 @@ namespace ATA{
 		} else {
 			outportb(busMasterPort + ATA_BMR_CMD, 8 /*Read*/ | 1 /*Start*/);
 		}
-		
-		while(!(inportb(busMasterPort + ATA_BMR_STATUS) & 0x4));// || (ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80));
-		
+
+		for(int i = 0; i < 4; i++) inportb(0x3f6);
+
+		//while(!(inportb(busMasterPort + ATA_BMR_STATUS) & 0x6));
+
 		outportb(busMasterPort + ATA_BMR_CMD, 0);
 		outportb(busMasterPort + ATA_BMR_STATUS, 4 | 2);
 

@@ -154,6 +154,8 @@ void LocalSocket::DisconnectPeer(){
 }
 
 void LocalSocket::OnDisconnect(){
+    connected = false;
+
     while(watching.get_length()){
         watching.remove_at(0)->Signal(); // Signal all watching on disconnect
     }

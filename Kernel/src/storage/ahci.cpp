@@ -63,10 +63,17 @@ namespace AHCI{
 			Timer::Wait(1);
 		}
 
-		/*ahciHBA->ghc |= 1;
+		/*ahciHBA->ghc = AHCI_GHC_ENABLE | 1; // Reset Controller
 		while(ahciHBA->ghc & 1){
 			Timer::Wait(1);
+		}
+
+		while(!(ahciHBA->ghc & AHCI_GHC_ENABLE)){
+			ahciHBA->ghc |= AHCI_GHC_ENABLE;
+			Timer::Wait(1);
 		}*/
+
+		ahciHBA->is = 0xffffffff;
 
 		for(int i = 0; i < 32; i++){
 			if((pi >> i) & 1){
@@ -81,7 +88,12 @@ namespace AHCI{
 					ports[i] = new Port(i, &ahciHBA->ports[i], ahciHBA);
 					Log::Info("name: %s", ports[i]->GetName());
 					
-					DeviceManager::RegisterDevice(*(ports[i]));
+					if(ports[i]->status == AHCIStatus::Active)
+						DeviceManager::RegisterDevice(*(ports[i]));
+					else {
+						delete ports[i];
+						ports[i] = nullptr;
+					}
 				}
 			}
 		}

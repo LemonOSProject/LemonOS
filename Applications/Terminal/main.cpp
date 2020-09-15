@@ -486,8 +486,6 @@ int main(char argc, char** argv){
 	auto& wMHandler = window->GetHandler();
 	fds.insert(fds.begin(), wMHandler.GetFileDescriptors().begin(), wMHandler.GetFileDescriptors().end());
 	for(;;){
-		poll(fds.data(), fds.size(), -1);
-
 		Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){
 			if(ev.event == Lemon::EventKeyPressed){
@@ -543,9 +541,12 @@ int main(char argc, char** argv){
 			paint = true;
 		}
 
-		window->Paint();
-
-		Lemon::Yield();
+		if(paint){
+			window->Paint();
+			paint = false;
+		}
+		
+		poll(fds.data(), fds.size(), 100);
 	}
 	for(;;);
 }

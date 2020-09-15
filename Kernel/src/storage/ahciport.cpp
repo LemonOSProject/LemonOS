@@ -11,7 +11,6 @@
 
 namespace AHCI{
 	Port::Port(int num, hba_port_t* portStructure, hba_mem_t* hbaMem){
-        Log::Info("name %s", this->name);
         registers = portStructure;
 
 		registers->cmd &= ~HBA_PxCMD_ST;
@@ -34,13 +33,11 @@ namespace AHCI{
 		registers->fbu = (uint32_t)(phys >> 32);
 	
 		// Command list size = 256*32 = 8K per port
-		commandList = (hba_cmd_header_t*)Memory::KernelAllocate4KPages(1);
-        Memory::KernelMapVirtualMemory4K(static_cast<uintptr_t>(registers->clb) + (static_cast<uintptr_t>(registers->clbu) << 32), (uintptr_t)commandList, 1);
+		commandList = (hba_cmd_header_t*)Memory::GetIOMapping(static_cast<uintptr_t>(registers->clb));
         memset(commandList, 0, PAGE_SIZE_4K);
 
 		// FIS
-		fis = Memory::KernelAllocate4KPages(1);
-        Memory::KernelMapVirtualMemory4K(static_cast<uintptr_t>(registers->fb) + (static_cast<uintptr_t>(registers->fbu) << 32), (uintptr_t)fis, 1);
+		fis = reinterpret_cast<void*>(Memory::GetIOMapping(static_cast<uintptr_t>(registers->fb)));
         memset(fis, 0, PAGE_SIZE_4K);
 
         for(int i = 0; i < 8 /*Support for 8 command slots*/; i++){
@@ -50,8 +47,7 @@ namespace AHCI{
             commandList[i].ctba = (uint32_t)(phys & 0xFFFFFFFF);
             commandList[i].ctbau = (uint32_t)(phys >> 32);
 
-            commandTables[i] = (hba_cmd_tbl_t*)Memory::KernelAllocate4KPages(1);
-            Memory::KernelMapVirtualMemory4K(phys,(uintptr_t)commandTables[i], 1);
+            commandTables[i] = (hba_cmd_tbl_t*)Memory::GetIOMapping(phys);
             memset(commandTables[i],0,PAGE_SIZE_4K);
         }
 
@@ -68,25 +64,75 @@ namespace AHCI{
         registers->cmd |= HBA_PxCMD_POD;
         registers->cmd |= HBA_PxCMD_SUD;
 
+        Timer::Wait(10);
+
         {
-            int spin = 0;
-            while(spin++ < 100 && (registers->ssts & HBA_PxSSTS_DET) != HBA_PxSSTS_DET_PRESENT){
+            int spin = 100;
+            while(spin-- && (registers->ssts & HBA_PxSSTS_DET) != HBA_PxSSTS_DET_PRESENT){
                 Timer::Wait(1);
             }
 
             if((registers->ssts & HBA_PxSSTS_DET) != HBA_PxSSTS_DET_PRESENT){
                 Log::Info("[AHCI] Device not present (DET: %x)", registers->ssts & HBA_PxSSTS_DET);
+                status = AHCIStatus::Error;
                 return;
             }
         }
 
         registers->cmd = (registers->cmd & ~HBA_PxCMD_ICC) | HBA_PxCMD_ICC_ACTIVE;
 
+        {
+            int spin = 1000;
+            while(spin-- && registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)){
+                Timer::Wait(1);
+            }
+
+            /*if(spin <= 0){
+                Log::Info("[AHCI] Port hung, attempting COMRESET");
+                registers->sctl = SCTL_PORT_DET_INIT | SCTL_PORT_IPM_NOPART | SCTL_PORT_IPM_NOSLUM | SCTL_PORT_IPM_NODSLP; // Reset the port
+            }
+
+            Timer::Wait(10);
+
+            registers->sctl &= ~HBA_PxSSTS_DET; // Disable init mode
+
+            Timer::Wait(10);
+
+            spin = 500;
+            while(spin-- && (registers->ssts & HBA_PxSSTS_DET_PRESENT) != HBA_PxSSTS_DET_PRESENT){
+                Timer::Wait(1);
+            }
+
+            if((registers->tfd & 0xff) == 0xff){
+                Timer::Wait(500);
+            }
+
+            registers->serr = 0;
+            registers->is = 0;
+
+            spin = 1000;
+            while(spin-- && registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)){
+                Timer::Wait(1);
+            }
+
+            if(spin <= 0){
+                Log::Info("[AHCI] Port hung!");
+            }*/
+        }
+
+        if((registers->ssts & HBA_PxSSTS_DET) != HBA_PxSSTS_DET_PRESENT){
+            Log::Info("[AHCI] Device not present (DET: %x)", registers->ssts & HBA_PxSSTS_DET);
+            status = AHCIStatus::Error;
+            return;
+        }
+
         startCMD(registers);
 
         bufPhys = Memory::AllocatePhysicalMemoryBlock();
         bufVirt = Memory::KernelAllocate4KPages(1);
         Memory::KernelMapVirtualMemory4K(bufPhys, (uintptr_t)bufVirt, 1);
+
+        status = AHCIStatus::Active;
 
         Log::Info("[AHCI] Port - SSTS: %x, SCTL: %x, SERR: %x, SACT: %x, Cmd/Status: %x, FBS: %x, IE: %x", registers->ssts, registers->sctl, registers->serr, registers->sact, registers->cmd, registers->fbs, registers->ie);
 
@@ -98,6 +144,7 @@ namespace AHCI{
             Log::Error("[SATA] Disk Error while Parsing GPT for SATA Disk ");
             break;
         }
+        Log::Info("[SATA] Found %d partitions!", partitions.get_length());
 
         InitializePartitions();
     }
@@ -186,7 +233,7 @@ namespace AHCI{
 
     int Port::Access(uint64_t lba, uint32_t count, int write){
         registers->ie = 0xffffffff; 
-        registers->is = 0xffffffff; 
+        registers->is = 0; 
         int spin = 0;
 
         registers->tfd = 0;
@@ -204,8 +251,7 @@ namespace AHCI{
         commandHeader->a = 0;
         commandHeader->w = write;
         commandHeader->c = 1;
-        commandHeader->p = 0;
-        commandHeader->r = 1;
+        commandHeader->p = 1;
 
         commandHeader->prdbc = 0;
         commandHeader->pmp = 0;
@@ -243,7 +289,7 @@ namespace AHCI{
         cmdfis->countl = count & 0xff;
         cmdfis->counth = count >> 8;
 
-        cmdfis->control = 0;
+        cmdfis->control = 0x8;
 
         while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < 1000000) {
             spin++;
@@ -253,6 +299,8 @@ namespace AHCI{
             Log::Warning("[SATA] Port Hung");
             return 3;
         }
+
+        registers->ie = registers->is = 0xffffffff;
 
         registers->ci |= 1 << slot;
 
@@ -265,8 +313,13 @@ namespace AHCI{
                 return 1;
             }
         }
+
+        spin = 0;
+        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < 1000000) {
+            spin++;
+        }
         
-        //Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
+       // Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
         
         if (registers->is & HBA_PxIS_TFES) {
             Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);

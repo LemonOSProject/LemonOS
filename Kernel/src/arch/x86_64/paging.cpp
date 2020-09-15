@@ -93,7 +93,7 @@ namespace Memory{
 		for(int i = 0; i < 4; i++){
 			kernelPDPT[PDPT_GET_INDEX(IO_VIRTUAL_BASE) + i] = ((uint64_t)ioDirs[i] - KERNEL_VIRTUAL_BASE) | 0x3;//(PAGE_SIZE_1G * i) | 0x83;
 			for(int j = 0; j < TABLES_PER_DIR; j++){
-				ioDirs[i][j] = (PAGE_SIZE_1G * i + PAGE_SIZE_2M * j) | 0x83;
+				ioDirs[i][j] = (PAGE_SIZE_1G * i + PAGE_SIZE_2M * j) | (PDE_2M | PDE_WRITABLE | PDE_PRESENT | PDE_CACHE_DISABLED);
 			}
 		}
 		

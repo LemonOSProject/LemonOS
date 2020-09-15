@@ -24,6 +24,7 @@
 #define PDE_PRESENT 1
 #define PDE_WRITABLE (1 << 1)
 #define PDE_USER (1 << 2)
+#define PDE_CACHE_DISABLED (1 << 4)
 #define PDE_2M (1 << 7)
 #define PDE_FRAME 0xFFFFFFFFFF000
 

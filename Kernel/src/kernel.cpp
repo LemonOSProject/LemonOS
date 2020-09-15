@@ -45,8 +45,8 @@ void KernelProcess(){
 	ATA::Init();
 	AHCI::Init();
 	
-	Network::InitializeDrivers();
-	Network::InitializeConnections();
+	/*Network::InitializeDrivers();
+	Network::InitializeConnections();*/
 
 	asm("cli");
 

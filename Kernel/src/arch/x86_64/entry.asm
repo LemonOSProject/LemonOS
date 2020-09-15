@@ -25,14 +25,18 @@ kernel_pml4:
 times 512 dq 0
 
 align 4096
+kernel_pde:
+times 512 dq 0
+
+align 4096
 kernel_pdpt:
-dq 0x83 ; 1GB Page
+dq 0
 times 511 dq 0
 
 align 4096
 kernel_pdpt2:
 times KERNEL_BASE_PDPT_INDEX dq 0
-dq 0x83 ; 1GB Page
+dq 0
 
 align 16
 GDT64:                           ; Global Descriptor Table (64-bit).
@@ -166,6 +170,15 @@ entry:
   or eax, 1 << 5  ; Set PAE bit
   mov cr4, eax
 
+  mov ecx, 512
+  mov eax, kernel_pde
+  mov ebx, 0x83
+.fill_pde:
+  mov dword [eax], ebx
+  add ebx, 0x200000 ; Go to next 2M
+  add eax, 8
+  loop .fill_pde
+
   mov eax, kernel_pdpt ; Get address of PDPT
   or eax, 3 ; Present, Write
   mov dword [kernel_pml4], eax
@@ -173,6 +186,11 @@ entry:
   mov eax, kernel_pdpt2 ; Second PDPT
   or eax, 3
   mov dword [kernel_pml4 + KERNEL_BASE_PML4_INDEX * 8], eax
+
+  mov eax, kernel_pde ; Second PDPT
+  or eax, 3
+  mov dword [kernel_pdpt], eax
+  mov dword [kernel_pdpt2 + KERNEL_BASE_PDPT_INDEX * 8], eax
 
   mov eax, kernel_pml4
   mov cr3, eax

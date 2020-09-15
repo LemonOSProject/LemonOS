@@ -330,13 +330,19 @@ typedef struct tagHBA_CMD_TBL
 
 #define HBA_PORT_IPM_ACTIVE 1
 
-#define HBA_PxSSTS_DET 0xf
+#define HBA_PxSSTS_DET 0xfULL
 #define HBA_PxSSTS_DET_INIT 1
 #define HBA_PxSSTS_DET_PRESENT 3
 
 #include <devicemanager.h>
 
 namespace AHCI{
+	enum AHCIStatus{
+		Uninitialized = 0,
+		Error = 1,
+		Active = 2,
+	};
+
 	class Port : public DiskDevice{
 	public:
 		Port(int num, hba_port_t* portStructure, hba_mem_t* hbaMem);
@@ -345,6 +351,7 @@ namespace AHCI{
 		int WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer);
 
         int blocksize = 512;
+		AHCIStatus status = AHCIStatus::Uninitialized;
 	private:
 		int FindCmdSlot();
 		int Access(uint64_t lba, uint32_t count, int write);
