@@ -17,13 +17,13 @@ asmg = generator(nasm,
 
 liblemon_cpp_args = ['-Wno-write-strings', '-Wno-pointer-arith', '-Wall', '-Wextra', '-Wno-address',
     '-fPIC',
-    '-m64',
-    '-fno-exceptions',]
+    '-m64' ]
 
 add_project_arguments(liblemon_cpp_args, language : ['c', 'cpp'])
 
 cpp_files = [
     'src/gfx/font.cpp',
+    'src/gfx/bitmapfont.cpp',
     'src/gfx/graphics.cpp',
     'src/gfx/image.cpp',
     'src/gfx/surface.cpp',

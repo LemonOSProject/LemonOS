@@ -1,6 +1,7 @@
 #include <gfx/graphics.h>
 
 #include <gfx/font.h>
+#include <gfx/text.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -10,127 +11,8 @@
 extern uint8_t font_default[];
 
 namespace Lemon::Graphics{
-    static int fontState = 0;
-    static FT_Library library;
-    static Font* mainFont = nullptr;
-    static List<Font*> fonts;
-
-    void RefreshFonts(){
-        if(library) FT_Done_FreeType(library);
-        fontState = 0;
-    }
-
-    __attribute__((constructor))
-    void InitializeFonts(){
-        fontState = -1;
-
-        if(FT_Init_FreeType(&library)){
-            printf("Error initializing freetype");
-            return;
-        }
-
-        FILE* fontFile = fopen("/initrd/montserrat.ttf", "r");
-        
-        if(!fontFile){
-            printf("Error loading font /initrd/montserrat.ttf");
-            return;
-        }
-
-        fseek(fontFile, 0, SEEK_END);
-        size_t fontSize = ftell(fontFile);
-        fseek(fontFile, 0, SEEK_SET);
-        uint8_t* fontBuffer = (uint8_t*)malloc(fontSize);
-        fread(fontBuffer, fontSize, 1, fontFile);
-
-        fclose(fontFile);
-
-        mainFont = new Font;
-
-        if(int err = FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &mainFont->face)){
-            printf("Freetype Error (%d) loading font from memory /initrd/montserrat.ttf\n",err);
-            return;
-        }
-
-        if(int err = FT_Set_Pixel_Sizes(mainFont->face, 0, 12)){
-            printf("Freetype Error (%d) Setting Font Size\n", err);
-            return;
-        }
-
-        mainFont->id = new char[strlen("default") + 1];
-        mainFont->height = 12;
-        mainFont->width = 8;
-        mainFont->tabWidth = 4;
-        strcpy(mainFont->id, "default");
-
-        fonts.add_back(mainFont);
-
-        fontState = 1;
-    }
-
-    Font* LoadFont(const char* path, const char* id, int sz){
-        fontState = -1;
-
-        if(FT_Init_FreeType(&library)){
-            //syscall(0,(uintptr_t)"Error initializing freetype",0,0,0,0);
-            return nullptr;
-        }
-
-        FILE* fontFile = fopen(path, "r");
-        
-        if(!fontFile){
-            //syscall(0,(uintptr_t)"Error loading custom font",0,0,0,0);
-            return nullptr;
-        }
-
-        fseek(fontFile, 0, SEEK_END);
-        size_t fontSize = ftell(fontFile);
-        fseek(fontFile, 0, SEEK_SET);
-        uint8_t* fontBuffer = (uint8_t*)malloc(fontSize);
-        fread(fontBuffer, fontSize, 1, fontFile);
-
-        fclose(fontFile);
-
-        Font* font = new Font;
-
-        if(int err = FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &font->face)){
-            printf("Freetype Error (%d) loading custom font from memory\n",err);
-            return nullptr;
-        }
-
-        if(int err = FT_Set_Pixel_Sizes(font->face, 0, sz)){
-            printf("Freetype Error (%d) Setting Font Size\n", err);
-            return nullptr;
-        }
-
-        if(!id){
-            char* buf = new char[24];
-            sprintf(buf, "font%d", fonts.get_length());
-            font->id = new char[strlen(buf) + 1];
-            strcpy(font->id, buf);
-            delete buf;
-        } else {
-            font->id = new char[strlen(id) + 1];
-            strcpy(font->id, id);
-        }
-
-        font->height = sz;
-        font->monospace = FT_IS_FIXED_WIDTH(font->face);
-        font->width = 8;
-        font->tabWidth = 4;
-
-        fonts.add_back(font);
-
-        fontState = 1;
-
-        return font;
-    }
-
-    Font* GetFont(const char* id){
-        for(unsigned i = 0; i < fonts.get_length(); i++){
-            if(strcmp(fonts[i]->id, id) == 0) return fonts[i];
-        }
-        return mainFont;
-    }
+    extern int fontState;
+    extern Font* mainFont;
 
     int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font){
         if (!isprint(character)) {
@@ -183,12 +65,7 @@ namespace Lemon::Graphics{
                     buffer[yOffset + (j + x)] = colour_i;
                 else if(font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] > 0){
                     double val = font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] * 1.0 / 255;
-                    uint32_t oldColour = buffer[yOffset + (j + x)];
-                    int oldB = oldColour & 0xFF;
-                    int oldG = (oldColour >> 8) & 0xFF;
-                    int oldR = (oldColour >> 16) & 0xFF;
-                    uint32_t newColour = (int)(b * val + oldB * (1 - val)) | (((int)(g * val + oldG * (1 - val)) << 8)) | (((int)(r * val + oldR * (1 - val)) << 16));
-                    buffer[yOffset + (j + x)] = newColour;
+                    buffer[yOffset + (j + x)] = AlphaBlend(buffer[yOffset + (j + x)], r, g, b, val);
                 }
             }
         }
@@ -272,12 +149,7 @@ namespace Lemon::Graphics{
                         buffer[off] = colour_i;
                     else if( font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j]){
                         double val = font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] * 1.0 / 255;
-                        uint32_t oldColour = buffer[off];
-                        int oldB = oldColour & 0xFF;
-                        int oldG = (oldColour >> 8) & 0xFF;
-                        int oldR = (oldColour >> 16) & 0xFF;
-                        uint32_t newColour = (int)(b * val + oldB * (1 - val)) | (((int)(g * val + oldG * (1 - val)) << 8)) | (((int)(r * val + oldR * (1 - val)) << 16));
-                        buffer[off] = newColour;
+                        buffer[off] = AlphaBlend(buffer[off], r, g, b, val);
                     }
                 }
             }
@@ -376,5 +248,41 @@ namespace Lemon::Graphics{
 
     int GetTextLength(const char* str){
         return GetTextLength(str, strlen(str));
+    }
+
+    TextObject::TextObject(vector2i_t pos, std::string& text, Font* font){
+        this->pos = pos;
+        this->text = text;
+        this->font = font;
+
+        CalculateSizes();
+    }
+
+    TextObject::TextObject(vector2i_t pos, const char* text, Font* font){
+        this->pos = pos;
+        this->text = text;
+        this->font = font;
+
+        CalculateSizes();
+    }
+
+    TextObject::TextObject(vector2i_t pos, Font* font){
+        this->pos = pos;
+        this->font = font;
+
+        CalculateSizes();
+    }
+
+    void TextObject::CalculateSizes(){
+        textSize.x = GetTextLength(text.c_str(), font); 
+        textSize.y = font->height;
+    }
+
+    void TextObject::Render(surface_t* surface){
+        switch(renderMode){
+            case RenderNormal:
+            default:
+                DrawString(text.c_str(), pos.x, pos.y, colour, surface, font);
+        }
     }
 }

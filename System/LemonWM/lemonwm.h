@@ -16,7 +16,7 @@
 #define CONTEXT_ITEM_WIDTH 128
 
 //#define LEMONWM_USE_CLIPPING
-#define LEMONWM_FRAMERATE_COUNTER
+//#define LEMONWM_FRAMERATE_COUNTER
 
 using WindowBuffer = Lemon::GUI::WindowBuffer;
 
