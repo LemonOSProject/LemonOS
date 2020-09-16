@@ -100,17 +100,23 @@ void CompositorInstance::Paint(){
     }
 
     if(wm->contextMenuActive){
-        DrawRect(wm->contextMenuBounds.x, wm->contextMenuBounds.y, wm->contextMenuBounds.width, wm->contextMenuBounds.height, Lemon::colours[Lemon::Colour::ContentBackground], renderSurface);
-        DrawRectOutline(wm->contextMenuBounds, {0, 0, 0, 255}, renderSurface);
+        rect_t bounds = wm->contextMenuBounds;
 
-        int ypos = wm->contextMenuBounds.y;
+        DrawRect(bounds.x, bounds.y, bounds.width, bounds.height, Lemon::colours[Lemon::Colour::Background], renderSurface);
+
+        DrawRect({bounds.pos + (vector2i_t){1, 1}, {bounds.width - 1, 1}}, Lemon::colours[Lemon::Colour::ContentBackground], renderSurface);
+        DrawRect({bounds.pos + (vector2i_t){1, 1}, {1, bounds.height - 1}}, Lemon::colours[Lemon::Colour::ContentBackground], renderSurface);
+        DrawRect({{bounds.pos.x, bounds.pos.y + bounds.height - 1}, {bounds.width, 1}}, Lemon::colours[Lemon::Colour::ContentShadow], renderSurface);
+        DrawRect({{bounds.pos.x + bounds.width - 1, bounds.pos.y}, {1, bounds.height}}, Lemon::colours[Lemon::Colour::ContentShadow], renderSurface);
+
+        int ypos = bounds.y;
 
         for(ContextMenuItem& item : wm->menu.items){
-            if(PointInRect({wm->contextMenuBounds.pos.x, ypos, CONTEXT_ITEM_WIDTH, CONTEXT_ITEM_HEIGHT},wm->input.mouse.pos)){
-                DrawRect(wm->contextMenuBounds.x, ypos,  wm->contextMenuBounds.width, CONTEXT_ITEM_HEIGHT, Lemon::colours[Lemon::Colour::Foreground], renderSurface);
+            if(PointInRect({bounds.pos.x, ypos, CONTEXT_ITEM_WIDTH, CONTEXT_ITEM_HEIGHT},wm->input.mouse.pos)){
+                DrawRect(bounds.x, ypos,  bounds.width, CONTEXT_ITEM_HEIGHT, Lemon::colours[Lemon::Colour::Foreground], renderSurface);
             }
 
-            DrawString(item.name.c_str(), wm->contextMenuBounds.x + 24, ypos + 4, 0, 0, 0, renderSurface);
+            DrawString(item.name.c_str(), bounds.x + 24, ypos + 2, 0, 0, 0, renderSurface);
             ypos += CONTEXT_ITEM_HEIGHT;
         }
     }
