@@ -34,7 +34,8 @@
 #define ATA_DEV_ERR     0x01    // Error
 
 #define ATA_CMD_READ_DMA_EX     0x25
-#define ATA_CMD_WRITE_DMA_EX     0x35
+#define ATA_CMD_WRITE_DMA_EX    0x35
+#define ATA_CMD_IDENTIFY        0xec
 
 #define ATA_PRD_BUFFER(x) (x & 0xFFFFFFFF)
 #define ATA_PRD_TRANSFER_SIZE(x) ((x & 0xFFFF) << 32)

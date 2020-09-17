@@ -1,5 +1,7 @@
 #pragma once 
 
+#include <stdint.h>
+
 #ifndef __lemon__
     #error "Lemon OS Only"
 #endif

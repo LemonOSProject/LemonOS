@@ -13,6 +13,7 @@ lsh_src = [
 
 shell_src = [
     'Shell/main.cpp',
+    #'Shell/menu.cpp',
     'Shell/shell.cpp',
 ]
 

@@ -6,6 +6,7 @@
 #include <png.h>
 #include <string.h>
 #include <gfx/font.h>
+#include <gfx/text.h>
 #include <list>
 
 typedef struct {

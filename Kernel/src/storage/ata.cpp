@@ -9,6 +9,7 @@
 #include <idt.h>
 #include <devicemanager.h>
 #include <apic.h>
+#include <timer.h>
 
 namespace ATA{
 
@@ -61,14 +62,14 @@ namespace ATA{
 
 		for(int i = 0; i < 4; i++) inportb(0x3f6);
 
-		while(ReadRegister(port, ATA_REGISTER_STATUS) & 0x80);
-
 		WriteRegister(port, ATA_REGISTER_SECTOR_COUNT, 0);
 		WriteRegister(port, ATA_REGISTER_LBA_LOW, 0);
 		WriteRegister(port, ATA_REGISTER_LBA_MID, 0);
 		WriteRegister(port, ATA_REGISTER_LBA_HIGH, 0);
 
 		WriteRegister(port, ATA_REGISTER_COMMAND, 0xec); // Identify
+
+		Timer::Wait(1);
 
 		if(!ReadRegister(port, ATA_REGISTER_STATUS)){
 			return 0;
@@ -78,8 +79,11 @@ namespace ATA{
 			int timer = 0xFFFFFF;
 			while(timer--){
 				uint8_t status = ReadRegister(port, ATA_REGISTER_STATUS);
-				if(status & ATA_DEV_ERR) return 0;
-				if(!(status & 0x80) && (status & ATA_DEV_DRQ)) goto c1;
+				if(status & ATA_DEV_ERR) {
+					Log::Info("ATA Error %x", ReadRegister(port, ATA_REGISTER_ERROR));
+					return 0;
+				}
+				if(!(status & ATA_DEV_BUSY) && status & ATA_DEV_DRQ) goto c1;
 			}
 			return 0;
 		}
@@ -110,18 +114,10 @@ namespace ATA{
 			return true; // No ATA Controller Found
 		}
 
-        Log::Info("Initializing ATA:");
+        Log::Info("Initializing ATA: %x %x %x %x", controllerDevice.header0.baseAddress0, controllerDevice.header0.baseAddress1, controllerDevice.header0.baseAddress2, controllerDevice.header0.baseAddress3);
 
         busMasterPort = controllerDevice.header0.baseAddress4 & 0xFFFFFFFC;
 		PCI::Config_WriteWord(controllerDevice.bus, controllerDevice.slot, controllerDevice.func, 0x4, controllerDevice.header0.command | PCI_CMD_BUS_MASTER);
-
-		Log::Write(" Bus Master: ");
-		Log::Write(busMasterPort);
-
-		IDT::RegisterInterruptHandler(IRQ0 + 14, IRQHandler);
-		APIC::IO::MapLegacyIRQ(14);
-		IDT::RegisterInterruptHandler(IRQ0 + 15, IRQHandler);
-		APIC::IO::MapLegacyIRQ(15);
 
 		for(int i = 0; i < 2; i++){ // Port
 			WriteControlRegister(i, 0, ReadControlRegister(i, 0) | 4); // Software Reset
@@ -137,6 +133,10 @@ namespace ATA{
 					Log::Write(", ");
 					Log::Write(j ? "slave" : "master");
 
+					for(int k = 0; k < 256; k++){
+						inportw((i ? port1 : port0) + ATA_REGISTER_DATA);
+					}
+
 					drives[i * 2 + j] = new ATADiskDevice(i, j);
 					DeviceManager::RegisterDevice(*drives[i * 2 + j]);
 				}
@@ -147,8 +147,8 @@ namespace ATA{
     }
 
 	int Access(ATADiskDevice* drive, uint64_t lba, uint16_t count, void* buffer, bool write){
-		if(count > 4){
-			Log::Warning("ATA::Read was called with count > 4");
+		if(count > 1){
+			Log::Warning("ATA::Read was called with count > 1");
 			return 1;
 		}
 		
@@ -159,16 +159,9 @@ namespace ATA{
 
 		outportb(busMasterPort + ATA_BMR_STATUS, inportb(busMasterPort +  ATA_BMR_STATUS) | 4 | 2); // Clear Error and Interrupt Bits
 
-		if(write){
-			outportb(busMasterPort + ATA_BMR_CMD, 0 /*Write */);
-		} else {
-			outportb(busMasterPort + ATA_BMR_CMD, 8 /* Read */);
-		}
-		
-		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80);
-
 		WriteRegister(drive->port, ATA_REGISTER_DRIVE_HEAD, 0x40 | (drive->drive << 4));
-		WriteControlRegister(drive->port, 0, 0);
+
+		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80);
 
 		for(int i = 0; i < 4; i++) inportb(0x3f6);
 
@@ -184,9 +177,9 @@ namespace ATA{
 		WriteRegister(drive->port, ATA_REGISTER_LBA_MID, (lba >> 8) & 0xFF);
 		WriteRegister(drive->port, ATA_REGISTER_LBA_HIGH, (lba >> 16) & 0xFF);
 
-		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80 || !(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x40));
-
 		for(int i = 0; i < 4; i++) inportb(0x3f6);
+
+		while(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x80 || !(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x40));
 
 		if(write){
 			WriteRegister(drive->port, ATA_REGISTER_COMMAND, 0x35); // 48-bit write DMA
@@ -194,20 +187,22 @@ namespace ATA{
 			WriteRegister(drive->port, ATA_REGISTER_COMMAND, 0x25); // 48-bit read DMA
 		}
 
-		for(int i = 0; i < 4; i++) inportb(0x3f6);
-
 		if(write){
 			outportb(busMasterPort + ATA_BMR_CMD, 0 /*Write*/ | 1 /*Start*/);
 		} else {
 			outportb(busMasterPort + ATA_BMR_CMD, 8 /*Read*/ | 1 /*Start*/);
 		}
 
-		for(int i = 0; i < 4; i++) inportb(0x3f6);
+		uint8_t status = ReadRegister(drive->port, ATA_REGISTER_STATUS);
+		while(status & ATA_DEV_BUSY){
+			if(status & ATA_DEV_ERR){
+				break;
+			}
 
-		//while(!(inportb(busMasterPort + ATA_BMR_STATUS) & 0x6));
+			status = ReadRegister(drive->port, ATA_REGISTER_STATUS);
+		}
 
 		outportb(busMasterPort + ATA_BMR_CMD, 0);
-		outportb(busMasterPort + ATA_BMR_STATUS, 4 | 2);
 
 		if(ReadRegister(drive->port, ATA_REGISTER_STATUS) & 0x1){
 			Log::Warning("Disk Error!");

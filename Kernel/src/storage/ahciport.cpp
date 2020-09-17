@@ -134,17 +134,19 @@ namespace AHCI{
 
         status = AHCIStatus::Active;
 
+        Identify();
+
         Log::Info("[AHCI] Port - SSTS: %x, SCTL: %x, SERR: %x, SACT: %x, Cmd/Status: %x, FBS: %x, IE: %x", registers->ssts, registers->sctl, registers->serr, registers->sact, registers->cmd, registers->fbs, registers->ie);
 
         switch(GPT::Parse(this)){
         case 0:
-            Log::Error("[SATA] Disk has a corrupted or non-existant GPT. MBR disks are NOT supported.");
+            Log::Error("[AHCI] Disk has a corrupted or non-existant GPT. MBR disks are NOT supported.");
             break;
         case -1:
-            Log::Error("[SATA] Disk Error while Parsing GPT for SATA Disk ");
+            Log::Error("[AHCI] Disk Error while Parsing GPT for SATA Disk ");
             break;
         }
-        Log::Info("[SATA] Found %d partitions!", partitions.get_length());
+        Log::Info("[AHCI] Found %d partitions!", partitions.get_length());
 
         InitializePartitions();
     }
@@ -289,7 +291,7 @@ namespace AHCI{
         cmdfis->countl = count & 0xff;
         cmdfis->counth = count >> 8;
 
-        cmdfis->control = 0x8;
+        cmdfis->control = 0;
 
         while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < 1000000) {
             spin++;
@@ -326,6 +328,99 @@ namespace AHCI{
             return 1;
         }
         return 0;
+    }
+
+    void Port::Identify(){
+
+        registers->ie = 0xffffffff; 
+        registers->is = 0; 
+        int spin = 0;
+
+        registers->tfd = 0;
+
+        int slot = FindCmdSlot();
+        if(slot == -1){
+            Log::Warning("[SATA] Could not find command slot!");
+            return ;
+        }
+
+        hba_cmd_header_t* commandHeader = &commandList[slot];
+
+        commandHeader->cfl = sizeof(fis_reg_h2d_t) / sizeof(uint32_t);
+
+        commandHeader->a = 0;
+        commandHeader->w = 0;
+        commandHeader->c = 1;
+        commandHeader->p = 1;
+
+        commandHeader->prdbc = 0;
+        commandHeader->pmp = 0;
+
+        hba_cmd_tbl_t* commandTable = commandTables[slot];
+        memset(commandTable, 0, sizeof(hba_cmd_tbl_t));
+
+        commandTable->prdt_entry[0].dba = bufPhys & 0xFFFFFFFF;
+        commandTable->prdt_entry[0].dbau = (bufPhys >> 32) & 0xFFFFFFFF;
+        commandTable->prdt_entry[0].dbc = 512 - 1; // 512 bytes per sector
+        commandTable->prdt_entry[0].i = 1;
+
+        fis_reg_h2d_t* cmdfis = (fis_reg_h2d_t*)(commandTable->cfis); 
+        memset(commandTable->cfis, 0, sizeof(fis_reg_h2d_t));
+
+        cmdfis->fis_type = FIS_TYPE_REG_H2D;
+        cmdfis->c = 1;  // Command
+        cmdfis->pmport = 0; // Port multiplier
+        cmdfis->command = ATA_CMD_IDENTIFY;
+ 
+        cmdfis->lba0 = 0;
+        cmdfis->lba1 = 0;
+        cmdfis->lba2 = 0;
+        cmdfis->device = 1 << 6;
+ 
+        cmdfis->lba3 = 0;
+        cmdfis->lba4 = 0;
+        cmdfis->lba5 = 0;
+ 
+        cmdfis->countl = 0;
+        cmdfis->counth = 0;
+
+        cmdfis->control = 0;
+
+        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < 1000000) {
+            spin++;
+        }
+
+        if(spin >= 1000000){
+            Log::Warning("[SATA] Port Hung");
+            return;
+        }
+
+        registers->ie = registers->is = 0xffffffff;
+
+        registers->ci |= 1 << slot;
+
+        //Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
+
+        while(registers->ci & (1 << slot)) {
+            if (registers->is & HBA_PxIS_TFES)   // Task file error
+            {
+                Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
+                return;
+            }
+        }
+
+        spin = 0;
+        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < 1000000) {
+            spin++;
+        }
+        
+       // Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
+        
+        if (registers->is & HBA_PxIS_TFES) {
+            Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
+            return;
+        }
+        return;
     }
 
     int Port::FindCmdSlot(){

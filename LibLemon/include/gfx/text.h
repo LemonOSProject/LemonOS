@@ -35,7 +35,7 @@ namespace Lemon::Graphics{
     public:
         TextObject(vector2i_t pos, std::string& text, Font* font = DefaultFont());
         TextObject(vector2i_t pos, const char* text, Font* font = DefaultFont());
-        TextObject(vector2i_t pos, Font* font = DefaultFont());
+        TextObject(vector2i_t pos = {0, 0}, Font* font = DefaultFont());
 
         /////////////////////////////
         /// \brief Render TextObject on surface

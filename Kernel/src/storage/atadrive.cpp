@@ -15,7 +15,7 @@ namespace ATA{
         prdBuffer = (uint8_t*)Memory::KernelAllocate4KPages(1);
 
         prdtPhys = Memory::AllocatePhysicalMemoryBlock();
-        prdt = (uint64_t*)Memory::KernelAllocate4KPages(1);
+        prdt = (uint64_t*)Memory::GetIOMapping(prdtPhys);
 
         Memory::KernelMapVirtualMemory4K(prdBufferPhys, (uintptr_t)prdBuffer, 1);
         Memory::KernelMapVirtualMemory4K(prdtPhys, (uintptr_t)prdt, 1);

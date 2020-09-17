@@ -355,6 +355,7 @@ namespace AHCI{
 	private:
 		int FindCmdSlot();
 		int Access(uint64_t lba, uint32_t count, int write);
+		void Identify();
 
 		hba_port_t* registers;
 
