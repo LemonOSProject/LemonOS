@@ -38,20 +38,23 @@ void IdleProcess(){
 
 void KernelProcess(){
 	if(progressBuffer)
-		Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+		Video::DrawBitmapImage(videoMode.width/2 + 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	NVMe::Initialize();
 	USB::XHCI::Initialize();
 	ATA::Init();
 	AHCI::Init();
+
+	if(progressBuffer)
+		Video::DrawBitmapImage(videoMode.width/2 + 24 * 2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 	
-	/*Network::InitializeDrivers();
-	Network::InitializeConnections();*/
+	Network::InitializeDrivers();
+	Network::InitializeConnections();
 
 	asm("cli");
 
 	if(progressBuffer)
-		Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+		Video::DrawBitmapImage(videoMode.width/2 + 24 * 3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Loading Init Process...");
 	FsNode* initFsNode = nullptr;
@@ -143,15 +146,15 @@ extern "C"
 			uint32_t size = splashFile->size;
 			uint8_t* buffer = (uint8_t*)kmalloc(size);
 			if(fs::Read(splashFile, 0, size, buffer))
-				Video::DrawBitmapImage(videoMode.width/2 - 484/2, videoMode.height/2 - 292/2, 484, 292, buffer);
+				Video::DrawBitmapImage(videoMode.width/2 - 620/2, videoMode.height/2 - 150/2, 621, 150, buffer);
 		} else Log::Warning("Could not load splash image");
 
 		if((splashFile = fs::FindDir(initrd,"pbar.bmp"))){
 			uint32_t size = splashFile->size;
 			progressBuffer = (uint8_t*)kmalloc(size);
 			if(fs::Read(splashFile, 0, size, progressBuffer)){
-				Video::DrawBitmapImage(videoMode.width/2 - 24*6, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
-				Video::DrawBitmapImage(videoMode.width/2 - 24*5, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+				Video::DrawBitmapImage(videoMode.width/2 - 24*4, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+				Video::DrawBitmapImage(videoMode.width/2 - 24*3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 			}
 		} else Log::Warning("Could not load progress bar image");
 	} else {
@@ -161,7 +164,7 @@ extern "C"
 	Video::DrawString("Copyright 2018-2020 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
 
 	if(progressBuffer)
-		Video::DrawBitmapImage(videoMode.width/2 - 24*4, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+		Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Initializing HID...");
 
@@ -171,7 +174,7 @@ extern "C"
 	Log::Info("OK");
 	
 	if(progressBuffer)
-		Video::DrawBitmapImage(videoMode.width/2 - 24*3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+		Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Registering Syscall Handler...");
 
@@ -180,7 +183,7 @@ extern "C"
 	Log::Write("OK");
 
 	if(progressBuffer)
-		Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+		Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	Log::Info("Initializing Task Scheduler...");
 	Scheduler::Initialize();

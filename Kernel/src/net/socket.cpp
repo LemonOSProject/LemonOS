@@ -131,13 +131,13 @@ LocalSocket::LocalSocket(int type, int protocol) : Socket(type, protocol){
 int LocalSocket::ConnectTo(Socket* client){
     assert(passive);
 
-    while(watching.get_length()){
-        watching.remove_at(0)->Signal();
-    }
-
     pendingConnections.Wait();
 
     pending.add_back(client);
+
+    while(watching.get_length()){
+        watching.remove_at(0)->Signal();
+    }
 
     while(!client->connected){
         // TODO: Actually block the task
