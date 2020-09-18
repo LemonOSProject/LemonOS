@@ -545,7 +545,7 @@ int main(char argc, char** argv){
 			window->Paint();
 			paint = false;
 		}
-		
+
 		poll(fds.data(), fds.size(), 100);
 	}
 	for(;;);

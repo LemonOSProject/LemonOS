@@ -27,7 +27,7 @@
 
 fb_info_t videoInfo;
 Lemon::GUI::Window* taskbar;
-Lemon::GUI::Window* menu;
+//Lemon::GUI::Window* menu;
 ShellInstance* shell;
 surface_t menuButton;
 
@@ -109,82 +109,11 @@ void OnTaskbarPaint(surface_t* surface){
 	Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255, 255, surface);
 }
 
-void OnMenuPaint(surface_t* surface){
-	Lemon::Graphics::DrawRect(2,32,surface->width - 4, surface->height - 64, {255, 255, 255}, surface);
-
-	Lemon::Graphics::DrawRect(0,0,2,surface->height, 64, 64, 64, surface);
-	Lemon::Graphics::DrawRect(surface->width - 2,0,2,surface->height, 64, 64, 64, surface);
-	Lemon::Graphics::DrawGradientVertical(0,0,surface->width, 32, {96, 96, 96}, {42, 50, 64}, surface);
-	Lemon::Graphics::DrawGradientVertical(0, surface->height - 32, surface->width, 32, {96, 96, 96}, {42, 50, 64}, surface);
-	
-	Lemon::Graphics::DrawString(versionString,5,MENU_ITEM_HEIGHT / 2 - 6,255,255,255,surface);
-
-	for(int i = 0; i < menuItemCount; i++){
-		if(Lemon::Graphics::PointInRect({2, 42 + i * MENU_ITEM_HEIGHT, surface->width - 4, MENU_ITEM_HEIGHT - 4}, menu->lastMousePos)){
-			Lemon::Graphics::DrawRect(3, 40 + i * MENU_ITEM_HEIGHT /* 2 pixels padding */, surface->width - 6, MENU_ITEM_HEIGHT - 4, Lemon::colours[Lemon::Colour::Foreground], surface);
-			Lemon::Graphics::DrawString(menuItems[i].name, 5, 42 + i * MENU_ITEM_HEIGHT /* 2 pixels padding */, 255, 255, 255, surface);
-		} else {
-			Lemon::Graphics::DrawString(menuItems[i].name, 5, 42 + i * MENU_ITEM_HEIGHT /* 2 pixels padding */, 0, 0, 0, surface);
-		}
-	}
-}
-
-void LoadConfig(){
-	FILE* menuConfig = fopen("/system/lemon/menu.cfg","r");
-
-	if(!menuConfig){
-		return;
-	}
-
-	fseek(menuConfig, 0, SEEK_END);
-	size_t configSize = ftell(menuConfig);
-
-	fseek(menuConfig, 0, SEEK_SET);
-
-	char* config = (char*)malloc(configSize);
-
-	fread(config, configSize, 1, menuConfig);
-
-	char name[64];
-	char buffer[64];
-	int namePos = 0;
-	int bufPos = 0;
-	memset(buffer,0,64);
-	memset(name,0,64);
-	for(int i = 0; i < configSize; i++){
-		switch(config[i]){
-		case '\r':
-			break;
-		case '\n':
-			if(!namePos){
-				namePos = 0;
-				bufPos = 0;
-				break;
-			}
-			menuItemCount++;
-			
-			strcpy(menuItems[menuItemCount-1].name, name);
-			strcpy(menuItems[menuItemCount-1].path, buffer);
-			
-			memset(buffer,0,64);
-			memset(name,0,64);
-			namePos = 0;
-			bufPos = 0;
-			break;
-		case ':':
-			strncpy(name, buffer, bufPos);
-			namePos = bufPos;
-			bufPos = 0;
-			memset(buffer,0,64);
-			break;
-		default:
-			buffer[bufPos++] = config[i];
-			break;
-		}
-	}
-}
-
-bool paint = true;
+bool paintTaskbar = true;
+void InitializeMenu();
+void PollMenu();
+Lemon::MessageHandler& GetMenuWindowHandler();
+void MinimizeMenu(bool s);
 
 int main(){
 	sockaddr_un shellAddress;
@@ -204,9 +133,6 @@ int main(){
 	taskbarWindowsContainer->background = {0, 0, 0, 0};
 	taskbar->AddWidget(taskbarWindowsContainer);
 
-	menu = new Lemon::GUI::Window("", {240, 300}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::Basic, {0, videoInfo.height - 30 - 300});
-	menu->OnPaint = OnMenuPaint;
-
 	Lemon::LemonMessage* msg = (Lemon::LemonMessage*)malloc(sizeof(Lemon::LemonMessage) + sizeof(Lemon::GUI::WMCommand));
 	Lemon::GUI::WMCommand* cmd = (Lemon::GUI::WMCommand*)msg->data;
 	cmd->cmd = Lemon::GUI::WMInitializeShellConnection;
@@ -214,15 +140,15 @@ int main(){
 	msg->length = sizeof(Lemon::GUI::WMCommand);
 	taskbar->SendWMMsg(msg);
 	free(msg);
-
-	LoadConfig();
 	
 	shell->AddWindow = AddWindow;
 	shell->RemoveWindow = RemoveWindow;
 
+	InitializeMenu();
+
 	Lemon::MessageMultiplexer mp;
 	mp.AddSource(taskbar->GetHandler());
-	mp.AddSource(menu->GetHandler());
+	mp.AddSource(GetMenuWindowHandler());
 	mp.AddSource(shell->GetServer());
 
 	for(;;){
@@ -234,46 +160,27 @@ int main(){
 				if(ev.mousePos.x < 100){
 					showMenu = !showMenu;
 
-					menu->Minimize(!showMenu);
+					MinimizeMenu(!showMenu);
 				} else {
 					taskbar->GUIHandleEvent(ev);
 				}
 			} else {
 				taskbar->GUIHandleEvent(ev);
 			}
-			paint = true;
+			paintTaskbar = true;
 		}
 
-		while(menu->PollEvent(ev)){
-			if(ev.event == Lemon::EventMouseMoved){
-				menu->lastMousePos = ev.mousePos;
-				paint = true;
-			} else if(ev.event == Lemon::EventMouseReleased){
-				if(ev.mousePos.y > 42 && ev.mousePos.y < (menuItemCount*MENU_ITEM_HEIGHT + 42)){
-					char* const argv[] = {menuItems[(int)floor((double)(ev.mousePos.y - 40) / MENU_ITEM_HEIGHT)].path};
-					lemon_spawn(argv[0], 1, argv, 0);
-
-					showMenu = false;
-					menu->Minimize(!showMenu);
-
-					paint = true;
-				}
-			}
-		}
+		PollMenu();
 
 		uint64_t usedMemLast = sysInfo.usedMem;
 		syscall(SYS_INFO, &sysInfo, 0, 0, 0, 0);
 
-		if(sysInfo.usedMem != usedMemLast) paint = true;
+		if(sysInfo.usedMem != usedMemLast) paintTaskbar = true;
 
-		if(paint){
-			if(showMenu){
-				menu->Paint();
-			}
-			
+		if(paintTaskbar){
 			taskbar->Paint();
 
-			paint = false;
+			paintTaskbar = false;
 		}
 
 		mp.PollSync();

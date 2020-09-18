@@ -5,7 +5,6 @@
 #include <string.h>
 #include <core/rotate.h>
 #include <core/msghandler.h>
-#include <core/systemservice.h>
 #include <vector>
 #include <core/message.h>
 #include <unistd.h>
@@ -32,11 +31,6 @@ public:
 std::vector<LemonUser> users;
 
 int main(int argc, char** argv){
-    sockaddr_un srvAddr;
-    strcpy(srvAddr.sun_path, Lemon::systemServiceSocketAddress);
-    srvAddr.sun_family = AF_UNIX;
-	Lemon::MessageServer systemServer = Lemon::MessageServer(srvAddr, sizeof(sockaddr_un));
-
 	putenv("HOME=/system");
 
 	lemon_spawn("/system/lemon/lemonwm.lef", 1, (char* const[1]){"/system/lemon/lemonwm.lef"});

@@ -116,7 +116,7 @@ void CompositorInstance::Paint(){
                 DrawRect(bounds.x, ypos,  bounds.width, CONTEXT_ITEM_HEIGHT, Lemon::colours[Lemon::Colour::Foreground], renderSurface);
             }
 
-            DrawString(item.name.c_str(), bounds.x + 24, ypos + 2, 0, 0, 0, renderSurface);
+            DrawString(item.name.c_str(), bounds.x + 24, ypos + 3, 0, 0, 0, renderSurface);
             ypos += CONTEXT_ITEM_HEIGHT;
         }
     }

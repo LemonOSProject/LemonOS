@@ -17,8 +17,10 @@ void ShellInstance::SetTaskbar(Lemon::GUI::Window* taskbar){
     this->taskbar = taskbar;
 }
 
+extern bool paintTaskbar;
 void ShellInstance::PollCommands(){
     while(auto m = shellSrv.Poll()){
+        paintTaskbar = true;
         if(m->msg.protocol == 0){ // Disconnected
             continue;
         }

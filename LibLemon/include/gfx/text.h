@@ -29,7 +29,7 @@ namespace Lemon::Graphics{
 
         int renderMode = RenderNormal;
         
-        rgba_colour_t colour;
+        rgba_colour_t colour = {0, 0, 0, 255};
 
         void CalculateSizes();
     public:

@@ -99,7 +99,7 @@ public:
 		count++;
 
 		if(count >= capacity){
-			capacity += (count >> 1) + 1;
+			capacity += (count << 1) + 1;
 
 			if(data){
 				T* oldData = data;

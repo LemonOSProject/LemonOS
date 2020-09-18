@@ -319,11 +319,10 @@ long SysClose(regs64_t* r){
 	
 	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
 		Log::Warning("sys_close: Invalid File Descriptor, %d", fd);
-		return -EINVAL;
+		return -EBADF;
 	}
 
 	fs_fd_t* handle;
-
 	if((handle = Scheduler::GetCurrentProcess()->fileDescriptors[fd])){
 		fs::Close(handle);
 	}

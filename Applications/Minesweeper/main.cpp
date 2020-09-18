@@ -268,6 +268,7 @@ void UpdateWindowSize(){ // Update window size according to the map size
 
 int main(int argc, char** argv){
     window = new Lemon::GUI::Window("Minesweeper", {160, 160}, 0, Lemon::GUI::GUI);
+    window->rootContainer.background = {0, 0, 0, 0};
 
     window->CreateMenuBar();
     window->menuBar->items.push_back(gameMenu);

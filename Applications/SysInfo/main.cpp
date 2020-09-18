@@ -21,7 +21,7 @@ lemon_sysinfo_t sysInfo;
 
 int main(int argc, char** argv){
     window = new Lemon::GUI::Window("System Information", {300, 300}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
-    Lemon::Graphics::LoadImage("/initrd/banner.bmp", &banner);
+    Lemon::Graphics::LoadImage("/initrd/banner.png", &banner);
     
     bannerW = new Lemon::GUI::Bitmap({{0, 0}, {300, banner.height}}, &banner);
     window->AddWidget(bannerW);

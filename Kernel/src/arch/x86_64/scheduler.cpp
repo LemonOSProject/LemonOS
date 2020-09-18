@@ -330,9 +330,10 @@ namespace Scheduler{
 
     void EndProcess(process_t* process){
         asm("sti");
-        for(unsigned i = 0; i < process->children.get_length(); i++){
-            EndProcess(process->children.get_at(i));
-        }
+        if(process->children.get_length())
+            for(auto& child : process->children){
+                EndProcess(child);
+            }
         
         CPU* cpu = GetCPULocal();
         

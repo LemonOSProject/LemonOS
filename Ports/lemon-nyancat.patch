@@ -1,0 +1,14 @@
+diff --color -ruN nyancat/src/nyancat.c nyancat2/src/nyancat.c
+--- nyancat/src/nyancat.c	2020-09-17 17:22:15.498654568 +1000
++++ nyancat2/src/nyancat.c	2020-09-17 17:22:50.195322668 +1000
+@@ -66,10 +66,7 @@
+ #include <getopt.h>
+ 
+ #include <sys/ioctl.h>
+-
+-#ifndef TIOCGWINSZ
+ #include <termios.h>
+-#endif
+ 
+ #ifdef ECHO
+ #undef ECHO
