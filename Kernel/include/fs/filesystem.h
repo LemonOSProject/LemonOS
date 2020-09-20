@@ -198,7 +198,7 @@ public:
     
     virtual ssize_t ReadLink(char* pathBuffer, size_t bufSize);
     virtual int Link(FsNode*, DirectoryEntry*);
-    virtual int Unlink(DirectoryEntry*);
+    virtual int Unlink(DirectoryEntry*, bool unlinkDirectories = false);
     
     virtual int Truncate(off_t length);
 
@@ -333,7 +333,7 @@ namespace fs{
     FsNode* FindDir(fs_fd_t* handle, char* name);
     
     int Link(FsNode*, FsNode*, DirectoryEntry*);
-    int Unlink(FsNode*, DirectoryEntry*);
+    int Unlink(FsNode*, DirectoryEntry*, bool unlinkDirectories = false);
 
     int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg);
 

@@ -52,10 +52,11 @@ public:
 };
 
 class MenuItem : public MenuObject{
+    std::string exec;
 public:
     uint16_t id;
     std::string comment;
-    std::string exec;
+    std::vector<char*> args;
 
     MenuItem(){
 
@@ -66,18 +67,58 @@ public:
         this->comment = comment;
         this->exec = exec;
         this->id = id;
+
+        std::string temp;
+        for(char c : exec){
+            if(c == ' '){
+                args.push_back(strdup(temp.c_str()));
+
+                temp.clear();
+            } else {
+                temp += c;
+            }
+        }
+
+        if(temp.length()){
+            args.push_back(strdup(temp.c_str())); // Any args left over?
+        }
+    }
+
+    void SetExec(std::string e){
+        exec = e;
+
+        args.clear();
+
+        std::string temp;
+        for(char c : exec){
+            if(c == ' '){
+                args.push_back(strdup(temp.c_str()));
+
+                temp.clear();
+            } else {
+                temp += c;
+            }
+        }
+
+        if(temp.length()){
+            args.push_back(strdup(temp.c_str())); // Any args left over?
+        }
+    }
+
+    std::string& GetExec(){
+        return exec;
     }
 
     void Open(vector2i_t pos) final {
         for(auto& p : path){
-            char* execPath = new char[p.length() + exec.length()];
+            char* execPath = new char[p.length() + strlen(args[0])];
             strcpy(execPath, p.c_str());
-            strcat(execPath, exec.c_str());
+            strcat(execPath, args[0]);
 
             struct stat st;
             int ret = stat(execPath, &st);
             if(!ret){
-                lemon_spawn(execPath, 1, &execPath);
+                lemon_spawn(execPath, args.size(), args.data());
 
                 showMenu = false;
                 window->Minimize();
@@ -180,13 +221,13 @@ void InitializeMenu(){
                         } else if(!cItem.name.compare("comment")){
                             item.comment = cItem.value;
                         } else if(!cItem.name.compare("exec")){
-                            item.exec = cItem.value;
+                            item.SetExec(cItem.value);
                         } else if(!cItem.name.compare("categories")){
                             categoryName = cItem.value;
                         }
                     }
 
-                    if(!item.name.length() || !item.exec.length()){
+                    if(!item.name.length() || !item.GetExec().length()){
                         continue; // Zero length name or path
                     }
                     item.id = GetItemID();

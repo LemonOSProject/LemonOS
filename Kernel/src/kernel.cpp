@@ -81,7 +81,10 @@ void KernelProcess(){
 
 	Log::Write("OK");
 
-	//Scheduler::EndProcess(Scheduler::GetCurrentProcess());
+	if(FsNode* node = fs::ResolvePath("/system/lemon")){
+		fs::volumes->add_back(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
+	}
+
 	for(;;) {
 		GetCPULocal()->currentThread->state = ThreadStateBlocked;
 		Scheduler::Yield();

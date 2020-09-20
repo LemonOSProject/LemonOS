@@ -630,8 +630,32 @@ long SysMkdir(regs64_t* r){
 }
 
 long SysRmdir(regs64_t* r){
-	Log::Warning("SysRmdir is a stub!");
-	return -ENOSYS;
+	process_t* proc = Scheduler::GetCurrentProcess();
+	if(!Memory::CheckUsermodePointer(r->rbx, 1, proc->addressSpace)){
+		return -EFAULT;
+	}
+
+	char* path = reinterpret_cast<char*>(r->rbx);
+	FsNode* node = fs::ResolvePath(path, proc->workingDir);
+	if(!node){
+		return -ENOENT;
+	}
+
+	if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+		return -ENOTDIR;
+	}
+
+	DirectoryEntry ent;
+	if(node->ReadDir(&ent, 0)){
+		return -ENOTEMPTY;
+	}
+
+	FsNode* parent = fs::ResolveParent(path);
+	strcpy(ent.name, fs::BaseName(path));
+	ent.inode = node->inode;
+
+	fs::Unlink(parent, &ent, true);
+	return 0;
 }
 
 long SysRename(regs64_t* r){
@@ -1480,6 +1504,11 @@ long SysPoll(regs64_t* r){
 		if((files[i]->node->flags & FS_NODE_TYPE) == FS_NODE_SOCKET){
 			if(!((Socket*)files[i]->node)->IsConnected()){
 				fds[i].revents |= POLLHUP;
+				hasEvent = true;
+			}
+			
+			if(((Socket*)files[i]->node)->PendingConnections() && (fds[i].events & POLLIN)){
+				fds[i].revents |= POLLIN;
 				hasEvent = true;
 			}
 		}

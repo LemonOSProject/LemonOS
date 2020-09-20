@@ -745,7 +745,7 @@ namespace fs::Ext2{
         for(unsigned i = 0; i < entries.get_length(); i++){
             DirectoryEntry ent = entries[i];
 
-            Log::Info("[Ext2] Writing entry: %s", ent.name);
+            //Log::Info("[Ext2] Writing entry: %s", ent.name);
 
             e2dirent->fileType = ent.flags;
             e2dirent->inode = ent.inode;
@@ -1295,8 +1295,7 @@ namespace fs::Ext2{
         return WriteDir(node, entries);
     }
 
-    int Ext2Volume::Unlink(Ext2Node* node, DirectoryEntry* ent){
-        
+    int Ext2Volume::Unlink(Ext2Node* node, DirectoryEntry* ent, bool unlinkDirectories){
         List<DirectoryEntry> entries;
         if(int e = ListDir(node, entries)){
             Log::Error("[Ext2] Unlink: Error listing directory!", ent->inode);
@@ -1321,7 +1320,9 @@ namespace fs::Ext2{
 
         if(Ext2Node* file = inodeCache.get(ent->inode)){
             if((file->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
-                return -EISDIR;
+                if(!unlinkDirectories){
+                    return -EISDIR;
+                }
             }
 
             file->nlink--;
@@ -1339,7 +1340,9 @@ namespace fs::Ext2{
             }
 
             if((e2inode.mode & EXT2_S_IFMT) == EXT2_S_IFDIR){
-                return -EISDIR;
+                if(!unlinkDirectories){
+                    return -EISDIR;
+                }
             }
             
             e2inode.linkCount--;
@@ -1485,9 +1488,9 @@ namespace fs::Ext2{
         return ret;
     }
     
-    int Ext2Node::Unlink(DirectoryEntry* d){
+    int Ext2Node::Unlink(DirectoryEntry* d, bool unlinkDirectories){
         flock.AcquireWrite();
-        auto ret = vol->Unlink(this, d);
+        auto ret = vol->Unlink(this, d, unlinkDirectories);
         flock.ReleaseWrite();
         return ret;
     }

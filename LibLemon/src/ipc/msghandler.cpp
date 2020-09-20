@@ -54,15 +54,15 @@ namespace Lemon {
 
     std::shared_ptr<LemonMessageInfo> MessageServer::Poll(){
     retry:
+        int fd = 0;
+        while((fd = accept(sock.fd, nullptr, nullptr)) > 0){
+            fds.push_back({ .fd = fd, .events = POLLIN, .revents = 0 });
+        }
+
         if(queue.size() > 0){
             auto element = queue.front();
             queue.pop_front();
             return element;
-        }
-
-        int fd = 0;
-        while((fd = accept(sock.fd, nullptr, nullptr)) > 0){
-            fds.push_back({ .fd = fd, .events = POLLIN, .revents = 0 });
         }
 
         if(!fds.size()) {
@@ -309,13 +309,14 @@ namespace Lemon {
 
         for(MessageHandler* h : handlers){
             for(pollfd& f : h->GetFileDescriptors()){
+                f.events |= POLLIN;
                 fds.push_back(f);
             }
         }
 
         int evCount = 0;
         
-        evCount = poll(fds.data(), fds.size(), -1);
+        evCount = poll(fds.data(), fds.size(), 200);
 
         if(evCount > 0){
             return true;

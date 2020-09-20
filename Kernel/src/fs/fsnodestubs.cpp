@@ -59,7 +59,7 @@ int FsNode::Link(FsNode*, DirectoryEntry*){
     return -ENOSYS;
 }
 
-int FsNode::Unlink(DirectoryEntry*){
+int FsNode::Unlink(DirectoryEntry*, bool unlinkDirs){
     return -ENOSYS;
 }
 

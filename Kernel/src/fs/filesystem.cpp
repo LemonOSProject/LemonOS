@@ -403,10 +403,11 @@ namespace fs{
 		return dir->Link(link, ent);
 	}
 
-    int Unlink(FsNode* dir, DirectoryEntry* ent){
+    int Unlink(FsNode* dir, DirectoryEntry* ent, bool unlinkDirectories){
 		assert(dir);
+		assert(ent);
 
-		return dir->Unlink(ent);
+		return dir->Unlink(ent, unlinkDirectories);
 	}
 
     void Close(FsNode* node){

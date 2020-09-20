@@ -215,7 +215,7 @@ namespace fs::Ext2{
 
         ssize_t ReadLink(char* pathBuffer, size_t bufSize);
         int Link(FsNode*, DirectoryEntry*);
-        int Unlink(DirectoryEntry*);
+        int Unlink(DirectoryEntry*, bool unlinkDirectories = false);
         int Truncate(off_t length);
 
         void Close();
@@ -311,7 +311,7 @@ namespace fs::Ext2{
         int CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
         ssize_t ReadLink(Ext2Node* node, char* pathBuffer, size_t bufSize);
         int Link(Ext2Node* dir, Ext2Node* node, DirectoryEntry* ent);
-        int Unlink(Ext2Node* dir, DirectoryEntry* ent);
+        int Unlink(Ext2Node* dir, DirectoryEntry* ent, bool unlinkDirectories = false);
         int Truncate(Ext2Node* node, off_t length);
 
         void SyncNode(Ext2Node* node);
