@@ -132,14 +132,6 @@ int main(){
 	taskbarWindowsContainer = new Lemon::GUI::LayoutContainer({100, 0, videoInfo.width - 104, videoInfo.height}, {128, 30 - 4});
 	taskbarWindowsContainer->background = {0, 0, 0, 0};
 	taskbar->AddWidget(taskbarWindowsContainer);
-
-	Lemon::LemonMessage* msg = (Lemon::LemonMessage*)malloc(sizeof(Lemon::LemonMessage) + sizeof(Lemon::GUI::WMCommand));
-	Lemon::GUI::WMCommand* cmd = (Lemon::GUI::WMCommand*)msg->data;
-	cmd->cmd = Lemon::GUI::WMInitializeShellConnection;
-	msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
-	msg->length = sizeof(Lemon::GUI::WMCommand);
-	taskbar->SendWMMsg(msg);
-	free(msg);
 	
 	shell->AddWindow = AddWindow;
 	shell->RemoveWindow = RemoveWindow;
@@ -150,6 +142,14 @@ int main(){
 	mp.AddSource(taskbar->GetHandler());
 	mp.AddSource(GetMenuWindowHandler());
 	mp.AddSource(shell->GetServer());
+
+	Lemon::LemonMessage* msg = (Lemon::LemonMessage*)malloc(sizeof(Lemon::LemonMessage) + sizeof(Lemon::GUI::WMCommand));
+	Lemon::GUI::WMCommand* cmd = (Lemon::GUI::WMCommand*)msg->data;
+	cmd->cmd = Lemon::GUI::WMInitializeShellConnection;
+	msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
+	msg->length = sizeof(Lemon::GUI::WMCommand);
+	taskbar->SendWMMsg(msg);
+	free(msg);
 
 	for(;;){
 		shell->Update();

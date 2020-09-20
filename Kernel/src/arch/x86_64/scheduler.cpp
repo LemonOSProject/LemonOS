@@ -447,6 +447,7 @@ namespace Scheduler{
 
         acquireLock(&lock);
         acquireLock(&cpu->runQueueLock);
+        releaseLock(&cpu->currentThread->lock);
         list.add_back(cpu->currentThread);
         cpu->currentThread->state = ThreadStateBlocked;
         releaseLock(&lock);

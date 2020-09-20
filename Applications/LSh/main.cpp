@@ -25,7 +25,7 @@ typedef struct {
 
 char currentDir[PATH_MAX];
 
-std::list<char*> path;
+std::list<std::string> path;
 
 std::list<builtin_t> builtins;
 
@@ -170,41 +170,31 @@ void ParseLine(){
 	}
 
 	int fd;
-	if(fd = open(currentDir, O_RDONLY | O_DIRECTORY)){
-		lemon_dirent_t dirent;
-
-		int i = 0;
-		while (lemon_readdir(fd, i++, &dirent)){
-			if(strcmp(argv[0], dirent.name) == 0){
-				pid_t pid = lemon_spawn(dirent.name, argc, argv, 1);
-
-				syscall(SYS_WAIT_PID, pid, 0, 0, 0, 0);
-
-				close(fd);
-
-				if(lnC)
-					free(lnC);
-				return;
-			}
+	if(strchr(argv[0], '/') && (fd = open(currentDir, O_RDONLY | O_DIRECTORY))){
+		pid_t pid = lemon_spawn(argv[0], argc, argv, 1);
+		if(pid > 0){
+			syscall(SYS_WAIT_PID, pid, 0, 0, 0, 0);
 		}
 
 		close(fd);
-	}
-	
-	for(char* path : path){
-		if((fd = open(path, O_RDONLY | O_DIRECTORY)) > 0){
+
+		if(lnC)
+			free(lnC);
+
+		close(fd);
+
+		return;
+	} else for(std::string path : path){
+		if((fd = open(path.c_str(), O_RDONLY | O_DIRECTORY)) > 0){
 			lemon_dirent_t dirent;
 
 			int i = 0;
 			while (lemon_readdir(fd, i++, &dirent)){
 				// Check exact filenames and try omitting extension of .lef files
 				if(strcmp(argv[0], dirent.name) == 0 || (strcmp(dirent.name + strlen(dirent.name) - 4, ".lef") == 0 && strncmp(argv[0], dirent.name, strlen(dirent.name) - 4) == 0)){
-					char* tempPath = (char*)malloc(strlen(path) + strlen(dirent.name) + 2);
-					strcpy(tempPath, path);
-					strcat(tempPath, "/");
-					strcat(tempPath, dirent.name);
+					path = path + "/" + dirent.name;
 					
-					pid_t pid = lemon_spawn(tempPath, argc, argv, 1);
+					pid_t pid = lemon_spawn(path.c_str(), argc, argv, 1);
 
 					if(pid){
 						syscall(SYS_WAIT_PID, pid, 0, 0, 0, 0);
@@ -213,7 +203,6 @@ void ParseLine(){
 					}
 
 					close(fd);
-					free(tempPath);
 					free(lnC);
 					return;
 				}
@@ -240,8 +229,20 @@ int main(){
 	builtins.push_back(builtinExport);
 	builtins.push_back(builtinClear);
 
-	path.push_back("/initrd");
-	path.push_back("/system/bin");
+	std::string pathEnv = getenv("PATH");
+	std::string temp;
+	for(char c : pathEnv){
+		if(c == ':' && temp.length()){
+			path.push_back(temp);
+			temp.clear();
+		} else {
+			temp += c;
+		}
+	}
+	if(temp.length()){
+		path.push_back(temp);
+		temp.clear();
+	}
 
 	fflush(stdin);
 
