@@ -81,7 +81,7 @@ namespace HAL{
                     break;
                 } 
                 case Mboot2MemoryMap: {
-                    multiboot2_memory_map_t* mbMemMap = reinterpret_cast<multiboot2_memory_map_t*>(tag); 
+                    multiboot2_memory_map_t* mbMemMap = reinterpret_cast<multiboot2_memory_map_t*>(tag);
                     
                     multiboot2_mmap_entry_t* currentEntry = mbMemMap->entries;
                     while(currentEntry < reinterpret_cast<void*>(mbMemMap) + mbMemMap->size){
@@ -97,6 +97,7 @@ namespace HAL{
                         }
                         currentEntry = reinterpret_cast<multiboot2_mmap_entry_t*>((uintptr_t)currentEntry + mbMemMap->entrySize);
                     }
+                    Memory::usedPhysicalBlocks = 0;
                 }
                 case Mboot2FramebufferInfo: {
                     multiboot2_framebuffer_info_t* mbFbInfo = reinterpret_cast<multiboot2_framebuffer_info_t*>(tag);

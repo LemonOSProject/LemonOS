@@ -243,8 +243,6 @@ namespace fs::FAT32{
         
         fat_entry_t* dirEntries = (fat_entry_t*)ReadClusterChain(cluster, &clusterCount);
 
-        Log::Warning(name);
-
         List<int> foundEntries;
         List<int> foundEntriesLfnCount;
 
@@ -285,7 +283,6 @@ namespace fs::FAT32{
                 }
 
                 if(strcmp(_name, name) == 0){
-                    Log::Warning("Found %s", _name);
                     uint64_t clusterNum = (((uint32_t)dirEntries[i].highClusterNum) << 16) | dirEntries[i].lowClusterNum;
                     if(clusterNum == bootRecord->ebr.rootClusterNum || clusterNum == 0) 
                         return mountPoint; // Root Directory

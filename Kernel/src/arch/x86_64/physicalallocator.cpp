@@ -11,7 +11,7 @@ namespace Memory{
     uint32_t physicalMemoryBitmap[PHYSALLOC_BITMAP_SIZE_DWORDS];
 
     uint64_t usedPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS * 32;
-    uint64_t maxPhysicalBlocks = 0;
+    uint64_t maxPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS * 32;
 
     lock_t allocatorLock = 0;
 

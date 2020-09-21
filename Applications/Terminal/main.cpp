@@ -546,7 +546,7 @@ int main(char argc, char** argv){
 			paint = false;
 		}
 
-		poll(fds.data(), fds.size(), 100);
+		poll(fds.data(), fds.size(), 200);
 	}
 	for(;;);
 }
