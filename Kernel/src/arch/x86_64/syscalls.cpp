@@ -1578,7 +1578,8 @@ long SysPoll(regs64_t* r){
 		} while(timeout < 0 || Timer::TimeDifference(Timer::GetSystemUptimeStruct(), tVal) < timeout); // Wait until timeout, unless timeout is negative in which wait infinitely
 	}
 
-	kfree(files);
+	if(files)
+		kfree(files);
 	
 	return eventCount;
 }

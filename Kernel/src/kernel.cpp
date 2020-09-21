@@ -23,6 +23,7 @@
 #include <sharedmem.h>
 #include <net/net.h>
 #include <cpu.h>
+#include <lemon.h>
 
 uint8_t* progressBuffer = nullptr;
 video_mode_t videoMode;
@@ -165,6 +166,7 @@ extern "C"
 	}
 
 	Video::DrawString("Copyright 2018-2020 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
+	Video::DrawString(Lemon::versionString, 2, videoMode.height - 20, 255, 255, 255);
 
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);

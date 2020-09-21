@@ -1,5 +1,3 @@
 namespace Lemon{
-	#ifdef Lemon64
-	char* versionString = "Lemon OS Nightly (Alpha) x86_64";
-	#endif
+	char* versionString = "Lemon OS Alpha x86_64 0.2.0";
 }
