@@ -516,8 +516,8 @@ int main(char argc, char** argv){
 				}
 			} else if (ev.event == Lemon::EventWindowClosed){
 				delete window;
-				free(_buf);
 				exit(0);
+				return 0;
 			} else if (ev.event == Lemon::EventWindowResize){
 				window->Resize(ev.resizeBounds);
 
@@ -546,7 +546,7 @@ int main(char argc, char** argv){
 			paint = false;
 		}
 
-		poll(fds.data(), fds.size(), 200);
+		poll(fds.data(), fds.size(), -1);
 	}
-	for(;;);
+	return 0;
 }

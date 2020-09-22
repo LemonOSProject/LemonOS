@@ -8,9 +8,11 @@
 #include <stdexcept>
 
 #include <unistd.h>
+#include <math.h>
 
 struct ProcessCPUTime{
     timespec recordTime;
+    uint64_t diff;
     uint64_t activeUs;
     short lastUsage;
 };
@@ -36,46 +38,46 @@ int main(int argc, char** argv){
 
     window->AddWidget(listView);
 
-    uint16_t cpuCount = Lemon::SysInfo().cpuCount;
-
     std::vector<lemon_process_info_t> processes;
     while(!window->closed){
         Lemon::GetProcessList(processes);
 
-        timespec time;
-        clock_gettime(CLOCK_BOOTTIME, &time);
+        uint64_t activeTimeSum = 0;
+
+        for(lemon_process_info_t proc : processes){
+            try{    
+                ProcessCPUTime& pTime = processTimer.at(proc.pid);
+
+                uint64_t diff = proc.activeUs - pTime.activeUs;
+                activeTimeSum += diff;
+
+                pTime.activeUs = proc.activeUs; // Update the entry
+                pTime.diff = diff;
+            } catch(std::out_of_range e) {
+                processTimer[proc.pid] = {.diff = 0, .activeUs = proc.activeUs, .lastUsage = 0 };
+            }
+        }
 
         listView->ClearItems();
         for(lemon_process_info_t proc : processes){
 
-            char uptime[17];
-            snprintf(uptime, 16, "%lum %lus", proc.runningTime / 60, proc.runningTime % 60);
+            char uptime[19];
+            snprintf(uptime, 18, "%lum %lus", proc.runningTime / 60, proc.runningTime % 60);
 
             char usage[6];
             try{    
                 ProcessCPUTime& pTime = processTimer.at(proc.pid);
-
-                if(pTime.recordTime.tv_sec != time.tv_sec){
-                    uint64_t diff = proc.activeUs - pTime.activeUs; // Microseconds spent active since last record
-                    uint64_t timeDiff = (time.tv_sec - pTime.recordTime.tv_sec) * 1000000 + (time.tv_nsec - pTime.recordTime.tv_nsec) / 1000; // Get the difference between the times in microseconds
-                    
-                    if(diff && timeDiff){
-                        snprintf(usage, 5, "%3lu%%", (diff * 100) / timeDiff); // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
-                        pTime.lastUsage = static_cast<short>((diff * 100) / timeDiff);
-                    } else {
-                        strcpy(usage, "0%");
-                        pTime.lastUsage = 0;
-                    }
-
-                    pTime.recordTime = time;
-                    pTime.activeUs = proc.activeUs; // Update the entry
+                if(pTime.diff && activeTimeSum){
+                    snprintf(usage, 5, "%lu%%", (pTime.diff * 100) / activeTimeSum); // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
+                    pTime.lastUsage = static_cast<short>((pTime.diff * 100) / activeTimeSum);
                 } else {
-                    snprintf(usage, 5, "%3i%%", pTime.lastUsage);
+                    strcpy(usage, "0%");
+                    pTime.lastUsage = 0;
                 }
             } catch(std::out_of_range e) {
                 strcpy(usage, "0%");
 
-                processTimer[proc.pid] = {.recordTime = time, .activeUs = proc.activeUs, .lastUsage = 0 };
+                processTimer[proc.pid] = {.diff = 0, .activeUs = proc.activeUs, .lastUsage = 0 };
             }
 
             Lemon::GUI::ListItem pItem = {.details = {proc.name, std::to_string(proc.pid), uptime, usage}};

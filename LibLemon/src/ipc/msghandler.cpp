@@ -316,7 +316,7 @@ namespace Lemon {
 
         int evCount = 0;
         
-        evCount = poll(fds.data(), fds.size(), 200);
+        evCount = poll(fds.data(), fds.size(), -1);
 
         if(evCount > 0){
             return true;

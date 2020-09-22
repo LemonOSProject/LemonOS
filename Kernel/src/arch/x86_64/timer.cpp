@@ -106,10 +106,12 @@ namespace Timer{
     }
 
     void Wait(long ms){
+        assert(ms > 0);
+
         uint64_t ticksPerMs = (Timer::GetFrequency() / 1000);
         uint64_t timeMs = Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * ticksPerMs);
     
-        while((Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * ticksPerMs)) - timeMs <= ms);
+        while((Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * ticksPerMs)) - timeMs <= static_cast<unsigned long>(ms));
     }
 
     void SleepCurrentThread(long ticks){
@@ -126,10 +128,12 @@ namespace Timer{
         }
 
         if(sleeping.get_length() && !(acquireTestLock(&sleepQueueLock))){
-            sleeping.get_front().ticksLeft--;
+            if(sleeping.get_length()){ // Make sure the queue has not changed inbetween checking the length and acquiring the lock
+                sleeping.get_front().ticksLeft--;
 
-            while(sleeping.get_length() && sleeping.get_front().ticksLeft <= 0){
-                Scheduler::UnblockThread(sleeping.remove_at(0).thread);
+                while(sleeping.get_length() && sleeping.get_front().ticksLeft <= 0){
+                    Scheduler::UnblockThread(sleeping.remove_at(0).thread);
+                }
             }
 
             releaseLock(&sleepQueueLock);

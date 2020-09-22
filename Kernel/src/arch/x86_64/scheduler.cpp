@@ -460,8 +460,8 @@ namespace Scheduler{
         CPU* cpu = GetCPULocal();
 
         acquireLock(&lock);
-        acquireLock(&cpu->runQueueLock);
         acquireLock(&cpu->currentThread->stateLock);
+        acquireLock(&cpu->runQueueLock);
         blocker.Block(cpu->currentThread);
         cpu->currentThread->state = ThreadStateBlocked;
         releaseLock(&cpu->currentThread->stateLock);

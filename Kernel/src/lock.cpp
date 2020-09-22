@@ -14,6 +14,7 @@ void Semaphore::Wait(){
 }
 
 void Semaphore::WaitTimeout(long timeout){
+    __sync_fetch_and_sub(&value, 1);
     if(value < 0){
         thread_t* cThread = GetCPULocal()->currentThread;
         acquireLock(&cThread->stateLock);
@@ -23,6 +24,6 @@ void Semaphore::WaitTimeout(long timeout){
             return;
         }
         releaseLock(&cThread->stateLock);
-        Timer::SleepCurrentThread(timeout); // TODO: Find a better way to do this
+        //Timer::SleepCurrentThread(timeout); // TODO: Find a better way to do this
     }
 }
