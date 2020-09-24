@@ -299,7 +299,7 @@ extern "C"{
 }*/
 
 void laihost_pci_writew(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset, uint16_t val){
-	PCI::Config_WriteWord(bus, slot, fun, offset, val);
+	PCI::ConfigWriteWord(bus, slot, fun, offset, val);
 }
 
 /*void laihost_pci_writed(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset, uint32_t val){

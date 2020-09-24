@@ -25,20 +25,10 @@ namespace ATA{
 
 	uint32_t busMasterPort;
 
-	pci_device_t controllerDevice{
-		nullptr, // Vendor Pointer
-		0, // Device ID
-		0, // Vendor ID
-		"Generic ATA Compaitble Storage Controller", // Name
-		0, // Bus
-		0, // Slot
-		0, // Func
-		PCI_CLASS_STORAGE, // Mass Storage Controller
-		0x01, // ATA Controller Subclass
-		{},
-		{},
-		true, // Is a generic driver
-	};
+	PCIDevice* controllerPCIDevice;
+
+	uint8_t ideClassCode = PCI_CLASS_STORAGE;
+	uint8_t ideSubclass = PCI_SUBCLASS_IDE;
 
 	inline void WriteRegister(uint8_t port, uint8_t reg, uint8_t value){
 		outportb((port ? port1 : port0 ) + reg, value);
@@ -106,18 +96,19 @@ namespace ATA{
 	}
 
 	int Init(){
-		controllerDevice.classCode = PCI_CLASS_STORAGE; // Storage Device
-		controllerDevice.subclass = 0x1; // ATA Controller
-		controllerDevice = PCI::RegisterPCIDevice(controllerDevice);
-
-		if(controllerDevice.vendorID == 0xFFFF){
-			return true; // No ATA Controller Found
+		if(!PCI::FindGenericDevice(ideClassCode, ideSubclass)){
+			Log::Warning("[ATA] Not IDE controller found!");
+			return 1;
 		}
 
-        Log::Info("Initializing ATA: %x %x %x %x", controllerDevice.header0.baseAddress0, controllerDevice.header0.baseAddress1, controllerDevice.header0.baseAddress2, controllerDevice.header0.baseAddress3);
+		controllerPCIDevice = &PCI::GetGenericPCIDevice(ideClassCode, ideSubclass);
+		assert(controllerPCIDevice->vendorID != 0xFFFF);
 
-        busMasterPort = controllerDevice.header0.baseAddress4 & 0xFFFFFFFC;
-		PCI::Config_WriteWord(controllerDevice.bus, controllerDevice.slot, controllerDevice.func, 0x4, controllerDevice.header0.command | PCI_CMD_BUS_MASTER);
+        Log::Info("[ATA] Initializing...");
+
+		assert(controllerPCIDevice->BarIsIOPort(4));
+        busMasterPort = controllerPCIDevice->GetBaseAddressRegister(4);
+		controllerPCIDevice->EnableBusMastering();
 
 		for(int i = 0; i < 2; i++){ // Port
 			WriteControlRegister(i, 0, ReadControlRegister(i, 0) | 4); // Software Reset

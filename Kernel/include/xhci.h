@@ -4,6 +4,10 @@
 
 #define XHCI_PORT_OFFSET 0x400
 
+#define USB_CMD_RS (1 << 0) // Run/Stop
+#define USB_CMD_HCRST (1 << 1) // Host Controller Reset
+#define USB_CMD_INTE (1 << 2) // Interrupter enable
+
 #define USB_STS_HCH (1 << 0) // HCHalted - 0 if CMD_RS is 1
 #define USB_STS_HSE (1 << 2) // Host System Error - set to 1 on error
 #define USB_STS_EINT (1 << 3) // Event Interrupt
@@ -27,7 +31,8 @@
 #define USB_CCR_PTR 0xFFFFFFFFFFFFFFC0‬ // Command Ring Pointer
 
 namespace USB{
-    namespace XHCI{
+    class XHCIController{
+    protected:
         typedef struct {
             uint8_t capLength; // Capability Register Length
             uint8_t reserved;
@@ -107,8 +112,6 @@ namespace USB{
                 return configure & USB_CFG_MAXSLOTSEN;
             }
         } __attribute__((packed)) xhci_op_regs_t; // Operational Registers
-        
-
 
         typedef struct {
             uint32_t portSC; // Port Status and Control
@@ -148,6 +151,32 @@ namespace USB{
             uint32_t slotState : 5;
         } __attribute__((packed)) xhci_slot_context_t;
 
-        int Initialize();
-    }
+        uintptr_t xhciBaseAddress;
+        uintptr_t xhciVirtualAddress;
+
+        xhci_cap_regs_t* capRegs;
+        xhci_op_regs_t* opRegs;
+        xhci_port_regs_t* portRegs;
+
+        uint64_t devContextBaseAddressArrayPhys;
+        uint64_t* devContextBaseAddressArray;
+
+        uint64_t cmdRingPointerPhys;
+        uint64_t* cmdRingPointer;
+    public:
+        enum Status{
+            ControllerNotInitialized,
+            ControllerInitialized,
+        };
+
+    private:
+        Status controllerStatus = ControllerNotInitialized;
+
+    public:
+        XHCIController(uintptr_t baseAddress);
+
+        inline Status GetControllerStatus() { return controllerStatus; }
+
+        static int Initialize();
+    };
 }

@@ -19,36 +19,24 @@ namespace AHCI{
 
 	Port* ports[32];
 
-	pci_device_t controllerDevice{
-		nullptr, // Vendor Pointer
-		0, // Device ID
-		0, // Vendor ID
-		"Generic AHCI Compaitble Storage Controller", // Name
-		0, // Bus
-		0, // Slot
-		0, // Func
-		PCI_CLASS_STORAGE, // Mass Storage Controller
-		0x06, // Serial ATA Controller Subclass
-		{},
-		{},
-		true, // Is a generic driver
-	};
+	PCIDevice* controllerPCIDevice;
+	uint8_t ahciClassCode = PCI_CLASS_STORAGE;
+	uint8_t ahciSubclass = PCI_SUBCLASS_SATA;
 
 	int Init(){
-		controllerDevice.classCode = PCI_CLASS_STORAGE; // Storage Device
-		controllerDevice.subclass = 0x6; // AHCI Controller
-		controllerDevice = PCI::RegisterPCIDevice(controllerDevice);
-
-		if(controllerDevice.vendorID == 0xFFFF){
-			Log::Warning("No AHCI Controller Found");
-			return true; // No AHCI Controller Found
+		if(!PCI::FindGenericDevice(ahciClassCode, ahciSubclass)){
+			Log::Warning("[AHCI] No controller found.");
+			return 1;
 		}
+
+		controllerPCIDevice = &PCI::GetGenericPCIDevice(ahciClassCode, ahciSubclass);
+		assert(controllerPCIDevice->vendorID != 0xFFFF);
 		
 		Log::Info("Initializing AHCI Controller...");
 
-		PCI::Config_WriteWord(controllerDevice.bus, controllerDevice.slot, controllerDevice.func, 0x4, controllerDevice.header0.command | PCI_CMD_BUS_MASTER); // Enable Bus Mastering
+		controllerPCIDevice->EnableBusMastering();
 
-		ahciBaseAddress = controllerDevice.header0.baseAddress5 & 0xFFFFFFFFFFFFF000; // BAR 5 is the AHCI Base Address
+		ahciBaseAddress = controllerPCIDevice->GetBaseAddressRegister(5); // BAR 5 is the AHCI Base Address
 		ahciVirtualAddress = Memory::GetIOMapping(ahciBaseAddress);
 
 		ahciHBA = (hba_mem_t*)ahciVirtualAddress;

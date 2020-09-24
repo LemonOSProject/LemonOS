@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <assert.h>
 
 #define PCI_BIST_CAPABLE (1 << 7)
 #define PCI_BIST_START (1 << 6)
@@ -38,92 +39,79 @@
 
 #define PCI_CLASS_COPROCESSOR 0x40
 
+#define PCI_SUBCLASS_IDE 0x1
+#define PCI_SUBCLASS_FLOPPY 0x2
+#define PCI_SUBCLASS_ATA 0x5
+#define PCI_SUBCLASS_SATA 0x6
+#define PCI_SUBCLASS_NVM 0x7
+
+#define PCI_SUBCLASS_ETHERNET 0x0
+
+#define PCI_SUBCLASS_VGA_COMPATIBLE 0x0
+#define PCI_SUBCLASS_XGA 0x1
+
+#define PCI_SUBCLASS_USB 0x3
+
 #define PCI_IO_PORT_CONFIG_ADDRESS 0xCF8
 #define PCI_IO_PORT_CONFIG_DATA 0xCFC
 
-typedef struct{
-	uint16_t vendorID;
-	uint16_t deviceID;
-	uint16_t command;
-	uint16_t status;
-	uint8_t revisionID;
-	uint8_t progIF;
-	uint8_t subclass;
-	uint8_t classCode;
-	uint8_t cacheLineSize;
-	uint8_t latencyTimer;
-	uint8_t headerType;
-	uint8_t BIST;
-	uint32_t baseAddress0;
-	uint32_t baseAddress1;
-	uint32_t baseAddress2;
-	uint32_t baseAddress3;
-	uint32_t baseAddress4;
-	uint32_t baseAddress5;
-	uint32_t cisPtr;
-	uint16_t subsystemVendorID;
-	uint16_t subsystemID;
-	uint32_t expansionROMBaseAddress;
-	uint8_t reserved[3];
-	uint8_t capabilitiesPtr;
-	uint32_t reserved2;
-	uint8_t interruptLine;
-	uint8_t interruptPin;
-	uint8_t minGrant;
-	uint8_t maxLatency;
-} __attribute__((packed)) pci_device_header_type0_t;
+enum PCIConfigRegisters{
+	PCIDeviceID = 0x2,
+	PCIVendorID = 0x0,
+	PCIStatus = 0x6,
+	PCICommand = 0x4,
+	PCIClassCode = 0xB,
+	PCISubclass = 0xA,
+	PCIProgIF = 0x9,
+	PCIRevisionID = 0x8,
+	PCIBIST = 0xF,
+	PCIHeaderType = 0xE,
+	PCILatencyTimer = 0xD,
+	PCICacheLineSize = 0xC,
+	PCIBAR0 = 0x10,
+	PCIBAR1 = 0x14,
+	PCIBAR2 = 0x18,
+	PCIBAR3 = 0x1C,
+	PCIBAR4 = 0x20,
+	PCIBAR5 = 0x24,
+	PCICardbusCISPointer = 0x28,
+	PCISubsystemID = 0x2E,
+	PCISubsystemVendorID = 0x2C,
+	PCIExpansionROMBaseAddress = 0x30,
+	PCICapabilitiesPointer = 0x37,
+	PCIMaxLatency = 0x3C,
+	PCIMinGrant = 0x3D,
+	PCIInterruptPIN = 0x3E,
+	PCIInterruptLine = 0x3F,
+};
 
-typedef struct{
-	uint16_t vendorID;
-	uint16_t deviceID;
-	uint16_t command;
-	uint16_t status;
-	uint8_t revisionID;
-	uint8_t progIF;
-	uint8_t subclass;
-	uint8_t classCode;
-	uint8_t cacheLineSize;
-	uint8_t latencyTimer;
-	uint8_t headerType;
-	uint32_t baseAddress0;
-	uint32_t baseAddress1;
-	uint8_t primaryBusNumber;
-	uint8_t secondaryBusNumber;
-	uint8_t subordinateBusNumber;
-	uint8_t secondaryLatencyTimer;
-	uint8_t ioBase;
-	uint8_t ioLimit;
-	uint16_t secondaryStatus;
-	uint16_t memoryLimit;
-	uint16_t memoryBase;
-	uint16_t prefetchMemoryLimit;
-	uint16_t prefetchMemoryBase;
-	uint32_t prefetchBaseUpper;
-	uint32_t prefetchLimitUpper;
-	uint16_t ioLimitUpper;
-	uint16_t ioBaseUpper;
-	uint8_t reserved[3];
-	uint8_t capabilityPointer;
-	uint32_t romBaseAddress;
-	uint16_t bridgeControl;
-	uint8_t interruptPIN;
-	uint8_t interruptLine;
-} __attribute__((packed)) pci_device_header_type1_t;
+class PCIDevice;
+namespace PCI{
+	uint16_t ReadWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
 
+	uint32_t ConfigReadDword(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
 
-typedef struct {
-	uint16_t vendorID;
-	char* vendorString;
-} pci_vendor_t;
+	uint16_t ConfigReadWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
+	void ConfigWriteWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint16_t data);
 
-typedef struct {
-	pci_vendor_t* vendor;
+	uint8_t ConfigReadByte(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
+	void ConfigWriteByte(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint8_t data);
 
+	bool CheckDevice(uint8_t bus, uint8_t device, uint8_t func);
+	bool FindDevice(uint16_t deviceID, uint16_t vendorID);
+	bool FindGenericDevice(uint16_t classCode, uint16_t subclass);
+
+	PCIDevice& GetPCIDevice(uint16_t deviceID, uint16_t vendorID);
+	PCIDevice& GetGenericPCIDevice(uint8_t classCode, uint8_t subclass);
+
+	void Init();
+}
+
+class PCIDevice{
+public:
 	uint16_t deviceID;
 	uint16_t vendorID;
-
-	const char* deviceName;
-
+	
 	uint8_t bus;
 	uint8_t slot;
 	uint8_t func;
@@ -131,19 +119,47 @@ typedef struct {
 	uint8_t classCode;
 	uint8_t subclass;
 
-	pci_device_header_type0_t header0;
-	pci_device_header_type1_t header1;
+	inline uintptr_t GetBaseAddressRegister(uint8_t idx){
+		assert(idx >= 0 && idx <= 5);
 
-	bool generic = false;
-} pci_device_t;
+		uintptr_t bar = PCI::ConfigReadDword(bus, slot, func, PCIBAR0 + (idx * sizeof(uint32_t)));
+		if(!(bar & 0x1) /* Not MMIO */ && bar & 0x4 /* 64-bit */ && idx < 5){
+			bar |= static_cast<uintptr_t>(PCI::ConfigReadDword(bus, slot, func, PCIBAR0 + ((bar + 1) * sizeof(uint32_t)))) << 32;
+		}
 
-namespace PCI{
-	uint16_t ReadWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
-	void Config_WriteWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint16_t data);
-	void RegsiterPCIVendor(pci_vendor_t vendor);
-	pci_device_t RegisterPCIDevice(pci_device_t device);
-	bool CheckDevice(uint8_t bus, uint8_t device, uint8_t func);
-	bool FindDevice(uint16_t deviceID, uint16_t vendorID);
+		return (bar & 0x1) ? (bar & 0xFFFFFFFFFFFFFFFC) : (bar & 0xFFFFFFFFFFFFFFF0);
+	}
 
-	void Init();
-}
+	inline bool BarIsIOPort(uint8_t idx){
+		return PCI::ConfigReadDword(bus, slot, func, PCIBAR0 + (idx * sizeof(uint32_t))) & 0x1;
+	}
+
+	inline uint8_t GetInterruptLine(){
+		return PCI::ConfigReadByte(bus, slot, func, PCIInterruptLine);
+	}
+
+	inline uint16_t GetCommand(){
+		return PCI::ConfigReadWord(bus, slot, func, PCICommand);
+	}
+
+	inline void SetCommand(uint16_t val){
+		PCI::ConfigWriteWord(bus, slot, func, PCICommand, val);
+	}
+
+	inline void EnableBusMastering(){
+		PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) | PCI_CMD_BUS_MASTER);
+	}
+
+	inline void UpdateClass(){
+		classCode = PCI::ConfigReadByte(bus, slot, func, PCIClassCode);
+		subclass = PCI::ConfigReadByte(bus, slot, func, PCISubclass);
+	}
+
+	inline uint8_t HeaderType(){
+		return PCI::ConfigReadByte(bus, slot, func, PCIHeaderType);
+	}
+
+	inline uint8_t GetProgIF(){
+		return PCI::ConfigReadByte(bus, slot, func, PCIProgIF);
+	}
+};

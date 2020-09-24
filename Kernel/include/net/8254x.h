@@ -116,7 +116,7 @@ namespace Network{
 
         const char* deviceName = "Intel 8254x Compaitble Ethernet Controller";
 
-        pci_device_t device;
+        PCIDevice& pciDevice;
 
         void WriteMem32(uintptr_t address, uint32_t data);
         uint32_t ReadMem32(uintptr_t address);
@@ -131,7 +131,7 @@ namespace Network{
         void UpdateLink();
 
         public:
-        Intel8254x(uint16_t vendorID, uint16_t deviceID);
+        Intel8254x(PCIDevice& device);
 
         void Interrupt();
         static void DetectAndInitialize();

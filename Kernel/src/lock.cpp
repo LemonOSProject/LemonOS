@@ -24,6 +24,6 @@ void Semaphore::WaitTimeout(long timeout){
             return;
         }
         releaseLock(&cThread->stateLock);
-        //Timer::SleepCurrentThread(timeout); // TODO: Find a better way to do this
+        Timer::SleepCurrentThread(timeout); // TODO: Find a better way to do this
     }
 }

@@ -42,7 +42,7 @@ void KernelProcess(){
 		Video::DrawBitmapImage(videoMode.width/2 + 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
 	NVMe::Initialize();
-	USB::XHCI::Initialize();
+	USB::XHCIController::Initialize();
 	ATA::Init();
 	AHCI::Init();
 
@@ -59,6 +59,9 @@ void KernelProcess(){
 
 	Log::Info("Loading Init Process...");
 	FsNode* initFsNode = nullptr;
+	char* argv[] = {"init.lef"};
+	int envc = 0;
+	char* envp[] = {nullptr};
 
 	if(HAL::useKCon || !(initFsNode = fs::ResolvePath("/system/lemon/init.lef"))){ // Attempt to start fterm
 		initFsNode = fs::ResolvePath("/initrd/fterm.lef");
@@ -69,13 +72,15 @@ void KernelProcess(){
 			};
 			KernelPanic(panicReasons,1);
 		}
+
+		envc = 1;
+		envp[0] = "PATH=/initrd";
 	}
 
 	void* initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 
-	char* argv[] = {"init.lef"};
-	process_t* initProc = Scheduler::CreateELFProcess(initElf, 1, argv);
+	process_t* initProc = Scheduler::CreateELFProcess(initElf, 1, argv, envc, envp);
 
 	strcpy(initProc->workingDir, "/");
 	strcpy(initProc->name, "Init");
