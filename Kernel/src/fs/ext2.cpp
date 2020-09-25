@@ -572,7 +572,7 @@ namespace fs::Ext2{
             WriteSuperblock();
             WriteBlockGroupDescriptor(i);
 
-            Log::Info("[Ext2] Created inode %d", node->inode);
+            //Log::Info("[Ext2] Created inode %d", node->inode);
 
             return node;
         }
@@ -814,10 +814,6 @@ namespace fs::Ext2{
                 }
             }
             entries.add_back(newEnt);
-        }
-
-        for(DirectoryEntry& ent : entries){
-            Log::Info("Entry: %s", ent.name);
         }
 
         return WriteDir(node, entries);
@@ -1066,7 +1062,7 @@ namespace fs::Ext2{
         bool sync = false; // Need to sync the inode?
 
         if(blockLimit >= fileBlockCount){
-            Log::Info("[Ext2] Allocating blocks for inode %d", node->inode);
+            //Log::Info("[Ext2] Allocating blocks for inode %d", node->inode);
             for(unsigned i = fileBlockCount; i <= blockLimit; i++){
                 uint32_t block = AllocateBlock();
                 SetInodeBlock(i, node->e2inode, block);

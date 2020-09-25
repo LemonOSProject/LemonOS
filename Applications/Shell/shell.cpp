@@ -67,8 +67,6 @@ void ShellInstance::PollCommands(){
                     break;
                 }
 
-                printf("[Shell] Window \e[33;1m%s\e[0m has been closed\n", win->title.c_str());
-
                 if(RemoveWindow) RemoveWindow(win);
 
                 windows.erase(cmd->windowID);

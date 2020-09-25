@@ -360,7 +360,7 @@ namespace AHCI{
 		hba_port_t* registers;
 
 		hba_cmd_header_t* commandList; // Address Mapping of the Command List
-		void* fis; // Address Mapping of the FIS
+		hba_fis_t* fis; // Address Mapping of the FIS
 
 		hba_cmd_tbl_t* commandTables[8];
 

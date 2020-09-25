@@ -907,7 +907,9 @@ long SysWaitPID(regs64_t* r){
 		Scheduler::BlockCurrentThread(proc->blocking, unused);
 	}
 
-	while((proc = Scheduler::FindProcessByPID(pid))) { Scheduler::Yield(); }
+	if((proc = Scheduler::FindProcessByPID(pid))) {
+		return -1;
+	}
 
 	return 0;
 }
@@ -1466,6 +1468,7 @@ long SysPoll(regs64_t* r){
 	unsigned nfds = r->rcx;
 	long timeout = r->rdx;
 
+	thread_t* thread = GetCPULocal()->currentThread;
 	process_t* proc = Scheduler::GetCurrentProcess();
 	if(!Memory::CheckUsermodePointer(r->rbx, nfds * sizeof(pollfd), proc->addressSpace)){
 		Log::Warning("sys_poll: Invalid pointer to file descriptor array");
@@ -1502,7 +1505,7 @@ long SysPoll(regs64_t* r){
 		bool hasEvent = 0;
 
 		if((files[i]->node->flags & FS_NODE_TYPE) == FS_NODE_SOCKET){
-			if(!((Socket*)files[i]->node)->IsConnected()){
+			if(!((Socket*)files[i]->node)->IsConnected() && !((Socket*)files[i]->node)->IsListening()){
 				fds[i].revents |= POLLHUP;
 				hasEvent = true;
 			}
@@ -1534,6 +1537,7 @@ long SysPoll(regs64_t* r){
 			fsWatcher.WatchNode(files[i]->node, fds[i].events);
 		}
 
+		releaseLock(&GetCPULocal()->currentThread->lock);
 		if(timeout > 0){
 			fsWatcher.WaitTimeout(timeout);
 		} else {
@@ -1551,7 +1555,7 @@ long SysPoll(regs64_t* r){
 				bool hasEvent = 0;
 
 				if((files[i]->node->flags & FS_NODE_TYPE) == FS_NODE_SOCKET){
-					if(!((Socket*)files[i]->node)->IsConnected()){
+					if(!((Socket*)files[i]->node)->IsConnected() && !((Socket*)files[i]->node)->IsListening()){
 						fds[i].revents |= POLLHUP;
 						hasEvent = 1;
 					}
@@ -1575,7 +1579,7 @@ long SysPoll(regs64_t* r){
 				if(hasEvent) eventCount++;
 			}
 			Scheduler::Yield();
-		} while(timeout < 0 || Timer::TimeDifference(Timer::GetSystemUptimeStruct(), tVal) < timeout); // Wait until timeout, unless timeout is negative in which wait infinitely
+		} while(thread->state != ThreadStateZombie && (timeout < 0 || Timer::TimeDifference(Timer::GetSystemUptimeStruct(), tVal) < timeout)); // Wait until timeout, unless timeout is negative in which wait infinitely
 	}
 
 	if(files)
@@ -2258,11 +2262,13 @@ void SyscallHandler(regs64_t* regs) {
 		
 	asm("sti"); // By reenabling interrupts a thread in a syscall can be preempted
 
+	thread_t* thread = GetCPULocal()->currentThread;
 	if(!syscalls[regs->rax]) return;
+	if(thread->state == ThreadStateZombie) for(;;);
 
-	acquireLock(&GetCPULocal()->currentThread->lock);
+	acquireLock(&thread->lock);
 	regs->rax = syscalls[regs->rax](regs); // Call syscall
-	releaseLock(&GetCPULocal()->currentThread->lock);
+	releaseLock(&thread->lock);
 }
 
 void InitializeSyscalls() {

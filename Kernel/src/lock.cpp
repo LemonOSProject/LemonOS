@@ -6,8 +6,10 @@
 #include <logging.h>
 
 void Semaphore::Wait(){
+    thread_t* thread = GetCPULocal()->currentThread;
+
     __sync_fetch_and_sub(&value, 1);
-    while(value < 0) {
+    while(value < 0 && thread->state != ThreadStateZombie) {
         Scheduler::BlockCurrentThread(blocked);
         asm("pause");
     }

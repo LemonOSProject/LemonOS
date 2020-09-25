@@ -330,16 +330,14 @@ namespace Scheduler{
 
     void EndProcess(process_t* process){
         asm("sti");
-        if(process->children.get_length())
-            for(auto& child : process->children){
-                EndProcess(child);
-            }
+        while(process->children.get_length())
+            EndProcess(process->children.get_front());
         
         CPU* cpu = GetCPULocal();
-        
         for(unsigned i = 0; i < process->threads.get_length(); i++){
             thread_t* thread = process->threads[i];
             if(thread != cpu->currentThread && thread){
+                thread->state = ThreadStateZombie;
                 acquireLock(&thread->lock); // Make sure we acquire a lock on all threads to ensure that they are not in a syscall and are not retaining a lock
             }
         }

@@ -37,8 +37,13 @@ namespace AHCI{
         memset(commandList, 0, PAGE_SIZE_4K);
 
 		// FIS
-		fis = reinterpret_cast<void*>(Memory::GetIOMapping(static_cast<uintptr_t>(registers->fb)));
-        memset(fis, 0, PAGE_SIZE_4K);
+		fis = reinterpret_cast<hba_fis_t*>(Memory::GetIOMapping(static_cast<uintptr_t>(registers->fb)));
+        memset((void*)(fis), 0, PAGE_SIZE_4K);
+
+        fis->dsfis.fis_type = FIS_TYPE_DMA_SETUP;
+        fis->psfis.fis_type = FIS_TYPE_PIO_SETUP;
+        fis->rfis.fis_type = FIS_TYPE_REG_D2H;
+        fis->sdbfis[0] = FIS_TYPE_DEV_BITS;
 
         for(int i = 0; i < 8 /*Support for 8 command slots*/; i++){
             commandList[i].prdtl = 1;
@@ -83,14 +88,14 @@ namespace AHCI{
 
         {
             int spin = 1000;
-            while(spin-- && registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)){
+            while(spin-- && (registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ))){
                 Timer::Wait(1);
             }
 
-            /*if(spin <= 0){
-                Log::Info("[AHCI] Port hung, attempting COMRESET");
-                registers->sctl = SCTL_PORT_DET_INIT | SCTL_PORT_IPM_NOPART | SCTL_PORT_IPM_NOSLUM | SCTL_PORT_IPM_NODSLP; // Reset the port
-            }
+            if(spin <= 0){
+                Log::Info("[AHCI] Port hung"/*, attempting COMRESET"*/);
+                //registers->sctl = SCTL_PORT_DET_INIT | SCTL_PORT_IPM_NOPART | SCTL_PORT_IPM_NOSLUM | SCTL_PORT_IPM_NODSLP; // Reset the port
+            }/*
 
             Timer::Wait(10);
 
@@ -375,7 +380,7 @@ namespace AHCI{
         cmdfis->lba0 = 0;
         cmdfis->lba1 = 0;
         cmdfis->lba2 = 0;
-        cmdfis->device = 1 << 6;
+        cmdfis->device = 0;
  
         cmdfis->lba3 = 0;
         cmdfis->lba4 = 0;

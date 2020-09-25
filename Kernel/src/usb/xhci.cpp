@@ -69,7 +69,7 @@ namespace USB{
         opRegs->cmdRingCtl = 0; // Clear everything
         opRegs->cmdRingCtl = cmdRingPointerPhys;
 
-        opRegs->SetMaxSlotsEnabled(0xFF);
+        opRegs->SetMaxSlotsEnabled(40);
 
         Log::Info("[XHCI] Interface version: %x, Page size: %d, Operational registers offset: %x, Runtime registers offset: %x, Doorbell registers offset: %x", capRegs->hciVersion, opRegs->pageSize, capRegs->capLength, capRegs->rtsOff, capRegs->dbOff);
 

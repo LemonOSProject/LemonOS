@@ -9,6 +9,7 @@ typedef uint64_t pid_t;
 enum {
 	ThreadStateRunning,
 	ThreadStateBlocked,
+	ThreadStateZombie,
 };
 
 struct process;

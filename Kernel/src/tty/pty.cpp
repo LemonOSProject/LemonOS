@@ -6,6 +6,7 @@
 #include <logging.h>
 #include <scheduler.h>
 #include <assert.h>
+#include <cpu.h>
 
 cc_t c_cc_default[NCCS]{
 	4,			// VEOF
@@ -172,10 +173,15 @@ size_t PTY::Master_Read(char* buffer, size_t count){
 }
 
 size_t PTY::Slave_Read(char* buffer, size_t count){
-	lock_t temp = 0;
+	thread_t* thread = GetCPULocal()->currentThread;
 
-	while(IsCanonical() && !slave.lines) Scheduler::BlockCurrentThread(slaveBlocker, temp);
-	while(!IsCanonical() && !slave.bufferPos) Scheduler::BlockCurrentThread(slaveBlocker, temp);
+	while(thread->state != ThreadStateZombie && IsCanonical() && !slave.lines) Scheduler::BlockCurrentThread(slaveBlocker);
+	while(thread->state != ThreadStateZombie && !IsCanonical() && !slave.bufferPos) Scheduler::BlockCurrentThread(slaveBlocker);
+
+	if(thread->state == ThreadStateZombie){
+		slaveBlocker.Remove(thread);
+		return -1;
+	}
 
 	return slave.Read(buffer, count);
 }
