@@ -79,10 +79,10 @@ enum PCIConfigRegisters{
 	PCISubsystemVendorID = 0x2C,
 	PCIExpansionROMBaseAddress = 0x30,
 	PCICapabilitiesPointer = 0x37,
-	PCIMaxLatency = 0x3C,
-	PCIMinGrant = 0x3D,
-	PCIInterruptPIN = 0x3E,
-	PCIInterruptLine = 0x3F,
+	PCIMaxLatency = 0x3F,
+	PCIMinGrant = 0x3E,
+	PCIInterruptPIN = 0x3D,
+	PCIInterruptLine = 0x3C,
 };
 
 class PCIDevice;

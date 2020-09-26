@@ -296,11 +296,12 @@ namespace Scheduler{
         process->threads.add_back(new thread_t);
         thread_t& thread = *process->threads[threadID];
 
-        memset(&thread, 0, sizeof(thread_t));
+        thread.tid = threadID;
         
         thread.parent = process;
         thread.registers.rip = entry;
         thread.registers.rsp = stack;
+        thread.registers.rbp = stack;
         thread.state = ThreadStateRunning;
         thread.stack = thread.stackLimit = reinterpret_cast<void*>(stack);
 
@@ -317,8 +318,8 @@ namespace Scheduler{
         
         regs64_t* registers = &thread.registers;
         registers->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
-        thread.registers.cs = 0x1B; // We want user mode so use user mode segments, make sure RPL is 3
-        thread.registers.ss = 0x23;
+        thread.registers.cs = process->threads[0]->registers.cs; // Use main thread's segments
+        thread.registers.ss = process->threads[0]->registers.ss;
         thread.timeSliceDefault = THREAD_TIMESLICE_DEFAULT;
         thread.timeSlice = thread.timeSliceDefault;
         thread.priority = 4;

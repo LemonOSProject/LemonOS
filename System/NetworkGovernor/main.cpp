@@ -65,7 +65,7 @@ int main(){
 	header.yourIP = 0;
 	header.serverIP = 0;
 	header.gatewayIP = 0;
-	memcpy(header.clientAddress, "\xde\xad\xbe\xef\x69\x69", 6); // TODO: ioctl() for getting MAC address
+	memcpy(header.clientAddress, "\xde\xad\x69\xbe\xef\x42", 6); // TODO: ioctl() for getting MAC address
 	header.cookie = DHCP_MAGIC_COOKIE;
 
 	std::vector<void*> options;

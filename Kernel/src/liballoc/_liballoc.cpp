@@ -10,11 +10,10 @@
 #include <cpu.h>
 	
 volatile int liballocLock = 0;
-volatile int exclusiveLock = 0;
 
 extern "C" {
 int liballoc_lock() {
-	while(acquireTestLock(&liballocLock)) { asm("sti"); Scheduler::Yield(); } // If for some reason liballoc is locked before the scheduler starts something probably went horribly wrong
+	while(acquireTestLock(&liballocLock)) { asm("sti"); } // If for some reason liballoc is locked before the scheduler starts something probably went horribly wrong
 	return 0;
 }
 

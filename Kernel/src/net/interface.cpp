@@ -8,6 +8,8 @@
 #include <timer.h>
 #include <errno.h>
 
+#define NET_INTERFACE_STACKSIZE 32768
+
 namespace Network::Interface{
 	IPv4Address gateway = {0, 0, 0, 0};
 	IPv4Address subnet = {255, 255, 255, 255};
@@ -65,7 +67,7 @@ namespace Network::Interface{
 		}
 	}
 
-	[[noreturn]] void InterfaceProcess(){
+	[[noreturn]] void InterfaceThread(){
 		Log::Info("[Network] Initializing network interface layer...");
 
 		assert(mainAdapter);
@@ -100,8 +102,7 @@ namespace Network::Interface{
 	}
 
 	void Initialize(){
-		auto proc = Scheduler::CreateProcess((void*)InterfaceProcess);
-		strcpy(proc->name, "KeNetworkInterface");
+		Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), (uintptr_t)InterfaceThread, (uintptr_t)kmalloc(NET_INTERFACE_STACKSIZE) + NET_INTERFACE_STACKSIZE);
 	}
 
 	void Send(void* data, size_t length){

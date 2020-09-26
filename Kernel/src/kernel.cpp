@@ -48,11 +48,6 @@ void KernelProcess(){
 
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 + 24 * 2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
-	
-	Network::InitializeDrivers();
-	Network::InitializeConnections();
-
-	asm("cli");
 
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 + 24 * 3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
@@ -90,6 +85,9 @@ void KernelProcess(){
 	if(FsNode* node = fs::ResolvePath("/system/lemon")){
 		fs::volumes->add_back(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
 	}
+	
+	Network::InitializeDrivers();
+	Network::InitializeConnections();
 
 	for(;;) {
 		GetCPULocal()->currentThread->state = ThreadStateBlocked;

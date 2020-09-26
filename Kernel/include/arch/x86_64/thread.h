@@ -31,10 +31,12 @@ typedef struct thread {
 	thread* next; // Next thread in queue
 	thread* prev; // Previous thread in queue
 	
-	uint8_t priority; // Thread priority
+	uint8_t priority = 0; // Thread priority
 	uint8_t state; // Thread state
 
-	uint64_t fsBase;
+	uint64_t fsBase = 0;
+	
+	pid_t tid = 0;
 
 	List<List<thread*>*> waiting; // Thread is waiting in these queues
 } thread_t;
