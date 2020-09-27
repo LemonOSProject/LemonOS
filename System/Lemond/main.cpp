@@ -21,9 +21,10 @@ int main(int argc, char** argv){
 		}
 	}
 
-	lemon_spawn("/system/lemon/lemonwm.lef", 1, (char* const[1]){"/system/lemon/lemonwm.lef"});
-	lemon_spawn("/system/bin/shell.lef", 1, (char* const[1]){"/system/bin/shell.lef"});
-	//lemon_spawn("/system/lemon/login.lef", 1, (char* const[1]){"/system/lemon/login.lef"});
+	char* lemonwm = "/system/lemon/lemonwm.lef";
+	char* login = "/system/lemon/login.lef";
+	lemon_spawn(lemonwm, 1, &lemonwm);
+	lemon_spawn(login, 1, &lemonwm);
 	
 	return 0;
 }

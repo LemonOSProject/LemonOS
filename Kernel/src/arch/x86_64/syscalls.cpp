@@ -1214,13 +1214,13 @@ long SysAccept(regs64_t* r){
 	}
 
 	socklen_t* len = (socklen_t*)r->rdx;
-	if(!Memory::CheckUsermodePointer(r->rdx, sizeof(socklen_t), proc->addressSpace)){
+	if(len && !Memory::CheckUsermodePointer(r->rdx, sizeof(socklen_t), proc->addressSpace)){
 		Log::Warning("sys_accept: Invalid socklen ptr");
 		return -3;
 	}
 	
 	sockaddr_t* addr = (sockaddr_t*)r->rcx;
-	if(!Memory::CheckUsermodePointer(r->rcx, *len, proc->addressSpace)){
+	if(addr && !Memory::CheckUsermodePointer(r->rcx, *len, proc->addressSpace)){
 		Log::Warning("sys_accept: Invalid sockaddr ptr");
 		return -3;
 	}

@@ -41,11 +41,9 @@ namespace ACPI{
 
 		auto getEntry = [](unsigned index) -> uintptr_t { // This will handle differences in ACPI revisions
 			if(desc->revision == 2){
-				uint64_t* sdtPointers = xsdtHeader->tables;
-				return sdtPointers[index];
+				return xsdtHeader->tables[index];
 			} else {
-				uint32_t* sdtPointers = rsdtHeader->tables;
-				return sdtPointers[index];
+				return rsdtHeader->tables[index];
 			}
 		};
 

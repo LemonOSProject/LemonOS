@@ -135,8 +135,7 @@ extern "C"
 
 	Video::DrawRect(0, 0, videoMode.width, videoMode.height, 0, 0, 0);
 
-	//Log::Info("System RAM: %d MB", (HAL::multibootInfo.memoryHi + HAL::multibootInfo.memoryLo) / 1024);
-	Log::Info("Reserved RAM: %d MB", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);
+	Log::Info("Used RAM: %d MB", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);
 	
 	Log::Info("Initializing Ramdisk...");
 	

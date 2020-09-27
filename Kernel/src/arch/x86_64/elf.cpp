@@ -13,8 +13,7 @@ int VerifyELF(void* elf){
     char id[4];
     strncpy(id, (char*)elfHdr.id + 1, 3);
     if(strncmp("ELF", id, 3)){
-        Log::Warning("Invalid ELF Header: ");
-        Log::Write(id);
+        Log::Warning("Invalid ELF Header: %x, %x, %x (%c%c%c)", id[0], id[1], id[2], id[0], id[1], id[2]);
         return 0;
     } else return 1;
 }

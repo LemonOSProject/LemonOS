@@ -57,7 +57,7 @@ namespace ATA{
                 return 1; // Error Reading Sectors
             }
 
-            memcpy(buffer, buf, size);
+            memcpy(buffer, prdBuffer, size);
             buffer += size;
             lba++;
         }
@@ -79,7 +79,7 @@ namespace ATA{
 
             if(!size) continue;
 
-            memcpy(buf, buffer, size);
+            memcpy(prdBuffer, buffer, size);
 
             if(ATA::Access(this, lba, 1, buf, true)){
                 kfree(buf);
