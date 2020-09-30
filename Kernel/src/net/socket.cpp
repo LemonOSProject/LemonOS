@@ -73,7 +73,7 @@ ssize_t Socket::Read(size_t offset, size_t size, uint8_t* buffer){
 }
 
 int64_t Socket::Receive(void* buffer, size_t len, int flags){
-    if(!connected) ;
+    if(!connected) {}
 
     return ReceiveFrom(buffer, len, flags, nullptr, nullptr);
 }

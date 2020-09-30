@@ -21,6 +21,9 @@ class ListIterator {
 protected:
 	ListNode<T>* node = nullptr;
 public:
+	ListIterator() = default;
+	ListIterator(const ListIterator<T>&) = default;
+
 	ListIterator& operator++(){
 		if(node)
 			node = node->next;

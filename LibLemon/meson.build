@@ -1,4 +1,4 @@
-project('LibLemon', default_options : ['cpp_std=c++17', 'optimization=3'])
+project('LibLemon', default_options : ['cpp_std=c++17', 'optimization=3', 'warning_level=2', 'werror=true'])
 
 liblemon_include_dirs = [
     include_directories('include'),
@@ -15,7 +15,7 @@ asmg = generator(nasm,
         '@INPUT@',
         '-o', '@OUTPUT@'])
 
-liblemon_cpp_args = ['-Wno-write-strings', '-Wno-pointer-arith', '-Wall', '-Wextra', '-Wno-address',
+liblemon_cpp_args = ['-Wno-write-strings',
     '-fPIC',
     '-m64' ]
 

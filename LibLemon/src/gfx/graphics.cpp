@@ -11,31 +11,19 @@ extern "C" void memcpy_sse2_unaligned(void* dest, void* src, size_t count);
 extern "C" void memset32_sse2(void* dest, uint32_t c, uint64_t count);
 extern "C" void memset64_sse2(void* dest, uint64_t c, uint64_t count);
 
-void memset32_optimized(void* dest, uint32_t c, size_t count) {
-    //{//if(((size_t)dest % 0x10)){
-        while(count--){
-            *((uint32_t*)dest) = c;
-            dest+=sizeof(uint32_t);
-        }
-        return;
-    /*}
-
-    size_t overflow = (count % 0x4); // Amount of overflow bytes
-    size_t size_aligned = (count - overflow); // Size rounded DOWN to lowest multiple of 128 bits
-
-    memset32_sse2(dest, c, size_aligned/0x4);
-
-    while(overflow--){
-            *((uint32_t*)dest) = c;
-            dest+=sizeof(uint32_t);
-        }*/
+void memset32_optimized(void* _dest, uint32_t c, size_t count) {
+    uint32_t* dest = reinterpret_cast<uint32_t*>(_dest);
+    while(count--){
+        *(dest++) = c;
+    }
+    return;
 }
 
-void memset64_optimized(void* dest, uint64_t c, size_t count) {
+void memset64_optimized(void* _dest, uint64_t c, size_t count) {
+    uint64_t* dest = reinterpret_cast<uint64_t*>(_dest);
     if(((size_t)dest & 0x7)){
         while(count--){
-            *((uint64_t*)dest) = c;
-            dest+=sizeof(uint64_t);
+            *(dest++) = c;
         }
         return;
     }
@@ -46,8 +34,7 @@ void memset64_optimized(void* dest, uint64_t c, size_t count) {
     memset64_sse2(dest, c, size_aligned >> 3);
 
     while(overflow--){
-        *((uint64_t*)dest) = c;
-        dest+=sizeof(uint64_t);
+        *(dest++) = c;
     }
 }
 
@@ -61,7 +48,7 @@ inline void memcpy_optimized(void* dest, void* src, size_t count) {
         memcpy_sse2(dest, src, size_aligned >> 4);
 
     if (overflow > 0)
-        memcpy(dest + size_aligned, src + size_aligned, overflow);
+        memcpy(reinterpret_cast<uint8_t*>(dest) + size_aligned, reinterpret_cast<uint8_t*>(src) + size_aligned, overflow);
 }
 
 namespace Lemon::Graphics{

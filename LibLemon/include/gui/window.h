@@ -89,7 +89,7 @@ namespace Lemon::GUI {
                 WMContextMenu contextMenu;
             };
         };
-    } __attribute__((packed));
+    };
 
     /*class WMCommand : Message {
         template<typename ...T>

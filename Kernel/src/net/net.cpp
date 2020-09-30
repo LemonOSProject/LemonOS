@@ -36,7 +36,7 @@ namespace Network {
         return port;
     }
 
-    int AcquirePort(Socket& sock, unsigned short port){
+    int AcquirePort(Socket& sock, unsigned int port){
         if(port > PORT_MAX){
             Log::Warning("[Network] AcquirePort: Invalid port: %d", port);
             return -1;

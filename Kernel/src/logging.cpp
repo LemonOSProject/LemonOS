@@ -168,6 +168,7 @@ namespace Log{
 					break;
 				} case 'u': {
 					hex = false;
+					[[fallthrough]];
 				} case 'x': {
 					format++;
 					auto arg = va_arg(args, unsigned long long);

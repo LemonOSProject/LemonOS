@@ -49,7 +49,7 @@ namespace APIC{
             return 0;
         }
 
-        volatile uint32_t Read(uint32_t off){
+        uint32_t Read(uint32_t off){
             return *((volatile uint32_t*)(virtualBase + off));
         }
         

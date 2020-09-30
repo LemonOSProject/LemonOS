@@ -72,6 +72,7 @@ namespace HAL{
                     multiboot2_module_t* mod = reinterpret_cast<multiboot2_module_t*>(tag);
 
                     modules[bootModuleCount++] = mod;
+                    break;
                 }
                 case Mboot2MemoryInfo: {
                     multiboot2_memory_info_t* mbMemInfo = reinterpret_cast<multiboot2_memory_info_t*>(tag);
@@ -98,6 +99,7 @@ namespace HAL{
                         currentEntry = reinterpret_cast<multiboot2_mmap_entry_t*>((uintptr_t)currentEntry + mbMemMap->entrySize);
                     }
                     Memory::usedPhysicalBlocks = 0;
+                    break;
                 }
                 case Mboot2FramebufferInfo: {
                     multiboot2_framebuffer_info_t* mbFbInfo = reinterpret_cast<multiboot2_framebuffer_info_t*>(tag);
@@ -111,14 +113,17 @@ namespace HAL{
                     videoMode.physicalAddress = mbFbInfo->framebufferAddr;
 
                     videoMode.type = mbFbInfo->type;
+                    break;
                 }
                 case Mboot2ACPI1RSDP: {
                     auto rsdp = &(reinterpret_cast<multiboot2_acpi1_rsdp_t*>(tag)->rsdp);
                     ACPI::SetRSDP(rsdp);
+                    break;
                 }
                 case Mboot2ACPI2RSDP: {
                     auto rsdp = &(reinterpret_cast<multiboot2_acpi2_rsdp_t*>(tag)->rsdp);
                     ACPI::SetRSDP(rsdp);
+                    break;
                 }
                 default: {
                     Log::Info("Ignoring boot tag %d", tag->type);

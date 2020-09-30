@@ -1,4 +1,5 @@
-project('Lemon Kernel')
+project('Lemon Kernel',
+    default_options : ['warning_level=2', 'cpp_std=c++17', 'optimization_level=0', 'werror=true'])
 
 lai = subproject('lai')
 
@@ -27,9 +28,8 @@ output : '@BASENAME@.bin.o',
 arguments : ['@INPUT@','@OUTPUT@', meson.current_source_dir() + '/src/arch/x86_64/', '@BASENAME@'])
 
 kernel_c_args = [
-    '-Wno-write-strings', '-Wall', '-Werror',
+    '-Wno-write-strings', '-Wno-unused-parameter',
     '-DLemon64',
-    '-O0',
     '-ffreestanding', '-nostdlib',
     '-mcmodel=large', '-mno-red-zone', '-fno-pic',
     '-mno-mmx', '-mno-sse', '-mno-sse2',
@@ -38,7 +38,7 @@ kernel_c_args = [
 ]
 
 kernel_cpp_args = [
-    '-fno-exceptions', '-fno-rtti', '-std=c++17',
+    '-fno-exceptions', '-fno-rtti',
 ]
 
 add_project_arguments(kernel_c_args, language : ['c', 'cpp'])
@@ -137,5 +137,5 @@ kernel_link_args += kernel_c_args
 
 executable('kernel.sys',
     [asmg.process(asm_files_x86_64), bing.process(asm_bin_files_x86_64), cpp_files, cpp_files_x86_64, lai.get_variable('sources')],
-    include_directories : [kernel_include_dirs],
-    cpp_args : kernel_cpp_args, link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')
+    include_directories : [kernel_include_dirs], 
+    c_args : kernel_c_args, cpp_args : kernel_cpp_args, link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')

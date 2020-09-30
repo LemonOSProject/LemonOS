@@ -61,7 +61,7 @@ namespace APIC{
         int Initialize();
         void Enable();
 
-        volatile uint32_t Read(uint32_t off);
+        uint32_t Read(uint32_t off);
         void Write(uint32_t off, uint32_t val);
 
         void SendIPI(uint8_t apicID, uint32_t dsh, uint32_t type, uint8_t vector);

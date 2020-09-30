@@ -11,8 +11,8 @@ class Vector{
 		size_t pos = 0;
 		Vector<T>& vector;
 	public:
-		VectorIterator(Vector<T>& newVector) : vector(newVector) {
-		}
+		VectorIterator(Vector<T>& newVector) : vector(newVector) {};
+		VectorIterator(const VectorIterator& it) : vector(it.vector) { pos = it.pos; };
 
 		VectorIterator& operator++(){
 			pos++;

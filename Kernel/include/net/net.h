@@ -153,7 +153,7 @@ namespace Network {
     void InitializeConnections();
     
     unsigned short AllocatePort(Socket& sock);
-    int AcquirePort(Socket& sock, unsigned short port);
+    int AcquirePort(Socket& sock, unsigned int port);
     void ReleasePort(unsigned short port);
 
     namespace Interface {

@@ -318,7 +318,7 @@ namespace Lemon::GUI{
             strncpy(wment->data, ent.name.c_str(), ent.name.length());
             wment->length = ent.name.length();
             wment->id = ent.id;
-            wment = (WMContextMenuEntry*)(((void*)wment) + sizeof(WMContextMenuEntry) + ent.name.length());
+            wment = (WMContextMenuEntry*)(reinterpret_cast<uint8_t*>(wment) + sizeof(WMContextMenuEntry) + ent.name.length());
         }
 
         msgClient.Send(msg);

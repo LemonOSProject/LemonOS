@@ -1425,6 +1425,7 @@ namespace fs::Ext2{
             break;
         case EXT2_S_IFSOCK:
             flags = FS_NODE_SOCKET;
+            break;
         default:
             flags = FS_NODE_FILE;
             break;
