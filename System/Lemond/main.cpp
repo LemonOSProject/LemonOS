@@ -23,8 +23,10 @@ int main(int argc, char** argv){
 
 	char* lemonwm = "/system/lemon/lemonwm.lef";
 	char* login = "/system/lemon/login.lef";
+	char* shell = "/system/bin/shell.lef";
 	lemon_spawn(lemonwm, 1, &lemonwm);
-	lemon_spawn(login, 1, &lemonwm);
+	//lemon_spawn(login, 1, &login);
+	lemon_spawn(shell, 1, &shell);
 	
 	return 0;
 }

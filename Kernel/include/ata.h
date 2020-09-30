@@ -47,5 +47,5 @@ namespace ATA{
     void SendCommand(uint8_t drive, uint8_t command);
 
     int Init();
-    int Access(ATADiskDevice* drive, uint64_t lba, uint16_t count, void* buffer, bool write = false);
+    int Access(ATADiskDevice* drive, uint64_t lba, uint16_t count, bool write = false);
 }

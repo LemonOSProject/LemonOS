@@ -70,7 +70,6 @@ namespace ATA{
 			while(timer--){
 				uint8_t status = ReadRegister(port, ATA_REGISTER_STATUS);
 				if(status & ATA_DEV_ERR) {
-					Log::Info("ATA Error %x", ReadRegister(port, ATA_REGISTER_ERROR));
 					return 0;
 				}
 				if(!(status & ATA_DEV_BUSY) && status & ATA_DEV_DRQ) goto c1;
@@ -105,7 +104,6 @@ namespace ATA{
 		assert(controllerPCIDevice->vendorID != 0xFFFF);
 
         Log::Info("[ATA] Initializing...");
-		Log::Info("[ATA] BAR0: %x, BAR1: %x, BAR2: %x, BAR3: %x", controllerPCIDevice->GetBaseAddressRegister(0), controllerPCIDevice->GetBaseAddressRegister(1), controllerPCIDevice->GetBaseAddressRegister(2), controllerPCIDevice->GetBaseAddressRegister(3));
 
 		if(controllerPCIDevice->BarIsIOPort(0)){
 			uintptr_t bar;
@@ -138,6 +136,8 @@ namespace ATA{
 		assert(controllerPCIDevice->BarIsIOPort(4));
         busMasterPort = controllerPCIDevice->GetBaseAddressRegister(4);
 		controllerPCIDevice->EnableBusMastering();
+		
+		Log::Info("[ATA] Using Ports: Primary %x, Secondary %x", port0, port1);
 
 		for(int i = 0; i < 2; i++){ // Port
 			WriteControlRegister(i, 0, ReadControlRegister(i, 0) | 4); // Software Reset
@@ -166,7 +166,7 @@ namespace ATA{
 		return 0;
     }
 
-	int Access(ATADiskDevice* drive, uint64_t lba, uint16_t count, void* buffer, bool write){
+	int Access(ATADiskDevice* drive, uint64_t lba, uint16_t count, bool write){
 		if(count > 1){
 			Log::Warning("ATA::Read was called with count > 1");
 			return 1;

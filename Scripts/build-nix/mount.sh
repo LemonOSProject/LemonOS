@@ -7,6 +7,8 @@ if sudo [ ! -b /dev/nbd0p2 ]; then
 	sleep 0.5 # Wait half a second if does not exist
 fi
 
+sudo partprobe /dev/nbd0
+
 if sudo [ ! -b /dev/nbd0p2 ]; then
 	>&2 echo "error mounting disk image"
 	exit 1

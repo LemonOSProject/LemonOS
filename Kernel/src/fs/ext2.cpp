@@ -74,6 +74,12 @@ namespace fs::Ext2{
         blocksize = 1024U << super.logBlockSize;
         superBlockIndex = LocationToBlock(EXT2_SUPERBLOCK_LOCATION);
 
+        if(super.revLevel){
+            inodeSize = superext.inodeSize;
+        } else {
+            inodeSize = 128;
+        }
+
         Log::Info("[Ext2] Initializing Volume\tRevision: %d, Block Size: %d, %d KB/%d KB used, Last mounted on: %s", super.revLevel, blocksize, super.freeBlockCount * blocksize / 1024, super.blockCount * blocksize / 1024, superext.lastMounted);
         Log::Info("[Ext2] Block Group Count: %d, Inodes Per Block Group: %d, Inode Size: %d", blockGroupCount, super.inodesPerGroup, inodeSize);
         Log::Info("[Ext2] Sparse Superblock? %s Large Files? %s, Filetype Extension? %s", (sparse ? "Yes" : "No"), (largeFiles ? "Yes" : "No"), (filetype ? "Yes" : "No"));
@@ -88,12 +94,6 @@ namespace fs::Ext2{
             return; // Disk Error
         }
 
-        if(super.revLevel){
-            inodeSize = superext.inodeSize;
-        } else {
-            inodeSize = 128;
-        }
-
         ext2_inode_t root;
         if(ReadInode(EXT2_ROOT_INODE_INDEX, root)){
             Log::Error("[Ext2] Disk Error Initializing Volume");
@@ -106,16 +106,13 @@ namespace fs::Ext2{
 
         mountPointDirent.node = mountPoint; 
         strcpy(mountPointDirent.name, name);
-
-        DirectoryEntry testDirent;
-        mountPoint->ReadDir(&testDirent, 4);
     }
 
     void Ext2Volume::WriteSuperblock(){
         uint8_t buffer[blocksize];
 
         uint32_t superindex = LocationToBlock(EXT2_SUPERBLOCK_LOCATION);
-        if(ReadBlock(superindex, buffer)){
+        if(ReadBlockCached(superindex, buffer)){
             Log::Info("[Ext2] WriteBlock: Error reading block %d", superindex);
             return;
         }
@@ -133,7 +130,7 @@ namespace fs::Ext2{
         uint32_t block = firstBlockGroup + LocationToBlock(index * sizeof(ext2_blockgrp_desc_t));
         uint8_t buffer[blocksize];
         
-        if(ReadBlock(block, buffer)){
+        if(ReadBlockCached(block, buffer)){
             Log::Info("[Ext2] WriteBlock: Error reading block %d", block);
             return;
         }
@@ -204,6 +201,7 @@ namespace fs::Ext2{
 
         unsigned i = index;
         Vector<uint32_t> blocks;
+        blocks.reserve(count);
 
         while(i < EXT2_DIRECT_BLOCK_COUNT && i < index + count){
             // Index lies within the direct blocklist
@@ -215,7 +213,7 @@ namespace fs::Ext2{
             uint32_t buffer[blocksize / sizeof(uint32_t)];
 
             if(int e = ReadBlockCached(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)){
-                (void)e;
+                Log::Info("[Ext2] GetInodeBlocks: Error %i reading block %u (singly indirect block)", e, ino.blocks[EXT2_SINGLY_INDIRECT_INDEX]);
                 error = DiskReadError;
 
                 blocks.clear();
@@ -223,7 +221,11 @@ namespace fs::Ext2{
             }
 
             while(i < doublyIndirectStart && i < index + count){
-                blocks.add_back(buffer[(i++) - singlyIndirectStart]);
+                uint32_t block = buffer[(i++) - singlyIndirectStart];
+                if(block >= super.blockCount){
+                    Log::Warning("[Ext2] GetInodeBlocks: Invalid singly indirect block %u, Singly indirect blocklist: %u", block, ino.blocks[EXT2_SINGLY_INDIRECT_INDEX]);
+                }
+                blocks.add_back(block);
             }
         }
         
@@ -233,7 +235,7 @@ namespace fs::Ext2{
             uint32_t buffer[blocksize / sizeof(uint32_t)];
 
             if(int e = ReadBlockCached(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)){
-                (void)e;
+                Log::Info("[Ext2] GetInodeBlocks: Error %i reading block %u (doubly indirect block)", e, ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX]);
                 error = DiskReadError;
 
                 blocks.clear();
@@ -244,7 +246,7 @@ namespace fs::Ext2{
                 uint32_t blockPointer = blockPointers[(i - doublyIndirectStart) / blocksPerPointer];
 
                 if(int e = ReadBlockCached(blockPointer, buffer)){
-                    (void)e;
+                    Log::Info("[Ext2] GetInodeBlocks: Error %i reading block %u (doubly indirect block pointer)", e, blockPointer);
                     error = DiskReadError;
 
                     blocks.clear();
@@ -253,14 +255,19 @@ namespace fs::Ext2{
 
                 uint32_t blockPointerEnd = i + (blocksPerPointer - (i - doublyIndirectStart) % blocksPerPointer);
                 while(i < blockPointerEnd && i < index + count){
-                    blocks.add_back(buffer[(i - doublyIndirectStart) % blocksPerPointer]);
+                    uint32_t block = buffer[(i - doublyIndirectStart) % blocksPerPointer];
+                    if(block >= super.blockCount){
+                        Log::Warning("[Ext2] GetInodeBlocks: Invalid doubly indirect block %u", block);
+                    }
+
+                    blocks.add_back(block);
                     i++;
                 }
             }
         } 
         
         if(i < index + count) {
-            assert(!"Yet to support triply indirect");
+            assert(!"[Ext2] Yet to support triply indirect blocklists");
 
             blocks.clear();
             return blocks;
@@ -351,7 +358,7 @@ namespace fs::Ext2{
 
     int Ext2Volume::ReadBlock(uint32_t block, void* buffer){
         if(block > super.blockCount)
-            return -1;
+            return 1;
 
         if(int e = part->Read(BlockToLBA(block), blocksize, buffer)){
             Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", e, block, blocksize);
@@ -363,7 +370,7 @@ namespace fs::Ext2{
     
     int Ext2Volume::WriteBlock(uint32_t block, void* buffer){
         if(block > super.blockCount)
-            return -1;
+            return 1;
 
         if(int e = part->Write(BlockToLBA(block), blocksize, buffer)){
             Log::Error("[Ext2] Disk error (%e) reading block %d (blocksize: %d)", e, block, blocksize);
@@ -375,7 +382,7 @@ namespace fs::Ext2{
     
     int Ext2Volume::ReadBlockCached(uint32_t block, void* buffer){
         if(block > super.blockCount)
-            return -1;
+            return 1;
 
         uint8_t* cachedBlock;
         if((cachedBlock = blockCache.get(block))){
@@ -464,6 +471,7 @@ namespace fs::Ext2{
             blockGroups[i].freeBlockCount--;
 
             WriteBlockGroupDescriptor(i);
+            WriteSuperblock();
 
             return block;
         }
@@ -507,6 +515,7 @@ namespace fs::Ext2{
         blockGroups[block / super.blocksPerGroup].freeBlockCount++;
 
         WriteBlockGroupDescriptor(block / super.blocksPerGroup);
+        WriteSuperblock();
 
         return 0;
     }
@@ -655,6 +664,7 @@ namespace fs::Ext2{
         blockGroups[inode / super.inodesPerGroup].freeInodeCount++;
 
         WriteBlockGroupDescriptor(inode / super.inodesPerGroup);
+        WriteSuperblock();
 
         return 0;
     }
@@ -980,7 +990,7 @@ namespace fs::Ext2{
         uint32_t blockLimit = LocationToBlock(offset + size);
         uint8_t blockBuffer[blocksize];
 
-        //Log::Info("[Ext2] Reading: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockCount, offset, size);
+        //Log::Info("[Ext2] Reading: Block index: %d, Block limit: %d, Offset: %d, Size: %d", blockIndex, blockLimit, offset, size);
 
         #ifdef EXT2_ENABLE_TIMER
         timeval_t blktv1 = Timer::GetSystemUptimeStruct();
@@ -998,10 +1008,10 @@ namespace fs::Ext2{
             if(size <= 0) break;
             
             if(offset % blocksize){
-                if(ReadBlockCached(block, blockBuffer)){
-                    Log::Info("[Ext2] Error reading block %d", block);
+                if(int e = ReadBlockCached(block, blockBuffer); e){
+                    Log::Info("[Ext2] Error %i reading block %u", e, block);
                     error = DiskReadError;
-                    return -1;
+                    //return -1;
                 }
 
                 size_t readSize = blocksize - (offset % blocksize);
@@ -1015,19 +1025,19 @@ namespace fs::Ext2{
                 buffer += readSize;
                 offset += readSize;
             } else if(size >= blocksize){
-                if(ReadBlockCached(block, buffer)){
-                    Log::Info("[Ext2] Error reading block %d", block);
+                if(int e = ReadBlockCached(block, buffer); e){
+                    Log::Info("[Ext2] Error %i reading block %u", e, block);
                     error = DiskReadError;
-                    return -1;
+                    //return -1;
                 }
                 size -= blocksize;
                 buffer += blocksize;
                 offset += blocksize;
             } else {
-                if(ReadBlockCached(block, blockBuffer)){
-                    Log::Info("[Ext2] Error reading block %d", block);
+                if(int e = ReadBlockCached(block, blockBuffer); e){
+                    Log::Info("[Ext2] Error %i reading block %u", e, block);
                     error = DiskReadError;
-                    return -1;
+                    //return -1;
                 }
                 memcpy(buffer, blockBuffer, size);
                 size = 0;

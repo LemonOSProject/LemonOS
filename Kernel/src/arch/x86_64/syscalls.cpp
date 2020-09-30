@@ -160,7 +160,13 @@ long SysExec(regs64_t* r){
 	}
 
 	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp);
-	strncpy(proc->name, fs::BaseName(kernelArgv[0]), NAME_MAX);
+	char* name;
+	if(argc){
+		name = fs::BaseName(kernelArgv[0]);
+	} else {
+		name = fs::BaseName(filepath);
+	}
+	strncpy(proc->name, name, NAME_MAX);
 
 	for(int i = 0; i < argc; i++){
 		kfree(kernelArgv[i]);

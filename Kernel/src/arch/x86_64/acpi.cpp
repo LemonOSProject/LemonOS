@@ -74,9 +74,8 @@ namespace ACPI{
 		}
 
 		acpi_madt_t* madtHeader = (acpi_madt_t*)madt;
-		void* madtEnd = madt + madtHeader->header.length;
-
-		void* madtEntry = madt + sizeof(acpi_madt_t);
+		uintptr_t madtEnd = reinterpret_cast<uintptr_t>(madt) + madtHeader->header.length;
+		uintptr_t madtEntry = reinterpret_cast<uintptr_t>(madt) + sizeof(acpi_madt_t);
 
 		while(madtEntry < madtEnd){
 			acpi_madt_entry_t* entry = (acpi_madt_entry_t*)madtEntry;

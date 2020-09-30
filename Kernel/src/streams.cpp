@@ -38,7 +38,7 @@ DataStream::DataStream(size_t bufSize){
     bufferSize = bufSize;
     bufferPos = 0;
 
-    buffer = kmalloc(bufferSize);
+    buffer = reinterpret_cast<uint8_t*>(kmalloc(bufferSize));
 }
 
 DataStream::~DataStream(){
@@ -90,7 +90,7 @@ int64_t DataStream::Write(void* data, size_t len){
         while(bufferPos + len >= bufferSize)
             bufferSize *= 2;
 
-        buffer = kmalloc(bufferSize);
+        buffer = reinterpret_cast<uint8_t*>(kmalloc(bufferSize));
 
         memcpy(buffer, oldBuffer, bufferPos);
 
@@ -154,7 +154,7 @@ int64_t PacketStream::Peek(void* buffer, size_t len){
 int64_t PacketStream::Write(void* buffer, size_t len){
     stream_packet_t pkt;
     pkt.len = len;
-    pkt.data = kmalloc(len);
+    pkt.data = reinterpret_cast<uint8_t*>(kmalloc(len));
     memcpy(pkt.data, buffer, len);
 
     packets.add_back(pkt);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <lock.h>
 
 enum
 {
@@ -366,6 +367,8 @@ namespace AHCI{
 
 		uint64_t bufPhys;
 		void* bufVirt;
+
+		Semaphore portLock = Semaphore(1); // Binary semaphore for the port
 	};
 
 	int Init();

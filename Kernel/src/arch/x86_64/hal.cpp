@@ -84,7 +84,7 @@ namespace HAL{
                     multiboot2_memory_map_t* mbMemMap = reinterpret_cast<multiboot2_memory_map_t*>(tag);
                     
                     multiboot2_mmap_entry_t* currentEntry = mbMemMap->entries;
-                    while(currentEntry < reinterpret_cast<void*>(mbMemMap) + mbMemMap->size){
+                    while(reinterpret_cast<uintptr_t>(currentEntry) < reinterpret_cast<uintptr_t>(mbMemMap) + mbMemMap->size){
                         switch (currentEntry->type)
                         {
                         case 1: // Available

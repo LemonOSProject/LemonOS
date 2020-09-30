@@ -10,7 +10,7 @@
 #define DATASTREAM_BUFSIZE_DEFAULT 1024
 
 typedef struct {
-    void* data;
+    uint8_t* data;
     size_t len;
 } stream_packet_t;
 
@@ -37,7 +37,7 @@ class DataStream final : public Stream {
     size_t bufferSize = 0;
     size_t bufferPos = 0;
 
-    void* buffer = nullptr;
+    uint8_t* buffer = nullptr;
 public:
     DataStream(size_t bufSize);
     ~DataStream();

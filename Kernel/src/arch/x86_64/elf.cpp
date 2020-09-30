@@ -18,7 +18,9 @@ int VerifyELF(void* elf){
     } else return 1;
 }
 
-elf_info_t LoadELFSegments(process_t* proc, void* elf, uintptr_t base){
+elf_info_t LoadELFSegments(process_t* proc, void* _elf, uintptr_t base){
+    uint8_t* elf = reinterpret_cast<uint8_t*>(_elf);
+
     elf_info_t elfInfo;
     memset(&elfInfo, 0, sizeof(elfInfo));
 
@@ -48,8 +50,8 @@ elf_info_t LoadELFSegments(process_t* proc, void* elf, uintptr_t base){
         if(elfPHdr.type == PT_LOAD && elfPHdr.memSize > 0){
             asm("cli");
             asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
-            memset((void*)base + elfPHdr.vaddr,0,elfPHdr.memSize);
-            memcpy((void*)base + elfPHdr.vaddr,(void*)(elf + elfPHdr.offset),elfPHdr.fileSize);
+            memset((void*)(base + elfPHdr.vaddr),0,elfPHdr.memSize);
+            memcpy((void*)(base + elfPHdr.vaddr),(void*)(elf + elfPHdr.offset),elfPHdr.fileSize);
             asm volatile("mov %%rax, %%cr3" :: "a"(Scheduler::GetCurrentProcess()->addressSpace->pml4Phys));
             asm("sti");
         } else if (elfPHdr.type == PT_PHDR) {

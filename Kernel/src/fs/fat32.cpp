@@ -99,7 +99,7 @@ namespace fs::FAT32{
 
         if(!clusterChain) return nullptr;
 
-        void* buf = kmalloc(clusterChain->get_length() * clusterSizeBytes);
+        uint8_t* buf = reinterpret_cast<uint8_t*>(kmalloc(clusterChain->get_length() * clusterSizeBytes));
         void* _buf = buf;
 
         for(unsigned i = 0; i < clusterChain->get_length() && maxCluster; i++){
@@ -122,7 +122,7 @@ namespace fs::FAT32{
 
         if(!clusterChain) return nullptr;
 
-        void* buf = kmalloc(clusterChain->get_length() * clusterSizeBytes);
+        uint8_t* buf = reinterpret_cast<uint8_t*>(kmalloc(clusterChain->get_length() * clusterSizeBytes));
         void* _buf = buf;
 
         for(unsigned i = 0; i < clusterChain->get_length(); i++){

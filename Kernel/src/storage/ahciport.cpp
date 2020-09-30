@@ -156,8 +156,9 @@ namespace AHCI{
         InitializePartitions();
     }
 
-    int Port::ReadDiskBlock(uint64_t lba, uint32_t count, void* buffer){
+    int Port::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer){
         uint64_t blockCount = ((count + 511) / 512);
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
         
         while(blockCount >= 8 && count){
             uint64_t size;
@@ -211,12 +212,14 @@ namespace AHCI{
             lba++;
         }
 
+        portLock.SetValue(1);
         return 0;
     }
 
     
-    int Port::WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer){
+    int Port::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer){
         uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
 
         while(blockCount-- && count){
             uint64_t size;
@@ -239,15 +242,17 @@ namespace AHCI{
     }
 
     int Port::Access(uint64_t lba, uint32_t count, int write){
+        portLock.Wait();
+
         registers->ie = 0xffffffff; 
         registers->is = 0; 
         int spin = 0;
 
-        registers->tfd = 0;
-
         int slot = FindCmdSlot();
         if(slot == -1){
             Log::Warning("[SATA] Could not find command slot!");
+            
+            portLock.Signal();
             return 2;
         }
 
@@ -298,17 +303,19 @@ namespace AHCI{
 
         cmdfis->control = 0;
 
-        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < 1000000) {
-            spin++;
+        spin = 0xFFFFF;
+        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin) {
+            spin--;
         }
 
-        if(spin >= 1000000){
+        if(spin <= 0){
             Log::Warning("[SATA] Port Hung");
+            
+            portLock.Signal();
             return 3;
         }
 
         registers->ie = registers->is = 0xffffffff;
-
         registers->ci |= 1 << slot;
 
         //Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
@@ -317,21 +324,34 @@ namespace AHCI{
             if (registers->is & HBA_PxIS_TFES)   // Task file error
             {
                 Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
+                
+                portLock.Signal();
                 return 1;
             }
         }
 
-        spin = 0;
-        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < 1000000) {
-            spin++;
+        spin = 0xFFFFF;
+        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin) {
+            spin--;
+        }
+        
+        if(spin <= 0){
+            Log::Warning("[SATA] Port Hung");
+            
+            portLock.Signal();
+            return 3;
         }
         
        // Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
         
         if (registers->is & HBA_PxIS_TFES) {
             Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
+            
+            portLock.Signal();
             return 1;
         }
+
+        portLock.Signal();
         return 0;
     }
 
@@ -402,6 +422,7 @@ namespace AHCI{
 
         registers->ie = registers->is = 0xffffffff;
 
+        startCMD(registers);
         registers->ci |= 1 << slot;
 
         //Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
@@ -414,11 +435,11 @@ namespace AHCI{
             }
         }
 
-        spin = 0;
-        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < 1000000) {
-            spin++;
+        spin = 0xFFFFF;
+        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin) {
+            spin--;
         }
-        
+
        // Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
         
         if (registers->is & HBA_PxIS_TFES) {

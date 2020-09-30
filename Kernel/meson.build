@@ -27,7 +27,7 @@ output : '@BASENAME@.bin.o',
 arguments : ['@INPUT@','@OUTPUT@', meson.current_source_dir() + '/src/arch/x86_64/', '@BASENAME@'])
 
 kernel_c_args = [
-    '-Wno-write-strings', '-Wno-pointer-arith', '-Werror',
+    '-Wno-write-strings', '-Wall', '-Werror',
     '-DLemon64',
     '-O0',
     '-ffreestanding', '-nostdlib',
@@ -106,7 +106,6 @@ cpp_files_x86_64 = [
     'src/arch/x86_64/scheduler.cpp',
     'src/arch/x86_64/serial.cpp',
     'src/arch/x86_64/smp.cpp',
-    'src/arch/x86_64/sse2.cpp',
     'src/arch/x86_64/ssp.cpp',
     'src/arch/x86_64/syscalls.cpp',
     'src/arch/x86_64/system.cpp',

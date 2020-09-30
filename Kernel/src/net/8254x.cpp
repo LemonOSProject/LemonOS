@@ -52,7 +52,7 @@ namespace Network{
         if(useIO){
             outportl(ioBase + address, data);
         } else {
-            *((uint32_t*)(memBaseVirt + address)) = data;
+            *((uint32_t*)(reinterpret_cast<uintptr_t>(memBaseVirt) + address)) = data;
         }
     }
 
@@ -60,7 +60,7 @@ namespace Network{
         if(useIO){
             return inportl(ioBase + address);
         } else {
-            return *((uint32_t*)(memBaseVirt + address));
+            return *((uint32_t*)(reinterpret_cast<uintptr_t>(memBaseVirt) + address));
         }
     }
 

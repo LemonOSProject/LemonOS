@@ -155,7 +155,18 @@ namespace Log{
 					size_t len = strlen(arg);
 					WriteN(arg, len);
 					break;
-				} case 'd': {
+				} case 'd': 
+				  case 'i': {
+					format++;
+					long arg = va_arg(args, long);
+					if(arg < 0){
+						WriteN("-", 1);
+						Write(-arg, false);
+					} else {
+						Write(arg, false);
+					}
+					break;
+				} case 'u': {
 					hex = false;
 				} case 'x': {
 					format++;

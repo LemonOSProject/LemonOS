@@ -40,10 +40,9 @@ namespace ATA{
         InitializePartitions();
     }
 
-    int ATADiskDevice::ReadDiskBlock(uint64_t lba, uint32_t count, void* buffer){
-        uint8_t* buf = (uint8_t*)kmalloc(512);
-
+    int ATADiskDevice::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer){
         uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
 
         while(blockCount-- && count){
             uint64_t size;
@@ -52,8 +51,7 @@ namespace ATA{
 
             if(!size) continue;
 
-            if(ATA::Access(this, lba, 1, buf, false)){
-                kfree(buf);
+            if(ATA::Access(this, lba, 1, false)){
                 return 1; // Error Reading Sectors
             }
 
@@ -62,15 +60,12 @@ namespace ATA{
             lba++;
         }
 
-        kfree(buf);
-
         return 0;
     }
     
-    int ATADiskDevice::WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer){
-        uint8_t* buf = (uint8_t*)kmalloc(512);
-
+    int ATADiskDevice::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer){
         uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
+        uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
 
         while(blockCount-- && count){
             uint64_t size;
@@ -81,16 +76,13 @@ namespace ATA{
 
             memcpy(prdBuffer, buffer, size);
 
-            if(ATA::Access(this, lba, 1, buf, true)){
-                kfree(buf);
+            if(ATA::Access(this, lba, 1, true)){
                 return 1; // Error Reading Sectors
             }
 
             buffer += size;
             lba++;
         }
-
-        kfree(buf);
 
         return 0;
     }

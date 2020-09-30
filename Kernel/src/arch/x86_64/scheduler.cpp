@@ -244,12 +244,12 @@ namespace Scheduler{
         Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)thread->fxState, 1);
         memset(thread->fxState, 0, 1024);
 
-        void* kernelStack = (void*)Memory::KernelAllocate4KPages(32); // Allocate Memory For Kernel Stack (128KB)
+        void* kernelStack = Memory::KernelAllocate4KPages(32); // Allocate Memory For Kernel Stack (128KB)
         for(int i = 0; i < 32; i++){
-            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)kernelStack + PAGE_SIZE_4K * i, 1);
+            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * i, 1);
         }
 
-        thread->kernelStack = kernelStack + PAGE_SIZE_4K * 32;
+        thread->kernelStack = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * 32);
 
         ((fx_state_t*)thread->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
         ((fx_state_t*)thread->fxState)->mxcsrMask = 0xffbf;
@@ -311,10 +311,10 @@ namespace Scheduler{
 
         void* kernelStack = (void*)Memory::KernelAllocate4KPages(32); // Allocate Memory For Kernel Stack (128KB)
         for(int i = 0; i < 32; i++){
-            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)kernelStack + PAGE_SIZE_4K * i, 1);
+            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * i, 1);
         }
 
-        thread.kernelStack = kernelStack + PAGE_SIZE_4K * 32;
+        thread.kernelStack = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * 32);
         
         regs64_t* registers = &thread.registers;
         registers->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1

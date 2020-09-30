@@ -1,6 +1,6 @@
 JOBS := $(shell nproc)
 
-.PHONY: disk
+.PHONY: disk kernel base initrd libc liblemon system clean run vbox debug
 
 libc:
 	ninja -C LibC/build install -j $(JOBS)
@@ -33,13 +33,14 @@ clean:
 	ninja -C LibLemon/build clean
 	ninja -C Applications/build clean
 	ninja -C Kernel/build clean
-	find Base/ -type f -not -name '*.cfg' -delete
+	ninja -C System/build clean
+	find Base/ -type f -not -name '*.cfg' -not -name '*.py' -not -name '*.asm' -not -name 'localtime' -delete
 	rm -rf Initrd/*
 	rm initrd.tar
 	
 cleanall:
-	rm -rf LibC/build LibLemon/build Applications/build Kernel/build
-	find Base/ -type f -not -name '*.cfg' -delete
+	rm -rf LibC/build LibLemon/build Applications/build Kernel/build System/build
+	find Base/ -type f -not -name '*.cfg' -not -name '*.py' -not -name '*.asm' -not -name 'localtime' -delete
 	rm -rf Initrd/*
 	rm initrd.tar
 	

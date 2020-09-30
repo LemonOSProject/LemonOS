@@ -82,7 +82,7 @@ namespace fs{
 		FsNode* currentNode = root;
 
 		char* file = strtok(tempPath,"/");
-
+		
 		while(file != NULL){ // Iterate through the directories to find the file
 			FsNode* node = fs::FindDir(currentNode,file);
 			if(!node) {
