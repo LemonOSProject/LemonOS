@@ -6,7 +6,7 @@ unsigned int rand()
 	return ((unsigned int)(rand_next / 65536) % 32768);
 }
 
-int floor(double num) {
+int floor(int num) {
 	int x = (int)num;
 	return num < x ? x - 1 : x;
 }

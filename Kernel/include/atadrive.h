@@ -24,6 +24,7 @@ namespace ATA{
         int blocksize = 512;
         
     private:
+        Semaphore driveLock = Semaphore(1);
         char* name = "Generic ATA Disk Device";
     };
 }

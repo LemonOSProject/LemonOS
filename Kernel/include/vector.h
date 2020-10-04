@@ -9,9 +9,9 @@ class Vector{
 		friend class Vector;
 	protected:
 		size_t pos = 0;
-		Vector<T>& vector;
+		const Vector<T>& vector;
 	public:
-		VectorIterator(Vector<T>& newVector) : vector(newVector) {};
+		VectorIterator(const Vector<T>& newVector) : vector(newVector) {};
 		VectorIterator(const VectorIterator& it) : vector(it.vector) { pos = it.pos; };
 
 		VectorIterator& operator++(){
@@ -27,11 +27,11 @@ class Vector{
 			return *this;
 		}
 
-		T& operator*(){
+		T& operator*() const{
 			return vector.data[pos];
 		}
 
-		T* operator->(){
+		T* operator->() const{
 			return &vector.data[pos];
 		}
 
@@ -55,30 +55,39 @@ private:
 	T* data = nullptr;
 	size_t count = 0;
 	size_t capacity = 0;
+	lock_t lock = 0;
 public:
-	T& at(size_t pos){
+	Vector() = default;
+
+	Vector(const Vector<T>& x){
+		data = new T[x.get_length()];
+		memcpy(data, x.data, x.get_length() * sizeof(T));
+	}
+
+	T& at(size_t pos) const{
 		assert(pos < count);
 
 		return data[pos];
 	}
 
-	T& get_at(size_t pos){
+	T& get_at(size_t pos) const{
 		return at(pos);
 	}
 
-	T& operator[](size_t pos){
+	T& operator[](size_t pos) const{
 		return at(pos);
 	}
 
-	size_t size(){
+	size_t size() const{
 		return count;
 	}
 
-	size_t get_length(){
+	size_t get_length() const {
 		return count;
 	}
 
 	void reserve(size_t count){
+		acquireLock(&lock);
 		if(count > capacity){
 			capacity = count + 1;
 		}
@@ -93,9 +102,11 @@ public:
 		} else {
 			data = new T[capacity];
 		}
+		releaseLock(&lock);
 	}
 
 	void add_back(T val){
+		acquireLock(&lock);
 		count++;
 
 		if(count >= capacity){
@@ -114,6 +125,7 @@ public:
 		}
 
 		data[count - 1] = val;
+		releaseLock(&lock);
 	}
 
 	T& pop_back(){
@@ -129,7 +141,7 @@ public:
 		data = nullptr;
 	}
 
-	VectorIterator begin(){
+	VectorIterator begin() const{
 		VectorIterator it = VectorIterator(*this);
 
 		it.pos = 0;
@@ -137,7 +149,7 @@ public:
 		return it;
 	}
 
-	VectorIterator end(){
+	VectorIterator end() const{
 		VectorIterator it = VectorIterator(*this);
 		
 		it.pos = count;
@@ -146,11 +158,13 @@ public:
 	}
 
 	void clear(){
+		acquireLock(&lock);
 		if(data){
 			delete data;
 		}
 
 		count = capacity = 0;
 		data = nullptr;
+		releaseLock(&lock);
 	}
 };

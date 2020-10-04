@@ -104,7 +104,6 @@ namespace Network{
 
             UpdateLink();
         } else if(status & 0x80){
-
             do {
                 rxTail = ReadMem32(I8254_REGISTER_RDESC_TAIL);
                 if(rxTail == ReadMem32(I8254_REGISTER_RDESC_HEAD)) return;

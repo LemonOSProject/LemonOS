@@ -182,12 +182,12 @@ namespace HAL{
     }
 
     void InitExtra(){
-        Log::Info("Initializing PCI...");
-        PCI::Init();
-        Log::Write("OK");
-
         Log::Info("Initializing ACPI...");
         ACPI::Init();
+        Log::Write("OK");
+        
+        Log::Info("Initializing PCI...");
+        PCI::Init();
         Log::Write("OK");
         
         Log::Info("Initializing Local and I/O APIC...");

@@ -26,6 +26,7 @@ namespace ACPI{
 	acpi_rsdt_t* rsdtHeader;
 	acpi_xsdt_t* xsdtHeader;
 	acpi_fadt_t* fadt;
+	pci_mcfg_table_t* mcfg = nullptr;
 
 	char oem[7];
 
@@ -48,9 +49,6 @@ namespace ACPI{
 		};
 
 		int _index = 0;
-
-		Log::Info("Finding: ");
-		Log::Write(signature);
 
 		if(memcmp("DSDT", signature, 4) == 0) return (void*)Memory::GetIOMapping(fadt->dsdt);
 	
@@ -181,7 +179,7 @@ namespace ACPI{
 		Log::Info("[ACPI] Revision: %d", desc->revision);
 		Log::Info("[ACPI] OEM ID: %s", oem);
 
-		fadt = (acpi_fadt_t*)FindSDT("FACP", 0);
+		fadt = reinterpret_cast<acpi_fadt_t*>(FindSDT("FACP", 0));
 
 		asm("cli");
 
@@ -189,6 +187,7 @@ namespace ACPI{
 		lai_create_namespace();
 
 		ReadMADT();
+		mcfg = reinterpret_cast<pci_mcfg_table_t*>(FindSDT("MCFG", 0)); // Attempt to find MCFG table for PCI
 
 		asm("sti");
 	}
@@ -286,35 +285,9 @@ extern "C"{
 				break;
 			}
 		}
-		return;
 	}
 
-	/* Write a byte/word/dword to the given device's PCI configuration space
-   at the given offset. */
-/*void laihost_pci_writeb(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset, uint8_t val){
-	
-}*/
-
-void laihost_pci_writew(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset, uint16_t val){
-	PCI::ConfigWriteWord(bus, slot, fun, offset, val);
-}
-
-/*void laihost_pci_writed(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset, uint32_t val){
-
-}*/
-
-/* Read a byte/word/dword from the given device's PCI configuration space
-   at the given offset. * /
-uint8_t laihost_pci_readb(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset){
-
-}
-
-uint16_t laihost_pci_readw(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset){
-
-}
-
-uint32_t laihost_pci_readd(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset){
-
-}*/
-
+	void laihost_pci_writew(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset, uint16_t val){
+		PCI::ConfigWriteWord(bus, slot, fun, offset, val);
+	}
 }

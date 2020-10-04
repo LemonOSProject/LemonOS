@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <assert.h>
+#include <vector.h>
 
 #define PCI_BIST_CAPABLE (1 << 7)
 #define PCI_BIST_START (1 << 6)
@@ -17,6 +18,8 @@
 #define PCI_CMD_BUS_MASTER (1 << 2)
 #define PCI_CMD_MEMORY_SPACE (1 << 1)
 #define PCI_CMD_IO_SPACE (1 << 0)
+
+#define PCI_STATUS_CAPABILITIES (1 << 4)
 
 #define PCI_CLASS_UNCLASSIFIED 0x0
 #define PCI_CLASS_STORAGE 0x1
@@ -55,6 +58,11 @@
 #define PCI_IO_PORT_CONFIG_ADDRESS 0xCF8
 #define PCI_IO_PORT_CONFIG_DATA 0xCFC
 
+#define PCI_CAP_MSI_CONTROL_64 (1 << 7) // 64-bit address capable
+#define PCI_CAP_MSI_CONTROL_SET_MME(x) (x << 4) // Multiple message enable
+#define PCI_CAP_MSI_CONTROL_MMC(x) ((x >> 1) & 0x7) // Multiple Message Capable
+#define PCI_CAP_MSI_CONTROL_ENABLE (1 << 0) // MSI Enable
+
 enum PCIConfigRegisters{
 	PCIDeviceID = 0x2,
 	PCIVendorID = 0x0,
@@ -78,15 +86,61 @@ enum PCIConfigRegisters{
 	PCISubsystemID = 0x2E,
 	PCISubsystemVendorID = 0x2C,
 	PCIExpansionROMBaseAddress = 0x30,
-	PCICapabilitiesPointer = 0x37,
+	PCICapabilitiesPointer = 0x34,
 	PCIMaxLatency = 0x3F,
 	PCIMinGrant = 0x3E,
 	PCIInterruptPIN = 0x3D,
 	PCIInterruptLine = 0x3C,
 };
 
+enum PCICapabilityIDs{
+	PCICapMSI = 0x5,
+};
+
+struct PCIMSICapability{
+	union{
+		struct{
+			uint8_t capID; // Should be PCICapMSI
+			uint8_t nextCap; // Next Capability
+			uint16_t msiControl; // MSI control register
+		};
+		uint32_t register0;
+	};
+	union{
+		uint32_t addressLow; // Interrupt Message Address Low
+		uint32_t register1;
+	};
+	union{
+		uint32_t data; // MSI data
+		uint32_t addressHigh; // Interrupt Message Address High (64-bit only)
+		uint32_t register2;
+	};
+	uint32_t data64; // MSI data when 64-bit capable
+
+	inline void SetData(uint32_t d){
+		if(msgControl & PCI_CAP_MSI_CONTROL_64){
+			data64 = d;
+		} else {
+			data = d;
+		}
+	}
+
+	inline uint32_t GetData(){
+		if(msgControl & PCI_CAP_MSI_CONTROL_64){
+			return data64;
+		} else {
+			return data;
+		}
+	}
+};
+
 class PCIDevice;
 namespace PCI{
+	enum PCIConfigurationAccessMode {
+		Legacy, // PCI
+		Enhanced, // PCI Express
+	};
+
 	uint16_t ReadWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
 
 	uint32_t ConfigReadDword(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset);
@@ -118,6 +172,10 @@ public:
 
 	uint8_t classCode;
 	uint8_t subclass;
+
+	Vector<uint16_t>* capabilities;
+	PCIMSICapability msiCap;
+	bool msiCapable = false;
 
 	inline uintptr_t GetBaseAddressRegister(uint8_t idx){
 		assert(idx >= 0 && idx <= 5);
@@ -161,5 +219,13 @@ public:
 
 	inline uint8_t GetProgIF(){
 		return PCI::ConfigReadByte(bus, slot, func, PCIProgIF);
+	}
+
+	inline uint16_t Status(){
+		return PCI::ConfigReadWord(bus, slot, func, PCIStatus);
+	}
+
+	inline bool HasCapability(uint16_t capability){
+		return false;
 	}
 };

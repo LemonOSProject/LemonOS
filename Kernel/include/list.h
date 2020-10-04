@@ -95,7 +95,7 @@ public:
 		num = 0;
 	}
 
-	void add_back(T obj) {
+	void add_back(const T& obj) {
 		if (!front) {
 			front = obj;
 			obj->prev = obj;
@@ -108,7 +108,7 @@ public:
 		num++;
 	}
 
-	void add_front(T obj) {
+	void add_front(const T& obj) {
 		if (!back) {
 			back = obj;
 		}
@@ -235,7 +235,7 @@ public:
 		releaseLock(&lock);
 	}
 
-	void add_back(T obj) {
+	void add_back(const T& obj) {
 		acquireLock(&lock);
 
 		ListNode<T>* node;
@@ -263,7 +263,7 @@ public:
 		releaseLock(&lock);
 	}
 
-	void add_front(T obj) {
+	void add_front(const T& obj) {
 		acquireLock(&lock);
 
 		ListNode<T>* node;
@@ -289,7 +289,7 @@ public:
 		releaseLock(&lock);
 	}
 
-	void insert(T obj, size_t pos){
+	void insert(const T& obj, size_t pos){
 		if(!num){
 			add_back(obj);
 			return;
@@ -451,19 +451,17 @@ public:
 		releaseLock(&lock);
 	}
 
-	T& get_front()
-	{
+	T& get_front() const {
 		assert(front);
 		return front->obj;
 	}
 
-	T& get_back()
-	{
+	T& get_back() const {
 		assert(back);
 		return back->obj;
 	}
 
-	ListIterator<T> begin(){
+	ListIterator<T> begin() const {
 		ListIterator<T> it;
 
 		if(!num || !front){
@@ -475,7 +473,7 @@ public:
 		return it;
 	}
 	
-	ListIterator<T> end(){
+	ListIterator<T> end() const {
 		ListIterator<T> it;
 		it.node = nullptr;
 		return it;

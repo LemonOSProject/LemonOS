@@ -3,20 +3,14 @@
 #include <system.h>
 #include <logging.h>
 #include <vector.h>
-
-#define AMD 0x1022
-#define INTEL 0x8086
-#define NVIDIA 0x10de
-#define REALTEK 0x10ec
-#define INNOTEK 0x80ee
-
-#define VENDOR_COUNT 5
+#include <acpi.h>
 
 namespace PCI{
 	Vector<PCIDevice>* devices;
 	PCIDevice* unknownDevice;
-
-	char* unknownDeviceString = "Unknown Device.";
+	PCIMCFG* mcfgTable;
+	PCIConfigurationAccessMode configMode = PCIConfigurationAccessMode::Legacy;
+	Vector<PCIMCFGBaseAddress>* enhancedBaseAddresses; // Base addresses for enhanced (PCI Express) configuration mechanism
 
 	uint32_t ConfigReadDword(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset){
 		uint32_t address = (uint32_t)((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | 0x80000000);
@@ -150,6 +144,31 @@ namespace PCI{
 		Log::Write(", Subclass: ");
 		Log::Write(device.subclass);
 
+		device.capabilities = new Vector<uint16_t>();
+		if(device.Status() & PCI_STATUS_CAPABILITIES){
+			uint8_t ptr = ConfigReadWord(bus, slot, func, PCICapabilitiesPointer) & 0xFC;
+			uint16_t cap = ConfigReadDword(bus, slot, func, ptr);
+			do {
+				Log::Info("PCI Capability: %x", cap & 0xFF);
+
+				if(cap & 0xFF == PCICapabilityIDs::PCICapMSI){
+					device.msiCapable = true;
+					device.msiCap.register0 = ConfigReadDword(bus, slot, func, ptr);
+					device.msiCap.register1 = ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t));
+					device.msiCap.register2 = ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t) * 2);
+
+					if(device.msiCap.msiControl & PCI_CAP_MSI_CONTROL_64){ // 64-bit capable
+						device.msiCap.data64 = ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t) * 3);
+					}
+				}
+
+				ptr = (cap >> 8);
+				cap = ConfigReadDword(bus, slot, func, ptr);
+
+				device.capabilities->add_back(cap & 0xFF);
+			} while((cap >> 8));
+		}
+
 		int ret = devices->get_length();
 		devices->add_back(device);
 		return ret;
@@ -160,6 +179,21 @@ namespace PCI{
 		unknownDevice->vendorID = unknownDevice->deviceID = 0xFFFF;
 		
 		devices = new Vector<PCIDevice>();
+		enhancedBaseAddresses = new Vector<PCIMCFGBaseAddress>();
+
+		mcfgTable = ACPI::mcfg;
+		if(mcfgTable){
+			configMode = PCIConfigurationAccessMode::Enhanced;
+			for(unsigned i = 0; i < (mcfgTable->header.length - sizeof(PCIMCFG)) / sizeof(PCIMCFGBaseAddress); i++){
+				PCIMCFGBaseAddress& base = mcfgTable->baseAddresses[i];
+				if(base.segmentGroupNumber > 0){
+					Log::Warning("No support for PCI express segments > 0");
+					continue;
+				}
+
+				enhancedBaseAddresses->add_back(base);
+			}
+		}
 
 		for(uint16_t i = 0; i < 256; i++){ // Bus
 			for(uint16_t j = 0; j < 32; j++){ // Slot

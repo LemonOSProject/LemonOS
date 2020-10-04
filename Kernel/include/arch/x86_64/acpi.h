@@ -52,6 +52,20 @@ typedef struct LocalAPICAddressOverride { // Local APIC Address Override - Type 
   uint64_t address; // 64-bit Address of Local APIC
 } __attribute__ ((packed)) apic_local_address_override_t;
 
+typedef struct PCIMCFGBaseAddress{
+  uint64_t baseAddress; // Base address of configuration space
+  uint16_t segmentGroupNumber; // PCI Segment group number
+  uint8_t startPCIBusNumber; // Start PCI bus number decoded by this host bridge
+  uint8_t endPCIBusNumber; // End PCI bus number decoded by this host bridge 
+  uint32_t reserved;
+} __attribute__ ((packed)) pci_mcfg_base_adress_t;
+
+typedef struct PCIMCFG {
+  acpi_header_t header;
+  uint64_t reserved;
+  PCIMCFGBaseAddress baseAddresses[];
+} __attribute__ ((packed)) pci_mcfg_table_t;
+
 namespace ACPI{
   extern uint8_t processors[];
   extern int processorCount;
@@ -60,6 +74,7 @@ namespace ACPI{
 
 	extern acpi_xsdp_t* desc;
 	extern acpi_rsdt_t* rsdtHeader;
+  extern pci_mcfg_table_t* mcfg;
 
 	void Init();
   void SetRSDP(acpi_xsdp_t* p);

@@ -122,7 +122,6 @@ long SysExec(regs64_t* r){
 	char** envp = (char**)r->rdi;
 
 	FsNode* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
-
 	if(!current_node){
 		return 1;
 	}
@@ -779,7 +778,7 @@ long SysUptime(regs64_t* r){
 		*seconds = Timer::GetSystemUptime();
 	}
 	if(milliseconds){
-		*milliseconds = ((double)Timer::GetTicks())/(Timer::GetFrequency()/1000.0);
+		*milliseconds = Timer::GetTicks() * 1000 /Timer::GetFrequency();
 	}
 	return 0;
 }

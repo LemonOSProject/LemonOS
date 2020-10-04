@@ -51,9 +51,12 @@ namespace ATA{
 
             if(!size) continue;
 
+            driveLock.Wait();
             if(ATA::Access(this, lba, 1, false)){
+                driveLock.Signal();
                 return 1; // Error Reading Sectors
             }
+            driveLock.Signal();
 
             memcpy(buffer, prdBuffer, size);
             buffer += size;
@@ -76,9 +79,12 @@ namespace ATA{
 
             memcpy(prdBuffer, buffer, size);
 
+            driveLock.Wait();
             if(ATA::Access(this, lba, 1, true)){
+                driveLock.Signal();
                 return 1; // Error Reading Sectors
             }
+            driveLock.Signal();
 
             buffer += size;
             lba++;
