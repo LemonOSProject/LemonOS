@@ -150,7 +150,7 @@ namespace IDT{
 		idt_ptr.base = (uint64_t)&idt;
 
 		for(int i = 0; i < 256; i++){
-			SetGate(i, 0,0x08,0x8E);
+			SetGate(i, 0, 0x08, 0x8E);
 		}
 
 		SetGate(0, (uint64_t)isr0,0x08,0x8E);
@@ -226,6 +226,19 @@ namespace IDT{
 
 	void RegisterInterruptHandler(uint8_t interrupt, isr_t handler) {
 		interrupt_handlers[interrupt] = handler;
+	}
+
+	uint8_t ReserveUnusedInterrupt(){
+		uint8_t interrupt = 0xFF;
+		for(unsigned i = IRQ0 + 16 /* Ignore all legacy IRQs and exceptions */; i < 255 /* Ignore 0xFF */ && interrupt == 0xFF; i++){
+			idt_entry_t& ent = idt[i];
+			uint64_t base = (static_cast<uint64_t>(ent.base_high) << 32) | (static_cast<uint64_t>(ent.base_med) << 16) | ent.base_low;
+			if(!base){ // empty
+				ent.base_low = 0xDEA1;
+				interrupt = i;
+			}
+		}
+		return interrupt;
 	}
 
 	void DisablePIC(){

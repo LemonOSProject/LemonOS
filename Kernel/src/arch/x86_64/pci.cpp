@@ -4,6 +4,8 @@
 #include <logging.h>
 #include <vector.h>
 #include <acpi.h>
+#include <apic.h>
+#include <idt.h>
 
 namespace PCI{
 	Vector<PCIDevice>* devices;
@@ -45,11 +47,18 @@ namespace PCI{
 		return data;
 	}
 
+	void ConfigWriteDword(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint16_t data){
+		uint32_t address = (uint32_t)((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | 0x80000000);
+
+		outportl(0xCF8, address);
+		outportl(0xCFC, data);
+	}
+
 	void ConfigWriteWord(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint16_t data){
 		uint32_t address = (uint32_t)((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | 0x80000000);
 
 		outportl(0xCF8, address);
-		outportw(0xCFC, data);
+		outportl(0xCFC, (inportl(0xCFC) & (~(0xFFFF << ((offset & 2) * 8)))) | (static_cast<uint32_t>(data) << ((offset & 2) * 8)));
 	}
 
 	void ConfigWriteByte(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset, uint8_t data){
@@ -151,7 +160,8 @@ namespace PCI{
 			do {
 				Log::Info("PCI Capability: %x", cap & 0xFF);
 
-				if(cap & 0xFF == PCICapabilityIDs::PCICapMSI){
+				if((cap & 0xFF) == PCICapabilityIDs::PCICapMSI){
+					device.msiPtr = ptr;
 					device.msiCapable = true;
 					device.msiCap.register0 = ConfigReadDword(bus, slot, func, ptr);
 					device.msiCap.register1 = ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t));
@@ -211,4 +221,51 @@ namespace PCI{
 			}
 		}
 	}
+}
+
+
+uint8_t PCIDevice::AllocateVector(PCIVectors type){
+	if(type & PCIVectorMSI){
+		if(!msiCapable){
+			Log::Error("[PCIDevice] AllocateVector: Device not MSI capable!");
+		} else {
+			uint8_t interrupt = IDT::ReserveUnusedInterrupt();
+			if(interrupt == 0xFF){
+				Log::Error("[PCIDevice] AllocateVector: Could not reserve unused interrupt (no free interrupts?)!");
+				return interrupt;
+			}
+			
+			msiCap.msiControl = (msiCap.msiControl & ~PCI_CAP_MSI_CONTROL_MME_MASK) | PCI_CAP_MSI_CONTROL_SET_MME(0); // We only support one message at the moment
+			msiCap.msiControl |= 1; // Enable MSIs
+
+			msiCap.SetData(ICR_VECTOR(interrupt) | ICR_MESSAGE_TYPE_FIXED);
+
+			msiCap.SetAddress(0);
+
+			PCI::ConfigWriteDword(bus, slot, func, msiPtr, msiCap.register0);
+			PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t), msiCap.register1);
+			PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t) * 2, msiCap.register2);
+
+			if(msiCap.msiControl & PCI_CAP_MSI_CONTROL_64){
+				PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t) * 3, msiCap.register3);
+			}
+
+			return interrupt;
+		}
+	}
+
+	if(type & PCIVectorLegacy){
+		uint8_t irq = GetInterruptLine();
+		if(irq == 0xFF){
+			Log::Error("[PCIDevice] AllocateVector: Legacy interrupts not supported by device.");
+			return 0xFF;
+		} else {
+			APIC::IO::MapLegacyIRQ(irq);
+		}
+
+		return IRQ0 + irq;
+	}
+
+	Log::Error("[PCIDevice] AllocateVector: Could not allocate interrupt (type %i)!", static_cast<int>(type));
+	return 0xFF;
 }

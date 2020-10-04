@@ -13,6 +13,7 @@
 #include <lai/core.h>
 #include <lai/helpers/pm.h>
 #include <lai/helpers/sci.h>
+#include <lai/helpers/pci.h>
 
 namespace ACPI{
 	uint8_t processors[256];
@@ -194,6 +195,16 @@ namespace ACPI{
 
 	void SetRSDP(acpi_xsdp_t* p){
 		desc = reinterpret_cast<acpi_xsdp_t*>(p);
+	}
+
+	uint8_t RoutePCIPin(uint8_t bus, uint8_t slot, uint8_t func, uint8_t pin){
+		acpi_resource_t res;
+		lai_api_error_t e = lai_pci_route_pin(&res, 0, bus, slot, func, pin);
+		if(e){
+			return 0xFF;
+		} else {
+			return res.base;
+		}
 	}
 
 	void Reset(){

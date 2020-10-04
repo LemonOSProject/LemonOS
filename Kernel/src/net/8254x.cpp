@@ -252,12 +252,10 @@ namespace Network{
             return;
         }
 
-        int irqNum = device.GetInterruptLine();
+        int irqNum = device.AllocateVector(PCIVectors::PCIVectorLegacy);
         Log::Write(",IRQ: ");
         Log::Write(irqNum);
-
-        APIC::IO::MapLegacyIRQ(irqNum);
-        IDT::RegisterInterruptHandler(IRQ0 + irqNum, InterruptHandler);
+        IDT::RegisterInterruptHandler(irqNum, InterruptHandler);
 
         uint8_t macAddr[6];
 

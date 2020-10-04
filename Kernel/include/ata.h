@@ -38,8 +38,11 @@
 #define ATA_CMD_IDENTIFY        0xec
 
 #define ATA_PRD_BUFFER(x) (x & 0xFFFFFFFF)
-#define ATA_PRD_TRANSFER_SIZE(x) ((x & 0xFFFF) << 32)
-#define ATA_PRD_END 0x8000000000000000ULL //(0x8000 << 48)
+#define ATA_PRD_TRANSFER_SIZE(x) ((x & 0xFFFFULL) << 32)
+#define ATA_PRD_END 0x8000000000000000ULL
+
+#define ATA_PRIMARY_IRQ 14
+#define ATA_SECONDARY_IRQ 15
 
 namespace ATA{
     class ATADiskDevice;

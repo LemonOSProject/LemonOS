@@ -5,14 +5,9 @@
 #include <logging.h>
 #include <memory.h>
 #include <timer.h>
+#include <idt.h>
 
 namespace AHCI{
-
-	struct AHCIDevice{
-		hba_port_t* port;
-		bool connected;
-	};
-
 	uintptr_t ahciBaseAddress;
 	uintptr_t ahciVirtualAddress;
 	hba_mem_t* ahciHBA;
@@ -22,6 +17,10 @@ namespace AHCI{
 	PCIDevice* controllerPCIDevice;
 	uint8_t ahciClassCode = PCI_CLASS_STORAGE;
 	uint8_t ahciSubclass = PCI_SUBCLASS_SATA;
+	
+    void InterruptHandler(regs64_t* r){
+        //Log::Info("[AHCI] Interrupt!");
+    }
 
 	int Init(){
 		if(!PCI::FindGenericDevice(ahciClassCode, ahciSubclass)){
@@ -41,7 +40,12 @@ namespace AHCI{
 
 		ahciHBA = (hba_mem_t*)ahciVirtualAddress;
 
-		Log::Info("[AHCI] Base Address: %x, Virtual Base Address: %x", ahciBaseAddress, ahciVirtualAddress);
+		uint8_t irq = controllerPCIDevice->AllocateVector(PCIVectors::PCIVectorAny);
+		if(irq == 0xFF){
+			Log::Warning("[AHCI] Failed to allocate vector!");
+		}
+
+		Log::Info("[AHCI] Interrupt Vector: %x, Base Address: %x, Virtual Base Address: %x", irq, ahciBaseAddress, ahciVirtualAddress);
 		Log::Info("[AHCI] (Cap: %x, Cap2: %x) Enabled? %Y, BOHC? %Y, 64-bit addressing? %Y, Staggered Spin-up? %Y, Slumber State Capable? %Y, Partial State Capable? %Y, FIS-based switching? %Y", ahciHBA->cap, ahciHBA->cap2, ahciHBA->ghc & AHCI_GHC_ENABLE, ahciHBA->cap2 & AHCI_CAP2_BOHC, ahciHBA->cap & AHCI_CAP_S64A, ahciHBA->cap & AHCI_CAP_SSS, ahciHBA->cap & AHCI_CAP_SSC, ahciHBA->cap & AHCI_CAP_PSC, ahciHBA->cap & AHCI_CAP_FBSS);
 
 		uint32_t pi = ahciHBA->pi;
@@ -50,6 +54,8 @@ namespace AHCI{
 			ahciHBA->ghc |= AHCI_GHC_ENABLE;
 			Timer::Wait(1);
 		}
+
+		IDT::RegisterInterruptHandler(irq, InterruptHandler);
 
 		/*ahciHBA->ghc = AHCI_GHC_ENABLE | 1; // Reset Controller
 		while(ahciHBA->ghc & 1){

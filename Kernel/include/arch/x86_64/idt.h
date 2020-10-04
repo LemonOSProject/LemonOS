@@ -33,5 +33,7 @@ namespace IDT{
 	
 	void DisablePIC();
 
+	uint8_t ReserveUnusedInterrupt();
+
 	int GetErrCode();
 }

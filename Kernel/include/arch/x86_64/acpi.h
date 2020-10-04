@@ -80,5 +80,7 @@ namespace ACPI{
   void SetRSDP(acpi_xsdp_t* p);
   void SetRSDP(acpi_xsdp_t* p);
 
+  uint8_t RoutePCIPin(uint8_t bus, uint8_t slot, uint8_t func, uint8_t pin);
+
   void Reset();
 }

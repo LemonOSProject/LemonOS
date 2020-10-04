@@ -96,7 +96,7 @@ namespace ATA{
 
 	int Init(){
 		if(!PCI::FindGenericDevice(ideClassCode, ideSubclass)){
-			Log::Warning("[ATA] Not IDE controller found!");
+			Log::Warning("[ATA] No IDE controller found!");
 			return 1;
 		}
 

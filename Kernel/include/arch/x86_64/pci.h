@@ -59,6 +59,7 @@
 #define PCI_IO_PORT_CONFIG_DATA 0xCFC
 
 #define PCI_CAP_MSI_CONTROL_64 (1 << 7) // 64-bit address capable
+#define PCI_CAP_MSI_CONTROL_MME_MASK (0x7U << 4)
 #define PCI_CAP_MSI_CONTROL_SET_MME(x) (x << 4) // Multiple message enable
 #define PCI_CAP_MSI_CONTROL_MMC(x) ((x >> 1) & 0x7) // Multiple Message Capable
 #define PCI_CAP_MSI_CONTROL_ENABLE (1 << 0) // MSI Enable
@@ -97,6 +98,13 @@ enum PCICapabilityIDs{
 	PCICapMSI = 0x5,
 };
 
+enum PCIVectors{
+	PCIVectorLegacy = 0x1, // Legacy IRQ
+	PCIVectorAPIC = 0x2, // I/O APIC
+	PCIVectorMSI = 0x4, // Message Signaled Interrupt
+	PCIVectorAny = 0x7, // (PCIVectorLegacy | PCIVectorAPIC | PCIVectorMSI)
+};
+
 struct PCIMSICapability{
 	union{
 		struct{
@@ -115,10 +123,13 @@ struct PCIMSICapability{
 		uint32_t addressHigh; // Interrupt Message Address High (64-bit only)
 		uint32_t register2;
 	};
-	uint32_t data64; // MSI data when 64-bit capable
+	union{
+		uint32_t data64; // MSI data when 64-bit capable
+		uint32_t register3;
+	};
 
 	inline void SetData(uint32_t d){
-		if(msgControl & PCI_CAP_MSI_CONTROL_64){
+		if(msiControl & PCI_CAP_MSI_CONTROL_64){
 			data64 = d;
 		} else {
 			data = d;
@@ -126,11 +137,15 @@ struct PCIMSICapability{
 	}
 
 	inline uint32_t GetData(){
-		if(msgControl & PCI_CAP_MSI_CONTROL_64){
+		if(msiControl & PCI_CAP_MSI_CONTROL_64){
 			return data64;
 		} else {
 			return data;
 		}
+	}
+
+	inline void SetAddress(int cpu){
+		addressLow = 0xFEE00000 | static_cast<uint32_t>(cpu);
 	}
 };
 
@@ -173,7 +188,9 @@ public:
 	uint8_t classCode;
 	uint8_t subclass;
 
-	Vector<uint16_t>* capabilities;
+	Vector<uint16_t>* capabilities; // List of capability IDs
+
+	uint8_t msiPtr;
 	PCIMSICapability msiCap;
 	bool msiCapable = false;
 
@@ -228,4 +245,6 @@ public:
 	inline bool HasCapability(uint16_t capability){
 		return false;
 	}
+
+	uint8_t AllocateVector(PCIVectors type);
 };
