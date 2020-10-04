@@ -188,6 +188,8 @@ namespace ATA{
 		WriteRegister(drive->port, ATA_REGISTER_LBA_LOW, (lba >> 24) & 0xFF);
 		WriteRegister(drive->port, ATA_REGISTER_LBA_MID, (lba >> 32) & 0xFF);
 		WriteRegister(drive->port, ATA_REGISTER_LBA_HIGH, (lba >> 40) & 0xFF);
+		
+		for(int i = 0; i < 4; i++) inportb(controlPort0);
 
 		WriteRegister(drive->port, ATA_REGISTER_SECTOR_COUNT, count & 0xFF);
 		

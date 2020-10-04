@@ -159,6 +159,18 @@ long SysExec(regs64_t* r){
 	}
 
 	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp);
+	
+	if(!proc) {
+		for(int i = 0; i < argc; i++){
+			kfree(kernelArgv[i]);
+		}
+
+		kfree(kernelArgv);
+		kfree(buffer);
+
+		return 0;
+	}
+
 	char* name;
 	if(argc){
 		name = fs::BaseName(kernelArgv[0]);
@@ -174,7 +186,6 @@ long SysExec(regs64_t* r){
 	kfree(kernelArgv);
 	kfree(buffer);
 
-	if(!proc) return 0;
 
 	if(flags & EXEC_CHILD){
 		Scheduler::GetCurrentProcess()->children.add_back(proc);

@@ -393,8 +393,6 @@ namespace SocketManager{
 
         for(unsigned i = 0; i < sockets.get_length(); i++){
             if(strcmp(sockets.get_at(i).address, address) == 0){
-                Log::Info("Resolved Socket Address %s", address);
-
                 return sockets.get_at(i).socket;
             }
         }

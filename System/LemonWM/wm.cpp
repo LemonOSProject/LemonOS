@@ -5,11 +5,23 @@
 #include <core/shell.h>
 #include <core/keyboard.h>
 #include <algorithm>
+#include <pthread.h>
 
 WMInstance::WMInstance(surface_t& surface, sockaddr_un address) : server(address, sizeof(sockaddr_un)){
 
     this->surface = surface;
     screenSurface.buffer = nullptr;
+}
+
+void* WMInstance::InitializeShellConnection(){
+    sockaddr_un shellAddr;
+    strcpy(shellAddr.sun_path, Lemon::Shell::shellSocketAddress);
+    shellAddr.sun_family = AF_UNIX;
+    shellClient.Connect(shellAddr, sizeof(sockaddr_un));
+
+    shellConnected = true;
+
+    return nullptr;
 }
 
 WMWindow* WMInstance::FindWindow(int id){
@@ -145,12 +157,8 @@ void WMInstance::Poll(){
             } else if(cmd->cmd == Lemon::GUI::WMMinimizeOther){
                 MinimizeWindow(cmd->minimizeWindowID, cmd->minimized);
             } else if(cmd->cmd == Lemon::GUI::WMInitializeShellConnection){
-                sockaddr_un shellAddr;
-                strcpy(shellAddr.sun_path, Lemon::Shell::shellSocketAddress);
-                shellAddr.sun_family = AF_UNIX;
-                shellClient.Connect(shellAddr, sizeof(sockaddr_un));
-
-                shellConnected = true;
+                pthread_t p;
+                pthread_create(&p, nullptr, reinterpret_cast<void*(*)(void*)>(&WMInstance::InitializeShellConnection), this);
             } else if(cmd->cmd == Lemon::GUI::WMOpenContextMenu){
                 WMWindow* win = FindWindow(m->clientFd);
 

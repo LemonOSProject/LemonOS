@@ -16,7 +16,7 @@
 #define CONTEXT_ITEM_WIDTH 160
 
 //#define LEMONWM_USE_CLIPPING
-//#define LEMONWM_FRAMERATE_COUNTER
+#define LEMONWM_FRAMERATE_COUNTER
 
 using WindowBuffer = Lemon::GUI::WindowBuffer;
 
@@ -164,6 +164,7 @@ protected:
 
     bool shellConnected = false;
 
+    void* InitializeShellConnection();
     void Poll();
     void PostEvent(Lemon::LemonEvent& ev, WMWindow* win);
     WMWindow* FindWindow(int id);

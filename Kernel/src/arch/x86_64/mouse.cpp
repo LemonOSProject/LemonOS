@@ -148,18 +148,16 @@ namespace Mouse{
 
 	void Install()
 	{
-		uint8_t status;
-
-		//fs::RegisterDevice(&mouseDev.dirent);
-
 		Wait(1);
-		outportb(0x64, 0xA8);
+		outportb(0x64, 0xA8); // Enable aux PS/2 input
+
+		outportb(0x64, 0xFF); // Reset Mouse
 
 		//Enable the interrupts
 		Wait(1);
 		outportb(0x64, 0x20);
 		Wait(0);
-		status = (inportb(0x60) | 2);
+		uint8_t status = ((inportb(0x60) & ~0x20) | 2); // Enable interrupts, enable mouse clock
 		Wait(1);
 		outportb(0x64, 0x60);
 		Wait(1);

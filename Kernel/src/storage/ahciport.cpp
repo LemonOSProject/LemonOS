@@ -131,8 +131,6 @@ namespace AHCI{
             return;
         }
 
-        startCMD(registers);
-
         bufPhys = Memory::AllocatePhysicalMemoryBlock();
         bufVirt = Memory::KernelAllocate4KPages(1);
         Memory::KernelMapVirtualMemory4K(bufPhys, (uintptr_t)bufVirt, 1);
@@ -316,6 +314,8 @@ namespace AHCI{
         }
 
         registers->ie = registers->is = 0xffffffff;
+
+        startCMD(registers);
         registers->ci |= 1 << slot;
 
         //Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
@@ -334,6 +334,8 @@ namespace AHCI{
         while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin) {
             spin--;
         }
+
+        stopCMD(registers);
         
         if(spin <= 0){
             Log::Warning("[SATA] Port Hung");
@@ -431,9 +433,12 @@ namespace AHCI{
             if (registers->is & HBA_PxIS_TFES)   // Task file error
             {
                 Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
+                stopCMD(registers);
                 return;
             }
         }
+        
+        stopCMD(registers);
 
         spin = 0xFFFFF;
         while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin) {
@@ -444,6 +449,7 @@ namespace AHCI{
         
         if (registers->is & HBA_PxIS_TFES) {
             Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
+            stopCMD(registers);
             return;
         }
         return;
