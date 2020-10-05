@@ -68,7 +68,7 @@ public:
     inline void Signal(){
         __sync_fetch_and_add(&value, 1);
 
-        if(value >= 0){
+        if(value <= 0){
             acquireLock(&blockedLock);
             if(blocked.get_length() > 0){
                 Scheduler::UnblockThread(blocked.remove_at(0));

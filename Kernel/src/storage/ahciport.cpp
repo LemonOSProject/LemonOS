@@ -325,6 +325,7 @@ namespace AHCI{
             {
                 Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
                 
+                stopCMD(registers);
                 portLock.Signal();
                 return 1;
             }

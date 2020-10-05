@@ -10,11 +10,9 @@ void Semaphore::Wait(){
 
     __sync_fetch_and_sub(&value, 1);
     while(value < 0 && thread->state != ThreadStateZombie) {
-        if(!CheckInterrupts()){
-            Log::Warning("Semaphore::Wait(): Interrupts Disabled!");
-        }
-
-        Scheduler::BlockCurrentThread(blocked);
+        assert(CheckInterrupts());
+        
+        Scheduler::BlockCurrentThread(blocked, blockedLock);
         asm("pause");
     }
 }
