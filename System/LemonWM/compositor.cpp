@@ -2,15 +2,13 @@
 
 #include <gui/colours.h>
 
-#ifdef LEMONWM_FRAMERATE_COUNTER
-    static unsigned int fCount = 0;
-    static unsigned int avgFrametime = 0;
-    static unsigned int fRate = 0;
-#endif
+static unsigned int fCount = 0;
+static unsigned int avgFrametime = 0;
+static unsigned int fRate = 0;
 
 using namespace Lemon::Graphics;
 
-rgba_colour_t backgroundColor = {64, 128, 128};
+rgba_colour_t backgroundColor = {64, 128, 128, 255};
 
 unsigned int operator-(const timespec& t1, const timespec& t2){
     return (t1.tv_sec - t2.tv_sec) * 1000000000 + (t1.tv_nsec - t2.tv_nsec);
@@ -25,7 +23,7 @@ void CompositorInstance::Paint(){
     timespec cTime;
     clock_gettime(CLOCK_BOOTTIME, &cTime);
 
-    #ifdef LEMONWM_FRAMERATE_COUNTER
+    if(displayFramerate){
         unsigned int renderTime = (cTime - lastRender);
 
         if(avgFrametime)
@@ -39,9 +37,9 @@ void CompositorInstance::Paint(){
             fCount = 0;
             avgFrametime = renderTime;
         }
-    #else
-        if((cTime - lastRender) < (11111111 / 2)) return; // Cap at 90 FPS
-    #endif
+    }
+
+    if(capFramerate && (cTime - lastRender) < (11111111 / 2)) return; // Cap at 90 FPS
 
     lastRender = cTime;
 
@@ -123,8 +121,7 @@ void CompositorInstance::Paint(){
 
     surfacecpyTransparent(renderSurface, &mouseCursor, wm->input.mouse.pos);
 
-    #ifdef LEMONWM_FRAMERATE_COUNTER
-    {
+    if(displayFramerate){
         DrawRect(0, 0, 80, 16, 0, 0 ,0, renderSurface);
         DrawString(std::to_string(fRate).c_str(), 2, 2, 255, 255, 255, renderSurface);
 
@@ -132,7 +129,6 @@ void CompositorInstance::Paint(){
                 surfacecpy(&wm->screenSurface, renderSurface, {0, 0}, {0, 0, 80, 16});
         #endif
     }
-    #endif
 
     
     if(wm->redrawBackground && wm->screenSurface.buffer){

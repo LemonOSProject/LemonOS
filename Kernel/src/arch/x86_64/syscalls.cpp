@@ -113,7 +113,7 @@ long SysExit(regs64_t* r){
 long SysExec(regs64_t* r){
 	char* filepath = (char*)kmalloc(strlen((char*)r->rbx) + 1);
 
-	if(!Memory::CheckUsermodePointer(r->rbx, 0, Scheduler::GetCurrentProcess()->addressSpace)) return -1;
+	if(!Memory::CheckUsermodePointer(r->rbx, 0, Scheduler::GetCurrentProcess()->addressSpace)) return -EFAULT;
 
 	strcpy(filepath, (char*)r->rbx);
 	int argc = r->rcx;
@@ -121,9 +121,9 @@ long SysExec(regs64_t* r){
 	uint64_t flags = r->rsi;
 	char** envp = (char**)r->rdi;
 
-	FsNode* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir);
+	FsNode* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir, true /* Follow Symlinks */);
 	if(!current_node){
-		return 1;
+		return -ENOENT;
 	}
 
 	Log::Info("Loading: %s", (char*)r->rbx);
@@ -168,7 +168,7 @@ long SysExec(regs64_t* r){
 		kfree(kernelArgv);
 		kfree(buffer);
 
-		return 0;
+		return -1;
 	}
 
 	char* name;
@@ -276,7 +276,7 @@ long SysOpen(regs64_t* r){
 	}
 
 open:
-	FsNode* node = fs::ResolvePath(filepath, proc->workingDir);
+	FsNode* node = fs::ResolvePath(filepath, proc->workingDir, !(flags & O_NOFOLLOW));
 
 	if(!node){
 		if(flags & O_CREAT){
@@ -1995,7 +1995,7 @@ long SysDup(regs64_t* r){
 	fs_fd_t* handle;
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
-	if(static_cast<unsigned>(fd) > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
+	if(static_cast<unsigned>(fd) >= currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
 		return -EBADF;
 	}
 
@@ -2062,7 +2062,7 @@ long SysSetFileStatusFlags(regs64_t* r){
 /// \param exceptfds (fd_set) check for exceptions on fds
 /// \param timeout (timespec) timeout period
 ///
-/// \return 0 on success, negative error code on failure
+/// \return number of events on success, negative error code on failure
 /////////////////////////////
 long SysSelect(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();

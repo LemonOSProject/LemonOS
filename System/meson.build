@@ -1,4 +1,5 @@
-project('Lemon System')
+project('Lemon System',
+    default_options : ['warning_level=2', 'cpp_std=c++2a', 'optimization=3', 'werror=true'])
 
 add_languages('c', 'cpp')
 
@@ -27,8 +28,10 @@ fterm_src = [
     'FTerm/input.cpp',
 ]
 
+add_project_arguments(['-Wno-write-strings', '-Wno-unused-parameter', '-Wno-pmf-conversions', '-Wno-missing-field-initializers'], language : 'cpp')
+
 executable('init.lef', lemond_src, link_args : ['-llemon'], install_dir : 'lemon/', install : true)
-executable('lemonwm.lef', lemonwm_src, cpp_args : '-O3', link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install_dir : 'lemon/', install : true)
+executable('lemonwm.lef', lemonwm_src, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install_dir : 'lemon/', install : true)
 executable('netgov.lef', netgov_src, install_dir : 'lemon/', install : true)
-executable('login.lef', login_src, cpp_args : '-O3', link_args : ['-llemon', '-lfreetype'], install_dir : 'lemon/', install : true)
-executable('fterm.lef', fterm_src, cpp_args : '-O3', link_args : ['-llemon', '-lfreetype'], install_dir : meson.current_source_dir() + '/../Initrd', install : true)
+executable('login.lef', login_src, link_args : ['-llemon', '-lfreetype'], install_dir : 'lemon/', install : true)
+executable('fterm.lef', fterm_src, link_args : ['-llemon', '-lfreetype'], install_dir : meson.current_source_dir() + '/../Initrd', install : true)

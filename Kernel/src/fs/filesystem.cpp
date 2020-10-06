@@ -44,7 +44,7 @@ namespace fs{
         return &root;
     }
 
-	FsNode* FollowLink(FsNode* link){
+	FsNode* FollowLink(FsNode* link, FsNode* workingDir){
 		assert(link);
 
 		char buffer[PATH_MAX + 1];
@@ -56,7 +56,9 @@ namespace fs{
 		}
 		buffer[bytesRead] = 0; // Null terminate
 
-		FsNode* node = ResolvePath(buffer, link);
+		Log::Warning("Following link %s", buffer);
+
+		FsNode* node = ResolvePath(buffer, workingDir);
 
 		if(!node){
 			Log::Warning("FollowLink: Failed to resolve symlink %s!", buffer);
@@ -98,7 +100,7 @@ namespace fs{
 					return nullptr;
 				}
 
-				node = FollowLink(node);
+				node = FollowLink(node, currentNode);
 
 				if(!node){
 					Log::Warning("ResolvePath: Unresolved symlink!");
@@ -119,8 +121,6 @@ namespace fs{
 				return nullptr;
 			}
 
-			currentNode = node;
-
 			amountOfSymlinks = 0;
 			while(followSymlinks && ((currentNode->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)){ // Check for symlinks
 				if(amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT){
@@ -128,14 +128,16 @@ namespace fs{
 					return nullptr;
 				}
 
-				currentNode = FollowLink(currentNode);
+				currentNode = FollowLink(node, currentNode);
 
 				if(!node){
 					Log::Warning("ResolvePath: Unresolved symlink!");
 					kfree(tempPath);
-					return currentNode;
+					return node;
 				}
 			}
+
+			currentNode = node;
 			break;
 		}
 		kfree(tempPath);
@@ -169,7 +171,7 @@ namespace fs{
 					return nullptr;
 				}
 
-				node = FollowLink(node);
+				node = FollowLink(node, currentNode);
 
 				if(!node){
 					Log::Warning("ResolvePath: Unresolved symlink!");
@@ -185,7 +187,7 @@ namespace fs{
 			}
 
 			if((file = strtok(NULL, "/"))){
-				Log::Warning("Found file in the path however we were not finished");
+				Log::Warning("%s is not a directory!", file);
 				return nullptr;
 			}
 
@@ -196,7 +198,7 @@ namespace fs{
 					return nullptr;
 				}
 
-				currentNode = FollowLink(currentNode);
+				currentNode = FollowLink(node, currentNode);
 
 				if(!node){
 					Log::Warning("ResolvePath: Unresolved symlink!");
@@ -362,15 +364,11 @@ namespace fs{
     ssize_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
 		assert(node);
 
-		if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return Read(node->link, offset, size, buffer);
-
         return node->Read(offset,size,buffer);
     }
 
     ssize_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
 		assert(node);
-
-		if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return Write(node->link, offset, size, buffer);
 
         return node->Write(offset,size,buffer);
     }
@@ -426,7 +424,7 @@ namespace fs{
     int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index){
 		assert(node);
 
-		if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return ReadDir(node->link, dirent, index);
+		//if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return ReadDir(node->link, dirent, index);
 
         return node->ReadDir(dirent, index);
     }
@@ -434,7 +432,7 @@ namespace fs{
     FsNode* FindDir(FsNode* node, char* name){
 		assert(node);
 
-		if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return FindDir(node->link, name);
+		//if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return FindDir(node->link, name);
             
 		return node->FindDir(name);
     }

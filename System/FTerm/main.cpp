@@ -13,20 +13,30 @@
 
 #include "fterm.h"
 
-struct TermState{
-	bool bold : 1;
-	bool italic : 1;
-	bool faint : 1;
-	bool underline : 1;
-	bool blink : 1;
-	bool reverse : 1;
-	bool strikethrough: 1;
+#include "colours.h"
+#include "escape.h"
 
-	uint8_t fgColour;
-	uint8_t bgColour;
+struct TermState{
+	bool bold : 1 = false;
+	bool italic : 1 = false;
+	bool faint : 1 = false;
+	bool underline : 1 = false;
+	bool blink : 1 = false;
+	bool reverse : 1 = false;
+	bool strikethrough: 1 = false;
+
+	uint8_t fgColour = 136;
+	uint8_t bgColour = 0;
 };
 
 TermState defaultState {
+	.bold = false,
+	.italic = false,
+	.faint = false,
+	.underline = false,
+	.blink = false,
+	.reverse = false,
+	.strikethrough = false,
 	.fgColour = 136,
 	.bgColour = 0,
 };
@@ -71,7 +81,7 @@ void Paint(){
     int lnPos = 0;
     int fontHeight = terminalFont->height;
     for(std::vector<TerminalChar>& line : screenBuffer){
-        for(int j = 0; j < line.size() && j < wSize.ws_col; j++){
+        for(int j = 0; j < static_cast<long>(line.size()) && j < wSize.ws_col; j++){
 			TerminalChar ch = screenBuffer[lnPos][j];
 			rgba_colour_t fg = colours[ch.s.fgColour];
 			rgba_colour_t bg = colours[ch.s.bgColour];
@@ -243,7 +253,7 @@ void DoAnsiCSI(char ch){
 			int num = atoi(escBuf);
 			switch(num){
 				case 0: // Clear entire screen from cursor
-					for(int i = curPos.y + 1; i < wSize.ws_row && i < screenBuffer.size(); i++){
+					for(int i = curPos.y + 1; i < wSize.ws_row && i < static_cast<long>(screenBuffer.size()); i++){
 						screenBuffer[i].clear();
 					}
 					break;
@@ -368,7 +378,7 @@ void PrintChar(char ch){
 				curPos.x = screenBuffer[curPos.y].size();
 			}
 			
-			if(curPos.x < screenBuffer[curPos.y].size())
+			if(curPos.x < static_cast<long>(screenBuffer[curPos.y].size()))
 				screenBuffer[curPos.y].erase(screenBuffer[curPos.y].begin() + curPos.x);
 
 			break;
@@ -382,7 +392,7 @@ void PrintChar(char ch){
 				Scroll();
 			}
 
-			if(curPos.x >= screenBuffer[curPos.y].size())
+			if(curPos.x >= static_cast<long>(screenBuffer[curPos.y].size()))
 				screenBuffer[curPos.y].push_back({.s = state, .c = ch});
 			else
 				screenBuffer[curPos.y][curPos.x] = {.s = state, .c = ch};

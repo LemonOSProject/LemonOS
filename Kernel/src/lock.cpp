@@ -23,7 +23,8 @@ void Semaphore::WaitTimeout(long timeout){
         thread_t* cThread = GetCPULocal()->currentThread;
         acquireLock(&cThread->stateLock);
         blocked.add_back(cThread);
-        if(value > 0){
+        if(value >= 0){
+            blocked.remove(cThread);
             releaseLock(&cThread->stateLock);
             return;
         }

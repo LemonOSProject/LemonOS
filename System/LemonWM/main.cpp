@@ -50,7 +50,19 @@ int main(){
                 }
             } else if(!entry.name.compare("backgroundImage")){
                 bgPath = entry.value;
-            }
+            } else if(!entry.name.compare("displayFramerate")){
+                if(!(entry.value.compare("yes") && entry.value.compare("true"))){
+                    wm.compositor.displayFramerate = true;
+                } else {
+                    wm.compositor.displayFramerate = false;
+                }
+            }  else if(!entry.name.compare("capFramerate")){
+                if(!(entry.value.compare("yes") && entry.value.compare("true"))){
+                    wm.compositor.capFramerate = true;
+                } else {
+                    wm.compositor.capFramerate = false;
+                }
+            } 
         }
     }
 

@@ -21,9 +21,9 @@ int main(int argc, char** argv){
 		}
 	}
 
-	char* lemonwm = "/system/lemon/lemonwm.lef";
-	char* login = "/system/lemon/login.lef";
-	char* shell = "/system/bin/shell.lef";
+	__attribute__((unused)) char* lemonwm = "/system/lemon/lemonwm.lef";
+	__attribute__((unused)) char* login = "/system/lemon/login.lef";
+	__attribute__((unused)) char* shell = "/system/bin/shell.lef";
 
 	if(lemon_spawn(lemonwm, 1, &lemonwm) <= 0)
 		lemon_spawn(lemonwm, 1, &lemonwm); // Attempt twice

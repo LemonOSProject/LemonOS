@@ -16,7 +16,6 @@
 #define CONTEXT_ITEM_WIDTH 160
 
 //#define LEMONWM_USE_CLIPPING
-#define LEMONWM_FRAMERATE_COUNTER
 
 using WindowBuffer = Lemon::GUI::WindowBuffer;
 
@@ -146,6 +145,8 @@ public:
     surface_t windowButtons;
     surface_t mouseCursor;
 
+    bool capFramerate;
+    bool displayFramerate = false;
     bool useImage = true;
     surface_t backgroundImage;
 };

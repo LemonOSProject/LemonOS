@@ -1,5 +1,5 @@
 project('Lemon Kernel',
-    default_options : ['warning_level=2', 'cpp_std=c++17', 'optimization_level=0', 'werror=true'])
+    default_options : ['warning_level=2', 'cpp_std=c++2a', 'optimization=0', 'werror=true'])
 
 lai = subproject('lai')
 

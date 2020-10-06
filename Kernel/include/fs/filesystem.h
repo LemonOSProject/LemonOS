@@ -260,10 +260,11 @@ namespace fs{
     /// \brief Follow symbolic link
     ///
     /// \param link FsNode pointing to the link to be followed
+    /// \param workingDir FsNode pointing to working directory for path resolution
     /// 
     /// \return FsNode of node in which the link points to on success, nullptr on failure
     /////////////////////////////
-    FsNode* FollowLink(FsNode* link);
+    FsNode* FollowLink(FsNode* link, FsNode* workingDir);
 
     /////////////////////////////
     /// \brief Resolve a path.

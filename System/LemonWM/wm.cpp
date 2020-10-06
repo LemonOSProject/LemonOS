@@ -177,7 +177,7 @@ void WMInstance::Poll(){
                 }
                 
                 Lemon::GUI::WMContextMenuEntry* item = cmd->contextMenu.contextEntries;
-                for(int i = 0; i < cmd->contextMenu.contextEntryCount; i++){
+                for(unsigned int i = 0; i < cmd->contextMenu.contextEntryCount; i++){
 
                     if(((uintptr_t)item) + sizeof(Lemon::GUI::WMContextMenuEntry) + item->length - (uintptr_t)(m->msg.data) > m->msg.length){
                         printf("[LemonWM] Invalid context menu item length: %d", item->length);
@@ -191,7 +191,7 @@ void WMInstance::Poll(){
 
                     contextMenuBounds.height += CONTEXT_ITEM_HEIGHT;
                     
-                    item = (Lemon::GUI::WMContextMenuEntry*)((void*)item + item->length + sizeof(Lemon::GUI::WMContextMenuEntry));
+                    item = reinterpret_cast<Lemon::GUI::WMContextMenuEntry*>(reinterpret_cast<uintptr_t>(item) + item->length + sizeof(Lemon::GUI::WMContextMenuEntry));
                 }
 
                 menu.owner = win;
