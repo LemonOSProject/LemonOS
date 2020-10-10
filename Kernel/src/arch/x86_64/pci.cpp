@@ -6,6 +6,7 @@
 #include <acpi.h>
 #include <apic.h>
 #include <idt.h>
+#include <cpu.h>
 
 namespace PCI{
 	Vector<PCIDevice>* devices;
@@ -65,7 +66,7 @@ namespace PCI{
 		uint32_t address = (uint32_t)((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | 0x80000000);
 
 		outportl(0xCF8, address);
-		outportb(0xCFC, data);
+		outportb(0xCFC, (inportl(0xCFC) & (~(0xFF << ((offset & 3) * 8)))) | (static_cast<uint32_t>(data) << ((offset & 3) * 8)));
 	}
 
 	uint16_t GetVendor(uint8_t bus, uint8_t slot, uint8_t func){
@@ -130,6 +131,17 @@ namespace PCI{
 
 		Log::Error("No PCI device found with Class %x and Subclass %x", classCode, subclass);
 		return *unknownDevice;
+	}
+
+	List<PCIDevice*> GetGenericPCIDevices(uint8_t classCode, uint8_t subclass){
+		List<PCIDevice*> foundDevices;
+		for(PCIDevice& dev : *devices){
+			if(dev.classCode == classCode && dev.subclass == subclass){
+				foundDevices.add_back(&dev);
+			}
+		}
+
+		return foundDevices;
 	}
 
 	int AddDevice(int bus, int slot, int func){
@@ -235,20 +247,20 @@ uint8_t PCIDevice::AllocateVector(PCIVectors type){
 				return interrupt;
 			}
 			
-			msiCap.msiControl = (msiCap.msiControl & ~PCI_CAP_MSI_CONTROL_MME_MASK) | PCI_CAP_MSI_CONTROL_SET_MME(0); // We only support one message at the moment
+			msiCap.msiControl = (msiCap.msiControl & ~(PCI_CAP_MSI_CONTROL_MME_MASK | PCI_CAP_MSI_CONTROL_VECTOR_MASKING)) | PCI_CAP_MSI_CONTROL_SET_MME(0); // We only support one message at the moment, disable masking
 			msiCap.msiControl |= 1; // Enable MSIs
 
 			msiCap.SetData(ICR_VECTOR(interrupt) | ICR_MESSAGE_TYPE_FIXED);
 
-			msiCap.SetAddress(0);
-
-			PCI::ConfigWriteDword(bus, slot, func, msiPtr, msiCap.register0);
-			PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t), msiCap.register1);
-			PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t) * 2, msiCap.register2);
+			msiCap.SetAddress(GetCPULocal()->id);
 
 			if(msiCap.msiControl & PCI_CAP_MSI_CONTROL_64){
 				PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t) * 3, msiCap.register3);
 			}
+			PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t) * 2, msiCap.register2);
+			PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t), msiCap.register1);
+
+			PCI::ConfigWriteWord(bus, slot, func, msiPtr + sizeof(uint16_t), msiCap.msiControl);
 
 			return interrupt;
 		}
@@ -256,7 +268,7 @@ uint8_t PCIDevice::AllocateVector(PCIVectors type){
 
 	if(type & PCIVectorLegacy){
 		uint8_t irq = GetInterruptLine();
-		if(irq == 0xFF){
+		if(irq == 0xFF){ 
 			Log::Error("[PCIDevice] AllocateVector: Legacy interrupts not supported by device.");
 			return 0xFF;
 		} else {

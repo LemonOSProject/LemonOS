@@ -116,12 +116,9 @@ extern "C"
 void isr0x69();
 
 extern "C"
-void ipi0xFD(); // IPI_SCHEDULE
-extern "C"
-void ipi0xFE(); // IPI_HALT
-
-extern "C"
 void idt_flush();
+
+extern uint64_t int_vectors[];
 
 int errCode = 0;
 
@@ -131,6 +128,10 @@ namespace IDT{
 
 		asm("cli");
 		asm("hlt");
+	}
+
+	void InvalidInterruptHandler(regs64_t* r){
+		Log::Warning("Invalid interrupt handler called!");
 	}
 
 	static void SetGate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags, uint8_t ist = 0) {
@@ -151,6 +152,10 @@ namespace IDT{
 
 		for(int i = 0; i < 256; i++){
 			SetGate(i, 0, 0x08, 0x8E);
+		}
+
+		for(unsigned i = 48; i < 256; i++){
+			SetGate(i, int_vectors[i - 48], 0x08, 0x8E);
 		}
 
 		SetGate(0, (uint64_t)isr0,0x08,0x8E);
@@ -186,8 +191,6 @@ namespace IDT{
 		SetGate(30, (uint64_t)isr30,0x08,0x8E);
 		SetGate(31, (uint64_t)isr31,0x08,0x8E);
 		SetGate(0x69, (uint64_t)isr0x69, 0x08, 0xEE /* Allow syscalls to be called from user mode*/, 0); // Syscall
-		SetGate(IPI_SCHEDULE, (uint64_t)ipi0xFD,0x08,0x8E);
-		SetGate(IPI_HALT, (uint64_t)ipi0xFE,0x08,0x8E);
 
 		idt_flush();
 
@@ -231,10 +234,8 @@ namespace IDT{
 	uint8_t ReserveUnusedInterrupt(){
 		uint8_t interrupt = 0xFF;
 		for(unsigned i = IRQ0 + 16 /* Ignore all legacy IRQs and exceptions */; i < 255 /* Ignore 0xFF */ && interrupt == 0xFF; i++){
-			idt_entry_t& ent = idt[i];
-			uint64_t base = (static_cast<uint64_t>(ent.base_high) << 32) | (static_cast<uint64_t>(ent.base_med) << 16) | ent.base_low;
-			if(!base){ // empty
-				ent.base_low = 0xDEA1;
+			if(!interrupt_handlers[i]){
+				interrupt_handlers[i] = InvalidInterruptHandler;
 				interrupt = i;
 			}
 		}

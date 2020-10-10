@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <assert.h>
 #include <vector.h>
+#include <list.h>
 
 #define PCI_BIST_CAPABLE (1 << 7)
 #define PCI_BIST_START (1 << 6)
@@ -55,12 +56,19 @@
 
 #define PCI_SUBCLASS_USB 0x3
 
+#define PCI_PROGIF_UHCI 0x20
+#define PCI_PROGIF_OHCI 0x10
+#define PCI_PROGIF_EHCI 0x20
+#define PCI_PROGIF_XHCI 0x30
+
 #define PCI_IO_PORT_CONFIG_ADDRESS 0xCF8
 #define PCI_IO_PORT_CONFIG_DATA 0xCFC
 
+#define PCI_CAP_MSI_ADDRESS_BASE 0xFEE00000
 #define PCI_CAP_MSI_CONTROL_64 (1 << 7) // 64-bit address capable
+#define PCI_CAP_MSI_CONTROL_VECTOR_MASKING (1 << 8) // Enable Vector Masking
 #define PCI_CAP_MSI_CONTROL_MME_MASK (0x7U << 4)
-#define PCI_CAP_MSI_CONTROL_SET_MME(x) (x << 4) // Multiple message enable
+#define PCI_CAP_MSI_CONTROL_SET_MME(x) ((x & 0x7) << 4) // Multiple message enable
 #define PCI_CAP_MSI_CONTROL_MMC(x) ((x >> 1) & 0x7) // Multiple Message Capable
 #define PCI_CAP_MSI_CONTROL_ENABLE (1 << 0) // MSI Enable
 
@@ -108,10 +116,10 @@ enum PCIVectors{
 struct PCIMSICapability{
 	union{
 		struct{
-			uint8_t capID; // Should be PCICapMSI
-			uint8_t nextCap; // Next Capability
-			uint16_t msiControl; // MSI control register
-		};
+			uint32_t capID : 8; // Should be PCICapMSI
+			uint32_t nextCap : 8; // Next Capability
+			uint32_t msiControl : 16; // MSI control register
+		} __attribute__((packed));
 		uint32_t register0;
 	};
 	union{
@@ -145,9 +153,12 @@ struct PCIMSICapability{
 	}
 
 	inline void SetAddress(int cpu){
-		addressLow = 0xFEE00000 | static_cast<uint32_t>(cpu);
+		addressLow = PCI_CAP_MSI_ADDRESS_BASE | (static_cast<uint32_t>(cpu) << 12);
+		if(msiControl & PCI_CAP_MSI_CONTROL_64){
+			addressHigh = 0;
+		}
 	}
-};
+} __attribute__((packed));
 
 class PCIDevice;
 namespace PCI{
@@ -172,6 +183,7 @@ namespace PCI{
 
 	PCIDevice& GetPCIDevice(uint16_t deviceID, uint16_t vendorID);
 	PCIDevice& GetGenericPCIDevice(uint8_t classCode, uint8_t subclass);
+	List<PCIDevice*> GetGenericPCIDevices(uint8_t classCode, uint8_t subclass);
 
 	void Init();
 }
@@ -211,6 +223,10 @@ public:
 
 	inline uint8_t GetInterruptLine(){
 		return PCI::ConfigReadByte(bus, slot, func, PCIInterruptLine);
+	}
+
+	inline void SetInterruptLine(uint8_t irq){
+		PCI::ConfigWriteByte(bus, slot, func, PCIInterruptLine, irq);
 	}
 
 	inline uint16_t GetCommand(){

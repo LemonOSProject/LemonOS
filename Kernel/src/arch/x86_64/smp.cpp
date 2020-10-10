@@ -39,8 +39,6 @@ namespace SMP{
     tss_t tss1 __attribute__((aligned(16)));
 
     void SMPEntry(uint16_t id){
-        Log::Info("[SMP] Hello from CPU #%d", id);
-
         CPU* cpu = cpus[id];
         cpu->currentThread = nullptr;
         cpu->runQueueLock = 0;
@@ -73,8 +71,6 @@ namespace SMP{
     }
 
     void InitializeCPU(uint16_t id){
-        Log::Info("[SMP] Enabling CPU #%d", id);
-
         CPU* cpu = new CPU;
         cpu->id = id;
         cpu->runQueueLock = 0;
@@ -92,19 +88,21 @@ namespace SMP{
 
         APIC::Local::SendIPI(id, ICR_DSH_DEST, ICR_MESSAGE_TYPE_INIT, 0);
 
-        wait(40);
+        wait(20);
 
         if((*smpMagic) != 0xB33F){ // Check if the trampoline code set the flag to let us know it has started
             APIC::Local::SendIPI(id, ICR_DSH_DEST, ICR_MESSAGE_TYPE_STARTUP, (SMP_TRAMPOLINE_ENTRY >> 12));
 
-            wait(250);
+            wait(80);
+        }
+
+        if((*smpMagic) != 0xB33F){
+            wait(100);
         }
 
         if((*smpMagic) != 0xB33F){
             Log::Error("[SMP] Failed to start CPU #%d", id);
             return;
-        } else {
-            Log::Info("[SMP] Successfully started CPU #%d ", id);
         }
         
         while(!doneInit);

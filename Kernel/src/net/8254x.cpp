@@ -252,7 +252,7 @@ namespace Network{
             return;
         }
 
-        int irqNum = device.AllocateVector(PCIVectors::PCIVectorLegacy);
+        int irqNum = device.AllocateVector(PCIVectors::PCIVectorAny);
         Log::Write(",IRQ: ");
         Log::Write(irqNum);
         IDT::RegisterInterruptHandler(irqNum, InterruptHandler);

@@ -6,9 +6,11 @@ extern ipi_handler
 extern LocalAPICEOI
 
 global idt_flush
+global int_vectors
 
 extern idt_ptr
 
+section .text
 %macro pushaq 0
     push rax
     push rbx
@@ -145,8 +147,12 @@ ISR_ERROR_CODE 30
 ISR_NO_ERROR_CODE 31
 ISR_NO_ERROR_CODE 32
 ISR_NO_ERROR_CODE 0x69 ; Syscall
-IPI 0xFD ; IPI_SCHEDULE
-IPI 0xFE ; IPI_HALT
+
+%assign num 48
+%rep 256-48
+    IPI num
+%assign num (num + 1)
+%endrep
 
 IRQ 0, 32
 IRQ 1, 33
@@ -164,3 +170,11 @@ IRQ 12, 44
 IRQ 13, 45
 IRQ 14, 46
 IRQ 15, 47
+
+section .rodata
+int_vectors: 
+%assign num 48
+%rep 256-48
+    dq ipi%+ num
+%assign num (num + 1)
+%endrep

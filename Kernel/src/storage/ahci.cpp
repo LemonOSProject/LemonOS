@@ -19,7 +19,7 @@ namespace AHCI{
 	uint8_t ahciSubclass = PCI_SUBCLASS_SATA;
 	
     void InterruptHandler(regs64_t* r){
-        //Log::Info("[AHCI] Interrupt!");
+        Log::Info("[AHCI] Interrupt!");
     }
 
 	int Init(){
