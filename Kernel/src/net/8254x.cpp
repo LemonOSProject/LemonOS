@@ -10,6 +10,7 @@
 #include <acpi.h>
 #include <apic.h>
 #include <net/net.h>
+#include <vector.h>
 
 namespace Network{
     uint16_t supportedDevices[]{
@@ -40,12 +41,11 @@ namespace Network{
     };
 
     int supportedDeviceCount = 23;
+    
+    Vector<Intel8254x*> cards;
 
-    Intel8254x* card = nullptr;
-
-    void InterruptHandler(regs64_t* r){
-        // TODO: Figure out a way to find the card
-        card->Interrupt();
+    void Intel8254x::InterruptHandler(Intel8254x* card, regs64_t* r){
+        card->OnInterrupt();
     }
 
     void Intel8254x::WriteMem32(uintptr_t address, uint32_t data){
@@ -85,7 +85,8 @@ namespace Network{
     void Intel8254x::DetectAndInitialize(){
         for(int i = 0; i < supportedDeviceCount; i++){
             if(PCI::FindDevice(supportedDevices[i], INTEL_VENDOR_ID)){
-                card = new Intel8254x(PCI::GetPCIDevice(supportedDevices[i], INTEL_VENDOR_ID));
+                Intel8254x* card = new Intel8254x(PCI::GetPCIDevice(supportedDevices[i], INTEL_VENDOR_ID));
+                cards.add_back(card);
                 DeviceManager::RegisterDevice(*card);
                 return;
             }
@@ -93,7 +94,7 @@ namespace Network{
         Log::Info("[i8254x] No i8254x Network Adapter found!");
     }
 
-    void Intel8254x::Interrupt(){
+    void Intel8254x::OnInterrupt(){
         uint32_t status = ReadMem32(I8254_REGISTER_INT_READ);
         Log::Info("Net Interrupt, Status: %x", status);
 
@@ -232,7 +233,6 @@ namespace Network{
         assert(device.vendorID != 0xFFFF);
 
         txTail = rxTail = 0;
-        card = this;
 
         memBase = device.GetBaseAddressRegister(0);
 
@@ -255,7 +255,7 @@ namespace Network{
         int irqNum = device.AllocateVector(PCIVectors::PCIVectorAny);
         Log::Write(",IRQ: ");
         Log::Write(irqNum);
-        IDT::RegisterInterruptHandler(irqNum, InterruptHandler);
+        IDT::RegisterInterruptHandler(irqNum, reinterpret_cast<isr_t>(&Intel8254x::InterruptHandler), this);
 
         uint8_t macAddr[6];
 

@@ -548,7 +548,7 @@ namespace Memory{
 		currentAddressSpace = addressSpace;
 	}
 
-	void PageFaultHandler(regs64_t* regs)
+	void PageFaultHandler(void*, regs64_t* regs)
 	{
 		asm("cli");
 		Log::Error("Page Fault!\r\n");

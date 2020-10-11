@@ -2272,7 +2272,7 @@ syscall_t syscalls[]{
 };
 
 int lastSyscall = 0;
-void SyscallHandler(regs64_t* regs) {
+void SyscallHandler(void*, regs64_t* regs) {
 	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
 		return;
 		

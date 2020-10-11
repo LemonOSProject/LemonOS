@@ -47,6 +47,8 @@
 namespace USB{
     class XHCIController{
     protected:
+        friend void XHCIIRQHandler(XHCIController* xHC, regs64_t* r);
+        
         enum XHCIExtendedCapabilities{
             XHCIExtCapLegacySupport = 1,
             XHCIExtCapSupportedProtocol = 2,
@@ -651,6 +653,9 @@ namespace USB{
         void InitializeProtocols();
         void InitializePorts();
 
+        void IRQHandler(regs64_t* r);
+        
+        void OnInterrupt();
     public:
         enum Status{
             ControllerNotInitialized,

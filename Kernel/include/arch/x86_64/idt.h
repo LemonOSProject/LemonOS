@@ -23,13 +23,13 @@ typedef struct {
 	uint64_t base;
 } __attribute__((packed)) idt_ptr_t;
 
-typedef void(*isr_t)(regs64_t*);
+typedef void(*isr_t)(void*, regs64_t*);
 
 extern "C" void idt_flush();
 
 namespace IDT{
 	void Initialize();
-	void RegisterInterruptHandler(uint8_t interrupt, isr_t handler);
+	void RegisterInterruptHandler(uint8_t interrupt, isr_t handler, void* data = nullptr);
 	
 	void DisablePIC();
 

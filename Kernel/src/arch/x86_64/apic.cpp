@@ -12,7 +12,7 @@ namespace APIC{
         uintptr_t base;
         volatile uintptr_t virtualBase;
 
-        void SpuriousInterruptHandler(regs64_t* r){
+        void SpuriousInterruptHandler(void*, regs64_t* r){
             Log::Warning("[APIC] Spurious Interrupt");
         }
 

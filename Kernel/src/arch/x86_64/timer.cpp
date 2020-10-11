@@ -120,7 +120,7 @@ namespace Timer{
     }
 
     // Timer handler
-    void Handler(regs64_t *r) {
+    void Handler(void*, regs64_t *r) {
         ticks++;
         if(ticks >= frequency){
             uptime++;

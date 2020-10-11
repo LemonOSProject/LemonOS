@@ -115,7 +115,7 @@ namespace Memory{
 
     void SwitchPageDirectory(uint64_t phys);
     
-	void PageFaultHandler(regs64_t* regs);
+	void PageFaultHandler(void*, regs64_t* regs);
 
     inline void SetPageFrame(uint64_t* page, uint64_t addr){
         *page = (*page & ~PAGE_FRAME) | (addr & PAGE_FRAME);

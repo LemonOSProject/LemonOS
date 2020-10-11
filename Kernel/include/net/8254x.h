@@ -129,11 +129,12 @@ namespace Network{
         void InitializeTx();
 
         void UpdateLink();
+        void OnInterrupt();
+        static void InterruptHandler(Intel8254x* card, regs64_t* r);
 
         public:
         Intel8254x(PCIDevice& device);
 
-        void Interrupt();
         static void DetectAndInitialize();
 
         void SendPacket(void* data, size_t len);

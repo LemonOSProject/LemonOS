@@ -39,7 +39,7 @@ namespace Scheduler{
     uint64_t handleCount = 1; // We don't want null handles
     uint32_t handleTableSize = INITIAL_HANDLE_TABLE_SIZE;
     
-    void Schedule(regs64_t* r);
+    void Schedule(void*, regs64_t* r);
     
     inline void InsertThreadIntoQueue(thread_t* thread){
         GetCPULocal()->runQueue->add_back(thread);
@@ -429,10 +429,10 @@ namespace Scheduler{
             releaseLock(&cpu->runQueueLock);
             asm("sti");
 
-            Schedule(nullptr);
+            Schedule(nullptr, nullptr);
             for(;;) {
                 asm("hlt");
-                Schedule(nullptr);
+                Schedule(nullptr, nullptr);
             }
         }
 
@@ -495,10 +495,10 @@ namespace Scheduler{
 
         APIC::Local::SendIPI(0, ICR_DSH_OTHER, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
 
-        Schedule(r);
+        Schedule(nullptr, r);
     }
 
-    void Schedule(regs64_t* r){
+    void Schedule(void* data, regs64_t* r){
         CPU* cpu = GetCPULocal();
 
         if(cpu->currentThread) {

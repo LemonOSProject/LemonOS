@@ -32,7 +32,7 @@ namespace Mouse{
 
 	bool dataUpdated = false;
 
-	void Handler(regs64_t* regs) {
+	void Handler(void*, regs64_t* regs) {
 		switch (mouseCycle)
 		{
 		case 0:

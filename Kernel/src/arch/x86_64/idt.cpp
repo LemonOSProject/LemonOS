@@ -12,7 +12,12 @@ idt_entry_t idt[256];
 
 idt_ptr_t idt_ptr;
 
-isr_t interrupt_handlers[256];
+struct ISRDataPair
+{
+	isr_t handler;
+	void* data;
+};
+ISRDataPair interrupt_handlers[256];
 
 extern "C"
 void isr0();
@@ -123,14 +128,12 @@ extern uint64_t int_vectors[];
 int errCode = 0;
 
 namespace IDT{
-	void IPIHalt(regs64_t* r){
-		//Log::Warning("Received halt IPI, halting processor.");
-
+	void IPIHalt(void*, regs64_t* r){
 		asm("cli");
 		asm("hlt");
 	}
 
-	void InvalidInterruptHandler(regs64_t* r){
+	void InvalidInterruptHandler(void*, regs64_t* r){
 		Log::Warning("Invalid interrupt handler called!");
 	}
 
@@ -227,15 +230,15 @@ namespace IDT{
 		RegisterInterruptHandler(IPI_HALT, IPIHalt);
 	}	
 
-	void RegisterInterruptHandler(uint8_t interrupt, isr_t handler) {
-		interrupt_handlers[interrupt] = handler;
+	void RegisterInterruptHandler(uint8_t interrupt, isr_t handler, void* data) {
+		interrupt_handlers[interrupt] = {.handler = handler, .data = data};
 	}
 
 	uint8_t ReserveUnusedInterrupt(){
 		uint8_t interrupt = 0xFF;
 		for(unsigned i = IRQ0 + 16 /* Ignore all legacy IRQs and exceptions */; i < 255 /* Ignore 0xFF */ && interrupt == 0xFF; i++){
-			if(!interrupt_handlers[i]){
-				interrupt_handlers[i] = InvalidInterruptHandler;
+			if(!interrupt_handlers[i].handler){
+				interrupt_handlers[i].handler = InvalidInterruptHandler;
 				interrupt = i;
 			}
 		}
@@ -264,8 +267,8 @@ namespace IDT{
 extern "C"
 	void isr_handler(int int_num, regs64_t* regs, int err_code) {
 		errCode = err_code;
-		if (interrupt_handlers[int_num] != 0) {
-			interrupt_handlers[int_num](regs);
+		if (interrupt_handlers[int_num].handler != 0) {
+			interrupt_handlers[int_num].handler(interrupt_handlers[int_num].data, regs);
 		} else if(int_num == 0x69){
 			Log::Warning("\r\nEarly syscall");
 		} else if(!(regs->ss & 0x3)){ // Check the CPL of the segment, caused by kernel?
@@ -321,10 +324,9 @@ extern "C"
 	void irq_handler(int int_num, regs64_t* regs) {
 		LocalAPICEOI();
 		
-		if (__builtin_expect(interrupt_handlers[int_num] != 0, 1)) {
-			isr_t handler;
-			handler = interrupt_handlers[int_num];
-			handler(regs);
+		if (__builtin_expect(interrupt_handlers[int_num].handler != 0, 1)) {
+			ISRDataPair pair = interrupt_handlers[int_num];
+			pair.handler(pair.data, regs);
 		} else {
 			Log::Warning("Unhandled IRQ: ");
 			Log::Write(int_num);
@@ -335,10 +337,9 @@ extern "C"
 	void ipi_handler(int int_num, regs64_t* regs) {
 		LocalAPICEOI();
 
-		if (__builtin_expect(interrupt_handlers[int_num] != 0, 1)) {
-			isr_t handler;
-			handler = interrupt_handlers[int_num];
-			handler(regs);
+		if (__builtin_expect(interrupt_handlers[int_num].handler != 0, 1)) {
+			ISRDataPair pair = interrupt_handlers[int_num];
+			pair.handler(pair.data, regs);
 		} else {
 			Log::Warning("Unhandled IPI: ");
 			Log::Write(int_num);

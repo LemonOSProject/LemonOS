@@ -14,8 +14,8 @@ namespace USB{
     uint8_t xhciSubclass = PCI_SUBCLASS_USB;
     uint8_t xhciProgIF = PCI_PROGIF_XHCI;
 
-    void XHCIIRQHandler(regs64_t* r){
-        Log::Info("[XHCI] Interrupt!");
+    void XHCIIRQHandler(XHCIController* xHC, regs64_t* r){
+        xHC->OnInterrupt();
     }
 
     int XHCIController::Initialize(){
@@ -81,7 +81,7 @@ namespace USB{
             return;
         }
 
-        IDT::RegisterInterruptHandler(controllerIRQ, XHCIIRQHandler);
+        IDT::RegisterInterruptHandler(controllerIRQ, reinterpret_cast<isr_t>(&XHCIIRQHandler));
 
         devContextBaseAddressArrayPhys = Memory::AllocatePhysicalMemoryBlock();
         devContextBaseAddressArray = reinterpret_cast<uint64_t*>(Memory::GetIOMapping(devContextBaseAddressArrayPhys));
@@ -181,6 +181,10 @@ namespace USB{
         InitializePorts();
     }
 
+    void XHCIController::OnInterrupt(){
+        Log::Info("[XHCI] Interrupt!");
+    }
+
     bool XHCIController::TakeOwnership(){
         volatile xhci_ext_cap_legacy_support_t* cap = reinterpret_cast<xhci_ext_cap_legacy_support_t*>(extCapabilities); // Legacy support should be the first entry in the extended capabilities
         
@@ -207,7 +211,7 @@ namespace USB{
 
     void XHCIController::InitializeProtocols(){
         auto initializeProto = [&](xhci_ext_cap_supported_protocol_t* cap){
-            Log::Info("[XHCI] Initializing protocol \"%c%c%c%c\", Version: %d%d.%d%d, Port Range: %u-%u", cap->name[0], cap->name[1], cap->name[2], cap->name[3], (cap->majorRevision >> 4), (cap->majorRevision & 0x9), (cap->minorRevision >> 4), (cap->minorRevision & 0x9), cap->portOffset, (cap->portOffset + cap->portCount));
+            Log::Info("[XHCI] Initializing protocol \"%c%c%c%c\", Version: %u%u.%u%u, Port Range: %u-%u", cap->name[0], cap->name[1], cap->name[2], cap->name[3], (cap->majorRevision >> 4), (cap->majorRevision & 0xF), (cap->minorRevision >> 4), (cap->minorRevision & 0xF), cap->portOffset, (cap->portOffset + cap->portCount));
 
             protocols.add_back(cap);
 
