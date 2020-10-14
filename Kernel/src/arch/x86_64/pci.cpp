@@ -156,21 +156,21 @@ namespace PCI{
 
 		device.UpdateClass();
 
-		Log::Info("Found Device! Vendor: ");
+		/*Log::Info("Found Device! Vendor: ");
 		Log::Write(device.vendorID);
 		Log::Write(", Device: ");
 		Log::Write(device.deviceID);
 		Log::Write(", Class: ");
 		Log::Write(device.classCode);
 		Log::Write(", Subclass: ");
-		Log::Write(device.subclass);
+		Log::Write(device.subclass);*/
 
 		device.capabilities = new Vector<uint16_t>();
 		if(device.Status() & PCI_STATUS_CAPABILITIES){
 			uint8_t ptr = ConfigReadWord(bus, slot, func, PCICapabilitiesPointer) & 0xFC;
 			uint16_t cap = ConfigReadDword(bus, slot, func, ptr);
 			do {
-				Log::Info("PCI Capability: %x", cap & 0xFF);
+				//Log::Info("PCI Capability: %x", cap & 0xFF);
 
 				if((cap & 0xFF) == PCICapabilityIDs::PCICapMSI){
 					device.msiPtr = ptr;
@@ -275,7 +275,7 @@ uint8_t PCIDevice::AllocateVector(PCIVectors type){
 			APIC::IO::MapLegacyIRQ(irq);
 		}
 
-		return IRQ0 + irq;
+		return IRQ0 | irq;
 	}
 
 	Log::Error("[PCIDevice] AllocateVector: Could not allocate interrupt (type %i)!", static_cast<int>(type));

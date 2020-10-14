@@ -49,6 +49,9 @@ run:
 
 qemu: run
 
+qemuusb:
+	Scripts/run.sh qemuusb
+
 vbox:
 	Scripts/run.sh vbox
 	

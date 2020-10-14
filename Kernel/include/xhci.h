@@ -41,6 +41,8 @@
 #define XHCI_PORTSC_PEC (1 << 18) // Port Enabled/Disabled Change
 #define XHCI_PORTSC_WPR (1 << 31) // On USB3 ports warm reset
 
+#define XHCI_INT_ERDP_BUSY (1 << 3)
+
 #define XHCI_TRB_SIZE 16
 #define XHCI_EVENT_RING_SEGMENT_TABLE_ENTRY_SIZE 16
 
@@ -430,6 +432,39 @@ namespace USB{
             INDataStage = 3,
         };
 
+        typedef struct{
+            uint32_t parameter[2];
+            uint32_t status;
+            uint32_t cycleBit : 1;
+            uint32_t extra : 9;
+            uint32_t trbType : 6;
+            uint32_t control : 16; 
+        } __attribute__((packed)) xhci_trb_t;
+
+        typedef struct{ // Generic event TRB
+            uint64_t ptr;
+            uint32_t rsvdZ : 24;
+            uint32_t completionCode : 8;
+            uint32_t cycleBit : 1;
+            uint32_t rsvdZ2 : 9;
+            uint32_t trbType : 6;
+            uint32_t rsvdZ3 : 16;
+        } __attribute__((packed)) xhci_event_trb_t;
+
+        typedef struct{
+            uint64_t segmentPtr;
+            uint32_t rsvdZ : 24;
+            uint32_t interrupterTarget : 8;
+            uint32_t cycleBit : 1;
+            uint32_t toggleCycle : 1;
+            uint32_t rsvdZ2 : 2;
+            uint32_t chainBit : 1;
+            uint32_t interruptOnCompletion : 1;
+            uint32_t rsvdZ3 : 4;
+            uint32_t trbType : 6;
+            uint32_t rsvdZ4 : 16;
+        } __attribute__((packed)) xhci_link_trb_t;
+
         // One 'work item' is a Transfer Descriptor (TD) and contains multiple Transfer Request Blocks (TRBs)
         typedef struct{
             uint64_t dataBuffer;
@@ -587,6 +622,11 @@ namespace USB{
             uint32_t rsvdZ3 : 16;
         } __attribute__((packed)) xhci_configure_endpoint_command_trb_t;
 
+        static_assert(XHCI_TRB_SIZE == sizeof(xhci_trb_t));
+
+        static_assert(XHCI_TRB_SIZE == sizeof(xhci_event_trb_t));
+        static_assert(XHCI_TRB_SIZE == sizeof(xhci_link_trb_t));
+
         static_assert(XHCI_TRB_SIZE == sizeof(xhci_configure_endpoint_command_trb_t));
         static_assert(XHCI_TRB_SIZE == sizeof(xhci_address_device_command_trb_t));
         static_assert(XHCI_TRB_SIZE == sizeof(xhci_disable_slot_command_trb_t));
@@ -606,9 +646,12 @@ namespace USB{
         };
 
         struct XHCIEventRingSegment{
-            xhci_event_ring_segment_table_entry_t* entry;
-            uint64_t segmentPhys;
-            uint8_t* segment;
+            xhci_event_ring_segment_table_entry_t* entry; // Entry given to the xHC
+
+            uint64_t segmentPhys; // The physical address of the segment itself
+            uint8_t* segment; // The segment itself
+
+            size_t size; // Segment size in TRB entries
         };
 
         PCIDevice& pciDevice;
@@ -629,12 +672,16 @@ namespace USB{
 
         unsigned eventRingSegmentTableSize = 0;
         XHCIEventRingSegment* eventRingSegments = nullptr;
+        bool eventRingCycleState = true; // Software maintains an Event Ring Consumer Cycle State (CCS) bit, initializing it to ‘1’ and toggling it every time the Event Ring Dequeue Pointer wraps back to the beginning of the Event Ring. If the Cycle bit of the Event TRB pointed to by the Event Ring Dequeue Pointer equals CCS, then the Event TRB is a valid event.
 
         uintptr_t devContextBaseAddressArrayPhys = 0;
         uint64_t* devContextBaseAddressArray = nullptr;
 
         uintptr_t cmdRingPointerPhys = 0;
-        uint8_t* cmdRingPointer = nullptr;
+        xhci_trb_t* commandRing = nullptr;
+        unsigned commandRingEnqueueIndex = 0;
+        unsigned commandRingIndexMax = 0;
+        bool commandRingCycleState = 1;
 
         uintptr_t scratchpadBuffersPhys = 0;
         uint64_t* scratchpadBuffers = nullptr;
@@ -654,6 +701,8 @@ namespace USB{
         void InitializePorts();
 
         void IRQHandler(regs64_t* r);
+
+        void SendCommand(void* data);
         
         void OnInterrupt();
     public:

@@ -6,6 +6,11 @@ qemu(){
 	qemu-system-x86_64 --enable-kvm $LEMOND/Disks/Lemon.vhd -no-reboot -no-shutdown -m 512M -device qemu-xhci -M q35 -smp 2 -serial stdio -netdev user,id=net0 -device e1000,netdev=net0,mac=DE:AD:69:BE:EF:42
 }
 
+qemuusb(){
+	qemu-system-x86_64 --enable-kvm -drive if=none,id=usbd,file=$LEMOND/Disks/Lemon.vhd -no-reboot -no-shutdown -m 512M -device qemu-xhci,id=xhci -device usb-storage,bus=xhci.0,drive=usbd -M q35 -smp 2 -serial stdio -netdev user,id=net0 -device e1000,netdev=net0,mac=DE:AD:69:BE:EF:42
+}
+
+
 vbox(){
 	VBoxManage startvm "Lemon"
 }

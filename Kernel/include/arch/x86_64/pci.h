@@ -241,6 +241,18 @@ public:
 		PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) | PCI_CMD_BUS_MASTER);
 	}
 
+	inline void EnableInterrupts(){
+		PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) & (~PCI_CMD_INTERRUPT_DISABLE));
+	}
+
+	inline void EnableMemorySpace(){
+		PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) | PCI_CMD_MEMORY_SPACE);
+	}
+
+	inline void EnableIOSpace(){
+		PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) | PCI_CMD_IO_SPACE);
+	}
+
 	inline void UpdateClass(){
 		classCode = PCI::ConfigReadByte(bus, slot, func, PCIClassCode);
 		subclass = PCI::ConfigReadByte(bus, slot, func, PCISubclass);

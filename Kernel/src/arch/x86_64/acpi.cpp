@@ -88,14 +88,14 @@ namespace ACPI{
 						if(localAPIC->apicID == 0) break; // Found the BSP
 						
 						processors[processorCount++] = localAPIC->apicID;
-						Log::Info("[ACPI] Found Processor, APIC ID: %d", localAPIC->apicID);
+						//Log::Info("[ACPI] Found Processor, APIC ID: %d", localAPIC->apicID);
 					}
 				}
 				break;
 			case 1:
 				{
 					apic_io_t* ioAPIC = (apic_io_t*)entry;
-					Log::Info("[ACPI] Found I/O APIC, Address: %x", ioAPIC->address);
+					//Log::Info("[ACPI] Found I/O APIC, Address: %x", ioAPIC->address);
 					if(!ioAPIC->gSIB)
 						APIC::IO::SetBase(ioAPIC->address);
 				}
@@ -107,10 +107,10 @@ namespace ACPI{
 				}
 				break;
 			case 4:
-				{
+				/*{
 					apic_nmi_t* nonMaskableInterrupt = (apic_nmi_t*)entry;
 					Log::Info("[ACPI] Found NMI, LINT #%d", nonMaskableInterrupt->lINT);
-				}
+				}*/
 				break;
 			case 5:
 				//apic_local_address_override_t* addressOverride = (apic_local_address_override_t*)entry;
@@ -123,7 +123,7 @@ namespace ACPI{
 			madtEntry += entry->length;
 		}
 
-		Log::Info("[ACPI] System Contains %d Processors", processorCount);
+		//Log::Info("[ACPI] System Contains %d Processors", processorCount);
 
 		return 0;
 	}

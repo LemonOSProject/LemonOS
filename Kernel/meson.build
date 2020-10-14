@@ -38,7 +38,7 @@ kernel_c_args = [
 ]
 
 kernel_cpp_args = [
-    '-fno-exceptions', '-fno-rtti',
+    '-fno-exceptions', '-fno-rtti', '-Wno-volatile',
 ]
 
 add_project_arguments(kernel_c_args, language : ['c', 'cpp'])
