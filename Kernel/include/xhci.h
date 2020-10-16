@@ -39,6 +39,7 @@
 #define XHCI_PORTSC_PP (1 << 9) // Port Power - When 0 the port is powered off
 #define XHCI_PORTSC_CSC (1 << 17) // Connect Status Change
 #define XHCI_PORTSC_PEC (1 << 18) // Port Enabled/Disabled Change
+#define XHCI_PORTSC_PRC (1 << 21) // Port Reset Change
 #define XHCI_PORTSC_WPR (1 << 31) // On USB3 ports warm reset
 
 #define XHCI_INT_ERDP_BUSY (1 << 3)
@@ -309,8 +310,8 @@ namespace USB{
                     uint32_t rsvdZ : 6;
                     uint32_t ringSegmentBaseAddressLo : 26;
                     uint32_t ringSegmentBaseAddressHigh : 32;
-                }__attribute__((packed));
-            };
+                } __attribute__((packed));
+            } __attribute__((packed));
             uint32_t ringSegmentSize : 16;
             uint32_t rsvdZ2 : 16;
             uint32_t rsvd3;
@@ -649,7 +650,7 @@ namespace USB{
             xhci_event_ring_segment_table_entry_t* entry; // Entry given to the xHC
 
             uint64_t segmentPhys; // The physical address of the segment itself
-            uint8_t* segment; // The segment itself
+            xhci_event_trb_t* segment; // The segment itself
 
             size_t size; // Segment size in TRB entries
         };
@@ -672,6 +673,7 @@ namespace USB{
 
         unsigned eventRingSegmentTableSize = 0;
         XHCIEventRingSegment* eventRingSegments = nullptr;
+        unsigned eventRingDequeueIndex = 0;
         bool eventRingCycleState = true; // Software maintains an Event Ring Consumer Cycle State (CCS) bit, initializing it to ‘1’ and toggling it every time the Event Ring Dequeue Pointer wraps back to the beginning of the Event Ring. If the Cycle bit of the Event TRB pointed to by the Event Ring Dequeue Pointer equals CCS, then the Event TRB is a valid event.
 
         uintptr_t devContextBaseAddressArrayPhys = 0;

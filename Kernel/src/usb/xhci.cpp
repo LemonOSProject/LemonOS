@@ -129,7 +129,7 @@ namespace USB{
 
         interrupter = &runtimeRegs->interrupters[0];
         interrupter->interruptEnable = 1;
-        interrupter->intModerationInterval = 4000; // (~1ms)
+        //interrupter->intModerationInterval = 4000; // (~1ms)
         
         eventRingSegmentTablePhys = Memory::AllocatePhysicalMemoryBlock();
         eventRingSegmentTable = reinterpret_cast<xhci_event_ring_segment_table_entry_t*>(Memory::KernelAllocate4KPages(1));
@@ -144,16 +144,17 @@ namespace USB{
             
             segment->entry = entry;
             segment->segmentPhys = Memory::AllocatePhysicalMemoryBlock();
-            segment->segment = reinterpret_cast<uint8_t*>(Memory::KernelAllocate4KPages(1));
+            segment->segment = reinterpret_cast<xhci_event_trb_t*>(Memory::KernelAllocate4KPages(1));
             Memory::KernelMapVirtualMemory4K(segment->segmentPhys, reinterpret_cast<uintptr_t>(segment->segment), 1, PAGE_PRESENT | PAGE_WRITABLE | PAGE_CACHE_DISABLED);
-            memset(segment->segment, 0, PAGE_SIZE_4K);
 
             assert(!(segment->segmentPhys & 0xFFF));
             entry->ringSegmentBaseAddress = segment->segmentPhys;
+            memset(segment->segment, 0, PAGE_SIZE_4K);
 
             entry->ringSegmentSize = PAGE_SIZE_4K / XHCI_TRB_SIZE; // Comes down to 256 TRBs per segment
             segment->size = PAGE_SIZE_4K / XHCI_TRB_SIZE;
         }
+        eventRingDequeueIndex = 0;
 
         interrupter->eventRingSegmentTableSize = eventRingSegmentTableSize;
         interrupter->eventRingSegmentTableBaseAddress = eventRingSegmentTablePhys;
@@ -227,22 +228,24 @@ namespace USB{
 
         XHCIEventRingSegment* segment = &eventRingSegments[0];
         uintptr_t dequeuePtr = interrupter->eventRingDequeuePointer & (~0xFULL);
-        xhci_event_trb_t* event = reinterpret_cast<xhci_event_trb_t*>(dequeuePtr);
+        xhci_event_trb_t* event = &segment->segment[eventRingDequeueIndex];
+        Log::Info("cycle: %Y event cycle: %Y", event->cycleBit, eventRingCycleState);
         while(!!event->cycleBit == !!eventRingCycleState){
-            Log::Info("[XHCI] Received event (TRB Type: %x (%x))", event->trbType, (((uint32_t*)event)[4] >> 10) & 0x3f);
+            Log::Info("[XHCI] Received event (TRB Type: %x (%x))", event->trbType, (((uint32_t*)event)[3] >> 10) & 0x3f);
 
             event++;
-            uintptr_t diff = reinterpret_cast<uintptr_t>(event) - reinterpret_cast<uintptr_t>(segment->segment);
-            if(!diff || !((diff) % (segment->size * XHCI_TRB_SIZE))){ // Check if we are at either beginning or end of ring segment
-                dequeuePtr = reinterpret_cast<uintptr_t>(segment);
-                event = reinterpret_cast<xhci_event_trb_t*>(event);
+            eventRingDequeueIndex++;
+
+            if(eventRingDequeueIndex >= segment->size){ // Check if we are at end of ring segment
+                dequeuePtr = reinterpret_cast<uintptr_t>(segment->segment);
+                event = reinterpret_cast<xhci_event_trb_t*>(dequeuePtr);
+                eventRingDequeueIndex = 0;
                 eventRingCycleState = !eventRingCycleState;
-                break;
             }
         }
+        dequeuePtr = reinterpret_cast<uintptr_t>(event);
 
         interrupter->eventRingDequeuePointer = dequeuePtr | XHCI_INT_ERDP_BUSY;
-
         interrupter->interruptPending = 0;
         opRegs->usbStatus &= ~USB_STS_EINT;
     }
@@ -318,6 +321,13 @@ namespace USB{
                     port.WarmReset();
                 } else {
                     port.Reset();
+                }
+
+                if(!port.Enabled()){
+                    int timeout = 25;
+                    while(timeout-- && !(port.portSC & XHCI_PORTSC_PRC)){
+                        Timer::Wait(1); // Wait for port reset change
+                    }
                 }
 
                 if(port.Enabled()){

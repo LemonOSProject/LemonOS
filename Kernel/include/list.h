@@ -104,7 +104,7 @@ public:
 			obj->prev = back;
 		}
 		back = obj;
-		obj->next = front;//obj->next = nullptr;
+		obj->next = front;
 		num++;
 	}
 
