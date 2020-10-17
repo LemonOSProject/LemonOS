@@ -298,6 +298,8 @@ typedef struct tagHBA_CMD_TBL
 	hba_prdt_entry_t	prdt_entry[1];	// Physical region descriptor table entries, 0 ~ 65535
 } __attribute__((packed)) hba_cmd_tbl_t;
 
+#define AHCI_GHC_HR (1 << 0) // HBA Reset
+#define AHCI_GHC_IE (1 << 1) // Interrupt enable
 #define AHCI_GHC_ENABLE (1 << 31)
 
 #define AHCI_CAP_S64A (1 << 31) // 64-bit addressing

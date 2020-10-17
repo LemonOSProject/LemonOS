@@ -94,8 +94,8 @@ namespace AHCI{
 
             if(spin <= 0){
                 Log::Info("[AHCI] Port hung"/*, attempting COMRESET"*/);
-                //registers->sctl = SCTL_PORT_DET_INIT | SCTL_PORT_IPM_NOPART | SCTL_PORT_IPM_NOSLUM | SCTL_PORT_IPM_NODSLP; // Reset the port
-            }/*
+                registers->sctl = SCTL_PORT_DET_INIT | SCTL_PORT_IPM_NOPART | SCTL_PORT_IPM_NOSLUM | SCTL_PORT_IPM_NODSLP; // Reset the port
+            }
 
             Timer::Wait(10);
 
@@ -103,7 +103,7 @@ namespace AHCI{
 
             Timer::Wait(10);
 
-            spin = 500;
+            spin = 200;
             while(spin-- && (registers->ssts & HBA_PxSSTS_DET_PRESENT) != HBA_PxSSTS_DET_PRESENT){
                 Timer::Wait(1);
             }
@@ -122,7 +122,7 @@ namespace AHCI{
 
             if(spin <= 0){
                 Log::Info("[AHCI] Port hung!");
-            }*/
+            }
         }
 
         if((registers->ssts & HBA_PxSSTS_DET) != HBA_PxSSTS_DET_PRESENT){
@@ -254,14 +254,16 @@ namespace AHCI{
             return 2;
         }
 
+        registers->serr = registers->tfd = 0;
+
         hba_cmd_header_t* commandHeader = &commandList[slot];
 
         commandHeader->cfl = sizeof(fis_reg_h2d_t) / sizeof(uint32_t);
 
         commandHeader->a = 0;
         commandHeader->w = write;
-        commandHeader->c = 1;
-        commandHeader->p = 1;
+        commandHeader->c = 0;
+        commandHeader->p = 0;
 
         commandHeader->prdbc = 0;
         commandHeader->pmp = 0;
@@ -299,11 +301,11 @@ namespace AHCI{
         cmdfis->countl = count & 0xff;
         cmdfis->counth = count >> 8;
 
-        cmdfis->control = 0;
+        cmdfis->control = 0x8;
 
-        spin = 0xFFFFF;
-        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin) {
-            spin--;
+        spin = 100;
+        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin--) {
+            Timer::Wait(1);
         }
 
         if(spin <= 0){
@@ -331,9 +333,9 @@ namespace AHCI{
             }
         }
 
-        spin = 0xFFFFF;
-        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin) {
-            spin--;
+        spin = 100;
+        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin--) {
+            Timer::Wait(1);
         }
 
         stopCMD(registers);
@@ -345,7 +347,7 @@ namespace AHCI{
             return 3;
         }
         
-       // Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
+        //Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
         
         if (registers->is & HBA_PxIS_TFES) {
             Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
@@ -378,8 +380,8 @@ namespace AHCI{
 
         commandHeader->a = 0;
         commandHeader->w = 0;
-        commandHeader->c = 1;
-        commandHeader->p = 1;
+        commandHeader->c = 0;
+        commandHeader->p = 0;
 
         commandHeader->prdbc = 0;
         commandHeader->pmp = 0;
@@ -414,8 +416,9 @@ namespace AHCI{
 
         cmdfis->control = 0;
 
-        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin < 1000000) {
-            spin++;
+        spin = 100;
+        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin--) {
+            Timer::Wait(1);
         }
 
         if(spin >= 1000000){
@@ -426,6 +429,7 @@ namespace AHCI{
         registers->ie = registers->is = 0xffffffff;
 
         startCMD(registers);
+        registers->sact |= 1 << slot;
         registers->ci |= 1 << slot;
 
         //Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
@@ -441,9 +445,9 @@ namespace AHCI{
         
         stopCMD(registers);
 
-        spin = 0xFFFFF;
-        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin) {
-            spin--;
+        spin = 100;
+        while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin--) {
+            Timer::Wait(1);
         }
 
        // Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);

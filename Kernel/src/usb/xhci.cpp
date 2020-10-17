@@ -147,14 +147,13 @@ namespace USB{
             segment->segment = reinterpret_cast<xhci_event_trb_t*>(Memory::KernelAllocate4KPages(1));
             Memory::KernelMapVirtualMemory4K(segment->segmentPhys, reinterpret_cast<uintptr_t>(segment->segment), 1, PAGE_PRESENT | PAGE_WRITABLE | PAGE_CACHE_DISABLED);
 
-            assert(!(segment->segmentPhys & 0xFFF));
             entry->ringSegmentBaseAddress = segment->segmentPhys;
             memset(segment->segment, 0, PAGE_SIZE_4K);
 
             entry->ringSegmentSize = PAGE_SIZE_4K / XHCI_TRB_SIZE; // Comes down to 256 TRBs per segment
             segment->size = PAGE_SIZE_4K / XHCI_TRB_SIZE;
         }
-        eventRingDequeueIndex = 0;
+        eventRingDequeue = eventRingSegments[0].segment;
 
         interrupter->eventRingSegmentTableSize = eventRingSegmentTableSize;
         interrupter->eventRingSegmentTableBaseAddress = eventRingSegmentTablePhys;
@@ -221,31 +220,37 @@ namespace USB{
         }
     }
 
+    void XHCIController::EnableSlot(){
+        xhci_enable_slot_command_trb_t trb;
+        memset(&trb, 0, XHCI_TRB_SIZE);
+
+        trb.trbType = TRBTypes::TRBTypeEnableSlotCommand;
+
+        SendCommand(&trb);
+    }
+
     void XHCIController::OnInterrupt(){
         Log::Info("[XHCI] Interrupt!");
 
         if(!eventRingSegments) return;
 
         XHCIEventRingSegment* segment = &eventRingSegments[0];
-        uintptr_t dequeuePtr = interrupter->eventRingDequeuePointer & (~0xFULL);
-        xhci_event_trb_t* event = &segment->segment[eventRingDequeueIndex];
+        xhci_event_trb_t* event = eventRingDequeue;
         Log::Info("cycle: %Y event cycle: %Y", event->cycleBit, eventRingCycleState);
         while(!!event->cycleBit == !!eventRingCycleState){
             Log::Info("[XHCI] Received event (TRB Type: %x (%x))", event->trbType, (((uint32_t*)event)[3] >> 10) & 0x3f);
 
             event++;
-            eventRingDequeueIndex++;
-
-            if(eventRingDequeueIndex >= segment->size){ // Check if we are at end of ring segment
-                dequeuePtr = reinterpret_cast<uintptr_t>(segment->segment);
-                event = reinterpret_cast<xhci_event_trb_t*>(dequeuePtr);
-                eventRingDequeueIndex = 0;
+            uintptr_t diff = reinterpret_cast<uintptr_t>(event) - reinterpret_cast<uintptr_t>(segment->segment);
+            if(!diff || !((diff) % (segment->size * XHCI_TRB_SIZE))){ // Check if we are at either beginning or end of ring segment
+                eventRingDequeue = segment->segment;
+                event = eventRingDequeue;
                 eventRingCycleState = !eventRingCycleState;
+                break;
             }
         }
-        dequeuePtr = reinterpret_cast<uintptr_t>(event);
 
-        interrupter->eventRingDequeuePointer = dequeuePtr | XHCI_INT_ERDP_BUSY;
+        interrupter->eventRingDequeuePointer = reinterpret_cast<uintptr_t>(eventRingDequeue) | XHCI_INT_ERDP_BUSY;
         interrupter->interruptPending = 0;
         opRegs->usbStatus &= ~USB_STS_EINT;
     }

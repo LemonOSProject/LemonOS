@@ -49,12 +49,7 @@ asm_files = [
     'src/gfx/sse2.asm',
 ]
 
-if host_machine.system() == 'lemon'
-    subdir('src/lemon')
-else
-    error('System ' + host_machine.system() + ' not supported!')
-endif
-    
+subdir('src/lemon')
 
 prefix = get_option('prefix')
 install_subdir('include', install_dir: prefix)

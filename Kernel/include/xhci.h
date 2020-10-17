@@ -673,7 +673,7 @@ namespace USB{
 
         unsigned eventRingSegmentTableSize = 0;
         XHCIEventRingSegment* eventRingSegments = nullptr;
-        unsigned eventRingDequeueIndex = 0;
+        xhci_event_trb_t* eventRingDequeue;
         bool eventRingCycleState = true; // Software maintains an Event Ring Consumer Cycle State (CCS) bit, initializing it to ‘1’ and toggling it every time the Event Ring Dequeue Pointer wraps back to the beginning of the Event Ring. If the Cycle bit of the Event TRB pointed to by the Event Ring Dequeue Pointer equals CCS, then the Event TRB is a valid event.
 
         uintptr_t devContextBaseAddressArrayPhys = 0;
@@ -705,6 +705,7 @@ namespace USB{
         void IRQHandler(regs64_t* r);
 
         void SendCommand(void* data);
+        void EnableSlot();
         
         void OnInterrupt();
     public:

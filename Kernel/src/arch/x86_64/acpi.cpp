@@ -223,7 +223,7 @@ extern "C"{
 				Log::Warning(msg);
 				break;
 			default:
-				Log::Info(msg);
+				//Log::Info(msg);
 				break;
 		}
 	}

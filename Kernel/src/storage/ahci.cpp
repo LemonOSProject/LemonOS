@@ -34,6 +34,8 @@ namespace AHCI{
 		Log::Info("Initializing AHCI Controller...");
 
 		controllerPCIDevice->EnableBusMastering();
+		controllerPCIDevice->EnableInterrupts();
+		controllerPCIDevice->EnableMemorySpace();
 
 		ahciBaseAddress = controllerPCIDevice->GetBaseAddressRegister(5); // BAR 5 is the AHCI Base Address
 		ahciVirtualAddress = Memory::GetIOMapping(ahciBaseAddress);
@@ -45,15 +47,16 @@ namespace AHCI{
 			Log::Warning("[AHCI] Failed to allocate vector!");
 		}
 
-		Log::Info("[AHCI] Interrupt Vector: %x, Base Address: %x, Virtual Base Address: %x", irq, ahciBaseAddress, ahciVirtualAddress);
-		Log::Info("[AHCI] (Cap: %x, Cap2: %x) Enabled? %Y, BOHC? %Y, 64-bit addressing? %Y, Staggered Spin-up? %Y, Slumber State Capable? %Y, Partial State Capable? %Y, FIS-based switching? %Y", ahciHBA->cap, ahciHBA->cap2, ahciHBA->ghc & AHCI_GHC_ENABLE, ahciHBA->cap2 & AHCI_CAP2_BOHC, ahciHBA->cap & AHCI_CAP_S64A, ahciHBA->cap & AHCI_CAP_SSS, ahciHBA->cap & AHCI_CAP_SSC, ahciHBA->cap & AHCI_CAP_PSC, ahciHBA->cap & AHCI_CAP_FBSS);
-
 		uint32_t pi = ahciHBA->pi;
 
 		while(!(ahciHBA->ghc & AHCI_GHC_ENABLE)){
 			ahciHBA->ghc |= AHCI_GHC_ENABLE;
 			Timer::Wait(1);
 		}
+		ahciHBA->ghc |= AHCI_GHC_IE;
+
+		Log::Info("[AHCI] Interrupt Vector: %x, Base Address: %x, Virtual Base Address: %x", irq, ahciBaseAddress, ahciVirtualAddress);
+		Log::Info("[AHCI] (Cap: %x, Cap2: %x) Enabled? %Y, BOHC? %Y, 64-bit addressing? %Y, Staggered Spin-up? %Y, Slumber State Capable? %Y, Partial State Capable? %Y, FIS-based switching? %Y", ahciHBA->cap, ahciHBA->cap2, ahciHBA->ghc & AHCI_GHC_ENABLE, ahciHBA->cap2 & AHCI_CAP2_BOHC, ahciHBA->cap & AHCI_CAP_S64A, ahciHBA->cap & AHCI_CAP_SSS, ahciHBA->cap & AHCI_CAP_SSC, ahciHBA->cap & AHCI_CAP_PSC, ahciHBA->cap & AHCI_CAP_FBSS);
 
 		IDT::RegisterInterruptHandler(irq, InterruptHandler);
 
