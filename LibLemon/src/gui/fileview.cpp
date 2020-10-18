@@ -53,7 +53,7 @@ namespace Lemon::GUI {
             if(FileView::icons.buffer)
                 Graphics::surfacecpy(surface, &FileView::icons, bounds.pos + (vector2i_t){2, 2}, (rect_t){{icon * 16, 0}, {16, 16}});
             
-            Graphics::DrawString(label.c_str(), bounds.pos.x + 20, bounds.pos.y + bounds.size.y / 2 - 8, 0, 0, 0, surface);
+            Graphics::DrawString(label.c_str(), bounds.pos.x + 20, bounds.pos.y + bounds.size.y / 2 - 8, colours[Colour::TextDark], surface);
         }
 	};
 

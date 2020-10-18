@@ -285,7 +285,8 @@ namespace Lemon::GUI {
                     if(drawText) DrawButtonLabel(surface, true);
                     break;
                 default:
-                    Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + 1, bounds.size.x - 2, bounds.size.y - 4,{250,250,250,255},{230,230,225,255},surface);
+                    //Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + 1, bounds.size.x - 2, bounds.size.y - 4,{250,250,250,255},{230,230,225,255},surface);
+                    Graphics::DrawRect(btnPos.x + 1, btnPos.y + 1, bounds.size.x - 2, bounds.size.y - 4, colours[Colour::ContentBackground],surface);
                     Graphics::DrawRect(btnPos.x + 1, btnPos.y + bounds.size.y - 3, bounds.size.x - 2, 2, colours[Colour::ContentShadow],surface);
                     DrawButtonBorders(surface, false);
                     if(drawText) DrawButtonLabel(surface, false);
@@ -450,7 +451,7 @@ namespace Lemon::GUI {
     }
 
     void TextBox::Paint(surface_t* surface){
-        Graphics::DrawRect(fixedBounds.pos.x + 1, fixedBounds.pos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2, 255, 255, 255, surface);
+        Graphics::DrawRect(fixedBounds.pos.x + 1, fixedBounds.pos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2, colours[Colour::ContentBackground], surface);
         Graphics::DrawRectOutline(fixedBounds, colours[Colour::ContentShadow], surface);
         int xpos = 2;
         int ypos = 2;

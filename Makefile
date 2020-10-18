@@ -1,11 +1,13 @@
 JOBS := $(shell nproc)
 
-.PHONY: disk kernel base initrd libc liblemon system clean run vbox debug
+.PHONY: all disk kernel base initrd libc liblemon system clean run vbox debug
+
+all: kernel base initrd disk
 
 libc:
 	ninja -C LibC/build install -j $(JOBS)
 	
-liblemon:
+liblemon: libc
 	ninja -C LibLemon/build install -j $(JOBS)
 	
 applications: liblemon
@@ -25,7 +27,7 @@ initrd: libc liblemon
 base: applications system
 	Scripts/buildbase.sh
 
-disk: kernel base initrd
+disk:
 	Scripts/build-nix/copytodisk.sh
 	
 clean:
