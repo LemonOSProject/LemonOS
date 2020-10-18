@@ -1,3 +1,3 @@
 namespace Lemon{
-	char* versionString = "Lemon OS Nightly (Alpha) x86_64";
+	char* versionString = "Lemon OS Alpha 0.2.2 x86_64";
 }
