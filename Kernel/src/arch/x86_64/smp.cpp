@@ -48,8 +48,6 @@ namespace SMP{
         Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)cpu->gdt, 1);
         memcpy(cpu->gdt, (void*)GDT64Pointer64.base, GDT64Pointer64.limit + 1); // Make a copy of the GDT
         cpu->gdtPtr = {.limit = GDT64Pointer64.limit, .base = (uint64_t)cpu->gdt};
-        
-        doneInit = true;
 
         asm volatile("lgdt (%%rax)" :: "a"(&cpu->gdtPtr));
 
@@ -60,6 +58,8 @@ namespace SMP{
         APIC::Local::Enable();
 
         cpu->runQueue = new FastList<thread_t*>();
+        
+        doneInit = true;
 
         asm("sti");
 
