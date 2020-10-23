@@ -17,10 +17,10 @@ void OnFileOpened(const char* path, Lemon::GUI::FileView* fv){
 	if(strncmp(path + strlen(path) - 4, ".lef", 4) == 0){
 		lemon_spawn(path, 1, &pathCopy);
 	} else if(strncmp(path + strlen(path) - 4, ".txt", 4) == 0 || strncmp(path + strlen(path) - 4, ".cfg", 4) == 0){
-		char* argv[] = {"/system/bin/textedit.lef", pathCopy};
+		char* const argv[] = {const_cast<char*>("/system/bin/textedit.lef"), pathCopy};
 		lemon_spawn("/system/bin/textedit.lef", 2, argv);
 	} else if(strncmp(path + strlen(path) - 4, ".png", 4) == 0 || strncmp(path + strlen(path) - 4, ".bmp", 4) == 0){
-		char* argv[] = {"/system/bin/imgview.lef", pathCopy};
+		char* const argv[] = {const_cast<char*>("/system/bin/imgview.lef"), pathCopy};
 		lemon_spawn("/system/bin/imgview.lef", 2, argv);
 	}
 
@@ -36,8 +36,6 @@ int main(int argc, char** argv){
 	Lemon::GUI::FileView* fv = new Lemon::GUI::FileView({{0,0},{0,0}}, "/", OnFileOpened);
 	window->AddWidget(fv);
 	fv->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft);
-	
-	bool repaint = true;
 
 	while(!window->closed){
 		Lemon::LemonEvent ev;

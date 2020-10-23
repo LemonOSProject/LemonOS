@@ -1,4 +1,4 @@
-project('Lemon Applications', default_options : ['cpp_std=c++17', 'optimization=3'])
+project('Lemon Applications', default_options : ['cpp_std=c++17', 'optimization=3', 'warning_level=2', 'werror=true'])
 
 add_languages('c', 'cpp')
 subproject('LemonUtils')
@@ -49,7 +49,7 @@ run_src = [
 ]
 
 application_cpp_args = [
-    
+    '-Wno-unused-parameter',
 ]
 
 guitest_src = [

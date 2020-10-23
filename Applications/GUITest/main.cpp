@@ -11,7 +11,7 @@
 
 surface_t fbSurface;
 
-rgba_colour_t backgroundColor = {64, 128, 128};
+rgba_colour_t backgroundColor = {64, 128, 128, 255};
 
 std::vector<Lemon::GUI::ContextMenuEntry> cxt;
 

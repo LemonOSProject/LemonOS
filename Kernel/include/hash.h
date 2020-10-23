@@ -40,9 +40,11 @@ private:
 	List<KeyValuePair>* buckets;
 	unsigned bucketCount = 2048;
 
+	lock_t lock = 0;
 public:
 	HashMap(){
 		buckets = new List<KeyValuePair>[bucketCount];
+		lock = 0;
 	}
 
 	HashMap(unsigned bCount){
@@ -54,17 +56,23 @@ public:
 	void insert(K key, T& value){
 		auto& bucket = buckets[hash(key) % bucketCount];
 
+		acquireLock(&lock);
 		bucket.add_back(KeyValuePair(key, value));
+		releaseLock(&lock);
 	}
 
 	T remove(K key){
 		auto& bucket = buckets[hash(key) % bucketCount];
 
+		acquireLock(&lock);
 		for(unsigned i = 0; i < bucket.get_length(); i++){
 			if(bucket[i].key == key){
-				return bucket.remove_at(i).value;
+				auto pair = bucket.remove_at(i);
+				releaseLock(&lock);
+				return pair.value;
 			}
 		}
+		releaseLock(&lock);
 
 		return T();
 	}
@@ -72,11 +80,14 @@ public:
 	T get(K key){
 		auto& bucket = buckets[hash(key) % bucketCount];
 
+		acquireLock(&lock);
 		for(KeyValuePair& val : bucket){
 			if(val.key == key){
+				releaseLock(&lock);
 				return val.value;
 			}
 		}
+		releaseLock(&lock);
 
 		return T();
 	}

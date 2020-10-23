@@ -1,6 +1,6 @@
-diff -ruN libpng-1.6.37/config.sub lemon-libpng/config.sub
+diff --color -ruN libpng-1.6.37/config.sub lemon-libpng-1.6.37/config.sub
 --- libpng-1.6.37/config.sub	2019-04-15 04:10:32.000000000 +1000
-+++ lemon-libpng/config.sub	2020-05-03 13:59:50.924663900 +1000
++++ lemon-libpng-1.6.37/config.sub	2020-10-20 14:15:30.594195794 +1100
 @@ -1390,7 +1390,7 @@
  	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
  	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es* \
@@ -10,3 +10,37 @@ diff -ruN libpng-1.6.37/config.sub lemon-libpng/config.sub
  	# Remember, each alternative MUST END IN *, to match a version number.
  		;;
  	-qnx*)
+diff --color -ruN libpng-1.6.37/configure lemon-libpng-1.6.37/configure
+--- libpng-1.6.37/configure	2019-04-15 04:10:32.000000000 +1000
++++ lemon-libpng-1.6.37/configure	2020-10-23 09:49:58.950010374 +1100
+@@ -5611,6 +5611,10 @@
+   fi
+   ;;
+ 
++lemon*)
++  lt_cv_deplibs_check_method=pass_all
++  ;;
++
+ haiku*)
+   lt_cv_deplibs_check_method=pass_all
+   ;;
+@@ -11370,6 +11374,19 @@
+   sys_lib_dlsearch_path_spec='/boot/home/config/lib /boot/common/lib /boot/system/lib'
+   hardcode_into_libs=yes
+   ;;
++  
++lemon*)
++  version_type=linux
++  need_lib_prefix=no
++  need_version=no
++  dynamic_linker="$host_os ld"
++  library_names_spec='$libname$release$shared_ext$versuffix $libname$release$shared_ext$major $libname$shared_ext'
++  soname_spec='$libname$release$shared_ext$major'
++  shlibpath_var=LIBRARY_PATH
++  shlibpath_overrides_runpath=no
++  sys_lib_dlsearch_path_spec='/system/lib /lib'
++  hardcode_into_libs=yes
++  ;;
+ 
+ hpux9* | hpux10* | hpux11*)
+   # Give a soname corresponding to the major version so that dld.sl refuses to

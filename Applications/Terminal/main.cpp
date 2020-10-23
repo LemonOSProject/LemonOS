@@ -42,6 +42,13 @@ struct TermState{
 };
 
 TermState defaultState {
+	.bold = 0,
+	.italic = 0,
+	.faint = 0,
+	.underline = 0,
+	.blink = 0,
+	.reverse = 0,
+	.strikethrough = 0,
 	.fgColour = 7,
 	.bgColour = 0,
 };
@@ -81,18 +88,16 @@ void Scroll(){
 		curPos.y = rowCount - 1;
 	}
 			
-	while(bufferOffset + rowCount >= buffer.size()) buffer.push_back(std::vector<TerminalChar>());
+	while(static_cast<std::size_t>(bufferOffset + rowCount) >= buffer.size()) buffer.push_back(std::vector<TerminalChar>());
 }
 
 void OnPaint(surface_t* surface){
 	Lemon::Graphics::DrawRect(0, 0, window->GetSize().x, window->GetSize().y, 0, 0, 0, surface);
 
-	int line = 0;
-	int i = 0;
 	int fontHeight = terminalFont->height;
 
-	for(int i = 0; i < rowCount && (bufferOffset + i) < buffer.size(); i++){
-		for(int j = 0; j < buffer[bufferOffset + i].size(); j++){
+	for(int i = 0; i < rowCount && (bufferOffset + i) < static_cast<int>(buffer.size()); i++){
+		for(int j = 0; j < static_cast<int>(buffer[bufferOffset + i].size()); j++){
 			TerminalChar ch = buffer[bufferOffset + i][j];
 			rgba_colour_t fg = colours[ch.s.fgColour];
 			rgba_colour_t bg = colours[ch.s.bgColour];
@@ -253,7 +258,7 @@ void DoAnsiCSI(char ch){
 			int num = atoi(escBuf);
 			switch(num){
 				case 0: // Clear entire screen from cursor
-					for(int i = curPos.y + 1; i < rowCount && i + bufferOffset < buffer.size(); i++){
+					for(int i = curPos.y + 1; i < rowCount && i + bufferOffset < static_cast<int>(buffer.size()); i++){
 						buffer[bufferOffset + i].clear();
 					}
 					break;
@@ -305,7 +310,7 @@ void DoAnsiCSI(char ch){
 			int amount = atoi(escBuf);
 			buffer.erase(buffer.begin() + bufferOffset + curPos.y - amount, buffer.begin() + bufferOffset + curPos.y);
 
-			while(buffer.size() - bufferOffset < rowCount){
+			while(static_cast<int>(buffer.size()) - bufferOffset < rowCount){
 				buffer.push_back(std::vector<TerminalChar>());
 			}
 			break;
@@ -317,7 +322,7 @@ void DoAnsiCSI(char ch){
 			bufferOffset++;
 		}
 
-		while(buffer.size() - bufferOffset < rowCount){
+		while(static_cast<int>(buffer.size()) - bufferOffset < rowCount){
 			buffer.push_back(std::vector<TerminalChar>());
 		}
 		break;
@@ -420,7 +425,7 @@ void PrintChar(char ch){
 				Scroll();
 			}
 
-			if(curPos.x >= buffer[bufferOffset + curPos.y].size())
+			if(static_cast<std::size_t>(curPos.x) >= buffer[bufferOffset + curPos.y].size())
 				buffer[bufferOffset + curPos.y].push_back({.s = state, .c = ch});
 			else
 				buffer[bufferOffset + curPos.y][curPos.x] = {.s = state, .c = ch};
@@ -439,7 +444,7 @@ void PrintChar(char ch){
 }
 
 extern "C"
-int main(char argc, char** argv){
+int main(int argc, char** argv){
 	window = new Lemon::GUI::Window("Terminal", {720, 480});
 
 	terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
@@ -462,8 +467,8 @@ int main(char argc, char** argv){
 
 	setenv("TERM", "xterm-256color", 1); // the Lemon OS terminal is (fairly) xterm compatible (256 colour, etc.)
 
-	char* const _argv[] = {"/system/bin/lsh.lef"};
-	lemon_spawn("/system/bin/lsh.lef", 1, _argv, 1);
+	char* const _argv[] = {const_cast<char*>("/system/bin/lsh.lef")};
+	lemon_spawn(_argv[0], 1, _argv, 1);
 	
 	window->OnPaint = OnPaint;
 
@@ -472,16 +477,16 @@ int main(char argc, char** argv){
 	bool paint = true;
 
 	winsize wSz = {
-		.ws_row = rowCount,
-		.ws_col = columnCount,
-		.ws_xpixel = window->GetSize().x,
-		.ws_ypixel = window->GetSize().y,
+		.ws_row = static_cast<unsigned short>(rowCount),
+		.ws_col = static_cast<unsigned short>(columnCount),
+		.ws_xpixel = static_cast<unsigned short>(window->GetSize().x),
+		.ws_ypixel = static_cast<unsigned short>(window->GetSize().y),
 	};
 
 	ioctl(masterPTYFd, TIOCSWINSZ, &wSz);
 
 	std::vector<pollfd> fds;
-	fds.push_back({.fd = masterPTYFd, .events = POLLIN});
+	fds.push_back({.fd = masterPTYFd, .events = POLLIN, .revents = 0});
 
 	auto& wMHandler = window->GetHandler();
 	fds.insert(fds.begin(), wMHandler.GetFileDescriptors().begin(), wMHandler.GetFileDescriptors().end());
@@ -524,10 +529,10 @@ int main(char argc, char** argv){
 				columnCount = window->GetSize().x / 8;
 				rowCount = window->GetSize().y / terminalFont->height;
 
-				wSz.ws_col = columnCount;
-				wSz.ws_row = rowCount;
-				wSz.ws_xpixel = window->GetSize().x;
-				wSz.ws_ypixel = window->GetSize().y;
+				wSz.ws_col = static_cast<unsigned short>(columnCount);
+				wSz.ws_row = static_cast<unsigned short>(rowCount);
+				wSz.ws_xpixel = static_cast<unsigned short>(window->GetSize().x);
+				wSz.ws_ypixel = static_cast<unsigned short>(window->GetSize().y);
 				
 				ioctl(masterPTYFd, TIOCSWINSZ, &wSz);
 			}

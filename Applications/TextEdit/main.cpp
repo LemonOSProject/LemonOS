@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <errno.h>
 
 #include "exttextbox.h"
 
@@ -33,7 +34,7 @@ void LoadFile(const char* path){
 	}
 
 	fseek(textFile, 0, SEEK_END);
-	size_t textFileSize = ftell(textFile);
+	long textFileSize = ftell(textFile);
 	fseek(textFile, 0, SEEK_SET);
 
 	char* textBuffer = (char*)malloc(textFileSize + 1);
@@ -48,7 +49,7 @@ void LoadFile(const char* path){
 
 	openPath = path;
 
-	char title[256];
+	char title[32 + openPath.length()];
 	sprintf(title, "Text Editor: %s", openPath.c_str());
 
 	window->SetTitle(title);
@@ -57,6 +58,11 @@ void LoadFile(const char* path){
 void SaveFile(const char* path){
 	struct stat sResult;
 	int ret = stat(path, &sResult);
+	if(ret && ret != ENOENT){
+		Lemon::GUI::DisplayMessageBox("Text Editor", strerror(ret), Lemon::GUI::MsgButtonsOK);
+		return;
+	}
+
 	if(S_ISDIR(sResult.st_mode)){
 		Lemon::GUI::DisplayMessageBox("Text Editor", "File is a directory!", Lemon::GUI::MsgButtonsOK);
 		return;
@@ -105,7 +111,7 @@ void SaveFileAs(){
 
 	openPath = filePath;
 
-	char title[256];
+	char title[32 + strlen(filePath)];
 	sprintf(title, "Text Editor: %s", filePath);
 
 	window->SetTitle(title);
@@ -122,7 +128,7 @@ void SaveOpenFile(){
 void OnWindowPaint(surface_t* surface){
 	Lemon::Graphics::DrawRect(0, window->GetSize().y - 20, window->GetSize().x, 20, 160, 160, 160, surface);
 
-	char buf[32];
+	char buf[38];
 	sprintf(buf, "Line: %d    Col: %d", textBox->cursorPos.y + 1, textBox->cursorPos.x + 1); // lines and columns don't start at 0
 
 	Lemon::Graphics::DrawString(buf, 4 + WINDOW_MENUBAR_HEIGHT, window->GetSize().y - 20 + 4, 0, 0, 0, surface);
@@ -139,8 +145,6 @@ void OnWindowCmd(unsigned short cmd, Lemon::GUI::Window* win){
 }
 
 int main(int argc, char** argv){
-	char* filePath;
-
 	window = new Lemon::GUI::Window("Text Editor", {512, 256}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
 	window->CreateMenuBar();
 

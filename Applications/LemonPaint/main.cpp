@@ -117,14 +117,14 @@ int main(int argc, char** argv){
     memset(canvas->surface.buffer, 0, 640*480*4);
 
     Brush* brush = new Brush();
-    brush->data = (surface_t){.width = 1, .height = 1, .buffer = brush0};
+    brush->data = (surface_t){.width = 1, .height = 1, .depth = 32, .buffer = brush0};
     brushes.add_back(brush);
     canvas->currentBrush = brush;
 
     window->AddWidget(canvas);
     
     brush = new Brush();
-    brush->data = (surface_t){.width = 8, .height = 8, .buffer = brush1};
+    brush->data = (surface_t){.width = 8, .height = 8, .depth = 32, .buffer = brush1};
     brushes.add_back(brush);
 
     int yPos = 0;

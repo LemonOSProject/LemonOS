@@ -1,0 +1,34 @@
+diff --color -ruN libtool-2.4.6-clean/m4/libtool.m4 libtool-2.4.6-lemon/m4/libtool.m4
+--- libtool-2.4.6-clean/m4/libtool.m4	2015-01-21 03:15:19.000000000 +1100
++++ libtool-2.4.6-lemon/m4/libtool.m4	2020-10-22 08:26:44.969941264 +1100
+@@ -2712,6 +2712,19 @@
+   sys_lib_dlsearch_path_spec='/boot/home/config/lib /boot/common/lib /boot/system/lib'
+   hardcode_into_libs=yes
+   ;;
++  
++lemon*)
++  version_type=linux
++  need_lib_prefix=no
++  need_version=no
++  dynamic_linker="$host_os runtime_loader"
++  library_names_spec='$libname$release$shared_ext$versuffix $libname$release$shared_ext$major $libname$shared_ext'
++  soname_spec='$libname$release$shared_ext$major'
++  shlibpath_var=LD_LIBRARY_PATH
++  shlibpath_overrides_runpath=no
++  sys_lib_dlsearch_path_spec='/system/lib /lib'
++  hardcode_into_libs=yes
++  ;;
+ 
+ hpux9* | hpux10* | hpux11*)
+   # Give a soname corresponding to the major version so that dld.sl refuses to
+@@ -3507,6 +3519,10 @@
+ haiku*)
+   lt_cv_deplibs_check_method=pass_all
+   ;;
++  
++lemon*)
++  lt_cv_deplibs_check_method=pass_all
++  ;;
+ 
+ hpux10.20* | hpux11*)
+   lt_cv_file_magic_cmd=/usr/bin/file

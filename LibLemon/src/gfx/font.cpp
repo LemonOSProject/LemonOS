@@ -31,24 +31,9 @@ namespace Lemon::Graphics{
             return;
         }
 
-        FILE* fontFile = fopen("/initrd/montserrat.ttf", "r");
-        
-        if(!fontFile){
-            printf("Error loading font /initrd/montserrat.ttf");
-            return;
-        }
-
-        fseek(fontFile, 0, SEEK_END);
-        size_t fontSize = ftell(fontFile);
-        fseek(fontFile, 0, SEEK_SET);
-        uint8_t* fontBuffer = new uint8_t[fontSize];
-        fread(fontBuffer, fontSize, 1, fontFile);
-
-        fclose(fontFile);
-
         mainFont = new Font;
-
-        if(int err = FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &mainFont->face)){
+        
+        if(int err = FT_New_Face(library, "/initrd/montserrat.ttf", 0, &mainFont->face)){
             printf("Freetype Error (%d) loading font from memory /initrd/montserrat.ttf\n",err);
             return;
         }
@@ -64,34 +49,15 @@ namespace Lemon::Graphics{
         mainFont->tabWidth = 4;
         strcpy(mainFont->id, "default");
 
-        delete fontBuffer;
-
         fonts.add_back(mainFont);
 
         fontState = 1;
     }
 
     Font* LoadFont(const char* path, const char* id, int sz){
-
-        FILE* fontFile = fopen(path, "r");
-        
-        if(!fontFile){
-            // Error loading custom font
-            throw FontException(FontException::FontFileError);
-            return nullptr;
-        }
-
-        fseek(fontFile, 0, SEEK_END);
-        size_t fontSize = ftell(fontFile);
-        fseek(fontFile, 0, SEEK_SET);
-        uint8_t* fontBuffer = new uint8_t[fontSize];
-        fread(fontBuffer, fontSize, 1, fontFile);
-
-        fclose(fontFile);
-
         Font* font = new Font;
 
-        if(int err = FT_New_Memory_Face(library, fontBuffer, fontSize, 0, &font->face)){
+        if(int err = FT_New_Face(library, path, 0, &font->face)){
             // Freetype Error loading custom font from memory
             throw FontException(FontException::FontLoadError, err);
             return nullptr;
@@ -113,8 +79,6 @@ namespace Lemon::Graphics{
             font->id = new char[strlen(id) + 1];
             strcpy(font->id, id);
         }
-
-        delete fontBuffer;
 
         font->height = sz;
         font->monospace = FT_IS_FIXED_WIDTH(font->face);

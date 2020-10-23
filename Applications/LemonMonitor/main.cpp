@@ -11,7 +11,6 @@
 #include <math.h>
 
 struct ProcessCPUTime{
-    timespec recordTime;
     uint64_t diff;
     uint64_t activeUs;
     short lastUsage;
@@ -53,7 +52,7 @@ int main(int argc, char** argv){
 
                 pTime.activeUs = proc.activeUs; // Update the entry
                 pTime.diff = diff;
-            } catch(std::out_of_range e) {
+            } catch(const std::out_of_range& e) {
                 processTimer[proc.pid] = {.diff = 0, .activeUs = proc.activeUs, .lastUsage = 0 };
             }
         }
@@ -61,8 +60,8 @@ int main(int argc, char** argv){
         listView->ClearItems();
         for(lemon_process_info_t proc : processes){
 
-            char uptime[19];
-            snprintf(uptime, 18, "%lum %lus", proc.runningTime / 60, proc.runningTime % 60);
+            char uptime[40];
+            snprintf(uptime, 39, "%lum %lus", proc.runningTime / 60, proc.runningTime % 60);
 
             char usage[6];
             try{    
@@ -74,7 +73,7 @@ int main(int argc, char** argv){
                     strcpy(usage, "0%");
                     pTime.lastUsage = 0;
                 }
-            } catch(std::out_of_range e) {
+            } catch(const std::out_of_range& e) {
                 strcpy(usage, "0%");
 
                 processTimer[proc.pid] = {.diff = 0, .activeUs = proc.activeUs, .lastUsage = 0 };

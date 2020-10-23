@@ -27,7 +27,6 @@
 
 fb_info_t videoInfo;
 Lemon::GUI::Window* taskbar;
-//Lemon::GUI::Window* menu;
 ShellInstance* shell;
 surface_t menuButton;
 
@@ -56,10 +55,10 @@ public:
 
 	void Paint(surface_t* surface){
 		if(win->state == Lemon::Shell::ShellWindowStateActive || pressed){
-			Lemon::Graphics::DrawRect(fixedBounds, {42, 50, 64}, surface);
+			Lemon::Graphics::DrawRect(fixedBounds, {42, 50, 64, 255}, surface);
 		} else {
-            Lemon::Graphics::DrawGradientVertical(fixedBounds.x + 1, fixedBounds.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 4,{90,90,90},{62, 70, 84},surface);
-            Lemon::Graphics::DrawRect(fixedBounds.x + 1, fixedBounds.y + fixedBounds.height - 3, bounds.size.x - 2, 2, {42, 50, 64},surface);
+            Lemon::Graphics::DrawGradientVertical(fixedBounds.x + 1, fixedBounds.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 4, {90, 90, 90, 255},{62, 70, 84, 255}, surface);
+            Lemon::Graphics::DrawRect(fixedBounds.x + 1, fixedBounds.y + fixedBounds.height - 3, bounds.size.x - 2, 2, {42, 50, 64, 255},surface);
 		}
 
 		DrawButtonBorders(surface, false);
@@ -96,8 +95,8 @@ void RemoveWindow(ShellWindow* win){
 }
 
 void OnTaskbarPaint(surface_t* surface){
-	Lemon::Graphics::DrawGradientVertical(100,0,surface->width - 100, /*surface->height*/24, {96, 96, 96}, {42, 50, 64},surface);
-	Lemon::Graphics::DrawRect(100,24,surface->width - 100, surface->height - 24, {42,50,64},surface);
+	Lemon::Graphics::DrawGradientVertical(100,0,surface->width - 100, /*surface->height*/24, {96, 96, 96, 255}, {42, 50, 64, 255},surface);
+	Lemon::Graphics::DrawRect(100,24,surface->width - 100, surface->height - 24, {42, 50, 64, 255},surface);
 
 	if(showMenu){
 		Lemon::Graphics::surfacecpy(surface, &menuButton, {0, 0}, {0, 30, 100, 30});
@@ -105,7 +104,7 @@ void OnTaskbarPaint(surface_t* surface){
 		Lemon::Graphics::surfacecpy(surface, &menuButton, {0, 0}, {0, 0, 100, 30});
 	}
 
-	sprintf(memString, "Used Memory: %d/%d KB", sysInfo.usedMem, sysInfo.totalMem);
+	sprintf(memString, "Used Memory: %lu/%lu KB", sysInfo.usedMem, sysInfo.totalMem);
 	Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255, 255, surface);
 }
 
@@ -126,10 +125,10 @@ int main(){
 
 	Lemon::Graphics::LoadImage("/initrd/menubuttons.bmp", &menuButton);
 
-	taskbar = new Lemon::GUI::Window("", {videoInfo.width, 30}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, videoInfo.height - 30});
+	taskbar = new Lemon::GUI::Window("", {static_cast<int>(videoInfo.width), 30}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 30});
 	taskbar->OnPaint = OnTaskbarPaint;
 	taskbar->rootContainer.background = {0, 0, 0, 0};
-	taskbarWindowsContainer = new Lemon::GUI::LayoutContainer({100, 0, videoInfo.width - 104, videoInfo.height}, {128, 30 - 4});
+	taskbarWindowsContainer = new Lemon::GUI::LayoutContainer({100, 0, static_cast<int>(videoInfo.width) - 104, static_cast<int>(videoInfo.height)}, {128, 30 - 4});
 	taskbarWindowsContainer->background = {0, 0, 0, 0};
 	taskbar->AddWidget(taskbarWindowsContainer);
 	

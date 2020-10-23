@@ -167,7 +167,7 @@ public:
 };
 
 void OnPaint(surface_t* surface){
-	Lemon::Graphics::DrawGradientVertical(0, 0, 24, surface->height, {42, 50, 64}, {96, 96, 96}, surface);
+	Lemon::Graphics::DrawGradientVertical(0, 0, 24, surface->height, {42, 50, 64, 255}, {96, 96, 96, 255}, surface);
 }
 
 int nextID = 10000;
@@ -237,7 +237,7 @@ void InitializeMenu(){
                     }
                     try{
                         cat = &categories[categoryName];
-                    } catch(std::out_of_range e){
+                    } catch(const std::out_of_range& e){
                         cat = &categories["Other"];
                     }
 
@@ -277,7 +277,7 @@ void PollMenu(){
             try{
                 auto& item = items[ev.windowCmd];
                 item.Open({0, 0});
-            } catch(std::out_of_range e){
+            } catch(const std::out_of_range& e){
 
             }
         } else {

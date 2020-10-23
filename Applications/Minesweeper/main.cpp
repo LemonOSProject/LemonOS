@@ -298,6 +298,7 @@ int main(int argc, char** argv){
                             break;
                     }
                     UpdateWindowSize();
+                    break;
                 default:
                     window->GUIHandleEvent(ev);
                     break;

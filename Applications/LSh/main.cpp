@@ -19,7 +19,7 @@ std::string ln;
 typedef void(*builtin_call_t)(int, char**);
 
 typedef struct {
-	char* name;
+	const char* name;
 	builtin_call_t func;
 } builtin_t;
 
@@ -47,7 +47,7 @@ void LShBuiltin_Pwd(int argc, char** argv){
 }
 
 void LShBuiltin_Export(int argc, char** argv){
-	for(unsigned i = 1; i < argc; i++){
+	for(int i = 1; i < argc; i++){
 		putenv(argv[i]);
 	}
 }
@@ -85,7 +85,7 @@ void ReadLine(){
 				case 'B': // Cursor Down
 					break;
 				case 'C': // Cursor Right
-					if(lnPos < ln.length()){
+					if(lnPos < static_cast<int>(ln.length())){
 						lnPos++;
 						printf("\e[C");
 					}
@@ -99,7 +99,7 @@ void ReadLine(){
 					}
 					break;
 				case 'F': // End
-					printf("\e[%dC", ln.length() - lnPos);
+					printf("\e[%uC", static_cast<int>(ln.length()) - lnPos);
 					lnPos = ln.length();
 					break;
 				case 'H': // Home
@@ -126,10 +126,10 @@ void ReadLine(){
 			lnPos++;
 		}
 
-		if(lnPos < ln.length()){
+		if(lnPos < static_cast<int>(ln.length())){
 			printf("\e[K%s", &ln[lnPos]); // Clear past cursor, print everything in front of the cursor
 
-			for(int i = 0; i < ln.length() - lnPos; i++){
+			for(int i = 0; i < static_cast<int>(ln.length()) - lnPos; i++){
 						printf("\e[D");
 			}
 		}

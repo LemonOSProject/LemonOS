@@ -94,9 +94,6 @@ int main(int argc, char** argv){
     window->AddWidget(textbox);
     window->AddWidget(okButton);
 
-	path.push_back("/initrd");
-	path.push_back("/system/bin");
-
     while(!window->closed){
         Lemon::LemonEvent ev;
         while(window->PollEvent(ev)){

@@ -21,7 +21,7 @@ rgba_colour_t snakeCellColours[]{
 
 rgba_colour_t bgColourDefault = {96,128,96,255};
 
-uint64_t frameWaitTime = 90000; // For ~10 FPS (in us)
+time_t frameWaitTime = 90000; // For ~10 FPS (in us)
 
 int powerUp = 0;
 
@@ -31,10 +31,10 @@ bool gameOver = true;
 
 unsigned long int rand_next = 1;
 
-unsigned int snakeRand()
+int snakeRand()
 {
 	rand_next = rand_next * 1103515245 + 12345;
-	return ((unsigned int)(rand_next / 65536) % 32768);
+	return ((int)(rand_next / 65536) % 32768);
 }
 
 void Wait(){

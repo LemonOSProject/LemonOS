@@ -239,7 +239,7 @@ namespace Lemon::GUI {
 
         void ResetScrollBar();
 
-        rgba_colour_t textColour = {0,0,0,255};
+        rgba_colour_t textColour = colours[Colour::TextDark];
         
         void (*OnSubmit)(TextBox*) = nullptr;
     };
