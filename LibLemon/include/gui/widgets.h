@@ -375,9 +375,12 @@ namespace Lemon::GUI {
         ListColumn nameCol, sizeCol;
         
     public:
-        static surface_t icons;
+        static surface_t diskIcon;
         static surface_t folderIcon;
         static surface_t fileIcon;
+        static surface_t ramIcon;
+        static surface_t diskIconSml;
+        static surface_t folderIconSml;
 
         std::string currentPath;
         FileView(rect_t bounds, const char* path, void(*_OnFileOpened)(const char*, FileView*) = nullptr);

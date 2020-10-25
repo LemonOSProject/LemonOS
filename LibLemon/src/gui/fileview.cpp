@@ -18,19 +18,23 @@
 #endif
 
 namespace Lemon::GUI {
-    surface_t FileView::icons;
+    surface_t FileView::diskIcon;
     surface_t FileView::folderIcon;
     surface_t FileView::fileIcon;
+    surface_t FileView::ramIcon;
+
+    surface_t FileView::diskIconSml;
+    surface_t FileView::folderIconSml;
 
     __attribute__((constructor))
     void InitializeFVIcons(){
-        if(FILE* f = fopen("/initrd/icons.png", "rb")){
-            Graphics::LoadImage(f, &FileView::icons);
+        if(FILE* f = fopen("/initrd/disk.png", "rb")){
+            Graphics::LoadImage(f, &FileView::diskIcon);
             fclose(f);
         } else {
             printf("GUI: Warning: Could not load FileView icons!");
-            FileView::icons.buffer = nullptr;
-            FileView::icons.width = 0;
+            FileView::diskIcon.buffer = nullptr;
+            FileView::diskIcon.width = 0;
         }
 
         if(FILE* f = fopen("/initrd/folder.png", "rb")){
@@ -38,8 +42,8 @@ namespace Lemon::GUI {
             fclose(f);
         } else {
             printf("GUI: Warning: Could not load FileView icons!");
-            FileView::icons.buffer = nullptr;
-            FileView::icons.width = 0;
+            FileView::folderIcon.buffer = nullptr;
+            FileView::folderIcon.width = 0;
         }
 
         if(FILE* f = fopen("/initrd/file.png", "rb")){
@@ -47,8 +51,26 @@ namespace Lemon::GUI {
             fclose(f);
         } else {
             printf("GUI: Warning: Could not load FileView icons!");
-            FileView::icons.buffer = nullptr;
-            FileView::icons.width = 0;
+            FileView::fileIcon.buffer = nullptr;
+            FileView::fileIcon.width = 0;
+        }
+
+        if(FILE* f = fopen("/initrd/disksml.png", "rb")){
+            Graphics::LoadImage(f, &FileView::diskIconSml);
+            fclose(f);
+        } else {
+            printf("GUI: Warning: Could not load FileView icons!");
+            FileView::diskIconSml.buffer = nullptr;
+            FileView::diskIconSml.width = 0;
+        }
+
+        if(FILE* f = fopen("/initrd/foldersml.png", "rb")){
+            Graphics::LoadImage(f, &FileView::folderIconSml);
+            fclose(f);
+        } else {
+            printf("GUI: Warning: Could not load FileView icons!");
+            FileView::folderIconSml.buffer = nullptr;
+            FileView::folderIconSml.width = 0;
         }
     }
 
@@ -68,11 +90,22 @@ namespace Lemon::GUI {
         }
 
 		void Paint(surface_t* surface){
-            Button::Paint(surface);
+            surface_t* iconS = nullptr;
+            switch(icon){
+                case 1:
+                    iconS = &FileView::diskIconSml;
+                    break;
+                case 2:
+                    iconS = &FileView::diskIconSml;//ramIcon;
+                    break;
+                default:
+                    iconS = &FileView::folderIconSml;
+                    break;
+            }
 
-            if(FileView::icons.buffer)
-                Graphics::surfacecpy(surface, &FileView::icons, bounds.pos + (vector2i_t){2, 2}, (rect_t){{icon * 16, 0}, {16, 16}});
-            
+            if(iconS && iconS->buffer)
+                Graphics::surfacecpyTransparent(surface, iconS, bounds.pos + (vector2i_t){2, 2});
+
             Graphics::DrawString(label.c_str(), bounds.pos.x + 20, bounds.pos.y + bounds.size.y / 2 - 8, colours[Colour::Text], surface);
         }
 	};
@@ -111,15 +144,22 @@ namespace Lemon::GUI {
 
             printf("Name: %s\n", dirent.name);
 
+            if(strcmp(dirent.name, "lib") == 0 || strcmp(dirent.name, "etc") == 0){
+                continue;
+            }
+
             if(strncmp(dirent.name, "hd", 2) == 0 && dirent.name[2]){ // hd(x)?
                 sprintf(str, "Harddrive (%s)", dirent.name);
+                icon = 1;
+            } else if(strcmp(dirent.name, "system") == 0){
+                strcpy(str, "System");
                 icon = 0;
             } else if(strcmp(dirent.name, "dev") == 0){ // dev?
                 sprintf(str, "Devices (%s)", dirent.name);
-                icon = 2;
+                icon = 3;
             } else if(strcmp(dirent.name, "initrd") == 0){ // initrd?
                 sprintf(str, "Ramdisk (%s)", dirent.name);
-                icon = 1;
+                icon = 2;
             } else sprintf(str, dirent.name);
             strcat(dirent.name, "/");
             FileButton* fb = new FileButton(str, (rect_t){bounds.pos + (vector2i_t){2, ypos}, {sidepanelWidth - 4,20}});

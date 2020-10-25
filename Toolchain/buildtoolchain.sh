@@ -43,7 +43,7 @@ _build_gcc(){
     make all-gcc all-target-libgcc -j $JOBCOUNT
     make install-gcc install-target-libgcc
     
-    cp $TOOLCHAIN_PREFIX/x86_64-lemon/lib/*.so* $LEMON_SYSROOT/system/lib/
+    cp -L $TOOLCHAIN_PREFIX/x86_64-lemon/lib/*.so* $LEMON_SYSROOT/system/lib/
 }
 
 _build_libstdcpp(){
