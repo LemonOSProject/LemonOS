@@ -378,6 +378,7 @@ namespace Lemon::GUI {
         static surface_t diskIcon;
         static surface_t folderIcon;
         static surface_t fileIcon;
+        static surface_t textFileIcon;
         static surface_t ramIcon;
         static surface_t diskIconSml;
         static surface_t folderIconSml;

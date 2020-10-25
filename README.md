@@ -9,7 +9,7 @@ Lemon OS is a UNIX-like 64-bit operating system written in C++.
 ![Lemon OS Screenshot](Screenshots/image.png)
 
 ### Prebuilt Image
-[Latest Prebuilt Image](https://github.com/fido2020/Lemon-OS/releases/tag/0.2.0)
+[Latest Prebuilt Image](https://github.com/fido2020/Lemon-OS/releases/tag/0.2.2)
 
 ### Building
 See [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-OS)
@@ -19,12 +19,12 @@ See [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon
 - UNIX Domain Sockets
 - Window Manager/Server (LemonWM)
 - Graphical Shell
+- Terminal Emulator
 - Writable Ext2 Filesystem
 - IDE and AHCI Driver
 - Dynamic Linking
-- Terminal Emulator w/ 256 colour support
 - Intel 8254x Ethernet Driver
-- Freetype and Libpng Port
+- Ports including Freetype, Binutils and Python 3.8
 - [mlibc](https://github.com/managarm/mlibc) C Library Port
 - [GnuBoy Port](https://github.com/fido2020/lemon-gnuboy)
 - [DOOM Port](https://github.com/fido2020/LemonDOOM)

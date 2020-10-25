@@ -21,6 +21,7 @@ namespace Lemon::GUI {
     surface_t FileView::diskIcon;
     surface_t FileView::folderIcon;
     surface_t FileView::fileIcon;
+    surface_t FileView::textFileIcon;
     surface_t FileView::ramIcon;
 
     surface_t FileView::diskIconSml;
@@ -53,6 +54,15 @@ namespace Lemon::GUI {
             printf("GUI: Warning: Could not load FileView icons!");
             FileView::fileIcon.buffer = nullptr;
             FileView::fileIcon.width = 0;
+        }
+
+        if(FILE* f = fopen("/initrd/textfile.png", "rb")){
+            Graphics::LoadImage(f, &FileView::textFileIcon);
+            fclose(f);
+        } else {
+            printf("GUI: Warning: Could not load FileView icons!");
+            FileView::folderIconSml.buffer = nullptr;
+            FileView::folderIconSml.width = 0;
         }
 
         if(FILE* f = fopen("/initrd/disksml.png", "rb")){
@@ -221,6 +231,12 @@ namespace Lemon::GUI {
 
             if(S_ISDIR(statResult.st_mode)){
                 item.icon = &folderIcon;
+            } else if(char* ext = strchr(dirent.name, '.'); ext){
+                if(!strcmp(ext, ".txt") || !strcmp(ext, ".cfg") || !strcmp(ext, ".py") || !strcmp(ext, ".asm")){
+                    item.icon = &textFileIcon;
+                } else {
+                    item.icon = &fileIcon;
+                }
             } else {
                 item.icon = &fileIcon;
             }
