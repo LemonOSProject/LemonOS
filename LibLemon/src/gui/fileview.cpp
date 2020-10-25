@@ -19,6 +19,8 @@
 
 namespace Lemon::GUI {
     surface_t FileView::icons;
+    surface_t FileView::folderIcon;
+    surface_t FileView::fileIcon;
 
     __attribute__((constructor))
     void InitializeFVIcons(){
@@ -30,13 +32,31 @@ namespace Lemon::GUI {
             FileView::icons.buffer = nullptr;
             FileView::icons.width = 0;
         }
+
+        if(FILE* f = fopen("/initrd/folder.png", "rb")){
+            Graphics::LoadImage(f, &FileView::folderIcon);
+            fclose(f);
+        } else {
+            printf("GUI: Warning: Could not load FileView icons!");
+            FileView::icons.buffer = nullptr;
+            FileView::icons.width = 0;
+        }
+
+        if(FILE* f = fopen("/initrd/file.png", "rb")){
+            Graphics::LoadImage(f, &FileView::fileIcon);
+            fclose(f);
+        } else {
+            printf("GUI: Warning: Could not load FileView icons!");
+            FileView::icons.buffer = nullptr;
+            FileView::icons.width = 0;
+        }
     }
 
-    void FileViewOnListSelect(ListItem& item, ListView* lv){
+    void FileViewOnListSelect(GridItem& item, GridView* lv){
         FileView* fv = (FileView*)lv->GetParent();
 
         if(fv->OnFileSelected)
-            fv->OnFileSelected(item.details[0], fv);
+            fv->OnFileSelected(item.name, fv);
     }
     
 	class FileButton : public Button{
@@ -53,7 +73,7 @@ namespace Lemon::GUI {
             if(FileView::icons.buffer)
                 Graphics::surfacecpy(surface, &FileView::icons, bounds.pos + (vector2i_t){2, 2}, (rect_t){{icon * 16, 0}, {16, 16}});
             
-            Graphics::DrawString(label.c_str(), bounds.pos.x + 20, bounds.pos.y + bounds.size.y / 2 - 8, colours[Colour::TextDark], surface);
+            Graphics::DrawString(label.c_str(), bounds.pos.x + 20, bounds.pos.y + bounds.size.y / 2 - 8, colours[Colour::Text], surface);
         }
 	};
 
@@ -69,20 +89,12 @@ namespace Lemon::GUI {
         OnFileOpened = _OnFileOpened;
         currentPath = path;
 
-        fileList = new ListView({sidepanelWidth, 24, 0, 0});
+        fileList = new GridView({sidepanelWidth, 24, 0, 0});
         AddWidget(fileList);
         fileList->SetLayout(LayoutSize::Stretch, LayoutSize::Stretch, WidgetAlignment::WAlignLeft);
 
         fileList->OnSubmit = OnListSubmit;
         fileList->OnSelect = FileViewOnListSelect;
-
-        nameCol.name = "Name";
-        nameCol.displayWidth = 280;
-        sizeCol.name = "Size";
-        sizeCol.displayWidth = 80;
-
-        fileList->AddColumn(nameCol);
-        fileList->AddColumn(sizeCol);
 
         pathBox = new TextBox({2, 2, 2, 20}, false);
         AddWidget(pathBox);
@@ -154,8 +166,8 @@ namespace Lemon::GUI {
         int i = 0;
         lemon_dirent_t dirent;
         while(lemon_readdir(currentDir, i++, &dirent) > 0){
-            ListItem item;
-            item.details.push_back(dirent.name);
+            GridItem item;
+            item.name = dirent.name;
 
             absPath = currentPath + "/" + dirent.name;
 
@@ -168,14 +180,10 @@ namespace Lemon::GUI {
             }
 
             if(S_ISDIR(statResult.st_mode)){
-                fileList->AddItem(item);
-                continue;
+                item.icon = &folderIcon;
+            } else {
+                item.icon = &fileIcon;
             }
-
-            char buf[80];
-            sprintf(buf, "%lu KB", statResult.st_size / 1024);
-
-            item.details.push_back(std::string(buf));
 
             fileList->AddItem(item);
         }
@@ -212,10 +220,10 @@ namespace Lemon::GUI {
         }
     }
     
-    void FileView::OnListSubmit(ListItem& item, ListView* list){
+    void FileView::OnListSubmit(GridItem& item, GridView* list){
         FileView* fv = (FileView*)list->GetParent();
 
-        fv->OnSubmit(item.details[0]);
+        fv->OnSubmit(item.name);
     }
 
     void FileView::OnTextBoxSubmit(TextBox* textBox){

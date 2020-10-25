@@ -124,7 +124,7 @@ namespace Lemon::GUI {
         int pressOffset;
         int height;
     public:
-        bool pressed;
+        bool pressed = false;
 
         rect_t scrollBar;
 
@@ -143,7 +143,7 @@ namespace Lemon::GUI {
         int pressOffset;
         int width;
     public:
-        bool pressed;
+        bool pressed = false;
 
         rect_t scrollBar;
 
@@ -168,11 +168,11 @@ namespace Lemon::GUI {
         void DrawButtonBorders(surface_t* surface, bool white);
         void DrawButtonLabel(surface_t* surface, bool white);
     public:
-        bool active;
-        bool pressed;
-        int style; // 0 - Normal, 1 - Blue, 2 - Red, 3 - Yellow
+        bool active = false;
+        bool pressed = false;
+        int style = 0; // 0 - Normal, 1 - Blue, 2 - Red, 3 - Yellow
 
-        bool state;
+        bool state = false;
 
         Button(const char* _label, rect_t _bounds);
 
@@ -194,6 +194,7 @@ namespace Lemon::GUI {
 
     class Label : public Widget{
     public:
+        rgba_colour_t textColour = colours[Colour::Text];
         std::string label;
         Label(const char* _label, rect_t _bounds);
 
@@ -212,11 +213,11 @@ namespace Lemon::GUI {
         ScrollBar sBar;
 
         std::vector<ContextMenuEntry> ctxEntries;
-        bool masked;
+        bool masked = false;
     public:
         bool editable =  true;
         bool multiline = false;
-        bool active;
+        bool active = false;
         std::vector<std::string> contents;
         int lineCount;
         int lineSpacing = 3;
@@ -239,7 +240,7 @@ namespace Lemon::GUI {
 
         void ResetScrollBar();
 
-        rgba_colour_t textColour = colours[Colour::TextDark];
+        rgba_colour_t textColour = colours[Colour::Text];
         
         void (*OnSubmit)(TextBox*) = nullptr;
     };
@@ -292,6 +293,70 @@ namespace Lemon::GUI {
         void(*OnSubmit)(ListItem&, ListView*) = nullptr;
         void(*OnSelect)(ListItem&, ListView*) = nullptr;
     };
+
+    class GridItem{
+    public:
+        surface_t* icon = nullptr;
+        std::string name;
+    };
+
+    class GridView : public Widget{
+        std::vector<GridItem> items;
+
+        const vector2i_t itemSize = {80, 80};
+
+        int selected = -1;
+        int itemsPerRow = 1;
+        bool showScrollBar = false;
+
+        ScrollBar sBar;
+
+        void ResetScrollBar();
+        int PosToItem(vector2i_t relPos){
+            if(!items.size()) return -1;
+            
+            int column = 0;
+            int row = 0;
+            
+            if(relPos.x){
+                column = relPos.x / itemSize.x;
+                if(column >= itemsPerRow){
+                    return -1;
+                }
+            }
+
+            if(relPos.y){
+                row = relPos.y / itemSize.y;
+                if(row > static_cast<int>(items.size()) / itemsPerRow){
+                    return -1;
+                }
+            }
+
+            return row * itemsPerRow + column;
+        }
+    public:
+        GridView(rect_t bounds) : Widget(bounds){}
+        ~GridView() = default;
+
+        void Paint(surface_t* surface);
+
+        void OnMouseDown(vector2i_t mousePos);
+        void OnMouseUp(vector2i_t mousePos);
+        void OnMouseMove(vector2i_t mousePos);
+        void OnDoubleClick(vector2i_t mousePos);
+        void OnKeyPress(int key);
+
+        int AddItem(GridItem& item);
+
+        void ClearItems(){
+            items.clear(); ResetScrollBar();
+        }
+
+        void UpdateFixedBounds();
+
+        void(*OnSubmit)(GridItem&, GridView*) = nullptr;
+        void(*OnSelect)(GridItem&, GridView*) = nullptr;
+    };
     
     class FileView : public Container{
     protected:
@@ -302,7 +367,7 @@ namespace Lemon::GUI {
 
         void(*OnFileOpened)(const char*, FileView*) = nullptr;
 
-        ListView* fileList;
+        GridView* fileList;
         TextBox* pathBox;
 
         Widget* active;
@@ -311,6 +376,8 @@ namespace Lemon::GUI {
         
     public:
         static surface_t icons;
+        static surface_t folderIcon;
+        static surface_t fileIcon;
 
         std::string currentPath;
         FileView(rect_t bounds, const char* path, void(*_OnFileOpened)(const char*, FileView*) = nullptr);
@@ -318,7 +385,7 @@ namespace Lemon::GUI {
         void Refresh();
 
         void OnSubmit(std::string& path);
-        static void OnListSubmit(ListItem& item, ListView* list);
+        static void OnListSubmit(GridItem& item, GridView* list);
         static void OnTextBoxSubmit(TextBox* textBox);
 
         void (*OnFileSelected)(std::string& file, FileView* fv) = nullptr;

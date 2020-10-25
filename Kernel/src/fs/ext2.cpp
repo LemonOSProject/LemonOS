@@ -769,7 +769,7 @@ namespace fs::Ext2{
                     e2dirent->recordLength = blocksize - blockOffset; // Directory entries cannot span multiple blocks
                 } else {
                     e2dirent->recordLength = sizeof(ext2_directory_entry_t) + e2dirent->nameLength;
-                    if(e2dirent->recordLength % 4){
+                    if(e2dirent->recordLength && e2dirent->recordLength % 4){
                         memset(((uint8_t*)e2dirent) + e2dirent->recordLength, 0, 4 - (e2dirent->recordLength % 4)); // Pad with zeros
                         e2dirent->recordLength += 4 - (e2dirent->recordLength % 4); // Round up to nearest multiple of 4
                     }
@@ -1007,7 +1007,7 @@ namespace fs::Ext2{
         for(uint32_t block : blocks){
             if(size <= 0) break;
             
-            if(offset % blocksize){
+            if(offset && offset % blocksize){
                 if(int e = ReadBlockCached(block, blockBuffer); e){
                     Log::Info("[Ext2] Error %i reading block %u", e, block);
                     error = DiskReadError;

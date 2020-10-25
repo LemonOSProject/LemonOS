@@ -7,7 +7,7 @@ all: kernel base initrd disk
 libc:
 	ninja -C LibC/build install -j $(JOBS)
 	
-liblemon: libc
+liblemon:
 	ninja -C LibLemon/build install -j $(JOBS)
 	
 applications: liblemon
@@ -21,7 +21,7 @@ kernel:
 	
 userspace: liblemon applications
 	
-initrd: libc liblemon
+initrd: libc
 	Scripts/buildinitrd.sh
 	
 base: applications system

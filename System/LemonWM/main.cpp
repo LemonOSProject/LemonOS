@@ -74,6 +74,7 @@ int main(){
         printf("LemonWM: Warning: Error %d loading mouse cursor.\n", e);
     }
 
+    wm.screenSurface = fbSurface;
     wm.compositor.backgroundImage = renderSurface;
     wm.compositor.backgroundImage.buffer = new uint8_t[renderSurface.width * renderSurface.height * 4];
     int bgError = -1;
@@ -81,32 +82,6 @@ int main(){
         printf("LemonWM: Warning: Error %d loading background image.\n", bgError);
         wm.compositor.useImage = false;
     }
-    
-	timespec t;
-	clock_gettime(CLOCK_BOOTTIME, &t);
-
-    timespec _t; 
-    double diff;
-    double horizontalAnimationTime = 200;
-    double animationTime = 1200;
-
-    // Horizontal Animation
-    while((diff = ({clock_gettime(CLOCK_BOOTTIME, &_t); ((_t.tv_sec - t.tv_sec) * 1000 + (_t.tv_nsec - t.tv_nsec) / 1000000.0);})) < horizontalAnimationTime){
-        int columns = (fbSurface.width / horizontalAnimationTime) * diff;
-        Lemon::Graphics::surfacecpy(&fbSurface, &wm.surface, {(fbSurface.width / 2) - (columns / 2), (fbSurface.height / 2)}, {{(fbSurface.width / 2) - (columns / 2), (fbSurface.height / 2)}, {columns, 1}});
-
-        wm.Update();
-    }
-
-    // Vertical Animation
-    while((diff = ({clock_gettime(CLOCK_BOOTTIME, &_t); ((_t.tv_sec - t.tv_sec) * 1000 + (_t.tv_nsec - t.tv_nsec) / 1000000.0);})) < animationTime){
-        int lines = (fbSurface.height / animationTime) * diff;
-        Lemon::Graphics::surfacecpy(&fbSurface, &wm.surface, {0, (fbSurface.height / 2) - (lines / 2)}, {{0, (fbSurface.height / 2) - (lines / 2)}, {fbSurface.width, lines}});
-
-        wm.Update();
-    }
-
-    wm.screenSurface = fbSurface;
 
     for(;;){
         wm.Update();

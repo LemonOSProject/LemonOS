@@ -246,9 +246,9 @@ namespace Lemon::GUI {
         vector2i_t btnPos = fixedBounds.pos;
 
         if(white){
-            colour = colours[Colour::TextLight];
+            colour = colours[Colour::TextAlternate];
         } else {
-            colour = colours[Colour::TextDark];
+            colour = colours[Colour::Text];
         }
 
         if(labelAlignment == TextAlignment::Centre){
@@ -285,9 +285,9 @@ namespace Lemon::GUI {
                     if(drawText) DrawButtonLabel(surface, true);
                     break;
                 default:
-                    //Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + 1, bounds.size.x - 2, bounds.size.y - 4,{250,250,250,255},{230,230,225,255},surface);
                     Graphics::DrawRect(btnPos.x + 1, btnPos.y + 1, bounds.size.x - 2, bounds.size.y - 4, colours[Colour::ContentBackground],surface);
-                    Graphics::DrawRect(btnPos.x + 1, btnPos.y + bounds.size.y - 3, bounds.size.x - 2, 2, colours[Colour::ContentShadow],surface);
+                    Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + bounds.size.y - 5, bounds.size.x - 2, 4,colours[Colour::ContentBackground],colours[Colour::Background],surface);
+                    //Graphics::DrawRect(btnPos.x + 1, btnPos.y + bounds.size.y - 3, bounds.size.x - 2, 2, colours[Colour::ContentShadow],surface);
                     DrawButtonBorders(surface, false);
                     if(drawText) DrawButtonLabel(surface, false);
                     break;
@@ -336,7 +336,7 @@ namespace Lemon::GUI {
     }
 
     void Label::Paint(surface_t* surface){
-        Graphics::DrawString(label.c_str(), fixedBounds.pos.x, fixedBounds.pos.y, 0, 0, 0, surface);
+        Graphics::DrawString(label.c_str(), fixedBounds.pos.x, fixedBounds.pos.y, textColour.r, textColour.g, textColour.b, surface);
     }
 
     //////////////////////////
@@ -518,7 +518,7 @@ namespace Lemon::GUI {
 
             long msec = (t.tv_nsec / 1000000.0);
             if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
-                Graphics::DrawRect(fixedBounds.pos.x + Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font) + 2, fixedBounds.pos.y + curYOffset, 2, font->height + 2, 0, 0, 0, surface);
+                Graphics::DrawRect(fixedBounds.pos.x + Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font) + 2, fixedBounds.pos.y + curYOffset, 2, font->height + 2, textColour.r, textColour.g, textColour.b, surface);
         }
     }
 
@@ -698,7 +698,7 @@ namespace Lemon::GUI {
         assert(items.size() < INT_MAX);
 
         Graphics::DrawRect(fixedBounds.x, fixedBounds.y, fixedBounds.width, columnDisplayHeight, colours[Colour::Background], surface);
-        rgba_colour_t textColour = colours[Colour::TextDark];
+        rgba_colour_t textColour = colours[Colour::Text];
         
         int totalColumnWidth;
         int xPos = fixedBounds.x;
@@ -709,7 +709,7 @@ namespace Lemon::GUI {
 
             Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, textColour, surface); // Divider
             xPos++;
-            Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, colours[Colour::TextLight], surface); // Divider
+            Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, colours[Colour::TextAlternate], surface); // Divider
             xPos++;
         }
 
@@ -754,7 +754,7 @@ namespace Lemon::GUI {
 
                 if(index == selected){
                     Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::Foreground], surface);
-                    Graphics::DrawString(str.c_str(), textPos.x, textPos.y, colours[Colour::TextLight], surface, fixedBounds);
+                    Graphics::DrawString(str.c_str(), textPos.x, textPos.y, colours[Colour::TextAlternate], surface, fixedBounds);
                 } else {
                     Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour.r, textColour.g, textColour.b, surface, fixedBounds);
                 }
@@ -864,6 +864,181 @@ namespace Lemon::GUI {
 
     void ListView::UpdateFixedBounds(){
         Widget::UpdateFixedBounds();
+
+        ResetScrollBar();
+    }
+
+    void GridView::ResetScrollBar(){
+        if(!items.size()) return; // Lets not divide by zero
+        
+        assert(items.size() < INT32_MAX);
+
+        if((static_cast<int>(items.size()) / itemsPerRow * itemSize.y) > fixedBounds.size.y) showScrollBar = true;
+        else showScrollBar = false;
+
+        if(showScrollBar)
+            sBar.ResetScrollBar(fixedBounds.size.y, (items.size() / itemsPerRow) * itemSize.y);
+    }
+
+    void GridView::Paint(surface_t* surface){
+        Graphics::DrawRect(fixedBounds, colours[Colour::ContentBackground], surface);
+
+        int xPos = 0;
+        int yPos = sBar.scrollPos ? -(sBar.scrollPos % itemSize.y) : 0;
+
+        unsigned idx = 0;
+        if(sBar.scrollPos){
+            idx = sBar.scrollPos / itemSize.y * itemsPerRow;
+        }
+
+        for(; idx < items.size(); idx++){
+            GridItem& item = items[idx];
+            if(item.icon){
+                vector2i_t pos = fixedBounds.pos + (vector2i_t){xPos + itemSize.x / 2 - 32, yPos + 2};
+                rect_t srcRegion = {0, 0, 64, 64};
+
+                if(pos.y < fixedBounds.pos.y){
+                    srcRegion.height += (pos.y - fixedBounds.pos.y);
+                    srcRegion.y -= (pos.y - fixedBounds.pos.y);
+                    pos.y = fixedBounds.pos.y;
+                }
+
+                Graphics::surfacecpyTransparent(surface, item.icon, pos, srcRegion);
+            }
+
+            std::string str = item.name;
+            int len = Graphics::GetTextLength(str.c_str());
+            if(len > itemSize.x - 2) {
+                int l = str.length() - 1;
+                while(l){
+                    str = str.substr(0, l);
+                    len = Graphics::GetTextLength(str.c_str());
+
+                    if(len < itemSize.x + 2) {
+                        if(l > 2){
+                            str.erase(str.end() - 1); // Omit last character
+                            str.append("..."); // We have a variable width font should we should only have to omit 1 character
+                        }
+                        break;
+                    }
+                    
+                    l = str.length() - 1;
+                }
+            }
+
+            if(static_cast<int>(idx) == selected){
+                Graphics::DrawRect(fixedBounds.x + xPos + (itemSize.x / 2) - (len / 2) - 4, fixedBounds.y + yPos + itemSize.y - Graphics::DefaultFont()->height - 4, len + 7, Graphics::DefaultFont()->height + 7, colours[Colour::Foreground], surface); // Highlight the label if selected
+            }
+
+            Graphics::DrawString(str.c_str(), fixedBounds.x + xPos + (itemSize.x / 2) - (len / 2), fixedBounds.y + yPos + itemSize.y - Graphics::DefaultFont()->height - 4, colours[Colour::Text], surface, fixedBounds);
+            
+            xPos += itemSize.x;
+
+            if(xPos + itemSize.x >= fixedBounds.width){
+                xPos = 0;
+                yPos += itemSize.y;
+            }
+
+            if(yPos >= fixedBounds.height){
+                break;
+            }
+        }
+
+        if(showScrollBar){
+            sBar.Paint(surface, {fixedBounds.x + fixedBounds.width - 16, fixedBounds.y});
+        }
+    }
+
+    void GridView::OnMouseDown(vector2i_t mousePos){
+        vector2i_t sBarPos = {fixedBounds.x + fixedBounds.width - 16, fixedBounds.y};
+        if(showScrollBar && Graphics::PointInRect((rect_t){sBarPos, {16, fixedBounds.height}}, mousePos)){
+            sBar.OnMouseDownRelative(mousePos - sBarPos);
+        } else {
+            selected = PosToItem(mousePos - fixedBounds.pos + (vector2i_t){sBar.scrollPos, 0}); // Position relative to position of GridView, but absolute from scroll position
+        }
+    }
+
+    void GridView::OnMouseUp(vector2i_t mousePos){
+        (void)mousePos;
+
+        sBar.pressed = false;
+    }
+
+    void GridView::OnMouseMove(vector2i_t mousePos){
+        vector2i_t sBarPos = {fixedBounds.x + fixedBounds.width - 16, fixedBounds.y};
+        sBar.OnMouseMoveRelative(mousePos - sBarPos);
+    }
+
+    void GridView::OnDoubleClick(vector2i_t mousePos){
+        selected = PosToItem(mousePos - fixedBounds.pos + (vector2i_t){sBar.scrollPos, 0}); // Position relative to position of GridView, but absolute from scroll position
+
+        if(selected >= 0 && static_cast<unsigned>(selected) < items.size()){
+            if(OnSelect) OnSubmit(items[selected], this);
+        }
+    }
+
+    void GridView::OnKeyPress(int key){
+        if(key == '\n'){
+        if(selected >= 0 && static_cast<unsigned>(selected) < items.size()){
+                if(OnSubmit) OnSubmit(items[selected], this);
+            }
+        } else if(key == KEY_ARROW_UP){
+            if(selected / itemsPerRow > 0){
+                selected -= itemsPerRow;
+
+                if(selected >= 0 && static_cast<unsigned>(selected) < items.size()){
+                    if(OnSelect) OnSelect(items[selected], this);
+                }
+            }
+        } else if(key == KEY_ARROW_LEFT){
+            if(selected > 0){
+                selected--;
+
+                if(selected >= 0 && static_cast<unsigned>(selected) < items.size()){
+                    if(OnSelect) OnSelect(items[selected], this);
+                }
+            }
+        } else if(key == KEY_ARROW_DOWN){
+            if(selected / itemsPerRow < static_cast<int>(items.size()) / itemsPerRow){
+                selected += itemsPerRow;
+
+                if(selected >= 0 && static_cast<unsigned>(selected) < items.size()){
+                    if(OnSelect) OnSelect(items[selected], this);
+                }
+            }
+        } else if(key == KEY_ARROW_RIGHT){
+            if(selected < static_cast<int>(items.size()) - 1){
+                selected++;
+
+                if(selected >= 0 && static_cast<unsigned>(selected) < items.size()){
+                    if(OnSelect) OnSelect(items[selected], this);
+                }
+            }
+        }
+
+        if(selected >= 0 && static_cast<unsigned>(selected) < items.size()){
+            if(selected >= 0 && ((selected / itemsPerRow + 1) * itemSize.y) > sBar.scrollPos + fixedBounds.height){ // Check if bottom of item is in view
+                sBar.scrollPos = ((selected / itemsPerRow + 1) * itemSize.y) - fixedBounds.height; // Scroll down to selected item
+            }
+
+            if(selected >= 0 && (selected / itemsPerRow * itemSize.y) < sBar.scrollPos){
+                sBar.scrollPos = (selected / itemsPerRow * itemSize.y); // Scroll up to selected item
+            }
+        }
+    }
+    
+    int GridView::AddItem(GridItem& item){
+        items.push_back(item);
+
+        ResetScrollBar();
+        
+        return items.size() - 1;
+    }
+
+    void GridView::UpdateFixedBounds(){
+        Widget::UpdateFixedBounds();
+
+        itemsPerRow = fixedBounds.width / itemSize.x;
 
         ResetScrollBar();
     }

@@ -341,7 +341,7 @@ namespace Lemon::GUI{
 
         int xpos = 0;
         for(auto& item : items){
-            xpos += Graphics::DrawString(item.first.c_str(), xpos + 4, 4, colours[Colour::TextDark], surface) + 8;
+            xpos += Graphics::DrawString(item.first.c_str(), xpos + 4, 4, colours[Colour::Text], surface) + 8;
         }
     }
 

@@ -46,9 +46,34 @@ int main(){
 
     Lemon::Graphics::DrawRect(r2, {0, 255, 255, 255}, &drawBox->surface);
 
-    Lemon::GUI::ListView* lView = new Lemon::GUI::ListView({10, 180, 10, 10});
+    Lemon::GUI::ListView* lView = new Lemon::GUI::ListView({10, 180, 10, 100});
     win->AddWidget(lView);
-    lView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft);
+    lView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Fixed, Lemon::GUI::WidgetAlignment::WAlignLeft);
+
+    Lemon::GUI::GridView* gridView = new Lemon::GUI::GridView({10, 290, 10, 10});
+    win->AddWidget(gridView);
+    gridView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft);
+
+    surface_t folderIcon;
+    Lemon::Graphics::LoadImage("/initrd/folder.png", &folderIcon);
+    surface_t fileIcon;
+    Lemon::Graphics::LoadImage("/initrd/file.png", &fileIcon);
+
+    Lemon::GUI::GridItem item1;
+    item1.name = "Item";
+    item1.icon = &folderIcon;
+
+    Lemon::GUI::GridItem item2;
+    item2.name = "Another Item";
+    item2.icon = &fileIcon;
+
+    for(int i = 0; i < 16; i++){
+        gridView->AddItem(item1);
+    }
+
+    for(int i = 0; i < 16; i++){
+        gridView->AddItem(item2);
+    }
 
     Lemon::GUI::ListColumn col1;
     col1.displayWidth = 220;

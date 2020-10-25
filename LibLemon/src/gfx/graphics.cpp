@@ -58,11 +58,11 @@ namespace Lemon::Graphics{
         return (point.x >= rect.pos.x && point.x < rect.pos.x + rect.size.x && point.y >= rect.pos.y && point.y < rect.pos.y + rect.size.y);
     }
 
-    void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface){
-        DrawRect(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour, surface);
+    void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface, rect_t mask){
+        DrawRect(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour, surface, mask);
     }
 
-    void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface){
+    void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t mask){
         if(x < 0){
             width += x;
             x = 0;
@@ -71,6 +71,34 @@ namespace Lemon::Graphics{
         if(y < 0){
             height += y;
             y = 0;
+        }
+
+        if(mask.x > x){
+            int xChange = mask.x - x;
+
+            width -= xChange;
+            
+            x = mask.x;
+        }
+
+        if(mask.y > y){
+            int yChange = mask.y - y;
+
+            height -= yChange;
+
+            y = mask.y;
+        }
+
+        if(x + width > mask.x + mask.width){
+            width = mask.width - x;
+        }
+
+        if(y + height > mask.y + mask.height){
+            height = mask.height - y;
+        }
+
+        if(width <= 0 || height <= 0){
+            return;
         }
         
         int _width = ((x + width) < surface->width) ? width : (surface->width - x);
@@ -84,8 +112,8 @@ namespace Lemon::Graphics{
         }
     }
 
-    void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface){
-        DrawRect(x,y,width,height,colour.r,colour.g,colour.b,surface);
+    void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface, rect_t mask){
+        DrawRect(x, y, width, height, colour.r, colour.g, colour.b, surface, mask);
     }
 
     void DrawRectOutline(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface){
@@ -260,7 +288,15 @@ namespace Lemon::Graphics{
         for(int i = 0; i < src->height && i < dest->height - offset.y; i++){
             for(int j = 0; j < src->width && j < dest->width - offset.x; j++){
                 if((srcBuffer[i*src->width + j] >> 24) < 255) continue;
-                destBuffer[(i+offset.y)*dest->width + j + offset.x] = srcBuffer[i*src->width + j];
+
+                uint32_t sPixel = (srcBuffer[i*src->width + j]);
+                if(!((sPixel >> 24) & 0xFF)) continue; // Check for 0 alpha
+
+                if(((sPixel >> 24) & 0xFF) >= 255){ // Check for full alpha
+                    destBuffer[(i+offset.y)*dest->width + j + offset.x] = srcBuffer[i*src->width + j];
+                } else {
+                    destBuffer[(i+offset.y)*dest->width + j + offset.x] = AlphaBlend(destBuffer[(i+offset.y)*dest->width + j + offset.x], (sPixel >> 16) & 0xFF, (sPixel >> 8) & 0xFF, sPixel & 0xFF, 1.0 - 1.0 / ((sPixel >> 24) & 0xFF));
+                }
             }
         }
     }
@@ -277,8 +313,14 @@ namespace Lemon::Graphics{
 
         for(int i = 0; i < srcHeight && i < dest->height - offset.y; i++){
             for(int j = 0; j < srcWidth && j < dest->width - offset.x; j++){
-                if((srcBuffer[i*src->width + j] >> 24) < 255) continue;
-                destBuffer[((i+offset.y)*(dest->width) + offset.x) + j] = srcBuffer[(i + srcRegion.pos.y)*src->width + srcRegion.pos.x + j];
+                uint32_t sPixel = (srcBuffer[i*src->width + j]);
+                if(!((sPixel >> 24) & 0xFF)) continue; // Check for 0 alpha
+
+                if(((sPixel >> 24) & 0xFF) >= 255){ // Check for full alpha
+                    destBuffer[((i+offset.y)*(dest->width) + offset.x) + j] = srcBuffer[(i + srcRegion.pos.y)*src->width + srcRegion.pos.x + j];
+                } else {
+                    destBuffer[((i+offset.y)*(dest->width) + offset.x) + j] = AlphaBlend(destBuffer[((i+offset.y)*(dest->width) + offset.x) + j], (sPixel >> 16) & 0xFF, (sPixel >> 8) & 0xFF, sPixel & 0xFF, ((sPixel >> 24) & 0xFF) * 1.0 / 255);
+                }
             }
         }
     }

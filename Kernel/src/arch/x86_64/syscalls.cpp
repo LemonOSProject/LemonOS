@@ -1491,7 +1491,7 @@ long SysPoll(regs64_t* r){
 		return -EFAULT;
 	}
 
-	fs_fd_t** files = (fs_fd_t**)kmalloc(sizeof(fs_fd_t*) * nfds);
+	fs_fd_t* files[nfds];
 
 	unsigned eventCount = 0; // Amount of fds with events
 	for(unsigned i = 0; i < nfds; i++){
@@ -1597,9 +1597,6 @@ long SysPoll(regs64_t* r){
 			Scheduler::Yield();
 		} while(thread->state != ThreadStateZombie && (timeout < 0 || Timer::TimeDifference(Timer::GetSystemUptimeStruct(), tVal) < timeout)); // Wait until timeout, unless timeout is negative in which wait infinitely
 	}
-
-	if(files)
-		kfree(files);
 	
 	return eventCount;
 }

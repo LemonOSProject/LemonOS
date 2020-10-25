@@ -6,8 +6,8 @@ namespace Lemon{
     enum Colour{
         Background, // Window Background, etc.
         ContentBackground, // Textbox Background, etc.
-        TextDark, // Labels, TextBox, Some Button Styles
-        TextLight, // Other Button Styles
+        Text, // Labels, TextBox, Some Button Styles
+        TextAlternate, // Other Button Styles
         Foreground,
         ContentShadow,
     };

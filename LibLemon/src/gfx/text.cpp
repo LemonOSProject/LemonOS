@@ -135,12 +135,20 @@ namespace Lemon::Graphics{
                 i = -y;
             }
 
+            if(y + (font->height - font->face->glyph->bitmap_top) < limits.y){
+                i = limits.y - (y + (font->height - font->face->glyph->bitmap_top));
+            }
+
             for(; i < font->face->glyph->bitmap.rows && i + (font->height - font->face->glyph->bitmap_top) < maxHeight; i++){
                 uint32_t yOffset = (i + y + (font->height - font->face->glyph->bitmap_top)) * (surface->width);
                 
                 unsigned j = 0;
                 if(x < 0){
                     j = -x;
+                }
+
+                if(x < limits.x){
+                    j = limits.x - x;
                 }
 
                 for(; j < font->face->glyph->bitmap.width && (x + xOffset + static_cast<long>(j)) < surface->width; j++){
