@@ -57,7 +57,7 @@ namespace fs::FAT32{
 
         mountPoint = &fat32MountPoint;
 
-        mountPointDirent.flags = FS_NODE_DIRECTORY;
+        mountPointDirent.flags = DT_DIR;
         mountPointDirent.node = &fat32MountPoint;
         strcpy(mountPointDirent.name, name);
         
@@ -229,8 +229,8 @@ namespace fs::FAT32{
             }
         }
 
-        if(dirEntry->attributes & FAT_ATTR_DIRECTORY) dirent->flags = FS_NODE_DIRECTORY;
-        else dirent->flags = FS_NODE_FILE;
+        if(dirEntry->attributes & FAT_ATTR_DIRECTORY) dirent->flags = DT_DIR;
+        else dirent->flags = DT_REG;
 
         return 1;
     }

@@ -16,14 +16,14 @@ namespace fs{
         LinkVolume(FsVolume* link, char* name){
             strcpy(mountPointDirent.name, name);
             mountPointDirent.node = link->mountPoint;
-            mountPointDirent.flags = link->mountPoint->flags;
+            mountPointDirent.flags = link->mountPointDirent.flags;
             mountPointDirent.node->nlink++;
         }
 
         LinkVolume(FsNode* link, char* name){
             strcpy(mountPointDirent.name, name);
             mountPointDirent.node = link;
-            mountPointDirent.flags = link->flags;
+            mountPointDirent.flags = DT_DIR;
             mountPointDirent.node->nlink++;
         }
     };

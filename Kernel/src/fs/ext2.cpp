@@ -105,6 +105,7 @@ namespace fs::Ext2{
         mountPoint = e2mountPoint;
 
         mountPointDirent.node = mountPoint; 
+        mountPointDirent.flags = DT_DIR;
         strcpy(mountPointDirent.name, name);
     }
 
@@ -888,6 +889,30 @@ namespace fs::Ext2{
         strncpy(dirent->name, e2dirent->name, e2dirent->nameLength);
         dirent->name[e2dirent->nameLength] = 0; // Null terminate
         dirent->flags = e2dirent->fileType;
+
+        switch(e2dirent->fileType){
+            case EXT2_FT_REG_FILE:
+                dirent->flags = DT_REG;
+                break;
+            case EXT2_FT_DIR:
+                dirent->flags = DT_DIR;
+                break;
+            case EXT2_FT_CHRDEV:
+                dirent->flags = DT_CHR;
+                break;
+            case EXT2_FT_BLKDEV:
+                dirent->flags = DT_BLK;
+                break;
+            case EXT2_FT_FIFO:
+                dirent->flags = DT_FIFO;
+                break;
+            case EXT2_FT_SOCK:
+                dirent->flags = DT_SOCK;
+                break;
+            case EXT2_FT_SYMLINK:
+                dirent->flags = DT_LNK;
+                break;
+        }
 
         return 1;
     }

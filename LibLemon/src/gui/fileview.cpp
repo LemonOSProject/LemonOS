@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include <dirent.h>
 
 #ifdef __lemon__
     #include <lemon/filesystem.h>
@@ -181,7 +182,7 @@ namespace Lemon::GUI {
 
             ypos += 22;
         }
-        close(sideBar);
+        close(sideBar); 
 
         Refresh();
     }
@@ -193,33 +194,36 @@ namespace Lemon::GUI {
         currentPath = rPath;
         free(rPath);
 
-        #ifdef __lemon__
-
-        close(currentDir);
-
         if(currentPath.back() != '/')
             currentPath.append("/");
-
-        currentDir = open(currentPath.c_str(), O_DIRECTORY);
-
-        if(currentDir <= 0){
-            perror("GUI: FileView: open:");
-            return;
-        }
 
         pathBox->LoadText(currentPath.c_str());
 
         fileList->ClearItems();
 
         std::string absPath;
+        struct dirent** entries;
+        int entryCount = scandir(currentPath.c_str(), &entries, static_cast<int(*)(const dirent*)>([](const dirent* d) -> int { (void)d; return 1; }), static_cast<int(*)(const dirent**, const dirent**)>([](const dirent** a, const dirent**b) {
+            if((*a)->d_type == DT_DIR && (*b)->d_type != DT_DIR){
+                return -1;
+            } else if((*b)->d_type == DT_DIR && (*a)->d_type != DT_DIR){
+                return 1;
+            }
+            return strcmp((*a)->d_name, (*b)->d_name);
+        }));
 
-        int i = 0;
-        lemon_dirent_t dirent;
-        while(lemon_readdir(currentDir, i++, &dirent) > 0){
+        if(entryCount < 0){
+            perror("GUI: FileView: open:");
+            return;
+        }
+
+        for(int i = 0; i < entryCount; i++){
+            struct dirent& dirent = *entries[i];
+
             GridItem item;
-            item.name = dirent.name;
+            item.name = dirent.d_name;
 
-            absPath = currentPath + "/" + dirent.name;
+            absPath = currentPath + "/" + dirent.d_name;
 
             struct stat statResult;
             int ret = stat(absPath.c_str(), &statResult);
@@ -231,7 +235,7 @@ namespace Lemon::GUI {
 
             if(S_ISDIR(statResult.st_mode)){
                 item.icon = &folderIcon;
-            } else if(char* ext = strchr(dirent.name, '.'); ext){
+            } else if(char* ext = strchr(dirent.d_name, '.'); ext){
                 if(!strcmp(ext, ".txt") || !strcmp(ext, ".cfg") || !strcmp(ext, ".py") || !strcmp(ext, ".asm")){
                     item.icon = &textFileIcon;
                 } else {
@@ -244,7 +248,10 @@ namespace Lemon::GUI {
             fileList->AddItem(item);
         }
 
-        #endif
+        while(--entryCount >= 0){
+            free(entries[entryCount]);
+        }
+        free(entries);
     }
 
     void FileView::OnSubmit(std::string& path){

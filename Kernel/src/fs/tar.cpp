@@ -141,7 +141,7 @@ namespace fs::tar{
 
         mountPoint = volumeNode;
         strcpy(mountPointDirent.name, name);
-        mountPointDirent.flags = FS_NODE_DIRECTORY;
+        mountPointDirent.flags = DT_DIR;
         mountPointDirent.node = volumeNode;
 
         volumeNode->children = (ino_t*)kmalloc(sizeof(ino_t) * entryCount);
@@ -210,9 +210,11 @@ namespace fs::tar{
 
         if(index == 0){
             strcpy(dirent->name, ".");
+            dirent->flags = DT_DIR;
             return 1;
         } else if(index == 1){
             strcpy(dirent->name, "..");
+            dirent->flags = DT_DIR;
             return 1;
         }
 
@@ -221,6 +223,27 @@ namespace fs::tar{
         strcpy(dirent->name, dir->name);
         dirent->flags = dir->flags;
         dirent->node = dir;
+
+        switch(dir->flags & FS_NODE_TYPE){
+            case FS_NODE_FILE:
+                dirent->flags = DT_REG;
+                break;
+            case FS_NODE_DIRECTORY:
+                dirent->flags = DT_DIR;
+                break;
+            case FS_NODE_CHARDEVICE:
+                dirent->flags = DT_CHR;
+                break;
+            case FS_NODE_BLKDEVICE:
+                dirent->flags = DT_BLK;
+                break;
+            case FS_NODE_SOCKET:
+                dirent->flags = DT_SOCK;
+                break;
+            case FS_NODE_SYMLINK:
+                dirent->flags = DT_LNK;
+                break;
+        }
 
         return 1;
     }

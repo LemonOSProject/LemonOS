@@ -22,6 +22,16 @@
 #define S_IFLNK 0xA000
 #define S_IFSOCK 0xC000
 
+#define DT_UNKNOWN 0
+#define DT_FIFO 1
+#define DT_CHR 2
+#define DT_DIR 4
+#define DT_BLK 6
+#define DT_REG 8
+#define DT_LNK 10
+#define DT_SOCK 12
+#define DT_WHT 14
+
 #define FS_NODE_TYPE 0xF000
 #define FS_NODE_FILE S_IFREG
 #define FS_NODE_DIRECTORY S_IFDIR//0x2
@@ -131,22 +141,8 @@ static inline void FD_ZERO(fd_set_t* fds) {
 	memset(fds, 0, sizeof(fd_set_t));
 }
 
-class DirectoryEntry{
-public:
-    char name[NAME_MAX];
-
-    FsNode* node = nullptr;
-    uint32_t inode = 0;
-
-    DirectoryEntry* parent = nullptr;
-
-    mode_t flags = 0;
-
-    DirectoryEntry(FsNode* node, const char* name) { this->node = node; strcpy(this->name, name); }
-    DirectoryEntry() {}
-};
-
 class FilesystemWatcher;
+class DirectoryEntry;
 
 class FsNode{
 public:
@@ -215,6 +211,44 @@ public:
     FsNode* parent;
 
     FilesystemLock nodeLock; // Lock on FsNode info
+};
+
+class DirectoryEntry{
+public:
+    char name[NAME_MAX];
+
+    FsNode* node = nullptr;
+    uint32_t inode = 0;
+
+    DirectoryEntry* parent = nullptr;
+
+    mode_t flags = 0;
+
+    DirectoryEntry(FsNode* node, const char* name) { 
+        this->node = node; strcpy(this->name, name);
+
+        switch(node->flags & FS_NODE_TYPE){
+            case FS_NODE_FILE:
+                flags = DT_REG;
+                break;
+            case FS_NODE_DIRECTORY:
+                flags = DT_DIR;
+                break;
+            case FS_NODE_CHARDEVICE:
+                flags = DT_CHR;
+                break;
+            case FS_NODE_BLKDEVICE:
+                flags = DT_BLK;
+                break;
+            case FS_NODE_SOCKET:
+                flags = DT_SOCK;
+                break;
+            case FS_NODE_SYMLINK:
+                flags = DT_LNK;
+                break;
+        }
+    }
+    DirectoryEntry() {}
 };
 
 // FilesystemWatcher is a semaphore initialized to 0.

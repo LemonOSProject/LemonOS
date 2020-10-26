@@ -362,7 +362,6 @@ namespace Lemon::GUI {
     protected:
         int pathBoxHeight = 20;
         int sidepanelWidth = 120;
-        int currentDir;
         char** filePointer;
 
         void(*OnFileOpened)(const char*, FileView*) = nullptr;
