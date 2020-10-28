@@ -25,6 +25,8 @@
 #include <cpu.h>
 #include <lemon.h>
 
+#include <debug.h>
+
 uint8_t* progressBuffer = nullptr;
 video_mode_t videoMode;
 
@@ -102,8 +104,6 @@ extern ctor_t _ctors_end[0];
 void InitializeConstructors(){
 	unsigned ctorCount = ((uint64_t)&_ctors_end - (uint64_t)&_ctors_start) / sizeof(void*);
 
-	Log::Info("[Constructors] Start: %x, End: %x, Count: %d", _ctors_start, _ctors_end, ctorCount);
-
 	for(unsigned i = 0; i < ctorCount; i++){
 		_ctors_start[i]();
 	}
@@ -126,7 +126,9 @@ extern "C"
 
 	Memory::InitializeSharedMemory();
 
-	Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
+	if(debugLevelMisc >= DebugLevelVerbose){
+		Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
+	}
 
 	if(videoMode.height < 600)
 		Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");

@@ -20,10 +20,13 @@ char versionString[80];
 lemon_sysinfo_t sysInfo;
 
 int main(int argc, char** argv){
-    window = new Lemon::GUI::Window("System Information", {300, 300}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
     Lemon::Graphics::LoadImage("/initrd/banner.png", &banner);
     
     bannerW = new Lemon::GUI::Bitmap({{0, 0}, {300, banner.height}}, &banner);
+
+    int winWidth = (banner.width > 200) ? banner.width : 200; 
+
+    window = new Lemon::GUI::Window("System Information", {winWidth, 300}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
     window->AddWidget(bannerW);
 
     int ypos = banner.height + 4;

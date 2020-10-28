@@ -287,7 +287,6 @@ namespace fs{
 
     void Initialize();
     FsNode* GetRoot();
-    void RegisterDevice(DirectoryEntry* device);
 	void RegisterVolume(FsVolume* vol);
 
     /////////////////////////////

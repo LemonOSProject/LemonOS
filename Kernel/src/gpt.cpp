@@ -5,6 +5,8 @@
 #include <device.h>
 #include <devicemanager.h>
 
+#include <debug.h>
+
 namespace GPT{
     int Parse(DiskDevice* disk){
         gpt_header_t* header = (gpt_header_t*)kmalloc(disk->blocksize);
@@ -17,10 +19,12 @@ namespace GPT{
             return 0; // GPT not present or corrupted
         }
 
-        Log::Info("Found GPT Header Partitions: ");
-        Log::Write(header->partNum);
-        Log::Write(" Entry Size:");
-        Log::Write(header->partEntrySize);
+        if(debugLevelPartitions >= DebugLevelNormal){
+            Log::Info("Found GPT Header Partitions: ");
+            Log::Write(header->partNum);
+            Log::Write(" Entry Size:");
+            Log::Write(header->partEntrySize);
+        }
 
         uint64_t tableLBA = header->partitionTableLBA;
 
@@ -34,7 +38,9 @@ namespace GPT{
         for(int i = 0; i < partNum; i++){
             gpt_entry_t entry = partitionTable[i];
             
-            Log::Info("Found GPT Partition of size %d MB", (entry.endLBA - entry.startLBA) * 512 / 1024 / 1024);
+            if(debugLevelPartitions >= DebugLevelNormal){
+                Log::Info("Found GPT Partition of size %d MB", (entry.endLBA - entry.startLBA) * 512 / 1024 / 1024);
+            }
 
             if((entry.endLBA - entry.startLBA)){
                 PartitionDevice* part = new PartitionDevice(entry.startLBA, entry.endLBA, disk);

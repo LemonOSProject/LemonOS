@@ -80,13 +80,11 @@ namespace Keyboard{
 
     // Register interrupt handler
     void Install() {
-        fs::RegisterDevice(&kbDev.dirent);
+        DeviceManager::RegisterDevice(kbDev);
 
         IDT::RegisterInterruptHandler(IRQ0 + 1, Handler);
 		APIC::IO::MapLegacyIRQ(1);
 
         outportb(0xF0, 1); // Set scan code 1
-
-        DeviceManager::RegisterDevice(kbDev);
     }
 }

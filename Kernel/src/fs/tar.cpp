@@ -106,6 +106,7 @@ namespace fs::tar{
             TarNode* n = &nodes[inode];
             MakeNode(&blocks[i], n, inode, dirInode, dirHeader);
             dirNode->children[e] = inode;
+
             //Log::Info("[TAR] Found File: %s, ", blocks[i].ustar.name);
 
             i += GetBlockCount(blocks[i].ustar.size) + 1;
@@ -117,8 +118,6 @@ namespace fs::tar{
     TarVolume::TarVolume(uintptr_t base, size_t size, char* name){
         blocks = (tar_header_t*)base;
         blockCount = size / 512;
-
-        Log::Info(" [TAR] Base: %x, Size: %x", base, size);
 
         int entryCount = 0;
         for(uint64_t i = 0; i < blockCount; i++, nodeCount++){ // Get file count

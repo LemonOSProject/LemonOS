@@ -16,6 +16,8 @@
 #include <smp.h>
 #include <videoconsole.h>
 
+#include <debug.h>
+
 extern void* _end;
 
 namespace HAL{
@@ -89,11 +91,15 @@ namespace HAL{
                         switch (currentEntry->type)
                         {
                         case 1: // Available
-                            Log::Info("Memory region [%x-%x] available", currentEntry->base, currentEntry->base + currentEntry->length);
+                            if(debugLevelHAL >= DebugLevelVerbose){
+                                Log::Info("Memory region [%x-%x] available", currentEntry->base, currentEntry->base + currentEntry->length);
+                            }
                             Memory::MarkMemoryRegionFree(currentEntry->base, currentEntry->length);
                             break;
                         default: // Not available
-                            Log::Info("Memory region [%x-%x] reserved", currentEntry->base, currentEntry->base + currentEntry->length);
+                            if(debugLevelHAL >= DebugLevelVerbose){
+                                Log::Info("Memory region [%x-%x] reserved", currentEntry->base, currentEntry->base + currentEntry->length);
+                            }
                             break;
                         }
                         currentEntry = reinterpret_cast<multiboot2_mmap_entry_t*>((uintptr_t)currentEntry + mbMemMap->entrySize);
@@ -126,7 +132,9 @@ namespace HAL{
                     break;
                 }
                 default: {
-                    Log::Info("Ignoring boot tag %d", tag->type);
+                    if(debugLevelHAL >= DebugLevelVerbose){
+                        Log::Info("Ignoring boot tag %d", tag->type);
+                    }
                     break;
                 }
             }
@@ -151,11 +159,16 @@ namespace HAL{
         Log::Initialize();
 
         // Manage Multiboot Modules
-	    Log::Info("Multiboot Module Count: %d", bootModuleCount);
+        if(debugLevelHAL >= DebugLevelNormal)
+	        Log::Info("Multiboot Module Count: %d", bootModuleCount);
 
         for(unsigned i = 0; i < bootModuleCount; i++){
             multiboot2_module_t& mod = *modules[i];
-            Log::Info("    Multiboot Module %d [Start: %x, End: %x, Cmdline: %s]", i, mod.moduleStart, mod.moduleEnd, mod.string);
+            
+            if(debugLevelHAL >= DebugLevelNormal){
+                Log::Info("    Multiboot Module %d [Start: %x, End: %x, Cmdline: %s]", i, mod.moduleStart, mod.moduleEnd, mod.string);
+            }
+            
             Memory::MarkMemoryRegionUsed(mod.moduleStart, mod.moduleEnd);
             bootModules[i] = {
                 .base = Memory::GetIOMapping(mod.moduleStart),

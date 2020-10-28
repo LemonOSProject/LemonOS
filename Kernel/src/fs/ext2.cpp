@@ -4,6 +4,8 @@
 #include <errno.h>
 #include <assert.h>
 #include <math.h>
+
+#include <debug.h>
  
 #ifdef EXT2_ENABLE_TIMER
     #include <timer.h>
@@ -81,8 +83,11 @@ namespace fs::Ext2{
         }
 
         Log::Info("[Ext2] Initializing Volume\tRevision: %d, Block Size: %d, %d KB/%d KB used, Last mounted on: %s", super.revLevel, blocksize, super.freeBlockCount * blocksize / 1024, super.blockCount * blocksize / 1024, superext.lastMounted);
-        Log::Info("[Ext2] Block Group Count: %d, Inodes Per Block Group: %d, Inode Size: %d", blockGroupCount, super.inodesPerGroup, inodeSize);
-        Log::Info("[Ext2] Sparse Superblock? %s Large Files? %s, Filetype Extension? %s", (sparse ? "Yes" : "No"), (largeFiles ? "Yes" : "No"), (filetype ? "Yes" : "No"));
+        
+        if(debugLevelExt2 >= DebugLevelNormal){
+            Log::Info("[Ext2] Block Group Count: %d, Inodes Per Block Group: %d, Inode Size: %d", blockGroupCount, super.inodesPerGroup, inodeSize);
+            Log::Info("[Ext2] Sparse Superblock? %s Large Files? %s, Filetype Extension? %s", (sparse ? "Yes" : "No"), (largeFiles ? "Yes" : "No"), (filetype ? "Yes" : "No"));
+        }
 
         blockGroups = (ext2_blockgrp_desc_t*)kmalloc(blockGroupCount * sizeof(ext2_blockgrp_desc_t));
         
@@ -582,7 +587,9 @@ namespace fs::Ext2{
             WriteSuperblock();
             WriteBlockGroupDescriptor(i);
 
-            //Log::Info("[Ext2] Created inode %d", node->inode);
+            if(debugLevelExt2 >= DebugLevelVerbose){
+                Log::Info("[Ext2] Created inode %d", node->inode);
+            }
 
             return node;
         }
@@ -693,7 +700,7 @@ namespace fs::Ext2{
         ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
 
         if(ReadBlock(GetInodeBlock(currentBlockIndex, ino), buffer)){
-            Log::Info("[Ext2] ListDir: Error reading block %d", ino.blocks[currentBlockIndex]);
+            Log::Warning("[Ext2] ListDir: Error reading block %d", ino.blocks[currentBlockIndex]);
             error = DiskReadError;
             return -1;
         }
@@ -756,7 +763,9 @@ namespace fs::Ext2{
         for(unsigned i = 0; i < entries.get_length(); i++){
             DirectoryEntry ent = entries[i];
 
-            //Log::Info("[Ext2] Writing entry: %s", ent.name);
+            if(debugLevelExt2 >= DebugLevelVerbose){
+                Log::Info("[Ext2] Writing entry: %s", ent.name);
+            }
 
             e2dirent->fileType = ent.flags;
             e2dirent->inode = ent.inode;
@@ -820,7 +829,7 @@ namespace fs::Ext2{
         for(DirectoryEntry& newEnt : newEntries){
             for(DirectoryEntry& ent : entries){
                 if(strcmp(ent.name, newEnt.name) == 0){
-                    Log::Info("[Ext2] InsertDir: Entry %s already exists!", newEnt.name);
+                    Log::Warning("[Ext2] InsertDir: Entry %s already exists!", newEnt.name);
                     return -EEXIST;
                 }
             }
@@ -857,7 +866,7 @@ namespace fs::Ext2{
         ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
 
         if(ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
-            Log::Info("[Ext2] Failed to read block %d", GetInodeBlock(currentBlockIndex, ino));
+            Log::Warning("[Ext2] Failed to read block %d", GetInodeBlock(currentBlockIndex, ino));
             error = DiskReadError;
             return -1;
         }
@@ -878,7 +887,7 @@ namespace fs::Ext2{
 
                 blockOffset = 0;
                 if(ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
-                    Log::Info("[Ext2] Failed to read block");
+                    Log::Warning("[Ext2] Failed to read block");
                     return -1;
                 }
             }
@@ -969,7 +978,7 @@ namespace fs::Ext2{
                 blockOffset = 0;
 
                 if(ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
-                    Log::Info("[Ext2] Failed to read block");
+                    Log::Error("[Ext2] Failed to read block");
                     return nullptr;
                 }
             }
@@ -1015,7 +1024,9 @@ namespace fs::Ext2{
         uint32_t blockLimit = LocationToBlock(offset + size);
         uint8_t blockBuffer[blocksize];
 
-        //Log::Info("[Ext2] Reading: Block index: %d, Block limit: %d, Offset: %d, Size: %d", blockIndex, blockLimit, offset, size);
+        if(debugLevelExt2 >= DebugLevelVerbose){
+            Log::Info("[Ext2] Reading: Block index: %d, Block limit: %d, Offset: %d, Size: %d", blockIndex, blockLimit, offset, size);
+        }
 
         #ifdef EXT2_ENABLE_TIMER
         timeval_t blktv1 = Timer::GetSystemUptimeStruct();
@@ -1097,7 +1108,9 @@ namespace fs::Ext2{
         bool sync = false; // Need to sync the inode?
 
         if(blockLimit >= fileBlockCount){
-            //Log::Info("[Ext2] Allocating blocks for inode %d", node->inode);
+            if(debugLevelExt2 >= DebugLevelVerbose){
+                Log::Info("[Ext2] Allocating blocks for inode %d", node->inode);
+            }
             for(unsigned i = fileBlockCount; i <= blockLimit; i++){
                 uint32_t block = AllocateBlock();
                 SetInodeBlock(i, node->e2inode, block);
@@ -1119,7 +1132,9 @@ namespace fs::Ext2{
             SyncNode(node);
         }
 
-        //Log::Info("[Ext2] Writing: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockLimit - blockIndex + 1, offset, size);
+        if(debugLevelExt2 >= DebugLevelVerbose){
+            Log::Info("[Ext2] Writing: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockLimit - blockIndex + 1, offset, size);
+        }
 
         size_t ret = size;
 

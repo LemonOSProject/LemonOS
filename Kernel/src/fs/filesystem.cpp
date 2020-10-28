@@ -337,12 +337,6 @@ namespace fs{
 		return basename;
 	}
 
-	void RegisterDevice(DirectoryEntry* device){
-		Log::Info("Device Registered: ");
-		Log::Write(device->name);
-		devices[deviceCount++] = device;
-	}
-
 	int Root::ReadDir(DirectoryEntry* dirent, uint32_t index){
 		if (index < fs::volumes->get_length()){
 			*dirent = (volumes->get_at(index)->mountPointDirent);

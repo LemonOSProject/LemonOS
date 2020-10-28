@@ -6,7 +6,6 @@
 #include <fs/fsvolume.h>
 #include <math.h>
 #include <timer.h>
-    #include <logging.h>
 	
 class URandom : public Device {
 public:
@@ -121,7 +120,6 @@ namespace DeviceManager{
     }
 
     void RegisterDevice(Device& dev){
-        Log::Info("registering %s", dev.GetName());
         devices.add_back(&dev);
     }
 

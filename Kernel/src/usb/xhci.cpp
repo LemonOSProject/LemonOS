@@ -8,6 +8,8 @@
 #include <assert.h>
 #include <timer.h>
 
+#include <debug.h>
+
 namespace USB{
     Vector<XHCIController*> xhciControllers;
     uint8_t xhciClassCode = PCI_CLASS_SERIAL_BUS;
@@ -161,7 +163,10 @@ namespace USB{
         opRegs->SetMaxSlotsEnabled(maxSlots);
 
         Log::Info("[XHCI] Interface version: %x, Page size: %d, Operational registers offset: %x, Runtime registers offset: %x, Doorbell registers offset: %x", capRegs->hciVersion, opRegs->pageSize, capRegs->capLength, capRegs->rtsOff, capRegs->dbOff);
-        Log::Info("[XHCI] MaxSlots: %x, Max Scratchpad Buffers: %x", capRegs->MaxSlots(), capRegs->MaxScratchpadBuffers());
+        
+        if(debugLevelXHCI >= DebugLevelNormal){
+            Log::Info("[XHCI] MaxSlots: %x, Max Scratchpad Buffers: %x", capRegs->MaxSlots(), capRegs->MaxScratchpadBuffers());
+        }
 
         opRegs->usbCommand |= USB_CMD_HSEE | USB_CMD_INTE | USB_CMD_RS;
         {
@@ -236,9 +241,15 @@ namespace USB{
 
         XHCIEventRingSegment* segment = &eventRingSegments[0];
         xhci_event_trb_t* event = eventRingDequeue;
-        Log::Info("cycle: %Y event cycle: %Y", event->cycleBit, eventRingCycleState);
+
+        if(debugLevelXHCI >= DebugLevelVerbose){
+            Log::Info("cycle: %Y event cycle: %Y", event->cycleBit, eventRingCycleState);
+        }
+
         while(!!event->cycleBit == !!eventRingCycleState){
-            Log::Info("[XHCI] Received event (TRB Type: %x (%x))", event->trbType, (((uint32_t*)event)[3] >> 10) & 0x3f);
+            if(debugLevelXHCI >= DebugLevelVerbose){
+                Log::Info("[XHCI] Received event (TRB Type: %x (%x))", event->trbType, (((uint32_t*)event)[3] >> 10) & 0x3f);
+            }
 
             event++;
             uintptr_t diff = reinterpret_cast<uintptr_t>(event) - reinterpret_cast<uintptr_t>(segment->segment);
@@ -263,7 +274,10 @@ namespace USB{
         }
 
         if(cap->controllerBIOSSemaphore){
-            Log::Info("[XHCI] BIOS owns host controller, attempting to take ownership...");
+            if(debugLevelXHCI >= DebugLevelVerbose){
+                Log::Info("[XHCI] BIOS owns host controller, attempting to take ownership...");
+            }
+
             cap->controllerOSSemaphore = 1;
         }
 
@@ -281,7 +295,9 @@ namespace USB{
 
     void XHCIController::InitializeProtocols(){
         auto initializeProto = [&](xhci_ext_cap_supported_protocol_t* cap){
-            Log::Info("[XHCI] Initializing protocol \"%c%c%c%c\", Version: %u%u.%u%u, Port Range: %u-%u", cap->name[0], cap->name[1], cap->name[2], cap->name[3], (cap->majorRevision >> 4), (cap->majorRevision & 0xF), (cap->minorRevision >> 4), (cap->minorRevision & 0xF), cap->portOffset, (cap->portOffset + cap->portCount));
+            if(debugLevelXHCI){
+                Log::Info("[XHCI] Initializing protocol \"%c%c%c%c\", Version: %u%u.%u%u, Port Range: %u-%u", cap->name[0], cap->name[1], cap->name[2], cap->name[3], (cap->majorRevision >> 4), (cap->majorRevision & 0xF), (cap->minorRevision >> 4), (cap->minorRevision & 0xF), cap->portOffset, (cap->portOffset + cap->portCount));
+            }
 
             protocols.add_back(cap);
 
@@ -336,7 +352,9 @@ namespace USB{
                 }
 
                 if(port.Enabled()){
-                    Log::Info("Port %i is enabled!", i);
+                    if(debugLevelXHCI >= DebugLevelVerbose){
+                        Log::Info("Port %i is enabled!", i);
+                    }
                 }
             }
         }

@@ -10,6 +10,7 @@ enum DeviceType{
     TypeDiskDevice,
     TypePartitionDevice,
     TypeNetworkAdapterDevice,
+    TypePseudoterminalDevice,
     TypeInputDevice,
 };
 

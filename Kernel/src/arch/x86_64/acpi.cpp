@@ -15,6 +15,8 @@
 #include <lai/helpers/sci.h>
 #include <lai/helpers/pci.h>
 
+#include <debug.h>
+
 namespace ACPI{
 	uint8_t processors[256];
 	int processorCount = 1;
@@ -88,14 +90,19 @@ namespace ACPI{
 						if(localAPIC->apicID == 0) break; // Found the BSP
 						
 						processors[processorCount++] = localAPIC->apicID;
-						//Log::Info("[ACPI] Found Processor, APIC ID: %d", localAPIC->apicID);
+
+						if(debugLevelACPI >= DebugLevelVerbose)
+							Log::Info("[ACPI] Found Processor, APIC ID: %d", localAPIC->apicID);
 					}
 				}
 				break;
 			case 1:
 				{
 					apic_io_t* ioAPIC = (apic_io_t*)entry;
-					//Log::Info("[ACPI] Found I/O APIC, Address: %x", ioAPIC->address);
+
+					if(debugLevelACPI >= DebugLevelVerbose)
+						Log::Info("[ACPI] Found I/O APIC, Address: %x", ioAPIC->address);
+					
 					if(!ioAPIC->gSIB)
 						APIC::IO::SetBase(ioAPIC->address);
 				}
@@ -107,10 +114,11 @@ namespace ACPI{
 				}
 				break;
 			case 4:
-				/*{
+				if(debugLevelACPI >= DebugLevelVerbose)
+				{
 					apic_nmi_t* nonMaskableInterrupt = (apic_nmi_t*)entry;
 					Log::Info("[ACPI] Found NMI, LINT #%d", nonMaskableInterrupt->lINT);
-				}*/
+				}
 				break;
 			case 5:
 				//apic_local_address_override_t* addressOverride = (apic_local_address_override_t*)entry;
@@ -177,8 +185,9 @@ namespace ACPI{
 		memcpy(oem,rsdtHeader->header.oem,6);
 		oem[6] = 0; // Zero OEM String
 
-		Log::Info("[ACPI] Revision: %d", desc->revision);
-		Log::Info("[ACPI] OEM ID: %s", oem);
+		if(debugLevelACPI >= DebugLevelNormal){
+			Log::Info("[ACPI] Revision: %d", desc->revision);
+		}
 
 		fadt = reinterpret_cast<acpi_fadt_t*>(FindSDT("FACP", 0));
 
@@ -223,7 +232,9 @@ extern "C"{
 				Log::Warning(msg);
 				break;
 			default:
-				//Log::Info(msg);
+				if(debugLevelACPI >= DebugLevelNormal){
+					Log::Info(msg);
+				}
 				break;
 		}
 	}

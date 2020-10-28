@@ -11,6 +11,8 @@
 #include <apic.h>
 #include <timer.h>
 
+#include <debug.h>
+
 namespace ATA{
 
 	int port0 = 0x1f0;
@@ -137,7 +139,9 @@ namespace ATA{
         busMasterPort = controllerPCIDevice->GetBaseAddressRegister(4);
 		controllerPCIDevice->EnableBusMastering();
 		
-		Log::Info("[ATA] Using Ports: Primary %x, Secondary %x", port0, port1);
+		if(debugLevelATA >= DebugLevelNormal){
+			Log::Info("[ATA] Using Ports: Primary %x, Secondary %x", port0, port1);
+		}
 
 		for(int i = 0; i < 2; i++){ // Port
 			WriteControlRegister(i, 0, ReadControlRegister(i, 0) | 4); // Software Reset
@@ -148,10 +152,9 @@ namespace ATA{
 
 			for(int j = 0; j < 2; j++){ // Drive (master/slave)
 				if(DetectDrive(i, j)){
-					Log::Info("Found ATA Drive: Port: ");
-					Log::Write(i);
-					Log::Write(", ");
-					Log::Write(j ? "slave" : "master");
+					if(debugLevelATA >= DebugLevelNormal){
+						Log::Info("Found ATA Drive: Port: %d, %s", i, j ? "slave" : "master");
+					}
 
 					for(int k = 0; k < 256; k++){
 						inportw((i ? port1 : port0) + ATA_REGISTER_DATA);

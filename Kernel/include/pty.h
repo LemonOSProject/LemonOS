@@ -3,6 +3,7 @@
 #include <characterbuffer.h>
 #include <types.h>
 #include <scheduler.h>
+#include <device.h>
 
 typedef unsigned int cc_t;
 typedef unsigned int speed_t;
@@ -81,7 +82,7 @@ enum {
 
 class PTY;
 
-class PTYDevice : public FsNode {
+class PTYDevice : public Device {
 public:
     DirectoryEntry dirent;
 
@@ -89,7 +90,7 @@ public:
 
     int device;
 
-    PTYDevice();
+    PTYDevice(const char* name);
 
     ssize_t Read(size_t, size_t, uint8_t *);
     ssize_t Write(size_t, size_t, uint8_t *);
@@ -117,7 +118,7 @@ public:
     winsz wSz;
     termios tios;
 
-    PTY();
+    PTY(const char* name);
 
     bool Echo() { return tios.c_lflag & ECHO; }
     bool IsCanonical() { return tios.c_lflag & ICANON; }

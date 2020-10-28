@@ -7,6 +7,8 @@
 #include <idt.h>
 #include <acpi.h>
 
+#include <debug.h>
+
 namespace APIC{
     namespace Local {
         uintptr_t base;
@@ -40,7 +42,9 @@ namespace APIC{
             Local::base = ReadBase() & LOCAL_APIC_BASE;
             virtualBase = Memory::GetIOMapping(base);
 
-            Log::Info("[APIC] Local APIC Base %x (%x)", base, virtualBase);
+            if(debugLevelInterrupts >= DebugLevelNormal){
+                Log::Info("[APIC] Local APIC Base %x (%x)", base, virtualBase);
+            }
 
             IDT::RegisterInterruptHandler(0xFF, SpuriousInterruptHandler);
 
@@ -116,11 +120,17 @@ namespace APIC{
             interrupts = Read32(IO_APIC_REGISTER_VER) >> 16;
             apicID = Read32(IO_APIC_REGISTER_ID) >> 24;
 
-            Log::Info("[APIC] I/O APIC Base %x (%x), Available Interrupts: %d, ID: %d ", base, virtualBase, interrupts, apicID);
+            if(debugLevelInterrupts >= DebugLevelNormal){
+                Log::Info("[APIC] I/O APIC Base %x (%x), Available Interrupts: %d, ID: %d ", base, virtualBase, interrupts, apicID);
+            }
 
             for(unsigned i = 0; i < ACPI::isos->get_length(); i++){
                 apic_iso_t* iso = ACPI::isos->get_at(i);
-				Log::Info("[APIC] Interrupt Source Override, IRQ: %d, GSI: %d", iso->irqSource, iso->gSI);
+
+                if(debugLevelInterrupts >= DebugLevelVerbose){
+				    Log::Info("[APIC] Interrupt Source Override, IRQ: %d, GSI: %d", iso->irqSource, iso->gSI);
+                }
+
                 Redirect(iso->gSI, iso->irqSource + 0x20, ICR_MESSAGE_TYPE_LOW_PRIORITY);
             }
 
@@ -132,7 +142,9 @@ namespace APIC{
         }
 
         void MapLegacyIRQ(uint8_t irq){
-            Log::Info("[APIC] Mapping Legacy IRQ, IRQ: %d", irq);
+            if(debugLevelInterrupts >= DebugLevelVerbose){
+                Log::Info("[APIC] Mapping Legacy IRQ, IRQ: %d", irq);
+            }
             for(unsigned i = 0; i < ACPI::isos->get_length(); i++){
                 apic_iso_t* iso = ACPI::isos->get_at(i);
                 if(iso->irqSource == irq) return; // We should have already redirected this IRQ

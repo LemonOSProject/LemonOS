@@ -36,14 +36,17 @@ List<PTY*>* ptys = NULL;
 
 PTY* GrantPTY(uint64_t pid){
 	if(!ptys) ptys = new List<PTY*>();
-	Log::Info(ptys->get_length());
 
-	PTY* pty = new PTY();
+	char name[5] = {'p', 't', 'y', 0, 0};
+	name[4] = nextPTY;
+	GetNextPTY();
+
+	PTY* pty = new PTY(name);
 	
 	return pty;
 }
 
-PTYDevice::PTYDevice(){
+PTYDevice::PTYDevice(const char* name) : Device(name, TypePseudoterminalDevice){
 	dirent.node = this;
 }
 
@@ -142,12 +145,8 @@ bool PTYDevice::CanRead() {
 	}
 }
 
-PTY::PTY(){
+PTY::PTY(const char* name) : masterFile(name), slaveFile(name){
 	slaveFile.flags = FS_NODE_CHARDEVICE;
-	strcpy(slaveFile.dirent.name, "pty");
-	char _name[] = {nextPTY, 0};
-	strcpy(slaveFile.dirent.name + strlen(slaveFile.dirent.name), _name);
-	GetNextPTY();
 
 	master.ignoreBackspace = true;
 	slave.ignoreBackspace = false;
@@ -163,7 +162,7 @@ PTY::PTY(){
 
 	for(int i = 0; i < NCCS; i++) tios.c_cc[i] = c_cc_default[i];
 
-	fs::RegisterDevice(&slaveFile.dirent);
+	DeviceManager::RegisterDevice(slaveFile);
 
 	ptys->add_back(this);
 }

@@ -7,6 +7,8 @@
 #include <ata.h>
 #include <timer.h>
 
+#include <debug.h>
+
 #define HBA_PxIS_TFES   (1 << 30)
 
 namespace AHCI{
@@ -78,7 +80,7 @@ namespace AHCI{
             }
 
             if((registers->ssts & HBA_PxSSTS_DET) != HBA_PxSSTS_DET_PRESENT){
-                Log::Info("[AHCI] Device not present (DET: %x)", registers->ssts & HBA_PxSSTS_DET);
+                Log::Warning("[AHCI] Device not present (DET: %x)", registers->ssts & HBA_PxSSTS_DET);
                 status = AHCIStatus::Error;
                 return;
             }
@@ -93,7 +95,10 @@ namespace AHCI{
             }
 
             if(spin <= 0){
-                Log::Info("[AHCI] Port hung"/*, attempting COMRESET"*/);
+                if(debugLevelAHCI >= DebugLevelNormal){
+                    Log::Info("[AHCI] Port hung"/*, attempting COMRESET"*/);
+                }
+                
                 registers->sctl = SCTL_PORT_DET_INIT | SCTL_PORT_IPM_NOPART | SCTL_PORT_IPM_NOSLUM | SCTL_PORT_IPM_NODSLP; // Reset the port
             }
 
@@ -126,7 +131,7 @@ namespace AHCI{
         }
 
         if((registers->ssts & HBA_PxSSTS_DET) != HBA_PxSSTS_DET_PRESENT){
-            Log::Info("[AHCI] Device not present (DET: %x)", registers->ssts & HBA_PxSSTS_DET);
+            Log::Warning("[AHCI] Device not present (DET: %x)", registers->ssts & HBA_PxSSTS_DET);
             status = AHCIStatus::Error;
             return;
         }
@@ -139,7 +144,9 @@ namespace AHCI{
 
         Identify();
 
-        Log::Info("[AHCI] Port - SSTS: %x, SCTL: %x, SERR: %x, SACT: %x, Cmd/Status: %x, FBS: %x, IE: %x", registers->ssts, registers->sctl, registers->serr, registers->sact, registers->cmd, registers->fbs, registers->ie);
+        if(debugLevelAHCI >= DebugLevelNormal){
+            Log::Info("[AHCI] Port - SSTS: %x, SCTL: %x, SERR: %x, SACT: %x, Cmd/Status: %x, FBS: %x, IE: %x", registers->ssts, registers->sctl, registers->serr, registers->sact, registers->cmd, registers->fbs, registers->ie);
+        }
 
         switch(GPT::Parse(this)){
         case 0:

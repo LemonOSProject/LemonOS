@@ -7,6 +7,8 @@
 #include <timer.h>
 #include <idt.h>
 
+#include <debug.h>
+
 namespace AHCI{
 	uintptr_t ahciBaseAddress;
 	uintptr_t ahciVirtualAddress;
@@ -55,21 +57,12 @@ namespace AHCI{
 		}
 		ahciHBA->ghc |= AHCI_GHC_IE;
 
-		Log::Info("[AHCI] Interrupt Vector: %x, Base Address: %x, Virtual Base Address: %x", irq, ahciBaseAddress, ahciVirtualAddress);
-		Log::Info("[AHCI] (Cap: %x, Cap2: %x) Enabled? %Y, BOHC? %Y, 64-bit addressing? %Y, Staggered Spin-up? %Y, Slumber State Capable? %Y, Partial State Capable? %Y, FIS-based switching? %Y", ahciHBA->cap, ahciHBA->cap2, ahciHBA->ghc & AHCI_GHC_ENABLE, ahciHBA->cap2 & AHCI_CAP2_BOHC, ahciHBA->cap & AHCI_CAP_S64A, ahciHBA->cap & AHCI_CAP_SSS, ahciHBA->cap & AHCI_CAP_SSC, ahciHBA->cap & AHCI_CAP_PSC, ahciHBA->cap & AHCI_CAP_FBSS);
-
-		IDT::RegisterInterruptHandler(irq, InterruptHandler);
-
-		/*ahciHBA->ghc = AHCI_GHC_ENABLE | 1; // Reset Controller
-		while(ahciHBA->ghc & 1){
-			Timer::Wait(1);
+		if(debugLevelAHCI >= DebugLevelNormal){
+			Log::Info("[AHCI] Interrupt Vector: %x, Base Address: %x, Virtual Base Address: %x", irq, ahciBaseAddress, ahciVirtualAddress);
+			Log::Info("[AHCI] (Cap: %x, Cap2: %x) Enabled? %Y, BOHC? %Y, 64-bit addressing? %Y, Staggered Spin-up? %Y, Slumber State Capable? %Y, Partial State Capable? %Y, FIS-based switching? %Y", ahciHBA->cap, ahciHBA->cap2, ahciHBA->ghc & AHCI_GHC_ENABLE, ahciHBA->cap2 & AHCI_CAP2_BOHC, ahciHBA->cap & AHCI_CAP_S64A, ahciHBA->cap & AHCI_CAP_SSS, ahciHBA->cap & AHCI_CAP_SSC, ahciHBA->cap & AHCI_CAP_PSC, ahciHBA->cap & AHCI_CAP_FBSS);
 		}
 
-		while(!(ahciHBA->ghc & AHCI_GHC_ENABLE)){
-			ahciHBA->ghc |= AHCI_GHC_ENABLE;
-			Timer::Wait(1);
-		}*/
-
+		IDT::RegisterInterruptHandler(irq, InterruptHandler);
 		ahciHBA->is = 0xffffffff;
 
 		for(int i = 0; i < 32; i++){
@@ -80,10 +73,11 @@ namespace AHCI{
 				else if(ahciHBA->ports[i].sig == SATA_SIG_PM) ;
 				else if(ahciHBA->ports[i].sig == SATA_SIG_SEMB) ;
 				else {
-					Log::Info("Found SATA Drive - Port: %d", i);
+					if(debugLevelAHCI >= DebugLevelVerbose){
+						Log::Info("Found SATA Drive - Port: %d", i);
+					}
 
 					ports[i] = new Port(i, &ahciHBA->ports[i], ahciHBA);
-					Log::Info("name: %s", ports[i]->GetName());
 					
 					if(ports[i]->status == AHCIStatus::Active)
 						DeviceManager::RegisterDevice(*(ports[i]));
