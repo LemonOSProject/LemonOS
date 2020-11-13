@@ -68,8 +68,8 @@ public:
     PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk);
 
     virtual int ReadAbsolute(uint64_t off, uint32_t count, void* buffer);
-    virtual int Read(uint64_t lba, uint32_t count, void* buffer);
-    virtual int Write(uint64_t lba, uint32_t count, void* buffer);
+    virtual int ReadBlock(uint64_t lba, uint32_t count, void* buffer);
+    virtual int WriteBlock(uint64_t lba, uint32_t count, void* buffer);
     
     virtual ~PartitionDevice();
 
@@ -78,8 +78,6 @@ private:
 
     uint64_t startLBA;
     uint64_t endLBA;
-
-    int type = TypePartitionDevice;
 };
 
 namespace DeviceManager{

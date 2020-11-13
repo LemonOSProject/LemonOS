@@ -24,7 +24,7 @@ int PartitionDevice::ReadAbsolute(uint64_t offset, uint32_t count, void* buffer)
     uint64_t tempCount = offset + (offset % parentDisk->blocksize); // Account for that we read from start of block
     uint8_t buf[tempCount];
 
-    if(int e = Read(lba, parentDisk->blocksize, buf)){
+    if(int e = ReadBlock(lba, parentDisk->blocksize, buf)){
         return e;
     }
 
@@ -33,13 +33,13 @@ int PartitionDevice::ReadAbsolute(uint64_t offset, uint32_t count, void* buffer)
     return 0;
 }
 
-int PartitionDevice::Read(uint64_t lba, uint32_t count, void* buffer){
+int PartitionDevice::ReadBlock(uint64_t lba, uint32_t count, void* buffer){
     if(lba * parentDisk->blocksize + count > (endLBA - startLBA) * parentDisk->blocksize) return 2;
 
     return parentDisk->ReadDiskBlock(lba + startLBA, count, buffer);
 }
 
-int PartitionDevice::Write(uint64_t lba, uint32_t count, void* buffer){
+int PartitionDevice::WriteBlock(uint64_t lba, uint32_t count, void* buffer){
     if(lba * parentDisk->blocksize + count > (endLBA - startLBA) * parentDisk->blocksize) return 2;
 
     return parentDisk->WriteDiskBlock(lba + startLBA, count, buffer);

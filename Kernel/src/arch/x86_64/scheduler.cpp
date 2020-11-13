@@ -87,7 +87,7 @@ namespace Scheduler{
             SMP::cpus[i]->runQueue->clear();
             releaseLock(&SMP::cpus[i]->runQueueLock);
         }
-        
+
         IDT::RegisterInterruptHandler(IPI_SCHEDULE, Schedule);
 
         auto kproc = CreateProcess((void*)KernelProcess);
@@ -248,7 +248,7 @@ namespace Scheduler{
         for(int i = 0; i < 32; i++){
             Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * i, 1);
         }
-
+        memset(kernelStack, 0, PAGE_SIZE_4K * 32);
         thread->kernelStack = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * 32);
 
         ((fx_state_t*)thread->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
@@ -274,10 +274,11 @@ namespace Scheduler{
         process_t* proc = InitializeProcessStructure();
         thread_t* thread = proc->threads[0];
 
-        void* stack = (void*)Memory::KernelAllocate4KPages(32);//, proc->addressSpace);
+        void* stack = (void*)Memory::KernelAllocate4KPages(32);
         for(int i = 0; i < 32; i++){
-            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)stack + PAGE_SIZE_4K * i, 1);//, proc->addressSpace);
+            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)stack + PAGE_SIZE_4K * i, 1);
         }
+        memset(stack, 0, PAGE_SIZE_4K * 32);
 
         thread->stack = stack; // 128KB stack size
         thread->registers.rsp = (uintptr_t)thread->stack + PAGE_SIZE_4K * 32;
@@ -405,7 +406,7 @@ namespace Scheduler{
             //releaseLock(&SMP::cpus[i]->runQueueLock);
 
             if(SMP::cpus[i]->currentThread == nullptr){
-                APIC::Local::SendIPI(i, 0, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
+                APIC::Local::SendIPI(i, ICR_DSH_SELF, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
             }
         }
 
@@ -545,7 +546,7 @@ namespace Scheduler{
 	    asm volatile ("wrmsr" :: "a"(cpu->currentThread->fsBase & 0xFFFFFFFF) /*Value low*/, "d"((cpu->currentThread->fsBase >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
         
         TSS::SetKernelStack(&cpu->tss, (uintptr_t)cpu->currentThread->kernelStack);
-
+	
         TaskSwitch(&cpu->currentThread->registers, cpu->currentThread->parent->addressSpace->pml4Phys);
     }
 

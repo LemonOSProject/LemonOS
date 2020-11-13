@@ -171,7 +171,7 @@ namespace Lemon::GUI {
             } else if(strcmp(dirent.name, "initrd") == 0){ // initrd?
                 sprintf(str, "Ramdisk (%s)", dirent.name);
                 icon = 2;
-            } else sprintf(str, dirent.name);
+            } else sprintf(str, "%s", dirent.name);
             strcat(dirent.name, "/");
             FileButton* fb = new FileButton(str, (rect_t){bounds.pos + (vector2i_t){2, ypos}, {sidepanelWidth - 4,20}});
             fb->file = dirent.name;

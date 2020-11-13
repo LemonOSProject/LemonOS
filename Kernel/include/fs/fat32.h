@@ -125,9 +125,6 @@ namespace fs::FAT32{
         PartitionDevice* part;
         fat32_boot_record_t* bootRecord;
 
-        uint32_t* fat;
-        uint32_t fatEntryCount;
-
         int clusterSizeBytes;
         Fat32Node fat32MountPoint;
     };

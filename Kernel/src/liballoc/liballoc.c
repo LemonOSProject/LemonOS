@@ -753,5 +753,3 @@ void*   PREFIX(realloc)(void *p, size_t size)
 
 	return ptr;
 }
-
-#pragma GCC diagnostic pop

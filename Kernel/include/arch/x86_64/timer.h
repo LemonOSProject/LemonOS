@@ -1,7 +1,8 @@
 #pragma once
 
 #include <stdint.h>
-#include <bits/ansi/time_t.h>
+
+typedef long time_t;
 
 typedef struct {
     long seconds;

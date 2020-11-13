@@ -22,6 +22,7 @@ namespace Lemon::Graphics{
             FontFileError    = 1,
             FontLoadError    = 2,
             FontSizeError    = 3,
+            FontRenderError  = 4,
         };
 
         static const char* errorStrings[];

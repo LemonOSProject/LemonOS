@@ -39,7 +39,7 @@ void CompositorInstance::Paint(){
         }
     }
 
-    if(capFramerate && (cTime - lastRender) < (11111111 / 2)) return; // Cap at 90 FPS
+    if(capFramerate && (cTime - lastRender) < (6944443)) return; // Cap at 90 FPS
 
     lastRender = cTime;
 
@@ -101,11 +101,6 @@ void CompositorInstance::Paint(){
         rect_t bounds = wm->contextMenuBounds;
 
         DrawRect(bounds.x, bounds.y, bounds.width, bounds.height, Lemon::colours[Lemon::Colour::Background], renderSurface);
-
-        DrawRect({bounds.pos + (vector2i_t){1, 1}, {bounds.width - 1, 1}}, Lemon::colours[Lemon::Colour::ContentBackground], renderSurface);
-        DrawRect({bounds.pos + (vector2i_t){1, 1}, {1, bounds.height - 1}}, Lemon::colours[Lemon::Colour::ContentBackground], renderSurface);
-        DrawRect({{bounds.pos.x, bounds.pos.y + bounds.height - 1}, {bounds.width, 1}}, Lemon::colours[Lemon::Colour::ContentShadow], renderSurface);
-        DrawRect({{bounds.pos.x + bounds.width - 1, bounds.pos.y}, {1, bounds.height}}, Lemon::colours[Lemon::Colour::ContentShadow], renderSurface);
 
         int ypos = bounds.y;
 

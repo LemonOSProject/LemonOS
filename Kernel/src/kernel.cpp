@@ -88,8 +88,8 @@ void KernelProcess(){
 		fs::volumes->add_back(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
 	}
 	
-	Network::InitializeDrivers();
-	Network::InitializeConnections();
+	/*Network::InitializeDrivers();
+	Network::InitializeConnections();*/
 
 	for(;;) {
 		GetCPULocal()->currentThread->state = ThreadStateBlocked;
@@ -100,6 +100,7 @@ void KernelProcess(){
 typedef void (*ctor_t)(void);
 extern ctor_t _ctors_start[0];
 extern ctor_t _ctors_end[0];
+extern "C" void _init();
 
 void InitializeConstructors(){
 	unsigned ctorCount = ((uint64_t)&_ctors_end - (uint64_t)&_ctors_start) / sizeof(void*);
@@ -146,6 +147,7 @@ extern "C"
 	fs::volumes->add_back(new fs::LinkVolume(tar, "lib"));
 	Log::Write("OK");
 
+	assert(fs::GetRoot());
 	FsNode* initrd = fs::FindDir(fs::GetRoot(), "initrd");
 	FsNode* splashFile = nullptr;
 

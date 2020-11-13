@@ -15,7 +15,7 @@ asmg = generator(nasm,
         '@INPUT@',
         '-o', '@OUTPUT@'])
 
-liblemon_cpp_args = ['-Wno-write-strings',
+liblemon_cpp_args = ['-Wno-write-strings', '-Wno-missing-braces',
     '-fPIC',
     '-m64' ]
 

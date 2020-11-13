@@ -9,7 +9,7 @@ class Socket;
 
 #define PORT_MAX UINT16_MAX
 
-#define EPHEMERAL_PORT_RANGE_START 49152
+#define EPHEMERAL_PORT_RANGE_START 49152U
 #define EPHEMERAL_PORT_RANGE_END PORT_MAX
 
 struct NetworkPacket{
@@ -72,11 +72,11 @@ typedef struct MACAddress {
         return *this;
     }
 
-    bool operator==(const MACAddress& r){
+    bool operator==(const MACAddress& r) const{
         return !memcmp(data, r.data, 6);
     }
 
-    bool operator!=(const MACAddress& r){
+    bool operator!=(const MACAddress& r) const{
         return !operator==(r);
     }
 

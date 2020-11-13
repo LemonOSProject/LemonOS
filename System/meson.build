@@ -28,7 +28,7 @@ fterm_src = [
     'FTerm/input.cpp',
 ]
 
-add_project_arguments(['-Wno-write-strings', '-Wno-unused-parameter', '-Wno-pmf-conversions', '-Wno-missing-field-initializers'], language : 'cpp')
+add_project_arguments(['-Wno-write-strings', '-Wno-unused-parameter', '-Wno-missing-braces', '-Wno-missing-field-initializers'], language : 'cpp')
 
 executable('init.lef', lemond_src, link_args : ['-llemon'], install_dir : 'lemon/', install : true)
 executable('lemonwm.lef', lemonwm_src, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install_dir : 'lemon/', install : true)

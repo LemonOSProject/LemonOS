@@ -536,7 +536,7 @@ namespace Lemon::GUI {
 
             text2 = text;
             for(int i = 0; i < lineCount; i++){
-                char* end = strchr(text2, '\n');
+                const char* end = strchr(text2, '\n');
                 if(end){
                     size_t len = (uintptr_t)(end - text2);
                     if(len > strlen(text2)) break;

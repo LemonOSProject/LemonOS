@@ -95,8 +95,7 @@ void RemoveWindow(ShellWindow* win){
 }
 
 void OnTaskbarPaint(surface_t* surface){
-	Lemon::Graphics::DrawGradientVertical(100,0,surface->width - 100, /*surface->height*/24, {96, 96, 96, 255}, {42, 50, 64, 255},surface);
-	Lemon::Graphics::DrawRect(100,24,surface->width - 100, surface->height - 24, {42, 50, 64, 255},surface);
+	Lemon::Graphics::DrawGradientVertical(100,0,surface->width - 100, surface->height, Lemon::colours[Lemon::Colour::Background], Lemon::colours[Lemon::Colour::ContentBackground],surface);
 
 	if(showMenu){
 		Lemon::Graphics::surfacecpy(surface, &menuButton, {0, 0}, {0, 30, 100, 30});

@@ -17,10 +17,7 @@ namespace Lemon::Shell {
         shCmd->titleLength = strlen(title);
         shCmd->windowState = state;
 
-        #pragma GCC diagnostic push
-        #pragma GCC diagnostic ignored "-Wstringop-overflow"
-            strncpy(shCmd->windowTitle, title, shCmd->titleLength);
-        #pragma GCC diagnostic pop
+        strncpy(shCmd->windowTitle, title, shCmd->titleLength);
 
         client.Send(msg); // Tell the Shell to add the window to its list
     }

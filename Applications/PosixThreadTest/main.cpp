@@ -2,7 +2,7 @@
 #include <pthread.h>
 
 void* PrintMessage(void* msg){
-    printf((char*)msg);
+    printf("%s", (char*)msg);
 
     return nullptr;
 }

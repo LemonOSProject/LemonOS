@@ -1,9 +1,9 @@
 [binaries]
-c = 'x86_64-lemon-gcc'
-cpp = 'x86_64-lemon-g++'
+c = 'lemon-clang'
+cpp = 'lemon-clang++'
 ar = 'x86_64-lemon-ar'
 strip = 'x86_64-lemon-strip'
-ld = 'ld'
+ld = 'x86_64-lemon-ld'
 
 [host_machine]
 system = 'lemon'

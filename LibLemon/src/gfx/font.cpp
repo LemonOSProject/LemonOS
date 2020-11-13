@@ -1,7 +1,10 @@
 #include <gfx/font.h>
 
-#include <stdint.h>
-#include <list.h>
+#include <cstdint>
+#include <cstdio>
+#include <map>
+#include <string>
+#include <cstring>
 
 namespace Lemon::Graphics{
     const char* FontException::errorStrings[] = {
@@ -9,13 +12,14 @@ namespace Lemon::Graphics{
         "Failed to open font file",
         "Freetype error on loading font",
         "Error setting font size",
+        "Error rendering font",
     };
 
     int fontState = 0;
     Font* mainFont = nullptr;
     
     static FT_Library library;
-    static List<Font*> fonts;
+    static std::map<std::string, Font*> fonts = {{"default", mainFont}}; // Clang appears to call InitializeFonts before the constructor for the map
 
     void RefreshFonts(){
         if(library) FT_Done_FreeType(library);
@@ -38,18 +42,19 @@ namespace Lemon::Graphics{
             return;
         }
 
-        if(int err = FT_Set_Pixel_Sizes(mainFont->face, 0, 12)){
+        mainFont->height = 12;
+
+        if(int err = FT_Set_Pixel_Sizes(mainFont->face, 0, mainFont->height)){
             printf("Freetype Error (%d) Setting Font Size\n", err);
             return;
         }
 
         mainFont->id = new char[strlen("default") + 1];
-        mainFont->height = 12;
         mainFont->width = 8;
         mainFont->tabWidth = 4;
         strcpy(mainFont->id, "default");
 
-        fonts.add_back(mainFont);
+        fonts["default"] = mainFont;
 
         fontState = 1;
     }
@@ -70,11 +75,10 @@ namespace Lemon::Graphics{
         }
 
         if(!id){
-            char* buf = new char[24];
-            sprintf(buf, "font%d", fonts.get_length());
+            char buf[32];
+            sprintf(buf, "%s", path);
             font->id = new char[strlen(buf) + 1];
             strcpy(font->id, buf);
-            delete buf;
         } else {
             font->id = new char[strlen(id) + 1];
             strcpy(font->id, id);
@@ -85,7 +89,7 @@ namespace Lemon::Graphics{
         font->width = 8;
         font->tabWidth = 4;
 
-        fonts.add_back(font);
+        fonts[font->id] = font;
 
         fontState = 1;
 
@@ -93,9 +97,13 @@ namespace Lemon::Graphics{
     }
 
     Font* GetFont(const char* id){
-        for(unsigned i = 0; i < fonts.get_length(); i++){
-            if(strcmp(fonts[i]->id, id) == 0) return fonts[i];
+        Font* font;
+        try{
+            font = fonts.at(id);
+        } catch (const std::out_of_range& e){
+            fprintf(stderr, "Warning: font %s could not be found!", id);
+            font = mainFont;
         }
-        return mainFont;
+        return font;
     }
 };

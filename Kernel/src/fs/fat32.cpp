@@ -11,7 +11,7 @@ namespace fs::FAT32{
     int Identify(PartitionDevice* part){
         fat32_boot_record_t* bootRecord = (fat32_boot_record_t*)kmalloc(512);
 
-        if(part->Read(0, 512, (uint8_t*)bootRecord)){ // Read Volume Boot Record (First sector of partition)
+        if(part->ReadBlock(0, 512, (uint8_t*)bootRecord)){ // Read Volume Boot Record (First sector of partition)
             return -1; // Disk Error
         }
 
@@ -38,7 +38,7 @@ namespace fs::FAT32{
 
         fat32_boot_record_t* bootRecord = (fat32_boot_record_t*)kmalloc(512);
 
-        if(part->Read(0, 512, (uint8_t*)bootRecord)){ // Read Volume Boot Record (First sector of partition)
+        if(part->ReadBlock(0, 512, (uint8_t*)bootRecord)){ // Read Volume Boot Record (First sector of partition)
             Log::Warning("Disk Error Initializing Volume"); // Disk Error
             return;
         }
@@ -78,7 +78,7 @@ namespace fs::FAT32{
             uint32_t offset = cluster % (4096 / 4);
     
             if(block != lastBlock) {
-                if(part->Read(bootRecord->bpb.reservedSectors + block * (4096 / part->parentDisk->blocksize) /* Get Sector of Block */, 4096, buf)){
+                if(part->ReadBlock(bootRecord->bpb.reservedSectors + block * (4096 / part->parentDisk->blocksize) /* Get Sector of Block */, 4096, buf)){
                     delete list;
                     return nullptr;
                 }
@@ -103,7 +103,7 @@ namespace fs::FAT32{
         void* _buf = buf;
 
         for(unsigned i = 0; i < clusterChain->get_length() && maxCluster; i++){
-            part->Read(ClusterToLBA(clusterChain->get_at(i)), clusterSizeBytes, buf);
+            part->ReadBlock(ClusterToLBA(clusterChain->get_at(i)), clusterSizeBytes, buf);
 
             buf += clusterSizeBytes;
         }
@@ -126,7 +126,7 @@ namespace fs::FAT32{
         void* _buf = buf;
 
         for(unsigned i = 0; i < clusterChain->get_length(); i++){
-            part->Read(ClusterToLBA(clusterChain->get_at(i)), clusterSizeBytes, buf);
+            part->ReadBlock(ClusterToLBA(clusterChain->get_at(i)), clusterSizeBytes, buf);
 
             buf += clusterSizeBytes;
         }

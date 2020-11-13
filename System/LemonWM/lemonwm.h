@@ -153,6 +153,8 @@ public:
 
 class WMInstance {
 protected:
+    friend void* _InitializeShellConnection(void*);
+    
     Lemon::MessageServer server;
     Lemon::MessageClient shellClient;
 

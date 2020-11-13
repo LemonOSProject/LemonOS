@@ -49,7 +49,7 @@ run_src = [
 ]
 
 application_cpp_args = [
-    '-Wno-unused-parameter',
+    '-Wno-unused-parameter', '-Wno-missing-braces'
 ]
 
 guitest_src = [

@@ -19,11 +19,17 @@ SECTIONS
     {
         _code = .;
         *(.text)
-        *(.rodata)
         . = ALIGN(8);
         _ctors_start = .;
-        *(.ctors)
+        KEEP(*(.init_array .ctors))
         _ctors_end = .;
+        . = ALIGN(4096);
+    }
+    
+    .rodata : AT(ADDR(.rodata) - KERNEL_VMA)
+    {
+        _rodata = .;
+        *(.rodata)
         . = ALIGN(4096);
     }
 
@@ -59,6 +65,5 @@ SECTIONS
    /DISCARD/ :
    {
         *(.comment)
-        *(.eh_frame)
    }
 }

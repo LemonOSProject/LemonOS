@@ -550,7 +550,7 @@ namespace Memory{
 	void PageFaultHandler(void*, regs64_t* regs)
 	{
 		asm("cli");
-		Log::Error("Page Fault!\r\n");
+		write_serial_n("Page Fault\r\n", 12);
 		Log::SetVideoConsole(nullptr);
 
 		int err_code = IDT::GetErrCode();

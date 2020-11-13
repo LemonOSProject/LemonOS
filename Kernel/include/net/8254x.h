@@ -114,8 +114,6 @@ namespace Network{
         bool useIO = false;
         bool hasEEPROM = false;
 
-        const char* deviceName = "Intel 8254x Compaitble Ethernet Controller";
-
         PCIDevice& pciDevice;
 
         void WriteMem32(uintptr_t address, uint32_t data);

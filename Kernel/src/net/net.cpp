@@ -24,7 +24,7 @@ namespace Network {
     }
 
     unsigned short AllocatePort(Socket& sock){
-        int port = EPHEMERAL_PORT_RANGE_START;
+        unsigned short port = EPHEMERAL_PORT_RANGE_START;
 
         while(port <= EPHEMERAL_PORT_RANGE_END && AcquirePort(sock, port)) port++;
 

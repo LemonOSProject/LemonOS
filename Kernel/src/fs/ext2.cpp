@@ -15,7 +15,7 @@ namespace fs::Ext2{
     int Identify(PartitionDevice* part){
         ext2_superblock_t* superblock = (ext2_superblock_t*)kmalloc(sizeof(ext2_superblock_t));
 
-        if(part->Read(EXT2_SUPERBLOCK_LOCATION / part->parentDisk->blocksize, sizeof(ext2_superblock_t), superblock)){
+        if(part->ReadBlock(EXT2_SUPERBLOCK_LOCATION / part->parentDisk->blocksize, sizeof(ext2_superblock_t), superblock)){
             return -1; // Disk Error
         }
 
@@ -33,14 +33,14 @@ namespace fs::Ext2{
     Ext2Volume::Ext2Volume(PartitionDevice* part, const char* name){
         this->part = part;
 
-        if(part->Read(EXT2_SUPERBLOCK_LOCATION / part->parentDisk->blocksize, sizeof(ext2_superblock_t), &super)){
+        if(part->ReadBlock(EXT2_SUPERBLOCK_LOCATION / part->parentDisk->blocksize, sizeof(ext2_superblock_t), &super)){
             Log::Error("[Ext2] Disk Error Initializing Volume");
             error = DiskReadError;
             return; // Disk Error
         }
 
         if(super.revLevel){ // If revision level >= 0 grab the extended superblock as well
-            if(part->Read(EXT2_SUPERBLOCK_LOCATION / part->parentDisk->blocksize, sizeof(ext2_superblock_t) + sizeof(ext2_superblock_extended_t), &super)){
+            if(part->ReadBlock(EXT2_SUPERBLOCK_LOCATION / part->parentDisk->blocksize, sizeof(ext2_superblock_t) + sizeof(ext2_superblock_extended_t), &super)){
                 Log::Error("[Ext2] Disk Error Initializing Volume");
                 error = DiskReadError;
                 return; // Disk Error
@@ -93,7 +93,7 @@ namespace fs::Ext2{
         
         uint64_t blockGLBA = BlockToLBA(LocationToBlock(EXT2_SUPERBLOCK_LOCATION) + 1); // One block from the superblock
         
-        if(part->Read(blockGLBA, blockGroupCount * sizeof(ext2_blockgrp_desc_t), blockGroups)){
+        if(part->ReadBlock(blockGLBA, blockGroupCount * sizeof(ext2_blockgrp_desc_t), blockGroups)){
             Log::Error("[Ext2] Disk Error Initializing Volume");
             error = DiskReadError;
             return; // Disk Error
@@ -352,7 +352,7 @@ namespace fs::Ext2{
         uint8_t buf[part->parentDisk->blocksize];
         uint64_t lba = InodeLBA(num);
 
-        if(int e = part->Read(lba, part->parentDisk->blocksize, buf)){
+        if(int e = part->ReadBlock(lba, part->parentDisk->blocksize, buf)){
             Log::Error("[Ext2] Disk Error (%d) Reading Inode %d", e, num);
             error = DiskReadError;
             return e;
@@ -366,7 +366,7 @@ namespace fs::Ext2{
         if(block > super.blockCount)
             return 1;
 
-        if(int e = part->Read(BlockToLBA(block), blocksize, buffer)){
+        if(int e = part->ReadBlock(BlockToLBA(block), blocksize, buffer)){
             Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", e, block, blocksize);
             return e;
         }
@@ -378,7 +378,7 @@ namespace fs::Ext2{
         if(block > super.blockCount)
             return 1;
 
-        if(int e = part->Write(BlockToLBA(block), blocksize, buffer)){
+        if(int e = part->WriteBlock(BlockToLBA(block), blocksize, buffer)){
             Log::Error("[Ext2] Disk error (%e) reading block %d (blocksize: %d)", e, block, blocksize);
             return e;
         }
@@ -395,7 +395,7 @@ namespace fs::Ext2{
             memcpy(buffer, cachedBlock, blocksize);
         } else {
             cachedBlock = (uint8_t*)kmalloc(blocksize);
-            if(int e = part->Read(BlockToLBA(block), blocksize, cachedBlock)){
+            if(int e = part->ReadBlock(BlockToLBA(block), blocksize, cachedBlock)){
                 Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", e, block, blocksize);
                 return e;
             }
@@ -416,7 +416,7 @@ namespace fs::Ext2{
             memcpy(cachedBlock, buffer, blocksize);
         }
         
-        if(int e = part->Write(BlockToLBA(block), blocksize, buffer)){
+        if(int e = part->WriteBlock(BlockToLBA(block), blocksize, buffer)){
             Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", e, block, blocksize);
             return e;
         }
@@ -1185,7 +1185,7 @@ namespace fs::Ext2{
         uint8_t buf[part->parentDisk->blocksize];
         uint64_t lba = InodeLBA(inode);
 
-        if(int e = part->Read(lba, part->parentDisk->blocksize, buf)){
+        if(int e = part->ReadBlock(lba, part->parentDisk->blocksize, buf)){
             Log::Error("[Ext2] Sync: Disk Error (%d) Reading Inode %d", e, inode);
             error = DiskReadError;
             return;
@@ -1193,7 +1193,7 @@ namespace fs::Ext2{
 
         *(ext2_inode_t*)(buf + (ResolveInodeBlockGroupIndex(inode) * inodeSize) % part->parentDisk->blocksize) = e2inode;
 
-        if(int e = part->Write(lba, part->parentDisk->blocksize, buf)){
+        if(int e = part->WriteBlock(lba, part->parentDisk->blocksize, buf)){
             Log::Error("[Ext2] Sync: Disk Error (%d) Writing Inode %d", e, inode);
             error = DiskWriteError;
             return;

@@ -240,7 +240,7 @@ extern "C"{
 	}
 
 	/* Reports a fatal error, and halts. */
-	[[noreturn]] void laihost_panic(const char *msg){
+	void laihost_panic(const char *msg){
 		const char* panicReasons[]{"ACPI Error:", msg};
 		KernelPanic(panicReasons,2);
 

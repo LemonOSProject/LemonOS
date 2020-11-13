@@ -13,6 +13,10 @@ WMInstance::WMInstance(surface_t& surface, sockaddr_un address) : server(address
     screenSurface.buffer = nullptr;
 }
 
+void* _InitializeShellConnection(void* inst){
+    return reinterpret_cast<WMInstance*>(inst)->InitializeShellConnection();
+}
+
 void* WMInstance::InitializeShellConnection(){
     sockaddr_un shellAddr;
     strcpy(shellAddr.sun_path, Lemon::Shell::shellSocketAddress);
@@ -158,7 +162,7 @@ void WMInstance::Poll(){
                 MinimizeWindow(cmd->minimizeWindowID, cmd->minimized);
             } else if(cmd->cmd == Lemon::GUI::WMInitializeShellConnection){
                 pthread_t p;
-                pthread_create(&p, nullptr, reinterpret_cast<void*(*)(void*)>(&WMInstance::InitializeShellConnection), this);
+                pthread_create(&p, nullptr, reinterpret_cast<void*(*)(void*)>(&_InitializeShellConnection), this);
             } else if(cmd->cmd == Lemon::GUI::WMOpenContextMenu){
                 WMWindow* win = FindWindow(m->clientFd);
 

@@ -8,7 +8,7 @@
 #define DEFAULT_TABLE_SIZE 65535
 
 namespace Memory {
-    int* lock = 0;
+    int lock = 0;
 
     shared_mem_t** table = nullptr;
     unsigned tableSize = 0;

@@ -32,8 +32,4 @@ namespace TSS
             
         asm volatile("ltr %%ax" :: "a"(0x2B));
     }
-
-    void SetKernelStack(tss_t* tss, uint64_t stack){
-        tss->rsp0 = stack;
-    }
 }

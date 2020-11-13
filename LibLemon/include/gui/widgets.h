@@ -223,7 +223,7 @@ namespace Lemon::GUI {
         int lineSpacing = 3;
         size_t bufferSize;
         vector2i_t cursorPos = {0, 0};
-        Graphics::Font* font;
+        Graphics::Font* font = Graphics::DefaultFont();
 
         TextBox(rect_t bounds, bool multiline);
 

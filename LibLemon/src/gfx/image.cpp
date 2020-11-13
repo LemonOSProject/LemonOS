@@ -219,7 +219,7 @@ namespace Lemon::Graphics{
 
         png_destroy_write_struct(&png, &info);
 
-        delete rowPointers;
+        delete[] rowPointers;
 
         return 0;
     }

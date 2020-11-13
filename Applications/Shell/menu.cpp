@@ -124,7 +124,7 @@ public:
                 window->Minimize();
             }
 
-            delete execPath;
+            delete[] execPath;
         }
     }
 };

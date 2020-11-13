@@ -33,12 +33,11 @@ kernel_c_args = [
     '-ffreestanding', '-nostdlib',
     '-mcmodel=large', '-mno-red-zone', '-fno-pic',
     '-mno-mmx', '-mno-sse', '-mno-sse2',
-    '-z', 'max-page-size=0x1000',
-    '-fno-stack-protector',
+    '-fno-stack-protector', '-fno-builtin',
 ]
 
 kernel_cpp_args = [
-    '-fno-exceptions', '-fno-rtti', '-Wno-volatile',
+    '-fno-exceptions', '-fno-rtti', '-Wno-deprecated-volatile', '-Wno-non-c-typedef-for-linkage',
 ]
 
 add_project_arguments(kernel_c_args, language : ['c', 'cpp'])
@@ -131,7 +130,7 @@ asm_bin_files_x86_64 = [
 kernel_link_args = [
     '-m64',
     '-T', meson.current_source_dir() + '/linkscript-x86_64.ld',
-    '-lgcc'
+    '-z', 'max-page-size=0x1000',
 ]
 
 kernel_link_args += kernel_c_args

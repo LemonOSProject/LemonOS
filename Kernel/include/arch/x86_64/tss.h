@@ -23,5 +23,8 @@ typedef struct {
 namespace TSS
 {
     void InitializeTSS(tss_t* tss, void* gdt);
-    void SetKernelStack(tss_t* tss, uint64_t stack);
+
+    inline void SetKernelStack(tss_t* tss, uint64_t stack){
+        tss->rsp0 = stack;
+    }
 }
