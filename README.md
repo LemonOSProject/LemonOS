@@ -1,5 +1,7 @@
 # Lemon OS
 
+![banner](Extra/lemonlt.png)
+
 The Lemon Operating System
 
 Lemon OS is a UNIX-like 64-bit operating system written in C++.

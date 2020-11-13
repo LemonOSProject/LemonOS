@@ -551,7 +551,7 @@ int main(int argc, char** argv){
 			paint = false;
 		}
 
-		poll(fds.data(), fds.size(), -1);
+		//poll(fds.data(), fds.size(), -1);
 	}
 	return 0;
 }
