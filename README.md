@@ -1,5 +1,3 @@
-# Lemon OS
-
 ![banner](Extra/lemonlt.png)
 
 The Lemon Operating System
