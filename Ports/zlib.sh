@@ -7,7 +7,6 @@ unpack(){
  
 buildp(){
  	cd $BUILD_DIR
- 	export CC=x86_64-lemon-gcc
  	./configure --prefix=$LEMON_PREFIX
  	make -j$JOBCOUNT
  	make install DESTDIR=$LEMON_SYSROOT

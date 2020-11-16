@@ -5,6 +5,8 @@ if [ -z "$LEMON_SYSROOT" ]; then
     exit
 fi
 
+export CC=lemon-clang
+export CFLAGS=-Wno-error
 export LEMON_PREFIX=/system
 
 . ./$1.sh
