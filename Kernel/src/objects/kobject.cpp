@@ -1,3 +1,3 @@
-#include <objects/kobject.h>
+#include <objects/kobject.h> 
 
-int64_t ko_nextOID = 2; 
+int64_t KernelObject::nextOID = 2; 

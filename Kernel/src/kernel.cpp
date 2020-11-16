@@ -187,12 +187,6 @@ extern "C"
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 - 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
-	Log::Info("Registering Syscall Handler...");
-
-	InitializeSyscalls();
-
-	Log::Write("OK");
-
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 

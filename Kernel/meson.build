@@ -79,6 +79,8 @@ cpp_files = [
     'src/net/interface.cpp',
     'src/net/ipsocket.cpp',
 
+    'src/objects/kobject.cpp',
+
     'src/storage/ahci.cpp',
     'src/storage/ahciport.cpp',
     'src/storage/ata.cpp',

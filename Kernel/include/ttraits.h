@@ -9,29 +9,29 @@ class TTraits{
     }
 };
 
-template<int32_t>
-class TTraits{
+template<>
+class TTraits <int32_t>{
     static const char* name(){
         return "int32";
     }
 };
 
-template<uint32_t>
-class TTraits{
+template<>
+class TTraits <uint32_t>{
     static const char* name(){
         return "uint32";
     }
 };
 
-template<int64_t>
-class TTraits{
+template<>
+class TTraits <int64_t>{
     static const char* name(){
         return "uint64";
     }
 };
 
-template<uint64_t>
-class TTraits{
+template<>
+class TTraits <uint64_t>{
     static const char* name(){
         return "uint64";
     }

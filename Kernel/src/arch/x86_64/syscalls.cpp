@@ -2269,7 +2269,8 @@ syscall_t syscalls[]{
 };
 
 int lastSyscall = 0;
-void SyscallHandler(void*, regs64_t* regs) {
+extern "C"
+void SyscallHandler(regs64_t* regs) {
 	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
 		return;
 		
@@ -2282,8 +2283,4 @@ void SyscallHandler(void*, regs64_t* regs) {
 	acquireLock(&thread->lock);
 	regs->rax = syscalls[regs->rax](regs); // Call syscall
 	releaseLock(&thread->lock);
-}
-
-void InitializeSyscalls() {
-	IDT::RegisterInterruptHandler(0x69, SyscallHandler);
 }

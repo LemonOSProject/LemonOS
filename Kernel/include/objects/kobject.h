@@ -8,15 +8,14 @@
 #include <stdint.h>
 #include <ttraits.h>
 
-extern int ko_nextOID;
-
 class KernelObject{
 protected:
     int64_t oid = -1;
+    static int64_t nextOID;
 
 public:
     KernelObject(){
-        oid = ko_nextOID++;
+        oid = nextOID++;
     }
 
     inline int64_t ObjectID() { return oid; }
@@ -24,4 +23,4 @@ public:
     virtual ~KernelObject(){
 
     }
-}
+};
