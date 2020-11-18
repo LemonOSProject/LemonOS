@@ -98,6 +98,24 @@ InputManager::InputManager(WMInstance* wm){
 }
 
 void InputManager::Poll(){
+	auto handlePacketPress = [=](Lemon::MousePacket& pkt) -> void {
+        if((!!(pkt.buttons & Lemon::MouseButton::Left)) != mouse.left){ /* Use a double negative to make the statement 0 or 1*/
+            mouse.left = !!(pkt.buttons & Lemon::MouseButton::Left);
+
+            if(mouse.left){
+                wm->MouseDown();
+            } else {
+                wm->MouseUp();
+            }
+        }
+
+        if((!!(pkt.buttons & Lemon::MouseButton::Right)) != mouse.right){ /* Use a double negative to make the statement 0 or 1*/
+            mouse.right = !!(pkt.buttons & Lemon::MouseButton::Right);
+
+            wm->MouseRight(mouse.right);
+		}
+	};
+
     if(Lemon::MousePacket mousePacket; Lemon::PollMouse(mousePacket)){
         mouse.pos.x += mousePacket.xMovement;
         mouse.pos.y += mousePacket.yMovement;
@@ -108,27 +126,26 @@ void InputManager::Poll(){
         if(mouse.pos.y > wm->surface.height) mouse.pos.y = wm->surface.height;
         else if (mouse.pos.y < 0) mouse.pos.y = 0;
 
-        if((!!(mousePacket.buttons & Lemon::MouseButton::Left)) != mouse.left){ /* Use a double negative to make the statement 0 or 1*/
-            mouse.left = !!(mousePacket.buttons & Lemon::MouseButton::Left);
+		handlePacketPress(mousePacket);
 
-            if(mouse.left){
-                wm->MouseDown();
-            } else {
-                wm->MouseUp();
-            }
-        }
+		while(Lemon::PollMouse(mousePacket)){
+        	mouse.pos.x += mousePacket.xMovement;
+        	mouse.pos.y += mousePacket.yMovement;
 
-        if((!!(mousePacket.buttons & Lemon::MouseButton::Right)) != mouse.right){ /* Use a double negative to make the statement 0 or 1*/
-            mouse.right = !!(mousePacket.buttons & Lemon::MouseButton::Right);
+			if(mouse.pos.x > wm->surface.width) mouse.pos.x = wm->surface.width;
+			else if (mouse.pos.x < 0) mouse.pos.x = 0;
 
-            wm->MouseRight(mouse.right);
+			if(mouse.pos.y > wm->surface.height) mouse.pos.y = wm->surface.height;
+			else if (mouse.pos.y < 0) mouse.pos.y = 0;
+
+			handlePacketPress(mousePacket); // If necessary send a mouse press event for each packet, however only send move event after processing all packets
 		}
 
 		wm->MouseMove();
     }
 
-    uint8_t buf[16];
-    ssize_t count = Lemon::PollKeyboard(buf, 16);
+    uint8_t buf[32];
+    ssize_t count = Lemon::PollKeyboard(buf, 32);
 
     for(ssize_t i = 0; i < count; i++){
         uint8_t code = buf[i] & 0x7F;

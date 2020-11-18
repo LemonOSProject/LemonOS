@@ -15,6 +15,7 @@ struct Message{
     uint16_t size;
 
     Message* next;
+    Message* prev;
 };
 
 class MessageEndpoint : public KernelObject{

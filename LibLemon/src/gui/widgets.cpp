@@ -897,10 +897,17 @@ namespace Lemon::GUI {
                 vector2i_t pos = fixedBounds.pos + (vector2i_t){xPos + itemSize.x / 2 - 32, yPos + 2};
                 rect_t srcRegion = {0, 0, 64, 64};
 
+                int containerBottom = fixedBounds.pos.y + fixedBounds.size.y;
                 if(pos.y < fixedBounds.pos.y){
                     srcRegion.height += (pos.y - fixedBounds.pos.y);
                     srcRegion.y -= (pos.y - fixedBounds.pos.y);
                     pos.y = fixedBounds.pos.y;
+                } else if(pos.y > containerBottom){
+                    continue;
+                }
+
+                if(pos.y + srcRegion.height > containerBottom){
+                    srcRegion.height = containerBottom - pos.y;
                 }
 
                 Graphics::surfacecpyTransparent(surface, item.icon, pos, srcRegion);
