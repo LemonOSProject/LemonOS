@@ -12,21 +12,16 @@ protected:
 public:
     FancyRefPtr(){
         refCount = new unsigned;
-        *(refCount) = 1;
+        *(refCount) = 0;
 
-        obj = new T();
-
-        #ifdef DEBUG_REFPTR
-            Log::Info("New RefPtr containing %s object, now %d references to object", TTraits<T>.name(), refCount);
-        #endif
+        obj = nullptr;
     }
 
     FancyRefPtr(T&& v){
         refCount = new unsigned;
         *(refCount) = 1;
 
-        obj = new T();
-        obj = v;
+        obj = new T(v);
 
         #ifdef DEBUG_REFPTR
             Log::Info("New RefPtr containing %s object, now %d references to object", TTraits<T>.name(), refCount);
@@ -57,13 +52,19 @@ public:
     }
 
     virtual ~FancyRefPtr(){
+        if(!obj) return;
+
+        #ifdef REFPTR_ASSERTIONS
+            assert(refCount);
+        #endif
+
         (*refCount)--;
 
         #ifdef DEBUG_REFPTR
             Log::Info("RefPtr: %s object unreferenced, %d references to object", TTraits<T>.name(), refCount);
         #endif
 
-        if(refCount <= 0){
+        if(obj && (*refCount) <= 0){
             delete refCount;
             delete obj;
 
@@ -76,6 +77,10 @@ public:
     FancyRefPtr<T>& operator=(const FancyRefPtr<T>& ptr){
         obj = ptr.obj;
         refCount = ptr.refCount;
+
+        (*refCount)++;
+
+        return *this;
     }
 
     inline T& operator* (){

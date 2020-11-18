@@ -19,8 +19,5 @@ extern const int debugLevelPartitions;
 extern const int debugLevelXHCI;
 extern const int debugLevelInterrupts;
 
-#define KOBJECT_ASSERTIONS
-#define REFPTR_DEBUG
-
 #define REFPTR_ASSERTIONS
 #define REFPTR_DEBUG

@@ -80,6 +80,7 @@ cpp_files = [
     'src/net/ipsocket.cpp',
 
     'src/objects/kobject.cpp',
+    'src/objects/message.cpp',
 
     'src/storage/ahci.cpp',
     'src/storage/ahciport.cpp',
