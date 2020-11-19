@@ -11,7 +11,10 @@
 
 struct Message{
     uint64_t id;
-    uint64_t data; // Empty, pointer or integer
+    union{
+        uint64_t data; // Empty, pointer or integer
+        uint8_t* dataP;
+    };
     uint16_t size;
 
     Message* next;
@@ -26,11 +29,13 @@ private:
     uint16_t messageQueueLimit = 128;
     uint16_t messageCacheLimit = 16;
 
+    lock_t bufferCacheLock = 0;
     lock_t cacheLock = 0;
     lock_t queueLock = 0;
 
     Semaphore queueAvailablilitySemaphore = Semaphore(messageQueueLimit);
 
+    List<uint8_t*> bufferCache;
     FastList<Message*> cache;
     FastList<Message*> queue;
 
@@ -47,6 +52,7 @@ public:
     }
 
     MessageEndpoint(uint16_t maxSize);
+    ~MessageEndpoint();
 
     /////////////////////////////
     /// \brief Read a message from the queue

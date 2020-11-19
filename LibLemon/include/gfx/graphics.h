@@ -97,6 +97,8 @@ namespace Lemon::Graphics{
     // PointInRect (rect, point) - Check if a point lies inside a rectangle
     bool PointInRect(rect_t rect, vector2i_t point);
 
+    rgba_colour_t AverageColour(rgba_colour_t c1, rgba_colour_t c2);
+
     // DrawRect (rect, colour, surface*) - Draw filled rectangle
     void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface, rect_t mask = {0, 0, INT_MAX, INT_MAX});
     void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t mask = {0, 0, INT_MAX, INT_MAX});

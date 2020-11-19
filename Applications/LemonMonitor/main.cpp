@@ -44,7 +44,7 @@ int main(int argc, char** argv){
         uint64_t activeTimeSum = 0;
 
         for(lemon_process_info_t proc : processes){
-            try{    
+            if(processTimer.find(proc.pid) != processTimer.end()){
                 ProcessCPUTime& pTime = processTimer.at(proc.pid);
 
                 uint64_t diff = proc.activeUs - pTime.activeUs;
@@ -52,7 +52,7 @@ int main(int argc, char** argv){
 
                 pTime.activeUs = proc.activeUs; // Update the entry
                 pTime.diff = diff;
-            } catch(const std::out_of_range& e) {
+            } else {
                 processTimer[proc.pid] = {.diff = 0, .activeUs = proc.activeUs, .lastUsage = 0 };
             }
         }
@@ -64,7 +64,7 @@ int main(int argc, char** argv){
             snprintf(uptime, 39, "%lum %lus", proc.runningTime / 60, proc.runningTime % 60);
 
             char usage[6];
-            try{    
+            if(processTimer.find(proc.pid) != processTimer.end()){
                 ProcessCPUTime& pTime = processTimer.at(proc.pid);
                 if(pTime.diff && activeTimeSum){
                     snprintf(usage, 5, "%lu%%", (pTime.diff * 100) / activeTimeSum); // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
@@ -73,7 +73,7 @@ int main(int argc, char** argv){
                     strcpy(usage, "0%");
                     pTime.lastUsage = 0;
                 }
-            } catch(const std::out_of_range& e) {
+            } else {
                 strcpy(usage, "0%");
 
                 processTimer[proc.pid] = {.diff = 0, .activeUs = proc.activeUs, .lastUsage = 0 };

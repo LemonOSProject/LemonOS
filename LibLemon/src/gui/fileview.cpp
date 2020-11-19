@@ -147,29 +147,27 @@ namespace Lemon::GUI {
 
         int sideBar = open("/", O_DIRECTORY);
         int ypos = pathBox->GetFixedBounds().height + 20;
-        char str[270];
+        char str[NAME_MAX];
         int i = 0;
         lemon_dirent_t dirent;
         while(lemon_readdir(sideBar, i++, &dirent) > 0){
             int icon = 3;
-
-            printf("Name: %s\n", dirent.name);
 
             if(strcmp(dirent.name, "lib") == 0 || strcmp(dirent.name, "etc") == 0){
                 continue;
             }
 
             if(strncmp(dirent.name, "hd", 2) == 0 && dirent.name[2]){ // hd(x)?
-                sprintf(str, "Harddrive (%s)", dirent.name);
+                snprintf(str, NAME_MAX, "Harddrive (%s)", dirent.name);
                 icon = 1;
             } else if(strcmp(dirent.name, "system") == 0){
                 strcpy(str, "System");
                 icon = 0;
             } else if(strcmp(dirent.name, "dev") == 0){ // dev?
-                sprintf(str, "Devices (%s)", dirent.name);
+                snprintf(str, NAME_MAX, "Devices (%s)", dirent.name);
                 icon = 3;
             } else if(strcmp(dirent.name, "initrd") == 0){ // initrd?
-                sprintf(str, "Ramdisk (%s)", dirent.name);
+                snprintf(str, NAME_MAX, "Ramdisk (%s)", dirent.name);
                 icon = 2;
             } else sprintf(str, "%s", dirent.name);
             strcat(dirent.name, "/");

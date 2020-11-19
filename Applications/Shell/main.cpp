@@ -56,13 +56,9 @@ public:
 	void Paint(surface_t* surface){
 		if(win->state == Lemon::Shell::ShellWindowStateActive || pressed){
 			Lemon::Graphics::DrawRect(fixedBounds, {42, 50, 64, 255}, surface);
-		} else {
-            Lemon::Graphics::DrawGradientVertical(fixedBounds.x + 1, fixedBounds.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 4, {90, 90, 90, 255},{62, 70, 84, 255}, surface);
-            Lemon::Graphics::DrawRect(fixedBounds.x + 1, fixedBounds.y + fixedBounds.height - 3, bounds.size.x - 2, 2, {42, 50, 64, 255},surface);
 		}
 
-		DrawButtonBorders(surface, false);
-		DrawButtonLabel(surface, true);
+		DrawButtonLabel(surface, false);
 	}
 
 	void OnMouseUp(vector2i_t mousePos){
@@ -95,7 +91,7 @@ void RemoveWindow(ShellWindow* win){
 }
 
 void OnTaskbarPaint(surface_t* surface){
-	Lemon::Graphics::DrawGradientVertical(100,0,surface->width - 100, surface->height, Lemon::colours[Lemon::Colour::Background], Lemon::colours[Lemon::Colour::ContentBackground],surface);
+	Lemon::Graphics::DrawGradientVertical(100,0,surface->width - 100, surface->height, Lemon::colours[Lemon::Colour::Background], Lemon::Graphics::AverageColour(Lemon::colours[Lemon::Colour::ContentBackground], Lemon::colours[Lemon::Colour::Background]),surface);
 
 	if(showMenu){
 		Lemon::Graphics::surfacecpy(surface, &menuButton, {0, 0}, {0, 30, 100, 30});

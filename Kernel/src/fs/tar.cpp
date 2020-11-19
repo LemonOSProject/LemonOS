@@ -203,7 +203,7 @@ namespace fs::tar{
     int TarVolume::ReadDir(TarNode* node, DirectoryEntry* dirent, uint32_t index){
         TarNode* tarNode = &nodes[node->inode];
         
-        if(!(node->flags & FS_NODE_DIRECTORY)) return -ENOTDIR;
+        if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) return -ENOTDIR;
 
         if(index >= static_cast<unsigned>(tarNode->entryCount + 2)) return 0;
 

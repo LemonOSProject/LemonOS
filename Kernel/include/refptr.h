@@ -74,6 +74,8 @@ public:
         }
     }
 
+    inline T* get() { return obj; }
+
     FancyRefPtr<T>& operator=(const FancyRefPtr<T>& ptr){
         obj = ptr.obj;
         refCount = ptr.refCount;

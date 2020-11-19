@@ -40,24 +40,21 @@ void memset64_optimized(void* _dest, uint64_t c, size_t count) {
 
 extern "C"
 void memcpy_optimized(void* dest, void* src, size_t count);
-/*inline void memcpy_optimized(void* dest, void* src, size_t count) {
-    size_t overflow = (count & 0xF); // Amount of overflow bytes
-    size_t size_aligned = (count & (~0xFULL)); // Size rounded DOWN to lowest multiple of 128 bits
-
-    if(((size_t)dest & 0xF) || ((size_t)src & 0xF))
-        memcpy_sse2_unaligned(dest, src, size_aligned >> 4);
-    else
-        memcpy_sse2(dest, src, size_aligned >> 4);
-
-    if (overflow > 0)
-        memcpy(reinterpret_cast<uint8_t*>(dest) + size_aligned, reinterpret_cast<uint8_t*>(src) + size_aligned, overflow);
-}*/
 
 namespace Lemon::Graphics{
 
     // Check if a point lies inside a rectangle
     bool PointInRect(rect_t rect, vector2i_t point){
         return (point.x >= rect.pos.x && point.x < rect.pos.x + rect.size.x && point.y >= rect.pos.y && point.y < rect.pos.y + rect.size.y);
+    }
+
+    rgba_colour_t AverageColour(rgba_colour_t c1, rgba_colour_t c2){
+        int r = static_cast<int>(c1.r) + c2.r;
+        int g = static_cast<int>(c1.g) + c2.g;
+        int b = static_cast<int>(c1.b) + c2.b;
+        int a = static_cast<int>(c1.a) + c2.a;
+
+        return {static_cast<uint8_t>(r / 2), static_cast<uint8_t>(g / 2), static_cast<uint8_t>(b / 2), static_cast<uint8_t>(a / 2)};
     }
 
     void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface, rect_t mask){
