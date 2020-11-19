@@ -752,7 +752,7 @@ namespace fs::Ext2{
 
         ext2_inode_t& ino = node->e2inode;
 
-        uint8_t* buffer = (uint8_t*)kmalloc(blocksize);
+        uint8_t buffer[blocksize];
         uint32_t currentBlockIndex = 0;
         uint32_t blockOffset = 0;
         uint32_t totalOffset = 0;
@@ -813,7 +813,6 @@ namespace fs::Ext2{
             node->size = node->e2inode.size;
         }
 
-        kfree(buffer);
         kfree(e2dirent);
 
         SyncNode(node);
@@ -858,7 +857,7 @@ namespace fs::Ext2{
 
         ext2_inode_t& ino = node->e2inode;
 
-        uint8_t* buffer = (uint8_t*)kmalloc(blocksize);
+        uint8_t buffer[blocksize];
         uint32_t currentBlockIndex = 0;
         uint32_t blockOffset = 0;
         uint32_t totalOffset = 0;
@@ -938,8 +937,7 @@ namespace fs::Ext2{
 
         ext2_inode_t& ino = node->e2inode;
 
-        uint8_t* buffer = (uint8_t*)kmalloc(blocksize);
-        memset(buffer, 0, blocksize);
+        uint8_t buffer[blocksize];
         uint32_t currentBlockIndex = 0;
         uint32_t blockOffset = 0;
         uint32_t totalOffset = 0;
@@ -971,7 +969,6 @@ namespace fs::Ext2{
                 
                 if(currentBlockIndex >= ino.blockCount / (blocksize / 512)){
                     // End of dir
-                    kfree(buffer);
                     return nullptr;
                 }
 
@@ -988,13 +985,11 @@ namespace fs::Ext2{
 
         if(strlen(name) != e2dirent->nameLength || strncmp(e2dirent->name, name, e2dirent->nameLength) != 0){
             // Not found
-            kfree(buffer);
             return nullptr;
         }
 
         if(!e2dirent->inode || e2dirent->inode > super.inodeCount){
             Log::Error("[Ext2] Directory Entry %s contains invalid inode %d", name, e2dirent->inode);
-            kfree(buffer);
             return nullptr;
         }
 
@@ -1011,8 +1006,6 @@ namespace fs::Ext2{
 
             inodeCache.insert(e2dirent->inode, returnNode);
         }
-
-        kfree(buffer);
         return returnNode;
     }
 
@@ -1104,7 +1097,7 @@ namespace fs::Ext2{
         uint32_t blockIndex = LocationToBlock(offset); // Index of first block to write
         uint32_t fileBlockCount = node->e2inode.blockCount / (blocksize / 512); // Size of file in blocks
         uint32_t blockLimit = LocationToBlock(offset + size); // Amount of blocks to write
-        uint8_t* blockBuffer = (uint8_t*)kmalloc(blocksize); // block buffer
+        uint8_t blockBuffer[blocksize]; // block buffer
         bool sync = false; // Need to sync the inode?
 
         if(blockLimit >= fileBlockCount){
