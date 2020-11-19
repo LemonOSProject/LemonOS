@@ -28,6 +28,8 @@
 
 Lemon::GUI::Window* window;
 
+bool paintAll = true;
+
 struct TermState{
 	bool bold : 1;
 	bool italic : 1;
@@ -89,24 +91,42 @@ void Scroll(){
 	}
 			
 	while(static_cast<std::size_t>(bufferOffset + rowCount) >= buffer.size()) buffer.push_back(std::vector<TerminalChar>());
+	
+	paintAll = true;
 }
 
 void OnPaint(surface_t* surface){
-	Lemon::Graphics::DrawRect(0, 0, window->GetSize().x, window->GetSize().y, 0, 0, 0, surface);
-
 	int fontHeight = terminalFont->height;
 
-	for(int i = 0; i < rowCount && (bufferOffset + i) < static_cast<int>(buffer.size()); i++){
-		for(int j = 0; j < static_cast<int>(buffer[bufferOffset + i].size()); j++){
-			TerminalChar ch = buffer[bufferOffset + i][j];
+	if(/*paintAll*/ true){
+		for(int i = 0; i < rowCount && (bufferOffset + i) < static_cast<int>(buffer.size()); i++){
+			int j = 0;
+			for(; j < static_cast<int>(buffer[bufferOffset + i].size()); j++){
+				TerminalChar ch = buffer[bufferOffset + i][j];
+				rgba_colour_t fg = colours[ch.s.fgColour];
+				rgba_colour_t bg = colours[ch.s.bgColour];
+				Lemon::Graphics::DrawRect(j * 8, i * fontHeight, 8, fontHeight, bg.r, bg.g, bg.b, surface);
+				Lemon::Graphics::DrawChar(ch.c, j * 8, i * fontHeight, fg.r, fg.g, fg.b, surface, terminalFont);
+			}
+			
+			Lemon::Graphics::DrawRect(j * 8, i * fontHeight, window->GetSize().x - j * 8, fontHeight, colours[state.bgColour], surface);
+		}
+	} else {
+		int j = 0;
+		for(; j < static_cast<int>(buffer[bufferOffset + curPos.y].size()); j++){
+			TerminalChar ch = buffer[bufferOffset + curPos.y][j];
 			rgba_colour_t fg = colours[ch.s.fgColour];
 			rgba_colour_t bg = colours[ch.s.bgColour];
-			Lemon::Graphics::DrawRect(j * 8, i * fontHeight, 8, fontHeight, bg.r, bg.g, bg.b, surface);
-			Lemon::Graphics::DrawChar(ch.c, j * 8, i * fontHeight, fg.r, fg.g, fg.b, surface, terminalFont);
+			Lemon::Graphics::DrawRect(j * 8, curPos.y * fontHeight, 8, fontHeight, bg.r, bg.g, bg.b, surface);
+			Lemon::Graphics::DrawChar(ch.c, j * 8, curPos.y * fontHeight, fg.r, fg.g, fg.b, surface, terminalFont);
 		}
+
+		Lemon::Graphics::DrawRect(j * 8, curPos.y * fontHeight, window->GetSize().x -  j * 8, fontHeight, colours[state.bgColour], surface);
 	}
 
 	Lemon::Graphics::DrawRect(curPos.x * 8, curPos.y * fontHeight + (fontHeight / 4 * 3), 8, fontHeight / 4, colours[0x7] /* Grey */, surface);
+
+	paintAll = false;
 }
 
 void DoAnsiSGR(){
@@ -191,6 +211,9 @@ void DoAnsiCSI(char ch){
 			if(strlen(escBuf)){
 				amount = atoi(escBuf);
 			}
+
+			paintAll = true;
+
 			curPos.y -= amount;
 			if(curPos.y < 0) curPos.y = 0;
 			break;
@@ -201,6 +224,7 @@ void DoAnsiCSI(char ch){
 			if(strlen(escBuf)){
 				amount = atoi(escBuf);
 			}
+
 			curPos.y += amount;
 			Scroll();
 			break;
@@ -229,6 +253,8 @@ void DoAnsiCSI(char ch){
 			if(curPos.x < 0) {
 				curPos.x = columnCount - 1;
 				curPos.y--;
+
+				paintAll = true;
 			}
 			if(curPos.y < 0) curPos.y = 0;
 			break;
@@ -251,6 +277,8 @@ void DoAnsiCSI(char ch){
 				curPos.x = 0;
 				curPos.y = 0;
 			}
+
+			paintAll = true;
 		}
 		break;
 	case ANSI_CSI_ED:
@@ -261,6 +289,7 @@ void DoAnsiCSI(char ch){
 					for(int i = curPos.y + 1; i < rowCount && i + bufferOffset < static_cast<int>(buffer.size()); i++){
 						buffer[bufferOffset + i].clear();
 					}
+					paintAll = true;
 					break;
 				case 1: // Clear screen and move cursor
 				case 2: // Same as 1 but delete everything in the scrollback buffer
@@ -270,6 +299,7 @@ void DoAnsiCSI(char ch){
 					for(int i = 0; i < rowCount; i++){
 						buffer.push_back(std::vector<TerminalChar>());
 					}
+					paintAll = true;
 					break;
 			}
 		}
@@ -288,6 +318,7 @@ void DoAnsiCSI(char ch){
 				curPos.x = 0;
 
 				buffer.erase(buffer.begin() + bufferOffset);
+				paintAll = true;
 				break;
 			case 1: // Clear from cursor to beginning of line
 				buffer[bufferOffset + curPos.y].erase(buffer[bufferOffset + curPos.y].begin(), buffer[bufferOffset + curPos.y].begin() + curPos.x);
@@ -303,6 +334,8 @@ void DoAnsiCSI(char ch){
 		{
 			int amount = atoi(escBuf);
 			buffer.insert(buffer.begin() + bufferOffset + curPos.y, amount, std::vector<TerminalChar>());
+
+			paintAll = true;
 			break;
 		}
 	case ANSI_CSI_DL:
@@ -313,6 +346,8 @@ void DoAnsiCSI(char ch){
 			while(static_cast<int>(buffer.size()) - bufferOffset < rowCount){
 				buffer.push_back(std::vector<TerminalChar>());
 			}
+
+			paintAll = true;
 			break;
 		}
 	case ANSI_CSI_SU: // Scroll Up
@@ -325,14 +360,20 @@ void DoAnsiCSI(char ch){
 		while(static_cast<int>(buffer.size()) - bufferOffset < rowCount){
 			buffer.push_back(std::vector<TerminalChar>());
 		}
+
+		paintAll = true;
 		break;
 	case ANSI_CSI_SD: // Scroll Down
 		if(strlen(escBuf)){
 			buffer.insert(buffer.begin() + bufferOffset, atoi(escBuf), std::vector<TerminalChar>());
 			//bufferOffset -= atoi(escBuf);
+
+			paintAll = true;
 		} else {
 			buffer.insert(buffer.begin() + bufferOffset, 1, std::vector<TerminalChar>());
 			//bufferOffset--;
+
+			paintAll = true;
 		}
 		break;
 	default:
@@ -411,6 +452,8 @@ void PrintChar(char ch){
 			else if(curPos.y > 0) {
 				curPos.y--;
 				curPos.x = buffer[bufferOffset + curPos.y].size();
+
+				paintAll = true;
 			}
 			
 			buffer[bufferOffset + curPos.y].erase(buffer[bufferOffset + curPos.y].begin() + curPos.x);
@@ -474,8 +517,6 @@ int main(int argc, char** argv){
 
 	char* _buf = (char*)malloc(512);
 
-	bool paint = true;
-
 	winsize wSz = {
 		.ws_row = static_cast<unsigned short>(rowCount),
 		.ws_col = static_cast<unsigned short>(columnCount),
@@ -535,21 +576,17 @@ int main(int argc, char** argv){
 				wSz.ws_ypixel = static_cast<unsigned short>(window->GetSize().y);
 				
 				ioctl(masterPTYFd, TIOCSWINSZ, &wSz);
+				paintAll = true;
 			}
-			paint = true;
 		}
 
 		while(int len = read(masterPTYFd, _buf, 512)){
 			for(int i = 0; i < len; i++){
 				PrintChar(_buf[i]);
 			}
-			paint = true;
 		}
 
-		if(paint){
-			window->Paint();
-			paint = false;
-		}
+		window->Paint();
 
 		//poll(fds.data(), fds.size(), -1);
 	}

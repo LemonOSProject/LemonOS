@@ -146,6 +146,7 @@ public:
 class LocalSocket : public Socket {
     lock_t slock = 0;
 
+    lock_t watcherLock = 0;
     List<FilesystemWatcher*> watching;
 public:
     LocalSocket* peer = nullptr;

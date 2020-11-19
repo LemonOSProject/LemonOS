@@ -135,9 +135,11 @@ int LocalSocket::ConnectTo(Socket* client){
 
     pending.add_back(client);
 
+    acquireLock(&watcherLock);
     while(watching.get_length()){
         watching.remove_at(0)->Signal();
     }
+    releaseLock(&watcherLock);
 
     while(!client->connected){
         // TODO: Actually block the task
@@ -160,9 +162,11 @@ void LocalSocket::DisconnectPeer(){
 void LocalSocket::OnDisconnect(){
     connected = false;
 
+    acquireLock(&watcherLock);
     while(watching.get_length()){
         watching.remove_at(0)->Signal(); // Signal all watching on disconnect
     }
+    releaseLock(&watcherLock);
 
     peer = nullptr;
 }
@@ -241,6 +245,7 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen){
         return -EOPNOTSUPP;
     }
 
+    
     if (type == DatagramSocket){
         inbound = new PacketStream();
         outbound = new PacketStream();
@@ -339,9 +344,11 @@ int64_t LocalSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr*
     int64_t written = outbound->Write(buffer, len);
 
     if(peer && peer->CanRead()){
+        acquireLock(&peer->watcherLock);
         while(peer->watching.get_length()){
             peer->watching.remove_at(0)->Signal();
         }
+        releaseLock(&peer->watcherLock);
     }
 
     return written;
@@ -376,11 +383,15 @@ void LocalSocket::Watch(FilesystemWatcher& watcher, int events){
         return;
     }
 
+    acquireLock(&watcherLock);
     watching.add_back(&watcher);
+    acquireLock(&watcherLock);
 }
 
 void LocalSocket::Unwatch(FilesystemWatcher& watcher){
+    acquireLock(&watcherLock);
     watching.remove(&watcher);
+    acquireLock(&watcherLock);
 }
 
 namespace SocketManager{
