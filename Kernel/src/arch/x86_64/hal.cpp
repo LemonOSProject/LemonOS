@@ -79,14 +79,14 @@ namespace HAL{
                 case Mboot2MemoryInfo: {
                     multiboot2_memory_info_t* mbMemInfo = reinterpret_cast<multiboot2_memory_info_t*>(tag);
                     Log::Info("Bootloader reports %d MB of memory", (mbMemInfo->memoryLower + mbMemInfo->memoryUpper) / 1024);
-                    mem_info.memory_high = mbMemInfo->memoryUpper;
-                    mem_info.memory_low = mbMemInfo->memoryLower;
                     break;
                 } 
                 case Mboot2MemoryMap: {
                     multiboot2_memory_map_t* mbMemMap = reinterpret_cast<multiboot2_memory_map_t*>(tag);
                     
                     multiboot2_mmap_entry_t* currentEntry = mbMemMap->entries;
+
+                    mem_info.totalMemory = 0;
                     while(reinterpret_cast<uintptr_t>(currentEntry) < reinterpret_cast<uintptr_t>(mbMemMap) + mbMemMap->size){
                         switch (currentEntry->type)
                         {
@@ -95,6 +95,7 @@ namespace HAL{
                                 Log::Info("Memory region [%x-%x] available", currentEntry->base, currentEntry->base + currentEntry->length);
                             }
                             Memory::MarkMemoryRegionFree(currentEntry->base, currentEntry->length);
+                            mem_info.totalMemory += currentEntry->length;
                             break;
                         default: // Not available
                             if(debugLevelHAL >= DebugLevelVerbose){

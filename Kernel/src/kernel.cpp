@@ -91,6 +91,8 @@ void KernelProcess(){
 	/*Network::InitializeDrivers();
 	Network::InitializeConnections();*/
 
+	Scheduler::EndProcess(Scheduler::GetCurrentProcess());
+
 	for(;;) {
 		GetCPULocal()->currentThread->state = ThreadStateBlocked;
 		Scheduler::Yield();

@@ -32,7 +32,7 @@ void WMWindow::Draw(surface_t* surface){
 
 	Lemon::Graphics::DrawRectOutline(pos.x, pos.y, size.x + WINDOW_BORDER_THICKNESS * 2, size.y + WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS * 2, WINDOW_BORDER_COLOUR, surface);
 	Lemon::Graphics::DrawRectOutline(pos.x + (WINDOW_BORDER_THICKNESS / 2), pos.y + WINDOW_TITLEBAR_HEIGHT + (WINDOW_BORDER_THICKNESS / 2), size.x + WINDOW_BORDER_THICKNESS, size.y + WINDOW_BORDER_THICKNESS, {42, 50, 64}, surface);
-	Lemon::Graphics::DrawGradientVertical({pos + (vector2i_t){1,1}, {size.x + WINDOW_BORDER_THICKNESS, WINDOW_TITLEBAR_HEIGHT}}, {96, 96, 96}, {42, 50, 64}, surface);
+	Lemon::Graphics::DrawGradientVertical({pos + (vector2i_t){1,1}, {size.x + WINDOW_BORDER_THICKNESS, WINDOW_TITLEBAR_HEIGHT}}, {0x29, 0x2c, 0x33, 255}, {0x29, 0x29, 0x2e, 255}, surface);
 
 	Lemon::Graphics::DrawString(title, pos.x + 6, pos.y + 6, 255, 255, 255, surface);
 

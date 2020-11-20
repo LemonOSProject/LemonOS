@@ -145,6 +145,7 @@ public:
         this->obj = &obj;
 
         label = Lemon::Graphics::TextObject(fixedBounds.pos + (vector2i_t){0, fixedBounds.size.y / 2}, this->obj->name);
+        label.SetColour({255, 255, 255, 255});
     }
 
     void Paint(surface_t* surface){
@@ -167,7 +168,7 @@ public:
 };
 
 void OnPaint(surface_t* surface){
-	Lemon::Graphics::DrawGradientVertical(0, 0, 24, surface->height, {42, 50, 64, 255}, {96, 96, 96, 255}, surface);
+
 }
 
 int nextID = 10000;
@@ -177,7 +178,7 @@ int GetItemID(){
 
 void InitializeMenu(){
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
-    window = new Lemon::GUI::Window("", {240, 300}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 30 - 300});
+    window = new Lemon::GUI::Window("", {240, 300}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 32 - 300});
     window->OnPaint = OnPaint;
     window->rootContainer.background = {0, 0, 0, 0};
 
@@ -253,7 +254,8 @@ void InitializeMenu(){
     }
     close(itemsDir);
 
-    menuContainer = new Lemon::GUI::LayoutContainer({24, 0, 0, 0}, {216, 36});
+    menuContainer = new Lemon::GUI::LayoutContainer({0, 0, 0, 0}, {240, 36});
+    menuContainer->background = {0x29, 0x2c, 0x33, 255};
 
     menuContainer->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
     window->AddWidget(menuContainer);

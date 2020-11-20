@@ -11,6 +11,8 @@
     #include <timer.h>
 #endif
 
+#define EXT2_NO_CACHE
+
 namespace fs::Ext2{
     int Identify(PartitionDevice* part){
         ext2_superblock_t* superblock = (ext2_superblock_t*)kmalloc(sizeof(ext2_superblock_t));
@@ -390,6 +392,7 @@ namespace fs::Ext2{
         if(block > super.blockCount)
             return 1;
 
+        #ifndef EXT2_NO_CACHE
         uint8_t* cachedBlock;
         if((cachedBlock = blockCache.get(block))){
             memcpy(buffer, cachedBlock, blocksize);
@@ -404,6 +407,12 @@ namespace fs::Ext2{
             
             memcpy(buffer, cachedBlock, blocksize);
         }
+        #else
+        if(int e = part->ReadBlock(BlockToLBA(block), blocksize, buffer)){
+            Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", e, block, blocksize);
+            return e;
+        }
+        #endif 
         return 0;
     }
     
@@ -411,10 +420,12 @@ namespace fs::Ext2{
         if(block > super.blockCount)
             return -1;
 
-        uint8_t* cachedBlock;
+        #ifndef EXT2_NO_CACHE
+        uint8_t* cachedBlock = nullptr;
         if((cachedBlock = blockCache.get(block))){
             memcpy(cachedBlock, buffer, blocksize);
         }
+        #endif
         
         if(int e = part->WriteBlock(BlockToLBA(block), blocksize, buffer)){
             Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", e, block, blocksize);

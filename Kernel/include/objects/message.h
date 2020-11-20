@@ -101,3 +101,8 @@ public:
     /////////////////////////////
     int64_t Write(uint64_t id, uint16_t size, uint64_t data);
 };
+
+class MessageBus : public KernelObject {
+public:
+    
+};

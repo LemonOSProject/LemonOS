@@ -66,6 +66,15 @@ namespace Lemon::Graphics{
         }
 
         /////////////////////////////
+        /// \brief Set colour of TextObject
+        ///
+        /// \param colour New colour
+        /////////////////////////////
+        inline void SetColour(rgba_colour_t colour){
+            this->colour = colour;
+        }
+
+        /////////////////////////////
         /// \brief Get size of the font being rendered
         ///
         /// Note that this is the font size not the screen size of the text object

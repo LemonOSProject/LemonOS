@@ -91,12 +91,12 @@ void RemoveWindow(ShellWindow* win){
 }
 
 void OnTaskbarPaint(surface_t* surface){
-	Lemon::Graphics::DrawGradientVertical(100,0,surface->width - 100, surface->height, Lemon::colours[Lemon::Colour::Background], Lemon::Graphics::AverageColour(Lemon::colours[Lemon::Colour::ContentBackground], Lemon::colours[Lemon::Colour::Background]),surface);
+	Lemon::Graphics::DrawGradientVertical(0,0,surface->width, surface->height, {0x29, 0x2c, 0x33, 255}, {0x29, 0x29, 0x2e, 255},surface);
 
 	if(showMenu){
-		Lemon::Graphics::surfacecpy(surface, &menuButton, {0, 0}, {0, 30, 100, 30});
+		Lemon::Graphics::surfacecpyTransparent(surface, &menuButton, {0, 1}, {0, menuButton.height / 2, menuButton.width, 30});
 	} else {
-		Lemon::Graphics::surfacecpy(surface, &menuButton, {0, 0}, {0, 0, 100, 30});
+		Lemon::Graphics::surfacecpyTransparent(surface, &menuButton, {0, 1}, {0, 0, menuButton.width, 30});
 	}
 
 	sprintf(memString, "Used Memory: %lu/%lu KB", sysInfo.usedMem, sysInfo.totalMem);
@@ -118,12 +118,12 @@ int main(){
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
 	syscall(SYS_UNAME, (uintptr_t)versionString,0,0,0,0);
 
-	Lemon::Graphics::LoadImage("/initrd/menubuttons.bmp", &menuButton);
+	Lemon::Graphics::LoadImage("/initrd/menubuttons.png", &menuButton);
 
-	taskbar = new Lemon::GUI::Window("", {static_cast<int>(videoInfo.width), 30}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 30});
+	taskbar = new Lemon::GUI::Window("", {static_cast<int>(videoInfo.width), 32}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 32});
 	taskbar->OnPaint = OnTaskbarPaint;
 	taskbar->rootContainer.background = {0, 0, 0, 0};
-	taskbarWindowsContainer = new Lemon::GUI::LayoutContainer({100, 0, static_cast<int>(videoInfo.width) - 104, static_cast<int>(videoInfo.height)}, {128, 30 - 4});
+	taskbarWindowsContainer = new Lemon::GUI::LayoutContainer({40, 0, static_cast<int>(videoInfo.width) - 104, static_cast<int>(videoInfo.height)}, {160, 32 - 4});
 	taskbarWindowsContainer->background = {0, 0, 0, 0};
 	taskbar->AddWidget(taskbarWindowsContainer);
 	

@@ -203,11 +203,7 @@ typedef struct{
 } video_mode_t;
 
 typedef struct {
-	uintptr_t memory_low;
-	uintptr_t memory_high;
-
-	multiboot1_memory_map_t* mem_map;
-	uintptr_t memory_map_len;
+	uintptr_t totalMemory;
 } memory_info_t;
 
 typedef struct {

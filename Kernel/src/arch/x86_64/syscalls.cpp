@@ -1008,7 +1008,7 @@ long SysInfo(regs64_t* r){
 	}
 
 	s->usedMem = Memory::usedPhysicalBlocks * 4;
-	s->totalMem = HAL::mem_info.memory_high + HAL::mem_info.memory_low;
+	s->totalMem = HAL::mem_info.totalMemory / 1024;
 	s->cpuCount = static_cast<uint16_t>(SMP::processorCount);
 
 	return 0;

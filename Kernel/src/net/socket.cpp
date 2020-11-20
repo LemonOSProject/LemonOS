@@ -385,13 +385,13 @@ void LocalSocket::Watch(FilesystemWatcher& watcher, int events){
 
     acquireLock(&watcherLock);
     watching.add_back(&watcher);
-    acquireLock(&watcherLock);
+    releaseLock(&watcherLock);
 }
 
 void LocalSocket::Unwatch(FilesystemWatcher& watcher){
     acquireLock(&watcherLock);
     watching.remove(&watcher);
-    acquireLock(&watcherLock);
+    releaseLock(&watcherLock);
 }
 
 namespace SocketManager{
