@@ -99,33 +99,27 @@ namespace Scheduler{
         for(;;);
     }
 
-    process_t* GetCurrentProcess(){
-        asm("cli");
-        CPU* cpu = GetCPULocal();
+	Handle& RegisterHandle(process_t* proc, FancyRefPtr<KernelObject> ko){
+        Handle h;
+        h.ko = ko;
 
-        process_t* ret = nullptr;
+        acquireLock(&proc->handleLock); // Prevent handle ID race conditions
 
-        if(cpu->currentThread)
-            ret = cpu->currentThread->parent;
+        h.id = proc->handles.get_length() + 1; // Handle IDs start at 1
+        Handle& ref = proc->handles.add_back(h);
 
-        asm("sti");
-        return ret;
+        releaseLock(&proc->handleLock);
+
+        return ref;
     }
-
-    handle_t RegisterHandle(void* pointer){
-        handle_t handle = (handle_t)(handleCount++);
-        handles[(uint64_t)handle] = pointer;
-
-        return handle;
-    }
-
-    void* FindHandle(handle_t handle){
-        if((uintptr_t)handle < handleTableSize || !handle)
-            return handles[(uint64_t)handle];
-        else {
-            //Log::Warning("Invalid Handle: %x, Process: %d", (uintptr_t)handle, (unsigned long)(currentProcess ? currentProcess->pid : -1));
-            return nullptr;
+	long FindHandle(process_t* proc, handle_id_t id, Handle& ref){
+        if(id < 1 || id - 1 > static_cast<handle_id_t>(proc->handles.get_length())){
+            return 1;
         }
+
+        ref = proc->handles[id - 1]; // Handle IDs start at 1
+
+        return 0;
     }
 
     process_t* FindProcessByPID(uint64_t pid){
@@ -149,30 +143,6 @@ namespace Scheduler{
         }
 
         return newPID;
-    }
-
-    int SendMessage(message_t msg){
-        process_t* proc = FindProcessByPID(msg.recieverPID);
-        if(!proc) return 1; // Failed to find process with specified PID
-        proc->messageQueue.add_back(msg);
-        return 0; // Success
-    }
-
-    int SendMessage(process_t* proc, message_t msg){
-        proc->messageQueue.add_back(msg); // Add message to queue
-        return 0; // Success
-    }
-
-    message_t RecieveMessage(process_t* proc){
-
-        if(proc->messageQueue.get_length() <= 0 || !proc){
-            message_t nullMsg;
-            nullMsg.senderPID = 0;
-            nullMsg.recieverPID = 0; // Idle process should not be asking for messages
-            nullMsg.msg = 0;
-            return nullMsg;
-        }
-        return proc->messageQueue.remove_at(0);
     }
 
     process_t* InitializeProcessStructure(){

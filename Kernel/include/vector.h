@@ -61,7 +61,10 @@ public:
 
 	Vector(const Vector<T>& x){
 		data = new T[x.get_length()];
-		memcpy(data, x.data, x.get_length() * sizeof(T));
+
+		for(unsigned i = 0; i < x.get_length(); i++){
+			data[i] = x.data[i];
+		}
 	}
 
 	T& at(size_t pos) const{
@@ -96,16 +99,19 @@ public:
 			T* oldData = data;
 
 			data = new T[capacity];
-			memcpy(data, oldData, count * sizeof(T));
+
+			for(unsigned i = 0; i < count; i++){
+				data[i] = oldData[i];
+			}
 			
-			delete oldData;
+			delete[] oldData;
 		} else {
 			data = new T[capacity];
 		}
 		releaseLock(&lock);
 	}
 
-	void add_back(T val){
+	T& add_back(T val){
 		acquireLock(&lock);
 		count++;
 
@@ -116,7 +122,10 @@ public:
 				T* oldData = data;
 
 				data = new T[capacity];
-				memcpy(data, oldData, count * sizeof(T));
+
+				for(unsigned i = 0; i < count; i++){
+					data[i] = oldData[i];
+				}
 				
 				delete oldData;
 			} else {
@@ -124,8 +133,12 @@ public:
 			}
 		}
 
-		data[count - 1] = val;
+		T& ref = data[count - 1];
+
+		ref = val;
 		releaseLock(&lock);
+
+		return ref;
 	}
 
 	T& pop_back(){

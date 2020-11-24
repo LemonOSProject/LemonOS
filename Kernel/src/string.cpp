@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <liballoc.h>
+#include <paging.h>
 
 void reverse(char *str, int length)
 {

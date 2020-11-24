@@ -10,6 +10,9 @@
 #include <lock.h>
 #include <timer.h>
 #include <hash.h>
+#include <cpu.h>
+
+#include <objects/handle.h>
 
 #include <thread.h>
 
@@ -20,14 +23,6 @@ typedef struct HandleIndex {
 	process* owner;
 	handle_t handle;
 } handle_index_t;
-
-typedef struct {
-	uint64_t senderPID; // PID of Sender
-	uint64_t recieverPID; // PID of Reciever
-	uint64_t msg; // ID of message
-	uint64_t data; // Message Data
-	uint64_t data2;
-} message_t;
 
 typedef struct process {
 	pid_t pid = -1; // PID
@@ -48,8 +43,9 @@ typedef struct process {
 	timeval_t creationTime; // When the process was created
 	uint64_t activeTicks = 0; // How many ticks this process has been active
 
+	lock_t handleLock = 0;
+	Vector<Handle> handles;
 	Vector<fs_fd_t*> fileDescriptors;
-	List<message_t> messageQueue;
 	List<thread_t*> blocking; // Threads blocking awaiting a state change
 	HashMap<uintptr_t, Scheduler::FutexThreadBlocker*> futexWaitQueue;
 } process_t;
@@ -76,17 +72,24 @@ namespace Scheduler{
     process_t* CreateProcess(void* entry);
 	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr, int envc = 0, char** envp = nullptr);
 
-	process_t* GetCurrentProcess();
+	inline static process_t* GetCurrentProcess(){
+        asm("cli");
+        CPU* cpu = GetCPULocal();
+
+        process_t* ret = nullptr;
+
+        if(cpu->currentThread)
+            ret = cpu->currentThread->parent;
+
+        asm("sti");
+        return ret;
+    }
+
+	Handle& RegisterHandle(process_t* proc, FancyRefPtr<KernelObject> ko);
+	long FindHandle(process_t* proc, handle_id_t id, Handle& ref);
+	long DestroyHandle(process_t* proc, handle_id_t id);
 
 	void Yield();
-
-	handle_t RegisterHandle(void* handle);
-	void* FindHandle(handle_t handle);
-
-	int SendMessage(message_t msg);
-	int SendMessage(process_t* proc, message_t msg);
-	
-	message_t RecieveMessage(process_t* proc);
 
 	process_t* FindProcessByPID(uint64_t pid);
     uint64_t GetNextProccessPID(uint64_t pid);

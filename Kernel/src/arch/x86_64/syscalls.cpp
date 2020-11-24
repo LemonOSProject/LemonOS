@@ -20,6 +20,7 @@
 #include <lock.h>
 #include <smp.h>
 #include <pair.h>
+#include <objects/service.h>
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -111,17 +112,22 @@ long SysExit(regs64_t* r){
 }
 
 long SysExec(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
 	char* filepath = (char*)kmalloc(strlen((char*)r->rbx) + 1);
 
-	if(!Memory::CheckUsermodePointer(r->rbx, 0, Scheduler::GetCurrentProcess()->addressSpace)) return -EFAULT;
+	size_t filePathLength;
+	long filePathInvalid = strlenSafe(reinterpret_cast<char*>(r->rbx), filePathLength, currentProcess->addressSpace);
+	if(filePathInvalid){
+		return -EFAULT;
+	}
 
-	strcpy(filepath, (char*)r->rbx);
+	strncpy(filepath, (char*)r->rbx, filePathLength);
 	int argc = r->rcx;
 	char** argv = (char**)r->rdx;
 	uint64_t flags = r->rsi;
 	char** envp = (char**)r->rdi;
 
-	FsNode* current_node = fs::ResolvePath(filepath, Scheduler::GetCurrentProcess()->workingDir, true /* Follow Symlinks */);
+	FsNode* current_node = fs::ResolvePath(filepath, currentProcess->workingDir, true /* Follow Symlinks */);
 	if(!current_node){
 		return -ENOENT;
 	}
@@ -754,32 +760,12 @@ long SysRenameAt(regs64_t* r){
 
 // SendMessage(message_t* msg) - Sends an IPC message to a process
 long SysSendMessage(regs64_t* r){
-	uint64_t pid = r->rbx;
-	uint64_t msg = r->rcx;
-	uint64_t data = r->rdx;
-	uint64_t data2 = r->rsi;
-
-	message_t message;
-	message.senderPID = Scheduler::GetCurrentProcess()->pid;
-	message.recieverPID = pid;
-	message.msg = msg;
-	message.data = data;
-	message.data2 = data2;
-
-	return Scheduler::SendMessage(message); // Send the message
+	return -ENOSYS;
 }
 
 // RecieveMessage(message_t* msg) - Grabs next message on queue and copies it to msg
 long SysReceiveMessage(regs64_t* r){
-	if(!(r->rbx && r->rcx)) return 1; // Was given null pointers
-
-	message_t* msg = (message_t*)r->rbx;
-	uint64_t* queueSize = (uint64_t*)r->rcx;
-
-	*queueSize = Scheduler::GetCurrentProcess()->messageQueue.get_length();
-	*msg = Scheduler::RecieveMessage(Scheduler::GetCurrentProcess());
-
-	return 0;
+	return -ENOSYS;
 }
 
 long SysUptime(regs64_t* r){
@@ -2189,6 +2175,236 @@ long SysSelect(regs64_t* r){
 	return evCount;
 }
 
+/////////////////////////////
+/// \brief SysCreateService (name) - Create a service
+///
+/// Create a new service. Services are essentially named containers for interfaces, allowing one program to implement multiple interfaces under a service.
+///
+/// \param name (const char*) Service name to be used, must be unique
+///
+/// \return Handle ID on success, error code on failure
+/////////////////////////////
+long SysCreateService(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	size_t nameLength;
+	if(strlenSafe(reinterpret_cast<const char*>(r->rbx), nameLength, currentProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	char name[nameLength + 1];
+	strncpy(name, reinterpret_cast<const char*>(r->rbx), nameLength);
+	name[nameLength] = 0;
+	for(auto& svc : ServiceFS::Instance()->services){
+		if(strncmp(svc->GetName(), name, nameLength) == 0){
+			return -EEXIST;
+		}
+	}
+
+	FancyRefPtr<Service> svc = ServiceFS::Instance()->CreateService(name);
+	Handle& handle = Scheduler::RegisterHandle(currentProcess, static_pointer_cast<KernelObject, Service>(svc));
+
+	return handle.id;
+}
+
+/////////////////////////////
+/// \brief SysCreateInterface (service, name, msgSize) - Create a new interface
+///
+/// Create a new interface. Interfaces allow clients to open connections to a service
+///
+/// \param service (handle_id_t) Handle ID of the service hosting the interface
+/// \param name (const char*) Name of the interface, 
+/// \param msgSize (uint16_t) Maximum message size for all connections
+///
+/// \return Handle ID of service on success, negative error code on failure
+/////////////////////////////
+long SysCreateInterface(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	Handle svcHandle;
+	if(Scheduler::FindHandle(currentProcess, r->rbx, svcHandle)){
+		Log::Warning("SysCreateInterface: Invalid handle ID %d", r->rbx);
+		return -EINVAL;
+	}
+
+	if(!svcHandle.ko->IsType(Service::TypeID())){
+		Log::Warning("SysCreateInterface: Invalid handle type (ID %d)", r->rbx);
+		return -EINVAL;
+	}
+
+	size_t nameLength;
+	if(strlenSafe(reinterpret_cast<const char*>(r->rcx), nameLength, currentProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	char name[nameLength + 1];
+	strncpy(name, reinterpret_cast<const char*>(r->rcx), nameLength);
+	name[nameLength] = 0;
+
+	Service* svc = reinterpret_cast<Service*>(svcHandle.ko.get());
+
+	FancyRefPtr<MessageInterface> interface;
+	long ret = svc->CreateInterface(interface, name, r->rdx);
+
+	if(ret){
+		return ret;
+	}
+
+	Handle& handle = Scheduler::RegisterHandle(currentProcess, static_pointer_cast<KernelObject, MessageInterface>(interface));
+
+	return handle.id;
+}
+
+/////////////////////////////
+/// \brief SysInterfaceAccept (interface) - Accept connections on an interface
+///
+/// Accept a pending connection on an interface and return a new MessageEndpoint
+///
+/// \param interface (handle_id_t) Handle ID of the interface
+///
+/// \return Handle ID of endpoint on success, negative error code on failure
+/////////////////////////////
+long SysInterfaceAccept(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	Handle ifHandle;
+	if(Scheduler::FindHandle(currentProcess, r->rbx, ifHandle)){
+		Log::Warning("SysInterfaceAccept: Invalid handle ID %d", r->rbx);
+		return -EINVAL;
+	}
+
+	if(!ifHandle.ko->IsType(MessageInterface::TypeID())){
+		Log::Warning("SysInterfaceAccept: Invalid handle type (ID %d)", r->rbx);
+		return -EINVAL;
+	}
+
+	return -ENOSYS;
+}
+
+/////////////////////////////
+/// \brief SysInterfaceConnect (path) - Open a connection to an interface
+///
+/// Open a new connection on an interface and return a new MessageEndpoint
+///
+/// \param interface (const char*) Path of interface in format servicename/interfacename (e.g. lemon.lemonwm/wm)
+///
+/// \return Handle ID of endpoint on success, negative error code on failure
+/////////////////////////////
+long SysInterfaceConnect(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	size_t sz = 0;
+	if(strlenSafe(reinterpret_cast<const char*>(r->rbx), sz, currentProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	char path[sz + 1];
+	strncpy(path, reinterpret_cast<const char*>(r->rbx), sz);
+	path[sz] = 0;
+
+	if(!strchr(path, '/')){ // Interface name given by '/' separator
+		Log::Warning("SysInterfaceConnect: No interface name given!");
+		return -EINVAL;
+	}
+
+	FancyRefPtr<MessageInterface> interface;
+	{
+		FancyRefPtr<Service> svc;
+		if(ServiceFS::Instance()->ResolveServiceName(svc, path)){
+			return -ENOENT; // No such service
+		}
+	
+		if(svc->ResolveInterface(interface, strchr(path, '/'))){
+			return -ENOENT; // No such interface
+		}
+	}
+
+	FancyRefPtr<MessageEndpoint> endp = interface->Connect();
+	
+	Handle& handle = Scheduler::RegisterHandle(currentProcess, static_pointer_cast<KernelObject>(endp));
+
+	return handle.id;
+}
+
+/////////////////////////////
+/// \brief SysEndpointQueue (endpoint, id, size, data) - Queue a message on an endpoint
+///
+/// Queues a new message on the specified endpoint.
+///
+/// \param endpoint (handle_id_t) Handle ID of specified endpoint
+/// \param id (uint64_t) Message ID
+/// \param size (uint64_t) Message Size
+/// \param data (uint8_t*/uint64_t) Message data, if size <= 8 then treated as an integer containing message data, if size > 8 then treated as a pointer to message data
+///
+/// \return 0 on success, negative error code on failure
+/////////////////////////////
+long SysEndpointQueue(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	Handle endpHandle;
+	if(Scheduler::FindHandle(currentProcess, r->rbx, endpHandle)){
+		Log::Warning("SysEndpointQueue: Invalid handle ID %d", r->rbx);
+		return -EINVAL;
+	}
+
+	if(!endpHandle.ko->IsType(MessageEndpoint::TypeID())){
+		Log::Warning("SysEndpointQueue: Invalid handle type (ID %d)", r->rbx);
+		return -EINVAL;
+	}
+
+	size_t size = r->rdx;
+	if(size > 8 && !Memory::CheckUsermodePointer(r->rsi, size, currentProcess->addressSpace)){
+		return -EFAULT; // Data greater than 8 and invalid pointer
+	}
+
+	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle.ko.get());
+
+	return endpoint->Write(r->rcx, size, r->rsi);
+}
+
+/////////////////////////////
+/// \brief SysEndpointDequeue (endpoint, id, data)
+///
+/// Accept a pending connection on an interface and return a new MessageEndpoint
+///
+/// \param endpoint (handle_id_t) Handle ID of specified endpoint
+/// \param id (uint64_t*) Returned message ID
+/// \param size (uint32_t*) Returned message Size
+/// \param data (uint8_t*) Message data buffer
+///
+/// \return 1 on empty, 0 on success, negative error code on failure
+/////////////////////////////
+long SysEndpointDequeue(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	Handle endpHandle;
+	if(Scheduler::FindHandle(currentProcess, r->rbx, endpHandle)){
+		Log::Warning("SysEndpointDequeue: Invalid handle ID %d", r->rbx);
+		return -EINVAL;
+	}
+
+	if(!endpHandle.ko->IsType(MessageEndpoint::TypeID())){
+		Log::Warning("SysEndpointDequeue: Invalid handle type (ID %d)", r->rbx);
+		return -EINVAL;
+	}
+
+	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(uint64_t), currentProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	if(!Memory::CheckUsermodePointer(r->rdx, sizeof(uint32_t), currentProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle.ko.get());
+
+	if(!Memory::CheckUsermodePointer(r->rsi, endpoint->GetMaxMessageSize(), currentProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	return endpoint->Read(reinterpret_cast<uint64_t*>(r->rcx), reinterpret_cast<uint16_t*>(r->rdx), reinterpret_cast<uint64_t*>(r->rsi));
+}
+
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -2265,7 +2481,7 @@ syscall_t syscalls[]{
 	SysDup,
 	SysGetFileStatusFlags,
 	SysSetFileStatusFlags,
-	SysSelect,
+	SysSelect,					// 75
 };
 
 int lastSyscall = 0;

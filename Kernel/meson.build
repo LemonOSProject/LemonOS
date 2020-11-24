@@ -81,6 +81,8 @@ cpp_files = [
 
     'src/objects/kobject.cpp',
     'src/objects/message.cpp',
+    'src/objects/interface.cpp',
+    'src/objects/service.cpp',
 
     'src/storage/ahci.cpp',
     'src/storage/ahciport.cpp',
@@ -110,6 +112,7 @@ cpp_files_x86_64 = [
     'src/arch/x86_64/serial.cpp',
     'src/arch/x86_64/smp.cpp',
     'src/arch/x86_64/ssp.cpp',
+    'src/arch/x86_64/stringsafe.cpp',
     'src/arch/x86_64/syscalls.cpp',
     'src/arch/x86_64/system.cpp',
     'src/arch/x86_64/timer.cpp',

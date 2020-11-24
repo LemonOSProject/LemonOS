@@ -8,7 +8,6 @@ class TTraits{
         return "undefined";
     }
 };
-
 template<>
 class TTraits <int32_t>{
     static const char* name(){

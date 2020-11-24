@@ -24,6 +24,7 @@
 #include <net/net.h>
 #include <cpu.h>
 #include <lemon.h>
+#include <objects/service.h>
 
 #include <debug.h>
 
@@ -50,6 +51,8 @@ void KernelProcess(){
 
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 + 24 * 2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+
+	ServiceFS::Initialize();
 
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 + 24 * 3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);

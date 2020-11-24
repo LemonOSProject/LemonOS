@@ -21,11 +21,10 @@ struct Message{
     Message* prev;
 };
 
-class MessageEndpoint : public KernelObject{
+class MessageEndpoint final : public KernelObject{
 private:
     friend Pair<FancyRefPtr<MessageEndpoint>,FancyRefPtr<MessageEndpoint>> CreatePair();
     uint16_t maxMessageSize = 8;
-    static const uint16_t maxMessageSizeLimit = UINT16_MAX;
     uint16_t messageQueueLimit = 128;
     uint16_t messageCacheLimit = 16;
 
@@ -41,6 +40,8 @@ private:
 
     FancyRefPtr<MessageEndpoint> peer;
 public:
+    static const uint16_t maxMessageSizeLimit = UINT16_MAX;
+    
     static Pair<FancyRefPtr<MessageEndpoint>,FancyRefPtr<MessageEndpoint>> CreatePair(uint16_t msgSize){
         FancyRefPtr<MessageEndpoint> endpoint1 = FancyRefPtr<MessageEndpoint>(new MessageEndpoint(msgSize));
         FancyRefPtr<MessageEndpoint> endpoint2 = FancyRefPtr<MessageEndpoint>(new MessageEndpoint(msgSize));
@@ -100,9 +101,9 @@ public:
     /// \return 0 on success, negative error code on failure
     /////////////////////////////
     int64_t Write(uint64_t id, uint16_t size, uint64_t data);
-};
 
-class MessageBus : public KernelObject {
-public:
-    
+    uint16_t GetMaxMessageSize() { return maxMessageSize; }
+
+    inline static constexpr const char* TypeID() { return "MsgEndpoint"; }
+    const char* InstanceTypeID() const { return TypeID(); }
 };

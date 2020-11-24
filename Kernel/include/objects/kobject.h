@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <ttraits.h>
+#include <string.h>
 
 class KernelObject{
 protected:
@@ -19,6 +20,12 @@ public:
     }
 
     inline int64_t ObjectID() { return oid; }
+
+    virtual const char* InstanceTypeID() const = 0;
+
+    inline bool IsType(const char* id){
+        return !strcmp(InstanceTypeID(), id);
+    }
 
     virtual ~KernelObject(){
 

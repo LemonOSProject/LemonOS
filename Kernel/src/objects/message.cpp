@@ -55,7 +55,12 @@ int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint64_t* data){
 
     *id = m->id;
     *size = m->size;
-    *data = m->data;
+
+    if(m->size <= 8){
+        *data = m->data;
+    } else {
+        memcpy(data, m->dataP, m->size);
+    }
 
     if(m->size > 8){
         acquireLock(&bufferCacheLock);

@@ -5,11 +5,19 @@
 
 template<typename T>
 class FancyRefPtr{
-protected:
+private:
     unsigned* refCount = nullptr; // Reference Count
     T* obj = nullptr;
 
 public:
+    template<class U>
+    FancyRefPtr(const FancyRefPtr<U>& s, T* p){
+        obj = p;
+        refCount = s.getRefCount();
+
+        (*refCount)++;
+    }
+
     FancyRefPtr(){
         refCount = new unsigned;
         *(refCount) = 0;
@@ -74,7 +82,8 @@ public:
         }
     }
 
-    inline T* get() { return obj; }
+    inline T* get() const { return obj; }
+    inline unsigned* getRefCount() const { return refCount; }
 
     FancyRefPtr<T>& operator=(const FancyRefPtr<T>& ptr){
         obj = ptr.obj;
@@ -101,3 +110,8 @@ public:
         return obj;
     }
 };
+
+template<class T, class U>
+inline static FancyRefPtr<T> static_pointer_cast(const FancyRefPtr<U>& src){
+    return FancyRefPtr<T>(src, src.get());
+}

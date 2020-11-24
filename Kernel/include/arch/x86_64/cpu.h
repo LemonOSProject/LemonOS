@@ -3,8 +3,10 @@
 #include <device.h>
 #include <stdint.h>
 #include <tss.h>
-#include <scheduler.h>
 #include <list.h>
+#include <thread.h>
+
+struct process;
 
 typedef struct {
 	uint16_t limit;
@@ -17,7 +19,7 @@ struct CPU{
     void* gdt; // GDT
 	gdt_ptr_t gdtPtr;
 	thread_t* currentThread = nullptr;
-	process_t* idleProcess = nullptr;
+	process* idleProcess = nullptr;
 	volatile int runQueueLock = 0;
 	FastList<thread_t*>* runQueue;
     tss_t tss __attribute__((aligned(16))); 

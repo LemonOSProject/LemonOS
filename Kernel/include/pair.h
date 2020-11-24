@@ -6,8 +6,12 @@ public:
     T1 item1;
     T2 item2;
 
-    Pair(T1 one, T2 two){
+    Pair(const T1 one, const T2 two){
         item1 = one;
         item2 = two;
+    }
+
+    Pair(){
+
     }
 };

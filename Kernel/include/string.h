@@ -1,6 +1,17 @@
 #pragma once
 
 #include <stddef.h>
+#include <paging.h>
+
+
+/////////////////////////////
+/// \brief safe strlen
+///
+/// Get the length of a usermode string and check if the pointer is valid
+///
+/// \return 0 on success, 1 when no incoming connections, negative error code on failure
+/////////////////////////////
+long strlenSafe(const char* str, size_t& size, address_space_t* aSpace);
 
 char* itoa(unsigned long long num, char* str, int base);
 
