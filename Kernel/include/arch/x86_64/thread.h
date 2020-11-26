@@ -3,7 +3,7 @@
 #include <spin.h>
 #include <list.h>
 
-#define THREAD_TIMESLICE_DEFAULT 7
+#define THREAD_TIMESLICE_DEFAULT 5
 typedef uint64_t pid_t;
 
 enum {

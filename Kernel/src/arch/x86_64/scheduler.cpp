@@ -350,6 +350,10 @@ namespace Scheduler{
             if(cpu->runQueue->get_at(j)->parent == process) cpu->runQueue->remove_at(j);
         }
 
+        for(fs_fd_t* fd : process->fileDescriptors){
+            if(fd && fd->node)
+                fd->node->Close();
+        }
         process->fileDescriptors.clear();
         
         for(unsigned i = 0; i < SMP::processorCount; i++){
@@ -408,7 +412,7 @@ namespace Scheduler{
         }
 
         releaseLock(&cpu->runQueueLock);
-        kfree(process);
+        delete process;
         asm("sti");
     }
 
@@ -563,8 +567,8 @@ namespace Scheduler{
             kfree(linkerElf);
         }
 
-        char** tempArgv = (char**)kmalloc(argc * sizeof(char*));
-        char** tempEnvp = (char**)kmalloc((envc) * sizeof(char*));
+        char* tempArgv[argc];
+        char* tempEnvp[envc];
 
         asm("cli");
         asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
@@ -638,9 +642,6 @@ namespace Scheduler{
         
         asm volatile("mov %%rax, %%cr3" :: "a"(GetCurrentProcess()->addressSpace->pml4Phys));
         asm("sti");
-
-        kfree(tempArgv);
-        kfree(tempEnvp);
 
         thread->registers.rsp = (uintptr_t) stack;
         thread->registers.rbp = (uintptr_t) stack;

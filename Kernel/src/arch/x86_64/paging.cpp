@@ -503,10 +503,6 @@ namespace Memory{
 		KernelMapVirtualMemory4K(phys, virt, amount, PAGE_WRITABLE | PAGE_PRESENT);
 	}
 
-	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount){
-		MapVirtualMemory4K(phys,virt,amount,currentAddressSpace);
-	}
-
 	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, address_space_t* addressSpace){
 		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
 
@@ -524,8 +520,8 @@ namespace Memory{
 
 			if(!(addressSpace->pageDirs[pdptIndex][pageDirIndex] & 0x1)) CreatePageTable(pdptIndex,pageDirIndex,addressSpace); // If we don't have a page table at this address, create one.
 			
+			addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] = PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
 			SetPageFrame(&(addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
-			addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] |= PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
 
 			invlpg(virt);
 

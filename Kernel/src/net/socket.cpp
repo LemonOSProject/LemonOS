@@ -109,6 +109,10 @@ fs_fd_t* Socket::Open(size_t flags){
 }
 
 void Socket::Close(){
+    if(bound){
+        SocketManager::DestroySocket(this);
+    }
+
     if(handleCount == 0)
         delete this;
 }
@@ -178,6 +182,7 @@ Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen, int mode){
 
     while(pending.get_length() <= 0){
         // TODO: Actually block the task
+        //Log::Info("polling");
         Scheduler::Yield();
     }
 
@@ -245,7 +250,6 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen){
         return -EOPNOTSUPP;
     }
 
-    
     if (type == DatagramSocket){
         inbound = new PacketStream();
         outbound = new PacketStream();
@@ -273,7 +277,7 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen){
 
 int LocalSocket::Listen(int backlog){
     acquireLock(&slock);
-    pendingConnections.SetValue(backlog);
+    pendingConnections.SetValue(backlog + 1);
     passive = true;
 
     if(inbound) {
@@ -398,7 +402,7 @@ namespace SocketManager{
     List<SocketBinding> sockets;
 
     Socket* ResolveSocketAddress(const sockaddr* addr, socklen_t addrlen){
-        char* address = (char*)kmalloc(addrlen + 1);
+        char address[addrlen + 1];
         strncpy(address, addr->data, addrlen);
         address[addrlen] = 0;
 

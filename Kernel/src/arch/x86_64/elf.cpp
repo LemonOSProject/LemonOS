@@ -6,6 +6,7 @@
 #include <paging.h>
 #include <physicalallocator.h>
 #include <scheduler.h>
+#include <math.h>
 
 int VerifyELF(void* elf){
     elf64_header_t elfHdr = *(elf64_header_t*)elf;
@@ -20,6 +21,7 @@ int VerifyELF(void* elf){
 
 elf_info_t LoadELFSegments(process_t* proc, void* _elf, uintptr_t base){
     uint8_t* elf = reinterpret_cast<uint8_t*>(_elf);
+    CPU* cpuLocal = GetCPULocal();
 
     elf_info_t elfInfo;
     memset(&elfInfo, 0, sizeof(elfInfo));
@@ -38,7 +40,7 @@ elf_info_t LoadELFSegments(process_t* proc, void* _elf, uintptr_t base){
         if(elfPHdr.memSize == 0) continue;
         for(unsigned j = 0; j < ((elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) >> 12); j++){
             uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
-            Memory::MapVirtualMemory4K(phys,base + elfPHdr.vaddr + j * PAGE_SIZE_4K, 1, proc->addressSpace);
+            Memory::MapVirtualMemory4K(phys, base + (elfPHdr.vaddr & ~0xFFFUL) + j * PAGE_SIZE_4K, 1, proc->addressSpace);
         }
     }
 
@@ -48,12 +50,14 @@ elf_info_t LoadELFSegments(process_t* proc, void* _elf, uintptr_t base){
         elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
         
         if(elfPHdr.type == PT_LOAD && elfPHdr.memSize > 0){
+            acquireLock(&cpuLocal->runQueueLock);
             asm("cli");
             asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
             memset((void*)(base + elfPHdr.vaddr),0,elfPHdr.memSize);
-            memcpy((void*)(base + elfPHdr.vaddr),(void*)(elf + elfPHdr.offset),elfPHdr.fileSize);
+            memcpy((void*)(base + elfPHdr.vaddr),(void*)(elf + elfPHdr.offset), elfPHdr.fileSize);
             asm volatile("mov %%rax, %%cr3" :: "a"(Scheduler::GetCurrentProcess()->addressSpace->pml4Phys));
             asm("sti");
+            releaseLock(&cpuLocal->runQueueLock);
         } else if (elfPHdr.type == PT_PHDR) {
             elfInfo.pHdrSegment = base + elfPHdr.vaddr;
         } else if(elfPHdr.type == PT_INTERP){

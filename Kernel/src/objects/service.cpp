@@ -63,3 +63,15 @@ long Service::CreateInterface(FancyRefPtr<MessageInterface>& rInterface, const c
 
     return 0;
 }
+
+long Service::ResolveInterface(FancyRefPtr<MessageInterface>& interface, const char* name){
+    for(auto& _if : interfaces){
+        if(strcmp(_if->name, name) == 0){
+            interface = _if;
+            return 0;
+        }
+    }
+
+    Log::Warning("Interface %s not found!", name);
+    return 1;
+}

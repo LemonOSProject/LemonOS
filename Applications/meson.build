@@ -60,8 +60,8 @@ lemonmonitor_src = [
     'LemonMonitor/main.cpp',
 ]
 
-threadtest_src = [
-    'PosixThreadTest/main.cpp'
+ipctest_src = [
+    'IPCTest/main.cpp'
 ]
 minesweeper_src = [
     'Minesweeper/main.cpp'
@@ -79,5 +79,5 @@ executable('sysinfo.lef', sysinfo_src, cpp_args : application_cpp_args, link_arg
 executable('guitest.lef', guitest_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('run.lef', run_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('lemonmonitor.lef', lemonmonitor_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
-executable('pthreadtest.lef', threadtest_src, cpp_args : application_cpp_args, install : true)
+executable('ipctest.lef', ipctest_src, cpp_args : application_cpp_args, install : true)
 executable('minesweeper.lef', minesweeper_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)

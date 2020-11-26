@@ -61,6 +61,10 @@ public:
         value = val;
     }
 
+    lock_t GetValue(){
+        return value;
+    }
+
     void Wait();
 
     void WaitTimeout(long timeout);

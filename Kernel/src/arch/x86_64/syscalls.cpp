@@ -113,7 +113,7 @@ long SysExit(regs64_t* r){
 
 long SysExec(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
-	char* filepath = (char*)kmalloc(strlen((char*)r->rbx) + 1);
+	char filepath[strlen((char*)r->rbx) + 1];
 
 	size_t filePathLength;
 	long filePathInvalid = strlenSafe(reinterpret_cast<char*>(r->rbx), filePathLength, currentProcess->addressSpace);
@@ -131,6 +131,26 @@ long SysExec(regs64_t* r){
 	if(!current_node){
 		return -ENOENT;
 	}
+	
+	int envCount = 0;
+	if(envp){
+		int i = 0;
+        while(envp[i]) i++;
+		envCount = i;
+	}
+
+	char* kernelEnvp[envCount];
+	if(envCount > 0){
+		for(int i = 0; i < envCount; i++){
+			size_t len;
+			if(strlenSafe(envp[i], len, currentProcess->addressSpace)){
+				return -EFAULT;
+			}
+			kernelEnvp[i] = (char*)kmalloc(len + 1);
+			strcpy(kernelEnvp[i], envp[i]);
+			kernelEnvp[i][len] = 0;
+		}
+	}
 
 	Log::Info("Loading: %s", (char*)r->rbx);
 	timeval_t tv = Timer::GetSystemUptimeStruct();
@@ -143,42 +163,29 @@ long SysExec(regs64_t* r){
 	timeval_t tvnew = Timer::GetSystemUptimeStruct();
 	Log::Info("Done (took %d ms)", Timer::TimeDifference(tvnew, tv));
 
-	char** kernelArgv = (char**)kmalloc(argc * sizeof(char*));
+	char* kernelArgv[argc];
 	for(int i = 0; i < argc; i++){
-		kernelArgv[i] = (char*)kmalloc(strlen(argv[i] + 1));
+		kernelArgv[i] = (char*)kmalloc(strlen(argv[i]) + 1);
 		strcpy(kernelArgv[i], argv[i]);
-	}
-	
-	int envCount = 0;
-	char** kernelEnvp = nullptr;
-
-	if(envp){
-		int i = 0;
-        while(envp[i]) i++;
-		envCount = i;
-
-		kernelEnvp = (char**)kmalloc(envCount * sizeof(char*));
-		for(int i = 0; i < envCount; i++){
-			kernelEnvp[i] = (char*)kmalloc(strlen(envp[i] + 1));
-			strcpy(kernelEnvp[i], envp[i]);
-		}
 	}
 
 	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp);
 	
+	for(int i = 0; i < envCount; i++){
+		kfree(kernelEnvp[i]);
+	}
+	kfree(buffer);
+
 	if(!proc) {
 		for(int i = 0; i < argc; i++){
 			kfree(kernelArgv[i]);
 		}
 
-		kfree(kernelArgv);
-		kfree(buffer);
-
 		return -1;
 	}
 
 	char* name;
-	if(argc){
+	if(argc > 0){
 		name = fs::BaseName(kernelArgv[0]);
 	} else {
 		name = fs::BaseName(filepath);
@@ -188,10 +195,6 @@ long SysExec(regs64_t* r){
 	for(int i = 0; i < argc; i++){
 		kfree(kernelArgv[i]);
 	}
-	
-	kfree(kernelArgv);
-	kfree(buffer);
-
 
 	if(flags & EXEC_CHILD){
 		Scheduler::GetCurrentProcess()->children.add_back(proc);
@@ -2490,7 +2493,7 @@ void SyscallHandler(regs64_t* regs) {
 	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
 		return;
 		
-	asm("sti"); // By reenabling interrupts a thread in a syscall can be preempted
+	asm("sti"); // By reenabling interrupts, a thread in a syscall can be preempted
 
 	thread_t* thread = GetCPULocal()->currentThread;
 	if(!syscalls[regs->rax]) return;
