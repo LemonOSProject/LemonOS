@@ -310,11 +310,11 @@ namespace Lemon::Graphics{
 
         for(int i = 0; i < srcHeight && i < dest->height - offset.y; i++){
             for(int j = 0; j < srcWidth && j < dest->width - offset.x; j++){
-                uint32_t sPixel = (srcBuffer[i*src->width + j]);
+                uint32_t sPixel = (srcBuffer[(i + srcRegion.pos.y)*src->width + srcRegion.pos.x + j]);
                 if(!((sPixel >> 24) & 0xFF)) continue; // Check for 0 alpha
 
                 if(((sPixel >> 24) & 0xFF) >= 255){ // Check for full alpha
-                    destBuffer[((i+offset.y)*(dest->width) + offset.x) + j] = srcBuffer[(i + srcRegion.pos.y)*src->width + srcRegion.pos.x + j];
+                    destBuffer[((i+offset.y)*(dest->width) + offset.x) + j] = sPixel;
                 } else {
                     destBuffer[((i+offset.y)*(dest->width) + offset.x) + j] = AlphaBlend(destBuffer[((i+offset.y)*(dest->width) + offset.x) + j], (sPixel >> 16) & 0xFF, (sPixel >> 8) & 0xFF, sPixel & 0xFF, ((sPixel >> 24) & 0xFF) * 1.0 / 255);
                 }

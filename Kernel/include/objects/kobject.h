@@ -6,7 +6,6 @@
 #endif
 
 #include <stdint.h>
-#include <ttraits.h>
 #include <string.h>
 
 class KernelObject{

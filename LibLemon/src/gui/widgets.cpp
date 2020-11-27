@@ -103,6 +103,8 @@ namespace Lemon::GUI {
         w->SetParent(nullptr);
         w->window = nullptr;
 
+        if(active == w) active = nullptr;
+
         children.erase(std::remove(children.begin(), children.end(), w), children.end());
     }
 

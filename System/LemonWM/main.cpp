@@ -66,7 +66,7 @@ int main(){
         }
     }
 
-    if(int e = Lemon::Graphics::LoadImage("/initrd/winbuttons.bmp", &wm.compositor.windowButtons)){
+    if(int e = Lemon::Graphics::LoadImage("/initrd/winbuttons.png", &wm.compositor.windowButtons)){
         printf("LemonWM: Warning: Error %d loading buttons.\n", e);
     }
 
