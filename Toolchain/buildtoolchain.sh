@@ -8,13 +8,13 @@ export BINUTILS_SRC_DIR=binutils-2.32
 export LLVM_SRC_DIR=llvm-project
  	
 _unpack_binutils(){
-    wget "http://ftpmirror.gnu.org/binutils/binutils-2.32.tar.gz"
+    curl "http://ftpmirror.gnu.org/binutils/binutils-2.32.tar.gz" -o binutils-2.32.tar.gz
     tar -xzvf binutils-2.32.tar.gz
  	rm binutils-2.32.tar.gz
 }
 
 _unpack_llvm(){
-    git clone "https://github.com/fido2020/llvm-project.git" $LLVM_SRC_DIR
+    git clone "https://github.com/fido2020/llvm-project.git" $LLVM_SRC_DIR --depth 1
 }
 
 _build_binutils(){
@@ -51,12 +51,7 @@ _prepare(){
 	mkdir -p $LEMON_SYSROOT/system/lib
 	mkdir -p $LEMON_SYSROOT/system/bin
 	
-	cd $LEMONDIR/LibC
-	meson build --cross $LEMONDIR/Scripts/lemon-crossfile.txt -Dheaders_only=true
-	meson install -Cbuild
-	rm -rf build
-	
-	cd $SPATH
+	curl https://lemonos.org/sysroot.tar.gz | tar -zxf - sysroot/system -C $LEMON_SYSROOT
 }
 
 _llvm(){
