@@ -1,6 +1,7 @@
 #include <objects/message.h>
 
 #include <errno.h>
+#include <logging.h>
 
 MessageEndpoint::MessageEndpoint(uint16_t maxSize){
     maxMessageSize = maxSize;
@@ -9,10 +10,14 @@ MessageEndpoint::MessageEndpoint(uint16_t maxSize){
         maxMessageSize = maxMessageSizeLimit;
     }
 
-    messageQueueLimit = 0x500000 / maxMessageSize; // No more than 5MB
+    messageQueueLimit = 0x300000 / maxMessageSize; // No more than 3MB
     messageCacheLimit = 0x80000 / maxMessageSize; // No more than 512KB
 
     queueAvailablilitySemaphore.SetValue(messageQueueLimit);
+
+    if(debugLevelMessageEndpoint >= DebugLevelNormal){
+        Log::Info("[MessageEndpoint] new endpoint with message size of %u (Queue limit: %u, Cache limit: %u)", maxMessageSize, messageQueueLimit, messageCacheLimit);
+    }
 }
 
 MessageEndpoint::~MessageEndpoint(){
@@ -33,6 +38,10 @@ MessageEndpoint::~MessageEndpoint(){
 
         delete m;
     }
+
+    if(peer.get()){
+        peer->peer = nullptr;
+    }
 }
 
 int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint64_t* data){
@@ -43,9 +52,13 @@ int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint64_t* data){
     acquireLock(&queueLock);
     unsigned queueLen = queue.get_length();
 
-    if(!queueLen){
+    if(queueLen <= 0){
         releaseLock(&queueLock);
-        return 1;
+        return 0;
+    }
+
+    if(debugLevelMessageEndpoint >= DebugLevelVerbose){
+        Log::Info("[MessageEndpoint] %u messages in queue!", queueLen);
     }
 
     Message* m = queue.remove_at(0);
@@ -63,26 +76,26 @@ int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint64_t* data){
     }
 
     if(m->size > 8){
-        acquireLock(&bufferCacheLock);
+        /*acquireLock(&bufferCacheLock);
         if(bufferCache.get_length() < messageCacheLimit){
             bufferCache.add_back(m->dataP);
             releaseLock(&cacheLock);
         } else {
-            releaseLock(&bufferCacheLock);
+            releaseLock(&bufferCacheLock);*/
             delete[] m->dataP;
-        }
+        //}
     }
 
-    acquireLock(&cacheLock);
+    /*acquireLock(&cacheLock);
     if(cache.get_length() < messageCacheLimit){
         cache.add_back(m);
         releaseLock(&cacheLock);
     } else {
-        releaseLock(&cacheLock);
+        releaseLock(&cacheLock);*/
         delete m;
-    }
+    //}
 
-    return 0;
+    return 1;
 }
 
 int64_t MessageEndpoint::Call(uint64_t id, uint16_t size, uint64_t data, uint64_t rID, uint16_t* rSize, uint64_t* rData, uint64_t timeout){
@@ -101,15 +114,17 @@ int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
 
     Message* msg;
 
+    /*peer->queueAvailablilitySemaphore.Wait();
+
     acquireLock(&peer->cacheLock);
     if(peer->cache.get_length() > 0){
         msg = peer->cache.remove_at(0);
         releaseLock(&peer->cacheLock);
     } else {
-        releaseLock(&peer->cacheLock);
+        releaseLock(&peer->cacheLock);*/
 
         msg = new Message;
-    }
+    //}
 
     msg->id = id;
     msg->size = size;
@@ -131,8 +146,15 @@ int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
         memcpy(msg->dataP, reinterpret_cast<uint8_t*>(data), size);
     }
 
+
     acquireLock(&peer->queueLock);
     peer->queue.add_back(msg);
+
+    if(debugLevelMessageEndpoint >= DebugLevelVerbose){
+        Log::Info("[MessageEndpoint] Sending message (ID: %u, Size: %u) to peer", id, size);
+        Log::Info("[MessageEndpoint] %u messages in peer queue", peer->queue.get_length());
+    }
+
     releaseLock(&peer->queueLock);
     return 0;
 }

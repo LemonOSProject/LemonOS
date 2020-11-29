@@ -127,7 +127,7 @@ public:
 					data[i] = oldData[i];
 				}
 				
-				delete oldData;
+				delete[] oldData;
 			} else {
 				data = new T[capacity];
 			}
@@ -149,7 +149,7 @@ public:
 
 	~Vector(){
 		if(data){
-			delete data;
+			delete[] data;
 		}
 		data = nullptr;
 	}
@@ -173,7 +173,7 @@ public:
 	void clear(){
 		acquireLock(&lock);
 		if(data){
-			delete data;
+			delete[] data;
 		}
 
 		count = capacity = 0;

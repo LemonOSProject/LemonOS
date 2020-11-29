@@ -10,3 +10,5 @@ const int debugLevelATA = 0;
 const int debugLevelXHCI = 0;
 const int debugLevelInterrupts = 0;
 const int debugLevelPartitions = 0;
+
+const int debugLevelMessageEndpoint = DebugLevelVerbose;

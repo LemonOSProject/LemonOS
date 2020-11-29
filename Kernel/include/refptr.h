@@ -3,6 +3,10 @@
 #include <debug.h>
 #include <ttraits.h>
 
+#ifdef REFPTR_DEBUG
+    #include <logging.h>
+#endif
+
 template<typename T>
 class FancyRefPtr{
 private:
@@ -15,12 +19,12 @@ public:
         obj = p;
         refCount = s.getRefCount();
 
-        (*refCount)++;
+        __sync_fetch_and_add(refCount, 1);
     }
 
     FancyRefPtr(){
         refCount = new unsigned;
-        *(refCount) = 0;
+        *(refCount) = 1;
 
         obj = nullptr;
     }
@@ -31,8 +35,8 @@ public:
 
         obj = new T(v);
 
-        #ifdef DEBUG_REFPTR
-            Log::Info("New RefPtr containing %s object, now %d references to object", TTraits<T>.name(), refCount);
+        #ifdef REFPTR_DEBUG
+            Log::Info("New RefPtr containing %s object, now %d references to object", TTraits<T>::name(), *refCount);
         #endif
     }
 
@@ -42,8 +46,8 @@ public:
 
         obj = p;
 
-        #ifdef DEBUG_REFPTR
-            Log::Info("New RefPtr containing existing pointer to %s object, now %d references to object", TTraits<T>.name(), refCount);
+        #ifdef REFPTR_DEBUG
+            Log::Info("New RefPtr containing existing pointer to %s object, now %d references to object", TTraits<T>::name(), *refCount);
         #endif
     }
 
@@ -51,7 +55,7 @@ public:
         obj = ptr.obj;
         refCount = ptr.refCount;
 
-        (*refCount)++;
+        __sync_fetch_and_add(refCount, 1);
     }
 
     FancyRefPtr(FancyRefPtr<T>&& ptr){
@@ -60,23 +64,29 @@ public:
     }
 
     virtual ~FancyRefPtr(){
-        if(!obj) return;
+        if(refCount && obj){
+            if(*refCount > 0){
+                __sync_fetch_and_sub(refCount, 1);
+            } else {
+                return; // Another thread deleting?
+            }
+        } else {
+            return;
+        }
 
         #ifdef REFPTR_ASSERTIONS
             assert(refCount);
         #endif
 
-        (*refCount)--;
-
-        #ifdef DEBUG_REFPTR
-            Log::Info("RefPtr: %s object unreferenced, %d references to object", TTraits<T>.name(), refCount);
+        #ifdef REFPTR_DEBUG
+            Log::Info("RefPtr: %s object unreferenced, %d references to object", TTraits<T>::name(), *refCount);
         #endif
 
-        if(obj && (*refCount) <= 0){
+        if((*refCount) <= 0){
             delete refCount;
             delete obj;
 
-            #ifdef DEBUG_REFPTR
+            #ifdef REFPTR_DEBUG
                 Log::Info("RefPtr: Deleting object");
             #endif
         }
@@ -89,9 +99,20 @@ public:
         obj = ptr.obj;
         refCount = ptr.refCount;
 
-        (*refCount)++;
+        __sync_fetch_and_add(refCount, 1);
 
         return *this;
+    }
+
+    inline bool operator==(const T* p){
+        if(obj == p){
+            return true;
+        }
+        return false;
+    }
+
+    inline bool operator!=(const T* p){
+        return !operator==(p);
     }
 
     inline T& operator* (){

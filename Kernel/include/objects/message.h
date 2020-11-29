@@ -102,7 +102,7 @@ public:
     /////////////////////////////
     int64_t Write(uint64_t id, uint16_t size, uint64_t data);
 
-    uint16_t GetMaxMessageSize() { return maxMessageSize; }
+    uint16_t GetMaxMessageSize() const { return maxMessageSize; }
 
     inline static constexpr const char* TypeID() { return "MsgEndpoint"; }
     const char* InstanceTypeID() const { return TypeID(); }

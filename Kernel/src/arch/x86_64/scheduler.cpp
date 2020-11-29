@@ -119,6 +119,8 @@ namespace Scheduler{
 
         ref = proc->handles[id - 1]; // Handle IDs start at 1
 
+        if(!ref.ko.get()) return 2;
+
         return 0;
     }
 
@@ -397,6 +399,8 @@ namespace Scheduler{
         for(unsigned i = 0; i < process->threadCount; i++){
             process->threads[i]->waiting.~List();
         }
+
+        process->handles.clear();
 
         if(cpu->currentThread->parent == process){
             cpu->currentThread = nullptr; // Force reschedule

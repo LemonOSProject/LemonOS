@@ -19,5 +19,7 @@ extern const int debugLevelPartitions;
 extern const int debugLevelXHCI;
 extern const int debugLevelInterrupts;
 
+extern const int debugLevelMessageEndpoint;
+
 #define REFPTR_ASSERTIONS
-#define REFPTR_DEBUG
+//#define REFPTR_DEBUG

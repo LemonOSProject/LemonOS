@@ -95,8 +95,14 @@
 #define SYS_GET_FILE_STATUS_FLAGS 73
 #define SYS_SET_FILE_STATUS_FLAGS 74
 #define SYS_SELECT 75
+#define SYS_CREATE_SERVICE 76
+#define SYS_CREATE_INTERFACE 77
+#define SYS_INTERFACE_ACCEPT 78
+#define SYS_INTERFACE_CONNECT 79
+#define SYS_ENDPOINT_QUEUE 80
+#define SYS_ENDPOINT_DEQUEUE 81
 
-#define NUM_SYSCALLS 76
+#define NUM_SYSCALLS 82
 
 #define EXEC_CHILD 1
 
@@ -2265,7 +2271,7 @@ long SysCreateInterface(regs64_t* r){
 ///
 /// \param interface (handle_id_t) Handle ID of the interface
 ///
-/// \return Handle ID of endpoint on success, negative error code on failure
+/// \return Handle ID of endpoint on success, 0 when no pending connections, negative error code on failure
 /////////////////////////////
 long SysInterfaceAccept(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
@@ -2281,7 +2287,15 @@ long SysInterfaceAccept(regs64_t* r){
 		return -EINVAL;
 	}
 
-	return -ENOSYS;
+	MessageInterface* interface = reinterpret_cast<MessageInterface*>(ifHandle.ko.get());
+	FancyRefPtr<MessageEndpoint> endp;
+	if(long ret = interface->Accept(endp); ret <= 0){
+		return ret;
+	}
+
+	Handle& handle = Scheduler::RegisterHandle(currentProcess, static_pointer_cast<KernelObject, MessageEndpoint>(endp));
+
+	return handle.id;
 }
 
 /////////////////////////////
@@ -2317,7 +2331,7 @@ long SysInterfaceConnect(regs64_t* r){
 			return -ENOENT; // No such service
 		}
 	
-		if(svc->ResolveInterface(interface, strchr(path, '/'))){
+		if(svc->ResolveInterface(interface, strchr(path, '/') + 1)){
 			return -ENOENT; // No such interface
 		}
 	}
@@ -2366,7 +2380,7 @@ long SysEndpointQueue(regs64_t* r){
 }
 
 /////////////////////////////
-/// \brief SysEndpointDequeue (endpoint, id, data)
+/// \brief SysEndpointDequeue (endpoint, id, size, data)
 ///
 /// Accept a pending connection on an interface and return a new MessageEndpoint
 ///
@@ -2375,7 +2389,7 @@ long SysEndpointQueue(regs64_t* r){
 /// \param size (uint32_t*) Returned message Size
 /// \param data (uint8_t*) Message data buffer
 ///
-/// \return 1 on empty, 0 on success, negative error code on failure
+/// \return 0 on empty, 1 on success, negative error code on failure
 /////////////////////////////
 long SysEndpointDequeue(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
@@ -2485,6 +2499,12 @@ syscall_t syscalls[]{
 	SysGetFileStatusFlags,
 	SysSetFileStatusFlags,
 	SysSelect,					// 75
+	SysCreateService,
+	SysCreateInterface,
+	SysInterfaceAccept,
+	SysInterfaceConnect,
+	SysEndpointQueue,			// 80
+	SysEndpointDequeue,
 };
 
 int lastSyscall = 0;

@@ -23,11 +23,11 @@ long MessageInterface::Accept(FancyRefPtr<MessageEndpoint>& endpoint){
         connection->item2 = channel.item2;
         connection->item1 = true;
 
-        endpoint = connection->item2; 
-        return 0;
+        endpoint = channel.item1; 
+        return 1;
     } else {
         releaseLock(&incomingLock);
-        return 1;
+        return 0;
     }
 }
 

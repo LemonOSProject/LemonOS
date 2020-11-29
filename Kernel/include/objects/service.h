@@ -11,6 +11,7 @@ class Service;
 
 class ServiceFS : public fs::FsVolume {
 protected:
+    friend class Service;
     static ServiceFS* instance;
 
 public:
@@ -23,6 +24,8 @@ public:
     ServiceFS();
 
     static ServiceFS* Instance(){
+        assert(instance);
+
         return instance;
     }
 
@@ -37,6 +40,7 @@ protected:
 
 public:
     Service(const char* _name);
+    ~Service();
 
     long CreateInterface(FancyRefPtr<MessageInterface>& rInterface, const char* name, uint16_t msgSize);
     long ResolveInterface(FancyRefPtr<MessageInterface>& interface, const char* name);

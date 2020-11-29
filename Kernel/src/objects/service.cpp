@@ -11,7 +11,7 @@ ServiceFS::ServiceFS(){
 }
 
 long ServiceFS::ResolveServiceName(FancyRefPtr<Service>& ref, const char* name){
-    const char* separator = strchr(name, ' ');
+    const char* separator = strchr(name, '/');
 
     if(separator){
         for(auto& svc : services){
@@ -37,12 +37,27 @@ FancyRefPtr<Service> ServiceFS::CreateService(const char* name){
     auto svc = FancyRefPtr<Service>(new Service(name));
 
     services.add_back(svc);
+    (*svc.getRefCount())--; // Really hacky but means that the service list entry does not count as a reference
 
     return svc;
 }
 
 Service::Service(const char* _name){
     name = strdup(_name);
+}
+
+Service::~Service(){
+    interfaces.clear();
+
+    auto& services = ServiceFS::Instance()->services;
+    auto it = services.begin();
+    while(it != services.end()){
+        if(*it == this){
+            services.remove(it);
+            break;
+        }
+        it++;
+    }
 }
 
 long Service::CreateInterface(FancyRefPtr<MessageInterface>& rInterface, const char* name, uint16_t msgSize){
@@ -57,7 +72,7 @@ long Service::CreateInterface(FancyRefPtr<MessageInterface>& rInterface, const c
         }
     }
 
-    FancyRefPtr<MessageInterface> interface = FancyRefPtr<MessageInterface>(new MessageInterface(name, msgSize));
+    rInterface = FancyRefPtr<MessageInterface>(new MessageInterface(name, msgSize));
 
     interfaces.add_back(rInterface);
 

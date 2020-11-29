@@ -1,5 +1,6 @@
 Disks/Lemon.vhd
 .vscode
+.cache
 *.img
 *.wad
 *.gbc
