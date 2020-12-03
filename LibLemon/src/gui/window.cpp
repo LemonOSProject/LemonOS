@@ -63,6 +63,8 @@ namespace Lemon::GUI{
 
         msgClient.Send(destroyMsg);
 
+        Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey);
+
         free(destroyMsg);
 
         usleep(100);

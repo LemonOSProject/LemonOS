@@ -1,4 +1,3 @@
-Disks/Lemon.vhd
 .vscode
 .cache
 *.img
@@ -11,14 +10,16 @@ Disks/Lemon.vhd
 *.a
 serial.log
 Kernel/build
+Kernel/subprojects/lai
 Applications/build
 LibLemon/build
+LibLemon/subprojects
+!LibLemon/subprojects/*.wrap
 System/build
 Scripts/build-win/mount.cfg
-Kernel/subprojects/lai
 Initrd/*
-Base/*
 Disks/*
+Base/*
 !Base/lemon
 !Base/hello.asm
 !Base/hello.py

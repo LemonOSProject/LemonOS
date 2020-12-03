@@ -3,47 +3,74 @@
 #include <vector>
 #include <map>
 #include <stack>
+#include <memory>
+#include <utility>
 
-/*std::map<std::string,std::string> types = {
-    {"byte", "uint8_t"},
-    {"uint16", "uint16_t"},
-    {"uint32", "uint32_t"},
-    {"uint64", "uint64_t"},
-    {"int16", "int16_t"},
-    {"int32", "int32_t"},
-    {"int64", "int64_t"},
-};*/
+// Asynchronous remote procedure: IDENTIFIER PARAMETERS
+
+// Synchronous remote procedure: IDENTIFIER PARAMETERS -> PARAMETERS
+// Protocol: protocol IDENTIFIER { }
+// Parameters: (IDENTIFIER TYPE, ...)
 
 enum TokenType{
     TokenEndline,
     TokenIdentifier,
     TokenKeyword,
-    TokenTypename,
     TokenLeftBrace,
     TokenRightBrace,
     TokenLeftParens,
     TokenRightParens,
     TokenComma,
+    TokenResponse,
+};
+
+enum Type{
+    TypeString,
+    TypeU8,
+    TypeU16,
+    TypeU32,
+    TypeU64,
+    TypeS8,
+    TypeS16,
+    TypeS32,
+    TypeS64,
+};
+
+std::map<std::string, Type> types = {
+    {"string", TypeString},
+    {"u8", TypeU8},
+    {"u16", TypeU16},
+    {"u32", TypeU32},
+    {"u64", TypeU64},
+    {"s8", TypeS8},
+    {"s16", TypeS16},
+    {"s32", TypeS32},
+    {"s64", TypeS64},
+};
+
+enum KeywordType{
     KeywordInterface,
-    KeywordSync,
-    KeywordAsync,
-    KeywordResponse,
+    KeywordStruct,
+    KeywordUnion,
+};
+
+std::vector<std::string> tokenNames = {
+    "ENDLINE",
+    "IDENTIFIER",
+    "KEYWORD",
+    "{",
+    "}",
+    "(",
+    ")",
+    ",",
+    "RESPONSE",
 };
 
 enum StatementType {
     StatementDeclareInterface,
-    StatementExitInterfaceScope,
-    StatementAsyncCallDeclaration,
-    StatementSyncCallDeclaration,
+    StatementAsynchronousMethod,
+    StatementSynchronousMethod,
     StatementParameterList,
-};
-
-enum {
-    ParserStateNone,
-    ParserStateDeclarationAsync,
-    ParserStateDeclarationSync,
-    ParserStateDeclarationInterface,
-    ParserStateParameterList,
 };
 
 #define IsDeclaration(x) ((x == ParserStateDeclarationSync) || (x == ParserStateDeclarationAsync) || (x == ParserStateDeclarationInterface))
@@ -56,18 +83,55 @@ struct Statement
     Statement(StatementType t) { type = t; }
 };
 
-struct InterfaceDeclarationStatment : Statement {
+struct InterfaceDeclarationStatement final : Statement {
     std::string interfaceName;
 
-    InterfaceDeclarationStatment(std::string& name){
+    std::vector<Statement> children;
+
+    InterfaceDeclarationStatement(const std::string& name){
         interfaceName = name;
         type = StatementDeclareInterface;
     }
 };
 
+struct ParameterList final : Statement {
+    std::vector<std::pair<Type, std::string>> parameters;
+
+    ParameterList(const std::vector<std::pair<Type, std::string>>& params){
+        type = StatementParameterList;
+
+        parameters = params;
+    }
+};
+
+struct ASynchronousMethod final : Statement{
+    std::string methodName;
+
+    ParameterList parameters;
+
+    ASynchronousMethod(const std::string& name){
+        methodName = name;
+
+        type = StatementAsynchronousMethod;
+    }
+};
+
+struct SynchronousMethod final : Statement{
+    std::string methodName;
+
+    ParameterList parameters;
+    ParameterList returnParameters;
+
+    SynchronousMethod(const std::string& name){
+        methodName = name;
+
+        type = StatementSynchronousMethod;
+    }
+};
+
 struct Token{
     TokenType type;
-    std::string value;
+    std::string value = "";
     int lineNum;
 
     Token(){}
@@ -83,34 +147,50 @@ struct Token{
     }
 };
 
-struct ParserState{
-    int state = ParserStateNone;
-    bool identified = false;
+enum {
+    ParserStateInvalid,
+    ParserStateRoot,
+    ParserStateDeclarationAsync,
+    ParserStateDeclarationSync,
+    ParserStateInterface,
+    ParserStateParameterList,
+};
 
-    Token identifier;
+struct ParserState{
+    int state = ParserStateInvalid;
+    std::shared_ptr<Statement> statement;
 
     ParserState(int s){
         state = s;
     }
 };
 
-using ParameterList = std::vector<std::pair<std::string, std::string>>; // Type and name
-
-std::map<std::string, TokenType> keywords = {
-    {"interface", KeywordInterface},
-    {"sync", KeywordSync},
-    {"async", KeywordAsync},
-    {"response", KeywordResponse},
+std::vector<std::string> keywordTokens = {
+    "interface",
+    "struct",
+    "union",
 };
 
+std::map<std::string, KeywordType> keywords = {
+    {"interface", KeywordInterface},
+    {"struct", KeywordStruct},
+    {"union", KeywordUnion},
+};
+
+bool IsType(const std::string& s){
+    return (types.find(s) != types.end());
+}
+
 std::vector<Token> tokens;
-std::vector<Statement*> statements;
+std::vector<std::shared_ptr<Statement>> statements;
 
 void BuildTokens(std::string& input){
     int lineNum = 0;
 
     std::string buf;
-    for(char c : input){
+    for(auto it = input.begin(); it != input.end(); it++){
+        char c = *it;
+
         auto appendIdentifier = [lineNum](std::string& buf) { 
             if(buf.length()){
                 tokens.push_back(Token(lineNum, TokenIdentifier, buf));
@@ -121,41 +201,60 @@ void BuildTokens(std::string& input){
         switch (c)
         {   
         case ',':
-            tokens.push_back(Token(lineNum, TokenComma));
             appendIdentifier(buf);
+            tokens.push_back(Token(lineNum, TokenComma));
             break;
         case ')':
-            tokens.push_back(Token(lineNum, TokenRightParens));
             appendIdentifier(buf);
+            tokens.push_back(Token(lineNum, TokenRightParens));
             break;
         case '(':
-            tokens.push_back(Token(lineNum, TokenLeftParens));
             appendIdentifier(buf);
+            tokens.push_back(Token(lineNum, TokenLeftParens));
             break;
         case '}':
-            tokens.push_back(Token(lineNum, TokenRightBrace));
             appendIdentifier(buf);
+            tokens.push_back(Token(lineNum, TokenRightBrace));
             break;
         case '{':
-            tokens.push_back(Token(lineNum, TokenLeftBrace));
             appendIdentifier(buf);
+            tokens.push_back(Token(lineNum, TokenLeftBrace));
             break;
         case '\n':
+            appendIdentifier(buf);
+            tokens.push_back(Token(lineNum, TokenEndline));
             lineNum++;
-        case ' ':
+            break;
+        case '-':
+            appendIdentifier(buf);
+
+            if(*(it + 1) == '>'){ // Response token is '->' so look ahead by one character
+                tokens.push_back(Token(lineNum, TokenResponse));
+                it++;
+            } else {
+                printf("error: [line %d] Unsupported character '%c'\n", lineNum, c);
+                exit(2);
+            }
+            break;
+        case ' ': // Eat whitespaces
             appendIdentifier(buf);
             break;
         default:
-            buf += c;
+            if(isalnum(c) || c == '_'){ // Must match 0-9A-Za-z_
+                buf += c;
+            } else {
+                printf("error: [line %d] Unsupported character '%c'\n", lineNum, c);
+                exit(2);
+            }
             break;
         }
     }
 
     for(Token& tok : tokens){
         if(tok.type == TokenIdentifier){
-            for(auto keyword : keywords){
-                if(!tok.value.compare(keyword.first)){
-                    tok.type = keyword.second;
+            for(auto keyword : keywordTokens){
+                if(!tok.value.compare(keyword)){
+                    tok.type = TokenKeyword;
                     break;
                 }
             }
@@ -163,16 +262,145 @@ void BuildTokens(std::string& input){
     }
 }
 
+// interface IDENTIFIER {
+std::shared_ptr<InterfaceDeclarationStatement> ParseInterfaceDeclarationStatement(std::vector<Token>::iterator& it){
+    std::string ifName = "";
+
+    Token& nameTok = *it;
+
+    if(nameTok.type != TokenIdentifier){
+        printf("error: [line %d] Invalid token '%s'\n", nameTok.lineNum, tokenNames[nameTok.type]);
+        exit(4);
+    }
+
+    ifName = nameTok.value;
+
+    Token& enterTok = *(++it);
+
+    if(enterTok.type != TokenLeftBrace){
+        printf("error: [line %d] Invalid token '%s'\n", nameTok.lineNum, tokenNames[nameTok.type]);
+        exit(4);
+    }
+
+    return std::shared_ptr<InterfaceDeclarationStatement>(new InterfaceDeclarationStatement(ifName));
+}
+
+// (TYPE IDENTIFIER, ...)
+ParameterList ParseParameterListStatement(const std::vector<Token>::iterator& end, std::vector<Token>::iterator& it){
+    std::vector<std::pair<Type, std::string>> parameters;
+
+    while(it != end){
+        Token typeTok = *(it++);
+        Type type;
+
+        if(typeTok.type == TokenIdentifier && IsType(typeTok.value)){ // Check if the token is a typename
+            type = types.at(typeTok.value);
+        } else if(typeTok.type == TokenRightParens) { // Check if list is beign terminated
+            return ParameterList(parameters);
+        } else {
+            printf("error: [line %d] Invalid type '%s'!", typeTok.lineNum, typeTok.value.c_str());
+            exit(4);
+        }
+
+        Token idTok = *(it++);
+        while(it != end && idTok.type == TokenEndline) idTok = *(it++); // Eat line endings
+
+        if(idTok.type != TokenIdentifier){
+            printf("error: [line %d] Unexpected token '%s', expected identifier!", typeTok.lineNum, tokenNames[typeTok.type].c_str());
+            exit(4);
+        }
+
+        parameters.push_back({type, idTok.value});
+    }
+    
+    printf("error: Unterminated parameter list!"));
+    exit(4);
+}
+
+void Parse(){
+    std::stack<ParserState> states;
+
+    states.push(ParserState(ParserStateRoot));
+
+    auto it = tokens.begin();
+    while(it != tokens.end()){
+        Token& tok = *it;
+        ParserState pState = states.top();
+
+        switch(pState.state){
+        case ParserStateRoot:
+            switch(tok.type){
+            case TokenKeyword: {
+                KeywordType kw = keywords.at(tok.value); // Get keyword id
+
+                if(kw == KeywordInterface){
+                    std::shared_ptr<InterfaceDeclarationStatement> ifDecl = ParseInterfaceDeclarationStatement(++it);
+
+                    printf("Declaring interface: %s\n", ifDecl->interfaceName.c_str());
+                    it++;
+
+                    statements.push_back(ifDecl);
+                    states.push(ParserStateInterface);
+
+                    states.top().statement = ifDecl;
+                } else {
+                    printf("error: [line %d] Unexpected keyword '%s'!", tok.lineNum, tok.value.c_str());
+                    exit(3);
+                }
+                break;
+            } case TokenEndline:
+                it++;
+                continue;
+            default:
+                printf("error: [line %d] Unexpected token '%s'!", tok.lineNum, tokenNames[tok.type].c_str());
+                exit(3);
+                continue;
+            } 
+            break;
+        case ParserStateInterface:
+            switch(tok.type){
+            case TokenIdentifier:
+                Token next = *(++it);
+
+                if(next.type == TokenLeftParens){
+                    ParameterList pList = ParseParameterListStatement(tokens.end(), ++it);
+
+                    Token response = *(it++);
+                    if(response.type == TokenResponse){
+                        // Synchronous method
+                    } else if(response.type == TokenEndline){
+                        // Asynchronous method
+                        std::shared_ptr method = std::shared_ptr<ASynchronousMethod>(new ASynchronousMethod(tok.value));
+                        method->parameters = pList;
+                    } else {
+                        
+                    }
+                } else {
+                    printf("error: [line %d] Unexpected token '%s'!", tok.lineNum, tokenNames[tok.type].c_str());
+                    exit(3);
+                }
+                break;
+            }
+            break;
+        case ParserStateInvalid:
+        default:
+            printf("Parser state is invalid!\n");
+            exit(99);
+            break;
+        }
+    }
+}
+
 int main(int argc, char** argv){
     if(argc < 2){
         printf("Usage: %s <file>\n", argv[0]);
-        exit(2);
+        exit(1);
     }
 
     FILE* inputFile;
     if(!(inputFile = fopen(argv[1], "r"))){
         perror("Error opening file for reading: ");
-        exit(2);
+        exit(1);
     }
 
     std::string input;
@@ -187,81 +415,7 @@ int main(int argc, char** argv){
 
     BuildTokens(input);
 
-    ParameterList parameters;
-    std::pair<std::string, std::string> currentParameter;
-    std::stack<ParserState> parserState;
-    parserState.push(ParserState(ParserStateNone));
-
-    for(Token tok : tokens){
-        switch(tok.type){
-            case KeywordSync:
-            case KeywordAsync:
-                if(parserState.top().state == ParserStateNone){
-                    parserState.push((tok.type == KeywordSync) ? ParserStateDeclarationSync : ParserStateDeclarationAsync);
-                } else {
-                    printf("error: [line %d] Unexpected declaration '%s'.\n", tok.lineNum, tok.value.c_str());
-                    exit(1);
-                }
-                break;
-            case KeywordInterface:
-                if(parserState.top().state == ParserStateNone){
-                    parserState.push(ParserState(ParserStateDeclarationInterface));
-                } else {
-                    printf("error: [line %d] Unexpected declaration '%s'.\n", tok.lineNum, tok.value.c_str());
-                    exit(1);
-                }
-                break;
-            case TokenIdentifier:
-                if(IsDeclaration(parserState.top().state)){
-                    parserState.top().identifier = tok;
-                    parserState.top().identified = true;
-                } else {
-                    if(!currentParameter.first.length()){ // type name
-                        currentParameter.first = tok.value;
-                    } else if(!currentParameter.second.length()){
-                        currentParameter.second = tok.value;
-                    } else {
-                        printf("error: [line %d] Unexpected identifier: %s.\n", tok.lineNum, tok.value.c_str());
-                        exit(1);
-                    }
-                }
-                break;
-            case TokenLeftBrace:
-                if(parserState.top().state == ParserStateDeclarationInterface){
-                    statements.push_back(new InterfaceDeclarationStatment(parserState.top().identifier.value));
-                    parserState.pop();
-                } else {
-                    printf("error: [line %d] Unexpected '{'.\n", tok.lineNum);
-                    exit(1);
-                }
-                break;
-            case TokenRightBrace:
-                statements.push_back(new Statement(StatementExitInterfaceScope));
-                break;
-            case TokenLeftParens:
-                if(IsDeclaration(parserState.top().state) && parserState.top().state != ParserStateDeclarationInterface){
-                    if(!parserState.top().identified){
-                        printf("error: [line %d] Expected identifier before '('.\n", tok.lineNum);
-                        exit(1);
-                    }
-
-                    parameters.clear();
-                    parserState.push(ParserState(ParserStateParameterList));
-                } else {
-                    printf("error: [line %d] Unexpected '('\n", tok.lineNum);
-                    exit(1);
-                }
-                break;
-            case TokenRightParens:
-                if(parserState.top().state != ParserStateParameterList){
-                    printf("error: [line %d] Unexpected ')'\n", tok.lineNum);
-                    exit(1);
-                } else {
-                    parserState.pop();
-                }
-                break;
-        }
-    }
+    Parse();
 
     exit(0);
 }

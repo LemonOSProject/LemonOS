@@ -1,7 +1,10 @@
 project('LibLemon', default_options : ['cpp_std=c++17', 'optimization=3', 'warning_level=2', 'werror=true'])
 
+json = subproject('json')
+
 liblemon_include_dirs = [
     include_directories('include'),
+    include_directories('subprojects/nlohmann_json-3.9.1/single_include/')
 ]
 
 add_languages('c', 'cpp')
@@ -42,6 +45,7 @@ cpp_files = [
     'src/shell/shell.cpp',
 
     'src/cfgparser.cpp',
+    'src/configmgr.cpp',
     'src/sha.cpp',
 ]
 
