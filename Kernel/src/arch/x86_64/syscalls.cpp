@@ -2230,13 +2230,13 @@ long SysCreateService(regs64_t* r){
 long SysCreateInterface(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
-	Handle svcHandle;
-	if(Scheduler::FindHandle(currentProcess, r->rbx, svcHandle)){
+	Handle* svcHandle;
+	if(Scheduler::FindHandle(currentProcess, r->rbx, &svcHandle)){
 		Log::Warning("SysCreateInterface: Invalid handle ID %d", r->rbx);
 		return -EINVAL;
 	}
 
-	if(!svcHandle.ko->IsType(Service::TypeID())){
+	if(!svcHandle->ko->IsType(Service::TypeID())){
 		Log::Warning("SysCreateInterface: Invalid handle type (ID %d)", r->rbx);
 		return -EINVAL;
 	}
@@ -2250,7 +2250,7 @@ long SysCreateInterface(regs64_t* r){
 	strncpy(name, reinterpret_cast<const char*>(r->rcx), nameLength);
 	name[nameLength] = 0;
 
-	Service* svc = reinterpret_cast<Service*>(svcHandle.ko.get());
+	Service* svc = reinterpret_cast<Service*>(svcHandle->ko.get());
 
 	FancyRefPtr<MessageInterface> interface;
 	long ret = svc->CreateInterface(interface, name, r->rdx);
@@ -2276,18 +2276,18 @@ long SysCreateInterface(regs64_t* r){
 long SysInterfaceAccept(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
-	Handle ifHandle;
-	if(Scheduler::FindHandle(currentProcess, r->rbx, ifHandle)){
+	Handle* ifHandle;
+	if(Scheduler::FindHandle(currentProcess, r->rbx, &ifHandle)){
 		Log::Warning("SysInterfaceAccept: Invalid handle ID %d", r->rbx);
 		return -EINVAL;
 	}
 
-	if(!ifHandle.ko->IsType(MessageInterface::TypeID())){
+	if(!ifHandle->ko->IsType(MessageInterface::TypeID())){
 		Log::Warning("SysInterfaceAccept: Invalid handle type (ID %d)", r->rbx);
 		return -EINVAL;
 	}
 
-	MessageInterface* interface = reinterpret_cast<MessageInterface*>(ifHandle.ko.get());
+	MessageInterface* interface = reinterpret_cast<MessageInterface*>(ifHandle->ko.get());
 	FancyRefPtr<MessageEndpoint> endp;
 	if(long ret = interface->Accept(endp); ret <= 0){
 		return ret;
@@ -2358,13 +2358,13 @@ long SysInterfaceConnect(regs64_t* r){
 long SysEndpointQueue(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
-	Handle endpHandle;
-	if(Scheduler::FindHandle(currentProcess, r->rbx, endpHandle)){
+	Handle* endpHandle;
+	if(Scheduler::FindHandle(currentProcess, r->rbx, &endpHandle)){
 		Log::Warning("SysEndpointQueue: Invalid handle ID %d", r->rbx);
 		return -EINVAL;
 	}
 
-	if(!endpHandle.ko->IsType(MessageEndpoint::TypeID())){
+	if(!endpHandle->ko->IsType(MessageEndpoint::TypeID())){
 		Log::Warning("SysEndpointQueue: Invalid handle type (ID %d)", r->rbx);
 		return -EINVAL;
 	}
@@ -2374,7 +2374,7 @@ long SysEndpointQueue(regs64_t* r){
 		return -EFAULT; // Data greater than 8 and invalid pointer
 	}
 
-	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle.ko.get());
+	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle->ko.get());
 
 	return endpoint->Write(r->rcx, size, r->rsi);
 }
@@ -2394,13 +2394,13 @@ long SysEndpointQueue(regs64_t* r){
 long SysEndpointDequeue(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
-	Handle endpHandle;
-	if(Scheduler::FindHandle(currentProcess, r->rbx, endpHandle)){
+	Handle* endpHandle;
+	if(Scheduler::FindHandle(currentProcess, r->rbx, &endpHandle)){
 		Log::Warning("SysEndpointDequeue: Invalid handle ID %d", r->rbx);
 		return -EINVAL;
 	}
 
-	if(!endpHandle.ko->IsType(MessageEndpoint::TypeID())){
+	if(!endpHandle->ko->IsType(MessageEndpoint::TypeID())){
 		Log::Warning("SysEndpointDequeue: Invalid handle type (ID %d)", r->rbx);
 		return -EINVAL;
 	}
@@ -2413,7 +2413,7 @@ long SysEndpointDequeue(regs64_t* r){
 		return -EFAULT;
 	}
 
-	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle.ko.get());
+	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle->ko.get());
 
 	if(!Memory::CheckUsermodePointer(r->rsi, endpoint->GetMaxMessageSize(), currentProcess->addressSpace)){
 		return -EFAULT;

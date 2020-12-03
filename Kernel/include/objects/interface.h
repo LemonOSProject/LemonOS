@@ -36,6 +36,6 @@ public:
     /////////////////////////////
     FancyRefPtr<MessageEndpoint> Connect();
     
-    inline static constexpr const char* TypeID() { return "MsgInterface"; }
-    const char* InstanceTypeID() const { return TypeID(); }
+    inline static constexpr kobject_id_t TypeID() { return KOBJECT_ID_INTERFACE; }
+    kobject_id_t InstanceTypeID() const { return TypeID(); }
 };

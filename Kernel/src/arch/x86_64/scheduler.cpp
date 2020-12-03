@@ -112,14 +112,14 @@ namespace Scheduler{
 
         return ref;
     }
-	long FindHandle(process_t* proc, handle_id_t id, Handle& ref){
+	long FindHandle(process_t* proc, handle_id_t id, Handle** handle){
         if(id < 1 || id - 1 > static_cast<handle_id_t>(proc->handles.get_length())){
             return 1;
         }
 
-        ref = proc->handles[id - 1]; // Handle IDs start at 1
+        *handle = &proc->handles[id - 1]; // Handle IDs start at 1
 
-        if(!ref.ko.get()) return 2;
+        if(!(*handle)->ko.get()) return 2;
 
         return 0;
     }

@@ -47,6 +47,6 @@ public:
 
     const char* GetName() { return name; };
 
-    inline static constexpr const char* TypeID() { return "Service"; }
-    const char* InstanceTypeID() const { return TypeID(); }
+    inline static constexpr kobject_id_t TypeID() { return KOBJECT_ID_SERVICE; }
+    kobject_id_t InstanceTypeID() const { return TypeID(); }
 };

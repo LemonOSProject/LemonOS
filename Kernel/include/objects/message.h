@@ -6,6 +6,7 @@
 #include <refptr.h>
 #include <pair.h>
 #include <lock.h>
+#include <ringbuffer.h>
 
 #include <objects/kobject.h>
 
@@ -26,17 +27,11 @@ private:
     friend Pair<FancyRefPtr<MessageEndpoint>,FancyRefPtr<MessageEndpoint>> CreatePair();
     uint16_t maxMessageSize = 8;
     uint16_t messageQueueLimit = 128;
-    uint16_t messageCacheLimit = 16;
-
-    lock_t bufferCacheLock = 0;
-    lock_t cacheLock = 0;
     lock_t queueLock = 0;
 
     Semaphore queueAvailablilitySemaphore = Semaphore(messageQueueLimit);
 
-    List<uint8_t*> bufferCache;
-    FastList<Message*> cache;
-    FastList<Message*> queue;
+    RingBuffer<Message> queue;
 
     FancyRefPtr<MessageEndpoint> peer;
 public:
@@ -104,6 +99,6 @@ public:
 
     uint16_t GetMaxMessageSize() const { return maxMessageSize; }
 
-    inline static constexpr const char* TypeID() { return "MsgEndpoint"; }
-    const char* InstanceTypeID() const { return TypeID(); }
+    inline static constexpr kobject_id_t TypeID() { return KOBJECT_ID_MESSAGE_ENDPOINT; }
+    kobject_id_t InstanceTypeID() const { return TypeID(); }
 };

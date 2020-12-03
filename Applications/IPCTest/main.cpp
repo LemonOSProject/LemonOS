@@ -5,13 +5,18 @@
 #include <string.h>
 #include <sys/time.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <lemon/syscall.h>
+
+const int msgCount = 8000;
+long avgTime = 0;
 
 unsigned int operator-(const timespec& t1, const timespec& t2){
     return (t1.tv_sec - t2.tv_sec) * 1000000000 + (t1.tv_nsec - t2.tv_nsec);
 }
-timespec timer;
+timespec timer[msgCount];
+timespec newTimer[msgCount];
 
 sockaddr_un udsAddr;
 void* UDSThread(void* n){
@@ -21,14 +26,32 @@ void* UDSThread(void* n){
         exit(1);
     }
 
-    char buf[513];
-    ssize_t len = recv(udsClient, buf, 512, 0);
-    buf[len] = 0;
+    char buf[64];
+    for(int i = 0; i < msgCount; i++){
+        recv(udsClient, buf, 64, 0);
+        
+        clock_gettime(CLOCK_BOOTTIME, &newTimer[i]);
+    }
 
-    timespec newTimer;
-    clock_gettime(CLOCK_BOOTTIME, &newTimer);
+    int low = newTimer[0] - timer[0];
+    int high = 0;
+    for(int i = 0; i < msgCount; i++){
+        int diff = (newTimer[i] - timer[i]);
+        if(diff / 1000 < low){
+            low = diff / 1000;
+        }
 
-    printf("Recieved message: %s in %d us\n", buf, (newTimer - timer) / 1000);
+        if(diff / 1000 > high){
+            high = diff / 1000;
+        }
+
+        avgTime += diff;
+    }
+    avgTime = avgTime / msgCount / 1000;
+
+    printf("Recieved messagees: avg time: %ldus, low: %dus, high %dus\n", avgTime, low, high);
+
+    close(udsClient);
     
     return nullptr;
 }
@@ -40,25 +63,43 @@ void* LemonIPCThread(void* n){
         return nullptr;
     }
     
-    char buf[513];
+    char buf[64];
     uint64_t id;
     uint32_t size;
 
-    long ret = syscall(SYS_ENDPOINT_DEQUEUE, endpHandle, &id, &size, buf, 0);
-    while(!ret){
-        ret = syscall(SYS_ENDPOINT_DEQUEUE, endpHandle, &id, &size, buf, 0);
+    avgTime = 0;
+
+    for(int i = 0; i < msgCount; i++){
+        long ret = syscall(SYS_ENDPOINT_DEQUEUE, endpHandle, &id, &size, buf, 0);
+        while(!ret){
+            ret = syscall(SYS_ENDPOINT_DEQUEUE, endpHandle, &id, &size, buf, 0);
+        }
+
+        if(ret <= 0){
+            printf("Error on endpoint dequeue!\n");
+            return nullptr;
+        }
+
+        clock_gettime(CLOCK_BOOTTIME, &newTimer[i]);
     }
 
-    if(ret <= 0){
-        printf("Error on endpoint dequeue!\n");
-        return nullptr;
+    int low = newTimer[0] - timer[0];
+    int high = 0;
+    for(int i = 0; i < msgCount; i++){
+        int diff = (newTimer[i] - timer[i]);
+        if(diff / 1000 < low){
+            low = diff / 1000;
+        }
+
+        if(diff / 1000 > high){
+            high = diff / 1000;
+        }
+
+        avgTime += diff;
     }
-    buf[size] = 0;
+    avgTime = avgTime / msgCount / 1000;
 
-    timespec newTimer;
-    clock_gettime(CLOCK_BOOTTIME, &newTimer);
-
-    printf("Recieved message: %s in %d us\n", buf, (newTimer - timer) / 1000);
+    printf("Recieved messagees: avg time: %ldus, low: %dus, high %dus\n", avgTime, low, high);
 
     return nullptr;
 }
@@ -89,14 +130,12 @@ int main(){
 
     int fd = accept(udsListener, nullptr, nullptr);
 
-    clock_gettime(CLOCK_BOOTTIME, &timer);
+    char msg[64];
+    for(int i = 0; i < msgCount; i++){
+        clock_gettime(CLOCK_BOOTTIME, &timer[i]);
 
-    char msg[] = "Test message";
-    send(fd, msg, strlen(msg), 0);
-
-    timespec sendTimer;
-    clock_gettime(CLOCK_BOOTTIME, &sendTimer);
-    printf("Sending message took %d us\n", (sendTimer - timer));
+        send(fd, msg, 64, 0);
+    }
 
     pthread_join(t1, nullptr);
 
@@ -106,7 +145,7 @@ int main(){
         return 1;
     }
 
-    ifHandle = syscall(SYS_CREATE_INTERFACE, svcHandle, "testif", 512, 0, 0);
+    ifHandle = syscall(SYS_CREATE_INTERFACE, svcHandle, "testif", 64, 0, 0);
     if(svcHandle <= 0){
         printf("Failed to create interface!");
         return 1;
@@ -124,11 +163,10 @@ int main(){
         return 0;
     }
 
-    clock_gettime(CLOCK_BOOTTIME, &timer);
-    syscall(SYS_ENDPOINT_QUEUE, endpHandle, 0xDEADBEEF, strlen(msg), msg, 0);
-
-    clock_gettime(CLOCK_BOOTTIME, &sendTimer);
-    printf("Sending message took %d us\n", (sendTimer - timer));
+    for(int i = 0; i < msgCount; i++){
+        clock_gettime(CLOCK_BOOTTIME, &timer[i]);
+        syscall(SYS_ENDPOINT_QUEUE, endpHandle, 0xDEADBEEF, 64, msg, 0);
+    }
 
     pthread_join(t2, nullptr);
 

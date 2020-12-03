@@ -86,7 +86,7 @@ namespace Scheduler{
     }
 
 	Handle& RegisterHandle(process_t* proc, FancyRefPtr<KernelObject> ko);
-	long FindHandle(process_t* proc, handle_id_t id, Handle& ref);
+	long FindHandle(process_t* proc, handle_id_t id, Handle** ref);
 	long DestroyHandle(process_t* proc, handle_id_t id);
 
 	void Yield();
