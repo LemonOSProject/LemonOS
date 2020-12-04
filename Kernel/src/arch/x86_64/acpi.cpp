@@ -251,10 +251,10 @@ extern "C"{
 		return kmalloc(sz);
 	}
 
-	void *laihost_realloc(void* addr, size_t sz){
+	void *laihost_realloc(void* addr, size_t sz, size_t oldsz){
 		return krealloc(addr, sz);
 	}
-	void laihost_free(void * addr){
+	void laihost_free(void * addr, size_t sz){
 		kfree(addr);
 	}
 

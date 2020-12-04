@@ -12,7 +12,8 @@ Lemon OS is a UNIX-like 64-bit operating system written in C++.
 [Latest Prebuilt Image](https://github.com/fido2020/Lemon-OS/releases/tag/0.2.2)
 
 ### Building
-See [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-OS)
+See [Building Lemon OS with Docker (Recommended)](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-OS-with-Docker)
+or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-OS)
 
 ### Features
 - Symmetric Multiprocessing (SMP)

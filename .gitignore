@@ -10,11 +10,10 @@
 *.a
 serial.log
 Kernel/build
-Kernel/subprojects/lai
 Applications/build
 LibLemon/build
 LibLemon/subprojects
-!LibLemon/subprojects/*.wrap
+!LibLemon/subprojects/json.wrap
 System/build
 Scripts/build-win/mount.cfg
 Initrd/*

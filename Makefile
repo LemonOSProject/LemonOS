@@ -2,7 +2,7 @@ JOBS := $(shell nproc)
 
 .PHONY: all disk kernel base initrd libc liblemon system clean run vbox debug
 
-all: kernel base initrd disk
+all: kernel libc base initrd disk
 
 libc:
 	ninja -j$(JOBS) -C LibC/build install

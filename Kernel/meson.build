@@ -1,14 +1,5 @@
 project('Lemon Kernel',
     default_options : ['warning_level=2', 'cpp_std=c++2a', 'optimization=0', 'werror=true'])
-
-lai = subproject('lai')
-
-kernel_include_dirs = [
-    include_directories('include'),
-    include_directories('subprojects/lai/include'),
-    include_directories('include/arch/x86_64'),
-]
-
 add_languages('c', 'cpp')
 
 nasm = find_program('nasm')
@@ -28,7 +19,7 @@ output : '@BASENAME@.bin.o',
 arguments : ['@INPUT@','@OUTPUT@', meson.current_source_dir() + '/src/arch/x86_64/', '@BASENAME@'])
 
 kernel_c_args = [
-    '-Wno-write-strings', '-Wno-unused-parameter',
+    '-Wno-write-strings', '-Wno-unused-parameter', '-Wno-sign-compare',
     '-DLemon64',
     '-ffreestanding', '-nostdlib',
     '-mcmodel=large', '-mno-red-zone', '-fno-pic',
@@ -42,6 +33,14 @@ kernel_cpp_args = [
 
 add_project_arguments(kernel_c_args, language : ['c', 'cpp'])
 add_project_arguments(kernel_cpp_args, language : 'cpp')
+
+lai = subproject('lai')
+
+kernel_include_dirs = [
+    include_directories('include'),
+    include_directories('subprojects/lai/include'),
+    include_directories('include/arch/x86_64'),
+]
 
 cpp_files = [
     'src/kernel.cpp',

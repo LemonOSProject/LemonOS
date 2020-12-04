@@ -4,7 +4,7 @@ json = subproject('json')
 
 liblemon_include_dirs = [
     include_directories('include'),
-    include_directories('subprojects/nlohmann_json-3.9.1/single_include/')
+    include_directories('subprojects/json/single_include/')
 ]
 
 add_languages('c', 'cpp')
