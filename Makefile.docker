@@ -1,26 +1,22 @@
-JOBS := $(shell nproc)
-
 .PHONY: all disk kernel base initrd libc liblemon system clean run vbox debug
 
 all: kernel base initrd disk
 
 libc:
-	ninja -j$(JOBS) -C LibC/build install
-	
-liblemon:
-	ninja -j$(JOBS) -C LibLemon/build install
-	
-applications: liblemon
-	ninja -j$(JOBS) -C Applications/build install
+	Scripts/docker-run.sh make libc
 
-system: liblemon
-	ninja -j$(JOBS) -C System/build install
+liblemon:
+	Scripts/docker-run.sh make liblemon
+	
+applications:
+	Scripts/docker-run.sh make applications
+
+system:
+	Scripts/docker-run.sh make system
 
 kernel:
-	ninja -j$(JOBS) -C Kernel/build
-	
-userspace: liblemon applications
-	
+	Scripts/docker-run.sh make kernel
+
 initrd: libc
 	Scripts/buildinitrd.sh
 	
@@ -31,11 +27,11 @@ disk:
 	Scripts/build-nix/copytodisk.sh
 	
 clean:
-	ninja -C LibC/build clean
-	ninja -C LibLemon/build clean
-	ninja -C Applications/build clean
-	ninja -C Kernel/build clean
-	ninja -C System/build clean
+	Scripts/docker-run.sh ninja -C LibC/build clean
+	Scripts/docker-run.sh ninja -C LibLemon/build clean
+	Scripts/docker-run.sh ninja -C Applications/build clean
+	Scripts/docker-run.sh ninja -C Kernel/build clean
+	Scripts/docker-run.sh ninja -C System/build clean
 	find Base/ -type f -not -name '*.cfg' -not -name '*.py' -not -name '*.asm' -not -name 'localtime' -delete
 	rm -rf Initrd/*
 	rm initrd.tar

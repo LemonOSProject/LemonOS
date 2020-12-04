@@ -3,7 +3,6 @@
 #include <gui/window.h>
 #include <gui/widgets.h>
 #include <stdlib.h>
-#include <list.h>
 #include <lemon/filesystem.h>
 #include <fcntl.h>
 #include <unistd.h>

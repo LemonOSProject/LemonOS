@@ -6,6 +6,7 @@ if [ -z "$LEMON_SYSROOT" ]; then
 fi
 
 export CC=lemon-clang
+export CXX=lemon-clang++
 export CFLAGS=-Wno-error
 export LEMON_PREFIX=/system
 

@@ -4,7 +4,6 @@
 #include <gfx/graphics.h>
 #include <gui/ctxentry.h>
 #include <gui/colours.h>
-#include <list.h>
 
 #include <vector>
 #include <string>

@@ -5,7 +5,6 @@
 #include <core/keyboard.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <list.h>
 #include <lemon/filesystem.h>
 #include <lemon/spawn.h>
 #include <ctype.h>

@@ -6,7 +6,6 @@
 #include FT_FREETYPE_H
 
 #include <ctype.h>
-#include <list.h>
 
 extern uint8_t font_default[];
 

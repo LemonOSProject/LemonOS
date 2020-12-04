@@ -10,7 +10,6 @@
 #include <lemon/filesystem.h>
 #include <gui/window.h>
 #include <stdio.h>
-#include <list.h>
 #include <core/keyboard.h>
 #include <fcntl.h>
 #include <unistd.h>

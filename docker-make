@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -e
+
+SPATH=$(dirname $(readlink -f "$0"))
+
+cd $SPATH
+make -f Makefile.docker $@

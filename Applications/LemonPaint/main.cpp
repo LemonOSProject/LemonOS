@@ -12,7 +12,7 @@
 
 Lemon::GUI::Window* window;
 Canvas* canvas;
-List<Brush*> brushes;
+std::vector<Brush*> brushes;
 
 void Colour::Paint(surface_t* surface){
     Lemon::Graphics::DrawRect(bounds, colour, surface);
@@ -118,14 +118,14 @@ int main(int argc, char** argv){
 
     Brush* brush = new Brush();
     brush->data = (surface_t){.width = 1, .height = 1, .depth = 32, .buffer = brush0};
-    brushes.add_back(brush);
+    brushes.push_back(brush);
     canvas->currentBrush = brush;
 
     window->AddWidget(canvas);
     
     brush = new Brush();
     brush->data = (surface_t){.width = 8, .height = 8, .depth = 32, .buffer = brush1};
-    brushes.add_back(brush);
+    brushes.push_back(brush);
 
     int yPos = 0;
     for(int i = 0; i < DEFAULT_COLOUR_COUNT / 2; i++){

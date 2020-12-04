@@ -38,6 +38,7 @@ _build_llvm(){
     cmake -C ../clang/cmake/caches/Lemon.cmake -DCMAKE_INSTALL_PREFIX=$TOOLCHAIN_PREFIX -DDEFAULT_SYSROOT=$LEMON_SYSROOT ../llvm -G Ninja
 
     ninja -j $JOBCOUNT
+    ninja install
 }
 
 _binutils(){
@@ -58,7 +59,6 @@ _llvm(){
     _unpack_llvm
     _build_llvm
 }
-
 _clean(){
 	rm -rf $LLVM_SRC_DIR $BINUTILS_SRC_DIR *.tar.*
 }
@@ -88,7 +88,7 @@ if [ -z "$LEMON_SYSROOT" -o -z "$TOOLCHAIN_PREFIX" ]; then
 fi
 
 if [ -z "$1" ]; then
-    echo "Usage: $0 (clean/prepare/binutils/llvm/build)"
+    echo "Usage: $0 (clean/prepare/binutils/llvm/install_llvm/build)"
 else
 	cd $SPATH
     _$1

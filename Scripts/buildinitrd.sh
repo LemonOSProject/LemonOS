@@ -1,5 +1,3 @@
-ninja -C Applications/build install
-
 cp Resources/* Initrd/
 cp -L ~/.local/share/lemon/sysroot/system/lib/*.so* Initrd/
 cp -L ~/.local/share/lemon/lib/x86_64-lemon/c++/lib*so* Initrd/

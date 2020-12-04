@@ -4,7 +4,6 @@
 #include <gui/window.h>
 #include <gui/widgets.h>
 #include <stdlib.h>
-#include <list.h>
 #include <gui/filedialog.h>
 #include <gui/messagebox.h>
 #include <stdio.h>

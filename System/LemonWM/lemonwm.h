@@ -122,8 +122,8 @@ protected:
     WMInstance* wm;
 
 public:
-    MouseState mouse;
-    KeyboardState keyboard;
+    MouseState mouse = {{100, 100}, false, false, false};
+    KeyboardState keyboard = {false, false, false, false};
 
     InputManager(WMInstance* wm);
     void Poll();
