@@ -1,4 +1,5 @@
-#include <stdio.h> 
+#include <cstdio>
+#include <cassert> 
 #include <string>
 #include <vector>
 #include <map>
@@ -26,6 +27,7 @@ enum TokenType{
 
 enum Type{
     TypeString,
+    TypeBool,
     TypeU8,
     TypeU16,
     TypeU32,
@@ -38,6 +40,7 @@ enum Type{
 
 std::map<std::string, Type> types = {
     {"string", TypeString},
+    {"bool", TypeBool},
     {"u8", TypeU8},
     {"u16", TypeU16},
     {"u32", TypeU32},
@@ -67,6 +70,7 @@ std::vector<std::string> tokenNames = {
 };
 
 enum StatementType {
+    StatementInvalid,
     StatementDeclareInterface,
     StatementAsynchronousMethod,
     StatementSynchronousMethod,
@@ -75,18 +79,22 @@ enum StatementType {
 
 #define IsDeclaration(x) ((x == ParserStateDeclarationSync) || (x == ParserStateDeclarationAsync) || (x == ParserStateDeclarationInterface))
 
-struct Statement
+class Statement
 {
-    StatementType type;
+public:
+    StatementType type = StatementInvalid;
 
     Statement() = default;
     Statement(StatementType t) { type = t; }
+
+    virtual ~Statement() = default;
 };
 
-struct InterfaceDeclarationStatement final : Statement {
+class InterfaceDeclarationStatement final : public Statement {
+public:
     std::string interfaceName;
 
-    std::vector<Statement> children;
+    std::vector<std::shared_ptr<Statement>> children;
 
     InterfaceDeclarationStatement(const std::string& name){
         interfaceName = name;
@@ -94,8 +102,13 @@ struct InterfaceDeclarationStatement final : Statement {
     }
 };
 
-struct ParameterList final : Statement {
+class ParameterList final : public Statement {
+public:
     std::vector<std::pair<Type, std::string>> parameters;
+
+    ParameterList(){
+        type = StatementParameterList;
+    }
 
     ParameterList(const std::vector<std::pair<Type, std::string>>& params){
         type = StatementParameterList;
@@ -104,7 +117,8 @@ struct ParameterList final : Statement {
     }
 };
 
-struct ASynchronousMethod final : Statement{
+class ASynchronousMethod final : public Statement{
+public:
     std::string methodName;
 
     ParameterList parameters;
@@ -116,7 +130,8 @@ struct ASynchronousMethod final : Statement{
     }
 };
 
-struct SynchronousMethod final : Statement{
+class SynchronousMethod final : public Statement{
+public:
     std::string methodName;
 
     ParameterList parameters;
@@ -129,20 +144,26 @@ struct SynchronousMethod final : Statement{
     }
 };
 
-struct Token{
+class Token{
+public:
     TokenType type;
     std::string value = "";
     int lineNum;
+    int linePos;
 
     Token(){}
 
-    Token(int ln, TokenType type){
+    Token(int ln, int pos, TokenType type){
         lineNum = ln;
+        linePos = pos;
+
         this->type = type;
     }
 
-    Token(int ln, TokenType type, std::string& text) : value(text) {
+    Token(int ln, int pos, TokenType type, std::string& text) : value(text) {
         lineNum = ln;
+        linePos = pos;
+
         this->type = type;
     }
 };
@@ -185,15 +206,17 @@ std::vector<Token> tokens;
 std::vector<std::shared_ptr<Statement>> statements;
 
 void BuildTokens(std::string& input){
-    int lineNum = 0;
+    int lineNum = 1;
+    int linePos = 0;
 
     std::string buf;
     for(auto it = input.begin(); it != input.end(); it++){
         char c = *it;
+        linePos++;
 
-        auto appendIdentifier = [lineNum](std::string& buf) { 
+        auto appendIdentifier = [lineNum, linePos](std::string& buf) { 
             if(buf.length()){
-                tokens.push_back(Token(lineNum, TokenIdentifier, buf));
+                tokens.push_back(Token(lineNum, linePos, TokenIdentifier, buf));
                 buf.clear();
             }
         };
@@ -202,37 +225,38 @@ void BuildTokens(std::string& input){
         {   
         case ',':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, TokenComma));
+            tokens.push_back(Token(lineNum, linePos, TokenComma));
             break;
         case ')':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, TokenRightParens));
+            tokens.push_back(Token(lineNum, linePos, TokenRightParens));
             break;
         case '(':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, TokenLeftParens));
+            tokens.push_back(Token(lineNum, linePos, TokenLeftParens));
             break;
         case '}':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, TokenRightBrace));
+            tokens.push_back(Token(lineNum, linePos, TokenRightBrace));
             break;
         case '{':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, TokenLeftBrace));
+            tokens.push_back(Token(lineNum, linePos, TokenLeftBrace));
             break;
         case '\n':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, TokenEndline));
+            tokens.push_back(Token(lineNum, linePos, TokenEndline));
             lineNum++;
+            linePos = 0;
             break;
         case '-':
             appendIdentifier(buf);
 
             if(*(it + 1) == '>'){ // Response token is '->' so look ahead by one character
-                tokens.push_back(Token(lineNum, TokenResponse));
+                tokens.push_back(Token(lineNum, linePos, TokenResponse));
                 it++;
             } else {
-                printf("error: [line %d] Unsupported character '%c'\n", lineNum, c);
+                printf("error: [line %d:%d] Unsupported character '%c'\n", lineNum, linePos, c);
                 exit(2);
             }
             break;
@@ -243,7 +267,7 @@ void BuildTokens(std::string& input){
             if(isalnum(c) || c == '_'){ // Must match 0-9A-Za-z_
                 buf += c;
             } else {
-                printf("error: [line %d] Unsupported character '%c'\n", lineNum, c);
+                printf("error: [line %d:%d] Unsupported character '%c'\n", lineNum, linePos, c);
                 exit(2);
             }
             break;
@@ -269,7 +293,7 @@ std::shared_ptr<InterfaceDeclarationStatement> ParseInterfaceDeclarationStatemen
     Token& nameTok = *it;
 
     if(nameTok.type != TokenIdentifier){
-        printf("error: [line %d] Invalid token '%s'\n", nameTok.lineNum, tokenNames[nameTok.type]);
+        printf("error: [line %d:%d] Invalid token '%s'\n", nameTok.lineNum, nameTok.linePos, tokenNames[nameTok.type]);
         exit(4);
     }
 
@@ -278,7 +302,7 @@ std::shared_ptr<InterfaceDeclarationStatement> ParseInterfaceDeclarationStatemen
     Token& enterTok = *(++it);
 
     if(enterTok.type != TokenLeftBrace){
-        printf("error: [line %d] Invalid token '%s'\n", nameTok.lineNum, tokenNames[nameTok.type]);
+        printf("error: [line %d:%d] Invalid token '%s'\n", nameTok.lineNum, nameTok.linePos, tokenNames[nameTok.type]);
         exit(4);
     }
 
@@ -290,15 +314,17 @@ ParameterList ParseParameterListStatement(const std::vector<Token>::iterator& en
     std::vector<std::pair<Type, std::string>> parameters;
 
     while(it != end){
-        Token typeTok = *(it++);
+        Token tok = *(it++);
         Type type;
 
-        if(typeTok.type == TokenIdentifier && IsType(typeTok.value)){ // Check if the token is a typename
-            type = types.at(typeTok.value);
-        } else if(typeTok.type == TokenRightParens) { // Check if list is beign terminated
+        if(tok.type == TokenIdentifier && IsType(tok.value)){ // Check if the token is a typename
+            type = types.at(tok.value);
+        } else if(tok.type == TokenRightParens) { // Check if list is beign terminated
             return ParameterList(parameters);
+        } else if(tok.type == TokenEndline) {
+            continue; // Eat line ending
         } else {
-            printf("error: [line %d] Invalid type '%s'!", typeTok.lineNum, typeTok.value.c_str());
+            printf("error: [line %d:%d] Invalid type '%s'!", tok.lineNum, tok.linePos, tok.value.c_str());
             exit(4);
         }
 
@@ -306,14 +332,26 @@ ParameterList ParseParameterListStatement(const std::vector<Token>::iterator& en
         while(it != end && idTok.type == TokenEndline) idTok = *(it++); // Eat line endings
 
         if(idTok.type != TokenIdentifier){
-            printf("error: [line %d] Unexpected token '%s', expected identifier!", typeTok.lineNum, tokenNames[typeTok.type].c_str());
+            printf("error: [line %d:%d] Unexpected token '%s', expected identifier!", idTok.lineNum, idTok.linePos, tokenNames[idTok.type].c_str());
             exit(4);
         }
 
-        parameters.push_back({type, idTok.value});
+        Token nextTok = *(it++);
+        while(it != end && nextTok.type == TokenEndline) nextTok = *(it++); // Eat line endings
+
+        if(nextTok.type == TokenComma){
+            parameters.push_back({type, idTok.value});
+            continue;
+        } else if(nextTok.type == TokenRightParens) { // Check if list is beign terminated
+            parameters.push_back({type, idTok.value});
+            return ParameterList(parameters);
+        } else {
+            printf("error: [line %d:%d] Unexpected token '%s'!", nextTok.lineNum, nextTok.linePos, tokenNames[nextTok.type].c_str());
+            exit(4);
+        }
     }
     
-    printf("error: Unterminated parameter list!"));
+    printf("error: Unterminated parameter list!");
     exit(4);
 }
 
@@ -359,26 +397,65 @@ void Parse(){
             break;
         case ParserStateInterface:
             switch(tok.type){
-            case TokenIdentifier:
+            case TokenIdentifier: {
                 Token next = *(++it);
 
-                if(next.type == TokenLeftParens){
+                if(next.type == TokenLeftParens){ // Parse parameter list
                     ParameterList pList = ParseParameterListStatement(tokens.end(), ++it);
 
                     Token response = *(it++);
                     if(response.type == TokenResponse){
                         // Synchronous method
-                    } else if(response.type == TokenEndline){
+                        if(it->type == TokenLeftParens){ // Check for return parameters
+                            it++;
+
+                            ParameterList rPList = ParseParameterListStatement(tokens.end(), it);
+
+                            std::shared_ptr method = std::shared_ptr<SynchronousMethod>(new SynchronousMethod(tok.value));
+                            method->parameters = pList;
+                            method->returnParameters = rPList;
+
+                            auto ifStatement = std::dynamic_pointer_cast<InterfaceDeclarationStatement, Statement>(states.top().statement);
+                            ifStatement->children.push_back(std::static_pointer_cast<Statement, SynchronousMethod>(method));
+                            
+                        } else { // No return parameters
+                            std::shared_ptr method = std::shared_ptr<SynchronousMethod>(new SynchronousMethod(tok.value));
+                            method->parameters = pList;
+
+                            auto ifStatement = std::dynamic_pointer_cast<InterfaceDeclarationStatement, Statement>(states.top().statement);
+                            ifStatement->children.push_back(std::static_pointer_cast<Statement, SynchronousMethod>(method));
+                        }
+                    } else if(response.type == TokenEndline){ // New method on a new line
                         // Asynchronous method
                         std::shared_ptr method = std::shared_ptr<ASynchronousMethod>(new ASynchronousMethod(tok.value));
                         method->parameters = pList;
+
+                        auto ifStatement = std::dynamic_pointer_cast<InterfaceDeclarationStatement, Statement>(states.top().statement);
+                        ifStatement->children.push_back(std::static_pointer_cast<Statement, ASynchronousMethod>(method));
                     } else {
-                        
+                        printf("error: [line %d] Unexpected token '%s'!", tok.lineNum, tokenNames[tok.type].c_str());
+                        exit(3);
                     }
                 } else {
                     printf("error: [line %d] Unexpected token '%s'!", tok.lineNum, tokenNames[tok.type].c_str());
                     exit(3);
                 }
+                break;
+            } case TokenRightBrace: {
+                auto ifStatement = std::dynamic_pointer_cast<InterfaceDeclarationStatement, Statement>(states.top().statement);
+
+                statements.push_back(ifStatement);
+
+                states.pop();
+
+                it++;
+                break;
+            } case TokenEndline: { // Ignore Line Endings
+                it++;
+                break;
+            } default:
+                printf("error: [line %d] Unexpected token '%s'!", tok.lineNum, tokenNames[tok.type].c_str());
+                exit(3);
                 break;
             }
             break;
@@ -416,6 +493,40 @@ int main(int argc, char** argv){
     BuildTokens(input);
 
     Parse();
+    
+    for(auto& st : statements){
+        assert(st.get());
+        
+        switch(st->type){
+            case StatementDeclareInterface:
+                for(auto& ifSt : std::dynamic_pointer_cast<InterfaceDeclarationStatement, Statement>(st)->children){
+                    assert(ifSt.get());
+
+                    switch(ifSt->type){
+                        case StatementSynchronousMethod: {
+                            auto method = std::dynamic_pointer_cast<SynchronousMethod, Statement>(ifSt);
+                            assert(method.get());
+
+                            printf("Synchronous Method '%s':\n", method->methodName.c_str());
+                            for(auto& param : method->parameters.parameters){
+                                printf("\t{%d, %s}\n", param.first, param.second.c_str());
+                            }
+                            break;
+                        } case StatementAsynchronousMethod: {
+                            auto method = std::dynamic_pointer_cast<ASynchronousMethod, Statement>(ifSt);
+                            assert(method.get());
+
+                            printf("Asynchronous Method '%s':\n", method->methodName.c_str());
+                            for(auto& param : method->parameters.parameters){
+                                printf("\t{%d, %s}\n", param.first, param.second.c_str());
+                            }
+                            break;
+                        }
+                    }
+                }
+                break;
+        }
+    }
 
     exit(0);
 }
