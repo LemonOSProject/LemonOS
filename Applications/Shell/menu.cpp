@@ -255,7 +255,7 @@ void InitializeMenu(){
     close(itemsDir);
 
     menuContainer = new Lemon::GUI::LayoutContainer({0, 0, 0, 0}, {240, 36});
-    menuContainer->background = {0x29, 0x2c, 0x33, 255};
+    menuContainer->background = {0x33, 0x2c, 0x29, 255};
 
     menuContainer->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
     window->AddWidget(menuContainer);

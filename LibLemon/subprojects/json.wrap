@@ -1,0 +1,7 @@
+[wrap-file]
+directory = json
+lead_directory_missing = true
+
+source_url = https://github.com/nlohmann/json/releases/download/v3.9.1/include.zip
+source_filename = include.zip
+source_hash = 6bea5877b1541d353bd77bdfbdb2696333ae5ed8f9e8cc22df657192218cad91
