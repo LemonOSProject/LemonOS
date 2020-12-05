@@ -31,7 +31,8 @@ kernel_cpp_args = [
     '-fno-exceptions', '-fno-rtti', '-Wno-deprecated-volatile', '-Wno-non-c-typedef-for-linkage',
 ]
 
-add_project_arguments(kernel_c_args, language : ['c', 'cpp'])
+add_project_arguments(kernel_c_args, language : 'c')
+add_project_arguments(kernel_c_args, language : 'cpp')
 add_project_arguments(kernel_cpp_args, language : 'cpp')
 
 lai = subproject('lai')

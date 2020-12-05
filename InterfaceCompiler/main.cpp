@@ -373,8 +373,6 @@ void Parse(){
 
                 if(kw == KeywordInterface){
                     std::shared_ptr<InterfaceDeclarationStatement> ifDecl = ParseInterfaceDeclarationStatement(++it);
-
-                    printf("Declaring interface: %s\n", ifDecl->interfaceName.c_str());
                     it++;
 
                     statements.push_back(ifDecl);
@@ -382,7 +380,7 @@ void Parse(){
 
                     states.top().statement = ifDecl;
                 } else {
-                    printf("error: [line %d] Unexpected keyword '%s'!", tok.lineNum, tok.value.c_str());
+                    printf("error: [line %d:%d] Unexpected keyword '%s'!", tok.lineNum, tok.linePos, tok.value.c_str());
                     exit(3);
                 }
                 break;
@@ -390,7 +388,7 @@ void Parse(){
                 it++;
                 continue;
             default:
-                printf("error: [line %d] Unexpected token '%s'!", tok.lineNum, tokenNames[tok.type].c_str());
+                printf("error: [line %d:%d] Unexpected token '%s'!", tok.lineNum, tok.linePos, tokenNames[tok.type].c_str());
                 exit(3);
                 continue;
             } 
