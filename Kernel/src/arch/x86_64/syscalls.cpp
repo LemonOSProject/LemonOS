@@ -101,8 +101,10 @@
 #define SYS_INTERFACE_CONNECT 79
 #define SYS_ENDPOINT_QUEUE 80
 #define SYS_ENDPOINT_DEQUEUE 81
+#define SYS_KERNELOBJECT_WAIT_ONE 82
+#define SYS_KERNELOBJECT_WAIT 83
 
-#define NUM_SYSCALLS 82
+#define NUM_SYSCALLS 84
 
 #define EXEC_CHILD 1
 
@@ -176,6 +178,29 @@ long SysExec(regs64_t* r){
 	}
 
 	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp);
+
+	// TODO: Do not run process until we have finished
+
+	if(flags & EXEC_CHILD){
+		Scheduler::GetCurrentProcess()->children.add_back(proc);
+		proc->parent = Scheduler::GetCurrentProcess();
+
+		proc->fileDescriptors[0] = new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));
+		proc->fileDescriptors[1] = new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1));
+		proc->fileDescriptors[2] = new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2));
+	}
+
+	strncpy(proc->workingDir, Scheduler::GetCurrentProcess()->workingDir, PATH_MAX);
+
+	char* name;
+	if(argc > 0){
+		name = fs::BaseName(kernelArgv[0]);
+	} else {
+		name = fs::BaseName(filepath);
+	}
+	strncpy(proc->name, name, NAME_MAX);
+
+	kfree(name);
 	
 	for(int i = 0; i < envCount; i++){
 		kfree(kernelEnvp[i]);
@@ -190,28 +215,9 @@ long SysExec(regs64_t* r){
 		return -1;
 	}
 
-	char* name;
-	if(argc > 0){
-		name = fs::BaseName(kernelArgv[0]);
-	} else {
-		name = fs::BaseName(filepath);
-	}
-	strncpy(proc->name, name, NAME_MAX);
-
 	for(int i = 0; i < argc; i++){
 		kfree(kernelArgv[i]);
 	}
-
-	if(flags & EXEC_CHILD){
-		Scheduler::GetCurrentProcess()->children.add_back(proc);
-		proc->parent = Scheduler::GetCurrentProcess();
-
-		proc->fileDescriptors[0] = new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));
-		proc->fileDescriptors[1] = new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(1));
-		proc->fileDescriptors[2] = new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(2));
-	}
-
-	strncpy(proc->workingDir, Scheduler::GetCurrentProcess()->workingDir, PATH_MAX);
 
 	return proc->pid;
 }
@@ -2422,6 +2428,65 @@ long SysEndpointDequeue(regs64_t* r){
 	return endpoint->Read(reinterpret_cast<uint64_t*>(r->rcx), reinterpret_cast<uint16_t*>(r->rdx), reinterpret_cast<uint64_t*>(r->rsi));
 }
 
+/////////////////////////////
+/// \brief SysKernelObjectWaitOne (object)
+///
+/// Wait on one KernelObject
+///
+/// \param object (handle_t) Object to wait one
+///
+/// \return negative error code on failure
+/////////////////////////////
+long SysKernelObjectWaitOne(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	Handle* handle;
+	if(Scheduler::FindHandle(currentProcess, r->rbx, &handle)){
+		Log::Warning("SysKernelObjectWaitOne: Invalid handle ID %d", r->rbx);
+		return -EINVAL;
+	}
+
+	KernelObjectWatcher watcher;
+
+	watcher.WatchObject(handle->ko, 0);
+	watcher.Wait();
+
+	return 0;
+}
+
+/////////////////////////////
+/// \brief SysKernelObjectWait (objects, count)
+///
+/// Wait on one KernelObject
+///
+/// \param objects (handle_t*) Pointer to array of handles to wait on
+/// \param count (size_t) Amount of objects to wait on
+///
+/// \return negative error code on failure
+/////////////////////////////
+long SysKernelObjectWait(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	unsigned count = r->rcx;
+
+	if(!Memory::CheckUsermodePointer(r->rbx, count * sizeof(handle_id_t), currentProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	Handle* handles[count];
+
+	KernelObjectWatcher watcher;
+	for(unsigned i = 0; i < count; i++){
+		if(Scheduler::FindHandle(currentProcess, r->rbx, &handles[i])){
+			Log::Warning("SysKernelObjectWait: Invalid handle ID %d", r->rbx);
+			return -EINVAL;
+		}
+
+		watcher.WatchObject(handles[i]->ko, 0);
+	}
+	watcher.Wait();
+
+	return 0;
+}
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -2505,6 +2570,8 @@ syscall_t syscalls[]{
 	SysInterfaceConnect,
 	SysEndpointQueue,			// 80
 	SysEndpointDequeue,
+	SysKernelObjectWaitOne,
+	SysKernelObjectWait,
 };
 
 int lastSyscall = 0;
