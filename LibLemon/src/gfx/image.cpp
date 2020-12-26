@@ -1,4 +1,4 @@
-#include <gfx/graphics.h>
+#include <lemon/gfx/graphics.h>
 
 #include <math.h>
 #include <stdio.h>
@@ -51,7 +51,7 @@ namespace Lemon::Graphics{
             fclose(imageFile);
             return type;
         }
-
+        
         surface_t surf;
         int r = LoadImage(imageFile, &surf);
         fclose(imageFile);

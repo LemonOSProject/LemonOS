@@ -1,12 +1,12 @@
 #pragma once
 
 #include <stdint.h>
-#include <gfx/surface.h>
-#include <gfx/types.h>
+#include <lemon/gfx/surface.h>
+#include <lemon/gfx/types.h>
 #include <png.h>
 #include <string.h>
-#include <gfx/font.h>
-#include <gfx/text.h>
+#include <lemon/gfx/font.h>
+#include <lemon/gfx/text.h>
 #include <list>
 
 typedef struct {

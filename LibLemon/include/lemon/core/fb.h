@@ -1,10 +1,10 @@
 #ifndef FB_H
 #define FB_H
 
-#include <gfx/surface.h>
+#include <lemon/gfx/surface.h>
 
 #ifdef __lemon__
-    #include <lemon/fb.h>
+    #include <lemon/system/fb.h>
 #endif 
 
 surface_t* CreateFramebufferSurface();

@@ -1,15 +1,15 @@
 #include "lemonwm.h"
 
-#include <gui/window.h>
-#include <sys/un.h>
-#include <core/shell.h>
-#include <core/keyboard.h>
+#include <lemon/gui/window.h>
+#include <lemon/core/shell.h>
+#include <lemon/core/keyboard.h>
 #include <algorithm>
 #include <pthread.h>
+#include <lemon/core/sharedmem.h>
 
-WMInstance::WMInstance(surface_t& surface, sockaddr_un address) : server(address, sizeof(sockaddr_un)){
-
+WMInstance::WMInstance(surface_t& surface, handle_t svc, const char* ifName) : server(svc, ifName, LEMONWM_MSG_SIZE){
     this->surface = surface;
+    this->screenSurface = surface;
     screenSurface.buffer = nullptr;
 }
 
@@ -18,11 +18,7 @@ void* _InitializeShellConnection(void* inst){
 }
 
 void* WMInstance::InitializeShellConnection(){
-    sockaddr_un shellAddr;
-    strcpy(shellAddr.sun_path, Lemon::Shell::shellSocketAddress);
-    shellAddr.sun_family = AF_UNIX;
-    shellClient.Connect(shellAddr, sizeof(sockaddr_un));
-
+    shellClient = Lemon::Endpoint("lemon.shell/Instance");
     shellConnected = true;
 
     return nullptr;
@@ -30,7 +26,7 @@ void* WMInstance::InitializeShellConnection(){
 
 WMWindow* WMInstance::FindWindow(int id){
     for(WMWindow* win : windows){
-        if(win->clientFd == id){
+        if(win->clientID == id){
             return win;
         }
     }
@@ -50,8 +46,8 @@ void WMInstance::MinimizeWindow(WMWindow* win, bool state){
             SetActive(nullptr);
         }
 
-        if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL))
-            Lemon::Shell::SetWindowState(win->clientFd, Lemon::Shell::ShellWindowStateMinimized, shellClient);
+        //if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL))
+        //    Lemon::Shell::SetWindowState(win->clientFd, Lemon::Shell::ShellWindowStateMinimized, shellClient);
     }
 }
 
@@ -69,14 +65,14 @@ void WMInstance::SetActive(WMWindow* win){
     if(active == win) return;
 
     if(shellConnected && active && !(active->flags & WINDOW_FLAGS_NOSHELL) && !active->minimized){
-        Lemon::Shell::SetWindowState(active->clientFd, Lemon::Shell::ShellWindowStateNormal, shellClient);
+        //Lemon::Shell::SetWindowState(active->clientFd, Lemon::Shell::ShellWindowStateNormal, shellClient);
     }
 
     active = win;
 
     if(win){
         if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-            Lemon::Shell::SetWindowState(win->clientFd, Lemon::Shell::ShellWindowStateActive, shellClient);
+            //Lemon::Shell::SetWindowState(win->clientFd, Lemon::Shell::ShellWindowStateActive, shellClient);
         }
         
         windows.remove(win);
@@ -84,49 +80,111 @@ void WMInstance::SetActive(WMWindow* win){
     }
 }
 
+int64_t WMInstance::CreateWindowBuffer(int width, int height, WindowBuffer** buffer){
+    size_t windowBufferSize = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F)) + ((width * height * 4 + 0x1F) & (~0x1F) /* Round up to 32 bytes */) * 2;
+
+    int64_t windowBufferKey = Lemon::CreateSharedMemory(windowBufferSize, SMEM_FLAGS_SHARED);
+    if(windowBufferKey <= 0){
+        printf("[LemonWM] Warning: Error %ld obtaining shared memory for window\n", -windowBufferKey);
+        return windowBufferKey;
+    }
+
+    WindowBuffer* windowBufferInfo = (WindowBuffer*)Lemon::MapSharedMemory(windowBufferKey);
+    windowBufferInfo->currentBuffer = 0;
+    windowBufferInfo->buffer1Offset = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F));
+    windowBufferInfo->buffer2Offset = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F)) + ((width * height * 4 + 0x1F) & (~0x1F) /* Round up to 32 bytes*/);
+
+    *buffer = windowBufferInfo;
+
+    return windowBufferKey;
+}
+
 void WMInstance::Poll(){
-    while(auto m = server.Poll()){
-        if(m && m->msg.protocol == LEMON_MESSAGE_PROTOCOL_WMCMD){
-            auto cmd = (Lemon::GUI::WMCommand*)m->msg.data;
+    Lemon::Message m;
+    handle_t client;
 
-            if(cmd->cmd == Lemon::GUI::WMCreateWindow){
-                char* title = (char*)malloc(cmd->create.titleLength + 1);
-                strncpy(title, cmd->create.title, cmd->create.titleLength);
-                title[cmd->create.titleLength] = 0;
+    while(server.Poll(client, m)){
+        if(client > 0){
+            auto cmd = m.id();
 
-                printf("[LemonWM] Creating Window:    Size: %dx%d, Title: %s\n", cmd->create.size.x, cmd->create.size.y, title);
+            if(cmd == Lemon::MessagePeerDisconnect){
+                WMWindow* win = FindWindow(client);
 
-                WMWindow* win = new WMWindow(this, cmd->create.bufferKey);
-                win->title = title;
-                win->pos = cmd->create.pos;
-                win->size = cmd->create.size;
-                win->flags = cmd->create.flags;
-                win->clientFd = m->clientFd;
+                if(!win){
+                    continue;
+                }
+
+                if(active == win){
+                    SetActive(nullptr);
+                }
+
+                if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
+                    //Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
+                }
+                
+                windows.remove(win);
+                redrawBackground = true;
+
+                delete win;
+            } else if(cmd == Lemon::GUI::WMCreateWindow){
+                int x = 0;
+                int y = 0;
+                int width = 0;
+                int height = 0;
+                unsigned int flags;
+                std::string title;
+
+                if(m.Decode(x, y, width, height, flags)){
+                    printf("[LemonWM] WMCreateWindow: Invalid msg\n");
+                    continue; // Invalid or corrupted message, just ignore
+                }
+
+                printf("[LemonWM] Creating Window:    Pos: (%d, %d), Size: %dx%d, Title: %s\n", x,y, width, height, title.c_str());
+                
+                WindowBuffer* wBufferInfo = nullptr;
+                int64_t wBufferKey = CreateWindowBuffer(width, height, &wBufferInfo);
+                if(wBufferKey <= 0 || !wBufferInfo){
+                    continue; // Error obtaining window buffer shared memory
+                }
+
+                WMWindow* win = new WMWindow(this, client, client, wBufferKey, wBufferInfo, {x,y}, {width, height}, flags, title);
                 win->RecalculateButtonRects();
 
                 windows.push_back(win);
 
                 if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-                    Lemon::Shell::AddWindow(m->clientFd, Lemon::Shell::ShellWindowState::ShellWindowStateNormal, title, shellClient);
+                    //Lemon::Shell::AddWindow(m->clientID, Lemon::Shell::ShellWindowState::ShellWindowStateNormal, title, shellClient);
                 }
                 SetActive(win);
 
                 redrawBackground = true;
-            } else if (cmd->cmd == Lemon::GUI::WMResize){
-                WMWindow* win = FindWindow(m->clientFd);
+            } else if (cmd == Lemon::GUI::WMResizeWindow){
+                WMWindow* win = FindWindow(client);
 
                 if(!win){
-                    printf("[LemonWM] Warning: Unknown Window ID: %d\n", m->clientFd);
+                    printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
                     continue;
                 }
 
-                win->Resize(cmd->size, cmd->bufferKey);
-            } else if(cmd->cmd == Lemon::GUI::WMDestroyWindow){
+                int width;
+                int height;
+                if(m.Decode(width, height)){
+                    continue; // Invalid or corrupted message
+                }
+
+                WindowBuffer* wBufferInfo = nullptr;
+                int64_t wBufferKey = CreateWindowBuffer(width, height, &wBufferInfo);
+                if(wBufferKey <= 0){
+                    continue; // Error obtaining window buffer
+                }
+
+                win->Resize({width, height}, wBufferKey, wBufferInfo);
+            } else if(cmd == Lemon::GUI::WMDestroyWindow){
                 printf("Destroying Window\n");
-                WMWindow* win = FindWindow(m->clientFd);
+                WMWindow* win = FindWindow(client);
 
                 if(!win){
-                    printf("[LemonWM] Warning: Unknown Window ID: %d\n", m->clientFd);
+                    printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
                     continue;
                 }
 
@@ -135,97 +193,90 @@ void WMInstance::Poll(){
                 }
                 
                 if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-                    Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
+                    //Lemon::Shell::RemoveWindow(client, shellClient);
                 }
 
                 windows.remove(win);
                 redrawBackground = true;
 
                 delete win;
-            } else if(cmd->cmd == Lemon::GUI::WMSetTitle){
-                WMWindow* win = FindWindow(m->clientFd);
+            } else if(cmd == Lemon::GUI::WMSetWindowTitle){
+                WMWindow* win = FindWindow(client);
 
                 if(!win){
-                    printf("[LemonWM] Warning: Unknown Window ID: %d\n", m->clientFd);
+                    printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
                     continue;
                 }
                 
-                char* title = (char*)malloc(cmd->titleLength + 1);
-                strncpy(title, cmd->title, cmd->titleLength);
-                title[cmd->titleLength] = 0;
+                std::string title;
+                if(m.Decode(title)){
+                    continue; // Invalid or corrupted message
+                }
 
-                if(win->title) free(win->title);
                 win->title = title;
-            } else if(cmd->cmd == Lemon::GUI::WMMinimize){
-                MinimizeWindow(m->clientFd, cmd->minimized);
-            } else if(cmd->cmd == Lemon::GUI::WMMinimizeOther){
-                MinimizeWindow(cmd->minimizeWindowID, cmd->minimized);
-            } else if(cmd->cmd == Lemon::GUI::WMInitializeShellConnection){
+            } else if(cmd == Lemon::GUI::WMMinimizeWindow){
+                bool minimized = true;
+                if(m.Decode(minimized)){
+                    continue; // Invalid or corrupted message
+                }
+
+                MinimizeWindow(client, minimized);
+            } else if(cmd == Lemon::GUI::WMMinimizeOtherWindow){
+                bool minimized = true;
+                handle_t winID = client;
+                if(m.Decode(winID, minimized)){
+                    continue; // Invalid or corrupted message
+                }
+
+                MinimizeWindow(winID, minimized);
+            } /*else if(cmd == Lemon::GUI::WMInitializeShellConnection){
                 pthread_t p;
                 pthread_create(&p, nullptr, reinterpret_cast<void*(*)(void*)>(&_InitializeShellConnection), this);
-            } else if(cmd->cmd == Lemon::GUI::WMOpenContextMenu){
-                WMWindow* win = FindWindow(m->clientFd);
+            } */ else if(cmd == Lemon::GUI::WMDisplayContextMenu){
+                WMWindow* win = FindWindow(client);
 
                 if(!win){
-                    printf("[LemonWM] Warning: Unknown Window ID: %d\n", m->clientFd);
+                    printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
                     continue;
                 }
 
                 menu.items.clear();
 
-                char buf[256];
-                contextMenuBounds = {win->pos + cmd->contextMenuPosition, {CONTEXT_ITEM_WIDTH, 0}};
+                vector2i_t menuPos;
+                std::string entries;
+                if(m.Decode(menuPos.x, menuPos.y, entries)){
+                    continue;
+                }
+
+                contextMenuBounds = {win->pos + menuPos, {CONTEXT_ITEM_WIDTH, 0}};
 
                 if(!(win->flags & WINDOW_FLAGS_NODECORATION)){
                     contextMenuBounds.y += WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS;
                 }
                 
-                Lemon::GUI::WMContextMenuEntry* item = cmd->contextMenu.contextEntries;
-                for(unsigned int i = 0; i < cmd->contextMenu.contextEntryCount; i++){
-
-                    if(((uintptr_t)item) + sizeof(Lemon::GUI::WMContextMenuEntry) + item->length - (uintptr_t)(m->msg.data) > m->msg.length){
-                        printf("[LemonWM] Invalid context menu item length: %d", item->length);
-                        continue;
+                int i = 0;
+                size_t pos;
+                while((pos = entries.find(";")) != std::string::npos){
+                    size_t cPos = entries.find(",");
+                    if(cPos >= pos || cPos == std::string::npos){
+                        menu.items.push_back(ContextMenuItem(entries.substr(0, pos), i++, 0));
+                    } else {
+                        menu.items.push_back(ContextMenuItem(entries.substr(cPos + 1, pos - cPos + 1), i++, std::stoi(entries.substr(0, cPos))));
                     }
 
-                    strncpy(buf, item->data, std::min<int>(static_cast<int>(item->length), 255));
-                    buf[std::min<int>(static_cast<int>(item->length), 255)] = 0;
-
-                    menu.items.push_back(ContextMenuItem(buf, i, item->id));
-
+                    entries.erase(0, pos + 1);
                     contextMenuBounds.height += CONTEXT_ITEM_HEIGHT;
-                    
-                    item = reinterpret_cast<Lemon::GUI::WMContextMenuEntry*>(reinterpret_cast<uintptr_t>(item) + item->length + sizeof(Lemon::GUI::WMContextMenuEntry));
                 }
 
                 menu.owner = win;
                 contextMenuActive = true;
             }
-        } else if (m && m->msg.protocol == 0){ // Client Disconnected
-            WMWindow* win = FindWindow(m->clientFd);
-
-            if(!win){
-                continue;
-            }
-
-            if(active == win){
-                SetActive(nullptr);
-            }
-
-            if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-                Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
-            }
-            
-            windows.remove(win);
-            redrawBackground = true;
-
-            delete win;
         }
     }
 }
 
 void WMInstance::PostEvent(Lemon::LemonEvent& ev, WMWindow* win){
-    server.Send(Lemon::Message(LEMON_MESSAGE_PROTOCOL_WMEVENT, ev), win->clientFd);
+    win->PostEvent(ev);
 }
 
 void WMInstance::MouseDown(){
@@ -390,7 +441,7 @@ void WMInstance::MouseMove(){
 
 void WMInstance::KeyUpdate(int key, bool pressed){
     if(shellConnected && key == KEY_GUI && pressed){
-        Lemon::Shell::ToggleMenu(shellClient);
+        //Lemon::Shell::ToggleMenu(shellClient);
     } else if(active){
         Lemon::LemonEvent ev;
 

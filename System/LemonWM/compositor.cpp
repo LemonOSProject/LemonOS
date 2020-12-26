@@ -1,6 +1,6 @@
 #include "lemonwm.h"
 
-#include <gui/colours.h>
+#include <lemon/gui/colours.h>
 
 static unsigned int fCount = 0;
 static unsigned int avgFrametime = 0;
@@ -135,6 +135,9 @@ void CompositorInstance::Paint(){
                 surfacecpy(&wm->screenSurface, renderSurface, r.pos, r);
             }
         #else
+            for(int i = 0; i < 100; i++){
+                wm->screenSurface.buffer[i] = rand() % 255;
+            }
             surfacecpy(&wm->screenSurface, renderSurface);
         #endif
     }

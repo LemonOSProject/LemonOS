@@ -1,15 +1,15 @@
-#include <lemon/spawn.h>
-#include <lemon/util.h>
-#include <core/cfgparser.h>
-#include <core/sha.h>
+#include <lemon/system/spawn.h>
+#include <lemon/system/util.h>
+#include <lemon/core/cfgparser.h>
+#include <lemon/core/sha.h>
 #include <string.h>
 #include <vector>
 #include <unistd.h>
 #include <string>
 
 int main(int argc, char** argv){
-	putenv("HOME=/system"); // Default home
-	putenv("PATH=/initrd:/system/bin"); // Default path
+	setenv("HOME", "/system", 1); // Default home
+	setenv("PATH", "/initrd:/system/bin", 1); // Default path
 
 	CFGParser confParser = CFGParser("/system/lemon/lemond.cfg");
 	confParser.Parse();
@@ -25,11 +25,15 @@ int main(int argc, char** argv){
 	__attribute__((unused)) char* login = "/system/lemon/login.lef";
 	__attribute__((unused)) char* shell = "/system/bin/shell.lef";
 
-	if(lemon_spawn(lemonwm, 1, &lemonwm) <= 0)
+	if(long ret = lemon_spawn(lemonwm, 1, &lemonwm); ret <= 0){
+		printf("Error %ld attempting to load %s. Attempting to load again\n", ret, lemonwm);
 		lemon_spawn(lemonwm, 1, &lemonwm); // Attempt twice
+	}
 		
-	if(lemon_spawn(shell, 1, &shell) <= 0)
+	if(long ret = lemon_spawn(shell, 1, &shell); ret <= 0){
+		printf("Error %ld attempting to load %s. Attempting to load again\n", ret, shell);
 		lemon_spawn(shell, 1, &shell); // Attempt twice
+	}
 	
 	return 0;
 }

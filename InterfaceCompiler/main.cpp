@@ -6,6 +6,7 @@
 #include <stack>
 #include <memory>
 #include <utility>
+#include <iostream>
 
 // Asynchronous remote procedure: IDENTIFIER PARAMETERS
 
@@ -466,6 +467,11 @@ void Parse(){
     }
 }
 
+void Generate(std::ostream& out){
+    out << "#include <lemon/ipc/message.h>\n";
+    out << "#include <lemon/ipc/interface.h>\n";
+}
+
 int main(int argc, char** argv){
     if(argc < 2){
         printf("Usage: %s <file>\n", argv[0]);
@@ -525,6 +531,8 @@ int main(int argc, char** argv){
                 break;
         }
     }
+
+    Generate(std::cout);
 
     exit(0);
 }

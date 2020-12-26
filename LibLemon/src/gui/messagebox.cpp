@@ -1,8 +1,8 @@
-#include <gui/messagebox.h>
+#include <lemon/gui/messagebox.h>
 
-#include <gui/window.h>
-#include <gui/widgets.h>
-#include <gfx/font.h>
+#include <lemon/gui/window.h>
+#include <lemon/gui/widgets.h>
+#include <lemon/gfx/font.h>
 
 namespace Lemon::GUI
 {

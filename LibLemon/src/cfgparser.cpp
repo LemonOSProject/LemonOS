@@ -1,4 +1,4 @@
-#include <core/cfgparser.h>
+#include <lemon/core/cfgparser.h>
 
 enum ParserState {
 	ParserStateHeading,
@@ -11,6 +11,24 @@ CFGParser::CFGParser(const char* path){
 
 	if(!cfgFile){
 		printf("CFGParser: Failed to open %s!\n", path);
+		return;
+	}
+
+	fseek(cfgFile, 0, SEEK_END);
+
+	size_t cfgSize = ftell(cfgFile);
+
+	if(cfgSize <= 0x8000){
+		cfgData.resize(cfgSize);
+
+		fseek(cfgFile, 0, SEEK_SET);
+
+		fread(cfgData.data(), cfgSize, 1, cfgFile);
+	} else {
+		char buf[512];
+		while(fread(buf, 512, 1, cfgFile)){
+			cfgData.insert(cfgData.end(), buf, buf + 512);
+		}
 	}
 }
 
@@ -21,9 +39,8 @@ CFGParser::~CFGParser(){
 }
 
 void CFGParser::Parse(){
-	if(!cfgFile) return;
+	if(!cfgFile || !cfgData.size()) return;
 
-	int c;
 	int state = ParserStateName;
 
 	std::string headingName;
@@ -31,7 +48,7 @@ void CFGParser::Parse(){
 	std::string value;
 
 	std::vector<CFGItem> values;
-	while((c = fgetc(cfgFile)) != EOF){
+	for(char c : cfgData){
 		switch(c){
 		case '=':
 			if(state == ParserStateName){

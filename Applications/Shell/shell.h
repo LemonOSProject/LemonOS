@@ -1,5 +1,6 @@
-#include <core/shell.h>
-#include <gui/window.h>
+#include <lemon/core/shell.h>
+#include <lemon/gui/window.h>
+#include <lemon/ipc/interface.h>
 
 #include <map>
 
@@ -12,7 +13,7 @@ public:
 };
 
 class ShellInstance {
-    Lemon::MessageServer shellSrv;
+    Lemon::Interface shellSrv;
 
     Lemon::GUI::Window* taskbar;
     Lemon::GUI::Window* menu;
@@ -23,13 +24,12 @@ public:
     ShellWindow* active = nullptr;
     bool showMenu = true;
 
-    ShellInstance(sockaddr_un& address);
+    ShellInstance(handle_t svc, const char* ifName);
 
     void SetMenu(Lemon::GUI::Window* menu);
     void SetTaskbar(Lemon::GUI::Window* taskbar);
 
     void Update();
-    Lemon::MessageHandler& GetServer() { return shellSrv; }
     void Open(char* path);
 
     void SetWindowState(ShellWindow* win);

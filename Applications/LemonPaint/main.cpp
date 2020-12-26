@@ -1,11 +1,12 @@
 #include "paint.h"
 
-#include <gui/window.h>
-#include <gui/widgets.h>
-#include <gui/messagebox.h>
+#include <lemon/gui/window.h>
+#include <lemon/gui/widgets.h>
+#include <lemon/gui/messagebox.h>
+#include <lemon/gui/filedialog.h>
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <gui/filedialog.h>
 
 #define BRUSH_CALLBACK(x) void OnPressBrush ## x (Lemon::GUI::Button* button)
 #define SCALE_CALLBACK(x) void OnPressBrushScale ## x (Lemon::GUI::Button* button)

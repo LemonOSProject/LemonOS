@@ -1,8 +1,8 @@
 #pragma once
 
+#include <lemon/gfx/surface.h>
+#include <lemon/gui/widgets.h>
 #include <stdint.h>
-#include <gfx/surface.h>
-#include <gui/widgets.h>
 
 class Brush{
 public:

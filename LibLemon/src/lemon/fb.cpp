@@ -1,12 +1,12 @@
 #include <lemon/syscall.h>
 
-#include <core/fb.h>
+#include <lemon/core/fb.h>
 #include <assert.h>
 #include <stdlib.h>
 
 volatile uint8_t* LemonMapFramebuffer(FBInfo& fbInfo){
     volatile uint8_t* ptr = 0;
-    syscall(SYS_MAP_FB,((uintptr_t)&ptr),(uintptr_t)&fbInfo,0,0,0);
+    syscall(SYS_MAP_FB, ((uintptr_t)&ptr), (uintptr_t)&fbInfo);
     return ptr;
 }
 

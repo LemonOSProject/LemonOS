@@ -1,9 +1,10 @@
 interface LemonWM {
-    CreateWindow(string title, s32 x, s32 y, s32 width, s32 height, u32 flags)
+    CreateWindow(string title, s32 x, s32 y, s32 width, s32 height, u32 flags) -> (u64 bufferKey)
     DestroyWindow()
 
     SetTitle(string title)
     Relocate(s32 x, s32 y)
-    Resize(s32 width, s32 height) -> (u32 bufferKey)
-    Minimize(s32 windowID, bool minimized)
+    Resize(s32 width, s32 height) -> (u64 bufferKey)
+    Minimize(s64 windowID, bool minimized)
+    DisplayContextMenu(s32 x, s32 y, array string serializedEntries)
 }

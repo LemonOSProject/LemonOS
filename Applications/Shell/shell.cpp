@@ -1,11 +1,11 @@
-#include <core/shell.h>
-#include <core/msghandler.h>
+#include <lemon/core/shell.h>
+#include <lemon/ipc/interface.h>
 #include <string.h>
 #include <stdexcept>
 
 #include "shell.h"
 
-ShellInstance::ShellInstance(sockaddr_un& address) : shellSrv(address, sizeof(sockaddr_un)) {
+ShellInstance::ShellInstance(handle_t svc, const char* name) : shellSrv(svc, name, 512) {
 
 }
 
@@ -19,7 +19,7 @@ void ShellInstance::SetTaskbar(Lemon::GUI::Window* taskbar){
 
 extern bool paintTaskbar;
 void ShellInstance::PollCommands(){
-    while(auto m = shellSrv.Poll()){
+    /*while(auto m = shellSrv.Poll()){
         paintTaskbar = true;
         if(m->msg.protocol == 0){ // Disconnected
             continue;
@@ -111,7 +111,7 @@ void ShellInstance::PollCommands(){
                 break;
             }
         }
-    }
+    }*/
 }
 
 void ShellInstance::Open(char* path){

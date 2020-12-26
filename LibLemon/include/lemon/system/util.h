@@ -8,6 +8,8 @@
 #include <limits.h>
 #include <vector>
 
+#include <lemon/system/info.h>
+
 typedef struct {
 	uint64_t pid; // Process ID
 

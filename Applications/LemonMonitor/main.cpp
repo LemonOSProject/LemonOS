@@ -1,7 +1,7 @@
-#include <gui/window.h>
+#include <lemon/gui/window.h>
 
-#include <lemon/util.h>
-#include <lemon/info.h>
+#include <lemon/system/util.h>
+#include <lemon/system/info.h>
 
 #include <vector>
 #include <map>

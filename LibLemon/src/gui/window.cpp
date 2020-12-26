@@ -1,121 +1,56 @@
-#include <gui/window.h>
-#include <core/sharedmem.h>
+#include <lemon/gui/window.h>
+#include <lemon/core/sharedmem.h>
 
 #include <stdlib.h>
-
 #include <unistd.h>
+
+#include <sstream>
 
 namespace Lemon::GUI{
     Window::Window(const char* title, vector2i_t size, uint32_t flags, int type, vector2i_t pos) : rootContainer({{0, 0}, size}) {
         windowType = type;
         this->flags = flags;
-        
-        sockaddr_un sockAddr;
-        strcpy(sockAddr.sun_path, wmSocketAddress);
-        sockAddr.sun_family = AF_UNIX;
 
-        msgClient.Connect(sockAddr, sizeof(sockaddr_un)); // Connect to Window Manager
+        rootContainer.window = this;
 
-        LemonMessage* createMsg = (LemonMessage*)malloc(sizeof(LemonMessage) + sizeof(WMCommand) + strlen(title));
-    
-        size_t windowBufferSize = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F)) + ((size.x * size.y * 4 + 0x1F) & (~0x1F) /* Round up to 32 bytes*/) * 2;
+        windowBufferKey = CreateWindow(pos.x, pos.y, size.x, size.y, flags, title);
+        if(windowBufferKey <= 0){
+            printf("[LibLemon] Warning: Window::Window: Failed to obtain window buffer!\n");
+            return;
+        }
 
-        windowBufferKey = Lemon::CreateSharedMemory(windowBufferSize, SMEM_FLAGS_SHARED);
         windowBufferInfo = (WindowBuffer*)Lemon::MapSharedMemory(windowBufferKey);
-        windowBufferInfo->currentBuffer = 0;
-        windowBufferInfo->buffer1Offset = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F));
-        windowBufferInfo->buffer2Offset = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F)) + ((size.x * size.y * 4 + 0x1F) & (~0x1F) /* Round up to 32 bytes*/);
 
+        windowBufferInfo->currentBuffer = 0;
         buffer1 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer1Offset;
         buffer2 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer2Offset;
 
         surface.buffer = buffer1;
         surface.width = size.x;
         surface.height = size.y;
-
-        WMCommand* cmd = (WMCommand*)createMsg->data;
-        cmd->cmd = WMCreateWindow;
-        cmd->create.pos = pos;
-        cmd->create.size = size;
-        cmd->create.flags = flags;
-        cmd->create.bufferKey = windowBufferKey;
-        memcpy(cmd->create.title, title, strlen(title));
-        cmd->create.titleLength = strlen(title);
-
-        createMsg->length = sizeof(WMCommand) + strlen(title);
-        createMsg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
-        
-        msgClient.Send(createMsg);
-
-        free(createMsg);
-
-        rootContainer.window = this;
     }
 
     Window::~Window(){
-        LemonMessage* destroyMsg = (LemonMessage*)malloc(sizeof(LemonMessage) + sizeof(WMCommand));
-
-        WMCommand* cmd = (WMCommand*)destroyMsg->data;
-        cmd->cmd = WMDestroyWindow;
-
-        destroyMsg->length = sizeof(WMCommand);
-        destroyMsg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
-
-        msgClient.Send(destroyMsg);
+        DestroyWindow();
 
         Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey);
-
-        free(destroyMsg);
 
         usleep(100);
     }
 
-    void Window::SetTitle(const char* title){
-        msgClient.Send(Lemon::Message(LEMON_MESSAGE_PROTOCOL_WMCMD, static_cast<unsigned short>(WMSetTitle), Lemon::Message::EncodeString(title)));
-    }
-
-    void Window::Minimize(bool minimized){
-        LemonMessage* msg = (LemonMessage*)malloc(sizeof(LemonMessage) + sizeof(WMCommand));
-
-        WMCommand* cmd = (WMCommand*)msg->data;
-        cmd->cmd = WMMinimize;
-        cmd->minimized = minimized;
-
-        msg->length = sizeof(WMCommand);
-        msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
-
-        msgClient.Send(msg);
-
-        free(msg);
-    }
-    
-    void Window::Minimize(int windowID, bool minimized){
-        LemonMessage* msg = (LemonMessage*)malloc(sizeof(LemonMessage) + sizeof(WMCommand));
-
-        WMCommand* cmd = (WMCommand*)msg->data;
-        cmd->cmd = WMMinimizeOther;
-        cmd->minimized = minimized;
-        cmd->minimizeWindowID = windowID;
-
-        msg->length = sizeof(WMCommand);
-        msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
-
-        msgClient.Send(msg);
-
-        free(msg);
-    }
-
     void Window::Resize(vector2i_t size){
+        
         Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey);
 
-        size_t windowBufferSize = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F)) + ((size.x * size.y * 4 + 0x1F) & (~0x1F) /* Round up to 32 bytes*/) * 2;
+        windowBufferKey = WMClient::Resize(size.x, size.y);
+        if(windowBufferKey <= 0){
+            printf("[LibLemon] Warning: Window::Resize: Failed to obtain window buffer!\n");
+            return;
+        }
 
-        windowBufferKey = Lemon::CreateSharedMemory(windowBufferSize, SMEM_FLAGS_SHARED);
         windowBufferInfo = (WindowBuffer*)Lemon::MapSharedMemory(windowBufferKey);
-        windowBufferInfo->currentBuffer = 0;
-        windowBufferInfo->buffer1Offset = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F));
-        windowBufferInfo->buffer2Offset = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F)) + ((size.x * size.y * 4 + 0x1F) & (~0x1F) /* Round up to 32 bytes*/);
 
+        windowBufferInfo->currentBuffer = 0;
         buffer1 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer1Offset;
         buffer2 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer2Offset;
 
@@ -128,21 +63,6 @@ namespace Lemon::GUI{
         } else {
             rootContainer.SetBounds({{0, 0}, size});
         }
-
-        LemonMessage* msg = (LemonMessage*)malloc(sizeof(LemonMessage) + sizeof(WMCommand));
-
-        WMCommand* cmd = (WMCommand*)msg->data;
-        cmd->cmd = WMResize;
-
-        cmd->size = size;
-        cmd->bufferKey = windowBufferKey;
-
-        msg->length = sizeof(WMCommand);
-        msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
-
-        msgClient.Send(msg);
-
-        free(msg);
 
         rootContainer.UpdateFixedBounds();
     }
@@ -176,9 +96,9 @@ namespace Lemon::GUI{
     }
     
     bool Window::PollEvent(LemonEvent& ev){
-        if(auto m = msgClient.Poll()){
-            if(m->protocol == LEMON_MESSAGE_PROTOCOL_WMEVENT){
-                ev = *((LemonEvent*)m->data);
+        Message m;
+        if(long ret = Poll(m); ret > 0 && m.id() == WindowEvent){
+            if(!m.Decode(ev)) {
                 return true;
             }
         }
@@ -187,7 +107,7 @@ namespace Lemon::GUI{
     }
     
     void Window::WaitEvent(){
-        msgClient.Wait();
+        
     }
 
     void Window::GUIHandleEvent(LemonEvent& ev){
@@ -296,36 +216,19 @@ namespace Lemon::GUI{
         rootContainer.RemoveWidget(w);
     }
 
-    void Window::DisplayContextMenu(std::vector<ContextMenuEntry>& entries, vector2i_t pos){
+    void Window::DisplayContextMenu(const std::vector<ContextMenuEntry>& entries, vector2i_t pos){
         if(pos.x == -1 && pos.y == -1){
             pos = lastMousePos;
         }
 
-        unsigned cmdSize = sizeof(WMCommand);
-        for(ContextMenuEntry& ent : entries){
-            cmdSize += sizeof(WMContextMenuEntry) + ent.name.length();
+        std::ostringstream serializedEntries;
+        for(const ContextMenuEntry& ent : entries){
+            serializedEntries << ent.id << "," << ent.name << ";";
         }
 
-        LemonMessage* msg = (LemonMessage*)malloc(sizeof(LemonMessage) + cmdSize);
-        msg->length = cmdSize;
-        msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
-
-        WMCommand* cmd = (WMCommand*)msg->data;
-        cmd->cmd = WMOpenContextMenu;
-        cmd->contextMenu.contextEntryCount = entries.size();
-        cmd->contextMenuPosition = pos;
-        
-        WMContextMenuEntry* wment = cmd->contextMenu.contextEntries;
-        for(ContextMenuEntry& ent : entries){
-            strncpy(wment->data, ent.name.c_str(), ent.name.length());
-            wment->length = ent.name.length();
-            wment->id = ent.id;
-            wment = (WMContextMenuEntry*)(reinterpret_cast<uint8_t*>(wment) + sizeof(WMContextMenuEntry) + ent.name.length());
-        }
-
-        msgClient.Send(msg);
-
-        free(msg);
+        std::string str = serializedEntries.str();
+        printf("str length: %lu\n", str.length());
+        WMClient::DisplayContextMenu(pos.x, pos.y, str);
     }
 
     void Window::CreateMenuBar(){
@@ -367,5 +270,48 @@ namespace Lemon::GUI{
 
     void WindowMenuBar::OnMouseMove(__attribute__((unused)) vector2i_t mousePos){
         
+    }
+
+    int64_t WMClient::CreateWindow(int x, int y, int width, int height, unsigned int flags, const std::string& title) const {
+        Message ret;
+        
+        Call(Message(WMCreateWindow, x, y, width, height, flags, title), ret, WindowBufferReturn);
+
+        int64_t key = 0;
+        if(ret.Decode(key)){
+            return 0;
+        }
+
+        return key;
+    }
+
+    void WMClient::DestroyWindow() const {
+        Queue(Message(WMDestroyWindow));
+    }
+
+    void WMClient::SetTitle(const std::string& title) const {
+        Queue(Message(WMSetWindowTitle, title));
+    }
+
+    void WMClient::Relocate(int x, int y) const {
+        Queue(Message(WMCreateWindow, x, y));
+    }
+
+    uint64_t WMClient::Resize(int width, int height) const {
+        Queue(Message(WMResizeWindow, width, height));
+
+        return -1;
+    }
+
+    void WMClient::Minimize(bool minimized) const {
+        Queue(Message(WMMinimizeWindow, minimized));
+    }
+
+    void WMClient::Minimize(long windowID, bool minimized) const {
+        Queue(Message(WMMinimizeOtherWindow, windowID, minimized));
+    }
+
+    void WMClient::DisplayContextMenu(int x, int y, const std::string& serializedEntries) const {
+        Queue(Message(WMDisplayContextMenu, x, y, serializedEntries));
     }
 }

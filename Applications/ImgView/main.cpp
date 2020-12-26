@@ -1,9 +1,10 @@
-#include <gui/window.h>
-#include <gui/widgets.h>
-#include <gui/messagebox.h>
+#include <lemon/gui/window.h>
+#include <lemon/gui/widgets.h>
+#include <lemon/gui/messagebox.h>
+#include <lemon/gui/filedialog.h>
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <gui/filedialog.h>
 
 #define IMGVIEW_OPEN 1
 

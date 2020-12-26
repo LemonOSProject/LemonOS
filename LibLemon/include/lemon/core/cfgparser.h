@@ -13,6 +13,7 @@ class CFGParser{
 private:
 	std::vector<std::pair<std::string, std::vector<CFGItem>>> items;
 	FILE* cfgFile = nullptr;
+	std::vector<char> cfgData;
 public:
 	CFGParser(const char* path);
 	~CFGParser();

@@ -1,10 +1,10 @@
-#include <gui/widgets.h>
+#include <lemon/gui/widgets.h>
 
-#include <core/keyboard.h>
+#include <lemon/core/keyboard.h>
 #include <string>
 #include <math.h>
-#include <gui/colours.h>
-#include <gui/messagebox.h>
+#include <lemon/gui/colours.h>
+#include <lemon/gui/messagebox.h>
 #include <assert.h>
 
 #include <unistd.h>
@@ -15,7 +15,7 @@
 #include <dirent.h>
 
 #ifdef __lemon__
-    #include <lemon/filesystem.h>
+    #include <lemon/system/filesystem.h>
 #endif
 
 namespace Lemon::GUI {

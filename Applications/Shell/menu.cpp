@@ -1,13 +1,10 @@
-#include <lemon/fb.h>
+#include <lemon/system/fb.h>
 #include <lemon/syscall.h>
-#include <lemon/spawn.h>
+#include <lemon/system/spawn.h>
 
-#include <gfx/graphics.h>
-
-#include <gui/window.h>
-
-#include <core/msghandler.h>
-#include <core/cfgparser.h>
+#include <lemon/gfx/graphics.h>
+#include <lemon/gui/window.h>
+#include <lemon/core/cfgparser.h>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -62,7 +59,7 @@ public:
 
     }
 
-    MenuItem(std::string name, std::string comment, std::string exec, int id){
+    MenuItem(const std::string& name, const std::string& comment, const  std::string& exec, int id){
         this->name = name;
         this->comment = comment;
         this->exec = exec;
@@ -84,7 +81,7 @@ public:
         }
     }
 
-    void SetExec(std::string e){
+    void SetExec(const std::string& e){
         exec = e;
 
         args.clear();
@@ -260,9 +257,9 @@ void InitializeMenu(){
     menuContainer->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
     window->AddWidget(menuContainer);
 
-    menuContainer->AddWidget(new MenuWidget(categories["Utilities"], {0, 0, 0, 0}));
-    menuContainer->AddWidget(new MenuWidget(categories["Games"], {0, 0, 0, 0}));
-    menuContainer->AddWidget(new MenuWidget(categories["Other"], {0, 0, 0, 0}));
+    for(auto& cat : categories){
+        menuContainer->AddWidget(new MenuWidget(cat.second, {0, 0, 0, 0}));
+    }
 
     for(auto& item : rootItems){
         menuContainer->AddWidget(new MenuWidget(item, {0, 0, 0, 0})); // LayoutContainer will handle bounds
@@ -292,10 +289,6 @@ void PollMenu(){
         window->Paint();
         paint = false;
     }
-}
-
-Lemon::MessageHandler& GetMenuWindowHandler(){
-    return window->GetHandler();
 }
 
 void MinimizeMenu(bool s){

@@ -1,10 +1,11 @@
-#include <gui/window.h>
-#include <core/cfgparser.h>
-#include <gui/messagebox.h>
+#include <lemon/gui/window.h>
+#include <lemon/core/cfgparser.h>
+#include <lemon/gui/messagebox.h>
+#include <lemon/core/sha.h>
+#include <lemon/system/spawn.h>
+
 #include <stdexcept>
-#include <core/sha.h>
 #include <unistd.h>
-#include <lemon/spawn.h>
 
 Lemon::GUI::Window* window;
 

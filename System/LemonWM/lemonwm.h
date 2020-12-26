@@ -1,11 +1,12 @@
 #pragma once
 
-#include <gfx/graphics.h>
-#include <gfx/surface.h>
+#include <lemon/gfx/graphics.h>
+#include <lemon/gfx/surface.h>
 
-#include <core/msghandler.h>
-#include <core/event.h>
-#include <gui/window.h>
+#include <lemon/ipc/endpoint.h>
+#include <lemon/ipc/interface.h>
+#include <lemon/core/event.h>
+#include <lemon/gui/window.h>
 
 #include <list>
 
@@ -16,6 +17,7 @@
 #define CONTEXT_ITEM_WIDTH 160
 
 //#define LEMONWM_USE_CLIPPING
+#define LEMONWM_MSG_SIZE 512
 
 using WindowBuffer = Lemon::GUI::WindowBuffer;
 
@@ -38,42 +40,44 @@ enum ResizePoint {
     TopRight,
 };
 
-class WMWindow {
+class WMWindow : Lemon::Endpoint {
     friend class CompositorInstance;
 protected:
-    unsigned long sharedBufferKey;
+    int64_t sharedBufferKey;
 
     WindowBuffer* windowBufferInfo;
     uint8_t* buffer1;
     uint8_t* buffer2;
-    unsigned long bufferKey;
+    int64_t bufferKey;
 
     WMInstance* wm;
 
     rect_t closeRect, minimizeRect;
 public:
-    WMWindow(WMInstance* wm, unsigned long key);
+    WMWindow(WMInstance* wm, handle_t endp, handle_t id, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title);
     ~WMWindow();
 
     #ifdef LEMONWM_USE_CLIPPING
         std::list<rect_t> clips;
     #endif
 
-    vector2i_t pos;
-    vector2i_t size;
-    char* title;
+    vector2i_t pos = {0, 0};
+    vector2i_t size = {0, 0};
+    std::string title;
     uint32_t flags = 0;
     bool minimized = false;
 
     short closeBState = ButtonStateUp; 
     short minimizeBState = ButtonStateUp;
 
-    int clientFd = 0;
+    handle_t clientID = 0;
 
     void Draw(surface_t* surface);
 
+    void PostEvent(Lemon::LemonEvent& ev) { Queue(Lemon::GUI::WindowEvent, reinterpret_cast<uintptr_t>(&ev), (uint16_t)sizeof(Lemon::LemonEvent)); }
+
     void Minimize(bool state);
-    void Resize(vector2i_t size, unsigned long bufferKey);
+    void Resize(vector2i_t size, int64_t bufferKey, WindowBuffer* bufferInfo);
     void RecalculateRects();
 
     rect_t GetCloseRect();
@@ -93,7 +97,7 @@ public:
     unsigned char index;
     unsigned short id;
 
-    ContextMenuItem(const char* name, unsigned char index, unsigned short id){
+    ContextMenuItem(const std::string& name, unsigned char index, unsigned short id){
         this->name = name;
         this->index = index;
         this->id = id;
@@ -133,7 +137,7 @@ class CompositorInstance{
 protected:
     WMInstance* wm;
 
-    timespec lastRender;
+    timespec lastRender = {0, 0};
 
     #ifdef LEMONWM_USE_CLIPPING
         std::list<rect_t> cclips;
@@ -145,20 +149,20 @@ public:
     surface_t windowButtons;
     surface_t mouseCursor;
 
-    bool capFramerate;
+    bool capFramerate = false;
     bool displayFramerate = false;
     bool useImage = true;
     surface_t backgroundImage;
 };
 
-class WMInstance {
+class WMInstance{
 protected:
     friend void* _InitializeShellConnection(void*);
     
-    Lemon::MessageServer server;
-    Lemon::MessageClient shellClient;
+    Lemon::Interface server;
+    Lemon::Endpoint shellClient;
 
-    WMWindow* active;
+    WMWindow* active = nullptr;
     bool drag = false;
     bool resize = false;
     vector2i_t dragOffset;
@@ -176,6 +180,8 @@ protected:
     void MinimizeWindow(int id, bool state);
 
     void SetActive(WMWindow* win);
+
+    int64_t CreateWindowBuffer(int width, int height, WindowBuffer** buffer);
 public:
     bool redrawBackground = true;
     bool contextMenuActive = false;
@@ -190,7 +196,7 @@ public:
     CompositorInstance compositor = CompositorInstance(this);
     ContextMenu menu;
 
-    WMInstance(surface_t& surface, sockaddr_un address);
+    WMInstance(surface_t& surface, handle_t svc, const char* ifName);
     
     void Update();
 

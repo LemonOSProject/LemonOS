@@ -1,14 +1,14 @@
-#include <lemon/syscall.h>
-#include <gfx/surface.h>
-#include <gfx/graphics.h>
-#include <gui/window.h>
-#include <gui/widgets.h>
-#include <stdlib.h>
-#include <gui/filedialog.h>
-#include <gui/messagebox.h>
+#include <lemon/gfx/surface.h>
+#include <lemon/gfx/graphics.h>
+#include <lemon/gui/window.h>
+#include <lemon/gui/widgets.h>
+#include <lemon/gui/filedialog.h>
+#include <lemon/gui/messagebox.h>
+
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <stdlib.h>
 #include <errno.h>
 
 #include "exttextbox.h"

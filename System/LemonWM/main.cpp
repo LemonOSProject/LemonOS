@@ -4,17 +4,12 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <core/msghandler.h>
-#include <gui/window.h>
-#include <core/fb.h>
-#include <core/input.h>
-#include <core/cfgparser.h>
+#include <lemon/gui/window.h>
+#include <lemon/core/fb.h>
+#include <lemon/core/input.h>
+#include <lemon/core/cfgparser.h>
 
 #include <time.h>
-
-#ifdef __lemon__
-    #include <lemon/spawn.h>
-#endif
 
 #include "lemonwm.h"
 
@@ -27,18 +22,18 @@ int main(){
     CreateFramebufferSurface(fbSurface);
     renderSurface = fbSurface;
     renderSurface.buffer = new uint8_t[fbSurface.width * fbSurface.height * 4];
-    
-    sockaddr_un srvAddr;
-    strcpy(srvAddr.sun_path, Lemon::GUI::wmSocketAddress);
-    srvAddr.sun_family = AF_UNIX;
-    WMInstance wm = WMInstance(renderSurface, srvAddr);
 
-    Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 0, 0, 0, &fbSurface);
+    Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 128, 0, 0, &fbSurface);
+
+    handle_t svc = Lemon::CreateService("lemon.lemonwm");
+    WMInstance wm = WMInstance(renderSurface, svc, "Instance");
+
+    Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 255, 0, 0, &fbSurface);
+
+    std::string bgPath = "/initrd/bg3.png";
 
 	CFGParser cfgParser = CFGParser("/system/lemon/lemonwm.cfg");
     cfgParser.Parse();
-
-    std::string bgPath = "/initrd/bg3.png";
 
     for(auto item : cfgParser.GetItems()){
         for(auto entry : item.second){
@@ -66,6 +61,8 @@ int main(){
         }
     }
 
+    Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 255, 0, 128, &fbSurface);
+
     if(int e = Lemon::Graphics::LoadImage("/initrd/winbuttons.png", &wm.compositor.windowButtons)){
         printf("LemonWM: Warning: Error %d loading buttons.\n", e);
     }
@@ -76,7 +73,6 @@ int main(){
         wm.compositor.mouseCursor.width = wm.compositor.mouseCursor.height = 4;
     }
 
-    wm.screenSurface = fbSurface;
     wm.compositor.backgroundImage = renderSurface;
     wm.compositor.backgroundImage.buffer = new uint8_t[renderSurface.width * renderSurface.height * 4];
     int bgError = -1;
@@ -84,6 +80,8 @@ int main(){
         printf("LemonWM: Warning: Error %d loading background image.\n", bgError);
         wm.compositor.useImage = false;
     }
+
+    wm.screenSurface.buffer = fbSurface.buffer;
 
     for(;;){
         wm.Update();

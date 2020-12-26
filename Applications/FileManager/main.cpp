@@ -1,14 +1,13 @@
-#include <gfx/surface.h>
-#include <gfx/graphics.h>
-#include <gui/window.h>
-#include <gui/widgets.h>
+#include <lemon/gui/window.h>
+#include <lemon/gui/widgets.h>
+#include <lemon/gui/messagebox.h>
+#include <lemon/system/filesystem.h>
+#include <lemon/system/spawn.h>
+#include <lemon/system/util.h>
+
 #include <stdlib.h>
-#include <lemon/filesystem.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <gui/messagebox.h>
-#include <lemon/spawn.h>
-#include <lemon/util.h>
 
 void OnFileOpened(const char* path, Lemon::GUI::FileView* fv){
 	char* pathCopy = strdup(path);

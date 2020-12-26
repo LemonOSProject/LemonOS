@@ -1,4 +1,4 @@
-project('LibLemon', default_options : ['cpp_std=c++17', 'optimization=3', 'warning_level=2', 'werror=true'])
+project('LibLemon', default_options : ['cpp_std=c++17', 'optimization=0', 'warning_level=2', 'werror=true'])
 
 json = subproject('json')
 
@@ -23,7 +23,6 @@ liblemon_cpp_args = ['-Wno-write-strings', '-Wno-missing-braces',
     '-m64' ]
 
 add_project_arguments(liblemon_cpp_args, language : ['c', 'cpp'])
-
 cpp_files = [
     'src/gfx/font.cpp',
     'src/gfx/bitmapfont.cpp',
@@ -32,8 +31,8 @@ cpp_files = [
     'src/gfx/surface.cpp',
     'src/gfx/text.cpp',
 
-    'src/ipc/msghandler.cpp',
     'src/ipc/message.cpp',
+	'src/ipc/interface.cpp',
 
     'src/gui/window.cpp',
     'src/gui/widgets.cpp',

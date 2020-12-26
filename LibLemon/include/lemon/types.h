@@ -1,3 +1,3 @@
 #pragma once
 
-typedef long handle_id_t;
+typedef long handle_t;

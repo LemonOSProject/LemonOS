@@ -1,13 +1,10 @@
+#include <lemon/gfx/graphics.h>
+#include <lemon/gfx/surface.h>
+#include <lemon/gui/window.h>
+
+#include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-
-#include <gfx/graphics.h>
-#include <gfx/surface.h>
-
-#include <gui/window.h>
-#include <stdlib.h>
-
-#include <core/msghandler.h>
 
 surface_t fbSurface;
 

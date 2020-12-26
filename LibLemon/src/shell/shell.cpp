@@ -1,12 +1,12 @@
-#include <core/shell.h>
+#include <lemon/core/shell.h>
 
-#include <core/msghandler.h>
+#include <lemon/ipc/interface.h>
 #include <string.h>
 #include <stdlib.h>
 
 namespace Lemon::Shell {
 
-    void AddWindow(int id, short state, const char* title, MessageClient& client){
+    /*void AddWindow(int id, short state, const char* title, MessageClient& client){
         Lemon::LemonMessage* msg = (Lemon::LemonMessage*)malloc(sizeof(Lemon::LemonMessage) + sizeof(Lemon::Shell::ShellCommand) + strlen(title));
         msg->length = sizeof(ShellCommand) + strlen(title);
         msg->protocol = LEMON_MESSAGE_PROTOCOL_SHELLCMD;
@@ -76,5 +76,5 @@ namespace Lemon::Shell {
         client.Connect(shellAddr, sizeof(sockaddr_un));
 
         ToggleMenu(client);
-    }
+    }*/
 }

@@ -1,7 +1,6 @@
 #pragma once
 
-#include <core/message.h>
-#include <gfx/graphics.h>
+#include <lemon/gfx/graphics.h>
 
 namespace Lemon {
     enum Event{
@@ -23,13 +22,13 @@ namespace Lemon {
     };
 
     typedef struct LemonEvent {
-        uint32_t event;
-        uint16_t length;
+        int32_t event;
         union {
             int key;
             vector2i_t mousePos;
             vector2i_t resizeBounds;
             unsigned short windowCmd;
+            uint64_t bufferKey;
         };
     } __attribute__((packed)) lemon_event_t;
 }

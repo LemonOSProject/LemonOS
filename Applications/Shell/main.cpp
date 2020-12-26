@@ -1,23 +1,23 @@
 #include <stdint.h>
 
 #include <lemon/syscall.h>
-#include <lemon/fb.h>
+#include <lemon/system/filesystem.h>
+#include <lemon/system/spawn.h>
+#include <lemon/system/info.h>
+#include <lemon/system/util.h>
+#include <lemon/system/fb.h>
+#include <lemon/gui/window.h>
+#include <lemon/core/sharedmem.h>
+#include <lemon/core/shell.h>
+#include <lemon/core/keyboard.h>
+#include <lemon/gfx/graphics.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
 #include <stdlib.h>
-#include <gfx/graphics.h>
-#include <lemon/filesystem.h>
-#include <gui/window.h>
-#include <stdio.h>
-#include <core/keyboard.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <lemon/spawn.h>
-#include <lemon/info.h>
-#include <core/sharedmem.h>
-#include <lemon/util.h>
-#include <core/shell.h>
 #include <map>
 
 #include "shell.h"
@@ -105,14 +105,11 @@ void OnTaskbarPaint(surface_t* surface){
 bool paintTaskbar = true;
 void InitializeMenu();
 void PollMenu();
-Lemon::MessageHandler& GetMenuWindowHandler();
 void MinimizeMenu(bool s);
 
 int main(){
-	sockaddr_un shellAddress;
-	strcpy(shellAddress.sun_path, Lemon::Shell::shellSocketAddress);
-	shellAddress.sun_family = AF_UNIX;
-	shell = new ShellInstance(shellAddress);
+	handle_t svc = Lemon::CreateService("lemon.shell");
+	shell = new ShellInstance(svc, "Instance");
 
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
 	syscall(SYS_UNAME, (uintptr_t)versionString,0,0,0,0);
@@ -131,7 +128,7 @@ int main(){
 
 	InitializeMenu();
 
-	Lemon::MessageMultiplexer mp;
+	/*Lemon::MessageMultiplexer mp;
 	mp.AddSource(taskbar->GetHandler());
 	mp.AddSource(GetMenuWindowHandler());
 	mp.AddSource(shell->GetServer());
@@ -142,7 +139,7 @@ int main(){
 	msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
 	msg->length = sizeof(Lemon::GUI::WMCommand);
 	taskbar->SendWMMsg(msg);
-	free(msg);
+	free(msg);*/
 
 	for(;;){
 		shell->Update();
@@ -166,7 +163,7 @@ int main(){
 		PollMenu();
 
 		uint64_t usedMemLast = sysInfo.usedMem;
-		syscall(SYS_INFO, &sysInfo, 0, 0, 0, 0);
+		sysInfo = Lemon::SysInfo();
 
 		if(sysInfo.usedMem != usedMemLast) paintTaskbar = true;
 
@@ -176,7 +173,7 @@ int main(){
 			paintTaskbar = false;
 		}
 
-		mp.PollSync();
+		//mp.PollSync();
 	}
 
 	for(;;);

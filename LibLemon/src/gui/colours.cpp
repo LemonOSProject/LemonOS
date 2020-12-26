@@ -1,4 +1,4 @@
-#include <gui/colours.h>
+#include <lemon/gui/colours.h>
 
 namespace Lemon{
     /*RGBAColour colours[] = {

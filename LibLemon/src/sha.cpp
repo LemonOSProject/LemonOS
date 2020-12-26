@@ -1,6 +1,6 @@
-#include <core/sha.h> 
+#include <lemon/core/sha.h> 
 #include <string.h>
-#include <core/rotate.h>
+#include <lemon/core/rotate.h>
 #include <sstream>
 #include <stdint.h>
 #include <string.h>

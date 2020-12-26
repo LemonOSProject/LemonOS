@@ -1,4 +1,4 @@
-#include <gfx/graphics.h>
+#include <lemon/gfx/graphics.h>
 
 #include <math.h>
 #include <string.h>
@@ -11,7 +11,7 @@ extern "C" void memcpy_sse2_unaligned(void* dest, void* src, size_t count);
 extern "C" void memset32_sse2(void* dest, uint32_t c, uint64_t count);
 extern "C" void memset64_sse2(void* dest, uint64_t c, uint64_t count);
 
-void memset32_optimized(void* _dest, uint32_t c, size_t count){
+inline void memset32_optimized(void* _dest, uint32_t c, size_t count){
     uint32_t* dest = reinterpret_cast<uint32_t*>(_dest);
     while(count--){
         *(dest++) = c;
@@ -19,7 +19,7 @@ void memset32_optimized(void* _dest, uint32_t c, size_t count){
     return;
 }
 
-void memset64_optimized(void* _dest, uint64_t c, size_t count) {
+inline void memset64_optimized(void* _dest, uint64_t c, size_t count) {
     uint64_t* dest = reinterpret_cast<uint64_t*>(_dest);
     if(((size_t)dest & 0x7)){
         while(count--){

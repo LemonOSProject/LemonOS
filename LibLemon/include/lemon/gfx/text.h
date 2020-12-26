@@ -1,8 +1,8 @@
 #pragma once
 
-#include <gfx/font.h>
-#include <gfx/types.h>
-#include <gfx/surface.h>
+#include <lemon/gfx/font.h>
+#include <lemon/gfx/types.h>
+#include <lemon/gfx/surface.h>
 
 #include <string>
 

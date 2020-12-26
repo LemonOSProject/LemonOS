@@ -1,7 +1,7 @@
 #pragma once
 
-#include <core/keyboard.h>
-#include <gfx/graphics.h>
+#include <lemon/core/keyboard.h>
+#include <lemon/gfx/graphics.h>
 
 struct KeyboardState{
 	bool caps, control, shift, alt;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <core/msghandler.h>
+#include <lemon/ipc/endpoint.h>
 
 namespace Lemon::Shell {
     static const char* shellSocketAddress = "lemonshell";
@@ -37,14 +37,14 @@ namespace Lemon::Shell {
         
     };
 
-    void AddWindow(int id, short state, const char* title, MessageClient& client);
-    void RemoveWindow(int id, MessageClient& client);
-    void SetWindowState(int id, int state, MessageClient& client);
+    void AddWindow(int id, short state, const char* title, Endpoint& client);
+    void RemoveWindow(int id, Endpoint& client);
+    void SetWindowState(int id, int state, Endpoint& client);
     
-    void Open(const char* path, MessageClient& client);
+    void Open(const char* path, Endpoint& client);
     void Open(const char* path);
 
-    void ToggleMenu(MessageClient& client);
+    void ToggleMenu(Endpoint& client);
 
     void ToggleMenu();
 }

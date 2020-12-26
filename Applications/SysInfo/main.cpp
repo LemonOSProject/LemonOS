@@ -1,11 +1,11 @@
-#include <gui/window.h>
-#include <gui/widgets.h>
-#include <gui/messagebox.h>
+#include <lemon/gui/window.h>
+#include <lemon/gui/widgets.h>
+#include <lemon/gui/messagebox.h>
+#include <lemon/gui/filedialog.h>
+#include <lemon/system/info.h>
+#include <lemon/syscall.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <lemon/syscall.h>
-#include <gui/filedialog.h>
-#include <lemon/info.h>
 #include <unistd.h>
 
 Lemon::GUI::Window* window;

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <gfx/surface.h>
-#include <gfx/graphics.h>
-#include <gui/ctxentry.h>
-#include <gui/colours.h>
+#include <lemon/gfx/surface.h>
+#include <lemon/gfx/graphics.h>
+#include <lemon/gui/ctxentry.h>
+#include <lemon/gui/colours.h>
 
 #include <vector>
 #include <string>

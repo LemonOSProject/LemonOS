@@ -1,19 +1,22 @@
+#include <lemon/gfx/surface.h>
+#include <lemon/gfx/graphics.h>
+#include <lemon/gui/window.h>
+#include <lemon/core/keyboard.h>
+
 #include <lemon/syscall.h>
-#include <gfx/surface.h>
-#include <gfx/graphics.h>
-#include <gui/window.h>
-#include <core/keyboard.h>
+#include <lemon/system/filesystem.h>
+#include <lemon/system/spawn.h>
+#include <lemon/system/util.h>
+
+#include <unistd.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <lemon/filesystem.h>
-#include <lemon/spawn.h>
 #include <ctype.h>
 #include <termios.h>
 #include <sys/ioctl.h>
-#include <lemon/util.h>
+
 #include <vector>
-#include <unistd.h>
-#include <fcntl.h>
 
 #include "escape.h"
 #include "colours.h"
@@ -528,8 +531,8 @@ int main(int argc, char** argv){
 	std::vector<pollfd> fds;
 	fds.push_back({.fd = masterPTYFd, .events = POLLIN, .revents = 0});
 
-	auto& wMHandler = window->GetHandler();
-	fds.insert(fds.begin(), wMHandler.GetFileDescriptors().begin(), wMHandler.GetFileDescriptors().end());
+	//auto& wMHandler = window->GetHandler();
+	//fds.insert(fds.begin(), wMHandler.GetFileDescriptors().begin(), wMHandler.GetFileDescriptors().end());
 	for(;;){
 		Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){

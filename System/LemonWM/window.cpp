@@ -1,23 +1,30 @@
 #include "lemonwm.h"
 
-#include <gfx/graphics.h>
-#include <gui/window.h>
-#include <core/sharedmem.h>
+#include <lemon/gfx/graphics.h>
+#include <lemon/gui/window.h>
+#include <lemon/core/sharedmem.h>
 #include <stdlib.h>
 
-WMWindow::WMWindow(WMInstance* wm, unsigned long key){
+WMWindow::WMWindow(WMInstance* wm, handle_t endp, handle_t id, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title) : Endpoint(endp){
 	this->wm = wm;
-	bufferKey = key;
 
-    windowBufferInfo = (WindowBuffer*)Lemon::MapSharedMemory(key);
+	clientID = id;
+	
+	bufferKey = key;
+    windowBufferInfo = bufferInfo;
 
     buffer1 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer1Offset;
     buffer2 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer2Offset;
+
+	this->pos = pos;
+	this->size = size;
+	this->flags = flags;
+	this->title = title;
+	
+	Queue(Lemon::Message(Lemon::GUI::WindowBufferReturn, bufferKey));
 }
 
 WMWindow::~WMWindow(){
-	free(title);
-
 	Lemon::UnmapSharedMemory(windowBufferInfo, bufferKey);
 }
 
@@ -34,7 +41,7 @@ void WMWindow::Draw(surface_t* surface){
 	Lemon::Graphics::DrawRectOutline(pos.x + (WINDOW_BORDER_THICKNESS / 2), pos.y + WINDOW_TITLEBAR_HEIGHT + (WINDOW_BORDER_THICKNESS / 2), size.x + WINDOW_BORDER_THICKNESS, size.y + WINDOW_BORDER_THICKNESS, {42, 50, 64}, surface);
 	Lemon::Graphics::DrawGradientVertical({pos + (vector2i_t){1,1}, {size.x + WINDOW_BORDER_THICKNESS, WINDOW_TITLEBAR_HEIGHT}}, {0x33, 0x2c, 0x29, 255}, {0x2e, 0x29, 0x29, 255}, surface);
 
-	Lemon::Graphics::DrawString(title, pos.x + 6, pos.y + 6, 255, 255, 255, surface);
+	Lemon::Graphics::DrawString(title.c_str(), pos.x + 6, pos.y + 6, 255, 255, 255, surface);
 
 	surface_t* buttons = &wm->compositor.windowButtons;
 
@@ -55,7 +62,7 @@ void WMWindow::Draw(surface_t* surface){
 	
 	vector2i_t clipOffset =  pos + (vector2i_t){WINDOW_BORDER_THICKNESS, WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT};
 	
-	#ifdef _LEMONWM_USE_CLIPPING
+	#ifdef LEMONWM_USE_CLIPPING
 		for(rect_t& clip : clips){
 			Lemon::Graphics::surfacecpy(surface, &wSurface, clip.pos, {clip.pos - clipOffset, clip.size});
 		}
@@ -70,12 +77,12 @@ void WMWindow::Minimize(bool state){
 	minimized = state;
 }
 
-void WMWindow::Resize(vector2i_t size, unsigned long key){
+void WMWindow::Resize(vector2i_t size, int64_t key, WindowBuffer* bufferInfo){
 	Lemon::UnmapSharedMemory(windowBufferInfo, bufferKey);
 
 	bufferKey = key;
 
-    windowBufferInfo = (WindowBuffer*)Lemon::MapSharedMemory(key);
+    windowBufferInfo = bufferInfo;
 
     buffer1 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer1Offset;
     buffer2 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer2Offset;

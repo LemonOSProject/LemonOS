@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <list>
-#include <lemon/spawn.h>
-#include <lemon/filesystem.h>
+#include <lemon/system/spawn.h>
+#include <lemon/system/filesystem.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <limits.h>

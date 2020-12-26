@@ -3,7 +3,7 @@ SPATH=$(dirname $(readlink -f "$0"))
 set -e
 
 ln -sfT ../../../include/c++ $HOME/.local/share/lemon/sysroot/system/include/c++
-cp $HOME/.local/share/lemon/lib/x86_64-lemon/c++/libc++*.so* $HOME/.local/share/lemon/sysroot/system/lib
+cp $HOME/.local/share/lemon/lib/x86_64-lemon/c++/*.so* $HOME/.local/share/lemon/sysroot/system/lib
 
 cd $SPATH
 $SPATH/libc.sh

@@ -31,3 +31,4 @@ Ports/*
 Toolchain/*
 !Toolchain/*.sh
 !Toolchain/*.patch
+InterfaceCompiler/a.out

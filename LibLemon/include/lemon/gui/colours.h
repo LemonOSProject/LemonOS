@@ -1,6 +1,6 @@
 #pragma once
 
-#include <gfx/graphics.h>
+#include <lemon/gfx/graphics.h>
 
 namespace Lemon{
     enum Colour{

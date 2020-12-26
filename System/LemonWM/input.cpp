@@ -1,7 +1,7 @@
 #include "lemonwm.h"
 
-#include <core/input.h>
-#include <core/keyboard.h>
+#include <lemon/core/keyboard.h>
+#include <lemon/core/input.h>
 
 int keymap_us[128] =
 {
