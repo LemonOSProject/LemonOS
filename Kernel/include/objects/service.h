@@ -42,6 +42,8 @@ public:
     Service(const char* _name);
     ~Service();
 
+    void Destroy();
+
     long CreateInterface(FancyRefPtr<MessageInterface>& rInterface, const char* name, uint16_t msgSize);
     long ResolveInterface(FancyRefPtr<MessageInterface>& interface, const char* name);
 

@@ -21,6 +21,15 @@
 #include <smp.h>
 #include <pair.h>
 #include <objects/service.h>
+#include <debug.h>
+#include <strace.h>
+
+#define SC_ARG0(r) r->rdi
+#define SC_ARG1(r) r->rsi
+#define SC_ARG2(r) r->rdx
+#define SC_ARG3(r) r->r10
+#define SC_ARG4(r) r->r9
+#define SC_ARG5(r) r->r8
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -101,19 +110,22 @@
 #define SYS_INTERFACE_CONNECT 79
 #define SYS_ENDPOINT_QUEUE 80
 #define SYS_ENDPOINT_DEQUEUE 81
-#define SYS_KERNELOBJECT_WAIT_ONE 82
-#define SYS_KERNELOBJECT_WAIT 83
+#define SYS_ENDPOINT_CALL 82
+#define SYS_ENDPOINT_INFO 83
+#define SYS_KERNELOBJECT_WAIT_ONE 84
+#define SYS_KERNELOBJECT_WAIT 85
+#define SYS_KERNELOBJECT_DESTROY 86
 
-#define NUM_SYSCALLS 84
+#define NUM_SYSCALLS 87
 
 #define EXEC_CHILD 1
 
 typedef long(*syscall_t)(regs64_t*);
 
 long SysExit(regs64_t* r){
-	int64_t code = r->rbx;
+	int64_t code = SC_ARG0(r);
 
-	Log::Info("Process %d exiting with code %d", Scheduler::GetCurrentProcess()->pid, code);
+	Log::Info("Process %s (PID: %d) exiting with code %d", Scheduler::GetCurrentProcess()->name, Scheduler::GetCurrentProcess()->pid, code);
 
 	Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 	return 0;
@@ -121,19 +133,20 @@ long SysExit(regs64_t* r){
 
 long SysExec(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
-	char filepath[strlen((char*)r->rbx) + 1];
+	char filepath[strlen((char*)SC_ARG0(r)) + 1];
 
 	size_t filePathLength;
-	long filePathInvalid = strlenSafe(reinterpret_cast<char*>(r->rbx), filePathLength, currentProcess->addressSpace);
+	long filePathInvalid = strlenSafe(reinterpret_cast<char*>(SC_ARG0(r)), filePathLength, currentProcess->addressSpace);
 	if(filePathInvalid){
+		Log::Warning("SysExec: Reached unallocated memory reading file path");
 		return -EFAULT;
 	}
 
-	strncpy(filepath, (char*)r->rbx, filePathLength);
-	int argc = r->rcx;
-	char** argv = (char**)r->rdx;
-	uint64_t flags = r->rsi;
-	char** envp = (char**)r->rdi;
+	strncpy(filepath, (char*)SC_ARG0(r), filePathLength);
+	int argc = SC_ARG1(r);
+	char** argv = (char**)SC_ARG2(r);
+	uint64_t flags = SC_ARG3(r);
+	char** envp = (char**)SC_ARG4(r);
 
 	FsNode* current_node = fs::ResolvePath(filepath, currentProcess->workingDir, true /* Follow Symlinks */);
 	if(!current_node){
@@ -152,6 +165,7 @@ long SysExec(regs64_t* r){
 		for(int i = 0; i < envCount; i++){
 			size_t len;
 			if(strlenSafe(envp[i], len, currentProcess->addressSpace)){
+				Log::Warning("SysExec: Reached unallocated memory reading environment");
 				return -EFAULT;
 			}
 			kernelEnvp[i] = (char*)kmalloc(len + 1);
@@ -160,7 +174,7 @@ long SysExec(regs64_t* r){
 		}
 	}
 
-	Log::Info("Loading: %s", (char*)r->rbx);
+	Log::Info("Loading: %s", (char*)SC_ARG0(r));
 	timeval_t tv = Timer::GetSystemUptimeStruct();
 	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
 	size_t read = fs::Read(current_node, 0, current_node->size, buffer);
@@ -224,21 +238,21 @@ long SysExec(regs64_t* r){
 
 long SysRead(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	if(r->rbx >= proc->fileDescriptors.get_length()){
-		Log::Warning("Invalid File Descriptor: %d", r->rbx);
+	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
+		Log::Warning("Invalid File Descriptor: %d", SC_ARG0(r));
 		return -EBADF;
 	}
-	fs_fd_t* handle = proc->fileDescriptors[r->rbx];
+	fs_fd_t* handle = proc->fileDescriptors[SC_ARG0(r)];
 	if(!handle){
-		Log::Warning("Invalid File Descriptor: %d", r->rbx);
+		Log::Warning("Invalid File Descriptor: %d", SC_ARG0(r));
 		return -EBADF;
 	}
 
-	uint8_t* buffer = (uint8_t*)r->rcx;
-	uint64_t count = r->rdx;
+	uint8_t* buffer = (uint8_t*)SC_ARG1(r);
+	uint64_t count = SC_ARG2(r);
 
-	if(!Memory::CheckUsermodePointer(r->rcx, count, proc->addressSpace)){
-		Log::Warning("Invalid Memory Buffer: %x", r->rcx);
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), count, proc->addressSpace)){
+		Log::Warning("Invalid Memory Buffer: %x", SC_ARG1(r));
 		return -EFAULT;
 	}
 
@@ -249,25 +263,25 @@ long SysRead(regs64_t* r){
 long SysWrite(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	if(r->rbx > proc->fileDescriptors.get_length()){
-		Log::Warning("Invalid File Descriptor: %d", r->rbx);
+	if(SC_ARG0(r) > proc->fileDescriptors.get_length()){
+		Log::Warning("Invalid File Descriptor: %d", SC_ARG0(r));
 		return -EBADF;
 	}
-	fs_fd_t* handle = proc->fileDescriptors[r->rbx];
+	fs_fd_t* handle = proc->fileDescriptors[SC_ARG0(r)];
 	if(!handle){
-		Log::Warning("Invalid File Descriptor: %d", r->rbx);
+		Log::Warning("Invalid File Descriptor: %d", SC_ARG0(r));
 		return -EBADF;
 	}
 
-	uint8_t* buffer = (uint8_t*)r->rcx;
-	uint64_t count = r->rdx;
+	uint8_t* buffer = (uint8_t*)SC_ARG1(r);
+	uint64_t count = SC_ARG2(r);
 
-	if(!Memory::CheckUsermodePointer(r->rcx, count, proc->addressSpace)){
-		Log::Warning("Invalid Memory Buffer: %x", r->rcx);
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), count, proc->addressSpace)){
+		Log::Warning("Invalid Memory Buffer: %x", SC_ARG1(r));
 		return -EFAULT;
 	}
 
-	ssize_t ret = fs::Write(handle, r->rdx, buffer);
+	ssize_t ret = fs::Write(handle, SC_ARG2(r), buffer);
 	return ret;
 }
 
@@ -280,11 +294,11 @@ long SysWrite(regs64_t* r){
  * On failure: return -1
  */
 long SysOpen(regs64_t* r){
-	char* filepath = (char*)kmalloc(strlen((char*)r->rbx) + 1);
-	strcpy(filepath, (char*)r->rbx);
+	char* filepath = (char*)kmalloc(strlen((char*)SC_ARG0(r)) + 1);
+	strcpy(filepath, (char*)SC_ARG0(r));
 	FsNode* root = fs::GetRoot();
 
-	uint64_t flags = r->rcx;
+	uint64_t flags = SC_ARG1(r);
 
 	process_t* proc = Scheduler::GetCurrentProcess();
 
@@ -333,7 +347,7 @@ open:
 		node->Truncate(0);
 	}
 
-	fs_fd_t* handle = fs::Open(node, r->rcx);
+	fs_fd_t* handle = fs::Open(node, SC_ARG1(r));
 
 	if(!handle){
 		Log::Warning("SysOpen: Error retrieving file handle for node. Dangling symlink?");
@@ -352,21 +366,22 @@ open:
 }
 
 long SysClose(regs64_t* r){
-	int fd = r->rbx;
+	int fd = SC_ARG0(r);
 	
-	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
-		Log::Warning("sys_close: Invalid File Descriptor, %d", fd);
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	if(fd >= static_cast<int>(currentProcess->fileDescriptors.get_length())){
+		Log::Warning("SysClose: Invalid File Descriptor, %d", fd);
 		return -EBADF;
 	}
 
 	fs_fd_t* handle;
-	if((handle = Scheduler::GetCurrentProcess()->fileDescriptors[fd])){
+	if((handle = currentProcess->fileDescriptors.at(fd))){
 		fs::Close(handle);
+
+		handle->node = nullptr;
+
+		Scheduler::GetCurrentProcess()->fileDescriptors.at(fd) = nullptr;
 	}
-
-	handle->node = nullptr;
-
-	Scheduler::GetCurrentProcess()->fileDescriptors[fd] = nullptr;
 	return 0;
 }
 
@@ -379,12 +394,12 @@ long SysCreate(regs64_t* r){
 }
 
 long SysLink(regs64_t* r){
-	const char* oldpath = (const char*)r->rbx;
-	const char* newpath = (const char*)r->rcx;
+	const char* oldpath = (const char*)SC_ARG0(r);
+	const char* newpath = (const char*)SC_ARG1(r);
 
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	if(!(Memory::CheckUsermodePointer(r->rbx, 1, proc->addressSpace) && Memory::CheckUsermodePointer(r->rcx, 1, proc->addressSpace))){
+	if(!(Memory::CheckUsermodePointer(SC_ARG0(r), 1, proc->addressSpace) && Memory::CheckUsermodePointer(SC_ARG1(r), 1, proc->addressSpace))){
 		Log::Warning("sys_link: Invalid path pointer");
 		return -EFAULT;
 	}
@@ -416,11 +431,11 @@ long SysLink(regs64_t* r){
 }
 
 long SysUnlink(regs64_t* r){
-	const char* path = (const char*)r->rbx;
+	const char* path = (const char*)SC_ARG0(r);
 	
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	if(!Memory::CheckUsermodePointer(r->rbx, 1, proc->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 1, proc->addressSpace)){
 		Log::Warning("sys_unlink: Invalid path pointer");
 		return -EFAULT;
 	}
@@ -444,8 +459,8 @@ long SysUnlink(regs64_t* r){
 }
 
 long SysChdir(regs64_t* r){
-	if(r->rbx){
-		char* path =  fs::CanonicalizePath((char*)r->rbx, Scheduler::GetCurrentProcess()->workingDir);
+	if(SC_ARG0(r)){
+		char* path =  fs::CanonicalizePath((char*)SC_ARG0(r), Scheduler::GetCurrentProcess()->workingDir);
 		FsNode* n = fs::ResolvePath(path);
 		if(!n) {
 			Log::Warning("chdir: Could not find %s", path);
@@ -482,15 +497,15 @@ long SysMapFB(regs64_t *r){
 
 	if(HAL::debugMode) fbInfo.height = vMode.height / 3 * 2;
 
-	*((uintptr_t*)r->rbx) = fbVirt;
-	*((fb_info_t*)r->rcx) = fbInfo;
+	*((uintptr_t*)SC_ARG0(r)) = fbVirt;
+	*((fb_info_t*)SC_ARG1(r)) = fbInfo;
 	
 	return 0;
 }
 
 long SysAlloc(regs64_t* r){
-	uint64_t pageCount = r->rbx;
-	uintptr_t* addressPointer = (uintptr_t*)r->rcx;
+	uint64_t pageCount = SC_ARG0(r);
+	uintptr_t* addressPointer = (uintptr_t*)SC_ARG1(r);
 
 	uintptr_t address = (uintptr_t)Memory::Allocate4KPages(pageCount, Scheduler::GetCurrentProcess()->addressSpace);
 
@@ -511,8 +526,8 @@ long SysChmod(regs64_t* r){
 }
 
 long SysFStat(regs64_t* r){
-	stat_t* stat = (stat_t*)r->rbx;
-	int fd = r->rcx;
+	stat_t* stat = (stat_t*)SC_ARG0(r);
+	int fd = SC_ARG1(r);
 
 	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
 		Log::Warning("sys_fstat: Invalid File Descriptor, %d", fd);
@@ -547,17 +562,17 @@ long SysFStat(regs64_t* r){
 }
 
 long SysStat(regs64_t* r){
-	stat_t* stat = (stat_t*)r->rbx;
-	char* filepath = (char*)r->rcx;
-	uint64_t flags = r->rdx;
+	stat_t* stat = (stat_t*)SC_ARG0(r);
+	char* filepath = (char*)SC_ARG1(r);
+	uint64_t flags = SC_ARG2(r);
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	if(!Memory::CheckUsermodePointer(r->rbx, sizeof(stat_t), proc->addressSpace)){
-		Log::Warning("sys_stat: stat structure points to invalid address %x", r->rbx);
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(stat_t), proc->addressSpace)){
+		Log::Warning("sys_stat: stat structure points to invalid address %x", SC_ARG0(r));
 	}
 	
-	if(!Memory::CheckUsermodePointer(r->rcx, 1, proc->addressSpace)){
-		Log::Warning("sys_stat: filepath points to invalid address %x", r->rbx);
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), 1, proc->addressSpace)){
+		Log::Warning("sys_stat: filepath points to invalid address %x", SC_ARG0(r));
 	}
 
 	bool followSymlinks = !(flags & AT_SYMLINK_NOFOLLOW);
@@ -592,16 +607,16 @@ long SysStat(regs64_t* r){
 
 long SysLSeek(regs64_t* r){
 	long ret = 0;
-	int fd = r->rbx;
+	int fd = SC_ARG0(r);
 
 	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length()) || !Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
 		Log::Warning("sys_lseek: Invalid File Descriptor, %d", fd);
 		return -1;
 	}
 
-	switch(r->rdx){
+	switch(SC_ARG2(r)){
 	case 0: // SEEK_SET
-		ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->pos = r->rcx;
+		ret = Scheduler::GetCurrentProcess()->fileDescriptors[fd]->pos = SC_ARG1(r);
 		return ret;
 		break;
 	case 1: // SEEK_CUR
@@ -613,7 +628,7 @@ long SysLSeek(regs64_t* r){
 		return ret;
 		break;
 	default:
-		Log::Info("Invalid seek: %d, mode: %d", fd, r->rdx);
+		Log::Info("Invalid seek: %d, mode: %d", fd, SC_ARG2(r));
 		return -1; // Invalid seek mode
 		break;
 	}
@@ -622,7 +637,7 @@ long SysLSeek(regs64_t* r){
 }
 
 long SysGetPID(regs64_t* r){
-	uint64_t* pid = (uint64_t*)r->rbx;
+	uint64_t* pid = (uint64_t*)SC_ARG0(r);
 
 	*pid = Scheduler::GetCurrentProcess()->pid;
 	
@@ -634,13 +649,13 @@ long SysMount(regs64_t* r){
 }
 
 long SysMkdir(regs64_t* r){
-	char* path = (char*)r->rbx;
-	mode_t mode = r->rcx;
+	char* path = (char*)SC_ARG0(r);
+	mode_t mode = SC_ARG1(r);
 
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	if(!Memory::CheckUsermodePointer(r->rbx, 0, proc->addressSpace)){
-		Log::Warning("sys_mkdir: Invalid path pointer %x", r->rbx);
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 0, proc->addressSpace)){
+		Log::Warning("sys_mkdir: Invalid path pointer %x", SC_ARG0(r));
 		return -EFAULT;
 	}
 
@@ -668,11 +683,11 @@ long SysMkdir(regs64_t* r){
 
 long SysRmdir(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	if(!Memory::CheckUsermodePointer(r->rbx, 1, proc->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 1, proc->addressSpace)){
 		return -EFAULT;
 	}
 
-	char* path = reinterpret_cast<char*>(r->rbx);
+	char* path = reinterpret_cast<char*>(SC_ARG0(r));
 	FsNode* node = fs::ResolvePath(path, proc->workingDir);
 	if(!node){
 		return -ENOENT;
@@ -696,18 +711,18 @@ long SysRmdir(regs64_t* r){
 }
 
 long SysRename(regs64_t* r){
-	char* oldpath = (char*)r->rbx;
-	char* newpath = (char*)r->rcx;
+	char* oldpath = (char*)SC_ARG0(r);
+	char* newpath = (char*)SC_ARG1(r);
 
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	if(!Memory::CheckUsermodePointer(r->rbx, 0, proc->addressSpace)){
-		Log::Warning("sys_rename: Invalid oldpath pointer %x", r->rbx);
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 0, proc->addressSpace)){
+		Log::Warning("sys_rename: Invalid oldpath pointer %x", SC_ARG0(r));
 		return -EFAULT;
 	}
 	
-	if(!Memory::CheckUsermodePointer(r->rcx, 0, proc->addressSpace)){
-		Log::Warning("sys_rename: Invalid newpath pointer %x", r->rbx);
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), 0, proc->addressSpace)){
+		Log::Warning("sys_rename: Invalid newpath pointer %x", SC_ARG0(r));
 		return -EFAULT;
 	}
 
@@ -739,12 +754,12 @@ long SysYield(regs64_t* r){
  * 
  */
 long SysReadDirNext(regs64_t* r){
-	unsigned int fd = r->rbx;
+	unsigned int fd = SC_ARG0(r);
 	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 		return -EBADF;
 	} 
 	
-	fs_dirent_t* direntPointer = (fs_dirent_t*)r->rcx;
+	fs_dirent_t* direntPointer = (fs_dirent_t*)SC_ARG1(r);
 	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[fd];
 
 	if(!handle){
@@ -784,8 +799,8 @@ long SysReceiveMessage(regs64_t* r){
 }
 
 long SysUptime(regs64_t* r){
-	uint64_t* seconds = (uint64_t*)r->rbx;
-	uint64_t* milliseconds = (uint64_t*)r->rcx;
+	uint64_t* seconds = (uint64_t*)SC_ARG0(r);
+	uint64_t* milliseconds = (uint64_t*)SC_ARG1(r);
 	if(seconds){
 		*seconds = Timer::GetSystemUptime();
 	}
@@ -796,7 +811,7 @@ long SysUptime(regs64_t* r){
 }
 
 long SysDebug(regs64_t* r){
-	Log::Info("%s, %d", (char*)r->rbx, r->rcx);
+	Log::Info("%s, %d", (char*)SC_ARG0(r), SC_ARG1(r));
 	return 0;
 }
 
@@ -809,32 +824,32 @@ long SysGetVideoMode(regs64_t* r){
 	fbInfo.bpp = vMode.bpp;
 	fbInfo.pitch = vMode.pitch;
 
-	*((fb_info_t*)r->rbx) = fbInfo;
+	*((fb_info_t*)SC_ARG0(r)) = fbInfo;
 
 	return 0;
 }
 
 long SysUName(regs64_t* r){
-	char* str = (char*)r->rbx;
+	char* str = (char*)SC_ARG0(r);
 	strcpy(str, Lemon::versionString);
 
 	return 0;
 }
 
 long SysReadDir(regs64_t* r){
-	int fd = r->rbx;
+	int fd = SC_ARG0(r);
 
 	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
 		return -EBADF;
 	} 
 	
-	fs_dirent_t* direntPointer = (fs_dirent_t*)r->rcx;
+	fs_dirent_t* direntPointer = (fs_dirent_t*)SC_ARG1(r);
 
-	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(fs_dirent_t), Scheduler::GetCurrentProcess()->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(fs_dirent_t), Scheduler::GetCurrentProcess()->addressSpace)){
 		return -EFAULT;
 	}
 
-	unsigned int count = r->rdx;
+	unsigned int count = SC_ARG2(r);
 
 	if((Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
 		return -ENOTDIR;
@@ -850,15 +865,15 @@ long SysReadDir(regs64_t* r){
 }
 
 long SysSetFsBase(regs64_t* r){
-	asm volatile ("wrmsr" :: "a"(r->rbx & 0xFFFFFFFF) /*Value low*/, "d"((r->rbx >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
-	GetCPULocal()->currentThread->fsBase = r->rbx;
+	asm volatile ("wrmsr" :: "a"(SC_ARG0(r) & 0xFFFFFFFF) /*Value low*/, "d"((SC_ARG0(r) >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
+	GetCPULocal()->currentThread->fsBase = SC_ARG0(r);
 	return 0;
 }
 
 long SysMmap(regs64_t* r){
-	uint64_t* address = (uint64_t*)r->rbx;
-	size_t count = r->rcx;
-	uintptr_t hint = r->rdx;
+	uint64_t* address = (uint64_t*)SC_ARG0(r);
+	size_t count = SC_ARG1(r);
+	uintptr_t hint = SC_ARG2(r);
 
 	uintptr_t _address;
 	if(hint){
@@ -882,13 +897,13 @@ long SysMmap(regs64_t* r){
 }
 
 long SysGrantPTY(regs64_t* r){
-	if(!r->rbx) return 1;
+	if(!SC_ARG0(r)) return 1;
 
 	PTY* pty = GrantPTY(Scheduler::GetCurrentProcess()->pid);
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
-	*((int*)r->rbx) = currentProcess->fileDescriptors.get_length();
+	*((int*)SC_ARG0(r)) = currentProcess->fileDescriptors.get_length();
 	
 	currentProcess->fileDescriptors[0] = fs::Open(&pty->slaveFile); // Stdin
 	currentProcess->fileDescriptors[1] = fs::Open(&pty->slaveFile); // Stdout
@@ -900,8 +915,8 @@ long SysGrantPTY(regs64_t* r){
 }
 
 long SysGetCWD(regs64_t* r){
-	char* buf = (char*)r->rbx;
-	size_t sz = r->rcx;
+	char* buf = (char*)SC_ARG0(r);
+	size_t sz = SC_ARG1(r);
 
 	char* workingDir = Scheduler::GetCurrentProcess()->workingDir;
 	if(strlen(workingDir) > sz) {
@@ -915,7 +930,7 @@ long SysGetCWD(regs64_t* r){
 }
 
 long SysWaitPID(regs64_t* r){
-	uint64_t pid = r->rbx;
+	uint64_t pid = SC_ARG0(r);
 
 	lock_t unused = 0;
 	process_t* proc = nullptr;
@@ -932,7 +947,7 @@ long SysWaitPID(regs64_t* r){
 }
 
 long SysNanoSleep(regs64_t* r){
-	uint64_t nanoseconds = r->rbx;
+	uint64_t nanoseconds = SC_ARG0(r);
 
 	uint64_t ticks = nanoseconds * Timer::GetFrequency() / 1000000000;
 	Timer::SleepCurrentThread(ticks);
@@ -941,68 +956,68 @@ long SysNanoSleep(regs64_t* r){
 }
 
 long SysPRead(regs64_t* r){
-	if(r->rbx > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+	if(SC_ARG0(r) > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 		return -EBADF;
 	}
 	FsNode* node;
-	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx)->node)){ 
-		Log::Warning("sys_pread: Invalid file descriptor: %d", r->rbx);
+	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(SC_ARG0(r)) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(SC_ARG0(r))->node)){ 
+		Log::Warning("sys_pread: Invalid file descriptor: %d", SC_ARG0(r));
 		return -EBADF; 
 	}
 	
-	if(!Memory::CheckUsermodePointer(r->rcx, r->rdx, Scheduler::GetCurrentProcess()->addressSpace)) {
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), SC_ARG2(r), Scheduler::GetCurrentProcess()->addressSpace)) {
 		return -EFAULT;
 	}
 
-	uint8_t* buffer = (uint8_t*)r->rcx;
-	uint64_t count = r->rdx;
-	uint64_t off = r->rdi;
+	uint8_t* buffer = (uint8_t*)SC_ARG1(r);
+	uint64_t count = SC_ARG2(r);
+	uint64_t off = SC_ARG4(r);
 	return fs::Read(node, off, count, buffer);
 }
 
 long SysPWrite(regs64_t* r){
-	if(r->rbx > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+	if(SC_ARG0(r) > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 		return -EBADF;
 	}
 	FsNode* node;
-	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(r->rbx)->node)){ 
-		Log::Warning("sys_pwrite: Invalid file descriptor: %d", r->rbx);
+	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(SC_ARG0(r)) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(SC_ARG0(r))->node)){ 
+		Log::Warning("sys_pwrite: Invalid file descriptor: %d", SC_ARG0(r));
 		return -EBADF;
 	}
 
-	if(!Memory::CheckUsermodePointer(r->rcx, r->rdx, Scheduler::GetCurrentProcess()->addressSpace)) {
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), SC_ARG2(r), Scheduler::GetCurrentProcess()->addressSpace)) {
 		return -EFAULT;
 	}
 
-	uint64_t off = r->rdi;
+	uint64_t off = SC_ARG4(r);
 
-	return fs::Write(node, off, r->rdx, (uint8_t*)r->rcx);
+	return fs::Write(node, off, SC_ARG2(r), (uint8_t*)SC_ARG1(r));
 }
 
 long SysIoctl(regs64_t* r){
-	int fd = r->rbx;
-	uint64_t request = r->rcx;
-	uint64_t arg = r->rdx;
-	int* result = (int*)r->rsi;
+	int fd = SC_ARG0(r);
+	uint64_t request = SC_ARG1(r);
+	uint64_t arg = SC_ARG2(r);
+	int* result = (int*)SC_ARG3(r);
 
 	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
 		return -1;
 	}
-	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[r->rbx];
+	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[SC_ARG0(r)];
 	if(!handle){
-		Log::Warning("sys_ioctl: Invalid File Descriptor: %d", r->rbx);
+		Log::Warning("sys_ioctl: Invalid File Descriptor: %d", SC_ARG0(r));
 		return -2;
 	}
 
 	int ret = fs::Ioctl(handle, request, arg);
 
-	if(result) *result = ret;
+	if(result && Memory::CheckUsermodePointer(SC_ARG3(r), sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)) *result = ret;
 
 	return ret;
 }
 
 long SysInfo(regs64_t* r){
-	lemon_sysinfo_t* s = (lemon_sysinfo_t*)r->rbx;
+	lemon_sysinfo_t* s = (lemon_sysinfo_t*)SC_ARG0(r);
 
 	if(!s){
 		return -1;
@@ -1022,8 +1037,8 @@ long SysInfo(regs64_t* r){
  * On failure - return -1
  */
 long SysMunmap(regs64_t* r){
-	uint64_t address = r->rbx;
-	size_t count = r->rcx;
+	uint64_t address = SC_ARG0(r);
+	size_t count = SC_ARG1(r);
 	
 	if(Memory::CheckRegion(address, count * PAGE_SIZE_4K, Scheduler::GetCurrentProcess()->addressSpace) /*Check availibilty of the requested map*/){
 		//Memory::Free4KPages((void*)address, count, Scheduler::GetCurrentProcess()->addressSpace);
@@ -1045,10 +1060,10 @@ long SysMunmap(regs64_t* r){
  * On Failure - Return -1, key null
  */
 long SysCreateSharedMemory(regs64_t* r){
-	uint64_t* key = (uint64_t*)r->rbx;
-	uint64_t size = r->rcx;
-	uint64_t flags = r->rdx;
-	uint64_t recipient = r->rsi;
+	int64_t* key = (int64_t*)SC_ARG0(r);
+	uint64_t size = SC_ARG1(r);
+	uint64_t flags = SC_ARG2(r);
+	uint64_t recipient = SC_ARG3(r);
 
 	*key = Memory::CreateSharedMemory(size, flags, Scheduler::GetCurrentProcess()->pid, recipient);
 
@@ -1067,9 +1082,9 @@ long SysCreateSharedMemory(regs64_t* r){
  * On Failure - ptr = 0
  */
 long SysMapSharedMemory(regs64_t* r){
-	void** ptr = (void**)r->rbx;
-	uint64_t key = r->rcx;
-	uint64_t hint = r->rdx;
+	void** ptr = (void**)SC_ARG0(r);
+	int64_t key = SC_ARG1(r);
+	uint64_t hint = SC_ARG2(r);
 
 	*ptr = Memory::MapSharedMemory(key,Scheduler::GetCurrentProcess(), hint);
 
@@ -1085,8 +1100,8 @@ long SysMapSharedMemory(regs64_t* r){
  * On Failure - return -1
  */
 long SysUnmapSharedMemory(regs64_t* r){
-	uint64_t address = r->rbx;
-	uint64_t key = r->rcx;
+	uint64_t address = SC_ARG0(r);
+	int64_t key = SC_ARG1(r);
 
 	shared_mem_t* sMem = Memory::GetSharedMemory(key);
 	if(!sMem) return -1;
@@ -1111,7 +1126,7 @@ long SysUnmapSharedMemory(regs64_t* r){
  * On Failure - return -1
  */
 long SysDestroySharedMemory(regs64_t* r){
-	uint64_t key = r->rbx;
+	uint64_t key = SC_ARG0(r);
 
 	if(Memory::CanModifySharedMemory(Scheduler::GetCurrentProcess()->pid, key)){
 		Memory::DestroySharedMemory(key);
@@ -1130,9 +1145,9 @@ long SysDestroySharedMemory(regs64_t* r){
  * On Failure - return -1
  */
 long SysSocket(regs64_t* r){
-	int domain = r->rbx;
-	int type = r->rcx;
-	int protocol = r->rdx;
+	int domain = SC_ARG0(r);
+	int type = SC_ARG1(r);
+	int protocol = SC_ARG2(r);
 
 	Socket* sock = Socket::CreateSocket(domain, type, protocol);
 
@@ -1160,21 +1175,21 @@ long SysSocket(regs64_t* r){
  */
 long SysBind(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
-		Log::Warning("sys_bind: Invalid file descriptor: ", r->rbx);
+		Log::Warning("sys_bind: Invalid file descriptor: ", SC_ARG0(r));
 		return -1; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_bind: File (Descriptor: %d) is not a socket", r->rbx);
+		Log::Warning("sys_bind: File (Descriptor: %d) is not a socket", SC_ARG0(r));
 		return -2;
 	}
 
-	socklen_t len = r->rdx;
+	socklen_t len = SC_ARG2(r);
 	
-	sockaddr_t* addr = (sockaddr_t*)r->rcx;
-	if(!Memory::CheckUsermodePointer(r->rcx, len, proc->addressSpace)){
+	sockaddr_t* addr = (sockaddr_t*)SC_ARG1(r);
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
 		Log::Warning("sys_bind: Invalid sockaddr ptr");
 		return -3;
 	}
@@ -1193,19 +1208,19 @@ long SysBind(regs64_t* r){
  */
 long SysListen(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
-		Log::Warning("sys_listen: Invalid file descriptor: ", r->rbx);
+		Log::Warning("sys_listen: Invalid file descriptor: ", SC_ARG0(r));
 		return -1; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_listen: File (Descriptor: %d) is not a socket", r->rbx);
+		Log::Warning("sys_listen: File (Descriptor: %d) is not a socket", SC_ARG0(r));
 		return -2;
 	}
 
 	Socket* sock = (Socket*)handle->node;
-	return sock->Listen(r->rcx);
+	return sock->Listen(SC_ARG1(r));
 }
 
 /* 
@@ -1219,25 +1234,25 @@ long SysListen(regs64_t* r){
  */
 long SysAccept(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
-		Log::Warning("sys_accept: Invalid file descriptor: ", r->rbx);
+		Log::Warning("sys_accept: Invalid file descriptor: ", SC_ARG0(r));
 		return -1; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_accept: File (Descriptor: %d) is not a socket", r->rbx);
+		Log::Warning("sys_accept: File (Descriptor: %d) is not a socket", SC_ARG0(r));
 		return -2;
 	}
 
-	socklen_t* len = (socklen_t*)r->rdx;
-	if(len && !Memory::CheckUsermodePointer(r->rdx, sizeof(socklen_t), proc->addressSpace)){
+	socklen_t* len = (socklen_t*)SC_ARG2(r);
+	if(len && !Memory::CheckUsermodePointer(SC_ARG2(r), sizeof(socklen_t), proc->addressSpace)){
 		Log::Warning("sys_accept: Invalid socklen ptr");
 		return -3;
 	}
 	
-	sockaddr_t* addr = (sockaddr_t*)r->rcx;
-	if(addr && !Memory::CheckUsermodePointer(r->rcx, *len, proc->addressSpace)){
+	sockaddr_t* addr = (sockaddr_t*)SC_ARG1(r);
+	if(addr && !Memory::CheckUsermodePointer(SC_ARG1(r), *len, proc->addressSpace)){
 		Log::Warning("sys_accept: Invalid sockaddr ptr");
 		return -3;
 	}
@@ -1270,21 +1285,21 @@ long SysAccept(regs64_t* r){
  */
 long SysConnect(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
-		Log::Warning("sys_connect: Invalid file descriptor: ", r->rbx);
+		Log::Warning("sys_connect: Invalid file descriptor: ", SC_ARG0(r));
 		return -1; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_connect: File (Descriptor: %d) is not a socket", r->rbx);
+		Log::Warning("sys_connect: File (Descriptor: %d) is not a socket", SC_ARG0(r));
 		return -2;
 	}
 
-	socklen_t len = r->rdx;
+	socklen_t len = SC_ARG2(r);
 	
-	sockaddr_t* addr = (sockaddr_t*)r->rcx;
-	if(!Memory::CheckUsermodePointer(r->rcx, len, proc->addressSpace)){
+	sockaddr_t* addr = (sockaddr_t*)SC_ARG1(r);
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
 		Log::Warning("sys_connect: Invalid sockaddr ptr");
 		return -3;
 	}
@@ -1305,23 +1320,23 @@ long SysConnect(regs64_t* r){
  */
 long SysSend(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
-	uint8_t* buffer = (uint8_t*)(r->rcx);
-	size_t len = r->rdx;
-	uint64_t flags = r->rsi;
+	uint8_t* buffer = (uint8_t*)(SC_ARG1(r));
+	size_t len = SC_ARG2(r);
+	uint64_t flags = SC_ARG3(r);
 
 	if(!handle){ 
-		Log::Warning("sys_send: Invalid file descriptor: ", r->rbx);
+		Log::Warning("sys_send: Invalid file descriptor: ", SC_ARG0(r));
 		return -1; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", r->rbx);
+		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", SC_ARG0(r));
 		return -2;
 	}
 	
-	if(!Memory::CheckUsermodePointer(r->rcx, len, proc->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
 		Log::Warning("sys_send: Invalid buffer ptr");
 		return -3;
 	}
@@ -1343,30 +1358,30 @@ long SysSend(regs64_t* r){
  */
 long SysSendTo(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
-	uint8_t* buffer = (uint8_t*)(r->rcx);
-	size_t len = r->rdx;
-	uint64_t flags = r->rsi;
+	uint8_t* buffer = (uint8_t*)(SC_ARG1(r));
+	size_t len = SC_ARG2(r);
+	uint64_t flags = SC_ARG3(r);
 
 	if(!handle){ 
-		Log::Warning("sys_send: Invalid file descriptor: ", r->rbx);
+		Log::Warning("sys_send: Invalid file descriptor: ", SC_ARG0(r));
 		return -1; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", r->rbx);
+		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", SC_ARG0(r));
 		return -2;
 	}
 	
-	if(!Memory::CheckUsermodePointer(r->rcx, len, proc->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
 		Log::Warning("sys_send: Invalid buffer ptr");
 		return -3;
 	}
 	
-	socklen_t slen = r->rdx;
+	socklen_t slen = SC_ARG2(r);
 	
-	sockaddr_t* addr = (sockaddr_t*)r->rcx;
+	sockaddr_t* addr = (sockaddr_t*)SC_ARG1(r);
 
 	Socket* sock = (Socket*)handle->node;
 	return sock->SendTo(buffer, len, flags, addr, slen);
@@ -1384,23 +1399,23 @@ long SysSendTo(regs64_t* r){
  */
 long SysReceive(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
-	uint8_t* buffer = (uint8_t*)(r->rcx);
-	size_t len = r->rdx;
-	uint64_t flags = r->rsi;
+	uint8_t* buffer = (uint8_t*)(SC_ARG1(r));
+	size_t len = SC_ARG2(r);
+	uint64_t flags = SC_ARG3(r);
 
 	if(!handle){ 
-		Log::Warning("sys_send: Invalid file descriptor: ", r->rbx);
+		Log::Warning("sys_send: Invalid file descriptor: ", SC_ARG0(r));
 		return -1; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", r->rbx);
+		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", SC_ARG0(r));
 		return -2;
 	}
 	
-	if(!Memory::CheckUsermodePointer(r->rcx, len, proc->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
 		Log::Warning("sys_send: Invalid buffer ptr");
 		return -3;
 	}
@@ -1422,30 +1437,30 @@ long SysReceive(regs64_t* r){
  */
 long SysReceiveFrom(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
-	uint8_t* buffer = (uint8_t*)(r->rcx);
-	size_t len = r->rdx;
-	uint64_t flags = r->rsi;
+	uint8_t* buffer = (uint8_t*)(SC_ARG1(r));
+	size_t len = SC_ARG2(r);
+	uint64_t flags = SC_ARG3(r);
 
 	if(!handle){ 
-		Log::Warning("sys_send: Invalid file descriptor: ", r->rbx);
+		Log::Warning("sys_send: Invalid file descriptor: ", SC_ARG0(r));
 		return -1; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", r->rbx);
+		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", SC_ARG0(r));
 		return -2;
 	}
 	
-	if(!Memory::CheckUsermodePointer(r->rcx, len, proc->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
 		Log::Warning("sys_send: Invalid buffer ptr");
 		return -3;
 	}
 	
-	socklen_t* slen = (socklen_t*)r->rdx;
+	socklen_t* slen = (socklen_t*)SC_ARG2(r);
 	
-	sockaddr_t* addr = (sockaddr_t*)r->rcx;
+	sockaddr_t* addr = (sockaddr_t*)SC_ARG1(r);
 
 	Socket* sock = (Socket*)handle->node;
 	return sock->ReceiveFrom(buffer, len, flags, addr, slen);
@@ -1481,13 +1496,13 @@ long SysSetUID(regs64_t* r){
  * On Failure - return -1
  */
 long SysPoll(regs64_t* r){
-	pollfd* fds = (pollfd*)r->rbx;
-	unsigned nfds = r->rcx;
-	long timeout = r->rdx;
+	pollfd* fds = (pollfd*)SC_ARG0(r);
+	unsigned nfds = SC_ARG1(r);
+	long timeout = SC_ARG2(r);
 
 	thread_t* thread = GetCPULocal()->currentThread;
 	process_t* proc = Scheduler::GetCurrentProcess();
-	if(!Memory::CheckUsermodePointer(r->rbx, nfds * sizeof(pollfd), proc->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), nfds * sizeof(pollfd), proc->addressSpace)){
 		Log::Warning("sys_poll: Invalid pointer to file descriptor array");
 		return -EFAULT;
 	}
@@ -1614,27 +1629,27 @@ long SysPoll(regs64_t* r){
 long SysSendMsg(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	if(r->rbx >= proc->fileDescriptors.get_length()){
-		Log::Warning("sys_sendmsg: Invalid File Descriptor: %d", r->rbx);
+	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
+		Log::Warning("sys_sendmsg: Invalid File Descriptor: %d", SC_ARG0(r));
 		return -1;
 	}
 
-	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
-	msghdr* msg = (msghdr*)r->rcx;
-	uint64_t flags = r->rsi;
+	msghdr* msg = (msghdr*)SC_ARG1(r);
+	uint64_t flags = SC_ARG3(r);
 
 	if(!handle){ 
-		Log::Warning("sys_sendmsg: Invalid file descriptor: ", r->rbx);
+		Log::Warning("sys_sendmsg: Invalid file descriptor: ", SC_ARG0(r));
 		return -1; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_sendmsg: File (Descriptor: %d) is not a socket", r->rbx);
+		Log::Warning("sys_sendmsg: File (Descriptor: %d) is not a socket", SC_ARG0(r));
 		return -2;
 	}
 	
-	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(msghdr), proc->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(msghdr), proc->addressSpace)){
 		Log::Warning("sys_sendmsg: Invalid msg ptr");
 		return -EFAULT;
 	}
@@ -1680,27 +1695,27 @@ long SysSendMsg(regs64_t* r){
 long SysRecvMsg(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	if(r->rbx >= proc->fileDescriptors.get_length()){
-		Log::Warning("sys_sendmsg: Invalid File Descriptor: %d", r->rbx);
+	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
+		Log::Warning("sys_sendmsg: Invalid File Descriptor: %d", SC_ARG0(r));
 		return -1;
 	}
 
-	fs_fd_t* handle = proc->fileDescriptors.get_at(r->rbx);
+	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
-	msghdr* msg = (msghdr*)r->rcx;
-	uint64_t flags = r->rsi;
+	msghdr* msg = (msghdr*)SC_ARG1(r);
+	uint64_t flags = SC_ARG3(r);
 
 	if(!handle){ 
-		Log::Warning("sys_recvmsg: Invalid file descriptor: ", r->rbx);
+		Log::Warning("sys_recvmsg: Invalid file descriptor: ", SC_ARG0(r));
 		return -1; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_recvmsg: File (Descriptor: %d) is not a socket", r->rbx);
+		Log::Warning("sys_recvmsg: File (Descriptor: %d) is not a socket", SC_ARG0(r));
 		return -2;
 	}
 	
-	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(msghdr), proc->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(msghdr), proc->addressSpace)){
 		Log::Warning("sys_recvmsg: Invalid msg ptr");
 		return -EFAULT;
 	}
@@ -1763,11 +1778,11 @@ long SysSetEUID(regs64_t* r){
 /// \return On Failure - Return error as negative value
 /////////////////////////////
 long SysGetProcessInfo(regs64_t* r){
-	uint64_t pid = r->rbx;
-	process_info_t* pInfo = reinterpret_cast<process_info_t*>(r->rcx);
+	uint64_t pid = SC_ARG0(r);
+	process_info_t* pInfo = reinterpret_cast<process_info_t*>(SC_ARG1(r));
 
 	process_t* cProcess = Scheduler::GetCurrentProcess();
-	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(process_info_t), cProcess->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(process_info_t), cProcess->addressSpace)){
 		return -EFAULT;
 	}
 
@@ -1804,15 +1819,15 @@ long SysGetProcessInfo(regs64_t* r){
 /// On Failure - Return error as negative value
 /////////////////////////////
 long SysGetNextProcessInfo(regs64_t* r){
-	uint64_t* pidP = reinterpret_cast<uint64_t*>(r->rbx);
-	process_info_t* pInfo = reinterpret_cast<process_info_t*>(r->rcx);
+	uint64_t* pidP = reinterpret_cast<uint64_t*>(SC_ARG0(r));
+	process_info_t* pInfo = reinterpret_cast<process_info_t*>(SC_ARG1(r));
 
 	process_t* cProcess = Scheduler::GetCurrentProcess();
-	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(process_info_t), cProcess->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(process_info_t), cProcess->addressSpace)){
 		return -EFAULT;
 	}
 
-	if(!Memory::CheckUsermodePointer(r->rbx, sizeof(uint64_t), cProcess->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(uint64_t), cProcess->addressSpace)){
 		return -EFAULT;
 	}
 
@@ -1857,17 +1872,17 @@ long SysGetNextProcessInfo(regs64_t* r){
 long SysReadLink(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	if(!Memory::CheckUsermodePointer(r->rbx, 0, proc->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 0, proc->addressSpace)){
 		return -EFAULT; // Invalid path pointer
 	}
 
-	if(!Memory::CheckUsermodePointer(r->rcx, r->rdx, proc->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), SC_ARG2(r), proc->addressSpace)){
 		return -EFAULT; // Invalid buffer
 	}
 
-	const char* path = reinterpret_cast<const char*>(r->rbx);
-	char* buffer = reinterpret_cast<char*>(r->rcx);
-	size_t bufferSize = r->rdx;
+	const char* path = reinterpret_cast<const char*>(SC_ARG0(r));
+	char* buffer = reinterpret_cast<char*>(SC_ARG1(r));
+	size_t bufferSize = SC_ARG2(r);
 
 	FsNode* link = fs::ResolvePath(path);
 	if(!link){
@@ -1886,7 +1901,7 @@ long SysReadLink(regs64_t* r){
 /// \return (pid_t) thread id
 /////////////////////////////
 long SysSpawnThread(regs64_t* r){
-	return Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), r->rbx, r->rcx);
+	return Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), SC_ARG0(r), SC_ARG1(r));
 }
 
 /////////////////////////////
@@ -1915,9 +1930,9 @@ long SysExitThread(regs64_t* r){
 /// \return 0 on success, error code on failure
 /////////////////////////////
 long SysFutexWake(regs64_t* r){
-	int* futex = reinterpret_cast<int*>(r->rbx);
+	int* futex = reinterpret_cast<int*>(SC_ARG0(r));
 
-	if(!Memory::CheckUsermodePointer(r->rbx, sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)){
 		return EFAULT;
 	}
 
@@ -1951,13 +1966,13 @@ long SysFutexWake(regs64_t* r){
 /// \return 0 on success, error code on failure
 /////////////////////////////
 long SysFutexWait(regs64_t* r){
-	int* futex = reinterpret_cast<int*>(r->rbx);
+	int* futex = reinterpret_cast<int*>(SC_ARG0(r));
 
-	if(!Memory::CheckUsermodePointer(r->rbx, sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)){
 		return EFAULT;
 	}
 
-	int expected = static_cast<int>(r->rcx);
+	int expected = static_cast<int>(SC_ARG1(r));
 
 	if(*futex != expected){
 		return 0;
@@ -1989,7 +2004,7 @@ long SysFutexWait(regs64_t* r){
 /// \return new file descriptor (int) on success, negative error code on failure
 /////////////////////////////
 long SysDup(regs64_t* r){
-	int fd = static_cast<int>(r->rbx);
+	int fd = static_cast<int>(SC_ARG0(r));
 	fs_fd_t* handle;
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
@@ -2015,7 +2030,7 @@ long SysDup(regs64_t* r){
 /// \return flags on success, negative error code on failure
 /////////////////////////////
 long SysGetFileStatusFlags(regs64_t* r){
-	int fd = static_cast<int>(r->rbx);
+	int fd = static_cast<int>(SC_ARG0(r));
 	fs_fd_t* handle;
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
@@ -2035,8 +2050,8 @@ long SysGetFileStatusFlags(regs64_t* r){
 /// \return 0 on success, negative error code on failure
 /////////////////////////////
 long SysSetFileStatusFlags(regs64_t* r){
-	int fd = static_cast<int>(r->rbx);
-	int nFlags = static_cast<int>(r->rcx);
+	int fd = static_cast<int>(SC_ARG0(r));
+	int nFlags = static_cast<int>(SC_ARG1(r));
 	fs_fd_t* handle;
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
@@ -2065,16 +2080,16 @@ long SysSetFileStatusFlags(regs64_t* r){
 long SysSelect(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
-	int nfds = static_cast<int>(r->rbx);
-	fd_set_t* readFdsMask = reinterpret_cast<fd_set_t*>(r->rcx);
-	fd_set_t* writeFdsMask = reinterpret_cast<fd_set_t*>(r->rdx);
-	fd_set_t* exceptFdsMask = reinterpret_cast<fd_set_t*>(r->rsi);
-	timespec_t* timeout = reinterpret_cast<timespec_t*>(r->rdi);
+	int nfds = static_cast<int>(SC_ARG0(r));
+	fd_set_t* readFdsMask = reinterpret_cast<fd_set_t*>(SC_ARG1(r));
+	fd_set_t* writeFdsMask = reinterpret_cast<fd_set_t*>(SC_ARG2(r));
+	fd_set_t* exceptFdsMask = reinterpret_cast<fd_set_t*>(SC_ARG3(r));
+	timespec_t* timeout = reinterpret_cast<timespec_t*>(SC_ARG4(r));
 
-	if(!((!readFdsMask || Memory::CheckUsermodePointer(r->rcx, sizeof(fd_set_t), currentProcess->addressSpace))
-		&& (!writeFdsMask || Memory::CheckUsermodePointer(r->rdx, sizeof(fd_set_t), currentProcess->addressSpace))
-		&& (!exceptFdsMask || Memory::CheckUsermodePointer(r->rsi, sizeof(fd_set_t), currentProcess->addressSpace))
-		&& Memory::CheckUsermodePointer(r->rdi, sizeof(timespec_t), currentProcess->addressSpace))){
+	if(!((!readFdsMask || Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(fd_set_t), currentProcess->addressSpace))
+		&& (!writeFdsMask || Memory::CheckUsermodePointer(SC_ARG2(r), sizeof(fd_set_t), currentProcess->addressSpace))
+		&& (!exceptFdsMask || Memory::CheckUsermodePointer(SC_ARG3(r), sizeof(fd_set_t), currentProcess->addressSpace))
+		&& Memory::CheckUsermodePointer(SC_ARG4(r), sizeof(timespec_t), currentProcess->addressSpace))){
 		return -EFAULT; // Only return EFAULT if read/write/exceptfds is not null
 	}
 
@@ -2203,12 +2218,12 @@ long SysCreateService(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	size_t nameLength;
-	if(strlenSafe(reinterpret_cast<const char*>(r->rbx), nameLength, currentProcess->addressSpace)){
+	if(strlenSafe(reinterpret_cast<const char*>(SC_ARG0(r)), nameLength, currentProcess->addressSpace)){
 		return -EFAULT;
 	}
 
 	char name[nameLength + 1];
-	strncpy(name, reinterpret_cast<const char*>(r->rbx), nameLength);
+	strncpy(name, reinterpret_cast<const char*>(SC_ARG0(r)), nameLength);
 	name[nameLength] = 0;
 	for(auto& svc : ServiceFS::Instance()->services){
 		if(strncmp(svc->GetName(), name, nameLength) == 0){
@@ -2237,29 +2252,29 @@ long SysCreateInterface(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* svcHandle;
-	if(Scheduler::FindHandle(currentProcess, r->rbx, &svcHandle)){
-		Log::Warning("SysCreateInterface: Invalid handle ID %d", r->rbx);
+	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &svcHandle)){
+		Log::Warning("SysCreateInterface: Invalid handle ID %d", SC_ARG0(r));
 		return -EINVAL;
 	}
 
 	if(!svcHandle->ko->IsType(Service::TypeID())){
-		Log::Warning("SysCreateInterface: Invalid handle type (ID %d)", r->rbx);
+		Log::Warning("SysCreateInterface: Invalid handle type (ID %d)", SC_ARG0(r));
 		return -EINVAL;
 	}
 
 	size_t nameLength;
-	if(strlenSafe(reinterpret_cast<const char*>(r->rcx), nameLength, currentProcess->addressSpace)){
+	if(strlenSafe(reinterpret_cast<const char*>(SC_ARG1(r)), nameLength, currentProcess->addressSpace)){
 		return -EFAULT;
 	}
 
 	char name[nameLength + 1];
-	strncpy(name, reinterpret_cast<const char*>(r->rcx), nameLength);
+	strncpy(name, reinterpret_cast<const char*>(SC_ARG1(r)), nameLength);
 	name[nameLength] = 0;
 
 	Service* svc = reinterpret_cast<Service*>(svcHandle->ko.get());
 
 	FancyRefPtr<MessageInterface> interface;
-	long ret = svc->CreateInterface(interface, name, r->rdx);
+	long ret = svc->CreateInterface(interface, name, SC_ARG2(r));
 
 	if(ret){
 		return ret;
@@ -2283,13 +2298,13 @@ long SysInterfaceAccept(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* ifHandle;
-	if(Scheduler::FindHandle(currentProcess, r->rbx, &ifHandle)){
-		Log::Warning("SysInterfaceAccept: Invalid handle ID %d", r->rbx);
+	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &ifHandle)){
+		Log::Warning("SysInterfaceAccept: Invalid handle ID %d", SC_ARG0(r));
 		return -EINVAL;
 	}
 
 	if(!ifHandle->ko->IsType(MessageInterface::TypeID())){
-		Log::Warning("SysInterfaceAccept: Invalid handle type (ID %d)", r->rbx);
+		Log::Warning("SysInterfaceAccept: Invalid handle type (ID %d)", SC_ARG0(r));
 		return -EINVAL;
 	}
 
@@ -2317,12 +2332,12 @@ long SysInterfaceConnect(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	size_t sz = 0;
-	if(strlenSafe(reinterpret_cast<const char*>(r->rbx), sz, currentProcess->addressSpace)){
+	if(strlenSafe(reinterpret_cast<const char*>(SC_ARG0(r)), sz, currentProcess->addressSpace)){
 		return -EFAULT;
 	}
 
 	char path[sz + 1];
-	strncpy(path, reinterpret_cast<const char*>(r->rbx), sz);
+	strncpy(path, reinterpret_cast<const char*>(SC_ARG0(r)), sz);
 	path[sz] = 0;
 
 	if(!strchr(path, '/')){ // Interface name given by '/' separator
@@ -2343,6 +2358,9 @@ long SysInterfaceConnect(regs64_t* r){
 	}
 
 	FancyRefPtr<MessageEndpoint> endp = interface->Connect();
+	if(!endp.get()){
+		return -EINVAL; // Some error connecting, interface destroyed? 
+	}
 	
 	Handle& handle = Scheduler::RegisterHandle(currentProcess, static_pointer_cast<KernelObject>(endp));
 
@@ -2365,24 +2383,24 @@ long SysEndpointQueue(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* endpHandle;
-	if(Scheduler::FindHandle(currentProcess, r->rbx, &endpHandle)){
-		Log::Warning("SysEndpointQueue: Invalid handle ID %d", r->rbx);
+	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
+		Log::Warning("SysEndpointQueue: Invalid handle ID %d", SC_ARG0(r));
 		return -EINVAL;
 	}
 
 	if(!endpHandle->ko->IsType(MessageEndpoint::TypeID())){
-		Log::Warning("SysEndpointQueue: Invalid handle type (ID %d)", r->rbx);
+		Log::Warning("SysEndpointQueue: Invalid handle type (ID %d)", SC_ARG0(r));
 		return -EINVAL;
 	}
 
-	size_t size = r->rdx;
-	if(size > 8 && !Memory::CheckUsermodePointer(r->rsi, size, currentProcess->addressSpace)){
+	size_t size = SC_ARG2(r);
+	if(size > 8 && !Memory::CheckUsermodePointer(SC_ARG3(r), size, currentProcess->addressSpace)){
 		return -EFAULT; // Data greater than 8 and invalid pointer
 	}
 
 	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle->ko.get());
 
-	return endpoint->Write(r->rcx, size, r->rsi);
+	return endpoint->Write(SC_ARG1(r), size, SC_ARG3(r));
 }
 
 /////////////////////////////
@@ -2401,31 +2419,106 @@ long SysEndpointDequeue(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* endpHandle;
-	if(Scheduler::FindHandle(currentProcess, r->rbx, &endpHandle)){
-		Log::Warning("SysEndpointDequeue: Invalid handle ID %d", r->rbx);
+	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
+		Log::Warning("SysEndpointDequeue: Invalid handle ID %d", SC_ARG0(r));
 		return -EINVAL;
 	}
 
 	if(!endpHandle->ko->IsType(MessageEndpoint::TypeID())){
-		Log::Warning("SysEndpointDequeue: Invalid handle type (ID %d)", r->rbx);
+		Log::Warning("SysEndpointDequeue: Invalid handle type (ID %d)", SC_ARG0(r));
 		return -EINVAL;
 	}
 
-	if(!Memory::CheckUsermodePointer(r->rcx, sizeof(uint64_t), currentProcess->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(uint64_t), currentProcess->addressSpace)){
 		return -EFAULT;
 	}
 
-	if(!Memory::CheckUsermodePointer(r->rdx, sizeof(uint32_t), currentProcess->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG2(r), sizeof(uint16_t), currentProcess->addressSpace)){
 		return -EFAULT;
 	}
 
 	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle->ko.get());
 
-	if(!Memory::CheckUsermodePointer(r->rsi, endpoint->GetMaxMessageSize(), currentProcess->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG3(r), endpoint->GetMaxMessageSize(), currentProcess->addressSpace)){
 		return -EFAULT;
 	}
 
-	return endpoint->Read(reinterpret_cast<uint64_t*>(r->rcx), reinterpret_cast<uint16_t*>(r->rdx), reinterpret_cast<uint64_t*>(r->rsi));
+	return endpoint->Read(reinterpret_cast<uint64_t*>(SC_ARG1(r)), reinterpret_cast<uint16_t*>(SC_ARG2(r)), reinterpret_cast<uint64_t*>(SC_ARG3(r)));
+}
+
+/////////////////////////////
+/// \brief SysEndpointCall (endpoint, id, data, rID, rData, size, timeout)
+///
+/// Accept a pending connection on an interface and return a new MessageEndpoint
+///
+/// \param endpoint (handle_id_t) Handle ID of specified endpoint
+/// \param id (uint64_t) id of message to send
+/// \param data (uint8_t*/uint64_t) Message data to be sent, if size <= 8 then treated as an integer containing message data, if size > 8 then treated as a pointer to message data
+/// \param rID (uint64_t) id of expected returned message
+/// \param rData (uint8_t*) Return message data buffer
+/// \param size (uint32_t*) Pointer containing size of message to be sent and size of returned message
+/// \param timeout (uint64_t*) timeout in us
+///
+/// \return 0 on success, negative error code on failure
+/////////////////////////////
+long SysEndpointCall(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	Handle* endpHandle;
+	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
+		Log::Warning("SysEndpointCall: Invalid handle ID %d", SC_ARG0(r));
+		return -EINVAL;
+	}
+
+	if(!endpHandle->ko->IsType(MessageEndpoint::TypeID())){
+		Log::Warning("SysEndpointCall: Invalid handle type (ID %d)", SC_ARG0(r));
+		return -EINVAL;
+	}
+
+	uint16_t* size = reinterpret_cast<uint16_t*>(SC_ARG5(r));
+	if((*size) > 8 && !Memory::CheckUsermodePointer(SC_ARG3(r), *size, currentProcess->addressSpace)){
+		return -EFAULT; // Data greater than 8 and invalid pointer
+	}
+
+	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle->ko.get());
+
+	return endpoint->Call(SC_ARG1(r), *size, SC_ARG2(r), SC_ARG3(r), size, reinterpret_cast<uint64_t*>(SC_ARG4(r)), -1);
+}
+
+/////////////////////////////
+/// \brief SysEndpointInfo (endpoint, info)
+///
+/// Get endpoint information
+///
+/// \param endpoint Endpoint handle
+/// \param info Pointer to endpoint info struct
+///
+/// \return 0 on success, negative error code on failure
+/////////////////////////////
+long SysEndpointInfo(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	MessageEndpointInfo* info = reinterpret_cast<MessageEndpointInfo*>(SC_ARG1(r));
+
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(MessageEndpointInfo), currentProcess->addressSpace)){
+		return -EFAULT; // Data greater than 8 and invalid pointer
+	}
+
+	Handle* endpHandle;
+	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
+		Log::Warning("SysEndpointQueue: Invalid handle ID %d", SC_ARG0(r));
+		return -EINVAL;
+	}
+
+	if(!endpHandle->ko->IsType(MessageEndpoint::TypeID())){
+		Log::Warning("SysEndpointQueue: Invalid handle type (ID %d)", SC_ARG0(r));
+		return -EINVAL;
+	}
+
+	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle->ko.get());
+
+	*info = { .msgSize = endpoint->GetMaxMessageSize() };
+	return 0;
 }
 
 /////////////////////////////
@@ -2441,8 +2534,8 @@ long SysKernelObjectWaitOne(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* handle;
-	if(Scheduler::FindHandle(currentProcess, r->rbx, &handle)){
-		Log::Warning("SysKernelObjectWaitOne: Invalid handle ID %d", r->rbx);
+	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &handle)){
+		Log::Warning("SysKernelObjectWaitOne: Invalid handle ID %d", SC_ARG0(r));
 		return -EINVAL;
 	}
 
@@ -2466,9 +2559,9 @@ long SysKernelObjectWaitOne(regs64_t* r){
 /////////////////////////////
 long SysKernelObjectWait(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
-	unsigned count = r->rcx;
+	unsigned count = SC_ARG1(r);
 
-	if(!Memory::CheckUsermodePointer(r->rbx, count * sizeof(handle_id_t), currentProcess->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), count * sizeof(handle_id_t), currentProcess->addressSpace)){
 		return -EFAULT;
 	}
 
@@ -2476,8 +2569,8 @@ long SysKernelObjectWait(regs64_t* r){
 
 	KernelObjectWatcher watcher;
 	for(unsigned i = 0; i < count; i++){
-		if(Scheduler::FindHandle(currentProcess, r->rbx, &handles[i])){
-			Log::Warning("SysKernelObjectWait: Invalid handle ID %d", r->rbx);
+		if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &handles[i])){
+			Log::Warning("SysKernelObjectWait: Invalid handle ID %d", SC_ARG0(r));
 			return -EINVAL;
 		}
 
@@ -2487,6 +2580,38 @@ long SysKernelObjectWait(regs64_t* r){
 
 	return 0;
 }
+
+
+/////////////////////////////
+/// \brief SysKernelObjectDestroy (object)
+///
+/// Destroy a KernelObject
+///
+/// \param object (handle_t) Object to destroy
+///
+/// \return negative error code on failure
+/////////////////////////////
+long SysKernelObjectDestroy(regs64_t* r){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+
+	Handle* h;
+	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &h)){
+		Log::Warning("SysKernelObjectDestroy: Invalid handle ID %d", SC_ARG0(r));
+		
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
+			Log::Info("Process %s (PID: %d), Stack Trace:", currentProcess->name, currentProcess->pid);
+			Log::Info("%x", r->rip);
+			UserPrintStackTrace(r->rbp, currentProcess->addressSpace);
+		});
+		return -EINVAL;
+	}
+
+	h->ko->Destroy();
+
+	Scheduler::DestroyHandle(currentProcess, SC_ARG0(r));
+	return 0;
+}
+
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -2570,8 +2695,11 @@ syscall_t syscalls[]{
 	SysInterfaceConnect,
 	SysEndpointQueue,			// 80
 	SysEndpointDequeue,
+	SysEndpointCall,
+	SysEndpointInfo,
 	SysKernelObjectWaitOne,
-	SysKernelObjectWait,
+	SysKernelObjectWait,		// 85
+	SysKernelObjectDestroy,
 };
 
 int lastSyscall = 0;

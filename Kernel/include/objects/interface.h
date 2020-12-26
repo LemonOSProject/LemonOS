@@ -7,16 +7,21 @@
 
 class MessageInterface final : public KernelObject{
 protected:
+    bool active = true;
+
     char* name;
     List<FancyRefPtr<MessageEndpoint>> connections;
 
     uint16_t msgSize;
     lock_t incomingLock = 0;
-    List<Pair<bool, FancyRefPtr<MessageEndpoint>>*> incoming;
+    List<Pair<int, FancyRefPtr<MessageEndpoint>>*> incoming;
 
     friend class Service;
 public:
     MessageInterface(const char* _name, uint16_t msgSize);
+    ~MessageInterface();
+
+    void Destroy();
 
     /////////////////////////////
     /// \brief Accept an incoming connection

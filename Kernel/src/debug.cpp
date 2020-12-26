@@ -12,3 +12,5 @@ const int debugLevelInterrupts = 0;
 const int debugLevelPartitions = 0;
 
 const int debugLevelMessageEndpoint = 0;
+
+const int debugLevelSyscalls = 0;

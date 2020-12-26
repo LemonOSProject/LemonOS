@@ -11,15 +11,21 @@
 #include <objects/kobject.h>
 
 struct Message{
-    uint64_t id;
     union{
         uint64_t data; // Empty, pointer or integer
         uint8_t* dataP;
     };
-    uint16_t size;
+    uint64_t id = 0;
+    uint16_t size = 0;
+};
 
-    Message* next;
-    Message* prev;
+struct Reponse{
+    Message* ret;
+    uint64_t id;
+};
+
+struct MessageEndpointInfo{
+    uint16_t msgSize;
 };
 
 class MessageEndpoint final : public KernelObject{
@@ -34,6 +40,12 @@ private:
     RingBuffer<Message> queue;
 
     FancyRefPtr<MessageEndpoint> peer;
+
+    List<KernelObjectWatcher*> waiting;
+    List<Pair<Semaphore*, Reponse>> waitingResponse;
+
+    lock_t waitingLock = 0;
+    lock_t waitingResponseLock = 0;
 public:
     static const uint16_t maxMessageSizeLimit = UINT16_MAX;
     
@@ -49,6 +61,8 @@ public:
 
     MessageEndpoint(uint16_t maxSize);
     ~MessageEndpoint();
+    
+    void Destroy();
 
     /////////////////////////////
     /// \brief Read a message from the queue
@@ -77,12 +91,11 @@ public:
     /// \param size Pointer to the message size to be populated
     /// \param data Pointer to an unsigned integer representing either 8 bytes of data (size <= 8) or a pointer to a buffer of size length containing message data
     ///
-    /// \param timeout Amount of time (in us) until timeout
+    /// \param timeout Amount of time (in us) until timeout, -1 for no timeout
     ///
     /// \return 0 on success, 1 on timeout, negative error code on failure
     /////////////////////////////
-    int64_t Call(uint64_t id, uint16_t size, uint64_t data, uint64_t rID, uint16_t* rSize, uint64_t* rData, uint64_t timeout);
-    
+    int64_t Call(uint64_t id, uint16_t size, uint64_t data, uint64_t rID, uint16_t* rSize, uint64_t* rData, int64_t timeout);
     
     /////////////////////////////
     /// \brief Send a message
@@ -97,8 +110,18 @@ public:
     /////////////////////////////
     int64_t Write(uint64_t id, uint16_t size, uint64_t data);
 
-    uint16_t GetMaxMessageSize() const { return maxMessageSize; }
+    void Watch(KernelObjectWatcher& watcher, int events){
+        acquireLock(&waitingLock);
+        waiting.add_back(&watcher);
+        releaseLock(&waitingLock)
+    }
+
+    virtual void Unwatch(KernelObjectWatcher& watcher){
+        waiting.remove(&watcher);
+    }
+
+    inline uint16_t GetMaxMessageSize() const { return maxMessageSize; }
 
     inline static constexpr kobject_id_t TypeID() { return KOBJECT_ID_MESSAGE_ENDPOINT; }
-    kobject_id_t InstanceTypeID() const { return TypeID(); }
+    inline kobject_id_t InstanceTypeID() const { return TypeID(); }
 };

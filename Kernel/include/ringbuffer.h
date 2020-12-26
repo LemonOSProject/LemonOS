@@ -30,7 +30,7 @@ public:
     void Enqueue(T* data){
         acquireLock(&dequeueLock);
 
-        memcpy(data, enqueuePointer++, sizeof(T));
+        memcpy(enqueuePointer++, data, sizeof(T));
         
         if(enqueuePointer >= bufferEnd){
             enqueuePointer = buffer;

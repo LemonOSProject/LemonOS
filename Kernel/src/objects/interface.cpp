@@ -13,6 +13,18 @@ MessageInterface::MessageInterface(const char* _name, uint16_t msgSize){
     this->msgSize = msgSize;
 }
 
+MessageInterface::~MessageInterface(){
+    Destroy();
+}
+
+void MessageInterface::Destroy(){
+    active = false;
+
+    for(auto& i : incoming){
+        i->item1 = -1;
+    }
+}
+
 long MessageInterface::Accept(FancyRefPtr<MessageEndpoint>& endpoint){
     acquireLock(&incomingLock);
     if(incoming.get_length()){
@@ -32,7 +44,11 @@ long MessageInterface::Accept(FancyRefPtr<MessageEndpoint>& endpoint){
 }
 
 FancyRefPtr<MessageEndpoint> MessageInterface::Connect(){
-    Pair<bool, FancyRefPtr<MessageEndpoint>> connection;
+    if(!active){
+        return FancyRefPtr<MessageEndpoint>();
+    }
+
+    Pair<int, FancyRefPtr<MessageEndpoint>> connection;
 
     connection.item1 = false;
 
@@ -43,5 +59,6 @@ FancyRefPtr<MessageEndpoint> MessageInterface::Connect(){
     while(!connection.item1){
         Scheduler::Yield();
     }
+    
     return connection.item2;
 }

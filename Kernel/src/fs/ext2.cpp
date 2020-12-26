@@ -11,8 +11,6 @@
     #include <timer.h>
 #endif
 
-#define EXT2_NO_CACHE
-
 namespace fs::Ext2{
     int Identify(PartitionDevice* part){
         ext2_superblock_t* superblock = (ext2_superblock_t*)kmalloc(sizeof(ext2_superblock_t));

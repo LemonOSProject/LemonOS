@@ -39,6 +39,7 @@ public:
 
     virtual void Unwatch(KernelObjectWatcher& watcher);
 
+    virtual void Destroy() = 0;
     virtual ~KernelObject(){
 
     }

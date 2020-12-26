@@ -6,6 +6,14 @@ enum{
     DebugLevelVerbose = 2,
 };
 
+#define KERNEL_DEBUG
+
+#ifdef KERNEL_DEBUG
+    #define IF_DEBUG(a, b) if(a) b
+#else
+    #define IF_DEBUG(a, b)
+#endif
+
 extern const int debugLevelHAL;
 extern const int debugLevelMisc;
 
@@ -20,6 +28,8 @@ extern const int debugLevelXHCI;
 extern const int debugLevelInterrupts;
 
 extern const int debugLevelMessageEndpoint;
+
+extern const int debugLevelSyscalls;
 
 #define REFPTR_ASSERTIONS
 //#define REFPTR_DEBUG

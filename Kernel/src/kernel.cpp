@@ -60,8 +60,8 @@ void KernelProcess(){
 	Log::Info("Loading Init Process...");
 	FsNode* initFsNode = nullptr;
 	char* argv[] = {"init.lef"};
-	int envc = 0;
-	char* envp[] = {nullptr};
+	int envc = 1;
+	char* envp[] = {"PATH=/initrd", nullptr};
 
 	if(HAL::useKCon || !(initFsNode = fs::ResolvePath("/system/lemon/init.lef"))){ // Attempt to start fterm
 		initFsNode = fs::ResolvePath("/initrd/fterm.lef");
@@ -72,9 +72,6 @@ void KernelProcess(){
 			};
 			KernelPanic(panicReasons,1);
 		}
-
-		envc = 1;
-		envp[0] = "PATH=/initrd";
 	}
 
 	void* initElf = (void*)kmalloc(initFsNode->size);

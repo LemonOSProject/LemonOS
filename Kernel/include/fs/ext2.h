@@ -44,6 +44,8 @@
 #define EXT2_DOUBLY_INDIRECT_INDEX 13
 #define EXT2_TRIPLY_INDIRECT_INDEX 14
 
+//#define EXT2_NO_CACHE
+
 namespace fs::Ext2{
     enum ErrorAction{
         Continue = 1,       // Continue

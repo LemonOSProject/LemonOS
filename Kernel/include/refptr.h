@@ -23,9 +23,7 @@ public:
     }
 
     FancyRefPtr(){
-        refCount = new unsigned;
-        *(refCount) = 1;
-
+        refCount = nullptr;
         obj = nullptr;
     }
 

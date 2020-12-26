@@ -18,8 +18,6 @@
 #include <apic.h>
 #include <timer.h>
 
-#define INITIAL_HANDLE_TABLE_SIZE 0xFFFF
-
 extern "C" [[noreturn]] void TaskSwitch(regs64_t* r, uint64_t pml4);
 
 extern "C"
@@ -35,10 +33,6 @@ namespace Scheduler{
     unsigned processTableSize = 512;
     uint64_t nextPID = 1;
 
-    handle_t handles[INITIAL_HANDLE_TABLE_SIZE];
-    uint64_t handleCount = 1; // We don't want null handles
-    uint32_t handleTableSize = INITIAL_HANDLE_TABLE_SIZE;
-    
     void Schedule(void*, regs64_t* r);
     
     inline void InsertThreadIntoQueue(thread_t* thread){
@@ -72,8 +66,6 @@ namespace Scheduler{
     }
 
     void Initialize() {
-        memset(handles, 0, handleTableSize);
-
         processes = new List<process_t*>();
 
         CPU* cpu = GetCPULocal();
@@ -112,6 +104,7 @@ namespace Scheduler{
 
         return ref;
     }
+
 	long FindHandle(process_t* proc, handle_id_t id, Handle** handle){
         if(id < 1 || id - 1 > static_cast<handle_id_t>(proc->handles.get_length())){
             return 1;
@@ -120,6 +113,16 @@ namespace Scheduler{
         *handle = &proc->handles[id - 1]; // Handle IDs start at 1
 
         if(!(*handle)->ko.get()) return 2;
+
+        return 0;
+    }
+
+	long DestroyHandle(process_t* proc, handle_id_t id){
+        if(id < 1 || id - 1 > static_cast<handle_id_t>(proc->handles.get_length())){
+            return 1;
+        }
+
+        proc->handles[id - 1] = {0, FancyRefPtr<KernelObject>(nullptr)}; // Handle IDs start at 1
 
         return 0;
     }
@@ -400,6 +403,9 @@ namespace Scheduler{
             process->threads[i]->waiting.~List();
         }
 
+        for(auto& h : process->handles){
+            h.ko->Destroy();
+        }
         process->handles.clear();
 
         if(cpu->currentThread->parent == process){

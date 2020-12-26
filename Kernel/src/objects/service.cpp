@@ -47,6 +47,10 @@ Service::Service(const char* _name){
 }
 
 Service::~Service(){
+    Destroy();
+}
+
+void Service::Destroy(){
     interfaces.clear();
 
     auto& services = ServiceFS::Instance()->services;

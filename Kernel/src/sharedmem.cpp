@@ -18,8 +18,8 @@ namespace Memory {
         tableSize = DEFAULT_TABLE_SIZE;
     }
 
-    uint64_t NextKey(){
-        uint64_t key = 0;
+    int64_t NextKey(){
+        int64_t key = 0;
         while(table[++key]);
 
         if(key >= tableSize){ // Increase table size
@@ -33,13 +33,13 @@ namespace Memory {
         return key;
     }
 
-    shared_mem_t* GetSharedMemory(uint64_t key){
+    shared_mem_t* GetSharedMemory(int64_t key){
         if(key < tableSize){
             return table[key];
         } else return nullptr;
     }
 
-    int CanModifySharedMemory(pid_t pid, uint64_t key){
+    int CanModifySharedMemory(pid_t pid, int64_t key){
         shared_mem_t* sMem = nullptr;
         if((sMem = GetSharedMemory(key))){
             if((sMem->owner = pid)) return 1;
@@ -48,10 +48,10 @@ namespace Memory {
         return 0;
     }
 
-    uint64_t CreateSharedMemory(uint64_t size, uint64_t flags, pid_t owner, pid_t recipient){
+    int64_t CreateSharedMemory(uint64_t size, uint64_t flags, pid_t owner, pid_t recipient){
         acquireLock(&lock);
 
-        uint64_t key = NextKey();
+        int64_t key = NextKey();
 
         if(!key) return 0;
 
@@ -76,7 +76,7 @@ namespace Memory {
         return key;
     }
 
-    void* MapSharedMemory(uint64_t key, process_t* proc, uint64_t hint){
+    void* MapSharedMemory(int64_t key, process_t* proc, uint64_t hint){
         acquireLock(&lock);
 
         shared_mem_t* sMem = GetSharedMemory(key);
@@ -96,9 +96,9 @@ namespace Memory {
 
         void* mapping;
         
-        if(hint && Memory::CheckRegion(hint, sMem->pgCount * PAGE_SIZE_4K, proc->addressSpace)){
+        /*if(hint && Memory::CheckRegion(hint, sMem->pgCount * PAGE_SIZE_4K, proc->addressSpace)){
             mapping = (void*)hint;
-        } else mapping = Memory::Allocate4KPages(sMem->pgCount, proc->addressSpace);
+        } else*/ mapping = Memory::Allocate4KPages(sMem->pgCount, proc->addressSpace);
 
         for(unsigned i = 0; i < sMem->pgCount; i++){
             Memory::MapVirtualMemory4K(sMem->pages[i], (uintptr_t)mapping + i * PAGE_SIZE_4K, 1, proc->addressSpace);
@@ -114,7 +114,7 @@ namespace Memory {
         return mapping;
     }
 
-    void DestroySharedMemory(uint64_t key){
+    void DestroySharedMemory(int64_t key){
         //acquireLock(&lock);
         
         shared_mem_t* sMem = GetSharedMemory(key);
