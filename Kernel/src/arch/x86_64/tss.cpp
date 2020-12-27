@@ -16,17 +16,23 @@ namespace TSS
         memset(tss, 0, sizeof(tss_t));
         
         // Set up Interrupt Stack Tables
-        tss->ist1 = (uint64_t)Memory::KernelAllocate4KPages(1);
-        tss->ist2 = (uint64_t)Memory::KernelAllocate4KPages(1);
-        tss->ist3 = (uint64_t)Memory::KernelAllocate4KPages(1);
+        tss->ist1 = (uint64_t)Memory::KernelAllocate4KPages(8);
+        tss->ist2 = (uint64_t)Memory::KernelAllocate4KPages(8);
+        tss->ist3 = (uint64_t)Memory::KernelAllocate4KPages(8);
 
-        Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), tss->ist1, 1);
-        Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), tss->ist2, 1);
-        Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), tss->ist3, 1);
+        for(unsigned i = 0; i < 8; i++){
+            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), tss->ist1 + 8 * PAGE_SIZE_4K, 1);
+            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), tss->ist2 + 8 * PAGE_SIZE_4K, 1);
+            Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), tss->ist3 + 8 * PAGE_SIZE_4K, 1);
+        }
 
         memset((void*)tss->ist1, 0, PAGE_SIZE_4K);
         memset((void*)tss->ist2, 0, PAGE_SIZE_4K);
         memset((void*)tss->ist3, 0, PAGE_SIZE_4K);
+
+        tss->ist1 += PAGE_SIZE_4K * 8;
+        tss->ist2 += PAGE_SIZE_4K * 8;
+        tss->ist3 += PAGE_SIZE_4K * 8;
 
         asm volatile("mov %%rsp, %0" : "=r"(tss->rsp0));
             

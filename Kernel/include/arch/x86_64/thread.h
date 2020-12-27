@@ -28,11 +28,11 @@ typedef struct thread {
 	regs64_t registers;  // Registers
 	void* fxState; // State of the extended registers
 
-	thread* next; // Next thread in queue
-	thread* prev; // Previous thread in queue
+	thread* next = nullptr; // Next thread in queue
+	thread* prev = nullptr; // Previous thread in queue
 	
 	uint8_t priority = 0; // Thread priority
-	uint8_t state; // Thread state
+	uint8_t state = ThreadStateRunning; // Thread state
 
 	uint64_t fsBase = 0;
 	

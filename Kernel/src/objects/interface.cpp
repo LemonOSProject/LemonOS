@@ -27,7 +27,7 @@ void MessageInterface::Destroy(){
 
 long MessageInterface::Accept(FancyRefPtr<MessageEndpoint>& endpoint){
     acquireLock(&incomingLock);
-    if(incoming.get_length()){
+    if(incoming.get_length() > 0){
         auto connection = incoming.remove_at(0);
         releaseLock(&incomingLock);
 
@@ -59,6 +59,6 @@ FancyRefPtr<MessageEndpoint> MessageInterface::Connect(){
     while(!connection.item1){
         Scheduler::Yield();
     }
-    
+
     return connection.item2;
 }

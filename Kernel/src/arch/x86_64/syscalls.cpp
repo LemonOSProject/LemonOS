@@ -1901,7 +1901,13 @@ long SysReadLink(regs64_t* r){
 /// \return (pid_t) thread id
 /////////////////////////////
 long SysSpawnThread(regs64_t* r){
-	return Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), SC_ARG0(r), SC_ARG1(r));
+	auto tid = Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), SC_ARG0(r), SC_ARG1(r));
+
+	thread_t* t = Scheduler::GetCurrentProcess()->threads[tid];
+	t->registers.cs = 0x1B;
+	t->registers.ss = 0x23;
+
+	return tid;
 }
 
 /////////////////////////////
@@ -2713,6 +2719,13 @@ void SyscallHandler(regs64_t* regs) {
 	thread_t* thread = GetCPULocal()->currentThread;
 	if(!syscalls[regs->rax]) return;
 	if(thread->state == ThreadStateZombie) for(;;);
+
+	uint64_t rsp = 0;
+	asm volatile("mov %%rsp, %0" : "=r"(rsp));
+
+	IF_DEBUG((rsp < KERNEL_VIRTUAL_BASE), {
+		Log::Info("warning: call: %d, thread rip: %x, kstack: %x, kernel rsp: %x, tss rsp0: %x, thread cs: %x, thread ss: %x", regs->rax, regs->rip, GetCPULocal()->currentThread->kernelStack, rsp, GetCPULocal()->tss.rsp0, regs->cs, regs->ss);
+	});
 
 	acquireLock(&thread->lock);
 	regs->rax = syscalls[regs->rax](regs); // Call syscall

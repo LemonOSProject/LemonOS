@@ -275,7 +275,7 @@ extern "C"
 			// Kernel Panic so tell other processors to stop executing
 			APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
 
-			Log::Error("Fatal Exception: ");
+			Log::Error("Fatal Kernel Exception: ");
 			Log::Info(int_num);
 			Log::Info("RIP: ");
 			Log::Info(regs->rip);

@@ -185,6 +185,36 @@ namespace Memory{
 		return addr < PDPT_SIZE && (addr + len) < PDPT_SIZE && (addressSpace->pdpt[PDPT_GET_INDEX(addr)] & PDPT_USER) && (addressSpace->pdpt[PDPT_GET_INDEX(addr + len)] & PDPT_USER);
 	}
 
+	bool CheckKernelPointer(uintptr_t addr, uint64_t len){
+		if(PML4_GET_INDEX(addr) != PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)){
+			return 0;
+		}
+
+		if(!(kernelPDPT[PDPT_GET_INDEX(addr)] & 0x1)){
+			return 0;
+		}
+		
+		if(PDPT_GET_INDEX(addr) == KERNEL_HEAP_PDPT_INDEX){
+			if(!(kernelHeapDir[PAGE_DIR_GET_INDEX(addr)] & 0x1)){
+				return 0;
+			}
+
+			if(!(kernelHeapDir[PAGE_DIR_GET_INDEX(addr)] & PDE_2M)){
+				if(!(kernelHeapDirTables[PAGE_DIR_GET_INDEX(addr)][PAGE_TABLE_GET_INDEX(addr)] & 0x1)){
+					return 0;
+				}
+			}
+		} else if(PDPT_GET_INDEX(addr) == PDPT_GET_INDEX(KERNEL_VIRTUAL_BASE)){
+			if(!(kernelDir[PAGE_DIR_GET_INDEX(addr)] & 0x1)){
+				return 0;
+			}
+		} else {
+			return 0;
+		}
+
+		return 1;
+	}
+
 	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, address_space_t* addressSpace){
 		if(!(addressSpace->pageDirs[PDPT_GET_INDEX(addr)][PAGE_DIR_GET_INDEX(addr)] & (PAGE_PRESENT))){
 			return 0;

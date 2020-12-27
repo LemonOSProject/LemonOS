@@ -2,11 +2,12 @@
 
 #include <logging.h>
 #include <paging.h>
+#include <scheduler.h>
 
 inline static void PrintStackTrace(uint64_t _rbp){
 	uint64_t* rbp = (uint64_t*)_rbp;
 	uint64_t rip = 0;
-	while(rbp){
+	while(rbp && Memory::CheckKernelPointer((uintptr_t)rbp, 16)){
 		rip = *(rbp + 1);
 		Log::Info(rip);
 		rbp = (uint64_t*)(*rbp);

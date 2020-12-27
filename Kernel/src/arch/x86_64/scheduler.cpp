@@ -270,10 +270,11 @@ namespace Scheduler{
     pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack){
         pid_t threadID = process->threadCount++;
         process->threads.add_back(new thread_t);
+
         thread_t& thread = *process->threads[threadID];
 
         thread.tid = threadID;
-        
+
         thread.parent = process;
         thread.registers.rip = entry;
         thread.registers.rsp = stack;
@@ -285,11 +286,11 @@ namespace Scheduler{
         Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)thread.fxState, 1);
         memset(thread.fxState, 0, 1024);
 
-        void* kernelStack = (void*)Memory::KernelAllocate4KPages(32); // Allocate Memory For Kernel Stack (128KB)
+        void* kernelStack = Memory::KernelAllocate4KPages(32); // Allocate Memory For Kernel Stack (128KB)
         for(int i = 0; i < 32; i++){
             Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * i, 1);
         }
-
+        memset(kernelStack, 0, PAGE_SIZE_4K * 32);
         thread.kernelStack = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * 32);
         
         regs64_t* registers = &thread.registers;
@@ -299,6 +300,10 @@ namespace Scheduler{
         thread.timeSliceDefault = THREAD_TIMESLICE_DEFAULT;
         thread.timeSlice = thread.timeSliceDefault;
         thread.priority = 4;
+        
+        ((fx_state_t*)thread.fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
+        ((fx_state_t*)thread.fxState)->mxcsrMask = 0xffbf;
+        ((fx_state_t*)thread.fxState)->fcw = 0x33f; // Default FPU Control Word State
 
         InsertNewThreadIntoQueue(&thread);
 

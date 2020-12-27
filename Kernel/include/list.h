@@ -219,6 +219,16 @@ public:
 		}
 	}
 
+	List& operator=(const List& l){
+		clear();
+
+		for(auto& i : l){
+			add_back(i);
+		}
+
+		return *this;
+	}
+
 	void clear() {
 		acquireLock(&lock);
 
