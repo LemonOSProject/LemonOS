@@ -6,6 +6,7 @@
 #include <lemon/system/info.h>
 #include <lemon/system/util.h>
 #include <lemon/system/fb.h>
+#include <lemon/system/ipc.h>
 #include <lemon/gui/window.h>
 #include <lemon/core/sharedmem.h>
 #include <lemon/core/shell.h>
@@ -116,6 +117,12 @@ int main(){
 
 	Lemon::Graphics::LoadImage("/initrd/menubuttons.png", &menuButton);
 
+	handle_t tempEndpoint = 0;
+	while(tempEndpoint <= 0){
+		tempEndpoint = Lemon::InterfaceConnect("lemon.lemonwm/Instance");
+	} // Wait for LemonWM to create the interface (if not already created)
+	Lemon::DestroyKObject(tempEndpoint);
+
 	taskbar = new Lemon::GUI::Window("", {static_cast<int>(videoInfo.width), 32}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 32});
 	taskbar->OnPaint = OnTaskbarPaint;
 	taskbar->rootContainer.background = {0, 0, 0, 0};
@@ -128,18 +135,7 @@ int main(){
 
 	InitializeMenu();
 
-	/*Lemon::MessageMultiplexer mp;
-	mp.AddSource(taskbar->GetHandler());
-	mp.AddSource(GetMenuWindowHandler());
-	mp.AddSource(shell->GetServer());
-
-	Lemon::LemonMessage* msg = (Lemon::LemonMessage*)malloc(sizeof(Lemon::LemonMessage) + sizeof(Lemon::GUI::WMCommand));
-	Lemon::GUI::WMCommand* cmd = (Lemon::GUI::WMCommand*)msg->data;
-	cmd->cmd = Lemon::GUI::WMInitializeShellConnection;
-	msg->protocol = LEMON_MESSAGE_PROTOCOL_WMCMD;
-	msg->length = sizeof(Lemon::GUI::WMCommand);
-	taskbar->SendWMMsg(msg);
-	free(msg);*/
+	taskbar->InitializeShellConnection();
 
 	for(;;){
 		shell->Update();

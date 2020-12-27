@@ -12,34 +12,16 @@ namespace Lemon::Shell {
     };
 
     enum {
-        LemonShellToggleMenu,
-        LemonShellOpen,
-        LemonShellAddWindow,
-        LemonShellRemoveWindow,
-        LemonShellSetWindowState,
+        LemonShellToggleMenu = 100,
+        LemonShellOpen = 101,
+        LemonShellAddWindow = 102,
+        LemonShellRemoveWindow = 103,
+        LemonShellSetWindowState = 104,
     };
 
-    struct ShellCommand{
-        short cmd;
-        union
-        {
-            struct {
-            int windowID;
-            short windowState;
-            short titleLength;
-            char windowTitle[];
-            };
-            struct {
-                short pathLength;
-                char path[];
-            };
-        };
-        
-    };
-
-    void AddWindow(int id, short state, const char* title, Endpoint& client);
-    void RemoveWindow(int id, Endpoint& client);
-    void SetWindowState(int id, int state, Endpoint& client);
+    void AddWindow(long id, short state, const std::string& title, Endpoint& client);
+    void RemoveWindow(long id, Endpoint& client);
+    void SetWindowState(long id, short state, Endpoint& client);
     
     void Open(const char* path, Endpoint& client);
     void Open(const char* path);

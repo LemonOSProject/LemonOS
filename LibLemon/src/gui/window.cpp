@@ -314,4 +314,8 @@ namespace Lemon::GUI{
     void WMClient::DisplayContextMenu(int x, int y, const std::string& serializedEntries) const {
         Queue(Message(WMDisplayContextMenu, x, y, serializedEntries));
     }
+
+    void WMClient::InitializeShellConnection() const {
+        Queue(WMInitializeShellConnection, nullptr, 0);
+    }
 }

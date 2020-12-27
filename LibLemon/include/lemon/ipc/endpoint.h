@@ -48,8 +48,10 @@ namespace Lemon{
             LemonEndpointInfo endpInfo;
             if(long ret = EndpointInfo(h, endpInfo); ret){
                 if(ret == -EINVAL){
+                    printf("[LibLemon] Invalid endpoint handle!\n");
                     throw new EndpointException(EndpointException::EndpointInvalidHandle);
                 } else {
+                    printf("[LibLemon] Endpoint error %ld\n!", ret);
                     throw new EndpointException(EndpointException::EndpointUnknownError);
                 }
             }
@@ -57,9 +59,14 @@ namespace Lemon{
         }
 
         Endpoint(const std::string& path){
-            handle = InterfaceConnect(path.c_str());
+            Endpoint(path.c_str());
+        }
+
+        Endpoint(const char* path){
+            handle = InterfaceConnect(path);
 
             if(handle <= 0){
+                printf("[LibLemon] Error %ld connecting to interface %s!\n", handle, path);
                 throw new EndpointException(EndpointException::EndpointInterfacePathResolutionError);
             }
 

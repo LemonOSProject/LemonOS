@@ -32,57 +32,6 @@ namespace Lemon::GUI {
         WMCxtEntryTypeExpand,
     };
 
-    struct WMCreateWindowCommand{
-        vector2i_t size; // Window Size
-        vector2i_t pos; // Window Position
-        uint32_t flags; // Window Flags
-        unsigned long bufferKey; // Shared Memory Key
-        unsigned short titleLength; // Length (in bytes) of the title;
-        char title[];
-    };
-
-    struct WMContextMenuEntry{
-        unsigned short id;
-        unsigned char length;
-        char data[];
-    };
-
-    struct WMContextMenu{
-        unsigned int contextEntryCount;
-        WMContextMenuEntry contextEntries[];
-    };
-
-    struct WMSetTitleCommand{
-        short cmd;
-        unsigned short titleLength;
-        char title[];
-    } __attribute__((packed));
-
-    struct WMCommand{
-        short cmd;
-        union{
-            vector2i_t position;
-            struct {
-            vector2i_t size;
-            unsigned long bufferKey;
-            } __attribute__((packed));
-            uint32_t flags;
-            WMCreateWindowCommand create;
-            struct{
-            bool minimized;
-            int minimizeWindowID;
-            } __attribute__((packed));
-            struct {
-            unsigned short titleLength;
-            char title[];
-            } __attribute__((packed));
-            struct {
-                vector2i_t contextMenuPosition;
-                WMContextMenu contextMenu;
-            };
-        };
-    };
-
     struct WindowBuffer {
         uint64_t currentBuffer;
         uint64_t buffer1Offset;
@@ -129,6 +78,8 @@ namespace Lemon::GUI {
 
         Window(const char* title, vector2i_t size, uint32_t flags = 0, int type = WindowType::Basic, vector2i_t pos = {20, 20});
         ~Window();
+
+        inline void InitializeShellConnection() const { WMClient::InitializeShellConnection(); }
 
         /////////////////////////////
         /// \brief Set title of window

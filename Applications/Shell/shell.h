@@ -6,10 +6,10 @@
 
 class ShellWindow{
 public:
-	int id;
+	long id;
 	std::string title;
-	int state;
-	int lastState;
+	short state;
+	short lastState;
 };
 
 class ShellInstance {
@@ -20,7 +20,7 @@ class ShellInstance {
 
     void PollCommands();
 public:
-    std::map<int, ShellWindow*> windows;
+    std::map<long, ShellWindow*> windows;
     ShellWindow* active = nullptr;
     bool showMenu = true;
 

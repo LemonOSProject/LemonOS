@@ -19,73 +19,33 @@ void ShellInstance::SetTaskbar(Lemon::GUI::Window* taskbar){
 
 extern bool paintTaskbar;
 void ShellInstance::PollCommands(){
-    /*while(auto m = shellSrv.Poll()){
+    handle_t client;
+    Lemon::Message m;
+    while(shellSrv.Poll(client, m)){
         paintTaskbar = true;
-        if(m->msg.protocol == 0){ // Disconnected
+        if(m.id() == Lemon::MessagePeerDisconnect){ // Disconnected
             continue;
         }
 
-        if(m->msg.protocol == LEMON_MESSAGE_PROTOCOL_SHELLCMD){
-            Lemon::Shell::ShellCommand* cmd = (Lemon::Shell::ShellCommand*)m->msg.data;
-
-            switch (cmd->cmd)
+        switch (m.id())
+        {
+        case Lemon::Shell::LemonShellAddWindow:
             {
-            case Lemon::Shell::LemonShellAddWindow:
-                {
-                    ShellWindow* win = new ShellWindow();
-
-                    char* title = (char*)malloc(cmd->titleLength + 1);
-                    strncpy(title, cmd->windowTitle, cmd->titleLength);
-                    title[cmd->titleLength] = 0; // Null terminate
-
-                    win->title = title;
-
-                    free(title);
-
-                    win->id = cmd->windowID;
-                    win->state = cmd->windowState;
-
-                    windows.insert(std::pair<int, ShellWindow*>(cmd->windowID, win));
-                    
-                    if(AddWindow) AddWindow(win);
-
-                    if(win->state == Lemon::Shell::ShellWindowStateActive){
-                        if(active && active != win){
-                            active->state = Lemon::Shell::ShellWindowStateNormal;
-                        }
-
-                        active = win;
-                    }
-                }
-                break;
-            case Lemon::Shell::LemonShellRemoveWindow: {
-                ShellWindow* win;
-                try{
-                    win = windows.at(cmd->windowID);
-                } catch (const std::out_of_range& e){
-                    printf("[Shell] Warning: LemonShellSetActive: Window ID out of range\n");
-                    break;
+                std::string title;
+                short state;
+                long id;
+                if(m.Decode(id, state, title)){
+                    continue; // Invalid message
                 }
 
-                if(RemoveWindow) RemoveWindow(win);
+                ShellWindow* win = new ShellWindow();
 
-                windows.erase(cmd->windowID);
-                break;
-            } case Lemon::Shell::LemonShellToggleMenu:
-                showMenu = !showMenu;
-                menu->Minimize(!showMenu);
-                break;
-            case Lemon::Shell::LemonShellSetWindowState: {
-                ShellWindow* win;
-                try{
-                    win = windows.at(cmd->windowID);
-                } catch (const std::out_of_range& e){
-                    printf("[Shell] Warning: LemonShellSetActive: Window ID out of range\n");
-                    break;
-                }
+                win->id = id;
+                win->state = state;
 
-                win->lastState = win->state;
-                win->state = cmd->windowState;
+                windows.insert(std::pair<long, ShellWindow*>(id, win));
+                
+                if(AddWindow) AddWindow(win);
 
                 if(win->state == Lemon::Shell::ShellWindowStateActive){
                     if(active && active != win){
@@ -94,24 +54,64 @@ void ShellInstance::PollCommands(){
 
                     active = win;
                 }
+            }
+            break;
+        case Lemon::Shell::LemonShellRemoveWindow: {
+            long id;
+            if(m.Decode(id)){
+                continue; // Invalid message
+            }
 
-                if(RefreshWindows) RefreshWindows();
-                break;
-            } case Lemon::Shell::LemonShellOpen: {
-                char* path = (char*)malloc(cmd->pathLength + 1);
-
-                strncpy(path, cmd->path, cmd->pathLength);
-                path[cmd->pathLength] = 0;
-
-                Open(path);
-
-                free(path);
-                break;
-            } default:
+            ShellWindow* win;
+            try{
+                win = windows.at(id);
+            } catch (const std::out_of_range& e){
+                printf("[Shell] Warning: LemonShellSetActive: Window ID out of range\n");
                 break;
             }
+
+            if(RemoveWindow) RemoveWindow(win);
+
+            windows.erase(id);
+            break;
+        } case Lemon::Shell::LemonShellToggleMenu:
+            showMenu = !showMenu;
+            menu->Minimize(!showMenu);
+            break;
+        case Lemon::Shell::LemonShellSetWindowState: {
+            long id;
+            short state;
+            if(m.Decode(id, state)){
+                continue; // Invalid message
+            }
+
+            ShellWindow* win;
+            try{
+                win = windows.at(id);
+            } catch (const std::out_of_range& e){
+                printf("[Shell] Warning: LemonShellSetActive: Window ID out of range\n");
+                break;
+            }
+
+            win->lastState = win->state;
+            win->state = state;
+
+            if(win->state == Lemon::Shell::ShellWindowStateActive){
+                if(active && active != win){
+                    active->state = Lemon::Shell::ShellWindowStateNormal;
+                }
+
+                active = win;
+            }
+
+            if(RefreshWindows) RefreshWindows();
+            break;
+        } case Lemon::Shell::LemonShellOpen: {
+            break;
+        } default:
+            break;
         }
-    }*/
+    }
 }
 
 void ShellInstance::Open(char* path){

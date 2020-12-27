@@ -18,6 +18,9 @@ void* _InitializeShellConnection(void* inst){
 }
 
 void* WMInstance::InitializeShellConnection(){
+    syscall(0, "");
+    syscall(0, "");
+    syscall(0, "");
     shellClient = Lemon::Endpoint("lemon.shell/Instance");
     shellConnected = true;
 
@@ -46,8 +49,8 @@ void WMInstance::MinimizeWindow(WMWindow* win, bool state){
             SetActive(nullptr);
         }
 
-        //if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL))
-        //    Lemon::Shell::SetWindowState(win->clientFd, Lemon::Shell::ShellWindowStateMinimized, shellClient);
+        if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL))
+            Lemon::Shell::SetWindowState(win->clientID, Lemon::Shell::ShellWindowStateMinimized, shellClient);
     }
 }
 
@@ -65,14 +68,14 @@ void WMInstance::SetActive(WMWindow* win){
     if(active == win) return;
 
     if(shellConnected && active && !(active->flags & WINDOW_FLAGS_NOSHELL) && !active->minimized){
-        //Lemon::Shell::SetWindowState(active->clientFd, Lemon::Shell::ShellWindowStateNormal, shellClient);
+        Lemon::Shell::SetWindowState(active->clientID, Lemon::Shell::ShellWindowStateNormal, shellClient);
     }
 
     active = win;
 
     if(win){
         if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-            //Lemon::Shell::SetWindowState(win->clientFd, Lemon::Shell::ShellWindowStateActive, shellClient);
+            Lemon::Shell::SetWindowState(win->clientID, Lemon::Shell::ShellWindowStateActive, shellClient);
         }
         
         windows.remove(win);
@@ -119,7 +122,7 @@ void WMInstance::Poll(){
                 }
 
                 if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-                    //Lemon::Shell::RemoveWindow(m->clientFd, shellClient);
+                    Lemon::Shell::RemoveWindow(client, shellClient);
                 }
                 
                 windows.remove(win);
@@ -134,7 +137,7 @@ void WMInstance::Poll(){
                 unsigned int flags;
                 std::string title;
 
-                if(m.Decode(x, y, width, height, flags)){
+                if(m.Decode(x, y, width, height, flags, title)){
                     printf("[LemonWM] WMCreateWindow: Invalid msg\n");
                     continue; // Invalid or corrupted message, just ignore
                 }
@@ -153,7 +156,7 @@ void WMInstance::Poll(){
                 windows.push_back(win);
 
                 if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-                    //Lemon::Shell::AddWindow(m->clientID, Lemon::Shell::ShellWindowState::ShellWindowStateNormal, title, shellClient);
+                    Lemon::Shell::AddWindow(client, Lemon::Shell::ShellWindowState::ShellWindowStateNormal, title, shellClient);
                 }
                 SetActive(win);
 
@@ -193,7 +196,7 @@ void WMInstance::Poll(){
                 }
                 
                 if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-                    //Lemon::Shell::RemoveWindow(client, shellClient);
+                    Lemon::Shell::RemoveWindow(client, shellClient);
                 }
 
                 windows.remove(win);
@@ -229,10 +232,10 @@ void WMInstance::Poll(){
                 }
 
                 MinimizeWindow(winID, minimized);
-            } /*else if(cmd == Lemon::GUI::WMInitializeShellConnection){
+            } else if(cmd == Lemon::GUI::WMInitializeShellConnection){
                 pthread_t p;
                 pthread_create(&p, nullptr, reinterpret_cast<void*(*)(void*)>(&_InitializeShellConnection), this);
-            } */ else if(cmd == Lemon::GUI::WMDisplayContextMenu){
+            } else if(cmd == Lemon::GUI::WMDisplayContextMenu){
                 WMWindow* win = FindWindow(client);
 
                 if(!win){
@@ -441,7 +444,7 @@ void WMInstance::MouseMove(){
 
 void WMInstance::KeyUpdate(int key, bool pressed){
     if(shellConnected && key == KEY_GUI && pressed){
-        //Lemon::Shell::ToggleMenu(shellClient);
+        Lemon::Shell::ToggleMenu(shellClient);
     } else if(active){
         Lemon::LemonEvent ev;
 

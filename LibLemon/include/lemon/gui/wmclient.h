@@ -13,6 +13,7 @@ namespace Lemon::GUI{
         WMMinimizeWindow = 105,
         WMMinimizeOtherWindow = 105,
         WMDisplayContextMenu = 106,
+        WMInitializeShellConnection = 107,
     };
 
     class WMClient : public Endpoint {
@@ -30,5 +31,6 @@ namespace Lemon::GUI{
         void Minimize(bool minimized) const;
         void Minimize(long windowID, bool minimized) const;
         void DisplayContextMenu(int x, int y, const std::string& serializedEntries) const;
+        void InitializeShellConnection() const;
     };
 }

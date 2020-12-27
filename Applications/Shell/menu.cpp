@@ -234,9 +234,9 @@ void InitializeMenu(){
                         categoryName = "Other";
                     }
                     try{
-                        cat = &categories[categoryName];
+                        cat = &categories.at(categoryName);
                     } catch(const std::out_of_range& e){
-                        cat = &categories["Other"];
+                        cat = &categories.at("Other");
                     }
 
                     items[item.id] = item;
@@ -274,7 +274,7 @@ void PollMenu(){
     while(window->PollEvent(ev)){
         if(ev.event == Lemon::EventWindowCommand){
             try{
-                auto& item = items[ev.windowCmd];
+                auto& item = items.at(ev.windowCmd);
                 item.Open({0, 0});
             } catch(const std::out_of_range& e){
 
