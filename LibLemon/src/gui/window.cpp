@@ -227,7 +227,7 @@ namespace Lemon::GUI{
         }
 
         std::string str = serializedEntries.str();
-        printf("str length: %lu\n", str.length());
+        
         WMClient::DisplayContextMenu(pos.x, pos.y, str);
     }
 

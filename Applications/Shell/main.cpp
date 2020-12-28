@@ -75,6 +75,7 @@ public:
 std::map<ShellWindow*, WindowButton*> taskbarWindows;
 Lemon::GUI::LayoutContainer* taskbarWindowsContainer;
 
+bool paintTaskbar = true;
 void AddWindow(ShellWindow* win){
 	WindowButton* btn = new WindowButton(win, {0, 0, 0, 0} /* The LayoutContainer will handle bounds for us*/);
 	taskbarWindows.insert(std::pair<ShellWindow*, WindowButton*>(win, btn));
@@ -103,7 +104,6 @@ void OnTaskbarPaint(surface_t* surface){
 	Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255, 255, surface);
 }
 
-bool paintTaskbar = true;
 void InitializeMenu();
 void PollMenu();
 void MinimizeMenu(bool s);

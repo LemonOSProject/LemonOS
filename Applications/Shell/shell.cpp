@@ -42,6 +42,7 @@ void ShellInstance::PollCommands(){
 
                 win->id = id;
                 win->state = state;
+                win->title = title;
 
                 windows.insert(std::pair<long, ShellWindow*>(id, win));
                 

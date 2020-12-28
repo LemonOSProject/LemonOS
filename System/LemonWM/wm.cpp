@@ -18,9 +18,6 @@ void* _InitializeShellConnection(void* inst){
 }
 
 void* WMInstance::InitializeShellConnection(){
-    syscall(0, "");
-    syscall(0, "");
-    syscall(0, "");
     shellClient = Lemon::Endpoint("lemon.shell/Instance");
     shellConnected = true;
 
@@ -264,7 +261,7 @@ void WMInstance::Poll(){
                     if(cPos >= pos || cPos == std::string::npos){
                         menu.items.push_back(ContextMenuItem(entries.substr(0, pos), i++, 0));
                     } else {
-                        menu.items.push_back(ContextMenuItem(entries.substr(cPos + 1, pos - cPos + 1), i++, std::stoi(entries.substr(0, cPos))));
+                        menu.items.push_back(ContextMenuItem(entries.substr(cPos + 1, pos - (cPos + 1)), i++, std::stoi(entries.substr(0, cPos))));
                     }
 
                     entries.erase(0, pos + 1);
