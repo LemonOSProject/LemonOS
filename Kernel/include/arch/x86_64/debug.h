@@ -21,6 +21,7 @@ extern const int debugLevelACPI;
 
 extern const int debugLevelAHCI;
 extern const int debugLevelATA;
+extern const int debugLevelNVMe;
 extern const int debugLevelExt2;
 extern const int debugLevelPartitions;
 
