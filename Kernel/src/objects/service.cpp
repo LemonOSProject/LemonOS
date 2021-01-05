@@ -29,7 +29,7 @@ long ServiceFS::ResolveServiceName(FancyRefPtr<Service>& ref, const char* name){
         }
     }
 
-    Log::Warning("Service %s not found!", name);
+    //Log::Warning("Service %s not found!", name);
     return 1;
 }
 

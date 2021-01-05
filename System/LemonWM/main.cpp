@@ -7,7 +7,7 @@
 #include <lemon/gui/window.h>
 #include <lemon/core/fb.h>
 #include <lemon/core/input.h>
-#include <lemon/core/cfgparser.h>
+#include <lemon/core/json.h>
 
 #include <time.h>
 
@@ -32,33 +32,44 @@ int main(){
 
     std::string bgPath = "/initrd/bg3.png";
 
-	CFGParser cfgParser = CFGParser("/system/lemon/lemonwm.cfg");
-    cfgParser.Parse();
+	Lemon::JSONParser configParser("/system/lemon/lemonwm.json");
+    auto json = configParser.Parse();
+    if(json.IsObject()){
+        std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *json.object;
 
-    for(auto item : cfgParser.GetItems()){
-        for(auto entry : item.second){
-            if(!entry.name.compare("useBackgroundImage")){
-                if(!(entry.value.compare("yes") && entry.value.compare("true"))){
-                    wm.compositor.useImage = true;
-                } else {
-                    wm.compositor.useImage = false;
-                }
-            } else if(!entry.name.compare("backgroundImage")){
-                bgPath = entry.value;
-            } else if(!entry.name.compare("displayFramerate")){
-                if(!(entry.value.compare("yes") && entry.value.compare("true"))){
-                    wm.compositor.displayFramerate = true;
-                } else {
-                    wm.compositor.displayFramerate = false;
-                }
-            }  else if(!entry.name.compare("capFramerate")){
-                if(!(entry.value.compare("yes") && entry.value.compare("true"))){
-                    wm.compositor.capFramerate = true;
-                } else {
-                    wm.compositor.capFramerate = false;
-                }
-            } 
+        if(auto it = values.find("useBackgroundImage"); it != values.end()){
+            auto& v = it->second;
+
+            if(v.IsBool()){
+                wm.compositor.useImage = v.AsBool();
+            } else {} // TODO: Do something when invalid valaue
         }
+
+        if(auto it = values.find("backgroundImage"); it != values.end()){
+            auto& v = it->second;
+
+            if(v.IsString()){
+                bgPath = v.AsString();
+            } else {} // TODO: Do something when invalid valaue
+        }
+
+        if(auto it = values.find("displayFramerate"); it != values.end()){
+            auto& v = it->second;
+
+            if(v.IsBool()){
+                wm.compositor.displayFramerate = v.AsBool();
+            } else {} // TODO: Do something when invalid valaue
+        }
+
+        if(auto it = values.find("capFramerate"); it != values.end()){
+            auto& v = it->second;
+
+            if(v.IsBool()){
+                wm.compositor.capFramerate = v.AsBool();
+            } else {} // TODO: Do something when invalid valaue
+        }
+    } else {
+        printf("[LemonWM] Warning: Error parsing JSON configuration file!\n");
     }
 
     Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 255, 0, 128, &fbSurface);

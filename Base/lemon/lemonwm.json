@@ -1,0 +1,7 @@
+{
+    "useBackgroundImage" : true,
+    "backgroundImage" : "/initrd/bg3.png",
+    "useExperimentalClipping" : false,
+    "displayFramerate" : true,
+    "capFramerate" : true
+}

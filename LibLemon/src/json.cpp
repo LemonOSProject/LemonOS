@@ -7,6 +7,38 @@ namespace Lemon{
 
     }
 
+    JSONParser::JSONParser(const char* path){
+        FILE* file = fopen(path, "r");
+        if(!file){
+            printf("[LibLemon] Warning: Failed to open JSON file '%s' for reading!\n", path);
+            return;
+        }
+
+        fseek(file, 0, SEEK_END);
+
+        size_t len = ftell(file);
+        if(len > 1048576){
+            fseek(file, 0, SEEK_END);
+            len = ftell(file);
+            if(len > 1048576){
+                fclose(file);
+                return;
+            }
+        }
+
+        buffer = std::unique_ptr<char>(new char[len + 1]);
+        buffer.get()[len] = 0;
+
+        fseek(file, 0, SEEK_SET);
+        fseek(file, 0, SEEK_SET);
+        fread(buffer.get(), len, 1, file);
+
+        fclose(file);
+
+        sv = std::string_view(buffer.get());
+        it = sv.begin();
+    }
+
     JSONValue JSONParser::Parse(){
         JSONValue v = JSONValue();
 
@@ -141,7 +173,7 @@ namespace Lemon{
                 return 1; // Unknown word
             }
 
-            v = JSONValue(true);
+            v = JSONValue(false);
         } else if(c == 'n'){
             if(!EatWord("null")){
                 return 1; // Unknown word
@@ -158,6 +190,8 @@ namespace Lemon{
     }
 
     JSONValue JSONParser::ParseObject(){
+        EatWhitespace();
+
         if(!EatOne('{')){
             #ifdef LIBLEMON_DEBUG_JSON
                 printf("Expected {, line %d.\n", line);
@@ -176,10 +210,6 @@ namespace Lemon{
                 #endif
                 return JSONValue();
             }
-
-            #ifdef LIBLEMON_DEBUG_JSON
-                printf("Found key: %s, line %d.\n", key.c_str(), line);
-            #endif
 
             EatWhitespace();
 

@@ -611,7 +611,7 @@ long SysLSeek(regs64_t* r){
 
 	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length()) || !Scheduler::GetCurrentProcess()->fileDescriptors[fd]){
 		Log::Warning("sys_lseek: Invalid File Descriptor, %d", fd);
-		return -1;
+		return -EINVAL;
 	}
 
 	switch(SC_ARG2(r)){
@@ -629,7 +629,7 @@ long SysLSeek(regs64_t* r){
 		break;
 	default:
 		Log::Info("Invalid seek: %d, mode: %d", fd, SC_ARG2(r));
-		return -1; // Invalid seek mode
+		return -EINVAL; // Invalid seek mode
 		break;
 	}
 

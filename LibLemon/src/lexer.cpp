@@ -3,7 +3,7 @@
 #include <cassert>
 
 namespace Lemon{
-    BasicLexer::BasicLexer(std::string_view& v){
+    BasicLexer::BasicLexer(const std::string_view& v){
         sv = v;
         it = sv.begin();
     }
@@ -49,7 +49,7 @@ namespace Lemon{
         return ch == c;
     }
 
-    char BasicLexer::Peek(size_t ahead) const{
+    char BasicLexer::Peek(ssize_t ahead) const{
         assert(it + ahead < sv.end());
 
         return *(it + ahead);

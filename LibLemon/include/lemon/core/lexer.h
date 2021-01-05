@@ -12,7 +12,8 @@ namespace Lemon{
         std::string_view sv;
         const char* it;
     public:
-        BasicLexer(std::string_view& v);
+        BasicLexer() = default;
+        BasicLexer(const std::string_view& v);
 
         inline bool End(){ return it >= sv.end(); }
 
@@ -22,6 +23,8 @@ namespace Lemon{
 
         template<typename C>
         std::string_view EatWhile(C cond){
+            if(End()) return nullptr;
+
             auto start = it;
             size_t count = 0;
             char c;
@@ -47,6 +50,6 @@ namespace Lemon{
             }
         }
 
-        char Peek(size_t ahead = 0) const;
+        char Peek(ssize_t ahead = 0) const;
     };
 }

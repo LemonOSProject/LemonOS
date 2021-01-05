@@ -41,7 +41,6 @@ cpp_files = [
     'src/shell/shell.cpp',
 
     'src/cfgparser.cpp',
-    'src/configmgr.cpp',
     'src/lexer.cpp',
     'src/json.cpp',
     'src/sha.cpp',
