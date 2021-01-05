@@ -30,8 +30,10 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 - [GnuBoy Port](https://github.com/fido2020/lemon-gnuboy)
 - [DOOM Port](https://github.com/fido2020/LemonDOOM)
 
-### Work In Progess
+### Work In Progress
 - Network Stack
+- NVMe Driver
+- XHCI Driver
 
 ### System requirements
 - 256 MB RAM (512 is more optimal)

@@ -219,6 +219,10 @@ void ParseLine(){
 int main(){
 	printf("Lemon SHell\n");
 
+	if(const char* h = getenv("HOME"); h){
+		chdir(h);
+	}
+
 	getcwd(currentDir, PATH_MAX);
 	tcgetattr(STDOUT_FILENO, &execAttributes);
 	readAttributes = execAttributes;

@@ -98,7 +98,7 @@ void Scroll(){
 }
 
 void OnPaint(surface_t* surface){
-	int fontHeight = terminalFont->height;
+	int fontHeight = terminalFont->lineHeight;
 
 	if(/*paintAll*/ true){
 		for(int i = 0; i < rowCount && (bufferOffset + i) < static_cast<int>(buffer.size()); i++){
@@ -497,7 +497,7 @@ int main(int argc, char** argv){
 		terminalFont = Lemon::Graphics::GetFont("default");
 	}
 
-	rowCount = 480 / terminalFont->height - 1;
+	rowCount = 480 / terminalFont->lineHeight - 1;
 	columnCount = 720 / 8;
 
 	curPos = {0, 0};
@@ -570,7 +570,7 @@ int main(int argc, char** argv){
 				window->Resize(ev.resizeBounds);
 
 				columnCount = window->GetSize().x / 8;
-				rowCount = window->GetSize().y / terminalFont->height;
+				rowCount = window->GetSize().y / terminalFont->lineHeight;
 
 				wSz.ws_col = static_cast<unsigned short>(columnCount);
 				wSz.ws_row = static_cast<unsigned short>(rowCount);

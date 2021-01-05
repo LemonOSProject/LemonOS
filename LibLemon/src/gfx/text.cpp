@@ -44,7 +44,7 @@ namespace Lemon::Graphics{
             return 0;
         }
 
-        int maxHeight = font->height - (font->height - font->face->glyph->bitmap_top);
+        int maxHeight = font->lineHeight - (font->height - font->face->glyph->bitmap_top);
 
         if(y + maxHeight >= limits.y + limits.height){
             maxHeight = limits.y + limits.height - y;

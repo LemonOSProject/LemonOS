@@ -10,6 +10,7 @@ namespace Lemon::Graphics{
         bool monospace = false;
         FT_Face face;
         int height;
+        int lineHeight;
         int width;
         int tabWidth = 4;
         char* id;

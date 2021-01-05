@@ -49,6 +49,7 @@ namespace Lemon::Graphics{
             return;
         }
 
+        mainFont->lineHeight = 16;
         mainFont->id = new char[strlen("default") + 1];
         mainFont->width = 8;
         mainFont->tabWidth = 4;
@@ -85,6 +86,7 @@ namespace Lemon::Graphics{
         }
 
         font->height = sz;
+        font->lineHeight = sz + sz / 3;
         font->monospace = FT_IS_FIXED_WIDTH(font->face);
         font->width = 8;
         font->tabWidth = 4;

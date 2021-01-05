@@ -63,6 +63,11 @@ lemonmonitor_src = [
 ipctest_src = [
     'IPCTest/main.cpp'
 ]
+
+jsondump_src = [
+    'JSONDump/main.cpp'
+]
+
 minesweeper_src = [
     'Minesweeper/main.cpp'
 ]
@@ -80,4 +85,5 @@ executable('guitest.lef', guitest_src, cpp_args : application_cpp_args, link_arg
 executable('run.lef', run_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('lemonmonitor.lef', lemonmonitor_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('ipctest.lef', ipctest_src, cpp_args : application_cpp_args, install : true)
+executable('jsondump.lef', jsondump_src, cpp_args : application_cpp_args, install : true, link_args : ['-llemon'])
 executable('minesweeper.lef', minesweeper_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
