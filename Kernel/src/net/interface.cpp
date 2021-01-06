@@ -102,7 +102,7 @@ namespace Network::Interface{
 	}
 
 	void Initialize(){
-		Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), (uintptr_t)InterfaceThread, (uintptr_t)kmalloc(NET_INTERFACE_STACKSIZE) + NET_INTERFACE_STACKSIZE);
+		Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), (uintptr_t)InterfaceThread, (uintptr_t)kmalloc(NET_INTERFACE_STACKSIZE) + NET_INTERFACE_STACKSIZE, KERNEL_CS, KERNEL_SS);
 	}
 
 	void Send(void* data, size_t length){

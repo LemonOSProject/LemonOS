@@ -1,5 +1,6 @@
 #include <lemon/gui/window.h>
 #include <lemon/core/sharedmem.h>
+#include <lemon/core/json.h>
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -36,6 +37,68 @@ namespace Lemon::GUI{
         Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey);
 
         usleep(100);
+    }
+
+    void Window::UpdateGUITheme(const std::string& path){
+        JSONParser jP = JSONParser(path.c_str());
+        auto json = jP.Parse();
+
+        if(json.IsObject()){
+            JSONValue obj;
+            if(json.object->find("gui") != json.object->end() && (obj = json.object->at("gui")).IsObject()) {
+                std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *obj.object;
+
+                if(auto it = values.find("background"); it != values.end()){
+                    auto& v = it->second;
+
+                    if(v.IsArray() && v.array->size() >= 3){
+                        Lemon::colours[Lemon::Colour::Background] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
+                    } else {} // TODO: Do something when invalid valaue
+                }
+
+                if(auto it = values.find("content"); it != values.end()){
+                    auto& v = it->second;
+
+                    if(v.IsArray() && v.array->size() >= 3){
+                        Lemon::colours[Lemon::Colour::ContentBackground] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
+                    } else {} // TODO: Do something when invalid valaue
+                }
+
+                if(auto it = values.find("text"); it != values.end()){
+                    auto& v = it->second;
+
+                    if(v.IsArray() && v.array->size() >= 3){
+                        Lemon::colours[Lemon::Colour::Text] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
+                    } else {} // TODO: Do something when invalid valaue
+                }
+
+                if(auto it = values.find("textAlternate"); it != values.end()){
+                    auto& v = it->second;
+
+                    if(v.IsArray() && v.array->size() >= 3){
+                        Lemon::colours[Lemon::Colour::TextAlternate] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
+                    } else {} // TODO: Do something when invalid valaue
+                }
+
+                if(auto it = values.find("highlight"); it != values.end()){
+                    auto& v = it->second;
+
+                    if(v.IsArray() && v.array->size() >= 3){
+                        Lemon::colours[Lemon::Colour::Foreground] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
+                    } else {} // TODO: Do something when invalid valaue
+                }
+
+                if(auto it = values.find("contentShadow"); it != values.end()){
+                    auto& v = it->second;
+
+                    if(v.IsArray() && v.array->size() >= 3){
+                        Lemon::colours[Lemon::Colour::ContentShadow] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
+                    } else {} // TODO: Do something when invalid valaue
+                }
+            }
+        } else {
+            printf("[LibLemon] Warning: Failed to parse system theme!\n");
+        }
     }
 
     void Window::Resize(vector2i_t size){
@@ -98,8 +161,10 @@ namespace Lemon::GUI{
     bool Window::PollEvent(LemonEvent& ev){
         Message m;
         if(long ret = Poll(m); ret > 0 && m.id() == WindowEvent){
-            if(!m.Decode(ev)) {
-                return true;
+            if(m.id() == WindowEvent){
+                if(!m.Decode(ev)) {
+                    return true;
+                }
             }
         }
 
@@ -107,7 +172,7 @@ namespace Lemon::GUI{
     }
     
     void Window::WaitEvent(){
-        
+        Wait();
     }
 
     void Window::GUIHandleEvent(LemonEvent& ev){

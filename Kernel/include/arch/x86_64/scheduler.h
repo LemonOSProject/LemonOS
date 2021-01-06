@@ -16,6 +16,11 @@
 
 #include <thread.h>
 
+#define KERNEL_CS 0x08
+#define KERNEL_SS 0x10
+#define USER_CS 0x1B
+#define USER_SS 0x23
+
 typedef void* handle_t;
 
 typedef struct HandleIndex {
@@ -67,7 +72,7 @@ typedef struct {
 } process_info_t;
 
 namespace Scheduler{
-    pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack);
+    pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss);
 
     process_t* CreateProcess(void* entry);
 	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr, int envc = 0, char** envp = nullptr);

@@ -9,10 +9,10 @@ namespace Lemon{
         std::list<class Waiter> waiters;
 
     public:
-        virtual inline const handle_t& handle() const = 0;
+        virtual inline const handle_t& GetHandle() const = 0;
         void Wait();
 
-        virtual ~Waitable();
+        virtual ~Waitable() = default;
     };
 
     class Waiter {

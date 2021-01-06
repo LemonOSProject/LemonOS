@@ -191,6 +191,7 @@ public:
     surface_t screenSurface;
 
     std::list<WMWindow*> windows;
+    std::string themePath = "/system/lemon/themes/classic.json";
 
     InputManager input = InputManager(this);
     CompositorInstance compositor = CompositorInstance(this);

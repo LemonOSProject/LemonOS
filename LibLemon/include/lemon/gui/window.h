@@ -69,6 +69,8 @@ namespace Lemon::GUI {
         int windowType = WindowType::Basic;
 
         timespec lastClick;
+
+        void UpdateGUITheme(const std::string& path);
     public:
         vector2i_t lastMousePos = {0, 0};
         WindowMenuBar* menuBar = nullptr;

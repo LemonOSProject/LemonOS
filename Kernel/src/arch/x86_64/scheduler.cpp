@@ -212,8 +212,8 @@ namespace Scheduler{
         regs64_t* registers = &thread->registers;
         memset((uint8_t*)registers, 0, sizeof(regs64_t));
         registers->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
-        registers->cs = 0x08; // Kernel CS
-        registers->ss = 0x10; // Kernel SS
+        registers->cs = KERNEL_CS; // Kernel CS
+        registers->ss = KERNEL_SS; // Kernel SS
 
         thread->fxState = Memory::KernelAllocate4KPages(1); // Allocate Memory for the FPU/Extended Register State
         Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)thread->fxState, 1);
@@ -267,7 +267,7 @@ namespace Scheduler{
         return proc;
     }
 
-    pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack){
+    pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss){
         pid_t threadID = process->threadCount++;
         process->threads.add_back(new thread_t);
 
@@ -295,8 +295,8 @@ namespace Scheduler{
         
         regs64_t* registers = &thread.registers;
         registers->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
-        thread.registers.cs = process->threads[0]->registers.cs; // Use main thread's segments
-        thread.registers.ss = process->threads[0]->registers.ss;
+        thread.registers.cs = cs;
+        thread.registers.ss = ss;
         thread.timeSliceDefault = THREAD_TIMESLICE_DEFAULT;
         thread.timeSlice = thread.timeSliceDefault;
         thread.priority = 4;
@@ -546,8 +546,8 @@ namespace Scheduler{
         process_t* proc = InitializeProcessStructure();
 
         thread_t* thread = proc->threads[0];
-        thread->registers.cs = 0x1B; // We want user mode so use user mode segments, make sure RPL is 3
-        thread->registers.ss = 0x23;
+        thread->registers.cs = USER_CS; // We want user mode so use user mode segments, make sure RPL is 3
+        thread->registers.ss = USER_SS;
         thread->timeSliceDefault = THREAD_TIMESLICE_DEFAULT;
         thread->timeSlice = thread->timeSliceDefault;
         thread->priority = 4;

@@ -68,6 +68,14 @@ int main(){
                 wm.compositor.capFramerate = v.AsBool();
             } else {} // TODO: Do something when invalid valaue
         }
+
+        if(auto it = values.find("theme"); it != values.end()){
+            auto& v = it->second;
+
+            if(v.IsString()){
+                wm.themePath = v.AsString();
+            } else {} // TODO: Do something when invalid valaue
+        }
     } else {
         printf("[LemonWM] Warning: Error parsing JSON configuration file!\n");
     }

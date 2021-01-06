@@ -6,4 +6,5 @@ cpp_files += files(
     'sharedmem.cpp',
     'util.cpp',
     'input.cpp',
+    'waitable.cpp',
 )

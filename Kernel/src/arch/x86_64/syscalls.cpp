@@ -133,7 +133,6 @@ long SysExit(regs64_t* r){
 
 long SysExec(regs64_t* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
-	char filepath[strlen((char*)SC_ARG0(r)) + 1];
 
 	size_t filePathLength;
 	long filePathInvalid = strlenSafe(reinterpret_cast<char*>(SC_ARG0(r)), filePathLength, currentProcess->addressSpace);
@@ -142,14 +141,16 @@ long SysExec(regs64_t* r){
 		return -EFAULT;
 	}
 
+	char filepath[filePathLength + 1];
+
 	strncpy(filepath, (char*)SC_ARG0(r), filePathLength);
 	int argc = SC_ARG1(r);
 	char** argv = (char**)SC_ARG2(r);
 	uint64_t flags = SC_ARG3(r);
 	char** envp = (char**)SC_ARG4(r);
 
-	FsNode* current_node = fs::ResolvePath(filepath, currentProcess->workingDir, true /* Follow Symlinks */);
-	if(!current_node){
+	FsNode* node = fs::ResolvePath(filepath, currentProcess->workingDir, true /* Follow Symlinks */);
+	if(!node){
 		return -ENOENT;
 	}
 	
@@ -176,8 +177,8 @@ long SysExec(regs64_t* r){
 
 	Log::Info("Loading: %s", (char*)SC_ARG0(r));
 	timeval_t tv = Timer::GetSystemUptimeStruct();
-	uint8_t* buffer = (uint8_t*)kmalloc(current_node->size);
-	size_t read = fs::Read(current_node, 0, current_node->size, buffer);
+	uint8_t* buffer = (uint8_t*)kmalloc(node->size);
+	size_t read = fs::Read(node, 0, node->size, buffer);
 	if(!read){
 		Log::Warning("Could not read file: %s", filepath);
 		return 0;
@@ -1901,11 +1902,7 @@ long SysReadLink(regs64_t* r){
 /// \return (pid_t) thread id
 /////////////////////////////
 long SysSpawnThread(regs64_t* r){
-	auto tid = Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), SC_ARG0(r), SC_ARG1(r));
-
-	thread_t* t = Scheduler::GetCurrentProcess()->threads[tid];
-	t->registers.cs = 0x1B;
-	t->registers.ss = 0x23;
+	auto tid = Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), SC_ARG0(r), SC_ARG1(r), USER_CS, USER_SS);
 
 	return tid;
 }
@@ -2532,7 +2529,7 @@ long SysEndpointInfo(regs64_t* r){
 ///
 /// Wait on one KernelObject
 ///
-/// \param object (handle_t) Object to wait one
+/// \param object (handle_t) Object to wait on
 ///
 /// \return negative error code on failure
 /////////////////////////////

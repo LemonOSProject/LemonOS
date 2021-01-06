@@ -3,6 +3,7 @@
 #include <lemon/types.h>
 #include <lemon/system/ipc.h>
 #include <lemon/system/kobject.h>
+#include <lemon/system/waitable.h>
 
 #include <lemon/ipc/message.h>
 
@@ -30,7 +31,7 @@ namespace Lemon{
         }
     };
 
-    class Endpoint{
+    class Endpoint : public Waitable {
     protected:
         handle_t handle = 0;
         uint16_t msgSize = 512;
@@ -92,6 +93,10 @@ namespace Lemon{
         }
 
         inline operator handle_t(){
+            return handle;
+        }
+
+        inline const handle_t& GetHandle() const {
             return handle;
         }
 
