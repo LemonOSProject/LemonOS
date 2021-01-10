@@ -65,7 +65,7 @@ namespace fs::Ext2{
     enum CompatibleFeatures{
         DirectoryPreallocation = 0x1,   // Preallocate blocks for new directories
         ImagicInodes = 0x2,             // 
-        Journal = 0x4,                  // Contains and Ext3 Journal
+        Journal = 0x4,                  // Contains an Ext3 Journal
         ExtendedAttributes = 0x8,       // Extended Inode Attributes
         ResizeInode = 0x10,             //
         DirectoryIndexing = 0x20,       // HTree Directory Indexing

@@ -356,8 +356,11 @@ namespace AHCI{
         int blocksize = 512;
 		AHCIStatus status = AHCIStatus::Uninitialized;
 	private:
+		unsigned AcquireBuffer();
+		void ReleaseBuffer(unsigned index);
+
 		int FindCmdSlot();
-		int Access(uint64_t lba, uint32_t count, int write);
+		int Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write);
 		void Identify();
 
 		hba_port_t* registers;
@@ -367,10 +370,12 @@ namespace AHCI{
 
 		hba_cmd_tbl_t* commandTables[8];
 
-		uint64_t bufPhys;
-		void* bufVirt;
+		uint64_t physBuffers[8];
+		void* buffers[8];
+		lock_t bufferLocks[8];
 
-		Semaphore portLock = Semaphore(1); // Binary semaphore for the port
+		Semaphore bufferSemaphore = Semaphore(8);
+		Semaphore portLock = Semaphore(1); // Binary semaphore for the AHCI port
 	};
 
 	int Init();

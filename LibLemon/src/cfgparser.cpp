@@ -48,7 +48,8 @@ void CFGParser::Parse(){
 	std::string value;
 
 	std::vector<CFGItem> values;
-	for(char c : cfgData){
+	for(auto it = cfgData.begin(); it != cfgData.end(); it++){
+		char c = *it;
 		switch(c){
 		case '=':
 			if(state == ParserStateName){
@@ -59,7 +60,7 @@ void CFGParser::Parse(){
 				break;
 			}
 		case '#':
-			while((c = fgetc(cfgFile)) != EOF && c != '\n');
+			while(it != cfgData.end() && (c = *it++) != '\n');
 			[[fallthrough]];
 		case '\n':
 			if(state == ParserStateValue){

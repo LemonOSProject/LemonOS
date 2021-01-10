@@ -556,10 +556,12 @@ namespace fs::Ext2{
 
                 for(uint8_t b = 0; b < sizeof(uint8_t) * 8; b++){ // Iterate through all bits in the entry
                     if(((bitmap[e] >> b) & 0x1) == 0){
-                        bitmap[e] |= (1U << b);
                         inode = (i * super.inodesPerGroup) + e * (sizeof(uint8_t) * 8) + b + 1; // Inode Number = (Group number * inodes per group) + (bitmap entry * 8 (8 bits per byte)) + bit (inode 1 is least significant bit, block 8 is most significant) + 1 (inodes start at 1)
-                        
-                        break;
+
+                        if((inode > superext.firstInode || super.revLevel == 0) && inode > 11){
+                            bitmap[e] |= (1U << b);
+                            break;
+                        }
                     }
                 }
 
@@ -717,13 +719,15 @@ namespace fs::Ext2{
         for(;;){
             if(e2dirent->recordLength == 0) break;
 
-            DirectoryEntry dirent;
-            dirent.flags = e2dirent->fileType;
-            strncpy(dirent.name, e2dirent->name, e2dirent->nameLength);
-            dirent.name[e2dirent->nameLength] = 0;
-            dirent.inode = e2dirent->inode;
+            if(e2dirent->inode > 0){ // 0 indicates unused
+                DirectoryEntry dirent;
+                dirent.flags = e2dirent->fileType;
+                strncpy(dirent.name, e2dirent->name, e2dirent->nameLength);
+                dirent.name[e2dirent->nameLength] = 0;
+                dirent.inode = e2dirent->inode;
 
-            entries.add_back(dirent);
+                entries.add_back(dirent);
+            }
 
             blockOffset += e2dirent->recordLength;
             totalOffset += e2dirent->recordLength;
@@ -885,6 +889,17 @@ namespace fs::Ext2{
             blockOffset += e2dirent->recordLength;
             totalOffset += e2dirent->recordLength;
 
+            if(e2dirent->recordLength < 8) {
+                IF_DEBUG(debugLevelExt2 >= DebugLevelNormal, {
+                    Log::Warning("[Ext2] Error (inode: %d) record length of directory entry is invalid (value: %d)!", node->inode, e2dirent->recordLength);
+                });
+                break;
+            }
+
+            if(e2dirent->inode == 0){
+                index--; // Ignore the entry
+            }
+
             if(blockOffset >= blocksize){
                 currentBlockIndex++;
 
@@ -958,14 +973,25 @@ namespace fs::Ext2{
             return nullptr;
         }
 
-        while(totalOffset < ino.size && currentBlockIndex < ino.blockCount / (blocksize / 512)){
-            /*char buf[e2dirent->nameLength + 1];
-            strncpy(buf, e2dirent->name, e2dirent->nameLength);
-            buf[e2dirent->nameLength] = 0;
-            Log::Info("Checking name %s, inode %d, len %d (parent inode: %d)", buf, e2dirent->inode, e2dirent->recordLength, node->inode);*/
-
-            if(strlen(name) == e2dirent->nameLength && strncmp(name, e2dirent->name, e2dirent->nameLength) == 0){
+        while(currentBlockIndex < ino.blockCount / (blocksize / 512)){
+            if(e2dirent->recordLength < 8) {
+                IF_DEBUG(debugLevelExt2 >= DebugLevelNormal, {
+                    Log::Warning("[Ext2] Error (inode: %d) record length of directory entry is invalid (value: %d)!", node->inode, e2dirent->recordLength);
+                });
                 break;
+            }
+
+            if(e2dirent->inode > 0){
+                IF_DEBUG(debugLevelExt2 >= DebugLevelVerbose, {
+                    char buf[e2dirent->nameLength + 1];
+                    strncpy(buf, e2dirent->name, e2dirent->nameLength);
+                    buf[e2dirent->nameLength] = 0;
+                    Log::Info("Checking name '%s' (name len %d), inode %d, len %d (parent inode: %d)", buf, e2dirent->nameLength, e2dirent->inode, e2dirent->recordLength, node->inode);
+                });
+
+                if(strlen(name) == e2dirent->nameLength && strncmp(name, e2dirent->name, e2dirent->nameLength) == 0){
+                    break;
+                }
             }
 
             blockOffset += e2dirent->recordLength;
@@ -1011,6 +1037,10 @@ namespace fs::Ext2{
                 return nullptr; // Could not read inode
             }
 
+            IF_DEBUG(debugLevelExt2 >= DebugLevelVerbose, {
+                Log::Info("[Ext2] Opening inode %d, size: %d", e2dirent->inode, direntInode.size);
+            });
+
             returnNode = new Ext2Node(this, direntInode, e2dirent->inode);
 
             inodeCache.insert(e2dirent->inode, returnNode);
@@ -1019,7 +1049,7 @@ namespace fs::Ext2{
     }
 
     ssize_t Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8_t *buffer){
-        if(offset > node->size) return -1;
+        if(offset >= node->size) return 0;
         if(offset + size > node->size) size = node->size - offset;
 
         uint32_t blockIndex = LocationToBlock(offset);
@@ -1027,7 +1057,7 @@ namespace fs::Ext2{
         uint8_t blockBuffer[blocksize];
 
         if(debugLevelExt2 >= DebugLevelVerbose){
-            Log::Info("[Ext2] Reading: Block index: %d, Block limit: %d, Offset: %d, Size: %d", blockIndex, blockLimit, offset, size);
+            Log::Info("[Ext2] Reading: Block index: %d, Block limit: %d, Offset: %d, Size: %d, Node size: %d", blockIndex, blockLimit, offset, size, node->size);
         }
 
         #ifdef EXT2_ENABLE_TIMER
@@ -1044,15 +1074,21 @@ namespace fs::Ext2{
 
         for(uint32_t block : blocks){
             if(size <= 0) break;
-            
+
             if(offset && offset % blocksize){
                 if(int e = ReadBlockCached(block, blockBuffer); e){
-                    Log::Info("[Ext2] Error %i reading block %u", e, block);
-                    error = DiskReadError;
-                    //return -1;
+                    if(int e = ReadBlockCached(block, blockBuffer); e){ // Try again
+                        Log::Info("[Ext2] Error %i reading block %u", e, block);
+                        error = DiskReadError;
+                        break;
+                    }
                 }
 
                 size_t readSize = blocksize - (offset % blocksize);
+                if(readSize > size){
+                    readSize = size;
+                }
+
                 size_t readOffset = (offset % blocksize);
 
                 if(readSize > size) readSize = size;
@@ -1064,20 +1100,25 @@ namespace fs::Ext2{
                 offset += readSize;
             } else if(size >= blocksize){
                 if(int e = ReadBlockCached(block, buffer); e){
-                    Log::Info("[Ext2] Error %i reading block %u", e, block);
-                    error = DiskReadError;
-                    //return -1;
+                    if(int e = ReadBlockCached(block, buffer); e){ // Try again
+                        Log::Info("[Ext2] Error %i reading block %u", e, block);
+                        error = DiskReadError;
+                        break;
+                    }
                 }
                 size -= blocksize;
                 buffer += blocksize;
                 offset += blocksize;
             } else {
                 if(int e = ReadBlockCached(block, blockBuffer); e){
-                    Log::Info("[Ext2] Error %i reading block %u", e, block);
-                    error = DiskReadError;
-                    //return -1;
+                    if(int e = ReadBlockCached(block, blockBuffer); e){ // Try again
+                        Log::Info("[Ext2] Error %i reading block %u", e, block);
+                        error = DiskReadError;
+                        break;
+                    }
                 }
                 memcpy(buffer, blockBuffer, size);
+
                 size = 0;
                 break;
             }
@@ -1090,7 +1131,9 @@ namespace fs::Ext2{
         #endif
 
         if(size){
-            Log::Info("[Ext2] Requested %d bytes, read %d bytes (offset: %d)", ret, ret - size, offset);
+            if(debugLevelExt2 >= DebugLevelVerbose){
+                Log::Info("[Ext2] Requested %d bytes, read %d bytes (offset: %d)", ret, ret - size, offset);
+            }
             return ret - size;
         }
 

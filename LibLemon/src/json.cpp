@@ -17,25 +17,26 @@ namespace Lemon{
         fseek(file, 0, SEEK_END);
 
         size_t len = ftell(file);
-        if(len > 1048576){
-            fseek(file, 0, SEEK_END);
-            len = ftell(file);
-            if(len > 1048576){
-                fclose(file);
-                return;
+
+        if(len <= 0x1000){
+            buffer.resize(len);
+
+            fseek(file, 0, SEEK_SET);
+
+            fread(buffer.data(), 1, len, file);
+        } else {
+            fseek(file, 0, SEEK_SET);
+
+            char buf[0x1000];
+            while(size_t sz = fread(buf, 0x1000, 1, file)){
+                buffer.insert(buffer.end(), buf, buf + sz);
             }
         }
 
-        buffer = std::unique_ptr<char>(new char[len + 1]);
-        buffer.get()[len] = 0;
-
-        fseek(file, 0, SEEK_SET);
-        fseek(file, 0, SEEK_SET);
-        fread(buffer.get(), len, 1, file);
-
+        buffer.push_back(0);
         fclose(file);
 
-        sv = std::string_view(buffer.get());
+        sv = std::string_view(buffer.data());
         it = sv.begin();
     }
 

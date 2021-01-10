@@ -1,7 +1,7 @@
 {
     "useBackgroundImage" : true,
-    "backgroundImage" : "/initrd/bg3.png",
-    "theme" : "/system/lemon/themes/classic.json",
+    "backgroundImage" : "/system/lemon/backgrounds/bg5.png",
+    "theme" : "/system/lemon/themes/default.json",
     "useExperimentalClipping" : false,
     "displayFramerate" : true,
     "capFramerate" : true

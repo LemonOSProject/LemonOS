@@ -224,11 +224,11 @@ namespace Lemon::GUI {
             absPath = currentPath + "/" + dirent.d_name;
 
             struct stat statResult;
-            int ret = stat(absPath.c_str(), &statResult);
+            int ret = lstat(absPath.c_str(), &statResult);
             if(ret){
-                perror("GUI: FileView: File: Stat:");
-                assert(!ret);
-                return;
+                perror("GUI: FileView: File: Stat");
+                //assert(!ret);
+                continue;
             }
 
             if(S_ISDIR(statResult.st_mode)){

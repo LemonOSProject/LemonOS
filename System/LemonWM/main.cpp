@@ -30,9 +30,9 @@ int main(){
 
     Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 255, 0, 0, &fbSurface);
 
-    std::string bgPath = "/initrd/bg3.png";
+    std::string bgPath = "/system/lemon/backgrounds/bg6.png";
 
-	Lemon::JSONParser configParser("/system/lemon/lemonwm.json");
+    Lemon::JSONParser configParser("/system/lemon/lemonwm.json");
     auto json = configParser.Parse();
     if(json.IsObject()){
         std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *json.object;

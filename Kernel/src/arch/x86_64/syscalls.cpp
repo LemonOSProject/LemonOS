@@ -1002,12 +1002,12 @@ long SysIoctl(regs64_t* r){
 	int* result = (int*)SC_ARG3(r);
 
 	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
-		return -1;
+		return -EINVAL;
 	}
 	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[SC_ARG0(r)];
 	if(!handle){
 		Log::Warning("sys_ioctl: Invalid File Descriptor: %d", SC_ARG0(r));
-		return -2;
+		return -EINVAL;
 	}
 
 	int ret = fs::Ioctl(handle, request, arg);

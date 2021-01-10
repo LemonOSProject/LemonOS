@@ -36,7 +36,7 @@ clean:
 	ninja -C Applications/build clean
 	ninja -C Kernel/build clean
 	ninja -C System/build clean
-	find Base/ -type f -not -name '*.cfg' -not -name '*.py' -not -name '*.asm' -not -name 'localtime' -delete
+	find Base/ -type f -not -name '*.cfg' -not -name '*.json' -not -name '*.png' -not -name '*.py' -not -name '*.asm' -not -name 'localtime' -delete
 	rm -rf Initrd/*
 	rm initrd.tar
 	

@@ -136,9 +136,11 @@ namespace AHCI{
             return;
         }
 
-        bufPhys = Memory::AllocatePhysicalMemoryBlock();
-        bufVirt = Memory::KernelAllocate4KPages(1);
-        Memory::KernelMapVirtualMemory4K(bufPhys, (uintptr_t)bufVirt, 1);
+        for(unsigned i = 0; i < 8; i++){
+            physBuffers[i] = Memory::AllocatePhysicalMemoryBlock();
+            buffers[i] = Memory::KernelAllocate4KPages(1);
+            Memory::KernelMapVirtualMemory4K(physBuffers[i], (uintptr_t)buffers[i], 1);
+        }
 
         status = AHCIStatus::Active;
 
@@ -159,24 +161,55 @@ namespace AHCI{
         Log::Info("[AHCI] Found %d partitions!", partitions.get_length());
 
         InitializePartitions();
+
+        portLock.SetValue(1);
+    }
+
+    unsigned Port::AcquireBuffer(){
+        bufferSemaphore.Wait();
+
+        unsigned i = 0;
+        for(; i < 8; i++){
+            if(!acquireTestLock(&bufferLocks[i])){
+                return i;
+            }
+        }
+
+        bufferSemaphore.Signal();
+        return (unsigned)-1;
+    }
+
+    void Port::ReleaseBuffer(unsigned index){
+        assert(index < 8);
+
+        releaseLock(&bufferLocks[index]);
+        bufferSemaphore.Signal();
     }
 
     int Port::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer){
-        uint64_t blockCount = ((count + 511) / 512);
+        uint64_t blockCount = ((count + (blocksize - 1)) / blocksize);
         uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
+
+        //Log::Info("LBA: %x, count: %u, blcount: %u", lba, count, blockCount);
         
         while(blockCount >= 8 && count){
-            uint64_t size;
-            if(count < 512 * 8) size = count;
-            else size = 512 * 8;
+            int size = 512 * 8;
+            if(size > count) size = count;
 
-            if(!size) continue;
+            if(!size) break;
 
-            if(Access(lba, 8, 0)){ // LBA, 2 blocks, read
+            unsigned buf = AcquireBuffer();
+            if(buf >= 8){
+                return 4; // Should not happen
+            }
+
+            if(Access(lba, 8, physBuffers[buf], 0)){ // LBA, 8 blocks, read
                 return 1; // Error Reading Sectors
             }
 
-            memcpy(buffer, bufVirt, size);
+            memcpy(buffer, buffers[buf], size);
+            ReleaseBuffer(buf);
+
             buffer += size;
             lba += 8;
             blockCount -= 8;
@@ -184,40 +217,52 @@ namespace AHCI{
         }
 
         while(blockCount >= 2 && count){
-            uint64_t size;
-            if(count < 512 * 2) size = count;
-            else size = 512 * 2;
+            int size = 512 << 1;
+            if(size > count) size = count;
 
-            if(!size) continue;
+            if(!size) break;
 
-            if(Access(lba, 2, 0)){ // LBA, 2 blocks, read
+            unsigned buf = AcquireBuffer();
+            if(buf >= 8){
+                return 4; // Should not happen
+            }
+
+            if(Access(lba, 2, physBuffers[buf], 0)){ // LBA, 2 blocks, read
                 return 1; // Error Reading Sectors
             }
 
-            memcpy(buffer, bufVirt, size);
+            memcpy(buffer, buffers[buf], size);
+            ReleaseBuffer(buf);
+
             buffer += size;
             lba += 2;
             blockCount -= 2;
             count -= size;
         }
 
-        while(blockCount-- && count){
-            uint64_t size;
-            if(count < 512) size = count;
-            else size = 512;
+        while(blockCount && count){
+            int size = 512;
+            if(size > count) size = count;
 
-            if(!size) continue;
+            if(!size) break;
 
-            if(Access(lba, 1, 0)){ // LBA, 1 block, read
+            unsigned buf = AcquireBuffer();
+            if(buf >= 8){
+                return 4; // Should not happen
+            }
+
+            if(Access(lba, 1, physBuffers[buf], 0)){ // LBA, 1 block, read
                 return 1; // Error Reading Sectors
             }
 
-            memcpy(buffer, bufVirt, size);
+            memcpy(buffer, buffers[buf], size);
+            ReleaseBuffer(buf);
+
             buffer += size;
             lba++;
+            blockCount--;
+            count -= size;
         }
-
-        portLock.SetValue(1);
         return 0;
     }
 
@@ -231,13 +276,20 @@ namespace AHCI{
             if(count < 512) size = count;
             else size = 512;
 
-            if(!size) continue;
+            if(!size) break;
 
-            memcpy(bufVirt, buffer, size);
+            unsigned buf = AcquireBuffer();
+            if(buf >= 8){
+                return 4; // Should not happen
+            }
 
-            if(Access(lba, 1, 1)){ // LBA, 1 block, write
+            memcpy(buffer, buffers[buf], size);
+
+            if(Access(lba, 1, physBuffers[buf], 1)){ // LBA, 1 block, write
                 return 1; // Error Reading Sectors
             }
+            
+            ReleaseBuffer(buf);
 
             buffer += size;
             lba++;
@@ -246,7 +298,7 @@ namespace AHCI{
         return 0;
     }
 
-    int Port::Access(uint64_t lba, uint32_t count, int write){
+    int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write){
         portLock.Wait();
 
         registers->ie = 0xffffffff; 
@@ -278,8 +330,8 @@ namespace AHCI{
         hba_cmd_tbl_t* commandTable = commandTables[slot];
         memset(commandTable, 0, sizeof(hba_cmd_tbl_t));
 
-        commandTable->prdt_entry[0].dba = bufPhys & 0xFFFFFFFF;
-        commandTable->prdt_entry[0].dbau = (bufPhys >> 32) & 0xFFFFFFFF;
+        commandTable->prdt_entry[0].dba = physBuffer & 0xFFFFFFFF;
+        commandTable->prdt_entry[0].dbau = (physBuffer >> 32) & 0xFFFFFFFF;
         commandTable->prdt_entry[0].dbc = 512 * count - 1; // 512 bytes per sector
         commandTable->prdt_entry[0].i = 1;
 
@@ -396,8 +448,8 @@ namespace AHCI{
         hba_cmd_tbl_t* commandTable = commandTables[slot];
         memset(commandTable, 0, sizeof(hba_cmd_tbl_t));
 
-        commandTable->prdt_entry[0].dba = bufPhys & 0xFFFFFFFF;
-        commandTable->prdt_entry[0].dbau = (bufPhys >> 32) & 0xFFFFFFFF;
+        commandTable->prdt_entry[0].dba = physBuffers[0] & 0xFFFFFFFF;
+        commandTable->prdt_entry[0].dbau = (physBuffers[0] >> 32) & 0xFFFFFFFF;
         commandTable->prdt_entry[0].dbc = 512 - 1; // 512 bytes per sector
         commandTable->prdt_entry[0].i = 1;
 

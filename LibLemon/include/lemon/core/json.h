@@ -159,7 +159,7 @@ namespace Lemon{
 
     class JSONParser : protected BasicLexer{
     protected:
-        std::unique_ptr<char> buffer = nullptr;
+        std::vector<char> buffer;
 
         std::string ParseString();
 
