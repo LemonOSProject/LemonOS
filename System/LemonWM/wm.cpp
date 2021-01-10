@@ -411,11 +411,13 @@ void WMInstance::MouseMove(){
         ev.event = Lemon::EventWindowResize;
 
         if(resizePoint == ResizePoint::BottomRight) {
-            ev.resizeBounds = active->size + (input.mouse.pos - resizeStartPos);
+            ev.resizeBounds = (input.mouse.pos - active->pos);
+            if(!(active->flags & WINDOW_FLAGS_NODECORATION)) ev.resizeBounds.y -= WINDOW_TITLEBAR_HEIGHT - WINDOW_BORDER_THICKNESS;
         } else if (resizePoint == ResizePoint::Bottom) {
-            ev.resizeBounds = active->size + (vector2i_t){0, (input.mouse.pos.y - resizeStartPos.y)};
+            ev.resizeBounds = {active->size.x, input.mouse.pos.y - active->pos.y};
+            if(!(active->flags & WINDOW_FLAGS_NODECORATION)) ev.resizeBounds.y -= WINDOW_TITLEBAR_HEIGHT - WINDOW_BORDER_THICKNESS;
         } else if (resizePoint == ResizePoint::Right) {
-            ev.resizeBounds = active->size + (vector2i_t){(input.mouse.pos.x - resizeStartPos.x), 0};
+            ev.resizeBounds = {input.mouse.pos.x - active->pos.x, active->size.y};
         } else {
             return;
         }

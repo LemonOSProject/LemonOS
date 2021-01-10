@@ -375,7 +375,8 @@ namespace AHCI{
 		lock_t bufferLocks[8];
 
 		Semaphore bufferSemaphore = Semaphore(8);
-		Semaphore portLock = Semaphore(1); // Binary semaphore for the AHCI port
+		//Semaphore portLock = Semaphore(1); // Binary semaphore for the AHCI port
+		lock_t portLock = 0;
 	};
 
 	int Init();

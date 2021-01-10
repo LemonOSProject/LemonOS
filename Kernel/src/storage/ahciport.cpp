@@ -162,7 +162,8 @@ namespace AHCI{
 
         InitializePartitions();
 
-        portLock.SetValue(1);
+        //portLock.SetValue(1);
+        portLock = 0;
         bufferSemaphore.SetValue(8);
     }
 
@@ -193,23 +194,22 @@ namespace AHCI{
 
         //Log::Info("LBA: %x, count: %u, blcount: %u", lba, count, blockCount);
         
+        unsigned buf = AcquireBuffer();
+        if(buf >= 8){
+            return 4; // Should not happen
+        }
+
         while(blockCount >= 8 && count){
             int size = 512 * 8;
             if(size > count) size = count;
 
             if(!size) break;
 
-            unsigned buf = AcquireBuffer();
-            if(buf >= 8){
-                return 4; // Should not happen
-            }
-
             if(Access(lba, 8, physBuffers[buf], 0)){ // LBA, 8 blocks, read
                 return 1; // Error Reading Sectors
             }
 
             memcpy(buffer, buffers[buf], size);
-            ReleaseBuffer(buf);
 
             buffer += size;
             lba += 8;
@@ -223,17 +223,12 @@ namespace AHCI{
 
             if(!size) break;
 
-            unsigned buf = AcquireBuffer();
-            if(buf >= 8){
-                return 4; // Should not happen
-            }
-
             if(Access(lba, 2, physBuffers[buf], 0)){ // LBA, 2 blocks, read
+                ReleaseBuffer(buf);
                 return 1; // Error Reading Sectors
             }
 
             memcpy(buffer, buffers[buf], size);
-            ReleaseBuffer(buf);
 
             buffer += size;
             lba += 2;
@@ -247,30 +242,31 @@ namespace AHCI{
 
             if(!size) break;
 
-            unsigned buf = AcquireBuffer();
-            if(buf >= 8){
-                return 4; // Should not happen
-            }
-
             if(Access(lba, 1, physBuffers[buf], 0)){ // LBA, 1 block, read
+                ReleaseBuffer(buf);
                 return 1; // Error Reading Sectors
             }
 
             memcpy(buffer, buffers[buf], size);
-            ReleaseBuffer(buf);
 
             buffer += size;
             lba++;
             blockCount--;
             count -= size;
         }
+        ReleaseBuffer(buf);
+
         return 0;
     }
 
-    
     int Port::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer){
-        uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
+        uint64_t blockCount = ((count + (blocksize - 1)) / blocksize);
         uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
+
+        unsigned buf = AcquireBuffer();
+        if(buf >= 8){
+            return 4; // Should not happen
+        }
 
         while(blockCount-- && count){
             uint64_t size;
@@ -279,28 +275,25 @@ namespace AHCI{
 
             if(!size) break;
 
-            unsigned buf = AcquireBuffer();
-            if(buf >= 8){
-                return 4; // Should not happen
-            }
-
-            memcpy(buffer, buffers[buf], size);
+            memcpy(buffers[buf], buffer, size);
 
             if(Access(lba, 1, physBuffers[buf], 1)){ // LBA, 1 block, write
+                ReleaseBuffer(buf);
                 return 1; // Error Reading Sectors
             }
             
-            ReleaseBuffer(buf);
 
             buffer += size;
             lba++;
         }
+        ReleaseBuffer(buf);
 
         return 0;
     }
 
     int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write){
-        portLock.Wait();
+        //portLock.Wait();
+        acquireLock(&portLock);
 
         registers->ie = 0xffffffff; 
         registers->is = 0; 
@@ -310,7 +303,8 @@ namespace AHCI{
         if(slot == -1){
             Log::Warning("[SATA] Could not find command slot!");
             
-            portLock.Signal();
+            //portLock.Signal();
+            releaseLock(&portLock);
             return 2;
         }
 
@@ -371,7 +365,8 @@ namespace AHCI{
         if(spin <= 0){
             Log::Warning("[SATA] Port Hung");
             
-            portLock.Signal();
+            //portLock.Signal();
+            releaseLock(&portLock);
             return 3;
         }
 
@@ -388,7 +383,8 @@ namespace AHCI{
                 Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
                 
                 stopCMD(registers);
-                portLock.Signal();
+                //portLock.Signal();
+                releaseLock(&portLock);
                 return 1;
             }
         }
@@ -403,7 +399,8 @@ namespace AHCI{
         if(spin <= 0){
             Log::Warning("[SATA] Port Hung");
             
-            portLock.Signal();
+            //portLock.Signal();
+            releaseLock(&portLock);
             return 3;
         }
         
@@ -412,11 +409,13 @@ namespace AHCI{
         if (registers->is & HBA_PxIS_TFES) {
             Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
             
-            portLock.Signal();
+            //portLock.Signal();
+            releaseLock(&portLock);
             return 1;
         }
 
-        portLock.Signal();
+        //portLock.Signal();
+        releaseLock(&portLock);
         return 0;
     }
 

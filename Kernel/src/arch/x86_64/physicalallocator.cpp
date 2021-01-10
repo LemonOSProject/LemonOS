@@ -25,27 +25,27 @@ namespace Memory{
     }
 
     // Sets a bit in the physical memory bitmap
-    inline void bit_set(uint64_t bit) {  
+    inline void SetBit(uint64_t bit) {  
         physicalMemoryBitmap[bit >> 5] |= (1 << (bit % 32));
     }
 
     // Clears a bit in the physical memory bitmap
-    inline void bit_clear(uint64_t bit) {
+    inline void ClearBit(uint64_t bit) {
         physicalMemoryBitmap[bit >> 5] &= ~ (1 << (bit % 32));
     }
 
     // Tests a bit in the physical memory bitmap
-    inline bool bit_test(uint64_t bit) {
+    inline bool TestBit(uint64_t bit) {
         return physicalMemoryBitmap[bit >> 5] & (1 << (bit % 32));
     }
 
     // Finds the first free block in physical memory
     uint64_t GetFirstFreeMemoryBlock() {
-        for (uint32_t i = 0; i < maxPhysicalBlocks / 32; i++)
+        for (uint32_t i = 1; i < maxPhysicalBlocks / 32; i++)
             if (physicalMemoryBitmap[i] != 0xffffffff) // If all 32 bits at the index are used then ignore them
                 for (uint32_t j = 0; j < 32; j++) // Test each bit in the dword
-                    if (!(physicalMemoryBitmap[i] & (1 << j)) && (i || j))
-                        return i * 32 + j;
+                    if (!(physicalMemoryBitmap[i] & (1 << j)))
+                        return (i << 5) + j;
 
         // The first block is always reserved
         return 0;
@@ -54,13 +54,13 @@ namespace Memory{
     // Marks a region in physical memory as being used
     void MarkMemoryRegionUsed(uint64_t base, size_t size) {
         for (uint32_t blocks = (size + (PHYSALLOC_BLOCK_SIZE - 1)) / PHYSALLOC_BLOCK_SIZE, align = base / PHYSALLOC_BLOCK_SIZE; blocks > 0; blocks--, usedPhysicalBlocks++)
-            bit_set(align++);
+            SetBit(align++);
     }
 
     // Marks a region in physical memory as being free
     void MarkMemoryRegionFree(uint64_t base, size_t size) {
         for (uint32_t blocks = (size + (PHYSALLOC_BLOCK_SIZE - 1)) / PHYSALLOC_BLOCK_SIZE, align = base / PHYSALLOC_BLOCK_SIZE; blocks > 0; blocks--, usedPhysicalBlocks--)
-            bit_clear(align++);
+            ClearBit(align++);
     }
 
     // Allocates a block of physical memory
@@ -75,7 +75,7 @@ namespace Memory{
             //return 0;
         }
 
-        bit_set(index);
+        SetBit(index);
         usedPhysicalBlocks++;
 
         releaseLock(&allocatorLock);
@@ -113,8 +113,8 @@ namespace Memory{
 
     // Frees a block of physical memory
     void FreePhysicalMemoryBlock(uint64_t addr) {
-        uint64_t index = addr / PHYSALLOC_BLOCK_SIZE;
-        bit_clear(index);
+        uint64_t index = addr >> 12;
+        ClearBit(index);
         usedPhysicalBlocks--;
     }
 
@@ -124,6 +124,6 @@ namespace Memory{
         uint64_t blockCount = 0x200000 /* 2MB */ / PHYSALLOC_BLOCK_SIZE;
         usedPhysicalBlocks-=blockCount;
         while(blockCount--)
-            bit_clear(index++);
+            ClearBit(index++);
     }
 }

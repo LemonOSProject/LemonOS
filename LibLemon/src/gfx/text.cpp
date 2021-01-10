@@ -100,7 +100,7 @@ namespace Lemon::Graphics{
         uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
         uint32_t* buffer = (uint32_t*)surface->buffer; 
 
-        unsigned int maxHeight = font->height;
+        unsigned int maxHeight = font->lineHeight;
 
         if(y < 0 && static_cast<unsigned>(-y) > maxHeight){
             return 0;
@@ -114,7 +114,7 @@ namespace Lemon::Graphics{
             maxHeight = surface->height - y;
         }
 
-        int xOffset = 0;
+        int xOffset = 0; 
         while (*str != 0) {
             if(*str == '\n'){
                 break;

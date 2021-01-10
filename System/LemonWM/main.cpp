@@ -9,6 +9,7 @@
 #include <lemon/core/input.h>
 #include <lemon/core/json.h>
 
+#include <pthread.h>
 #include <time.h>
 
 #include "lemonwm.h"
@@ -16,7 +17,22 @@
 surface_t fbSurface;
 surface_t renderSurface;
 
+std::string bgPath = "/system/lemon/backgrounds/bg6.png";
+
 extern rgba_colour_t backgroundColor;
+WMInstance* inst;
+
+void* LoadBackground(void*){
+    int bgError = -1;
+    if(inst->compositor.useImage && (bgError = Lemon::Graphics::LoadImage(bgPath.c_str(), 0, 0, renderSurface.width, renderSurface.height, &inst->compositor.backgroundImage, true))){
+        printf("LemonWM: Warning: Error %d loading background image.\n", bgError);
+        inst->compositor.useImage = false;
+    }
+
+    inst->redrawBackground = true;
+
+    return nullptr;
+}
 
 int main(){
     CreateFramebufferSurface(fbSurface);
@@ -26,11 +42,10 @@ int main(){
     Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 128, 0, 0, &fbSurface);
 
     handle_t svc = Lemon::CreateService("lemon.lemonwm");
-    WMInstance wm = WMInstance(renderSurface, svc, "Instance");
+    inst = new WMInstance(renderSurface, svc, "Instance");
+    WMInstance& wm = *inst;
 
     Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 255, 0, 0, &fbSurface);
-
-    std::string bgPath = "/system/lemon/backgrounds/bg6.png";
 
     Lemon::JSONParser configParser("/system/lemon/lemonwm.json");
     auto json = configParser.Parse();
@@ -94,14 +109,12 @@ int main(){
 
     wm.compositor.backgroundImage = renderSurface;
     wm.compositor.backgroundImage.buffer = new uint8_t[renderSurface.width * renderSurface.height * 4];
-    int bgError = -1;
-
-    if(wm.compositor.useImage && (bgError = Lemon::Graphics::LoadImage(bgPath.c_str(), 0, 0, renderSurface.width, renderSurface.height, &wm.compositor.backgroundImage, true))){
-        printf("LemonWM: Warning: Error %d loading background image.\n", bgError);
-        wm.compositor.useImage = false;
-    }
+    Lemon::Graphics::DrawString("Loading Background...", fbSurface.width / 2 - Lemon::Graphics::GetTextLength("Loading Background...") / 2, fbSurface.height / 2, 255, 255, 255, &wm.compositor.backgroundImage);
 
     wm.screenSurface.buffer = fbSurface.buffer;
+
+    pthread_t th;
+    pthread_create(&th, nullptr, LoadBackground, nullptr);
 
     for(;;){
         wm.Update();

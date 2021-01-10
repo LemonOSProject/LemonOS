@@ -91,8 +91,12 @@ void Scroll(){
 		bufferOffset += curPos.y - (rowCount - 1);
 		curPos.y = rowCount - 1;
 	}
-			
+
 	while(static_cast<std::size_t>(bufferOffset + rowCount) >= buffer.size()) buffer.push_back(std::vector<TerminalChar>());
+			
+	if(buffer.size() > 2000){
+		buffer.erase(buffer.begin() + 2000, buffer.end());
+	}
 	
 	paintAll = true;
 }
