@@ -23,6 +23,7 @@ namespace Lemon::GUI {
     surface_t FileView::folderIcon;
     surface_t FileView::fileIcon;
     surface_t FileView::textFileIcon;
+    surface_t FileView::jsonFileIcon;
     surface_t FileView::ramIcon;
 
     surface_t FileView::diskIconSml;
@@ -62,8 +63,17 @@ namespace Lemon::GUI {
             fclose(f);
         } else {
             printf("GUI: Warning: Could not load FileView icons!");
-            FileView::folderIconSml.buffer = nullptr;
-            FileView::folderIconSml.width = 0;
+            FileView::textFileIcon.buffer = nullptr;
+            FileView::textFileIcon.width = 0;
+        }
+
+        if(FILE* f = fopen("/initrd/jsonfile.png", "rb")){
+            Graphics::LoadImage(f, &FileView::jsonFileIcon);
+            fclose(f);
+        } else {
+            printf("GUI: Warning: Could not load FileView icons!");
+            FileView::jsonFileIcon.buffer = nullptr;
+            FileView::jsonFileIcon.width = 0;
         }
 
         if(FILE* f = fopen("/initrd/disksml.png", "rb")){
@@ -236,6 +246,8 @@ namespace Lemon::GUI {
             } else if(char* ext = strchr(dirent.d_name, '.'); ext){
                 if(!strcmp(ext, ".txt") || !strcmp(ext, ".cfg") || !strcmp(ext, ".py") || !strcmp(ext, ".asm")){
                     item.icon = &textFileIcon;
+                } else if(!strcmp(ext, ".json")) {
+                    item.icon = &jsonFileIcon;  
                 } else {
                     item.icon = &fileIcon;
                 }
@@ -262,7 +274,7 @@ namespace Lemon::GUI {
         }
 
         struct stat statResult;
-        int ret = stat(absPath.c_str(), &statResult);
+        int ret = lstat(absPath.c_str(), &statResult);
 
         if(ret){
             perror("GUI: FileView: OnSubmit: Stat:");

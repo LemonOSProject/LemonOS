@@ -3,4 +3,4 @@
 	url = https://github.com/fido2020/LemonUtils.git
 [submodule "LibC"]
 	path = LibC
-	url = https://github.com/fido2020/mlibc.git
+	url = https://github.com/managarm/mlibc.git

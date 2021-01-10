@@ -90,6 +90,8 @@ void WMWindow::Resize(vector2i_t size, int64_t key, WindowBuffer* bufferInfo){
 	this->size = size;
 
 	RecalculateButtonRects();
+
+	Queue(Lemon::Message(Lemon::GUI::WindowBufferReturn, bufferKey));
 }
 
 rect_t WMWindow::GetCloseRect(){

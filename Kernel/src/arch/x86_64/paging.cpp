@@ -216,6 +216,8 @@ namespace Memory{
 	}
 
 	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, address_space_t* addressSpace){
+		if(addr >> 48) return 0; // Non-canonical or higher-half address
+
 		if(!(addressSpace->pageDirs[PDPT_GET_INDEX(addr)][PAGE_DIR_GET_INDEX(addr)] & (PAGE_PRESENT))){
 			return 0;
 		}

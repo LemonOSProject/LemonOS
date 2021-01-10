@@ -1001,6 +1001,10 @@ long SysIoctl(regs64_t* r){
 	uint64_t arg = SC_ARG2(r);
 	int* result = (int*)SC_ARG3(r);
 
+	if(result && !Memory::CheckUsermodePointer((uintptr_t)result, sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)){
+		return -EFAULT;
+	}
+
 	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
 		return -EINVAL;
 	}
@@ -1012,7 +1016,9 @@ long SysIoctl(regs64_t* r){
 
 	int ret = fs::Ioctl(handle, request, arg);
 
-	if(result && Memory::CheckUsermodePointer(SC_ARG3(r), sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)) *result = ret;
+	if(result && ret > 0){
+		*result = ret;
+	}
 
 	return ret;
 }

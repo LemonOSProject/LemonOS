@@ -11,9 +11,9 @@ namespace Lemon::GUI{
         WMRelocateWindow = 103,
         WMResizeWindow = 104,
         WMMinimizeWindow = 105,
-        WMMinimizeOtherWindow = 105,
-        WMDisplayContextMenu = 106,
-        WMInitializeShellConnection = 107,
+        WMMinimizeOtherWindow = 106,
+        WMDisplayContextMenu = 107,
+        WMInitializeShellConnection = 108,
     };
 
     class WMClient : public Endpoint {
@@ -27,7 +27,7 @@ namespace Lemon::GUI{
 
         void SetTitle(const std::string& title) const;
         void Relocate(int x, int y) const;
-        uint64_t Resize(int width, int height) const;
+        int64_t Resize(int width, int height) const;
         void Minimize(bool minimized) const;
         void Minimize(long windowID, bool minimized) const;
         void DisplayContextMenu(int x, int y, const std::string& serializedEntries) const;

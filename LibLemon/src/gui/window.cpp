@@ -102,7 +102,6 @@ namespace Lemon::GUI{
     }
 
     void Window::Resize(vector2i_t size){
-        
         Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey);
 
         windowBufferKey = WMClient::Resize(size.x, size.y);
@@ -362,10 +361,17 @@ namespace Lemon::GUI{
         Queue(Message(WMCreateWindow, x, y));
     }
 
-    uint64_t WMClient::Resize(int width, int height) const {
-        Queue(Message(WMResizeWindow, width, height));
+    int64_t WMClient::Resize(int width, int height) const {
+        Message ret;
 
-        return -1;
+        Call(Message(WMResizeWindow, width, height), ret, WindowBufferReturn);
+
+        int64_t key = 0;
+        if(ret.Decode(key)){
+            return 0;
+        }
+
+        return key;
     }
 
     void WMClient::Minimize(bool minimized) const {

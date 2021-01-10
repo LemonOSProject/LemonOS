@@ -3,10 +3,11 @@
 The Lemon Operating System
 
 Lemon OS is a UNIX-like 64-bit operating system written in C++.
+If you have any questions or concerns feel free to open a GitHub issues or email me at computerfido@gmail.com.
 
 (https://lemonos.org)
 
-![Lemon OS Screenshot](Screenshots/image.png)
+![Lemon OS Screenshot](Screenshots/image4.png)
 
 ### Prebuilt Image
 [Latest Prebuilt Image](https://github.com/fido2020/Lemon-OS/releases/tag/0.2.2)
@@ -40,6 +41,7 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 - x86_64 Processor
 - 2 cores/CPUs recommended
 - I/O APIC
+- ATA or AHCI disk (AHCI *strongly* recommended)
 
 ## Repo Structure
 
@@ -47,6 +49,8 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 | ------------- | ---------------------------------- |
 | Applications/ | Userspace Applications             |
 | Base/         | Files copied to disk               |
+| Documentation/| Lemon OS Documentation             |
+| Extra/        | (Currently) vector icons           |
 | Kernel/       | Lemon Kernel                       |
 | LibLemon/     | LibLemon (Lemon API)               |
 | Toolchain/    | Cross Compiler Patches             |
@@ -57,4 +61,5 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 | System/       | Core system programs and services  |
 
 ![Lemon OS Screenshot](Screenshots/image3.png)
+![Lemon OS Screenshot](Screenshots/image.png)
 ![Lemon OS Screenshot](Screenshots/image2.png)

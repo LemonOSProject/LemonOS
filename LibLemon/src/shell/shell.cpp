@@ -15,7 +15,7 @@ namespace Lemon::Shell {
     }
 
     void SetWindowState(long id, short state, Endpoint& client){
-        client.Queue(Message(Lemon::Shell::LemonShellAddWindow, id, state));
+        client.Queue(Message(Lemon::Shell::LemonShellSetWindowState, id, state));
     }
     
     void Open(const char* path, Endpoint& client){
