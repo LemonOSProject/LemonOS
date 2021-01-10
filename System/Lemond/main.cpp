@@ -1,6 +1,6 @@
 #include <lemon/system/spawn.h>
 #include <lemon/system/util.h>
-#include <lemon/core/cfgparser.h>
+#include <lemon/core/json.h>
 #include <lemon/core/sha.h>
 #include <string.h>
 #include <vector>
@@ -11,15 +11,25 @@ int main(int argc, char** argv){
 	setenv("HOME", "/system", 1); // Default home
 	setenv("PATH", "/initrd:/system/bin", 1); // Default path
 
-	CFGParser confParser = CFGParser("/system/lemon/lemond.cfg");
-	confParser.Parse();
-	for(auto& heading : confParser.GetItems()){
-		if(!heading.first.compare("Environment")){
-			for(auto& env : heading.second){
-				setenv(env.name.c_str(), env.value.c_str(), 1); // Name, Value, Replace
+	Lemon::JSONParser confParser = Lemon::JSONParser("/system/lemon/lemond.json");
+	auto json = confParser.Parse();
+    if(json.IsObject()){
+        std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *json.object;
+
+		if(auto it = values.find("environment"); it != values.end() && it->second.IsArray()){
+			std::vector<Lemon::JSONValue>& env = *it->second.array;
+
+			for(auto& v : env){
+				std::string str;
+				size_t eq = std::string::npos;
+				if(v.IsString() && (eq = (str = v.AsString()).find("=")) != std::string::npos){
+					setenv(str.substr(0, eq - 1).c_str(), str.substr(eq + 1).c_str(), 1);
+				}
 			}
 		}
-	}
+	} else {
+        printf("[Lemond] Warning: Error parsing JSON configuration file!\n");
+    }
 
 	__attribute__((unused)) char* lemonwm = "/system/lemon/lemonwm.lef";
 	__attribute__((unused)) char* login = "/system/lemon/login.lef";

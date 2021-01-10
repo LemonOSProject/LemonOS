@@ -1772,6 +1772,7 @@ long SysGetEUID(regs64_t* r){
 /// \return On success return 0, otherwise return negative error code
 /////////////////////////////
 long SysSetEUID(regs64_t* r){
+	Log::Warning("SysSetEUID is a stub!");
 	return -ENOSYS;
 }
 

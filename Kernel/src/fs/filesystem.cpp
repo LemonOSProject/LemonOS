@@ -56,9 +56,7 @@ namespace fs{
 		}
 		buffer[bytesRead] = 0; // Null terminate
 
-		Log::Warning("Following link %s", buffer);
-
-		FsNode* node = ResolvePath(buffer, workingDir);
+		FsNode* node = ResolvePath(buffer, workingDir, false);
 
 		if(!node){
 			Log::Warning("FollowLink: Failed to resolve symlink %s!", buffer);
@@ -165,7 +163,7 @@ namespace fs{
 			}
 
 			size_t amountOfSymlinks = 0;
-			while(((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)){ // Check for symlinks
+			while(followSymlinks && ((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)){ // Check for symlinks
 				if(amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT){
 					Log::Warning("ResolvePath: Reached maximum number of symlinks");
 					return nullptr;
@@ -206,6 +204,7 @@ namespace fs{
 					return currentNode;
 				}
 			}
+			currentNode = node;
 			break;
 		}
 

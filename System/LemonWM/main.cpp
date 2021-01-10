@@ -95,6 +95,7 @@ int main(){
     wm.compositor.backgroundImage = renderSurface;
     wm.compositor.backgroundImage.buffer = new uint8_t[renderSurface.width * renderSurface.height * 4];
     int bgError = -1;
+
     if(wm.compositor.useImage && (bgError = Lemon::Graphics::LoadImage(bgPath.c_str(), 0, 0, renderSurface.width, renderSurface.height, &wm.compositor.backgroundImage, true))){
         printf("LemonWM: Warning: Error %d loading background image.\n", bgError);
         wm.compositor.useImage = false;

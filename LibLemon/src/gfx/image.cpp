@@ -163,13 +163,12 @@ namespace Lemon::Graphics{
         surface_t _surface = {.width = static_cast<int>(width), .height = static_cast<int>(height), .depth = 32, .buffer = (uint8_t*)malloc(width * height * 4)};
         *surface = _surface;
 
-        png_bytepp rowPointers = new png_bytep[height];
+        png_bytep rowPointers[height];
 
         for(png_uint_32 i = 0; i < height; i++){
             rowPointers[i] = surface->buffer + i * surface->width * 4;
+            png_read_row(png, rowPointers[i], NULL);
         }
-
-        png_read_image(png, rowPointers);
 
         png_destroy_read_struct(&png, &info, nullptr);
 

@@ -163,6 +163,7 @@ namespace AHCI{
         InitializePartitions();
 
         portLock.SetValue(1);
+        bufferSemaphore.SetValue(8);
     }
 
     unsigned Port::AcquireBuffer(){

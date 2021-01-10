@@ -1,5 +1,5 @@
 #include <lemon/gui/window.h>
-#include <lemon/core/cfgparser.h>
+#include <lemon/core/json.h>
 #include <lemon/gui/messagebox.h>
 #include <lemon/core/sha.h>
 #include <lemon/system/spawn.h>
@@ -27,7 +27,7 @@ struct User{
 std::map<std::string, User> users;
 
 void OnOKPress(__attribute__((unused)) Lemon::GUI::Button* b){
-	try{
+	if(users.find(usernameBox->contents.front()) != users.end()){
 		User& user = users.at(usernameBox->contents.front());
 
 		SHA256 passwordHash;
@@ -50,8 +50,8 @@ void OnOKPress(__attribute__((unused)) Lemon::GUI::Button* b){
 		delete window;
 
 		exit(0);
-	} catch (std::out_of_range& e){
-		char buf[100];
+	} else {
+		char buf[128];
 		snprintf(buf, 128, "Unknown user '%s'", usernameBox->contents.front().c_str());
 		Lemon::GUI::DisplayMessageBox("Invalid Username", buf);
 		return;
@@ -59,45 +59,61 @@ void OnOKPress(__attribute__((unused)) Lemon::GUI::Button* b){
 }
 
 int main(int argc, char** argv){
-	CFGParser cfgParser = CFGParser("/system/lemon/users.cfg");
+	Lemon::JSONParser cfgParser = Lemon::JSONParser("/system/lemon/users.json");
 
-	cfgParser.Parse();
-	auto items = cfgParser.GetItems();
+	auto json = cfgParser.Parse();
+	if(json.IsObject()){
+        std::map<Lemon::JSONKey, Lemon::JSONValue>& root = *json.object;
 
-	for(auto user : items){
-		if(user.first.compare("user")){
-			printf("users.cfg: Unknown heading [%s]\n", user.first.c_str());
-			continue;
-		}
+		if(auto it = root.find("users"); it != root.end() && it->second.IsArray()){
+			for(Lemon::JSONValue& v : *it->second.array){
+				if(v.IsObject()){
+					User u;
+					std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *v.object;
 
-		int uid = 0;
-		int gid = 0;
-		std::string username, hash;
+					if(auto it = values.find("name"); it != values.end() && it->second.IsString()){
+						u.username = it->second.AsString();
+					} else {
+						continue;
+					}
 
-		for(auto entry : user.second){
-			if(!entry.name.compare("name")){
-				username = entry.value;
-			} else if(!entry.name.compare("uid")){
-				uid = std::stoi(entry.value);
-			} else if(!entry.name.compare("gid")){
-				gid = std::stoi(entry.value);
-			} else if(!entry.name.compare("hash")){
-				hash = entry.value;
-			} else {
-				printf("users.cfg: Unknown entry: %s\n", entry.name.c_str());
+					if(auto it = values.find("hash"); it != values.end() && it->second.IsString()){
+						u.hash = it->second.AsString();
+					} else {
+						continue;
+					}
+
+					if(auto it = values.find("uid"); it != values.end() && it->second.IsNumber()){
+						u.uid = it->second.AsSignedNumber();
+					} else {
+						continue;
+					}
+
+					if(auto it = values.find("gid"); it != values.end() && it->second.IsNumber()){
+						u.gid = it->second.AsSignedNumber();
+					} else {
+						continue;
+					}
+
+					users[u.username] = u;
+				}
 			}
 		}
+	} else {
+		printf("Failied to parse users.json!\n");
+	}
 
-		if(uid > 0 && gid > 0 && username.length()){
-			printf("Found user: Name is %s, UID is %d, GID is %d\n", username.c_str(), uid, gid);
+	if(!users.size()){ // TODO: Don't just boot to shell
+		char* const args[] = {const_cast<char*>("/system/bin/shell.lef")}; // There are no users just load the shell
+		lemon_spawn(*args, 1, args, 0);
 
-			users[username] = {.username = username, .hash = hash, .uid = uid, .gid = gid};
-		}
+		exit(0);
 	}
 
 	usernameLabel = new Lemon::GUI::Label("Username:", {10, 20, 100, 16});
 	usernameBox = new Lemon::GUI::TextBox({Lemon::Graphics::GetTextLength("Username:") + 20, 16, 10, 24}, false);
 	usernameBox->SetLayout(Lemon::GUI::Stretch, Lemon::GUI::Fixed);
+	usernameBox->LoadText("root");
 
 	passwordLabel = new Lemon::GUI::Label("Password:", {10, 48, 100, 16});
 	passwordBox = new Lemon::GUI::TextBox({Lemon::Graphics::GetTextLength("Username:") + 20, 44, 10, 24}, false);

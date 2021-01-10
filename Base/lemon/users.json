@@ -1,0 +1,10 @@
+{
+    "users" : [
+        {
+            "name" : "root",
+            "uid" : 0,
+            "gid" : 0,
+            "hash" : "f464d7d71c06e47a535ce441aa202aa717cddeab902a45b0c283aac7a9a090d7"
+        }
+    ]
+}
