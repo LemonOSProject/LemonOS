@@ -256,6 +256,14 @@ entry64:
 	or ax, 3 << 9		; Set flags for SSE
 	mov cr4, rax
 
+  mov rcx, 0x277 ; PAT Model Specific Register
+  rdmsr
+  mov rbx, 0xFFFFFFFFFFFFFF
+  and rax, rbx
+  mov rbx, 0x100000000000000
+  or rax, rbx  ; Set PA7 to Write-combining (0x1, WC)
+  wrmsr
+
   xor rbp, rbp
   mov rdi, qword[mb_addr] ; Pass multiboot info struct
   add rdi, KERNEL_VIRTUAL_BASE

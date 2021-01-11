@@ -112,7 +112,7 @@ namespace HAL{
                     multiboot2_framebuffer_info_t* mbFbInfo = reinterpret_cast<multiboot2_framebuffer_info_t*>(tag);
 
                     videoMode.address = reinterpret_cast<void*>(Memory::KernelAllocate4KPages((mbFbInfo->framebufferPitch * mbFbInfo->framebufferHeight + (PAGE_SIZE_4K - 1)) / PAGE_SIZE_4K));
-                    Memory::KernelMapVirtualMemory4K(mbFbInfo->framebufferAddr, (uintptr_t)videoMode.address, ((mbFbInfo->framebufferPitch * mbFbInfo->framebufferHeight + (PAGE_SIZE_4K - 1)) / PAGE_SIZE_4K));
+                    Memory::KernelMapVirtualMemory4K(mbFbInfo->framebufferAddr, (uintptr_t)videoMode.address, ((mbFbInfo->framebufferPitch * mbFbInfo->framebufferHeight + (PAGE_SIZE_4K - 1)) / PAGE_SIZE_4K), PAGE_PAT_WRITE_COMBINING | PAGE_WRITABLE | PAGE_PRESENT);
 
                     videoMode.width = mbFbInfo->framebufferWidth;
                     videoMode.height = mbFbInfo->framebufferHeight;

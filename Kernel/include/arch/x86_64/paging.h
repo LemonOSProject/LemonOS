@@ -27,6 +27,7 @@
 #define PDE_CACHE_DISABLED (1 << 4)
 #define PDE_2M (1 << 7)
 #define PDE_FRAME 0xFFFFFFFFFF000
+#define PDE_PAT (1 << 12)
 
 #define PAGE_PRESENT 1
 #define PAGE_WRITABLE (1 << 1)
@@ -34,6 +35,8 @@
 #define PAGE_WRITETHROUGH (1 << 3)
 #define PAGE_CACHE_DISABLED (1 << 4)
 #define PAGE_FRAME 0xFFFFFFFFFF000ULL
+#define PAGE_PAT (1 << 7)
+#define PAGE_PAT_WRITE_COMBINING (PAGE_PAT | PAGE_CACHE_DISABLED | PAGE_WRITETHROUGH) // We set PA7 to write combining, PAGE_PAT is the high bit of the PAT index
 
 #define PAGE_SIZE_4K 4096
 #define PAGE_SIZE_2M 0x200000

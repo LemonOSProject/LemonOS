@@ -4,6 +4,8 @@
 #include <stdarg.h>
 
 namespace Log{
+    extern VideoConsole* console;
+
     void Initialize();
     void LateInitialize();
     void SetVideoConsole(VideoConsole* con);

@@ -111,7 +111,6 @@ namespace SMP{
     }
 
     void Initialize(){
-
         cpus[0] = new CPU; // Initialize CPU 0
         cpus[0]->id = 0;
         cpus[0]->gdt = (void*)GDT64Pointer64.base;
@@ -132,11 +131,13 @@ namespace SMP{
 
         PrepareTrampoline();
 
-        for(int i = 0; i < ACPI::processorCount; i++){
+        for(int i = 0; i < processorCount; i++){
             if(ACPI::processors[i] != 0)
                 InitializeCPU(ACPI::processors[i]);
         }
         
         TSS::InitializeTSS(&cpus[0]->tss, cpus[0]->gdt);
+
+        Log::Info("[SMP] %u processors initialized!", processorCount);
     }
 }
