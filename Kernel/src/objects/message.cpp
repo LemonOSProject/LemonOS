@@ -26,7 +26,7 @@ MessageEndpoint::~MessageEndpoint(){
 void MessageEndpoint::Destroy(){
     Message m;
     while(queue.Dequeue(&m, 1)){
-        if(m.size > 8){
+        if(m.size > 8 && m.dataP){
             delete[] m.dataP;
         }
     }
@@ -43,7 +43,9 @@ int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint64_t* data){
 
     Message m;
     
+    acquireLock(&queueLock);
     int r = queue.Dequeue(&m, 1);
+    releaseLock(&queueLock);
     if(r < 1){
         if(!peer.get()){
             return -ENOTCONN;
@@ -66,7 +68,7 @@ int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint64_t* data){
         Log::Info("[MessageEndpoint] Receiving message (ID: %u, Size: %u)", m.id, m.size);
     }
 
-    if(m.size > 8){
+    if(m.size > 8 && m.dataP){
         delete[] m.dataP;
     }
 
@@ -152,6 +154,8 @@ int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
         }
     }
     releaseLock(&peer->waitingResponseLock);
+
+    queueAvailablilitySemaphore.Wait();
 
     acquireLock(&peer->queueLock);
     peer->queue.Enqueue(&msg);

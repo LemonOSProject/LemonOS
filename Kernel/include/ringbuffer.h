@@ -29,6 +29,7 @@ public:
 
     void Enqueue(T* data){
         acquireLock(&dequeueLock);
+        acquireLock(&enqueueLock);
 
         memcpy(enqueuePointer++, data, sizeof(T));
         
@@ -43,7 +44,6 @@ public:
 
             bufferSize = (bufferSize + 2) << 1;
 
-            acquireLock(&enqueueLock);
             buffer = reinterpret_cast<T*>(kmalloc(sizeof(T) * bufferSize));
             bufferEnd = &buffer[bufferSize - 1];
             
@@ -51,10 +51,10 @@ public:
 
             dequeuePointer = bufferEnd - (oldBufferEnd - dequeuePointer);
             enqueuePointer = buffer + (enqueuePointer - oldBuffer);
-            releaseLock(&enqueueLock);
 
             kfree(oldBuffer);
         }
+        releaseLock(&enqueueLock);
         releaseLock(&dequeueLock);
     }
 
