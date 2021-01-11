@@ -14,4 +14,4 @@ const int debugLevelPartitions = 0;
 
 const int debugLevelMessageEndpoint = 0;
 
-const int debugLevelSyscalls = 0;
+const int debugLevelSyscalls = DebugLevelNormal;

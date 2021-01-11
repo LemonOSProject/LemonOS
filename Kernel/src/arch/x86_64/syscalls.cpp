@@ -2579,8 +2579,10 @@ long SysKernelObjectWait(regs64_t* r){
 
 	KernelObjectWatcher watcher;
 	for(unsigned i = 0; i < count; i++){
-		if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &handles[i])){
-			Log::Warning("SysKernelObjectWait: Invalid handle ID %d", SC_ARG0(r));
+		if(Scheduler::FindHandle(currentProcess, reinterpret_cast<handle_id_t*>(SC_ARG0(r))[i], &handles[i])){
+			IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+				Log::Warning("SysKernelObjectWait: Invalid handle ID %d", SC_ARG0(r));
+			});
 			return -EINVAL;
 		}
 

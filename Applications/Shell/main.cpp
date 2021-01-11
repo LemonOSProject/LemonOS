@@ -7,6 +7,7 @@
 #include <lemon/system/util.h>
 #include <lemon/system/fb.h>
 #include <lemon/system/ipc.h>
+#include <lemon/system/waitable.h>
 #include <lemon/gui/window.h>
 #include <lemon/core/sharedmem.h>
 #include <lemon/core/shell.h>
@@ -27,6 +28,7 @@
 
 fb_info_t videoInfo;
 Lemon::GUI::Window* taskbar;
+extern Lemon::GUI::Window* menuWindow;
 ShellInstance* shell;
 surface_t menuButton;
 
@@ -137,6 +139,11 @@ int main(){
 
 	taskbar->InitializeShellConnection();
 
+	Lemon::Waiter waiter;
+	waiter.WaitOnAll(&shell->GetInterface());
+	waiter.WaitOn(taskbar);
+	waiter.WaitOn(menuWindow);
+
 	for(;;){
 		shell->Update();
 
@@ -169,7 +176,7 @@ int main(){
 			paintTaskbar = false;
 		}
 
-		//mp.PollSync();
+		waiter.Wait();
 	}
 
 	for(;;);

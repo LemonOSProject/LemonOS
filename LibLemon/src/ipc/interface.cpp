@@ -46,6 +46,10 @@ namespace Lemon{
         while((newIf = InterfaceAccept(interfaceHandle))){ // Accept any incoming connections
             if(newIf > 0){
                 endpoints.push_back(newIf);
+
+                for(Waiter* waiter : waiters){
+                    waiter->RepopulateHandles(); // Repopulate handles
+                }
             }
         }
 
@@ -72,6 +76,10 @@ namespace Lemon{
                     endpoints.erase(it);
 
                     queue.push_back({.client = endpoint, .id = MessagePeerDisconnect, .data = nullptr, .length = 0});
+
+                    for(Waiter* waiter : waiters){
+                        waiter->RepopulateHandles();
+                    }
                     break;
                 }
 

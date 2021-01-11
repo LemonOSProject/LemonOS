@@ -57,7 +57,7 @@ namespace Lemon::GUI {
         void OnMouseMove(vector2i_t mousePos);
     };
 
-    class Window : protected WMClient{
+    class Window : public WMClient{
     private:
         WindowBuffer* windowBufferInfo;
         uint8_t* buffer1;

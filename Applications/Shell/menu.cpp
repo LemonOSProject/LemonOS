@@ -14,7 +14,7 @@
 
 #include <stdexcept>
 
-Lemon::GUI::Window* window;
+Lemon::GUI::Window* menuWindow;
 extern fb_info_t videoInfo;
 
 extern bool showMenu;
@@ -44,7 +44,7 @@ public:
     }
 
     void Open(vector2i_t pos) final {
-        window->DisplayContextMenu(items, pos);
+        menuWindow->DisplayContextMenu(items, pos);
     }
 };
 
@@ -118,7 +118,7 @@ public:
                 lemon_spawn(execPath, args.size(), args.data());
 
                 showMenu = false;
-                window->Minimize();
+                menuWindow->Minimize();
             }
 
             delete[] execPath;
@@ -146,7 +146,7 @@ public:
     }
 
     void Paint(surface_t* surface){
-        if(Lemon::Graphics::PointInRect(fixedBounds, window->lastMousePos)){
+        if(Lemon::Graphics::PointInRect(fixedBounds, menuWindow->lastMousePos)){
             Lemon::Graphics::DrawRect(fixedBounds, Lemon::colours[Lemon::Colour::Foreground], surface);
         }
 
@@ -175,9 +175,9 @@ int GetItemID(){
 
 void InitializeMenu(){
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
-    window = new Lemon::GUI::Window("", {240, 300}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 32 - 300});
-    window->OnPaint = OnPaint;
-    window->rootContainer.background = {0, 0, 0, 0};
+    menuWindow = new Lemon::GUI::Window("", {240, 300}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 32 - 300});
+    menuWindow->OnPaint = OnPaint;
+    menuWindow->rootContainer.background = {0, 0, 0, 0};
 
     categories["Games"] = MenuCategory("Games");
     categories["Utilities"] = MenuCategory("Utilities");
@@ -255,7 +255,7 @@ void InitializeMenu(){
     menuContainer->background = {0x33, 0x2c, 0x29, 255};
 
     menuContainer->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
-    window->AddWidget(menuContainer);
+    menuWindow->AddWidget(menuContainer);
 
     for(auto& cat : categories){
         menuContainer->AddWidget(new MenuWidget(cat.second, {0, 0, 0, 0}));
@@ -265,13 +265,13 @@ void InitializeMenu(){
         menuContainer->AddWidget(new MenuWidget(item, {0, 0, 0, 0})); // LayoutContainer will handle bounds
     }
 
-    window->Paint();
+    menuWindow->Paint();
 }
 
 static bool paint = false;
 void PollMenu(){
     Lemon::LemonEvent ev;
-    while(window->PollEvent(ev)){
+    while(menuWindow->PollEvent(ev)){
         if(ev.event == Lemon::EventWindowCommand){
             try{
                 auto& item = items.at(ev.windowCmd);
@@ -280,17 +280,17 @@ void PollMenu(){
 
             }
         } else {
-            window->GUIHandleEvent(ev);
+            menuWindow->GUIHandleEvent(ev);
         }
         paint = true;
     }
 
     if(paint){
-        window->Paint();
+        menuWindow->Paint();
         paint = false;
     }
 }
 
 void MinimizeMenu(bool s){
-    window->Minimize(s);
+    menuWindow->Minimize(s);
 }

@@ -35,7 +35,7 @@ namespace Lemon{
         }
     };
 
-    class Interface{
+    class Interface : public Waitable{
     private:
         handle_t interfaceHandle;
     protected:
@@ -80,5 +80,11 @@ namespace Lemon{
 
         long Poll(handle_t& client, Message& m);
         void Wait();
+        
+        inline const handle_t& GetHandle() const { return interfaceHandle; }
+        void GetAllHandles(std::vector<handle_t>& v) const {
+            v.insert(v.end(), endpoints.begin(), endpoints.end());
+            v.push_back(interfaceHandle);
+        }
     };
 }

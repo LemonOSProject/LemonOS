@@ -56,6 +56,12 @@ FancyRefPtr<MessageEndpoint> MessageInterface::Connect(){
     incoming.add_back(&connection);
     releaseLock(&incomingLock);
 
+    acquireLock(&waitingLock);
+    while(waiting.get_length() > 0){
+        waiting.remove_at(0)->Signal();
+    }
+    releaseLock(&waitingLock);
+
     while(!connection.item1){
         Scheduler::Yield();
     }

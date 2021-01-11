@@ -37,4 +37,6 @@ public:
     void(*AddWindow)(ShellWindow*) = nullptr;
     void(*RemoveWindow)(ShellWindow*) = nullptr;
     void(*RefreshWindows)(void) = nullptr;
+
+    inline Lemon::Interface& GetInterface() { return shellSrv; }
 };

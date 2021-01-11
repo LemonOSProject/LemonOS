@@ -16,6 +16,9 @@ protected:
     lock_t incomingLock = 0;
     List<Pair<int, FancyRefPtr<MessageEndpoint>>*> incoming;
 
+    lock_t waitingLock = 0;
+    List<KernelObjectWatcher*> waiting;
+
     friend class Service;
 public:
     MessageInterface(const char* _name, uint16_t msgSize);
@@ -40,6 +43,16 @@ public:
     /// \return Pointer to MessageEndpoint
     /////////////////////////////
     FancyRefPtr<MessageEndpoint> Connect();
+
+    void Watch(KernelObjectWatcher& watcher, int events){
+        acquireLock(&waitingLock);
+        waiting.add_back(&watcher);
+        releaseLock(&waitingLock)
+    }
+
+    virtual void Unwatch(KernelObjectWatcher& watcher){
+        waiting.remove(&watcher);
+    }
     
     inline static constexpr kobject_id_t TypeID() { return KOBJECT_ID_INTERFACE; }
     kobject_id_t InstanceTypeID() const { return TypeID(); }
