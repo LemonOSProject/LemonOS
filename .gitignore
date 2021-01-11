@@ -20,10 +20,6 @@ System/build
 Scripts/build-win/mount.cfg
 Initrd/*
 Disks/*
-Base/*
-!Base/lemon
-!Base/hello.asm
-!Base/hello.py
 initrd.tar
 Ports/*
 !Ports/*.sh

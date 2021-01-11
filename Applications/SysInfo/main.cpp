@@ -49,7 +49,7 @@ int main(int argc, char** argv){
     window->AddWidget(usedMem);
     ypos += 16;
 
-	for(;;){
+	while(!window->closed){
 		Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){
 			window->GUIHandleEvent(ev);
@@ -57,13 +57,13 @@ int main(int argc, char** argv){
 
 		window->Paint();
 
-        usleep(1000);
-
         lemon_sysinfo_t _sysInfo = Lemon::SysInfo();
 
         if(_sysInfo.usedMem != sysInfo.usedMem){
             snprintf(buf, 64, "Used System Memory: %lu MB (%lu KB)", sysInfo.usedMem / 1024, sysInfo.usedMem);
             usedMem->label = buf;
         } sysInfo = _sysInfo;
+
+        window->WaitEvent();
 	}
 }

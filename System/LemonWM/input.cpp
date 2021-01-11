@@ -14,7 +14,7 @@ int keymap_us[128] =
 	'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';',	/* 39 */
 	'\'', '`',   KEY_SHIFT,		/* Left shift */
 	'\\', 'z', 'x', 'c', 'v', 'b', 'n',			/* 49 */
-	'm', ',', '.', '/',   0,				/* Right shift */
+	'm', ',', '.', '/', KEY_SHIFT,				/* Right shift */
 	'*',
 	KEY_ALT,	/* Alt */
 	' ',	/* Space bar */

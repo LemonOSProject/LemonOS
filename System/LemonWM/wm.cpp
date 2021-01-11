@@ -315,17 +315,31 @@ void WMInstance::MouseDown(){
             } else { // Resize the window
                 resize = true;
                 if (Lemon::Graphics::PointInRect(win->GetBottomBorderRect(), input.mouse.pos)){
-                    if (Lemon::Graphics::PointInRect(win->GetLeftBorderRect(), input.mouse.pos)){
+                    rect_t left = win->GetLeftBorderRect(); // Resize corner if within 10 pixels of border bounds
+                    left.width += 10;
+
+                    rect_t right = win->GetRightBorderRect();
+                    right.width += 10;
+                    right.x -= 10;
+
+                    if (Lemon::Graphics::PointInRect(left, input.mouse.pos)){
                         resizePoint = ResizePoint::BottomLeft;
-                    } else if (Lemon::Graphics::PointInRect(win->GetRightBorderRect(), input.mouse.pos)){
+                    } else if (Lemon::Graphics::PointInRect(right, input.mouse.pos)){
                         resizePoint = ResizePoint::BottomRight;
                     } else {
                         resizePoint = ResizePoint::Bottom;
                     }
                 } else if (Lemon::Graphics::PointInRect(win->GetTopBorderRect(), input.mouse.pos)){
-                    if (Lemon::Graphics::PointInRect(win->GetLeftBorderRect(), input.mouse.pos)){
+                    rect_t left = win->GetLeftBorderRect(); // Resize corner if within 10 pixels of border bounds
+                    left.width += 10;
+
+                    rect_t right = win->GetRightBorderRect();
+                    right.width += 10;
+                    right.x -= 10;
+
+                    if (Lemon::Graphics::PointInRect(left, input.mouse.pos)){
                         resizePoint = ResizePoint::TopLeft;
-                    } else if (Lemon::Graphics::PointInRect(win->GetRightBorderRect(), input.mouse.pos)){
+                    } else if (Lemon::Graphics::PointInRect(right, input.mouse.pos)){
                         resizePoint = ResizePoint::TopRight;
                     } else {
                         resizePoint = ResizePoint::Top;
@@ -422,8 +436,8 @@ void WMInstance::MouseMove(){
             return;
         }
 
-        if(ev.resizeBounds.x < 100) ev.resizeBounds.x = 100;
-        if(ev.resizeBounds.y < 50) ev.resizeBounds.y = 50;
+        if(ev.resizeBounds.x < 128) ev.resizeBounds.x = 128;
+        if(ev.resizeBounds.y < 64) ev.resizeBounds.y = 64;
 
         PostEvent(ev, active);
         

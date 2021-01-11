@@ -14,7 +14,7 @@ buildp(){
     automake
     autoreconf
     cd ..
-    ./configure --host=x86_64-lemon --target=x86_64-lemon --prefix=/system --with-sysroot=$LEMON_SYSROOT --disable-werror --enable-shared
+    ./configure --host=x86_64-lemon --target=x86_64-lemon --prefix=/system --with-sysroot=$LEMON_SYSROOT --disable-werror --enable-shared --disable-nls
     MAKEINFO=true make -j $JOBCOUNT all-binutils all-gas all-ld
     make install-binutils install-gas install-ld DESTDIR=$LEMON_SYSROOT
 }
