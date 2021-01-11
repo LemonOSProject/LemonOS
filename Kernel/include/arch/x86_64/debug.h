@@ -6,7 +6,7 @@ enum{
     DebugLevelVerbose = 2,
 };
 
-#define KERNEL_DEBUG
+//#define KERNEL_DEBUG
 
 #ifdef KERNEL_DEBUG
     #define IF_DEBUG(a, b) if(a) b
