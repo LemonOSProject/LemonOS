@@ -101,7 +101,7 @@ static inline void SetCPULocal(CPU* val){
 	asm volatile("wrmsr" :: "a"((uintptr_t)val & 0xFFFFFFFF) /*Value low*/, "d"(((uintptr_t)val >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000101) /*Set Kernel GS Base*/);
 }
 
-static inline CPU* GetCPULocal(){
+__attribute__((always_inline)) static inline CPU* GetCPULocal(){
 	CPU* ret;
     asm volatile("swapgs; movq %%gs:0, %0; swapgs;" : "=r"(ret)); // CPU info is 16-byte aligned as per liballoc alignment
 	return ret;

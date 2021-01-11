@@ -90,7 +90,7 @@ void CompositorInstance::Paint(){
             DrawRect(0, 0, renderSurface->width, renderSurface->height, backgroundColor, renderSurface);
         }
 
-        //wm->redrawBackground = false;
+        wm->redrawBackground = false;
     }
 
     for(WMWindow* win : wm->windows){
@@ -126,18 +126,15 @@ void CompositorInstance::Paint(){
     }
 
     
-    if(wm->redrawBackground && wm->screenSurface.buffer){
+    /*if(wm->redrawBackground && wm->screenSurface.buffer){
         surfacecpy(&wm->screenSurface, renderSurface);
         wm->redrawBackground = false;
-    } else if(wm->screenSurface.buffer){
+    } else*/ if(wm->screenSurface.buffer){
         #ifdef LEMONWM_USE_CLIPPING
             for(rect_t& r : cclips){
                 surfacecpy(&wm->screenSurface, renderSurface, r.pos, r);
             }
         #else
-            for(int i = 0; i < 100; i++){
-                wm->screenSurface.buffer[i] = rand() % 255;
-            }
             surfacecpy(&wm->screenSurface, renderSurface);
         #endif
     }

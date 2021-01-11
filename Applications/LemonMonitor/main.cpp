@@ -66,6 +66,7 @@ int main(int argc, char** argv){
             char usage[6];
             if(processTimer.find(proc.pid) != processTimer.end()){
                 ProcessCPUTime& pTime = processTimer.at(proc.pid);
+                
                 if(pTime.diff && activeTimeSum){
                     snprintf(usage, 5, "%lu%%", (pTime.diff * 100) / activeTimeSum); // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
                     pTime.lastUsage = static_cast<short>((pTime.diff * 100) / activeTimeSum);
@@ -83,14 +84,23 @@ int main(int argc, char** argv){
             listView->AddItem(pItem);
         }
 
-        Lemon::LemonEvent ev;
-        while(window->PollEvent(ev)){
-            window->GUIHandleEvent(ev);
-        }
-
         window->Paint();
 
-        usleep(100000); // 100ms
+        for(unsigned i = 0; i < 10 && !window->closed; i++){ // Update the task list every 500ms, poll for events every 50ms, paint every 500ms or when an event is recieved
+            Lemon::LemonEvent ev;
+
+            bool paint = false;
+            while(window->PollEvent(ev)){
+                window->GUIHandleEvent(ev);
+                paint = true;
+            }
+
+            if(paint){
+                window->Paint();
+            }
+
+            usleep(50000); // 50ms
+        }
     }
     
     return 0;

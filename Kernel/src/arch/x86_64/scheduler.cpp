@@ -21,7 +21,7 @@
 extern "C" [[noreturn]] void TaskSwitch(regs64_t* r, uint64_t pml4);
 
 extern "C"
-void IdleProc();
+void IdleProcess();
 
 void KernelProcess();
 
@@ -71,8 +71,11 @@ namespace Scheduler{
         CPU* cpu = GetCPULocal();
 
         for(unsigned i = 0; i < SMP::processorCount; i++) {
-            SMP::cpus[i]->idleProcess = CreateProcess((void*)IdleProc);
-            strcpy(SMP::cpus[i]->idleProcess->name, "IdleProcess");
+            process_t* idleProcess = CreateProcess((void*)IdleProcess);
+            strcpy(idleProcess->name, "IdleProcess");
+            idleProcess->threads[0]->timeSliceDefault = 0;
+            idleProcess->threads[0]->timeSlice = 0;
+            SMP::cpus[i]->idleProcess = idleProcess;
         }
 
         for(unsigned i = 0; i < SMP::processorCount; i++) {

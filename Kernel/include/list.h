@@ -138,7 +138,7 @@ public:
 		return current;
 	}
 
-	unsigned get_length() {
+	__attribute__((always_inline)) inline unsigned get_length() {
 		return num;
 	}
 

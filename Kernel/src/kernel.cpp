@@ -35,7 +35,6 @@ extern "C"
 void IdleProcess(){
 	for(;;) {
 		asm("sti");
-		Scheduler::Yield();
 		asm("hlt");
 	}
 }

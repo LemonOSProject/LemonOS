@@ -34,7 +34,3 @@ TaskSwitch:
 
     pop rax ; Now pop RAX
     iretq ; This will pop RIP, CS, RFLAGS, RSP and SS.
-
-IdleProc:
-    call IdleProcess
-    jmp IdleProc

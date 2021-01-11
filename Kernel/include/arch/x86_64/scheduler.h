@@ -95,6 +95,7 @@ namespace Scheduler{
 	long DestroyHandle(process_t* proc, handle_id_t id);
 
 	void Yield();
+	void Schedule(void* data, regs64_t* r);
 
 	process_t* FindProcessByPID(uint64_t pid);
     uint64_t GetNextProccessPID(uint64_t pid);
