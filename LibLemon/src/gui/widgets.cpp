@@ -265,7 +265,7 @@ namespace Lemon::GUI {
         rect_t bounds = fixedBounds;
 
         if(pressed){
-            Graphics::DrawRect(btnPos.x+1, btnPos.y+1, bounds.size.x-2, (bounds.size.y)/2 - 1, 224/1.1, 224/1.1, 219/1.1, surface);
+            Graphics::DrawRect(btnPos.x+1, btnPos.y+1, bounds.size.x-2, (bounds.size.y)/2 - 1, 224/1.1, 224/1.1, 219/1.1, surface, parent->GetFixedBounds());
             Graphics::DrawRect(btnPos.x+1, btnPos.y + bounds.size.y / 2, bounds.size.x-2, bounds.size.y/2-1, 224/1.1, 224/1.1, 219/1.1, surface);
 
             DrawButtonBorders(surface, false);
@@ -936,7 +936,7 @@ namespace Lemon::GUI {
             }
 
             if(static_cast<int>(idx) == selected){
-                Graphics::DrawRect(fixedBounds.x + xPos + (itemSize.x / 2) - (len / 2) - 4, fixedBounds.y + yPos + itemSize.y - Graphics::DefaultFont()->height - 4, len + 7, Graphics::DefaultFont()->height + 7, colours[Colour::Foreground], surface); // Highlight the label if selected
+                Graphics::DrawRect(fixedBounds.x + xPos + (itemSize.x / 2) - (len / 2) - 4, fixedBounds.y + yPos + itemSize.y - Graphics::DefaultFont()->height - 4, len + 7, Graphics::DefaultFont()->height + 7, colours[Colour::Foreground], surface, fixedBounds); // Highlight the label if selected
             }
 
             Graphics::DrawString(str.c_str(), fixedBounds.x + xPos + (itemSize.x / 2) - (len / 2), fixedBounds.y + yPos + itemSize.y - Graphics::DefaultFont()->height - 4, colours[Colour::Text], surface, fixedBounds);
@@ -963,7 +963,9 @@ namespace Lemon::GUI {
         if(showScrollBar && Graphics::PointInRect((rect_t){sBarPos, {16, fixedBounds.height}}, mousePos)){
             sBar.OnMouseDownRelative(mousePos - sBarPos);
         } else {
-            selected = PosToItem(mousePos - fixedBounds.pos + (vector2i_t){sBar.scrollPos, 0}); // Position relative to position of GridView, but absolute from scroll position
+            selected = PosToItem(mousePos - fixedBounds.pos + (vector2i_t){0, sBar.scrollPos}); // Position relative to position of GridView, but absolute from scroll position
+
+            if(OnSelect) OnSelect(items[selected], this);
         }
     }
 
@@ -979,10 +981,11 @@ namespace Lemon::GUI {
     }
 
     void GridView::OnDoubleClick(vector2i_t mousePos){
-        selected = PosToItem(mousePos - fixedBounds.pos + (vector2i_t){sBar.scrollPos, 0}); // Position relative to position of GridView, but absolute from scroll position
+        int oldSelected = selected;
+        selected = PosToItem(mousePos - fixedBounds.pos + (vector2i_t){0, sBar.scrollPos}); // Position relative to position of GridView, but absolute from scroll position
 
-        if(selected >= 0 && static_cast<unsigned>(selected) < items.size()){
-            if(OnSelect) OnSubmit(items[selected], this);
+        if(selected >= 0 && oldSelected == selected && static_cast<unsigned>(selected) < items.size()){
+            if(OnSubmit) OnSubmit(items[selected], this);
         }
     }
 

@@ -23,7 +23,7 @@ namespace Lemon::GUI{
 	}
 
 	void FileDialogOnFileSelected(std::string& path, __attribute__((unused)) FileView* fv){
-		dialogFileBox->contents.front() = std::string(path);
+		dialogFileBox->contents.front() = path;
 	}
 
 	void FileDialogOnCancelPress(Lemon::GUI::Button* btn){
