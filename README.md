@@ -3,9 +3,10 @@
 The Lemon Operating System
 
 Lemon OS is a UNIX-like 64-bit operating system written in C++.
-If you have any questions or concerns feel free to open a GitHub issues or email me at computerfido@gmail.com.
+If you have any questions or concerns feel free to open a GitHub issue, join our Discord server or email me at computerfido@gmail.com.
 
-(https://lemonos.org)
+Website: https://lemonos.org
+Discord Server: https://discord.gg/NAYp6AUYWM
 
 ![Lemon OS Screenshot](Screenshots/image4.png)
 
