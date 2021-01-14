@@ -10,6 +10,7 @@
 #include <lemon/syscall.h>
 #include <string>
 #include <termios.h>
+#include <vector>
 
 termios execAttributes; // Set before executing
 termios readAttributes; // Set on ReadLine
@@ -28,6 +29,8 @@ char currentDir[PATH_MAX];
 std::list<std::string> path;
 
 std::list<builtin_t> builtins;
+
+std::vector<std::string> history;
 
 void LShBuiltin_Cd(int argc, char** argv){
 	if(argc > 3){
@@ -64,9 +67,11 @@ builtin_t builtinClear = {.name = "clear", .func = LShBuiltin_Clear};
 void ReadLine(){
 	tcsetattr(STDOUT_FILENO, TCSANOW, &readAttributes);
 
-	bool esc = false;
-	bool csi = false;
-	int lnPos = 0;
+	bool esc = false; // Escape sequence
+	bool csi = false; // Control sequence indicator
+
+	int lnPos = 0; // Line cursor position
+	int historyIndex = -1; // History index
 	ln.clear();
 
 	for(int i = 0; ; i++){
@@ -81,8 +86,28 @@ void ReadLine(){
 		} else if (csi) {
 			switch(ch){
 				case 'A': // Cursor Up
+					if(historyIndex < static_cast<long>(history.size()) - 1){
+						historyIndex++;
+
+						ln = history[history.size() - historyIndex - 1];
+
+						printf("\e[%dD\e[K%s", lnPos, ln.c_str()); // Delete line and print new line
+
+						lnPos = ln.length();
+					}
 					break;
 				case 'B': // Cursor Down
+					if(historyIndex > 0){
+						historyIndex--;
+						ln = history[history.size() - historyIndex - 1];
+					} else {
+						historyIndex = -1;
+						ln.clear();
+					}
+
+					printf("\e[%dD\e[K%s", lnPos, ln.c_str()); // Delete line and print new line
+
+					lnPos = ln.length();
 					break;
 				case 'C': // Cursor Right
 					if(lnPos < static_cast<int>(ln.length())){
@@ -130,7 +155,7 @@ void ReadLine(){
 			printf("\e[K%s", &ln[lnPos]); // Clear past cursor, print everything in front of the cursor
 
 			for(int i = 0; i < static_cast<int>(ln.length()) - lnPos; i++){
-						printf("\e[D");
+				printf("\e[D");
 			}
 		}
 
@@ -146,8 +171,10 @@ void ParseLine(){
 		return;
 	}
 
+	history.push_back(ln);
+
 	int argc = 0;
-	char* argv[128];
+	std::vector<char*> argv;
 
 	char* lnC = strdup(ln.c_str());
 
@@ -156,22 +183,24 @@ void ParseLine(){
 	}
 
 	char* tok = strtok(lnC, " \t\n");
-	argv[argc++] = tok;
+	argv.push_back(tok);
+	argc++;
 
-	while((tok = strtok(NULL, " \t\n")) && argc < 128){
-		argv[argc++] = tok;
+	while((tok = strtok(NULL, " \t\n"))){
+		argv.push_back(tok);
+		argc++;
 	}
 
 	for(builtin_t builtin : builtins){
 		if(strcmp(builtin.name, argv[0]) == 0){
-			builtin.func(argc, argv);
+			builtin.func(argc, argv.data());
 			return;
 		}
 	}
 
 	int fd;
 	if(strchr(argv[0], '/') && (fd = open(currentDir, O_RDONLY | O_DIRECTORY))){
-		pid_t pid = lemon_spawn(argv[0], argc, argv, 1);
+		pid_t pid = lemon_spawn(argv[0], argc, argv.data(), 1);
 		if(pid > 0){
 			syscall(SYS_WAIT_PID, pid, 0, 0, 0, 0);
 		}
@@ -194,7 +223,7 @@ void ParseLine(){
 				if(strcmp(argv[0], dirent.name) == 0 || (strcmp(dirent.name + strlen(dirent.name) - 4, ".lef") == 0 && strncmp(argv[0], dirent.name, strlen(dirent.name) - 4) == 0)){
 					path = path + "/" + dirent.name;
 					
-					pid_t pid = lemon_spawn(path.c_str(), argc, argv, 1);
+					pid_t pid = lemon_spawn(path.c_str(), argc, argv.data(), 1);
 
 					if(pid){
 						syscall(SYS_WAIT_PID, pid, 0, 0, 0, 0);

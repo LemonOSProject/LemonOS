@@ -82,6 +82,8 @@ namespace NVMe{
     Controller::Controller(PCIDevice* pciDev){
         pciDevice = pciDev;
 
+        return;
+
         cRegs = reinterpret_cast<Registers*>(Memory::KernelAllocate4KPages(4));
         Memory::KernelMapVirtualMemory4K(pciDevice->GetBaseAddressRegister(0), (uintptr_t)cRegs, 4);
         
