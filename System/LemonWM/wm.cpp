@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <pthread.h>
 #include <lemon/core/sharedmem.h>
+#include <unistd.h>
 
 WMInstance::WMInstance(surface_t& surface, handle_t svc, const char* ifName) : server(svc, ifName, LEMONWM_MSG_SIZE){
     this->surface = surface;
@@ -458,6 +459,11 @@ void WMInstance::MouseMove(){
 void WMInstance::KeyUpdate(int key, bool pressed){
     if(shellConnected && key == KEY_GUI && pressed){
         Lemon::Shell::ToggleMenu(shellClient);
+    } else if(active && input.keyboard.alt && key == KEY_F4 && pressed) { // Check for Alt + F4
+        Lemon::LemonEvent ev;
+        ev.event = Lemon::EventWindowClosed;
+
+        PostEvent(ev, active);
     } else if(active){
         Lemon::LemonEvent ev;
 
@@ -469,9 +475,11 @@ void WMInstance::KeyUpdate(int key, bool pressed){
 }
 
 void WMInstance::Update(){
-    Poll(); // Poll for commands
-    
+    clock_gettime(CLOCK_BOOTTIME, &startTime);
+
     input.Poll(); // Poll input devices
+
+    Poll(); // Poll for commands
 
     if(drag && active){
         active->pos = input.mouse.pos - dragOffset; // Move window
@@ -481,4 +489,12 @@ void WMInstance::Update(){
     }
 
     compositor.Paint(); // Render the frame
+
+    if(targetFrameDelay){
+        clock_gettime(CLOCK_BOOTTIME, &endTime);
+        long diff = (endTime - startTime + 999) / 1000;
+        if(diff > 0 && diff < frameDelayThreshold){
+            usleep(targetFrameDelay - diff);
+        }
+    }
 }

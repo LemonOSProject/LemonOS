@@ -22,6 +22,14 @@ inline void operator-= (vector2i_t& l, const vector2i_t& r){
     l = l - r;
 }
 
+inline bool operator== (const vector2i_t& l, const vector2i_t& r){
+    return l.x == r.x && l.y == r.y;
+}
+
+inline bool operator!= (const vector2i_t& l, const vector2i_t& r){
+    return l.x != r.x && l.y != r.y;
+}
+
 typedef struct Rect{
     union {
         vector2i_t pos;
@@ -38,15 +46,15 @@ typedef struct Rect{
         };
     };
 
-    int left() { return x; }
-    int right() { return x + width; }
-    int top() { return y; }
-    int bottom() { return y + height; }
+    __attribute__((always_inline)) inline int left() const { return x; }
+    __attribute__((always_inline)) inline int right() const { return x + width; }
+    __attribute__((always_inline)) inline int top() const { return y; }
+    __attribute__((always_inline)) inline int bottom() const { return y + height; }
 
-    int left(int newLeft) { width += x - newLeft; x = newLeft; return x; }
-    int right(int newRight) { width += newRight - (x + width); return x + width; }
-    int top(int newTop) { height += y - newTop; y = newTop; return y; }
-    int bottom(int newBottom) { height += newBottom - (y + height); return y + height; }
+    __attribute__((always_inline)) inline int left(int newLeft) { width += x - newLeft; x = newLeft; return x; }
+    __attribute__((always_inline)) inline int right(int newRight) { width += newRight - (x + width); return x + width; }
+    __attribute__((always_inline)) inline int top(int newTop) { height += y - newTop; y = newTop; return y; }
+    __attribute__((always_inline)) inline int bottom(int newBottom) { height += newBottom - (y + height); return y + height; }
 
     std::list<Rect> Split(Rect cut){
         std::list<Rect> clips;

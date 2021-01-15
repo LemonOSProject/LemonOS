@@ -10,16 +10,21 @@
 
 #include <list>
 
+#include "winrect.h"
+
 #define WINDOW_BORDER_COLOUR {32,32,32}
 #define WINDOW_TITLEBAR_HEIGHT 24
 #define WINDOW_BORDER_THICKNESS 2
 #define CONTEXT_ITEM_HEIGHT 20
 #define CONTEXT_ITEM_WIDTH 160
 
-//#define LEMONWM_USE_CLIPPING
 #define LEMONWM_MSG_SIZE 512
 
 using WindowBuffer = Lemon::GUI::WindowBuffer;
+
+inline long operator-(const timespec& t1, const timespec& t2){
+    return (t1.tv_sec - t2.tv_sec) * 1000000000 + (t1.tv_nsec - t2.tv_nsec);
+}
 
 class WMInstance;
 
@@ -53,13 +58,11 @@ protected:
     WMInstance* wm;
 
     rect_t closeRect, minimizeRect;
+
+    surface_t windowSurface;
 public:
     WMWindow(WMInstance* wm, handle_t endp, handle_t id, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title);
     ~WMWindow();
-
-    #ifdef LEMONWM_USE_CLIPPING
-        std::list<rect_t> clips;
-    #endif
 
     vector2i_t pos = {0, 0};
     vector2i_t size = {0, 0};
@@ -72,23 +75,29 @@ public:
 
     handle_t clientID = 0;
 
-    void Draw(surface_t* surface);
+    void DrawDecoration(surface_t* surface, rect_t) const;
+    void DrawClip(surface_t* surface, rect_t clip);
+    //void Draw(surface_t* surface);
 
     void PostEvent(Lemon::LemonEvent& ev) { Queue(Lemon::GUI::WindowEvent, reinterpret_cast<uintptr_t>(&ev), (uint16_t)sizeof(Lemon::LemonEvent)); }
 
     void Minimize(bool state);
     void Resize(vector2i_t size, int64_t bufferKey, WindowBuffer* bufferInfo);
-    void RecalculateRects();
 
-    rect_t GetCloseRect();
-    rect_t GetMinimizeRect();
+    inline int Dirty() const { return windowBufferInfo->dirty; }
+    inline void SetDirty(int v) { windowBufferInfo->dirty = v; }
 
-    rect_t GetBottomBorderRect();
-    rect_t GetTopBorderRect();
-    rect_t GetLeftBorderRect();
-    rect_t GetRightBorderRect();
+    rect_t GetWindowRect() const; // Return window bounds as a rectangle
 
-    void RecalculateButtonRects();
+    rect_t GetCloseRect() const;
+    rect_t GetMinimizeRect() const;
+
+    rect_t GetBottomBorderRect() const;
+    rect_t GetTopBorderRect() const;
+    rect_t GetLeftBorderRect() const;
+    rect_t GetRightBorderRect() const;
+
+    void RecalculateButtonRects(); // Recalculate rectangles for close/minimize buttons
 };
 
 class ContextMenuItem{
@@ -139,17 +148,18 @@ protected:
 
     timespec lastRender = {0, 0};
 
-    #ifdef LEMONWM_USE_CLIPPING
-        std::list<rect_t> cclips;
-    #endif
+    std::list<WMWindowRect> clips;
 public:
     CompositorInstance(WMInstance* wm);
+
+    void RecalculateClipping();
     void Paint();
 
     surface_t windowButtons;
     surface_t mouseCursor;
+    surface_t mouseBuffer = { .width = 0, .height = 0, .depth = 32, .buffer = nullptr };
+    vector2i_t lastMousePos;
 
-    bool capFramerate = false;
     bool displayFramerate = false;
     bool useImage = true;
     surface_t backgroundImage;
@@ -182,10 +192,17 @@ protected:
     void SetActive(WMWindow* win);
 
     int64_t CreateWindowBuffer(int width, int height, WindowBuffer** buffer);
+
 public:
+    timespec startTime;
+    timespec endTime;
+
     bool redrawBackground = true;
     bool contextMenuActive = false;
     rect_t contextMenuBounds;
+
+    long targetFrameDelay = 8333; // 8333 us (120 fps)
+    long frameDelayThreshold = 8333 - (8333 / 20); // -5% of the frame delay
 
     surface_t surface;
     surface_t screenSurface;

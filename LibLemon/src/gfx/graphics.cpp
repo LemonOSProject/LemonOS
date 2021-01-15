@@ -57,10 +57,6 @@ namespace Lemon::Graphics{
         return {static_cast<uint8_t>(r / 2), static_cast<uint8_t>(g / 2), static_cast<uint8_t>(b / 2), static_cast<uint8_t>(a / 2)};
     }
 
-    void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface, rect_t mask){
-        DrawRect(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour, surface, mask);
-    }
-
     void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t mask){
         if(x < 0){
             width += x;
@@ -111,23 +107,18 @@ namespace Lemon::Graphics{
         }
     }
 
-    void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface, rect_t mask){
-        DrawRect(x, y, width, height, colour.r, colour.g, colour.b, surface, mask);
-    }
-
     void DrawRectOutline(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface){
         DrawRect(x, y, width, 1, r, g, b, surface);
         DrawRect(x, y + 1, 1, height - 1, r, g, b, surface);
         DrawRect(x, y + height - 1, width, 1, r, g, b, surface);
         DrawRect(x + width - 1, y + 1, 1, height - 1, r, g, b, surface);
     }
-    
-    void DrawRectOutline(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface){
-        DrawRectOutline(x,y,width,height,colour.r,colour.g,colour.b,surface);
-    }
-    
-    void DrawRectOutline(rect_t rect, rgba_colour_t colour, surface_t* surface){
-        DrawRectOutline(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour, surface);
+
+    void DrawRectOutline(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t mask){
+        DrawRect(x, y, width, 1, r, g, b, surface, mask);
+        DrawRect(x, y + 1, 1, height - 1, r, g, b, surface, mask);
+        DrawRect(x, y + height - 1, width, 1, r, g, b, surface, mask);
+        DrawRect(x + width - 1, y + 1, 1, height - 1, r, g, b, surface, mask);
     }
 
     uint32_t Interpolate(double q11, double q21, double q12, double q22, double x, double y){
@@ -163,6 +154,10 @@ namespace Lemon::Graphics{
         DrawGradientVertical(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, c1, c2, surface);
     }
 
+    void DrawGradientVertical(rect_t rect, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface, rect_t limits){
+        DrawGradientVertical(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, c1, c2, surface, limits);
+    }
+
     void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface){
         if(x < 0){
             width += x;
@@ -177,7 +172,7 @@ namespace Lemon::Graphics{
         width = (width + x > surface->width) ? (surface->width - x) : width;
 
         for(int j = 0; j < height && (y + j) < surface->height; j++){
-                DrawRect(x, y + j, width, 1, (uint8_t)(j*(((double)c2.r - (double)c1.r)/height)+c1.r),(uint8_t)(j*(((double)c2.g - (double)c1.g)/height)+c1.g),(uint8_t)(j*(((double)c2.b - (double)c1.b)/height)+c1.b),surface);
+            DrawRect(x, y + j, width, 1, (uint8_t)(j*(((double)c2.r - (double)c1.r)/height)+c1.r),(uint8_t)(j*(((double)c2.g - (double)c1.g)/height)+c1.g),(uint8_t)(j*(((double)c2.b - (double)c1.b)/height)+c1.b),surface);
         }
     }
 
@@ -213,7 +208,7 @@ namespace Lemon::Graphics{
         }
     }
 
-    void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset){
+    void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset){
         if(dest->height == src->height && dest->width == src->width && offset.x == 0 && offset.y == 0) {
             memcpy_optimized(dest->buffer, src->buffer, dest->width * dest->height);
             return;
@@ -242,7 +237,7 @@ namespace Lemon::Graphics{
         }
     }
 
-    void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion){
+    void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion){
         if(offset.x >= dest->width || offset.y >= dest->height || srcRegion.pos.x >= src->width || srcRegion.pos.y >= src->height) return;
 
         int srcWidth = (srcRegion.pos.x + srcRegion.size.x) > src->width ? (src->width - srcRegion.pos.x) : srcRegion.size.x;
@@ -281,7 +276,7 @@ namespace Lemon::Graphics{
         }
     }
 
-    void surfacecpyTransparent(surface_t* dest, surface_t* src, vector2i_t offset){
+    void surfacecpyTransparent(surface_t* dest, const surface_t* src, vector2i_t offset){
         uint32_t* srcBuffer = (uint32_t*)src->buffer;
         uint32_t* destBuffer = (uint32_t*)dest->buffer;
         for(int i = 0; i < src->height && i < dest->height - offset.y; i++){
@@ -298,7 +293,7 @@ namespace Lemon::Graphics{
         }
     }
     
-    void surfacecpyTransparent(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion){
+    void surfacecpyTransparent(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion){
         int srcWidth = (srcRegion.pos.x + srcRegion.size.x) > src->width ? (src->width - srcRegion.pos.x) : srcRegion.size.x;
         int srcHeight = (srcRegion.pos.y + srcRegion.size.y) > src->height ? (src->height - srcRegion.pos.y) : srcRegion.size.y;
         int rowSize = ((offset.x + srcWidth) > dest->width) ? dest->width - offset.x : srcWidth;

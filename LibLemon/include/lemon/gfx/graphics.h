@@ -100,13 +100,28 @@ namespace Lemon::Graphics{
     rgba_colour_t AverageColour(rgba_colour_t c1, rgba_colour_t c2);
 
     // DrawRect (rect, colour, surface*) - Draw filled rectangle
-    void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface, rect_t mask = {0, 0, INT_MAX, INT_MAX});
     void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t mask = {0, 0, INT_MAX, INT_MAX});
-    void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface, rect_t mask = {0, 0, INT_MAX, INT_MAX});
+    inline void DrawRect(rect_t rect, rgba_colour_t colour, surface_t* surface, rect_t mask = {0, 0, INT_MAX, INT_MAX}){
+        DrawRect(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour.r, colour.g, colour.b, surface, mask);
+    }
+    inline void DrawRect(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface, rect_t mask = {0, 0, INT_MAX, INT_MAX}){
+        DrawRect(x, y, width, height, colour.r, colour.g, colour.b, surface, mask);
+    }
 
-    void DrawRectOutline(rect_t rect, rgba_colour_t colour, surface_t* surface);
+    void DrawRectOutline(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t mask);
     void DrawRectOutline(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface);
-    void DrawRectOutline(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface);
+    inline void DrawRectOutline(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface){
+        DrawRectOutline(x, y, width, height, colour.r, colour.g, colour.b, surface);
+    }
+    inline void DrawRectOutline(int x, int y, int width, int height, rgba_colour_t colour, surface_t* surface, rect_t mask){
+        DrawRectOutline(x, y, width, height, colour.r, colour.g, colour.b, surface, mask);
+    }
+    inline void DrawRectOutline(rect_t rect, rgba_colour_t colour, surface_t* surface){
+        DrawRectOutline(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour, surface);
+    }
+    inline void DrawRectOutline(rect_t rect, rgba_colour_t colour, surface_t* surface, rect_t mask){
+        DrawRectOutline(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour, surface, mask);
+    }
 
     int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font = DefaultFont());
     int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font = DefaultFont());
@@ -138,11 +153,12 @@ namespace Lemon::Graphics{
 
     void DrawGradient(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
     void DrawGradientVertical(rect_t rect, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
+    void DrawGradientVertical(rect_t rect, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface, rect_t limits);
     void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface);
     void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1, rgba_colour_t c2, surface_t* surface, rect_t limits);
 
-    void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset = {0,0});
-    void surfacecpy(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion);
-    void surfacecpyTransparent(surface_t* dest, surface_t* src, vector2i_t offset = {0,0});
-    void surfacecpyTransparent(surface_t* dest, surface_t* src, vector2i_t offset, rect_t srcRegion);
+    void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset = {0,0});
+    void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion);
+    void surfacecpyTransparent(surface_t* dest, const surface_t* src, vector2i_t offset = {0,0});
+    void surfacecpyTransparent(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion);
 }

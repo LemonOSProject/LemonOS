@@ -10,20 +10,51 @@ using namespace Lemon::Graphics;
 
 rgba_colour_t backgroundColor = {64, 128, 128, 255};
 
-unsigned int operator-(const timespec& t1, const timespec& t2){
-    return (t1.tv_sec - t2.tv_sec) * 1000000000 + (t1.tv_nsec - t2.tv_nsec);
-}
-
 CompositorInstance::CompositorInstance(WMInstance* wm){
     this->wm = wm;
     clock_gettime(CLOCK_BOOTTIME, &lastRender);
 }
 
-void CompositorInstance::Paint(){
-    timespec cTime;
-    clock_gettime(CLOCK_BOOTTIME, &cTime);
+void CompositorInstance::RecalculateClipping(){
+    clips.clear();
 
+    auto doClipping = [this](const Rect& winRect){
+        retry:
+        for(auto it = clips.begin(); it != clips.end(); it++){
+            WMWindowRect& rect = *it;
+
+            // Check if the rectangles intersect
+            if(rect.left() < winRect.right() && rect.right() > rect.left() && rect.right() > winRect.left() && rect.top() < winRect.bottom() && rect.bottom() > winRect.top()){
+                clips.erase(it); // Remove the current rectangle
+                
+                clips.splice(clips.end(), rect.Split(winRect)); // Split it
+
+                goto retry; // Now that it has been split, reiterate through the list
+            }
+        }
+    };
+
+    for(WMWindow* win : wm->windows){
+        if(win->minimized){
+            continue; // Ignore minimized windows
+        }
+
+        WMWindowRect winRect = WMWindowRect(win->GetWindowRect(), win);
+        doClipping(winRect);
+
+        clips.push_back(winRect);
+    }
+
+    if(wm->contextMenuActive){
+        doClipping(wm->contextMenuBounds);
+    }
+}
+
+void CompositorInstance::Paint(){
     if(displayFramerate){
+        timespec cTime;
+        clock_gettime(CLOCK_BOOTTIME, &cTime);
+
         unsigned int renderTime = (cTime - lastRender);
 
         if(avgFrametime)
@@ -37,64 +68,42 @@ void CompositorInstance::Paint(){
             fCount = 0;
             avgFrametime = renderTime;
         }
+
+        lastRender = cTime;
     }
 
-    if(capFramerate && (cTime - lastRender) < (6944443)) return; // Cap at 90 FPS
-
-    lastRender = cTime;
+    RecalculateClipping();
 
     surface_t* renderSurface = &wm->surface;
-    
+        
     if(wm->redrawBackground){
-        #ifdef LEMONWM_USE_CLIPPING
-            auto doClipping = [&](rect_t newRect){
-                retry:
-                for(WMWindow* win : wm->windows){
-                    auto& clips = win->clips;
-                    for(auto it = clips.begin(); it != clips.end(); it++){
-                        rect_t rect = *it;
-                        if(rect.left() < newRect.right() && rect.right() > newRect.left() && rect.top() < newRect.bottom() && rect.bottom() > newRect.top()){
-                            clips.erase(it);
-                            cclips.erase(it);
-
-                            clips.splice(clips.end(), rect.Split(newRect));
-                            cclips.splice(cclips.end(), rect.Split(newRect));
-                            goto retry;
-                        }
-                    }
-                }
-            };
-
-            for(WMWindow* win : wm->windows){
-                win->clips.clear();
-            }
-            cclips.clear();
-
-            for(WMWindow* win : wm->windows){
-                if(win->minimized) continue;
-
-                if(win->flags & WINDOW_FLAGS_NODECORATION) {
-                    doClipping({win->pos, win->size});
-                    cclips.push_back({win->pos, win->size});
-                } else {
-                    doClipping({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
-                    cclips.push_back({win->pos.x + WINDOW_BORDER_THICKNESS, win->pos.y + WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT, win->size.x, win->size.y});
-                }
-            }
-
-        #endif
-
-        if(useImage){
-            surfacecpy(renderSurface, &backgroundImage);
-        } else {
-            DrawRect(0, 0, renderSurface->width, renderSurface->height, backgroundColor, renderSurface);
-        }
-
-        wm->redrawBackground = false;
+        surfacecpy(renderSurface, &backgroundImage);
     }
 
-    for(WMWindow* win : wm->windows){
-        win->Draw(renderSurface);
+    for(auto it = clips.begin(); it != clips.end();){
+        WMWindowRect& rect = *it;
+        WMWindow* win = rect.win;
+
+        if(win->Dirty() || wm->redrawBackground){
+            win->SetDirty(0);
+
+            while(it != clips.end() && it->win == win){
+                rect = *it;
+                win->DrawClip(renderSurface, rect);
+
+                if(!wm->redrawBackground){
+                    surfacecpy(&wm->screenSurface, renderSurface, rect.rect.pos, rect);
+                }
+
+                it++;
+            }
+        } else while(it != clips.end() && it->win == win){
+            it++;
+        }
+    }
+
+    if(wm->redrawBackground){
+        surfacecpy(&wm->screenSurface, renderSurface);
     }
 
     if(wm->contextMenuActive){
@@ -112,50 +121,28 @@ void CompositorInstance::Paint(){
             DrawString(item.name.c_str(), bounds.x + 24, ypos + 3, Lemon::colours[Lemon::Colour::Text], renderSurface);
             ypos += CONTEXT_ITEM_HEIGHT;
         }
+
+        surfacecpy(&wm->screenSurface, renderSurface, bounds.pos, bounds);
     }
 
-    surfacecpyTransparent(renderSurface, &mouseCursor, wm->input.mouse.pos);
+    vector2i_t mousePos = wm->input.mouse.pos;
+
+    surfacecpy(&mouseBuffer, renderSurface, {0, 0}, {mousePos, {mouseBuffer.width, mouseBuffer.height}}); // Save what was under the cursor
+    surfacecpyTransparent(&mouseBuffer, &mouseCursor);
+
+    surfacecpy(&wm->screenSurface, renderSurface, lastMousePos, {lastMousePos, {mouseCursor.width, mouseCursor.height}});
+    surfacecpy(&wm->screenSurface, &mouseBuffer, mousePos);
+
+    lastMousePos = mousePos;
 
     if(displayFramerate){
         DrawRect(0, 0, 80, 16, 0, 0 ,0, renderSurface);
         DrawString(std::to_string(fRate).c_str(), 2, 2, 255, 255, 255, renderSurface);
 
-        #ifdef LEMONWM_USE_CLIPPING
-                surfacecpy(&wm->screenSurface, renderSurface, {0, 0}, {0, 0, 80, 16});
-        #endif
-    }
-
-    
-    /*if(wm->redrawBackground && wm->screenSurface.buffer){
-        surfacecpy(&wm->screenSurface, renderSurface);
-        wm->redrawBackground = false;
-    } else*/ if(wm->screenSurface.buffer){
-        #ifdef LEMONWM_USE_CLIPPING
-            for(rect_t& r : cclips){
-                surfacecpy(&wm->screenSurface, renderSurface, r.pos, r);
-            }
-        #else
-            surfacecpy(&wm->screenSurface, renderSurface);
-        #endif
-    }
-
-    if(wm->contextMenuActive){
-        if(useImage){
-            surfacecpy(renderSurface, &backgroundImage, wm->contextMenuBounds.pos, wm->contextMenuBounds);
-        } else {
-            DrawRect(wm->contextMenuBounds, backgroundColor, renderSurface);
+        if(!wm->redrawBackground){
+            surfacecpy(&wm->screenSurface, renderSurface, {0, 0}, {0, 0, 80, 16});
         }
     }
-    
-    if(useImage){
-        surfacecpy(renderSurface, &backgroundImage, wm->input.mouse.pos, {wm->input.mouse.pos, {mouseCursor.width, mouseCursor.height}});
-    } else {
-        DrawRect(wm->input.mouse.pos.x, wm->input.mouse.pos.y, mouseCursor.width, mouseCursor.height, backgroundColor, renderSurface);
-    }
 
-    #ifdef LEMONWM_USE_CLIPPING
-        surfacecpy(&wm->screenSurface, renderSurface, wm->input.mouse.pos, {wm->input.mouse.pos, {mouseCursor.width, mouseCursor.height}});
-    #else
-
-    #endif
+    wm->redrawBackground = false;
 }

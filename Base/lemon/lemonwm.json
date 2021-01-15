@@ -3,6 +3,6 @@
     "backgroundImage" : "/system/lemon/backgrounds/bg5.png",
     "theme" : "/system/lemon/themes/default.json",
     "useExperimentalClipping" : false,
-    "displayFramerate" : false,
-    "capFramerate" : false
+    "displayFramerate" : true,
+    "targetFramerate" : 100
 }

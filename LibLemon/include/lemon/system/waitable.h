@@ -13,7 +13,7 @@ namespace Lemon{
     public:
         virtual inline const handle_t& GetHandle() const = 0;
         virtual inline void GetAllHandles(std::vector<handle_t>& v) const { v.push_back(GetHandle()); };
-        void Wait();
+        void Wait(long timeout = -1);
 
         virtual ~Waitable();
     };
@@ -46,7 +46,7 @@ namespace Lemon{
         void StopWaitingOn(Waitable* waitable);
         void StopWaitingOnAll(Waitable* waitable);
 
-        void Wait();
+        void Wait(long timeout = -1);
 
         virtual ~Waiter();
     };

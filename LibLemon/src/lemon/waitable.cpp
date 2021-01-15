@@ -3,8 +3,8 @@
 #include <lemon/system/kobject.h>
 
 namespace Lemon{
-    void Waitable::Wait(){
-        WaitForKernelObject(GetHandle());
+    void Waitable::Wait(long timeout){
+        WaitForKernelObject(GetHandle(), timeout);
     }
 
     Waitable::~Waitable(){
@@ -42,9 +42,9 @@ namespace Lemon{
         RepopulateHandles();
     }
 
-    void Waiter::Wait(){
+    void Waiter::Wait(long timeout){
         if(handles.size()){
-            WaitForKernelObject(handles.data(), handles.size());
+            WaitForKernelObject(handles.data(), handles.size(), timeout);
         }
     }
 

@@ -76,11 +76,18 @@ int main(){
             } else {} // TODO: Do something when invalid valaue
         }
 
-        if(auto it = values.find("capFramerate"); it != values.end()){
+        if(auto it = values.find("targetFramerate"); it != values.end()){
             auto& v = it->second;
 
             if(v.IsBool()){
-                wm.compositor.capFramerate = v.AsBool();
+                long targetFramerate = v.AsSignedNumber();
+                if(targetFramerate < 0){
+                    wm.targetFrameDelay = 0;
+                    wm.frameDelayThreshold = -1;
+                } else {
+                    wm.targetFrameDelay = 1000000 / targetFramerate; // in microseconds
+                    wm.frameDelayThreshold = wm.targetFrameDelay - (wm.targetFrameDelay / 20);
+                }
             } else {} // TODO: Do something when invalid valaue
         }
 
@@ -103,9 +110,11 @@ int main(){
 
     if(int e = Lemon::Graphics::LoadImage("/initrd/mouse.png", &wm.compositor.mouseCursor)){
         printf("LemonWM: Warning: Error %d loading mouse cursor.\n", e);
-        wm.compositor.mouseCursor.buffer = new uint8_t[4 * 4];
+        wm.compositor.mouseCursor.buffer = new uint8_t[4 * 4 * 4];
         wm.compositor.mouseCursor.width = wm.compositor.mouseCursor.height = 4;
     }
+    wm.compositor.mouseBuffer = wm.compositor.mouseCursor;
+    wm.compositor.mouseBuffer.buffer = new uint8_t[wm.compositor.mouseCursor.width * wm.compositor.mouseCursor.height * 4];
 
     wm.compositor.backgroundImage = renderSurface;
     wm.compositor.backgroundImage.buffer = new uint8_t[renderSurface.width * renderSurface.height * 4];
