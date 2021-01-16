@@ -104,7 +104,7 @@ void Scroll(){
 void OnPaint(surface_t* surface){
 	int fontHeight = terminalFont->lineHeight;
 
-	if(/*paintAll*/ true){
+	if(true){
 		for(int i = 0; i < rowCount && (bufferOffset + i) < static_cast<int>(buffer.size()); i++){
 			int j = 0;
 			for(; j < static_cast<int>(buffer[bufferOffset + i].size()); j++){
@@ -494,14 +494,14 @@ void PrintChar(char ch){
 
 extern "C"
 int main(int argc, char** argv){
-	window = new Lemon::GUI::Window("Terminal", {720, 480});
-
 	terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
 	if(!terminalFont){
 		terminalFont = Lemon::Graphics::GetFont("default");
 	}
+	
+	window = new Lemon::GUI::Window("Terminal", {720, 32 * terminalFont->lineHeight});
 
-	rowCount = 480 / terminalFont->lineHeight - 1;
+	rowCount = window->GetSize().y / terminalFont->lineHeight;
 	columnCount = 720 / 8;
 
 	curPos = {0, 0};

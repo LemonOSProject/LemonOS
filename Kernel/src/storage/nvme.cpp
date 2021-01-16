@@ -24,7 +24,7 @@ namespace NVMe{
         submissionBase = sqBase;
 
         completionQueue = reinterpret_cast<NVMeCompletion*>(cq);
-        submissionQueue = reinterpret_cast<NVMeCommand*>(cq);
+        submissionQueue = reinterpret_cast<NVMeCommand*>(sq);
 
         completionDB = cqDB;
         submissionDB = sqDB;
@@ -67,7 +67,9 @@ namespace NVMe{
 
         *submissionDB = sqTail;
 
-        while(completionCycleState == !completionQueue[cqHead].phaseTag) Scheduler::Yield();
+        while(completionCycleState == !completionQueue[cqHead].phaseTag){
+            Scheduler::Yield();
+        }
         complet = completionQueue[cqHead];
 
         if(++cqHead >= cqCount){
@@ -82,14 +84,14 @@ namespace NVMe{
     Controller::Controller(PCIDevice* pciDev){
         pciDevice = pciDev;
 
-        return;
-
         cRegs = reinterpret_cast<Registers*>(Memory::KernelAllocate4KPages(4));
         Memory::KernelMapVirtualMemory4K(pciDevice->GetBaseAddressRegister(0), (uintptr_t)cRegs, 4);
         
         pciDevice->EnableBusMastering();
         pciDevice->EnableMemorySpace();
         pciDevice->EnableInterrupts();
+
+        Log::Info("[NVMe] Found Controller, Version: %d.%d.%d, Maximum Queue Entries Supported: %u", cRegs->version >> 16, cRegs->version >> 8 & 0xff, cRegs->version & 0xff, GetMaxQueueEntries());
 
         Disable();
 
@@ -103,6 +105,8 @@ namespace NVMe{
                 return;
             }
         }
+
+        memset(cRegs, 0, sizeof(Registers));
 
         cRegs->config = NVME_CFG_DEFAULT_IOCQES | NVME_CFG_DEFAULT_IOSQES;
 
@@ -122,13 +126,17 @@ namespace NVMe{
         cRegs->adminCompletionQ = admCQBase;
         cRegs->adminSubmissionQ = admSQBase;
 
-        Memory::KernelMapVirtualMemory4K(admCQBase, (uintptr_t)admCQ, 1);
-        Memory::KernelMapVirtualMemory4K(admSQBase, (uintptr_t)admSQ, 1);
+        Memory::KernelMapVirtualMemory4K(admCQBase, (uintptr_t)admCQ, 1, PAGE_CACHE_DISABLED);
+        Memory::KernelMapVirtualMemory4K(admSQBase, (uintptr_t)admSQ, 1, PAGE_CACHE_DISABLED);
         
         adminQueue = NVMeQueue(0 /* admin queue ID is 0 */, admCQBase, admSQBase, admCQ, admSQ, GetCompletionDoorbell(0), GetSubmissionDoorbell(0), MIN(PAGE_SIZE_4K, GetMaxQueueEntries() * sizeof(NVMeCompletion)), MIN(PAGE_SIZE_4K, GetMaxQueueEntries() * sizeof(NVMeCommand)));
 
         SetAdminCompletionQueueSize(adminQueue.CQSize());
         SetAdminSubmissionQueueSize(adminQueue.SQSize());
+
+        IF_DEBUG(debugLevelNVMe >= DebugLevelVerbose, {
+            Log::Info("[NVMe] Admin completion queue: %x (%x), submission queue: %x (%x), CQ size: %u, SQ size: %u", admCQ, admCQBase, admSQ, admSQBase, adminQueue.CQSize(), adminQueue.SQSize());
+        });
 
         Enable();
 
@@ -143,14 +151,23 @@ namespace NVMe{
             }
         }
 
+        if(cRegs->status & NVME_CSTS_FATAL){
+                Log::Warning("[NVMe] Controller fatal error! (NVME_CSTS_FATAL set)");
+                dStatus = DriverStatus::ControllerError;
+                return;
+        }
+
         if(IdentifyController()){
             Log::Warning("[NVMe] Failed to identify controller!");
             dStatus = DriverStatus::ControllerError;
             return;
         }
 
-        if(controllerIdentity->controllerType != ControllerType::IOController){
-            Log::Warning("[NVMe] Not an I/O Controller");
+        // Check for one of two things:
+        //      1. Controller type is set to I/O Controller
+        //      2. Controller type is set to not reported (0) and has >0 namespaces
+        if(controllerIdentity->controllerType != ControllerType::IOController && (controllerIdentity->controllerType > 0 && !controllerIdentity->numNamespaces)){
+            Log::Warning("[NVMe] Not an I/O Controller (%d)", controllerIdentity->controllerType);
             Disable();
             return;
         }
@@ -164,7 +181,7 @@ namespace NVMe{
             memcpy(name, controllerIdentity->name, 40);
             name[40] = 0;
 
-            Log::Info("[NVMe] Found Controller, Version: %d.%d.%d, Serial number: %s, Name: %s, %d namespaces", cRegs->version >> 16, cRegs->version >> 8 & 0xff, cRegs->version & 0xff, serialNumber, name, controllerIdentity->numNamespaces);
+            Log::Info("[NVMe] Serial number: '%s', Name: '%s', %d namespaces", serialNumber, name, controllerIdentity->numNamespaces);
         });
     }
 

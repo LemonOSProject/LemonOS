@@ -81,7 +81,7 @@ int main(){
 
             if(v.IsBool()){
                 long targetFramerate = v.AsSignedNumber();
-                if(targetFramerate < 0){
+                if(targetFramerate <= 0){
                     wm.targetFrameDelay = 0;
                     wm.frameDelayThreshold = -1;
                 } else {

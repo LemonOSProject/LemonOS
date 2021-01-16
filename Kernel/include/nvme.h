@@ -32,11 +32,14 @@
 #define NVME_CFG_DEFAULT_IOCQES (4 << 20) // 16 bytes so log2(16) = 4
 #define NVME_CFG_DEFAULT_IOSQES (6 << 16) // 64 bytes so log2(64) = 6
 
+#define NVME_CSTS_FATAL (1 << 1)
 #define NVME_CSTS_READY (1 << 0) // Set to 1 when the controller is ready to accept submission queue doorbell writes
 
 #define NVME_AQA_AQS_MASK 0xfffU // Admin queue size mask
 #define NVME_AQA_ACQS(x) (((x) & NVME_AQA_AQS_MASK) << 16) // Admin completion queue size
 #define NVME_AQA_ASQS(x) (((x) & NVME_AQA_AQS_MASK) << 0) // Admin submission queue size
+
+#define NVME_NSSR_RESET_VALUE 0x4E564D65h // "NVME", initiates a reset
 
 namespace NVMe{
 	struct NVMeIdentifyCommand{
@@ -157,8 +160,8 @@ namespace NVMe{
 		NVMeCompletion* completionQueue;
 		NVMeCommand* submissionQueue;
 
-		uint32_t* completionDB;
-		uint32_t* submissionDB;
+		volatile uint32_t* completionDB;
+		volatile uint32_t* submissionDB;
 
 		uint16_t cQueueSize = 0; // Queue sizes in bytes
 		uint16_t sQueueSize = 0; // Queue sizes in bytes
@@ -297,7 +300,9 @@ namespace NVMe{
 			uint32_t intMask; // Interrupt Mask Set
 			uint32_t intMaskClear; // Interrupt Mask Clear
 			uint32_t config; // Controller Configuration
+			uint32_t reserved;
 			uint32_t status; // Controller status
+			uint32_t nvmSubsystemReset; // NVM subsystem reset
 			uint32_t adminQAttr; // Admin queue attributes
 			uint64_t adminSubmissionQ; // Admin submission queue
 			uint64_t adminCompletionQ; // Admin completion queue
@@ -337,7 +342,13 @@ namespace NVMe{
 		}
 
 		__attribute__((always_inline)) inline uint16_t GetMaxQueueEntries(){
-			return NVME_CAP_MQES(cRegs->cap);
+			uint16_t value = NVME_CAP_MQES(cRegs->cap);
+
+			if(value <= 0){
+				return UINT16_MAX;
+			} else {
+				return value + 1;
+			}
 		}
 
 		// Config
