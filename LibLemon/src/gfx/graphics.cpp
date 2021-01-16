@@ -63,17 +63,25 @@ namespace Lemon::Graphics{
             x = 0;
         }
 
-        if(y < 0){
-            height += y;
-            y = 0;
-        }
-
         if(mask.x > x){
             int xChange = mask.x - x;
 
             width -= xChange;
             
             x = mask.x;
+        }
+
+        if(x + width > mask.x + mask.width){
+            width = (mask.x + mask.width) - x;
+        }
+
+        if(width <= 0){
+            return;
+        }
+
+        if(y < 0){
+            height += y;
+            y = 0;
         }
 
         if(mask.y > y){
@@ -84,15 +92,11 @@ namespace Lemon::Graphics{
             y = mask.y;
         }
 
-        if(x + width > mask.x + mask.width){
-            width = mask.width - x;
-        }
-
         if(y + height > mask.y + mask.height){
-            height = mask.height - y;
+            height = (mask.y + mask.height) - y;
         }
 
-        if(width <= 0 || height <= 0){
+        if(height <= 0){
             return;
         }
         

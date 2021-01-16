@@ -57,7 +57,7 @@ namespace Scheduler{
 		public:
 		void Block(thread_t* th) final {
 			assert(th);
-			blocked.add_back(th);
+			blocked.add_back_unlocked(th);
 		}
 
 		void Remove(thread_t* th) final {

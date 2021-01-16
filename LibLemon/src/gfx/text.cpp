@@ -114,7 +114,7 @@ namespace Lemon::Graphics{
             maxHeight = surface->height - y;
         }
 
-        int xOffset = 0; 
+        int xOffset = x; 
         while (*str != 0) {
             if(*str == '\n'){
                 break;
@@ -130,6 +130,12 @@ namespace Lemon::Graphics{
                 return 0;
             }
 
+            if(xOffset + (font->face->glyph->advance.x >> 6) < limits.x){
+                xOffset += font->face->glyph->advance.x >> 6;
+                str++;
+                continue;
+            }
+
             unsigned i = 0;
             if(y < 0){
                 i = -y;
@@ -143,16 +149,16 @@ namespace Lemon::Graphics{
                 uint32_t yOffset = (i + y + (font->height - font->face->glyph->bitmap_top)) * (surface->width);
                 
                 unsigned j = 0;
-                if(x < 0){
+                if(xOffset < 0){
                     j = -x;
                 }
 
-                if(x < limits.x){
-                    j = limits.x - x;
+                if(xOffset < limits.x){
+                    j = limits.x - xOffset;
                 }
 
-                for(; j < font->face->glyph->bitmap.width && (x + xOffset + static_cast<long>(j)) < surface->width; j++){
-                    unsigned off = yOffset + (j + x + xOffset);
+                for(; j < font->face->glyph->bitmap.width && (xOffset + static_cast<long>(j)) < surface->width; j++){
+                    unsigned off = yOffset + (j + xOffset);
                     if(font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] == 255)
                         buffer[off] = colour_i;
                     else if( font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j]){
@@ -165,7 +171,7 @@ namespace Lemon::Graphics{
             xOffset += font->face->glyph->advance.x >> 6;
             str++;
         }
-        return xOffset;
+        return xOffset - x;
     }
 
     int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font) {
