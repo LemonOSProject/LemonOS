@@ -83,7 +83,7 @@ void CompositorInstance::Paint(){
     for(auto it = clips.begin(); it != clips.end();){
         WMWindowRect& rect = *it;
         WMWindow* win = rect.win;
-
+        
         if(win->Dirty() || wm->redrawBackground){
             win->SetDirty(0);
 

@@ -14,6 +14,7 @@ namespace Log{
 
 	VideoConsole* console = nullptr;
 
+	bool logBufferEnabled = false;
 	char* logBuffer = nullptr;
 	size_t logBufferPos = 0;
 	size_t logBufferSize = 0;
@@ -68,9 +69,17 @@ namespace Log{
 	}
 
 	void EnableBuffer(){
-		logBufferSize = 4096;
-		logBuffer = (char*)kmalloc(logBufferSize);
-		logBufferPos = 0;
+		if(!logBuffer){
+			logBufferSize = 4096;
+			logBuffer = (char*)kmalloc(logBufferSize);
+			logBufferPos = 0;
+		}
+
+		logBufferEnabled = true;
+	}
+
+	void DisableBuffer(){
+		logBufferEnabled = false;
 	}
 
 	void WriteN(const char* str, size_t n){
@@ -80,7 +89,7 @@ namespace Log{
 			console->PrintN(str, n, 255, 255, 255);
 		}
 
-		if(logBuffer){
+		if(logBufferEnabled){
 			if(n >= logBufferMaxSize){
 				n -= (n - logBufferMaxSize);
 			}

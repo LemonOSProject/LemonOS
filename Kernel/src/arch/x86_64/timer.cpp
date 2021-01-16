@@ -36,23 +36,25 @@ namespace Timer{
 
         void Block(thread_t* thread) final {
             if(!sleeping.get_length()){
-                sleeping.add_back({.thread = thread, .ticksLeft = ticks}); // No sleeping threads in queue, just add
+                sleeping.add_front({.thread = thread, .ticksLeft = ticks}); // No sleeping threads in queue, just add
                 return;
             }
 
             long total = 0;
-            for(unsigned i = 0; i < sleeping.get_length(); i++){
-                if(total + sleeping[i].ticksLeft >= ticks){ // See if we need to insert in middle of queue
-                    ticks -= total;
-                    sleeping[i].ticksLeft -= ticks;
-                    sleeping.insert({.thread = thread, .ticksLeft = ticks}, i);
+            unsigned cnt = 0;
+            for(auto it = sleeping.begin(); it != sleeping.end(); it++, cnt++){
+                if(total + it->ticksLeft >= ticks){ // See if we need to insert in middle of queue
+                    ticks -= total; 
+                    it->ticksLeft -= ticks;
+                    sleeping.insert({.thread = thread, .ticksLeft = ticks}, it); // Insert before
+
                     return;
                 }
 
-                total += sleeping[i].ticksLeft;
+                total += it->ticksLeft;
             }
 
-            sleeping.add_back({.thread = thread, .ticksLeft = ticks - sleeping.get_back().ticksLeft}); // Add to back
+            sleeping.add_back({.thread = thread, .ticksLeft = ticks - total}); // Add to back
         }
 
         void Remove(thread_t* thread) final {
@@ -115,8 +117,12 @@ namespace Timer{
     }
 
     void SleepCurrentThread(long ticks){
+        acquireLock(&sleepQueueLock);
+        sleeping.allocate(1);
+        releaseLock(&sleepQueueLock);
+
         SleepBlocker blocker = SleepBlocker(ticks);
-        Scheduler::BlockCurrentThread(blocker, sleepQueueLock);
+        Scheduler::BlockCurrentThread(blocker, sleepQueueLock); // We will need an exculsive lock on the allocator
     }
 
     // Timer handler
@@ -127,13 +133,19 @@ namespace Timer{
             ticks -= frequency;
         }
 
-        if(sleeping.get_length() && !(acquireTestLock(&sleepQueueLock))){
+        if(!(acquireTestLock(&sleepQueueLock))){
             if(sleeping.get_length()){ // Make sure the queue has not changed inbetween checking the length and acquiring the lock
-                sleeping.get_front().ticksLeft--;
+                Timer::SleepCounter& cnt = sleeping.get_front();
+                cnt.ticksLeft--;
 
-                while(sleeping.get_length() && sleeping.get_front().ticksLeft <= 0){
-                    Scheduler::UnblockThread(sleeping.remove_at(0).thread);
+                if(cnt.ticksLeft <= 0){
+                    Scheduler::UnblockThread(sleeping.remove_at_force_cache(0).thread);
+                    
+                    while(sleeping.get_length() && sleeping.get_front().ticksLeft <= 0){
+                        Scheduler::UnblockThread(sleeping.remove_at_force_cache(0).thread);
+                    }
                 }
+                
             }
 
             releaseLock(&sleepQueueLock);

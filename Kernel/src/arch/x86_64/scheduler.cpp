@@ -438,14 +438,18 @@ namespace Scheduler{
         CPU* cpu = GetCPULocal();
 
         acquireLock(&lock);
-        acquireLock(&cpu->runQueueLock);
+        acquireLock(&cpu->currentThread->stateLock);
+        list.add_back(cpu->currentThread); // Add as soon as we acquire the state lock to avoid locking the heap for too long
+        asm("cli");
         releaseLock(&cpu->currentThread->lock);
-        list.add_back(cpu->currentThread);
         cpu->currentThread->state = ThreadStateBlocked;
+        releaseLock(&cpu->currentThread->stateLock);
         releaseLock(&lock);
-        releaseLock(&cpu->runQueueLock);
+        asm("sti");
 
         Yield();
+        
+        acquireLock(&cpu->currentThread->lock);
     }
 
 	void BlockCurrentThread(ThreadBlocker& blocker, lock_t& lock){
@@ -453,14 +457,19 @@ namespace Scheduler{
 
         acquireLock(&lock);
         acquireLock(&cpu->currentThread->stateLock);
-        acquireLock(&cpu->runQueueLock);
+        alloc_lock();
+        asm("cli");
+        releaseLock(&cpu->currentThread->lock);
         blocker.Block(cpu->currentThread);
         cpu->currentThread->state = ThreadStateBlocked;
+        alloc_unlock();
         releaseLock(&cpu->currentThread->stateLock);
         releaseLock(&lock);
-        releaseLock(&cpu->runQueueLock);
+        asm("sti");
 
         Yield();
+        
+        acquireLock(&cpu->currentThread->lock);
     }
 
 	void BlockCurrentThread(ThreadBlocker& blocker){

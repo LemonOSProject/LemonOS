@@ -9,6 +9,8 @@ namespace Log{
     void Initialize();
     void LateInitialize();
     void SetVideoConsole(VideoConsole* con);
+
+    void DisableBuffer();
     void EnableBuffer();
 
     void WriteF(const char* __restrict format, va_list args);

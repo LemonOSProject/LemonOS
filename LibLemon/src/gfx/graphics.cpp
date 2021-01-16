@@ -109,16 +109,16 @@ namespace Lemon::Graphics{
 
     void DrawRectOutline(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface){
         DrawRect(x, y, width, 1, r, g, b, surface);
-        DrawRect(x, y + 1, 1, height - 1, r, g, b, surface);
+        DrawRect(x, y + 1, 1, height - 2, r, g, b, surface);
         DrawRect(x, y + height - 1, width, 1, r, g, b, surface);
-        DrawRect(x + width - 1, y + 1, 1, height - 1, r, g, b, surface);
+        DrawRect(x + width - 1, y + 1, 1, height - 2, r, g, b, surface);
     }
 
     void DrawRectOutline(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t mask){
         DrawRect(x, y, width, 1, r, g, b, surface, mask);
-        DrawRect(x, y + 1, 1, height - 1, r, g, b, surface, mask);
+        DrawRect(x, y + 1, 1, height - 2, r, g, b, surface, mask);
         DrawRect(x, y + height - 1, width, 1, r, g, b, surface, mask);
-        DrawRect(x + width - 1, y + 1, 1, height - 1, r, g, b, surface, mask);
+        DrawRect(x + width - 1, y + 1, 1, height - 2, r, g, b, surface, mask);
     }
 
     uint32_t Interpolate(double q11, double q21, double q12, double q22, double x, double y){
@@ -240,8 +240,8 @@ namespace Lemon::Graphics{
     void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion){
         if(offset.x >= dest->width || offset.y >= dest->height || srcRegion.pos.x >= src->width || srcRegion.pos.y >= src->height) return;
 
-        int srcWidth = (srcRegion.pos.x + srcRegion.size.x) > src->width ? (src->width - srcRegion.pos.x) : srcRegion.size.x;
-        int srcHeight = (srcRegion.pos.y + srcRegion.size.y) > src->height ? (src->height - srcRegion.pos.y) : srcRegion.size.y;
+        int srcWidth = (srcRegion.right()) > src->width ? (src->width - srcRegion.pos.x) : srcRegion.size.x;
+        int srcHeight = (srcRegion.bottom()) > src->height ? (src->height - srcRegion.pos.y) : srcRegion.size.y;
         int rowOffset = srcRegion.pos.x;
         int rowSize = srcWidth;
 

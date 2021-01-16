@@ -12,8 +12,11 @@
 volatile int liballocLock = 0;
 
 extern "C" {
+	
 int liballoc_lock() {
-	while(acquireTestLock(&liballocLock)) { asm("sti"); } // If for some reason liballoc is locked before the scheduler starts something probably went horribly wrong
+	while(acquireTestLock(&liballocLock)) {
+		assert(CheckInterrupts());
+	} // If for some reason liballoc is locked before the scheduler starts something probably went horribly wrong
 	return 0;
 }
 
@@ -51,19 +54,4 @@ int liballoc_free(void* addr, size_t pages) {
 	return 0;
 }
 
-void* kmalloc(size_t sz){
-	return _kmalloc(sz);
-}
-
-void* krealloc(void* ptr, size_t sz){
-	return _krealloc(ptr, sz);
-}
-
-void* kcalloc(size_t sz, size_t v){
-	return _kcalloc(sz, v);
-}
-
-void kfree(void* ptr){
-	_kfree(ptr);
-}
 }

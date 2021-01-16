@@ -45,6 +45,5 @@ void write_serial_n(const char* s, unsigned n) {
 		while(is_transmit_empty() == 0);
 		outportb(PORT, *s++);
 	}
-	if(CheckInterrupts())
-		releaseLock(&lock);
+	releaseLock(&lock);
 }

@@ -104,10 +104,6 @@ namespace Lemon::GUI{
     void Window::Resize(vector2i_t size){
         Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey);
 
-        surface.buffer = buffer1;
-        surface.width = size.x;
-        surface.height = size.y;
-
         if(menuBar){
             rootContainer.SetBounds({{0, 16}, {size.x, size.y - WINDOW_MENUBAR_HEIGHT}});
         } else {
@@ -127,6 +123,10 @@ namespace Lemon::GUI{
         windowBufferInfo->currentBuffer = 0;
         buffer1 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer1Offset;
         buffer2 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer2Offset;
+
+        surface.buffer = buffer1;
+        surface.width = size.x;
+        surface.height = size.y;
 
         Paint();
     }

@@ -52,9 +52,9 @@ typedef struct Rect{
     __attribute__((always_inline)) inline int bottom() const { return y + height; }
 
     __attribute__((always_inline)) inline int left(int newLeft) { width += x - newLeft; x = newLeft; return x; }
-    __attribute__((always_inline)) inline int right(int newRight) { width += newRight - (x + width); return x + width; }
+    __attribute__((always_inline)) inline int right(int newRight) { width = newRight - x; return x + width; }
     __attribute__((always_inline)) inline int top(int newTop) { height += y - newTop; y = newTop; return y; }
-    __attribute__((always_inline)) inline int bottom(int newBottom) { height += newBottom - (y + height); return y + height; }
+    __attribute__((always_inline)) inline int bottom(int newBottom) { height = newBottom - y; return y + height; }
 
     std::list<Rect> Split(Rect cut){
         std::list<Rect> clips;

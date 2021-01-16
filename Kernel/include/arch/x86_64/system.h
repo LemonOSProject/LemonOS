@@ -52,3 +52,12 @@ typedef struct {
     uint8_t st[8][16]; // FPU Registers, Last 6 bytes reserved
     uint8_t xmm[16][16]; // XMM Registers
 } __attribute__((packed)) fx_state_t;
+
+
+static inline int CheckInterrupts(){
+    unsigned long flags;
+    asm volatile ( "pushf;"
+                   "pop %%rax;"
+                   : "=a"(flags) :: "cc" );
+    return (flags & 0x200);
+}

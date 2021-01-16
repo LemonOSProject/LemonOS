@@ -1,12 +1,13 @@
 #pragma once
 
-#include <device.h>
 #include <stdint.h>
 #include <tss.h>
-#include <list.h>
 #include <thread.h>
+#include <system.h>
 
 struct process;
+template<typename T>
+class FastList;
 
 typedef struct {
 	uint16_t limit;
@@ -99,14 +100,6 @@ static inline void SetCPULocal(CPU* val){
 	val->self = val;
 	asm volatile("wrmsr" :: "a"((uintptr_t)val & 0xFFFFFFFF) /*Value low*/, "d"(((uintptr_t)val >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000102) /*Set Kernel GS Base*/);
 	asm volatile("wrmsr" :: "a"((uintptr_t)val & 0xFFFFFFFF) /*Value low*/, "d"(((uintptr_t)val >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000101) /*Set Kernel GS Base*/);
-}
-
-static inline int CheckInterrupts(){
-    unsigned long flags;
-    asm volatile ( "pushf;"
-                   "pop %%rax;"
-                   : "=a"(flags) :: "cc" );
-    return (flags & 0x200);
 }
 
 __attribute__((always_inline)) static inline CPU* GetCPULocal(){

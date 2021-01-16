@@ -56,8 +56,6 @@ uint8_t snakeMapCells[16][16];
 
 void Reset(){
 	snake.clear();
-	//delete snake;
-	//snake = new List<vector2i_t>();
 	
 	snake.push_back({8,8});
 	snake.push_back({9,8});
