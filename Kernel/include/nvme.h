@@ -173,7 +173,7 @@ namespace NVMe{
 	static_assert(sizeof(NVMeCompletion) == 16);
 
 	class NVMeQueue{
-		uint16_t queueID;
+		uint16_t queueID = 0;
 
 		uintptr_t completionBase;
 		uintptr_t submissionBase;

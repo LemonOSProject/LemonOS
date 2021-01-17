@@ -210,7 +210,7 @@ public:
 		assert(idx >= 0 && idx <= 5);
 
 		uintptr_t bar = PCI::ConfigReadDword(bus, slot, func, PCIBAR0 + (idx * sizeof(uint32_t)));
-		if(!(bar & 0x1) /* Not MMIO */ && bar & 0x4 /* 64-bit */ && idx < 5){
+		if(!(bar & 0x1) /* Not IO */ && bar & 0x4 /* 64-bit */ && idx < 5){
 			bar |= static_cast<uintptr_t>(PCI::ConfigReadDword(bus, slot, func, PCIBAR0 + ((bar + 1) * sizeof(uint32_t)))) << 32;
 		}
 

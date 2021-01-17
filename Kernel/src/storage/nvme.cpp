@@ -26,6 +26,9 @@ namespace NVMe{
         completionQueue = reinterpret_cast<NVMeCompletion*>(cq);
         submissionQueue = reinterpret_cast<NVMeCommand*>(sq);
 
+        memset(completionQueue, 0, csz);
+        memset(submissionQueue, 0, ssz);
+
         completionDB = cqDB;
         submissionDB = sqDB;
 
@@ -42,6 +45,9 @@ namespace NVMe{
     void NVMeQueue::Submit(NVMeCommand& cmd){
         acquireLock(&queueLock);
         cmd.commandID = nextCommandID++;
+        if(nextCommandID == 0xffff){
+            nextCommandID = 0;
+        }
 
         submissionQueue[sqTail] = cmd;
 
@@ -57,6 +63,9 @@ namespace NVMe{
     void NVMeQueue::SubmitWait(NVMeCommand& cmd, NVMeCompletion& complet){
         acquireLock(&queueLock);
         cmd.commandID = nextCommandID++;
+        if(nextCommandID == 0xffff){
+            nextCommandID = 0;
+        }
 
         submissionQueue[sqTail] = cmd;
 
@@ -67,7 +76,12 @@ namespace NVMe{
 
         *submissionDB = sqTail;
 
+        timeval_t tv = Timer::GetSystemUptimeStruct();
         while(completionCycleState == !completionQueue[cqHead].phaseTag){
+            if(Timer::TimeDifference(Timer::GetSystemUptimeStruct(), tv) >= 500){
+                complet.status = 32767;
+                return; // Timeout
+            }
             Scheduler::Yield();
         }
         complet = completionQueue[cqHead];
@@ -85,11 +99,11 @@ namespace NVMe{
         pciDevice = pciDev;
 
         cRegs = reinterpret_cast<Registers*>(Memory::KernelAllocate4KPages(4));
-        Memory::KernelMapVirtualMemory4K(pciDevice->GetBaseAddressRegister(0), (uintptr_t)cRegs, 4);
+        Memory::KernelMapVirtualMemory4K(pciDevice->GetBaseAddressRegister(0), (uintptr_t)cRegs, 4, PAGE_PRESENT | PAGE_WRITABLE | PAGE_CACHE_DISABLED | PAGE_WRITETHROUGH);
         
         pciDevice->EnableBusMastering();
         pciDevice->EnableMemorySpace();
-        pciDevice->EnableInterrupts();
+        //pciDevice->EnableInterrupts();
 
         Log::Info("[NVMe] Initializing Controller... Version: %d.%d.%d, Maximum Queue Entries Supported: %u", cRegs->version >> 16, cRegs->version >> 8 & 0xff, cRegs->version & 0xff, GetMaxQueueEntries());
 
@@ -106,21 +120,7 @@ namespace NVMe{
             }
         }
 
-        if(cRegs->cap & NVME_CAP_NSSRS){
-            cRegs->nvmSubsystemReset = NVME_NSSR_RESET_VALUE;
-            unsigned spin = 500;
-            while(spin-- && !(cRegs->status & NVME_CSTS_NSSRO)) Timer::Wait(1);
-
-            if(spin <= 0){
-                Log::Warning("[NVMe] Controller not reset! (NVME_CSTS_NSSRO != 1)");
-                dStatus = DriverStatus::ControllerError;
-                return;
-            } 
-        }
-
-        memset(cRegs, 0, sizeof(Registers));
-
-        cRegs->config = NVME_CFG_DEFAULT_IOCQES | NVME_CFG_DEFAULT_IOSQES;
+        //memset(cRegs, 0, sizeof(Registers));
 
         if(GetMinMemoryPageSize() > PAGE_SIZE_4K || GetMaxMemoryPageSize() < PAGE_SIZE_4K){
             Log::Error("[NVMe] Error: Controller does not support 4K pages");
@@ -130,22 +130,27 @@ namespace NVMe{
         SetMemoryPageSize(PAGE_SIZE_4K);
         SetCommandSet(NVMeConfigCmdSetNVM);
 
+        cRegs->config |= NVME_CFG_DEFAULT_IOCQES | NVME_CFG_DEFAULT_IOSQES;
+
         uintptr_t admCQBase = Memory::AllocatePhysicalMemoryBlock();
         uintptr_t admSQBase = Memory::AllocatePhysicalMemoryBlock();
         void* admCQ = Memory::KernelAllocate4KPages(1);
         void* admSQ = Memory::KernelAllocate4KPages(1);
 
+        Memory::KernelMapVirtualMemory4K(admCQBase, (uintptr_t)admCQ, 1);
+        Memory::KernelMapVirtualMemory4K(admSQBase, (uintptr_t)admSQ, 1);
+        memset(admCQ, 0, PAGE_SIZE_4K);
+        memset(admSQ, 0, PAGE_SIZE_4K);
+
         cRegs->adminCompletionQ = admCQBase;
         cRegs->adminSubmissionQ = admSQBase;
-
-        Memory::KernelMapVirtualMemory4K(admCQBase, (uintptr_t)admCQ, 1, PAGE_CACHE_DISABLED);
-        Memory::KernelMapVirtualMemory4K(admSQBase, (uintptr_t)admSQ, 1, PAGE_CACHE_DISABLED);
         
         adminQueue = NVMeQueue(0 /* admin queue ID is 0 */, admCQBase, admSQBase, admCQ, admSQ, GetCompletionDoorbell(0), GetSubmissionDoorbell(0), MIN(PAGE_SIZE_4K, GetMaxQueueEntries() * sizeof(NVMeCompletion)), MIN(PAGE_SIZE_4K, GetMaxQueueEntries() * sizeof(NVMeCommand)));
 
+        cRegs->adminQAttr = 0;
         SetAdminCompletionQueueSize(adminQueue.CQSize());
         SetAdminSubmissionQueueSize(adminQueue.SQSize());
-
+        
         IF_DEBUG(debugLevelNVMe >= DebugLevelVerbose, {
             Log::Info("[NVMe] Admin completion queue: %x (%x), submission queue: %x (%x)", admCQ, admCQBase, admSQ, admSQBase);
             Log::Info("[NVMe] CQ size: %d, SQ size: %d", (cRegs->adminQAttr >> 16) + 1, (cRegs->adminQAttr & 0xffff) + 1);
