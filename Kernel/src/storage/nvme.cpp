@@ -91,7 +91,7 @@ namespace NVMe{
         pciDevice->EnableMemorySpace();
         pciDevice->EnableInterrupts();
 
-        Log::Info("[NVMe] Found Controller, Version: %d.%d.%d, Maximum Queue Entries Supported: %u", cRegs->version >> 16, cRegs->version >> 8 & 0xff, cRegs->version & 0xff, GetMaxQueueEntries());
+        Log::Info("[NVMe] Initializing Controller... Version: %d.%d.%d, Maximum Queue Entries Supported: %u", cRegs->version >> 16, cRegs->version >> 8 & 0xff, cRegs->version & 0xff, GetMaxQueueEntries());
 
         Disable();
 
@@ -104,6 +104,18 @@ namespace NVMe{
                 dStatus = DriverStatus::ControllerError;
                 return;
             }
+        }
+
+        if(cRegs->cap & NVME_CAP_NSSRS){
+            cRegs->nvmSubsystemReset = NVME_NSSR_RESET_VALUE;
+            unsigned spin = 500;
+            while(spin-- && !(cRegs->status & NVME_CSTS_NSSRO)) Timer::Wait(1);
+
+            if(spin <= 0){
+                Log::Warning("[NVMe] Controller not reset! (NVME_CSTS_NSSRO != 1)");
+                dStatus = DriverStatus::ControllerError;
+                return;
+            } 
         }
 
         memset(cRegs, 0, sizeof(Registers));
@@ -135,7 +147,8 @@ namespace NVMe{
         SetAdminSubmissionQueueSize(adminQueue.SQSize());
 
         IF_DEBUG(debugLevelNVMe >= DebugLevelVerbose, {
-            Log::Info("[NVMe] Admin completion queue: %x (%x), submission queue: %x (%x), CQ size: %u, SQ size: %u", admCQ, admCQBase, admSQ, admSQBase, adminQueue.CQSize(), adminQueue.SQSize());
+            Log::Info("[NVMe] Admin completion queue: %x (%x), submission queue: %x (%x)", admCQ, admCQBase, admSQ, admSQBase);
+            Log::Info("[NVMe] CQ size: %d, SQ size: %d", (cRegs->adminQAttr >> 16) + 1, (cRegs->adminQAttr & 0xffff) + 1);
         });
 
         Enable();
@@ -172,6 +185,34 @@ namespace NVMe{
             return;
         }
 
+        //GetNamespaceList();
+
+        // Attempt to allocate 12 I/O queues
+        if(SetNumberOfQueues(12)){
+            dStatus = ControllerError; // Failed to create at least one I/O queue
+            return;
+        }
+
+        // Create 32 I/O Queues
+        for(unsigned i = 0; i < MIN(completionQueuesAllocated, submissionQueuesAllocated); i++){
+            NVMeQueue* qPtr = new NVMeQueue();
+
+            if(CreateIOQueue(qPtr)){ // Error creating I/O queue?
+                delete qPtr;
+                break;
+            }
+
+            ioQueues.add_back(qPtr);
+        }
+
+        if(ioQueues.get_length() < 1){
+            Log::Warning("[NVMe] Failed to create any I/O queues!");
+            dStatus = ControllerError; // Failed to create at least one I/O queue
+            return;
+        }
+
+        queueAvailability = Semaphore(ioQueues.get_length());
+
         IF_DEBUG(debugLevelNVMe >= DebugLevelNormal, {
             char serialNumber[21];
             memcpy(serialNumber, controllerIdentity->serialNumber, 20);
@@ -181,8 +222,121 @@ namespace NVMe{
             memcpy(name, controllerIdentity->name, 40);
             name[40] = 0;
 
-            Log::Info("[NVMe] Serial number: '%s', Name: '%s', %d namespaces", serialNumber, name, controllerIdentity->numNamespaces);
+            Log::Info("[NVMe] Serial number: '%s', Name: '%s', %d namespaces (%d reported), %d I/O queues", serialNumber, name, namespaceIDs.get_length(), controllerIdentity->numNamespaces, ioQueues.get_length());
         });
+
+        dStatus = ControllerReady;
+
+        for(unsigned i = 0; i < controllerIdentity->numNamespaces; i++){
+            NamespaceIdentity* namespaceIdentity = reinterpret_cast<NamespaceIdentity*>(Memory::KernelAllocate4KPages(1));
+            uintptr_t namespaceIdentityPhys = Memory::AllocatePhysicalMemoryBlock();
+            Memory::KernelMapVirtualMemory4K(namespaceIdentityPhys, reinterpret_cast<uintptr_t>(namespaceIdentity), 1);
+
+            NVMeCommand identifyNs;
+            memset(&identifyNs, 0, sizeof(NVMeCommand));
+
+            identifyNs.opcode = AdminCmdIdentify;
+            identifyNs.prp1 = namespaceIdentityPhys;
+
+            identifyNs.identify.cns = NVMeIdentifyCommand::CNSNamespace;
+            identifyNs.nsID = i + 1;
+
+            NVMeCompletion completion;
+            adminQueue.SubmitWait(identifyNs, completion);
+
+            if(completion.status > 0){
+                Memory::FreePhysicalMemoryBlock(namespaceIdentityPhys);
+                Memory::KernelFree4KPages(namespaceIdentity, 1);
+                continue;
+            }
+
+            Log::Info("[NVMe] Found namespace! NSID: %u", i + 1);
+
+            namespaces.add_back(new Namespace(this, i + 1, *namespaceIdentity));
+
+            Memory::FreePhysicalMemoryBlock(namespaceIdentityPhys);
+            Memory::KernelFree4KPages(namespaceIdentity, 1);
+        }
+
+        for(auto& ns : namespaces){
+            if(ns->nsStatus == Namespace::NamespaceStatus::Active){
+                DeviceManager::RegisterDevice(*ns);
+            }
+        }
+    }
+
+    long Controller::CreateIOQueue(NVMeQueue* qPtr){
+        uintptr_t sqBase = Memory::AllocatePhysicalMemoryBlock();
+        uintptr_t cqBase = Memory::AllocatePhysicalMemoryBlock();
+        void* sq = Memory::KernelAllocate4KPages(1);
+        void* cq = Memory::KernelAllocate4KPages(1);
+
+        Memory::KernelMapVirtualMemory4K(cqBase, (uintptr_t)cq, 1, PAGE_CACHE_DISABLED);
+        Memory::KernelMapVirtualMemory4K(sqBase, (uintptr_t)sq, 1, PAGE_CACHE_DISABLED);
+
+        uint16_t queueID = AllocateQueueID();
+
+        NVMeCompletion completion;
+
+        *qPtr = NVMeQueue(queueID, cqBase, sqBase, cq, sq, GetCompletionDoorbell(queueID), GetSubmissionDoorbell(queueID), PAGE_SIZE_4K, PAGE_SIZE_4K);
+
+        NVMeCommand createCq;
+        memset(&createCq, 0, sizeof(NVMeCommand));
+        createCq.opcode = AdminCmdCreateIOCompletionQueue;
+
+        createCq.createIOCQ.contiguous = 1;
+        createCq.createIOCQ.queueID = queueID;
+        createCq.createIOCQ.queueSize = qPtr->CQSize() - 1;
+        createCq.prp1 = cqBase;
+
+        adminQueue.SubmitWait(createCq, completion);
+
+        if(completion.status > 0){
+            Log::Warning("[NVMe] Status %u creating I/O completion queue", completion.status);
+            return completion.status;
+        }
+
+        NVMeCommand createSq;
+        memset(&createSq, 0, sizeof(NVMeCommand));
+        createSq.opcode = AdminCmdCreateIOSubmissionQueue;
+
+        createSq.createIOSQ.contiguous = 1;
+        createSq.createIOSQ.queueID = queueID;
+        createSq.createIOSQ.queueSize = qPtr->SQSize() - 1;
+        createSq.createIOSQ.cqID = queueID;
+        createSq.prp1 = sqBase;
+
+        adminQueue.SubmitWait(createSq, completion);
+
+        if(completion.status > 0){
+            Log::Warning("[NVMe] Status %u creating I/O submission queue", completion.status);
+            return completion.status;
+        }
+
+        return 0;
+    }
+
+    long Controller::SetNumberOfQueues(uint16_t num){
+        NVMeCommand cmd;
+        memset(&cmd, 0, sizeof(NVMeCommand));
+
+        cmd.opcode = AdminCmdSetFeatures;
+
+        cmd.setFeatures.featureID = NVMeSetFeaturesCommand::FeatureIDNumberOfQueues;
+        cmd.setFeatures.dw11 = (static_cast<uint32_t>(num) << 16) | num; // Number of completion queues in high word, Number of submission queues in low word
+
+        NVMeCompletion completion;
+        adminQueue.SubmitWait(cmd, completion);
+
+        if(completion.status > 0){
+            Log::Warning("[NVMe] Status %u setting queue count", completion.status);
+            return completion.status;
+        }
+
+        completionQueuesAllocated = (completion.dw0 >> 16) & 0xffff; // High word
+        submissionQueuesAllocated = completion.dw0 & 0xffff; // Low Word
+
+        return 0;
     }
 
     long Controller::IdentifyController(){
@@ -205,11 +359,59 @@ namespace NVMe{
 
         if(completion.status > 0){
             IF_DEBUG(debugLevelNVMe >= DebugLevelVerbose, {
-                Log::Warning("[NVMe] Status %d attempting to identify controller", completion.status);
+                Log::Warning("[NVMe] Status %d attempting to identify controller!", completion.status);
             })
             return completion.status;
         }
 
         return 0;
+    }
+
+    long Controller::GetNamespaceList(){
+		uint32_t* namespaceList = reinterpret_cast<uint32_t*>(Memory::KernelAllocate4KPages(1));
+		uintptr_t namespaceListPhys = Memory::AllocatePhysicalMemoryBlock();
+        Memory::KernelMapVirtualMemory4K(namespaceListPhys, reinterpret_cast<uintptr_t>(namespaceList), 1);
+
+        NVMeCommand identifyNsList;
+        memset(&identifyNsList, 0, sizeof(NVMeCommand));
+
+        identifyNsList.opcode = AdminCmdIdentify;
+        identifyNsList.prp1 = namespaceListPhys;
+
+        identifyNsList.identify.cns = NVMeIdentifyCommand::CNSNamespaceList;
+        identifyNsList.nsID = 0;
+
+        NVMeCompletion completion;
+        adminQueue.SubmitWait(identifyNsList, completion);
+
+        if(completion.status > 0){
+            IF_DEBUG(debugLevelNVMe >= DebugLevelVerbose, {
+                Log::Warning("[NVMe] Status %d attempting to retrieve controller namespace list!", completion.status);
+            })
+            return completion.status;
+        }
+
+        uint32_t* namespaceListEnd = namespaceList + (PAGE_SIZE_4K / sizeof(uint32_t));
+        while(*namespaceList && namespaceList < namespaceListEnd){
+            namespaceIDs.add_back(*namespaceList++);
+        }
+
+        Memory::FreePhysicalMemoryBlock(namespaceListPhys);
+        Memory::KernelFree4KPages(namespaceList, 1);
+
+        return 0;
+    }
+
+    NVMeQueue* Controller::AcquireIOQueue(){
+        queueAvailability.Wait();
+
+        assert(ioQueues.get_length() > 0);
+        return ioQueues.remove_at(0);
+    }
+
+    void Controller::ReleaseIOQueue(NVMeQueue* queue){
+        ioQueues.add_back(queue);
+
+        queueAvailability.Signal();
     }
 }

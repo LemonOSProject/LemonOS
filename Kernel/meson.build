@@ -90,6 +90,7 @@ cpp_files = [
     'src/storage/atadrive.cpp',
     'src/storage/diskdevice.cpp',
     'src/storage/nvme.cpp',
+    'src/storage/nvmenamespace.cpp',
     'src/storage/partitiondevice.cpp',
     
     'src/tty/pty.cpp',

@@ -9,8 +9,8 @@
 #define NVME_CAP_CMBS (1 << 57) // Controller memory buffer supported
 #define NVME_CAP_PMRS (1 << 56) // Persistent memory region supported
 #define NVME_CAP_BPS (1 << 45) // Boot partition support
-#define NVME_CAP_NVM_CMD_SET (1 << 37) // NVM command set supported
-#define NVME_CAP_NSSRS (1 << 36) // NVM subsystem reset supported
+#define NVME_CAP_NVM_CMD_SET (1UL << 37) // NVM command set supported
+#define NVME_CAP_NSSRS (1UL << 36) // NVM subsystem reset supported
 #define NVME_CAP_CQR (1 << 16) // Contiguous Queues Required
 
 #define NVME_CAP_MPS_MASK 0xfU
@@ -34,12 +34,13 @@
 
 #define NVME_CSTS_FATAL (1 << 1)
 #define NVME_CSTS_READY (1 << 0) // Set to 1 when the controller is ready to accept submission queue doorbell writes
+#define NVME_CSTS_NSSRO (1 << 4) // NVM Subsystem reset occurred
 
 #define NVME_AQA_AQS_MASK 0xfffU // Admin queue size mask
 #define NVME_AQA_ACQS(x) (((x) & NVME_AQA_AQS_MASK) << 16) // Admin completion queue size
 #define NVME_AQA_ASQS(x) (((x) & NVME_AQA_AQS_MASK) << 0) // Admin submission queue size
 
-#define NVME_NSSR_RESET_VALUE 0x4E564D65h // "NVME", initiates a reset
+#define NVME_NSSR_RESET_VALUE 0x4E564D65 // "NVME", initiates a reset
 
 namespace NVMe{
 	struct NVMeIdentifyCommand{
@@ -87,12 +88,28 @@ namespace NVMe{
 		uint32_t queueID;
 	};
 
+	struct NVMeSetFeaturesCommand{
+		enum {
+			FeatureIDNumberOfQueues = 0x7,
+		};
+
+		struct {
+			uint32_t featureID : 8; // Feature to set
+			uint32_t reserved : 23;
+			uint32_t save : 1; // Save across resets
+		} __attribute__((packed));
+
+		uint32_t dw11; // Feature specific
+		uint32_t dw12; // Feature specific
+		uint32_t dw13; // Feature specific
+	};
+
 	struct NVMeReadCommand{
 		uint64_t startLBA; // DWORD 10 - 11, First logical block to be read from
 		struct{
 			uint32_t blockNum : 16; // Number of logical blocks to be read;
 			uint32_t reserved : 10;
-			uint32_t prInfo : 4; // Protection information field
+			uint32_t prI3nfo : 4; // Protection information field
 			uint32_t forceUnitAccess : 1; // Force unit access
 			uint32_t limitedRetry : 1; // Limited retry
 		} __attribute__((packed)); // DWORD 12
@@ -132,6 +149,10 @@ namespace NVMe{
 			NVMeCreateIOCompletionQueueCommand createIOCQ;
 			NVMeCreateIOSubmissionQueueCommand createIOSQ;
 			NVMeDeleteIOQueueCommand deleteIOQ;
+			NVMeSetFeaturesCommand setFeatures;
+
+			NVMeReadCommand read;
+			NVMeWriteCommand write;
 		};
 	};
 	static_assert(sizeof(NVMeCommand) == 64);
@@ -202,15 +223,42 @@ namespace NVMe{
 		__attribute__((always_inline)) uintptr_t SQBase() { return submissionBase; }
 	};
 
+	union NVMeLBAFormat{
+		uint32_t dw;
+		struct{
+			uint32_t metadataSize : 16; // Metadata Size
+			uint32_t lbaDataSize : 8; // Data size/Logical block size as (2 ^ n), minimum supported value is 9 (512 bytes)
+			uint32_t relativePerformance : 2; // Lower value = better performance at 4KiB
+			uint32_t reserved : 6;
+		} __attribute__((packed));
+	};
+
+	struct NamespaceIdentity{
+		uint64_t namespaceSize; // Namespace consists of LBA 0 to (n - 1)
+		uint64_t nsCap; // Namespace capacity, indicates the maximum number of logical blocks that may be allocated in the namespace
+		uint64_t nsUse; // Namespace utilization, indicates the current number of logical blocks allocated in the namespace
+		uint8_t nsFeat; // Namespace features
+		uint8_t numLBAFormats; // Number of LBA formats
+		uint8_t fmtLBASize; // Formatted LBA Size (bits 0-3 indicate LBA format, bit 4 indicates metadata)
+		uint8_t unused[101];
+		NVMeLBAFormat lbaFormats[16]; // LBA formats
+		uint8_t reserved[192];
+		uint8_t vendor[3712]; // Vendor specific
+	} __attribute__((packed));
+	static_assert(sizeof(NamespaceIdentity) == 4096);
+
+	class Namespace;
+
 	class Controller{
 	public:
+		friend class Controller;
+
 		enum DriverStatus{
 			ControllerNotReady,
 			ControllerError,
 			ControllerReady,
 		};
 	private:
-
 		enum ControllerConfigCommandSet{
 			NVMeConfigCmdSetNVM = 0,
 			NVMeConfigCmdSetAdminOnly = 0b111,
@@ -223,6 +271,7 @@ namespace NVMe{
 			AdminCmdDeleteIOCompletionQueue = 0x4,
 			AdminCmdCreateIOCompletionQueue = 0x5,
 			AdminCmdIdentify				= 0x6,
+			AdminCmdSetFeatures				= 0x9,
 		};
 
 		enum ControllerType{
@@ -276,24 +325,7 @@ namespace NVMe{
 			uint8_t unused3[3072];
 		};
 		static_assert(sizeof(ControllerIdentity) == 4096);
-
-		struct NamespaceIdentity{
-			uint64_t namespaceSize; // Namespace consists of LBA 0 to (n - 1)
-			uint64_t nsCap; // Namespace capacity, indicates the maximum number of logical blocks that may be allocated in the namespace
-			uint64_t nsUse; // Namespace utilization, indicates the current number of logical blocks allocated in the namespace
-			uint8_t nsFeat; // Namespace features
-			uint8_t numLBAFormats; // Number of LBA formats
-			uint8_t unused[358];
-			uint8_t vendor[3712]; // Vendor specific
-		};
-		static_assert(sizeof(NamespaceIdentity) == 4096);
-
-		enum NVMCommands{
-			NVMCmdFlush	 = 0x0,
-			NVMCmdWrite	 = 0x1,
-			NVMCmdRead	 = 0x2,
-		};
-
+		
 		struct Registers{
 			uint64_t cap; // Capabilities
 			uint32_t version; // Version
@@ -322,12 +354,21 @@ namespace NVMe{
 		ControllerIdentity* controllerIdentity = nullptr;
 		uintptr_t controllerIdentityPhys = 0;
 
-		uint16_t nextQueueID = 1;
+		Vector<uint32_t> namespaceIDs;
+		Vector<Namespace*> namespaces;
 
+		List<NVMeQueue*> ioQueues;
+		uint16_t nextQueueID = 1;
 		NVMeQueue adminQueue;
 
 		DriverStatus dStatus;
 
+		uint16_t completionQueuesAllocated = 1;
+		uint16_t submissionQueuesAllocated = 1;
+
+		Semaphore queueAvailability = Semaphore(0);
+
+		#pragma region Controller Registers
 		// Capabilities
 		__attribute__((always_inline)) inline uint32_t GetMaxMemoryPageSize(){
 			return 0x1000 /*(1 << 12)*/ << NVME_CAP_MPSMAX(cRegs->cap);
@@ -394,21 +435,55 @@ namespace NVMe{
 			assert(cRegs);
 			return reinterpret_cast<uint32_t*>(reinterpret_cast<uintptr_t>(cRegs) + 0x1000 + (2 * qID + 1) * (4 << GetDoorbellStride()));
 		}
+		#pragma endregion
 
 		uint16_t AllocateQueueID() { return nextQueueID++; }
+
+		long CreateIOQueue(NVMeQueue* qPtr);
+		long SetNumberOfQueues(uint16_t num);
 	public:
 		Controller(PCIDevice* pciDev);
 	
 		long IdentifyController();
+		long GetNamespaceList();
+
+		NVMeQueue* AcquireIOQueue();
+		void ReleaseIOQueue(NVMeQueue* queue);
 
 		__attribute__((always_inline)) inline DriverStatus Status(){ return dStatus; }
 	};
 
-	class Device : public DiskDevice{
+	class Namespace final : public DiskDevice{
 		Controller* controller;
+		size_t diskSize;
+		uint32_t nsID;
+
+		uintptr_t physBuffers[8];
+		void* buffers[8];
+		lock_t bufferLocks[8];
+		Semaphore bufferAvailability = Semaphore(8);
+
+		int AcquireBuffer();
+		void ReleaseBuffer(int buffer);
 
 	public:
-		Device(Controller* c){ controller = c; }
+		enum NamespaceStatus{
+			Uninitialized = 0,
+			Error = 1,
+			Active = 2,
+		};
+		NamespaceStatus nsStatus = NamespaceStatus::Uninitialized;
+
+		enum NVMCommands{
+			NVMCmdFlush	 = 0x0,
+			NVMCmdWrite	 = 0x1,
+			NVMCmdRead	 = 0x2,
+		};
+	public:
+		Namespace(Controller* c, uint32_t nsID, const NamespaceIdentity& id);
+
+		int ReadDiskBlock(uint64_t lba, uint32_t count, void* buffer);
+		int WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer);
 	};
 
 	void Initialize();

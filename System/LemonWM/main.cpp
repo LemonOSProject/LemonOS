@@ -79,7 +79,7 @@ int main(){
         if(auto it = values.find("targetFramerate"); it != values.end()){
             auto& v = it->second;
 
-            if(v.IsBool()){
+            if(v.IsNumber()){
                 long targetFramerate = v.AsSignedNumber();
                 if(targetFramerate <= 0){
                     wm.targetFrameDelay = 0;

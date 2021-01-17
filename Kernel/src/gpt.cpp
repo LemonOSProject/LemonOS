@@ -11,7 +11,8 @@ namespace GPT{
     int Parse(DiskDevice* disk){
         gpt_header_t* header = (gpt_header_t*)kmalloc(disk->blocksize);
 
-        if(disk->ReadDiskBlock(1,disk->blocksize,(uint8_t*)header)){
+        if(int e = disk->ReadDiskBlock(1, disk->blocksize, (uint8_t*)header); e){
+            Log::Info("[GPT] Disk error %d", e);
             return -1; // Disk Error
         }
 

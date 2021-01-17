@@ -88,20 +88,14 @@ namespace Memory{
     void KernelFree2MPages(void* addr, uint64_t amount);
 	void KernelFree4KPages(void* addr, uint64_t amount);
 
-    void* Allocate4KPages(uint64_t amount);
     void* Allocate4KPages(uint64_t amount, address_space_t* addressSpace);
-    void* Allocate2MPages(uint64_t amount);
-    void* Allocate1GPages(uint64_t amount);
 
     void Free4KPages(void* addr, uint64_t amount, address_space_t* addressSpace);
 
     void* KernelAllocate4KPages(uint64_t amount);
     void* KernelAllocate2MPages(uint64_t amount);
     void* KernelAllocate1GPages(uint64_t amount);
-
-    void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount);
-    void MapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount);
-    void MapVirtualMemory1G(uint64_t phys, uint64_t virt, uint64_t amount);
+    
     void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount);
     void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount);
     void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags);
