@@ -270,6 +270,8 @@ void WMInstance::Poll(){
                 }
 
                 menu.owner = win;
+
+                redrawBackground = true;
                 contextMenuActive = true;
             }
         }
@@ -281,8 +283,13 @@ void WMInstance::PostEvent(Lemon::LemonEvent& ev, WMWindow* win){
 }
 
 void WMInstance::MouseDown(){
-    if(Lemon::Graphics::PointInRect(contextMenuBounds, input.mouse.pos)){
-        return;
+    if(contextMenuActive){
+        if(Lemon::Graphics::PointInRect(contextMenuBounds, input.mouse.pos)){
+            return;
+        } else {
+            contextMenuActive = false;
+            redrawBackground = true;
+        }
     }
 
     auto it = windows.end();
@@ -391,10 +398,11 @@ void WMInstance::MouseUp(){
 
         ev.windowCmd = item.id;
 
-        printf("[LemonWM] Context Item: %s, ID: %d\n", item.name.c_str(), item.id);
         PostEvent(ev, menu.owner);
 
         contextMenuActive = false;
+
+        redrawBackground = true;
         return;
     }
 
@@ -443,16 +451,37 @@ void WMInstance::MouseMove(){
         PostEvent(ev, active);
         
         resizeStartPos = input.mouse.pos;
+    } else {
+        if(lastMousedOver && !PointInWindowProper(lastMousedOver, input.mouse.pos)){ // Check if the last window moused over is still under the cursor
+            Lemon::LemonEvent ev;
+            ev.event = Lemon::EventMouseExit;
 
-        redrawBackground = true;
-    } else if (active && PointInWindowProper(active, input.mouse.pos)){
-        Lemon::LemonEvent ev;
-        ev.event = Lemon::EventMouseMoved;
-        ev.mousePos = input.mouse.pos - active->pos;
+            PostEvent(ev, lastMousedOver);
 
-        if(!(active->flags & WINDOW_FLAGS_NODECORATION)) ev.mousePos = ev.mousePos - (vector2i_t){1, 25};
+            lastMousedOver = nullptr; // Set to null in case the mouse is not above any window
+        }
 
-        PostEvent(ev, active);
+        for(WMWindow* win : windows){ 
+            if(PointInWindowProper(win, input.mouse.pos)){
+                Lemon::LemonEvent ev;
+
+                if(win == lastMousedOver){
+                    ev.event = Lemon::EventMouseMoved;
+                } else {
+                    ev.event = Lemon::EventMouseEnter;
+                }
+
+                ev.mousePos = input.mouse.pos - active->pos;
+
+                if(!(active->flags & WINDOW_FLAGS_NODECORATION)) ev.mousePos = ev.mousePos - (vector2i_t){1, 25};
+
+                PostEvent(ev, win);
+
+                lastMousedOver = win; // This window is now the last moused over
+
+                break;
+            }
+        }
     }
 }
 

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="128.0px"
+   height="128.0px"
+   viewBox="0 0 128.0 128.0"
+   version="1.1"
+   id="SVGRoot"
+   sodipodi:docname="games.svg"
+   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07, custom)"
+   inkscape:export-filename="/home/computerfido/Lemon/Resources/gamesicon.png"
+   inkscape:export-xdpi="24.000002"
+   inkscape:export-ydpi="24.000002">
+  <defs
+     id="defs1410" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="4"
+     inkscape:cx="48.600632"
+     inkscape:cy="73.091846"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     inkscape:document-rotation="0"
+     showgrid="false"
+     inkscape:window-width="2560"
+     inkscape:window-height="1380"
+     inkscape:window-x="1920"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     showguides="false"
+     inkscape:guide-bbox="true">
+    <inkscape:grid
+       type="xygrid"
+       id="grid1980"
+       empspacing="4" />
+    <sodipodi:guide
+       position="64,64"
+       orientation="1,0"
+       id="guide1987" />
+    <sodipodi:guide
+       position="64,64"
+       orientation="0,-1"
+       id="guide1989" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata1413">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="fill:#999999;fill-opacity:1;stroke:none;stroke-width:1.65856px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 64,120 13.649576,106.01377 V 92.02754 L 64,106.01377 114.35043,92.02754 v 13.98623 z"
+       id="path1991" />
+    <path
+       style="fill:#cccccc;fill-opacity:1;stroke:none;stroke-width:1.65856px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 13.649576,92.02754 64,78.041311 114.35043,92.02754 64,106.01377 13.649576,92.02754"
+       id="path1999" />
+    <path
+       style="fill:#b3b3b3;stroke:none;stroke-width:1.72065px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 62.601376,92.02754 c 0,0 -4.146417,-2.733242 -4.195868,-11.188982 0,-27.790216 -2.727321,-41.998378 -2.797246,-48.082386 0.03497,-2.202832 -1.398622,-14.801776 0,-16.934677 1.433591,-1.993038 2.797246,-2.116835 2.797246,-2.116835 2.727321,-1.433589 8.356769,-1.328694 11.188983,0 0,0 1.468547,0.0189 2.797245,2.116835 1.398624,2.132901 0.03497,14.701608 0.05431,16.904546 0.05497,6.258509 -2.824321,32.749555 -2.851554,48.112517 0.04946,8.35684 -4.195868,11.188982 -4.195868,11.188982 z"
+       id="path2005"
+       sodipodi:nodetypes="cccccccsccc" />
+    <ellipse
+       style="fill:#aa0000;fill-opacity:1;stroke:none;stroke-width:2.33647"
+       id="path2007-3"
+       cx="38.809017"
+       cy="92.312881"
+       rx="8.3759661"
+       ry="3.9105208" />
+    <ellipse
+       style="fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:2.33647"
+       id="path2007"
+       cx="38.809017"
+       cy="90.357628"
+       rx="8.3759661"
+       ry="3.9105208" />
+  </g>
+</svg>

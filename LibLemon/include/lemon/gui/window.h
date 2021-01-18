@@ -11,6 +11,7 @@
 #define WINDOW_FLAGS_NODECORATION 0x1
 #define WINDOW_FLAGS_RESIZABLE 0x2
 #define WINDOW_FLAGS_NOSHELL 0x4
+#define WINDOW_FLAGS_TOOLTIP 0x8
 
 #define WINDOW_MENUBAR_HEIGHT 20
 
@@ -72,7 +73,7 @@ namespace Lemon::GUI {
 
         void UpdateGUITheme(const std::string& path);
     public:
-        vector2i_t lastMousePos = {0, 0};
+        vector2i_t lastMousePos = {-1, -1};
         WindowMenuBar* menuBar = nullptr;
         Container rootContainer;
         surface_t surface = {0, 0, 32, nullptr};

@@ -21,10 +21,12 @@ extern bool showMenu;
 const char* itemsPath = "/system/lemon/menu/";
 
 std::vector<std::string> path = {"/system/bin/"};
+surface_t defaultIcon = {.width = 0, .height = 0, .depth = 32, .buffer = nullptr};
 
 class MenuObject{
 public:
     std::string name;
+    surface_t icon = defaultIcon;
 
     virtual void Open(vector2i_t pos) = 0;
 
@@ -56,14 +58,15 @@ public:
     std::vector<char*> args;
 
     MenuItem(){
-
+        icon = defaultIcon;
     }
 
-    MenuItem(const std::string& name, const std::string& comment, const  std::string& exec, int id){
+    MenuItem(const std::string& name, const std::string& comment, const std::string& exec, int id){
         this->name = name;
         this->comment = comment;
         this->exec = exec;
         this->id = id;
+        icon = defaultIcon;
 
         std::string temp;
         for(char c : exec){
@@ -140,9 +143,6 @@ class MenuWidget : public Lemon::GUI::Widget{
 public:
     MenuWidget(MenuObject& obj, rect_t bounds) : Widget(bounds){
         this->obj = &obj;
-
-        label = Lemon::Graphics::TextObject(fixedBounds.pos + (vector2i_t){0, fixedBounds.size.y / 2}, this->obj->name);
-        label.SetColour({255, 255, 255, 255});
     }
 
     void Paint(surface_t* surface){
@@ -150,7 +150,9 @@ public:
             Lemon::Graphics::DrawRect(fixedBounds, Lemon::colours[Lemon::Colour::Foreground], surface);
         }
 
-        label.Render(surface);
+        if(obj->icon.width){
+            Lemon::Graphics::surfacecpyTransparent(surface, &obj->icon, fixedBounds.pos + (vector2i_t){fixedBounds.size.x / 2 - obj->icon.width / 2, fixedBounds.size.y / 2 - obj->icon.height / 2});
+        }
     }
 
     void OnMouseUp(vector2i_t pos){
@@ -175,16 +177,21 @@ int GetItemID(){
 
 void InitializeMenu(){
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
-    menuWindow = new Lemon::GUI::Window("", {240, 300}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 32 - 300});
+    menuWindow = new Lemon::GUI::Window("", {36, static_cast<int>(videoInfo.height) - 36}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, 0});
     menuWindow->OnPaint = OnPaint;
     menuWindow->rootContainer.background = {0, 0, 0, 0};
 
+    Lemon::Graphics::LoadImage("/initrd/applicationicon.png", &defaultIcon);
+
     categories["Games"] = MenuCategory("Games");
+    Lemon::Graphics::LoadImage("/initrd/gamesicon.png", &categories["Games"].icon);
+
     categories["Utilities"] = MenuCategory("Utilities");
     categories["Other"] = MenuCategory("Other");
 
     {
         MenuItem item("Terminal...", "Open a Terminal", "terminal.lef", GetItemID());
+        Lemon::Graphics::LoadImage("/initrd/terminalicon.png", &item.icon);
         items[item.id] = item;
         rootItems.push_back(item);
     }
@@ -251,8 +258,10 @@ void InitializeMenu(){
     }
     close(itemsDir);
 
-    menuContainer = new Lemon::GUI::LayoutContainer({0, 0, 0, 0}, {240, 36});
+    menuContainer = new Lemon::GUI::LayoutContainer({0, 0, 0, 0}, {36, 36});
     menuContainer->background = {0x33, 0x2c, 0x29, 255};
+    menuContainer->xPadding = 0;
+    menuContainer->yPadding = 0;
 
     menuContainer->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
     menuWindow->AddWidget(menuContainer);

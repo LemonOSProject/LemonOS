@@ -19,6 +19,8 @@ namespace Lemon {
         EventWindowAdded,
         EventWindowRemoved,
         EventWindowCommand,
+        EventMouseEnter,
+        EventMouseExit,
     };
 
     typedef struct LemonEvent {

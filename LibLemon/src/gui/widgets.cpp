@@ -198,7 +198,7 @@ namespace Lemon::GUI {
     void LayoutContainer::UpdateFixedBounds(){
         Widget::UpdateFixedBounds();
 
-        vector2i_t pos = {2, 2};
+        vector2i_t pos = {xPadding, yPadding};
         isOverflowing = false;
 
         for(Widget* w : children){
@@ -210,8 +210,8 @@ namespace Lemon::GUI {
             pos.x += itemSize.x;
 
             if(pos.x + itemSize.x > fixedBounds.width){
-                pos.x = 2;
-                pos.y += itemSize.y + 2;
+                pos.x = xPadding;
+                pos.y += itemSize.y + yPadding;
             }
         }
 

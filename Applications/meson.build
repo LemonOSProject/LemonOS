@@ -34,12 +34,6 @@ sysinfo_src = [
     'SysInfo/main.cpp',
 ]
 
-lemonpaint_src = [
-    'LemonPaint/main.cpp',
-    'LemonPaint/canvas.cpp',
-    'LemonPaint/brush.cpp',
-]
-
 imgview_src = [
     'ImgView/main.cpp',
 ]
@@ -78,7 +72,6 @@ executable('shell.lef', shell_src, cpp_args : application_cpp_args, link_args : 
 executable('snake.lef', snake_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype'], install : true)
 executable('terminal.lef', terminal_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype'], install : true)
 executable('textedit.lef', textedit_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
-executable('lemonpaint.lef', lemonpaint_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('imgview.lef', imgview_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('sysinfo.lef', sysinfo_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('guitest.lef', guitest_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)

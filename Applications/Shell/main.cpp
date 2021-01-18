@@ -97,9 +97,9 @@ void OnTaskbarPaint(surface_t* surface){
 	Lemon::Graphics::DrawGradientVertical(0,0,surface->width, surface->height, {0x33, 0x2c, 0x29, 255}, {0x2e, 0x29, 0x29, 255},surface);
 
 	if(showMenu){
-		Lemon::Graphics::surfacecpyTransparent(surface, &menuButton, {0, 1}, {0, menuButton.height / 2, menuButton.width, 30});
+		Lemon::Graphics::surfacecpyTransparent(surface, &menuButton, {18 - menuButton.width / 2, 18 - menuButton.height / 4}, {0, menuButton.height / 2, menuButton.width, 30});
 	} else {
-		Lemon::Graphics::surfacecpyTransparent(surface, &menuButton, {0, 1}, {0, 0, menuButton.width, 30});
+		Lemon::Graphics::surfacecpyTransparent(surface, &menuButton, {18 - menuButton.width / 2, 18 - menuButton.height / 4}, {0, 0, menuButton.width, 30});
 	}
 
 	sprintf(memString, "Used Memory: %lu/%lu KB", sysInfo.usedMem, sysInfo.totalMem);
@@ -125,10 +125,10 @@ int main(){
 	} // Wait for LemonWM to create the interface (if not already created)
 	Lemon::DestroyKObject(tempEndpoint);
 
-	taskbar = new Lemon::GUI::Window("", {static_cast<int>(videoInfo.width), 32}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 32});
+	taskbar = new Lemon::GUI::Window("", {static_cast<int>(videoInfo.width), 36}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 36});
 	taskbar->OnPaint = OnTaskbarPaint;
 	taskbar->rootContainer.background = {0, 0, 0, 0};
-	taskbarWindowsContainer = new Lemon::GUI::LayoutContainer({40, 0, static_cast<int>(videoInfo.width) - 104, static_cast<int>(videoInfo.height)}, {160, 32 - 4});
+	taskbarWindowsContainer = new Lemon::GUI::LayoutContainer({40, 0, static_cast<int>(videoInfo.width) - 104, static_cast<int>(videoInfo.height)}, {160, 36 - 4});
 	taskbarWindowsContainer->background = {0, 0, 0, 0};
 	taskbar->AddWidget(taskbarWindowsContainer);
 	

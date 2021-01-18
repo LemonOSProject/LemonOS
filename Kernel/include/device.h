@@ -35,7 +35,12 @@ protected:
         this->name = strdup(name);
     }
 
-    char* name;
+    void SetDescription(const char* desc){
+        this->description = strdup(desc);
+    }
+
+    char* name = "";
+    char* description = nullptr;
     DeviceType type = TypeGenericDevice;
 };
 

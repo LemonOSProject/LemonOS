@@ -240,6 +240,7 @@ namespace Lemon::GUI{
 
                 rootContainer.OnRightMouseUp(ev.mousePos);
                 break;
+            case EventMouseEnter:
             case EventMouseMoved:
                 lastMousePos = ev.mousePos;
 
@@ -270,6 +271,9 @@ namespace Lemon::GUI{
                 } else {
                     rootContainer.OnCommand(ev.windowCmd);
                 }
+                break;
+            case EventMouseExit:
+                lastMousePos = {-1, -1}; // Prevent anything from staying selected
                 break;
         }
     }

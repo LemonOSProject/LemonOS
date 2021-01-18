@@ -76,6 +76,7 @@ void CompositorInstance::Paint(){
 
     surface_t* renderSurface = &wm->surface;
         
+    bool hasRedrawnBackground = wm->redrawBackground;
     if(wm->redrawBackground){
         surfacecpy(renderSurface, &backgroundImage);
     }
@@ -136,13 +137,15 @@ void CompositorInstance::Paint(){
     lastMousePos = mousePos;
 
     if(displayFramerate){
-        DrawRect(0, 0, 80, 16, 0, 0 ,0, renderSurface);
-        DrawString(std::to_string(fRate).c_str(), 2, 2, 255, 255, 255, renderSurface);
+        DrawRect(renderSurface->width - 80, 0, 80, 16, 0, 0 ,0, renderSurface);
+        DrawString(std::to_string(fRate).c_str(), renderSurface->width - 78, 2, 255, 255, 255, renderSurface);
 
         if(!wm->redrawBackground){
-            surfacecpy(&wm->screenSurface, renderSurface, {0, 0}, {0, 0, 80, 16});
+            surfacecpy(&wm->screenSurface, renderSurface, {renderSurface->width - 80, 0}, {renderSurface->width - 80, 0, 80, 16});
         }
     }
 
-    wm->redrawBackground = false;
+    if(hasRedrawnBackground){
+        wm->redrawBackground = false;
+    }
 }

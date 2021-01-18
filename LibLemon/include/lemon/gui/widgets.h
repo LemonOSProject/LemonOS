@@ -108,6 +108,9 @@ namespace Lemon::GUI {
         vector2i_t itemSize;
         bool isOverflowing = false;
     public:
+        int xPadding = 2;
+        int yPadding = 2;
+
         LayoutContainer(rect_t bounds, vector2i_t itemSize);
         
         void AddWidget(Widget* w);

@@ -173,6 +173,8 @@ protected:
     Lemon::Endpoint shellClient;
 
     WMWindow* active = nullptr;
+    WMWindow* lastMousedOver = nullptr;
+
     bool drag = false;
     bool resize = false;
     vector2i_t dragOffset;

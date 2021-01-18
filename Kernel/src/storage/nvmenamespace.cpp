@@ -116,11 +116,57 @@ namespace NVMe{
 		return 0;
 	}
 
-	int Namespace::WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer){
+	int Namespace::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer){
 		if(lba + count > diskSize){
 			return 2;
 		}
-		
-		return 1;
+
+		uint32_t blockCount = (count + (blocksize - 1)) / blocksize;
+		uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
+		int blockBufferIndex = AcquireBuffer();
+		assert(blockBufferIndex >= 0);
+
+		NVMeQueue* queue = controller->AcquireIOQueue();
+
+		NVMeCompletion completion;
+
+		NVMeCommand cmd;
+		memset(&cmd, 0, sizeof(NVMeCommand));
+		cmd.opcode = NVMCommands::NVMCmdWrite;
+
+		cmd.write.blockNum = 1;
+		cmd.write.startLBA = lba;
+		cmd.prp1 = physBuffers[blockBufferIndex];
+		cmd.nsID = nsID;
+
+		while(blockCount && count > 0){
+            int size = blocksize;
+            if(size > count) size = count;
+
+            if(!size) break;
+
+			memcpy(buffers[blockBufferIndex], buffer, size);
+
+			queue->SubmitWait(cmd, completion);
+
+			if(completion.status > 0){
+				controller->ReleaseIOQueue(queue);
+				ReleaseBuffer(blockBufferIndex);
+
+				IF_DEBUG(debugLevelNVMe >= DebugLevelNormal, {
+					Log::Error("[NVMe] (NSID: %d, LBA: %x) Disk Error %d", nsID, lba, completion.status);
+				});
+				return completion.status;
+			}
+
+			count -= size;
+			buffer += size;
+			cmd.read.startLBA++;
+			blockCount--;
+		}
+
+		ReleaseBuffer(blockBufferIndex);
+		controller->ReleaseIOQueue(queue);
+		return 0;
 	}
 }
