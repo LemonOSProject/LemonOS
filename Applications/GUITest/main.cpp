@@ -75,6 +75,7 @@ int main(){
     Lemon::GUI::ListColumn col1;
     col1.displayWidth = 220;
     col1.name = "Name";
+    col1.editable = true;
     
     Lemon::GUI::ListColumn col2;
     col2.displayWidth = 130;

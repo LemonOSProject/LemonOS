@@ -69,6 +69,8 @@ namespace Lemon::GUI {
         virtual void OnKeyPress(int key);
         virtual void OnHover(vector2i_t mousePos);
         virtual void OnCommand(unsigned short command);
+        virtual void OnActive();
+        virtual void OnInactive();
 
         virtual void UpdateFixedBounds();
 
@@ -247,15 +249,14 @@ namespace Lemon::GUI {
         void (*OnSubmit)(TextBox*) = nullptr;
     };
 
-    class ListItem{
-        public:
+    struct ListItem{
         std::vector<std::string> details;
     };
 
-    class ListColumn{
-        public:
+    struct ListColumn{
         std::string name;
         int displayWidth;
+        bool editable;
     };
 
     class ListView : public Widget{
@@ -274,6 +275,17 @@ namespace Lemon::GUI {
         Graphics::Font* font;
 
         void ResetScrollBar();
+
+        class ListEditTextbox : public TextBox{
+        public:
+            ListEditTextbox(ListView* lv, rect_t bounds) : TextBox(bounds, false){
+                SetParent(lv);
+            }
+        };
+
+        ListEditTextbox editbox = ListEditTextbox(this, {0,0,0,0});
+        bool editing = false;
+        int editingColumnIndex = 0;
     public:
         ListView(rect_t bounds);
         ~ListView();
@@ -285,6 +297,7 @@ namespace Lemon::GUI {
         void OnMouseMove(vector2i_t mousePos);
         void OnDoubleClick(vector2i_t mousePos);
         void OnKeyPress(int key);
+        void OnInactive();
 
         void AddColumn(ListColumn& column);
         int AddItem(ListItem& item);
@@ -292,6 +305,9 @@ namespace Lemon::GUI {
 
         void UpdateFixedBounds();
 
+        void OnEditboxSubmit();
+
+        void(*OnEdit)(ListItem&, ListView*) = nullptr;
         void(*OnSubmit)(ListItem&, ListView*) = nullptr;
         void(*OnSelect)(ListItem&, ListView*) = nullptr;
     };
