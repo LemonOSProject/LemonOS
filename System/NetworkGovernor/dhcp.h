@@ -45,7 +45,7 @@ struct DHCPHeader {
     uint8_t hlen; // Length of hardware addresses (6 = MAC)
     uint8_t hops;
     BigEndianUInt32 xID; // Transmission ID
-    BigEndianUInt16 secs; // NUmber of seconds since the process has started
+    BigEndianUInt16 secs; // Number of seconds since the process has started
     BigEndianUInt16 flags; // Flags
     uint32_t clientIP; // Client's IP Address if known
     uint32_t yourIP; // IP Address assigned to client
@@ -55,7 +55,7 @@ struct DHCPHeader {
     int8_t serverName[64]; // Server name
     uint8_t bootFilename[128];
     BigEndianUInt32 cookie;
-    uint8_t options[100];
+    uint8_t options[312];
 } __attribute__((packed));
 
 template<uint8_t optlen>

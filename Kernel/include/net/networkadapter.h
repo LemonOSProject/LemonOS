@@ -13,9 +13,15 @@ namespace Network{
     class NetworkAdapter : public Device {
     protected:
         static int nextDeviceNumber;
+        unsigned maxCache = 256; // Maximum amount of cached packets, NIC drivers are free to change this
     
         int linkState = LinkDown;
-        List<NetworkPacket> queue;
+
+        FastList<NetworkPacket*> cache;
+        FastList<NetworkPacket*> queue;
+
+        lock_t cacheLock = 0;
+        lock_t queueLock = 0;
 
         lock_t threadLock = 0;
         Scheduler::GenericThreadBlocker blocker;
@@ -28,22 +34,35 @@ namespace Network{
 
         virtual int GetLink() { return linkState; }
         virtual int QueueSize() { return queue.get_length(); }
-        virtual NetworkPacket Dequeue() { 
+        virtual NetworkPacket* Dequeue() { 
             if(queue.get_length()) {
                 return queue.remove_at(0); 
             } else {
-                return {nullptr, 0};
+                return nullptr;
             }
         }
-        virtual NetworkPacket DequeueBlocking() {
-            Scheduler::BlockCurrentThread(blocker, threadLock);
+        virtual NetworkPacket* DequeueBlocking() {
+            if(!queue.get_length()){
+                Scheduler::BlockCurrentThread(blocker, threadLock);
+            }
 
             if(queue.get_length()){
                 return queue.remove_at(0); 
             } else {
-                return {nullptr, 0};
+                return nullptr;
             }
         }
+        virtual void CachePacket(NetworkPacket* pkt){
+            if(cache.get_length() < maxCache){
+                acquireLock(&cacheLock);
+
+                cache.add_back(pkt);
+
+                releaseLock(&cacheLock);
+            } else {
+                delete pkt;
+            }
+        };
 
         virtual ~NetworkAdapter() = default;
     };

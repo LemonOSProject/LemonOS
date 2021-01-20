@@ -181,8 +181,8 @@ public:
 class IPSocket : public Socket {
 protected:
     IPv4Address address = 0;
-    BigEndianUInt16 port = 0;
-    BigEndianUInt16 destinationPort = 0;
+    BigEndian<uint16_t> port = 0;
+    BigEndian<uint16_t> destinationPort = 0;
 
     List<NetworkPacket> pQueue;
 

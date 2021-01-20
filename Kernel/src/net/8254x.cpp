@@ -112,18 +112,21 @@ namespace Network{
 
                 if(!(rxDescriptors[rxTail].status & 0x1)) break;
 
-                Log::Info("Recieved Packet");
-
                 rxDescriptors[rxTail].status = 0;
 
-                NetworkPacket pack;
-                pack.data = kmalloc(rxDescriptors[rxTail].length);
-                pack.length = rxDescriptors[rxTail].length;
-                memcpy(pack.data, rxDescriptorsVirt[rxTail], pack.length);
+                if(rxDescriptors[rxTail].length <= ETHERNET_MAX_PACKET_SIZE && cache.get_length()){
+                    NetworkPacket* pkt = cache.remove_at(0);
 
-                queue.add_back(pack);
+                    pkt->length = rxDescriptors[rxTail].length;
+                    memcpy(pkt->data, rxDescriptorsVirt[rxTail], pkt->length);
 
-                Log::Info("Ethertype: %x", (*((uint16_t*)pack.data + 12)));
+                    EthernetFrame* ef = ((EthernetFrame*)pkt->data);
+                    Log::Info("Ethertype: %x", (uint16_t)ef->etherType);
+
+                    queue.add_back(pkt);
+                } else {
+                    // TODO: Do something that isn't dropping the packet when the cache is empty
+                }
 
                 WriteMem32(I8254_REGISTER_RDESC_TAIL, rxTail);
             } while(1);
@@ -131,6 +134,7 @@ namespace Network{
             for(auto& t : blocker.blocked){
                 Scheduler::UnblockThread(t);
             }
+            blocker.blocked.clear();
         }
     }
 
@@ -171,12 +175,16 @@ namespace Network{
 
     void Intel8254x::InitializeRx(){
         uint64_t rxDescPhys = Memory::AllocatePhysicalMemoryBlock(); // The card wants a physical address
-        rxDescriptors = (r_desc_t*)Memory::GetIOMapping(rxDescPhys);
+        rxDescriptors = (r_desc_t*)Memory::KernelAllocate4KPages(1);
+        Memory::KernelMapVirtualMemory4K(rxDescPhys, (uintptr_t)rxDescriptors, 1);
+
+        memset(rxDescriptors, 0, PAGE_SIZE_4K);
+
         uint32_t rxLow = rxDescPhys & 0xFFFFFFFF;
         uint32_t rxHigh = rxDescPhys >> 32;
         uint32_t rxLen = 4096; // Memory block size
         uint32_t rxHead = 0;
-        uint32_t _rxTail = RX_DESC_COUNT; // Offset from base
+        uint32_t _rxTail = RX_DESC_COUNT - 1; // Offset from base
 
         rxDescriptorsVirt = (void**)kmalloc(RX_DESC_COUNT * sizeof(void*));
 
@@ -196,7 +204,7 @@ namespace Network{
             Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)rxDescriptorsVirt[i], 1);
         }
 
-        WriteMem32(I8254_REGISTER_TCTRL, (TCTRL_ENABLE | TCTRL_PSP));
+        WriteMem32(I8254_REGISTER_RCTRL, (RCTRL_ENABLE | RCTRL_SBP | RCTRL_UPE | RCTRL_MPE | RCTRL_LPE | RCTRL_BAM | RCTRL_SECRC | BSIZE_4096));
     }
     
     void Intel8254x::InitializeTx(){
@@ -226,7 +234,7 @@ namespace Network{
             Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)txDescriptorsVirt[i], 1);
         }
 
-        WriteMem32(I8254_REGISTER_RCTRL, (RCTRL_ENABLE | RCTRL_SBP | RCTRL_UPE | RCTRL_MPE | RCTRL_LPE | RCTRL_BAM | RCTRL_SECRC | BSIZE_4096));
+        WriteMem32(I8254_REGISTER_TCTRL, (TCTRL_ENABLE | TCTRL_PSP));
     }
 
     Intel8254x::Intel8254x(PCIDevice& device) : pciDevice(device){
@@ -293,6 +301,11 @@ namespace Network{
 
         InitializeRx();
         InitializeTx();
+
+        maxCache = 256;
+        for(unsigned i = 0; i < maxCache; i++){
+            cache.add_back(new NetworkPacket()); // Fill the cache
+        }
 
         WriteMem32(I8254_REGISTER_INT_MASK, 0x1F6DF); // Set the interrupt mask to enable all interrupts
         UpdateLink();

@@ -12,9 +12,17 @@ class Socket;
 #define EPHEMERAL_PORT_RANGE_START 49152U
 #define EPHEMERAL_PORT_RANGE_END PORT_MAX
 
+#define ETHERNET_MAX_PACKET_SIZE 1518
+
+class NetworkAdapter;
 struct NetworkPacket{
-    void* data;
     size_t length;
+    uint8_t data[1518];
+
+    NetworkAdapter* adapter;
+
+    NetworkPacket* next;
+    NetworkPacket* prev;
 };
 
 struct IPv4Address{
@@ -51,13 +59,13 @@ struct IPv4Header{ // Keep in mind that our architecture is little endian so the
     uint8_t version : 4; // Should be 4
     uint8_t ecn : 2; // Explicit Congestion Notification
     uint8_t dscp : 6; // Differentiated Services Code Point
-    BigEndianUInt16 length; // Total Length - Packet size in bytes including header
-    BigEndianUInt16 id; // ID
+    BigEndian<uint16_t> length; // Total Length - Packet size in bytes including header
+    BigEndian<uint16_t> id; // ID
     uint16_t fragmentOffset : 13; // Offset of the fragment
     uint16_t flags : 3; // 0 - Reserved, 1 - Don't Fragment, 2 - More Fragments
     uint8_t ttl; // Time to live
     uint8_t protocol; // Protocol
-    BigEndianUInt16 headerChecksum; // Checksum
+    BigEndian<uint16_t> headerChecksum; // Checksum
     IPv4Address sourceIP; // Source IP Address
     IPv4Address destIP; // Destination IP Address
     uint8_t data[];
@@ -88,16 +96,16 @@ typedef struct MACAddress {
 struct EthernetFrame {
     MACAddress dest; // Destination MAC Address
     MACAddress src; // Source MAC Address
-    BigEndianUInt16 etherType;
+    BigEndian<uint16_t> etherType;
     uint8_t data[];
 } __attribute__((packed));
 
 struct ARPHeader {
-    BigEndianUInt16 hwType; // Hardware Type
-    BigEndianUInt16 prType; // Protocol Type
+    BigEndian<uint16_t> hwType; // Hardware Type
+    BigEndian<uint16_t> prType; // Protocol Type
     uint8_t hLength = 6; // Hardware Address Length
     uint8_t pLength = 4; // Protocol Address Length
-    BigEndianUInt16 opcode; // ARP Operation Code
+    BigEndian<uint16_t> opcode; // ARP Operation Code
     MACAddress srcHwAddr; // Source hardware address
     IPv4Address srcPrAddr; // Source protocol address
     MACAddress destHwAddr; // Destination hardware address
@@ -105,17 +113,17 @@ struct ARPHeader {
 } __attribute__((packed));
 
 struct UDPHeader {
-    BigEndianUInt16 srcPort;
-    BigEndianUInt16 destPort;
-    BigEndianUInt16 length;
-    BigEndianUInt16 checksum;
+    BigEndian<uint16_t> srcPort;
+    BigEndian<uint16_t> destPort;
+    BigEndian<uint16_t> length;
+    BigEndian<uint16_t> checksum;
     uint8_t data[];
 } __attribute__((packed));
 
 struct ICMPHeader{
     uint8_t type;
     uint8_t code;
-    BigEndianUInt16 checksum;
+    BigEndian<uint16_t> checksum;
     uint8_t data[];
 } __attribute__((packed));
 
@@ -131,9 +139,9 @@ namespace Network {
         IPv4ProtocolUDP = 0x11,
     };
 
-    static inline BigEndianUInt16 CaclulateChecksum(void* data, size_t size){
+    static inline BigEndian<uint16_t> CaclulateChecksum(void* data, size_t size){
         uint16_t* ptr = (uint16_t*)data;
-        size_t count = sizeof(IPv4Header);
+        size_t count = size;
         uint32_t checksum = 0;
 
         while(count >= 2){
@@ -142,10 +150,12 @@ namespace Network {
         }
 
         checksum = (checksum & 0xFFFF) + (checksum >> 16);
-        checksum += checksum >> 16;
+        if(checksum > UINT16_MAX){
+            checksum += 1;
+        }
 
-        BigEndianUInt16 ret;
-        ret = ~checksum;
+        BigEndian<uint16_t> ret;
+        ret.value = ~checksum;
         return ret;
     }
 
@@ -161,7 +171,7 @@ namespace Network {
 
         void Send(void* data, size_t length);
         int SendIPv4(void* data, size_t length, IPv4Address& destination, uint8_t protocol);
-        int SendUDP(void* data, size_t length, IPv4Address& destination, BigEndianUInt16 sourcePort, BigEndianUInt16 destinationPort);
+        int SendUDP(void* data, size_t length, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort);
     }
     
 }

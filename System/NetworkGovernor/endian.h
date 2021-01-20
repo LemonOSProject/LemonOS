@@ -27,7 +27,7 @@ typedef struct BigEndianUInt16 {
         uint16_t value;
         struct {
             uint8_t high, low;
-        };
+        } __attribute__((packed));
     };
 
     BigEndianUInt16() {}

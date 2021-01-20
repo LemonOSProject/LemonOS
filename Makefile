@@ -53,6 +53,9 @@ qemu: run
 qemuusb:
 	Scripts/run.sh qemuusb
 
+qemunetdump:
+	Scripts/run.sh qemunetdump
+
 vbox:
 	Scripts/run.sh vbox
 	

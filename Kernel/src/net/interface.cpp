@@ -1,6 +1,5 @@
 #include <net/net.h>
 #include <net/networkadapter.h>
-#include <net/dhcp.h>
 
 #include <scheduler.h>
 #include <logging.h>
@@ -37,7 +36,7 @@ namespace Network::Interface{
 
 		UDPHeader* header = (UDPHeader*)data;
 		
-		Log::Info("[Network] [UDP] Receiving Packet (Source port: %d, Destination port: %d)", header->srcPort, header->destPort);
+		Log::Info("[Network] [UDP] Receiving Packet (Source port: %d, Destination port: %d)", (uint16_t)header->srcPort, (uint16_t)header->destPort);
 	}
 
     void OnReceiveIPv4(void* data, size_t length){
@@ -75,23 +74,33 @@ namespace Network::Interface{
 		while(mainAdapter->GetLink() != LinkUp) Scheduler::Yield();
 
 		for(;;){
-			NetworkPacket p;
-			while((p = mainAdapter->DequeueBlocking()).length){
-				if(p.length < sizeof(EthernetFrame)){
+			NetworkPacket* p;
+			while((p = mainAdapter->DequeueBlocking())){
+				Log::Info("got packet!");
+				
+				if(p->length < sizeof(EthernetFrame)){
 					Log::Warning("[Network] Discarding packet (too short)");
+
+					mainAdapter->CachePacket(p);
 					continue;
 				}
 
-				EthernetFrame* etherFrame = (EthernetFrame*)p.data;
+				size_t len = p->length;
+				uint8_t buffer[ETHERNET_MAX_PACKET_SIZE];
+				memcpy(buffer, p->data, p->length);
+
+				mainAdapter->CachePacket(p); // Get the packet back to the NIC driver's cache as soon as possible
+
+				EthernetFrame* etherFrame = reinterpret_cast<EthernetFrame*>(buffer);
 
 				if(etherFrame->dest != mainAdapter->mac){
-					Log::Warning("[Network] Discarding packet (invalid MAC address %x:%x:%x:%x:%x:%x)", etherFrame->dest[0], etherFrame->dest[1], etherFrame->dest[2], etherFrame->dest[3], etherFrame->dest[4], etherFrame->dest[5]);
+					//Log::Warning("[Network] Discarding packet (invalid MAC address %x:%x:%x:%x:%x:%x)", etherFrame->dest[0], etherFrame->dest[1], etherFrame->dest[2], etherFrame->dest[3], etherFrame->dest[4], etherFrame->dest[5]);
 				}
 				
 				switch (etherFrame->etherType)
 				{
 				case EtherTypeIPv4:
-					OnReceiveIPv4(etherFrame->data, p.length - sizeof(EthernetFrame));
+					OnReceiveIPv4(etherFrame->data, len - sizeof(EthernetFrame));
 					break;
 				default:
 					Log::Warning("[Network] Discarding packet (invalid EtherType %x)", etherFrame->etherType);
@@ -102,19 +111,21 @@ namespace Network::Interface{
 	}
 
 	void Initialize(){
-		Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), (uintptr_t)InterfaceThread, (uintptr_t)kmalloc(NET_INTERFACE_STACKSIZE) + NET_INTERFACE_STACKSIZE, KERNEL_CS, KERNEL_SS);
+		//Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), (uintptr_t)InterfaceThread, (uintptr_t)kmalloc(NET_INTERFACE_STACKSIZE) + NET_INTERFACE_STACKSIZE, KERNEL_CS, KERNEL_SS);
+		Scheduler::CreateProcess((void*)InterfaceThread);
 	}
 
 	void Send(void* data, size_t length){
-		mainAdapter->SendPacket(data, length);
+		if(mainAdapter)
+			mainAdapter->SendPacket(data, length);
 	}
 
     int SendIPv4(void* data, size_t length, IPv4Address& destination, uint8_t protocol){
-		uint8_t buffer[1600]; // The maxmium Ethernet frame size is 1518 so this will do
-
 		if(length > 1518 - sizeof(EthernetFrame) - sizeof(IPv4Header)){
 			return -EMSGSIZE;
 		}
+
+		uint8_t buffer[1600]; // The maxmium Ethernet frame size is 1518 so this will do
 
 		EthernetFrame* ethFrame = (EthernetFrame*)buffer;
 		ethFrame->etherType = EtherTypeIPv4;
@@ -141,21 +152,22 @@ namespace Network::Interface{
 		return 0;
 	}
 
-    int SendUDP(void* data, size_t length, IPv4Address& destination, BigEndianUInt16 sourcePort, BigEndianUInt16 destinationPort){
-		uint8_t buffer[1600];
-
+    int SendUDP(void* data, size_t length, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort){
 		if(length > 1518){
 			return -EMSGSIZE;
 		}
+
+		uint8_t buffer[1600];
 
 		UDPHeader* header = (UDPHeader*)buffer;
 		header->destPort = destinationPort;
 		header->srcPort = sourcePort;
 		header->length = sizeof(UDPHeader) + length;
 		header->checksum = 0;
-		header->checksum = CaclulateChecksum(header, sizeof(UDPHeader));
 
 		memcpy(header->data, data, length);
+
+		//header->checksum = CaclulateChecksum(header, sizeof(UDPHeader));
 
 		return SendIPv4(header, header->length, destination, IPv4ProtocolUDP);
 	}

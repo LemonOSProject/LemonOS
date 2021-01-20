@@ -32,7 +32,7 @@ int main(int argc, char** argv){
     }
 
 	__attribute__((unused)) char* lemonwm = "/system/lemon/lemonwm.lef";
-	__attribute__((unused)) char* login = "/system/lemon/login.lef";
+	__attribute__((unused)) char* netgov = "/system/lemon/netgov.lef";
 	__attribute__((unused)) char* shell = "/system/bin/shell.lef";
 
 	if(long ret = lemon_spawn(lemonwm, 1, &lemonwm); ret <= 0){
@@ -43,6 +43,11 @@ int main(int argc, char** argv){
 	if(long ret = lemon_spawn(shell, 1, &shell); ret <= 0){
 		printf("Error %ld attempting to load %s. Attempting to load again\n", ret, shell);
 		lemon_spawn(shell, 1, &shell); // Attempt twice
+	}
+		
+	if(long ret = lemon_spawn(netgov, 1, &netgov); ret <= 0){
+		printf("Error %ld attempting to load %s. Attempting to load again\n", ret, netgov);
+		lemon_spawn(netgov, 1, &netgov); // Attempt twice
 	}
 	
 	return 0;

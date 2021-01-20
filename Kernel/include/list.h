@@ -94,16 +94,21 @@ public:
 	}
 
 	void add_back(const T& obj) {
-		if (!front) {
-			front = obj;
-			obj->prev = obj;
-		} else if (back) {
-			back->next = obj;
-			obj->prev = back;
-		}
-		back = obj;
 		obj->next = front;
-		num++;
+
+		if (!front) {
+			obj->prev = obj;
+			obj->next = obj;
+			front = obj;
+		} else {
+			assert(back);
+
+			obj->prev = back;
+			back->next = obj;
+		}
+
+		back = obj;
+		num++; // By having this being the last thing we do, when consumers take from the front, the producer should not have to acquire a lock
 	}
 
 	void add_front(const T& obj) {

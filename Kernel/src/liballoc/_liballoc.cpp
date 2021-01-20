@@ -15,7 +15,7 @@ extern "C" {
 	
 int liballoc_lock() {
 	while(acquireTestLock(&liballocLock)) {
-		assert(CheckInterrupts());
+		//assert(CheckInterrupts());
 	} // If for some reason liballoc is locked before the scheduler starts something probably went horribly wrong
 	return 0;
 }

@@ -58,7 +58,6 @@ int64_t IPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src
 
 	if(src && addrlen){
 		src->family = InternetProtocol;
-		
 	}
 }
 
@@ -84,7 +83,7 @@ int64_t UDPSocket::IPReceiveFrom(void* buffer, size_t len){
 
 int64_t UDPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen){
 	IPv4Address sendIPAddress;
-	BigEndianUInt16 destPort;
+	BigEndian<uint16_t> destPort;
 
 	if(src){
 		const sockaddr_in* inetAddr = (const sockaddr_in*)src;

@@ -42,7 +42,7 @@ int main(){
 	dhcpClientAddress.sin_port = htons(68);
 
 	if(bind(dhcpSocket, (sockaddr*)&dhcpClientAddress, sizeof(sockaddr_in))){
-		perror("[NetworkGovernor] Could not bind UDP to port 67: ");
+		perror("[NetworkGovernor] Could not bind UDP to port 68");
 		return -2;
 	}
 
@@ -54,12 +54,14 @@ int main(){
 	clock_gettime(CLOCK_BOOTTIME, &t);
 
 	DHCPHeader header;
+	memset(&header, 0, sizeof(DHCPHeader));
+
 	header.op = DHCPOpCodeDiscover;
 	header.htype = DHCPHardwareTypeEthernet;
 	header.hlen = 6; // MAC addresses are 6 bytes long
 	header.hops = 0;
-	header.xID = rand() * (t.tv_sec + t.tv_nsec); // Generate random id
-	header.secs = 0;
+	header.xID = rand() * ((t.tv_sec << 1) ^ t.tv_nsec); // Generate random id
+	header.secs = 65535;
 	header.flags = DHCP_FLAG_BROADCAST;
 	header.clientIP = 0; // Don't worry about endianess 0.0.0.0 is symmetrical
 	header.yourIP = 0;
