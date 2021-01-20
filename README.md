@@ -38,7 +38,7 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 - XHCI Driver
 
 ### System requirements
-- 256 MB RAM (512 is more optimal)
+- 256 MB RAM (512 is closer to the optimal amount)
 - x86_64 Processor
 - 2 cores/CPUs recommended
 - I/O APIC
