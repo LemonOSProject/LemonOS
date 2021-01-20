@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <lemon/system/info.h>
+#include <sys/types.h>
 
 typedef struct {
 	uint64_t pid; // Process ID
@@ -23,7 +24,9 @@ typedef struct {
 	char name[NAME_MAX]; // Process Name
 
 	uint64_t runningTime; // Amount of time in seconds that the process has been running
-    uint64_t activeUs; // Microseconds the process has been active for
+	uint64_t activeUs;
+
+	uint64_t usedMem; // Used memory in KB
 } lemon_process_info_t;
 
 namespace Lemon{

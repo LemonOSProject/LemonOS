@@ -508,17 +508,19 @@ long SysAlloc(regs64_t* r){
 	uint64_t pageCount = SC_ARG0(r);
 	uintptr_t* addressPointer = (uintptr_t*)SC_ARG1(r);
 
-	uintptr_t address = (uintptr_t)Memory::Allocate4KPages(pageCount, Scheduler::GetCurrentProcess()->addressSpace);
+	process_t* proc = Scheduler::GetCurrentProcess();
+	uintptr_t address = (uintptr_t)Memory::Allocate4KPages(pageCount, proc->addressSpace);
 
 	assert(address);
 
 	for(unsigned i = 0; i < pageCount; i++){
-		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),address + i * PAGE_SIZE_4K,1,Scheduler::GetCurrentProcess()->addressSpace);
+		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), address + i * PAGE_SIZE_4K, 1, proc->addressSpace);
 		memset((void*)(address + i * PAGE_SIZE_4K), 0, PAGE_SIZE_4K);
 	}
 
 	*addressPointer = address;
 
+	proc->usedMemoryBlocks += pageCount;
 	return 0;
 }
 
@@ -876,24 +878,26 @@ long SysMmap(regs64_t* r){
 	size_t count = SC_ARG1(r);
 	uintptr_t hint = SC_ARG2(r);
 
+	process_t* proc = Scheduler::GetCurrentProcess();
 	uintptr_t _address;
 	if(hint){
-		if(Memory::CheckRegion(hint, count * PAGE_SIZE_4K, Scheduler::GetCurrentProcess()->addressSpace) /*Check availibilty of the requested map*/){
+		if(Memory::CheckRegion(hint, count * PAGE_SIZE_4K, proc->addressSpace) /*Check availibilty of the requested map*/){
 			_address = hint;
 		} else {
 			Log::Warning("sys_mmap: Could not map to address %x", hint);
 			*address = 0;
 			return 1;
 		}
-	} else _address = (uintptr_t)Memory::Allocate4KPages(count, Scheduler::GetCurrentProcess()->addressSpace);
+	} else _address = (uintptr_t)Memory::Allocate4KPages(count, proc->addressSpace);
 
 	for(size_t i = 0; i < count; i++){
-		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), _address + i * PAGE_SIZE_4K, 1, Scheduler::GetCurrentProcess()->addressSpace);
+		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), _address + i * PAGE_SIZE_4K, 1, proc->addressSpace);
 		memset((void*)(_address + i * PAGE_SIZE_4K), 0, PAGE_SIZE_4K);
 	}
 
 	*address = _address;
 
+	proc->usedMemoryBlocks += count;
 	return 0;
 }
 
@@ -1813,6 +1817,7 @@ long SysGetProcessInfo(regs64_t* r){
 	pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.seconds;
 	pInfo->activeUs = reqProcess->activeTicks * 1000000 / Timer::GetFrequency();
 
+	pInfo->usedMem = reqProcess->usedMemoryBlocks / 4;
 	return 0;
 }
 
@@ -1864,6 +1869,7 @@ long SysGetNextProcessInfo(regs64_t* r){
 	pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.seconds;
 	pInfo->activeUs = reqProcess->activeTicks * 1000000 / Timer::GetFrequency();
 
+	pInfo->usedMem = reqProcess->usedMemoryBlocks / 4;
 	return 0;
 }
 

@@ -53,6 +53,8 @@ typedef struct process {
 	Vector<fs_fd_t*> fileDescriptors;
 	List<thread_t*> blocking; // Threads blocking awaiting a state change
 	HashMap<uintptr_t, Scheduler::FutexThreadBlocker*> futexWaitQueue;
+
+	uintptr_t usedMemoryBlocks;
 } process_t;
 
 typedef struct {
@@ -69,6 +71,8 @@ typedef struct {
 
 	uint64_t runningTime; // Amount of time in seconds that the process has been running
 	uint64_t activeUs;
+
+	uint64_t usedMem; // Used memory in KB
 } process_info_t;
 
 namespace Scheduler{

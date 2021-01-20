@@ -41,6 +41,8 @@ elf_info_t LoadELFSegments(process_t* proc, void* _elf, uintptr_t base){
         for(unsigned j = 0; j < ((elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) >> 12); j++){
             uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
             Memory::MapVirtualMemory4K(phys, base + (elfPHdr.vaddr & ~0xFFFUL) + j * PAGE_SIZE_4K, 1, proc->addressSpace);
+            
+            proc->usedMemoryBlocks++;
         }
     }
 

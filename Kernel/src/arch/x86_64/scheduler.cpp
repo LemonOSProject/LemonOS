@@ -396,6 +396,20 @@ namespace Scheduler{
                 APIC::Local::SendIPI(i, ICR_DSH_SELF, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
             }
         }
+        asm("sti");
+        
+        for(auto& h : process->handles){
+            h.ko->Destroy();
+        }
+
+        process->handles.clear();
+        
+        for(unsigned i = 0; i < process->threadCount; i++){
+            process->threads[i]->waiting.clear();
+        }
+
+        alloc_lock();
+        asm("cli");
 
         if(cpu->currentThread->parent == process){
             asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE)); // If we are using the PML4 of the current process switch to the kernel's
@@ -407,19 +421,12 @@ namespace Scheduler{
 
         Memory::DestroyAddressSpace(process->addressSpace);
 
-        for(unsigned i = 0; i < process->threadCount; i++){
-            process->threads[i]->waiting.~List();
-        }
-
-        for(auto& h : process->handles){
-            h.ko->Destroy();
-        }
-        process->handles.clear();
-
         if(cpu->currentThread->parent == process){
             cpu->currentThread = nullptr; // Force reschedule
-            kfree(process);
+            kfree_unlocked(process);
+
             releaseLock(&cpu->runQueueLock);
+            alloc_unlock();
             asm("sti");
 
             Schedule(nullptr, nullptr);
@@ -430,8 +437,10 @@ namespace Scheduler{
         }
 
         releaseLock(&cpu->runQueueLock);
-        delete process;
+        alloc_unlock();
         asm("sti");
+
+        delete process;
     }
 
 	void BlockCurrentThread(List<thread_t*>& list, lock_t& lock){
@@ -602,6 +611,7 @@ namespace Scheduler{
         void* _stack = (void*)Memory::Allocate4KPages(64, proc->addressSpace);
         for(int i = 0; i < 64; i++){
             Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)_stack + PAGE_SIZE_4K * i, 1, proc->addressSpace);
+            proc->usedMemoryBlocks++;
         }
         memset(_stack, 0, PAGE_SIZE_4K * 64);
 
