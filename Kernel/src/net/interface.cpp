@@ -29,14 +29,6 @@ namespace Network::Interface{
 	}
 
 	void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length){
-		if(length < sizeof(UDPHeader)){
-			Log::Warning("[Network] [UDP] Discarding packet (too short)");
-			return;
-		}
-
-		UDPHeader* header = (UDPHeader*)data;
-		
-		Log::Info("[Network] [UDP] Receiving Packet (Source port: %d, Destination port: %d)", (uint16_t)header->srcPort, (uint16_t)header->destPort);
 	}
 
     void OnReceiveIPv4(void* data, size_t length){
@@ -52,12 +44,20 @@ namespace Network::Interface{
 			return;
 		}
 
+		BigEndian<uint16_t> checksum = header->headerChecksum;
+
+		header->headerChecksum = 0;
+		if(checksum.value != CaclulateChecksum(data, sizeof(IPv4Header)).value){ // Verify checksum
+			Log::Warning("[Network] [IPv4] Discarding packet (invalid checksum)");
+			return;
+		}
+
 		switch(header->protocol){
 			case IPv4ProtocolICMP:
 				OnReceiveICMP(header->data, length - sizeof(IPv4Header));
 				break;
 			case IPv4ProtocolUDP:
-				OnReceiveUDP(*header, header->data, length - sizeof(IPv4Header));
+				UDP::OnReceiveUDP(*header, header->data, length - sizeof(IPv4Header));
 				break;
 			case IPv4ProtocolTCP:
 			default:
@@ -76,7 +76,9 @@ namespace Network::Interface{
 		for(;;){
 			NetworkPacket* p;
 			while((p = mainAdapter->DequeueBlocking())){
-				Log::Info("got packet!");
+				IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
+					Log::Info("got packet!");
+				});
 				
 				if(p->length < sizeof(EthernetFrame)){
 					Log::Warning("[Network] Discarding packet (too short)");

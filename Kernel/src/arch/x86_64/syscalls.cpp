@@ -1736,10 +1736,6 @@ long SysRecvMsg(regs64_t* r){
 		return -EFAULT;
 	}
 
-	if(msg->name){
-		Log::Warning("sys_recvmsg: msg: name ignored");
-	}
-
 	long read = 0;
 	Socket* sock = (Socket*)handle->node;
 
@@ -1749,7 +1745,7 @@ long SysRecvMsg(regs64_t* r){
 			return -EFAULT;
 		}
 
-		long ret = sock->Receive(msg->iov[i].base, msg->iov[i].len, flags);
+		long ret = sock->ReceiveFrom(msg->iov[i].base, msg->iov[i].len, flags, reinterpret_cast<sockaddr*>(msg->name), &msg->namelen);
 
 		if(ret < 0) {
 			return ret;

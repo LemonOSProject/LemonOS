@@ -19,12 +19,12 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 
 ### Features
 - Symmetric Multiprocessing (SMP)
-- UNIX Domain Sockets
+- UNIX Domain and UDP Sockets
 - Window Manager/Server (LemonWM)
 - Graphical Shell
 - Terminal Emulator
 - Writable Ext2 Filesystem
-- IDE and AHCI Driver
+- IDE, AHCI and NVMe Driver
 - Dynamic Linking
 - Intel 8254x Ethernet Driver
 - Ports including Freetype, Binutils and Python 3.8
@@ -33,8 +33,7 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 - [DOOM Port](https://github.com/fido2020/LemonDOOM)
 
 ### Work In Progress
-- Network Stack
-- NVMe Driver
+- Network Stack (TCP, DNS and DHCP Client)
 - XHCI Driver
 
 ### System requirements
@@ -42,7 +41,7 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 - x86_64 Processor
 - 2 cores/CPUs recommended
 - I/O APIC
-- ATA or AHCI disk (AHCI *strongly* recommended)
+- ATA, NVMe or AHCI disk (AHCI *strongly* recommended)
 
 ## Repo Structure
 

@@ -1,11 +1,14 @@
 #pragma once
 
+#include <fs/filesystem.h>
+
+#include <net/net.h>
+
 #include <stdint.h>
 #include <stddef.h>
-#include <fs/filesystem.h>
 #include <lock.h>
 #include <stream.h>
-#include <net/net.h>
+#include <list.h>
 
 #define MSG_CTRUNC 0x1
 #define MSG_DONTROUTE 0x2
@@ -41,10 +44,10 @@ struct in_addr {
 };
 
 struct sockaddr_in {
-    sa_family_t     sin_family;
-    unsigned short  sin_port;
-    struct in_addr  in_addr;
-    char            sin_zero[8];
+	sa_family_t sin_family;
+	uint16_t sin_port;
+	struct in_addr sin_addr;
+	uint8_t pad[8];
 };
 
 struct iovec {
@@ -186,7 +189,10 @@ protected:
 
     List<NetworkPacket> pQueue;
 
-    virtual int64_t IPReceiveFrom(void* buffer, size_t len);
+    virtual unsigned short AllocatePort() = 0;
+    virtual int AcquirePort(uint16_t port) = 0;
+    virtual int ReleasePort(uint16_t port) = 0;
+    int64_t OnReceive(void* buffer, size_t len);
 public:
     IPSocket(int type, int protocol);
     virtual ~IPSocket();
@@ -198,16 +204,44 @@ public:
 
     void Close();
     
-    int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
+    virtual int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
     virtual int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
 };
 
-class UDPSocket : public IPSocket {
-    int64_t IPReceiveFrom(void* buffer, size_t len);
-public:
-    UDPSocket(int type, int protocol);
-    int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
-};
+namespace Network::UDP{
+    class UDPSocket final : public IPSocket {
+    protected:
+        friend void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length);
+
+        struct UDPPacket{
+            IPv4Address sourceIP;
+            BigEndian<uint16_t> sourcePort;
+            size_t length;
+            uint8_t* data;
+        };
+
+        lock_t packetsLock = 0;
+        lock_t waitingLock = 0;
+        List<thread_t*> waiting;
+        List<UDPPacket> packets;
+
+        unsigned short AllocatePort();
+        int AcquirePort(uint16_t port);
+        int ReleasePort(uint16_t port);
+
+        int64_t OnReceive(IPv4Address& sourceIP, BigEndian<uint16_t> sourcePort, void* buffer, size_t len);
+    public:
+        UDPSocket(int type, int protocol);
+
+        Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
+        int Bind(const sockaddr* addr, socklen_t addrlen);
+        int Connect(const sockaddr* addr, socklen_t addrlen);
+        int Listen(int backlog);
+
+        int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
+        int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
+    };
+}
 
 namespace SocketManager{
     typedef struct SocketBinding{

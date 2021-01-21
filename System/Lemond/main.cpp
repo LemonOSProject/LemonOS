@@ -45,10 +45,10 @@ int main(int argc, char** argv){
 		lemon_spawn(shell, 1, &shell); // Attempt twice
 	}
 		
-	/*if(long ret = lemon_spawn(netgov, 1, &netgov); ret <= 0){
+	if(long ret = lemon_spawn(netgov, 1, &netgov); ret <= 0){
 		printf("Error %ld attempting to load %s. Attempting to load again\n", ret, netgov);
 		lemon_spawn(netgov, 1, &netgov); // Attempt twice
-	}*/
+	}
 	
 	return 0;
 }

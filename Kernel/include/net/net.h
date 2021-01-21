@@ -26,7 +26,12 @@ struct NetworkPacket{
 };
 
 struct IPv4Address{
-    uint8_t data[4];
+    union{
+        struct{
+            uint8_t data[4];
+        };
+        uint32_t value;
+    };
 
     IPv4Address() {}
 
@@ -174,4 +179,8 @@ namespace Network {
         int SendUDP(void* data, size_t length, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort);
     }
     
+    namespace UDP{
+        Socket* FindSocket(BigEndian<uint16_t> port);
+        void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length);
+    }
 }

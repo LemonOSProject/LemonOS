@@ -53,7 +53,7 @@ public:
 		HashMap();
 	}
 
-	void insert(K key, T& value){
+	void insert(K key, const T& value){
 		auto& bucket = buckets[hash(key) % bucketCount];
 
 		acquireLock(&lock);

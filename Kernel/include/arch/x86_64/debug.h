@@ -32,5 +32,7 @@ extern const int debugLevelMessageEndpoint;
 
 extern const int debugLevelSyscalls;
 
+extern const int debugLevelNetwork;
+
 #define REFPTR_ASSERTIONS
 //#define REFPTR_DEBUG

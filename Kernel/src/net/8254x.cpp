@@ -119,10 +119,7 @@ namespace Network{
 
                     pkt->length = rxDescriptors[rxTail].length;
                     memcpy(pkt->data, rxDescriptorsVirt[rxTail], pkt->length);
-
-                    EthernetFrame* ef = ((EthernetFrame*)pkt->data);
-                    Log::Info("Ethertype: %x", (uint16_t)ef->etherType);
-
+                    
                     queue.add_back(pkt);
                 } else {
                     // TODO: Do something that isn't dropping the packet when the cache is empty
@@ -314,8 +311,6 @@ namespace Network{
     void Intel8254x::SendPacket(void* data, size_t len){
         t_desc_t* txd = &(txDescriptors[txTail]);
 
-        Log::Info("Sending Packet, Tx tail %d", txTail);
-
         memcpy(txDescriptorsVirt[txTail], data, len);
         txd->length = len;
         txd->cmd = TCMD_EOP | TCMD_IFCS | TCMD_RS;
@@ -323,7 +318,5 @@ namespace Network{
         txTail = (txTail + 1) % TX_DESC_COUNT;
 
         WriteMem32(I8254_REGISTER_TDESC_TAIL, txTail);
-
-        while(!txd->status);
     }
 }

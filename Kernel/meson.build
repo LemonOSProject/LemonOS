@@ -78,6 +78,8 @@ cpp_files = [
     'src/net/net.cpp',
     'src/net/interface.cpp',
     'src/net/ipsocket.cpp',
+    'src/net/udp.cpp',
+    'src/net/tcp.cpp',
 
     'src/objects/kobject.cpp',
     'src/objects/message.cpp',

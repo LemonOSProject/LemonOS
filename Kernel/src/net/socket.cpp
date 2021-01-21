@@ -24,7 +24,7 @@ Socket* Socket::CreateSocket(int domain, int type, int protocol){
         return new LocalSocket(type, protocol);
     } else if (domain == InternetProtocol){
         if(type == DatagramSocket){
-            return new UDPSocket(type, protocol);
+            return new Network::UDP::UDPSocket(type, protocol);
         }
     }
 

@@ -87,8 +87,8 @@ void KernelProcess(){
 		fs::volumes->add_back(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
 	}
 	
-	/*Network::InitializeDrivers();
-	Network::InitializeConnections();*/
+	Network::InitializeDrivers();
+	Network::InitializeConnections();
 
 	Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 

@@ -14,6 +14,7 @@ enum {
 
 enum {
     DHCPOpCodeDiscover = 1,
+    DHCPOpCodeOffset = 2,
 };
 
 enum {

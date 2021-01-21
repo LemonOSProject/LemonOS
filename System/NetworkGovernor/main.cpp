@@ -61,7 +61,7 @@ int main(){
 	header.hlen = 6; // MAC addresses are 6 bytes long
 	header.hops = 0;
 	header.xID = rand() * ((t.tv_sec << 1) ^ t.tv_nsec); // Generate random id
-	header.secs = 65535;
+	header.secs = 0;
 	header.flags = DHCP_FLAG_BROADCAST;
 	header.clientIP = 0; // Don't worry about endianess 0.0.0.0 is symmetrical
 	header.yourIP = 0;
@@ -89,8 +89,76 @@ int main(){
 
 	SendDHCPMessage(header, options);
 
+	uint32_t subnetMask = 0;
+	uint32_t defaultGateway = 0;
+	uint32_t dnsServer = 0;
+
+	DHCPHeader recvHeader;
+	sockaddr_in recvAddr;
+	socklen_t recvLen = sizeof(sockaddr_in);
+
+	recvfrom(dhcpSocket, &recvHeader, sizeof(DHCPHeader), 0, reinterpret_cast<sockaddr*>(&recvAddr), &recvLen);
+	printf("received dhcp response:\n\
+			IP Address: %d.%d.%d.%d\n",
+			recvHeader.yourIP & 0xff, (recvHeader.yourIP >> 8) & 0xff, (recvHeader.yourIP >> 16) & 0xff, (recvHeader.yourIP >> 24) & 0xff);
+
+	DHCPOption<0>* option = reinterpret_cast<DHCPOption<0>*>(recvHeader.options);
+	while(option->optionCode != 0xff /* end marker */ && reinterpret_cast<void*>(option) < recvHeader.options + 312){
+		switch(option->optionCode){
+			case DHCPOptionSubnetMask:
+				if(option->length == 4 /* IP address length */){
+					subnetMask = *reinterpret_cast<uint32_t*>(option->data);
+				}
+				break;
+			case DHCPOptionDefaultGateway:
+				if(option->length == 4 /* IP address length */){
+					defaultGateway = *reinterpret_cast<uint32_t*>(option->data);
+				}
+				break;
+			case DHCPOptionDNS:
+				if(option->length == 4 /* IP address length */){
+					dnsServer = *reinterpret_cast<uint32_t*>(option->data);
+				}
+				break;
+		}
+
+		option = reinterpret_cast<DHCPOption<0>*>(option->data + option->length);
+	} 
+
+	header.clientIP = recvHeader.yourIP; // Request the IP from the offer
+	header.serverIP = recvHeader.serverIP;
+
+	dhcpMessage.length = 1;
+	dhcpMessage.optionCode = DHCPOptionMessageType;
+	dhcpMessage.data[0] = DHCPMessageTypeRequest;
+
+	DHCPOption<4> dhcpIPRequest;
+	dhcpIPRequest.length = 4;
+	dhcpIPRequest.optionCode = DHCPOptionRequestIPAddress;
+	*reinterpret_cast<uint32_t*>(dhcpIPRequest.data) = recvHeader.yourIP; // Request the IP from the offer
+
+	DHCPOption<4> dhcpServer;
+	dhcpServer.length = 4;
+	dhcpServer.optionCode = DHCPOptionServerIdentifier;
+	*reinterpret_cast<uint32_t*>(dhcpServer.data) = recvHeader.serverIP; // Use the server IP from the offer
+
+	options.clear();
+	options = { &dhcpMessage, &dhcpIPRequest, &dhcpServer };
+
+	SendDHCPMessage(header, options);
+
+	recvfrom(dhcpSocket, &recvHeader, sizeof(DHCPHeader), 0, reinterpret_cast<sockaddr*>(&recvAddr), &recvLen);
+	printf("received dhcp response:\n\
+			IP Address: %d.%d.%d.%d\n\
+			Subnet Mask: %d.%d.%d.%d\n\
+			Default Gateway: %d.%d.%d.%d\n\
+			DNS Server: %d.%d.%d.%d\n",
+			recvHeader.yourIP & 0xff, (recvHeader.yourIP >> 8) & 0xff, (recvHeader.yourIP >> 16) & 0xff, (recvHeader.yourIP >> 24) & 0xff,
+			subnetMask & 0xff, (subnetMask >> 8) & 0xff, (subnetMask >> 16) & 0xff, (subnetMask >> 24) & 0xff,
+			defaultGateway & 0xff, (defaultGateway >> 8) & 0xff, (defaultGateway >> 16) & 0xff, (defaultGateway >> 24) & 0xff,
+			dnsServer & 0xff, (dnsServer >> 8) & 0xff, (dnsServer >> 16) & 0xff, (dnsServer >> 24) & 0xff);
+
 	for(;;){
 
 	}
-	//sendto(dhcpSocket, &header, sizeof(DHCPHeader), 0, (sockaddr*)&dhcpServerAddress, sizeof(sockaddr_in));
 }
