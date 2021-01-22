@@ -1,207 +1,10 @@
 #include <cstdio>
 #include <cassert> 
-#include <string>
-#include <vector>
-#include <map>
 #include <stack>
-#include <memory>
-#include <utility>
 #include <iostream>
+#include <sstream>
 
-// Asynchronous remote procedure: IDENTIFIER PARAMETERS
-
-// Synchronous remote procedure: IDENTIFIER PARAMETERS -> PARAMETERS
-// Protocol: protocol IDENTIFIER { }
-// Parameters: (IDENTIFIER TYPE, ...)
-
-enum TokenType{
-    TokenEndline,
-    TokenIdentifier,
-    TokenKeyword,
-    TokenLeftBrace,
-    TokenRightBrace,
-    TokenLeftParens,
-    TokenRightParens,
-    TokenComma,
-    TokenResponse,
-};
-
-enum Type{
-    TypeString,
-    TypeBool,
-    TypeU8,
-    TypeU16,
-    TypeU32,
-    TypeU64,
-    TypeS8,
-    TypeS16,
-    TypeS32,
-    TypeS64,
-};
-
-std::map<std::string, Type> types = {
-    {"string", TypeString},
-    {"bool", TypeBool},
-    {"u8", TypeU8},
-    {"u16", TypeU16},
-    {"u32", TypeU32},
-    {"u64", TypeU64},
-    {"s8", TypeS8},
-    {"s16", TypeS16},
-    {"s32", TypeS32},
-    {"s64", TypeS64},
-};
-
-enum KeywordType{
-    KeywordInterface,
-    KeywordStruct,
-    KeywordUnion,
-};
-
-std::vector<std::string> tokenNames = {
-    "ENDLINE",
-    "IDENTIFIER",
-    "KEYWORD",
-    "{",
-    "}",
-    "(",
-    ")",
-    ",",
-    "RESPONSE",
-};
-
-enum StatementType {
-    StatementInvalid,
-    StatementDeclareInterface,
-    StatementAsynchronousMethod,
-    StatementSynchronousMethod,
-    StatementParameterList,
-};
-
-#define IsDeclaration(x) ((x == ParserStateDeclarationSync) || (x == ParserStateDeclarationAsync) || (x == ParserStateDeclarationInterface))
-
-class Statement
-{
-public:
-    StatementType type = StatementInvalid;
-
-    Statement() = default;
-    Statement(StatementType t) { type = t; }
-
-    virtual ~Statement() = default;
-};
-
-class InterfaceDeclarationStatement final : public Statement {
-public:
-    std::string interfaceName;
-
-    std::vector<std::shared_ptr<Statement>> children;
-
-    InterfaceDeclarationStatement(const std::string& name){
-        interfaceName = name;
-        type = StatementDeclareInterface;
-    }
-};
-
-class ParameterList final : public Statement {
-public:
-    std::vector<std::pair<Type, std::string>> parameters;
-
-    ParameterList(){
-        type = StatementParameterList;
-    }
-
-    ParameterList(const std::vector<std::pair<Type, std::string>>& params){
-        type = StatementParameterList;
-
-        parameters = params;
-    }
-};
-
-class ASynchronousMethod final : public Statement{
-public:
-    std::string methodName;
-
-    ParameterList parameters;
-
-    ASynchronousMethod(const std::string& name){
-        methodName = name;
-
-        type = StatementAsynchronousMethod;
-    }
-};
-
-class SynchronousMethod final : public Statement{
-public:
-    std::string methodName;
-
-    ParameterList parameters;
-    ParameterList returnParameters;
-
-    SynchronousMethod(const std::string& name){
-        methodName = name;
-
-        type = StatementSynchronousMethod;
-    }
-};
-
-class Token{
-public:
-    TokenType type;
-    std::string value = "";
-    int lineNum;
-    int linePos;
-
-    Token(){}
-
-    Token(int ln, int pos, TokenType type){
-        lineNum = ln;
-        linePos = pos;
-
-        this->type = type;
-    }
-
-    Token(int ln, int pos, TokenType type, std::string& text) : value(text) {
-        lineNum = ln;
-        linePos = pos;
-
-        this->type = type;
-    }
-};
-
-enum {
-    ParserStateInvalid,
-    ParserStateRoot,
-    ParserStateDeclarationAsync,
-    ParserStateDeclarationSync,
-    ParserStateInterface,
-    ParserStateParameterList,
-};
-
-struct ParserState{
-    int state = ParserStateInvalid;
-    std::shared_ptr<Statement> statement;
-
-    ParserState(int s){
-        state = s;
-    }
-};
-
-std::vector<std::string> keywordTokens = {
-    "interface",
-    "struct",
-    "union",
-};
-
-std::map<std::string, KeywordType> keywords = {
-    {"interface", KeywordInterface},
-    {"struct", KeywordStruct},
-    {"union", KeywordUnion},
-};
-
-bool IsType(const std::string& s){
-    return (types.find(s) != types.end());
-}
+#include "interfacec.h"
 
 std::vector<Token> tokens;
 std::vector<std::shared_ptr<Statement>> statements;
@@ -375,8 +178,6 @@ void Parse(){
                 if(kw == KeywordInterface){
                     std::shared_ptr<InterfaceDeclarationStatement> ifDecl = ParseInterfaceDeclarationStatement(++it);
                     it++;
-
-                    statements.push_back(ifDecl);
                     states.push(ParserStateInterface);
 
                     states.top().statement = ifDecl;
@@ -467,9 +268,105 @@ void Parse(){
     }
 }
 
+struct CppType{
+    std::string typeName = ""; // e.g. int32_t, std::string
+    bool constReference = false; // e.g. pass std::string parameters as std::string&
+};
+
+std::map<Type, CppType> cppTypes = {
+    {TypeString, {"std::string", true}},
+    {TypeBool, {"bool", false}},
+    {TypeU8, {"uint8_t", false}},
+    {TypeU16, {"uint16_t", false}},
+    {TypeU32, {"uint32_t", false}},
+    {TypeU64, {"uint64_t", false}},
+    {TypeS8, {"int8_t", false}},
+    {TypeS16, {"int16_t", false}},
+    {TypeS32, {"int32_t", false}},
+    {TypeS64, {"int64_t", false}}
+};
+
+
 void Generate(std::ostream& out){
-    out << "#include <lemon/ipc/message.h>\n";
-    out << "#include <lemon/ipc/interface.h>\n";
+    out << "#include <lemon/ipc/message.h>" << std::endl
+        << "#include <lemon/ipc/interface.h>" << std::endl << std::endl;
+
+    for(auto& st : statements){
+        assert(st.get());
+        
+        if(st->type == StatementDeclareInterface){
+            auto interfaceStatement = std::dynamic_pointer_cast<InterfaceDeclarationStatement, Statement>(st);
+
+            std::stringstream client;
+            std::stringstream server;
+
+            client << "class " << interfaceStatement->interfaceName << "Client : public Lemon::Endpoint {" << std::endl;
+
+            client << "public:" << std::endl;
+            for(auto& st : interfaceStatement->children){
+                switch (st->type)
+                {
+                case StatementAsynchronousMethod: {
+                    auto async = std::dynamic_pointer_cast<ASynchronousMethod, Statement>(st);
+                    client << "\tvoid " << async->methodName << "(";
+
+                    auto it = async->parameters.parameters.begin();
+                    while(it != async->parameters.parameters.end()){
+                        auto& param = *it;
+
+                        try{
+                            CppType type = cppTypes[param.first];
+
+                            if(type.constReference){
+                                client << "const " << type.typeName << "& " << param.second; // TYPE IDENTIFIER
+                            } else {
+                                client << type.typeName << " " << param.second; // TYPE IDENTIFIER
+                            }
+                        } catch(const std::out_of_range& e){
+                            fprintf(stderr, "No mapping for type %d!\n", param.first);
+                            exit(5);
+                        }
+
+                        it++;
+                        if(it != async->parameters.parameters.end()){
+                            client << ", "; // Not at the end so add a separator
+                        }
+                    }
+
+                    client << ") const {" << std::endl;
+
+                    client << "\t\tQueue(Message(";
+
+                    it = async->parameters.parameters.begin();
+                    while(it != async->parameters.parameters.end()){
+                        auto& param = *it;
+
+                        client << param.second;
+
+                        it++;
+                        if(it != async->parameters.parameters.end()){
+                            client << ", "; // Not at the end so add a separator
+                        }
+                    }
+
+                    client << "));" << std::endl
+                        << "\t}" << std::endl << std::endl;
+                    break;
+                } case StatementSynchronousMethod: {
+                    break;
+                } default:
+                    break;
+                }
+            }
+
+            client << "};" << std::endl;
+
+            server << "class " << interfaceStatement->interfaceName << " {}" << std::endl;
+
+            out << server.rdbuf();
+            out << client.rdbuf();
+        }
+    }
 }
 
 int main(int argc, char** argv){
