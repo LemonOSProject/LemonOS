@@ -86,6 +86,12 @@ namespace Lemon{
             
         }
 
+        /////////////////////////////
+        /// \brief Close Endpoint
+        ///
+        /// Destroy the handle to the endpoint,
+        /// the actual endpoint will be destroyed when any peers destroy their handles
+        /////////////////////////////
         inline void Close(){
             DestroyKObject(handle);
 
@@ -96,8 +102,24 @@ namespace Lemon{
             return handle;
         }
 
+        /////////////////////////////
+        /// \brief Get the Kernel Handle to the Endpoint
+        ///
+        /// Returns a Lemon OS handle ID pointing to the endpoint.
+        ///
+        /// \return Handle ID of endpoint
+        /////////////////////////////
         inline const handle_t& GetHandle() const {
             return handle;
+        }
+
+        /////////////////////////////
+        /// \brief Get the message size
+        ///
+        /// \return Maximum message size
+        /////////////////////////////
+        inline uint16_t GetMessageSize() const {
+            return msgSize;
         }
 
         inline long Queue(uint64_t id, uint8_t* data, uint16_t size) const{
@@ -110,6 +132,15 @@ namespace Lemon{
 
         inline long Queue(const Message& m) const{
             return EndpointQueue(handle, m.id(), m.length(), (m.length() > 8) ? reinterpret_cast<uintptr_t>(m.data()) : *(reinterpret_cast<const uint64_t*>(m.data())));
+        }
+
+        template<typename ...T>
+        inline long QueueObjects(uint64_t id, const T&... objects){
+            uint16_t size = Message::GetSize(objects) + ...;
+            uint8_t buffer[size]; // Faster than heap
+
+            Message m = Message(buffer, size, objects); // Create a message with our stack allocated buffer
+            return Queue(m);
         }
 
         inline long Poll(Message& m) const{
@@ -131,6 +162,20 @@ namespace Lemon{
             uint8_t* data = new uint8_t[msgSize];
 
             long ret = EndpointCall(handle, call.id(), (call.length() > 8) ? reinterpret_cast<uintptr_t>(call.data()) : *(reinterpret_cast<const uint64_t*>(call.data())), id, reinterpret_cast<uintptr_t>(data), &size);
+
+            if(!ret){
+                rmsg.Set(data, size, id);
+            } else {
+                delete[] data;
+            }
+            return ret;
+        }
+
+        inline long Call(Message& call, uint64_t id) const { // Use the same buffer for return
+            uint16_t size = call.length();
+            uint8_t* data = new uint8_t[msgSize];
+
+            long ret = EndpointCall(handle, call.id(), (call.length() > 8) ? reinterpret_cast<uintptr_t>(call.data()) : *(reinterpret_cast<const uint64_t*>(call.data())), id, reinterpret_cast<uintptr_t>(call.data()), &size);
 
             if(!ret){
                 rmsg.Set(data, size, id);

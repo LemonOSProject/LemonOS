@@ -8,8 +8,6 @@
 #include <logging.h>
 
 namespace Network {
-    Socket* ports[PORT_MAX + 1];
-
     void InitializeDrivers(){
 	    Intel8254x::DetectAndInitialize();
     }

@@ -16,6 +16,7 @@ protected:
 
 public:
     List<FancyRefPtr<Service>> services;
+    FancyRefPtr<Service> kernelService;
 
     static void Initialize(){
         instance = new ServiceFS();

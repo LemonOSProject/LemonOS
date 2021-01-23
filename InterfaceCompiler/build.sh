@@ -1,0 +1,1 @@
+g++ -o lic -std=c++17 main.cpp -Wall -Wextra

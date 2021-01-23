@@ -7,7 +7,10 @@ ServiceFS* ServiceFS::instance = nullptr;
 ServiceFS::ServiceFS(){
     if(instance){
         Log::Error("Instance of ServiceFS already created!");
+        return;
     }
+
+    kernelService = CreateService("lemon.kernel");
 }
 
 long ServiceFS::ResolveServiceName(FancyRefPtr<Service>& ref, const char* name){

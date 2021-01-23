@@ -16,12 +16,12 @@ namespace Lemon{
     }
 
     template<>
-    uint16_t Message::GetSize<MessageRawDataObject>(const MessageRawDataObject& obj) const {
+    static uint16_t Message::GetSize<MessageRawDataObject>(const MessageRawDataObject& obj) {
         return sizeof(uint16_t) + obj.second; // 2 byte length + data
     }
 
     template<>
-    uint16_t Message::GetSize<std::string>(const std::string& obj) const {
+    static uint16_t Message::GetSize<std::string>(const std::string& obj) {
         return sizeof(uint16_t) + obj.length(); // 2 byte length + data
     }
 

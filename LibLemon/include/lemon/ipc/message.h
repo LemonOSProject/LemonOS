@@ -30,11 +30,6 @@ namespace Lemon{
         Message& operator=(const Message& m);
 
         template<typename T>
-        uint16_t GetSize(const T& obj) const {
-            return sizeof(obj);
-        }
-
-        template<typename T>
         void Insert(uint16_t& pos, const T& obj){
             memcpy(&mdata[pos], &obj, sizeof(T));
             pos += sizeof(T);
@@ -67,6 +62,11 @@ namespace Lemon{
             return 0;
         }
     public:
+        template<typename T>
+        static inline constexpr uint16_t GetSize(const T& obj) {
+            return sizeof(obj);
+        }
+
         enum {
             OK,
             ErrorDecodeOutOfBounds,
@@ -91,14 +91,19 @@ namespace Lemon{
         }
 
         template<typename ...T>
-        Message(uint64_t id, const T&... objects){
+        Message(uint64_t id, const T&... objects) : mid(id){
             msize = (GetSize(objects) + ...); // Get total length of objects
-            mid = id;
 
             if(msize > 0){
                 mdata = new uint8_t[msize];
             }
 
+            uint16_t pos = 0;
+            (void)std::initializer_list<int>{ ((void)Insert(pos, objects), 0)... }; // HACK: Call insert for each object
+        }
+
+        template<typename ...T>
+        Message(uint8_t* data, uint16_t size, uint64_t id, const T&... objects) : msize(size), mid(id), mdata(data){ // Don't calculate the size as the caller should know the size beforehand as they have created a buffer
             uint16_t pos = 0;
             (void)std::initializer_list<int>{ ((void)Insert(pos, objects), 0)... }; // HACK: Call insert for each object
         }

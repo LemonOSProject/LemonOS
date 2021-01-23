@@ -97,7 +97,7 @@ std::shared_ptr<InterfaceDeclarationStatement> ParseInterfaceDeclarationStatemen
     Token& nameTok = *it;
 
     if(nameTok.type != TokenIdentifier){
-        printf("error: [line %d:%d] Invalid token '%s'\n", nameTok.lineNum, nameTok.linePos, tokenNames[nameTok.type]);
+        printf("error: [line %d:%d] Invalid token '%s'\n", nameTok.lineNum, nameTok.linePos, tokenNames[nameTok.type].c_str());
         exit(4);
     }
 
@@ -106,7 +106,7 @@ std::shared_ptr<InterfaceDeclarationStatement> ParseInterfaceDeclarationStatemen
     Token& enterTok = *(++it);
 
     if(enterTok.type != TokenLeftBrace){
-        printf("error: [line %d:%d] Invalid token '%s'\n", nameTok.lineNum, nameTok.linePos, tokenNames[nameTok.type]);
+        printf("error: [line %d:%d] Invalid token '%s'\n", nameTok.lineNum, nameTok.linePos, tokenNames[nameTok.type].c_str());
         exit(4);
     }
 
@@ -288,8 +288,8 @@ std::map<Type, CppType> cppTypes = {
 
 
 void Generate(std::ostream& out){
-    out << "#include <lemon/ipc/message.h>" << std::endl
-        << "#include <lemon/ipc/interface.h>" << std::endl << std::endl;
+    out << "#include <lemon/ipc/message.h>\n"
+        << "#include <lemon/ipc/interface.h>\n\n";
 
     for(auto& st : statements){
         assert(st.get());
@@ -298,73 +298,194 @@ void Generate(std::ostream& out){
             auto interfaceStatement = std::dynamic_pointer_cast<InterfaceDeclarationStatement, Statement>(st);
 
             std::stringstream client;
+
             std::stringstream server;
 
-            client << "class " << interfaceStatement->interfaceName << "Client : public Lemon::Endpoint {" << std::endl;
+            client << "class " << interfaceStatement->interfaceName << "Client : public Lemon::Endpoint {\n"
+                << "public:\n";
 
-            client << "public:" << std::endl;
+            server << "class " << interfaceStatement->interfaceName << " {\n"
+                << "protected:\n";
+
+			std::stringstream requestIDs; // Request IDs
+            std::stringstream responseIDs; // Response IDs
+
+			std::stringstream clientRequests; // Client code for sending requests
+            std::stringstream serverRequestHandlers; // Server handlers for requests
+            std::stringstream serverRequestCondition; // Swtich statement condition for request
+
+			std::stringstream responses;
+
+			uint64_t nextID = 100;
+
+			requestIDs << "    enum RequestID {\n";
+			responseIDs << "    enum ResponseID {\n";
+
             for(auto& st : interfaceStatement->children){
                 switch (st->type)
                 {
                 case StatementAsynchronousMethod: {
                     auto async = std::dynamic_pointer_cast<ASynchronousMethod, Statement>(st);
-                    client << "\tvoid " << async->methodName << "(";
+                    clientRequests << "    void " << async->methodName << "("; // void NAME (
+                    serverRequestHandlers << "    virtual void On" << async->methodName << "(";
 
-                    auto it = async->parameters.parameters.begin();
-                    while(it != async->parameters.parameters.end()){
-                        auto& param = *it;
+                    serverRequestCondition << "   case " << interfaceStatement->interfaceName << async->methodName << ":\n"
+                        << "        On" << async->methodName << "(m);\n"
+                        << "        break;\n";
 
+					requestIDs << "        " << async->methodName << " = " << nextID++ << ",\n"; // $(interfaceName)$(methodName)% = $(nextID);
+
+                    if(async->parameters.parameters.size()){
+                        std::stringstream parameters;
+                        std::stringstream parameterDeclarations;
+                        auto it = async->parameters.parameters.begin();
+                        while(it != async->parameters.parameters.end()){
+                            auto& param = *it;
+
+                            try{
+                                CppType type = cppTypes[param.first];
+
+                                if(type.constReference){
+                                    parameterDeclarations << "const " << type.typeName << "& " << param.second; // TYPE IDENTIFIER
+                                } else {
+                                    parameterDeclarations << type.typeName << " " << param.second; // TYPE IDENTIFIER
+                                }
+
+                                parameters << param.second;
+                            } catch(const std::out_of_range& e){
+                                fprintf(stderr, "No mapping for type %d!\n", param.first);
+                                exit(5);
+                            }
+
+                            it++;
+                            if(it != async->parameters.parameters.end()){
+                                parameters << ", "; // Not at the end so add a separator
+                                parameterDeclarations << ", "; // Not at the end so add a separator
+                            }
+                        }
+                        
+                        std::string parameterDeclarationString = parameterDeclarations.str();
+                        std::string parameterString = parameters.str();
+
+                        clientRequests << parameterDeclarationString << ") const {\n"
+                            << "        uint16_t size = Message::GetSize(" << parameterString << ");\n" // Get size of message
+                            << "        uint8_t buffer[size] // Stack allocation to prevent heap overhead\n\n" // Allocate on stack to avoid heap allocations
+                            << "        Message m = Message(buffer, size, RequestID::" << async->methodName << ", " << parameterString << ");\n" // Create message object using our calculated size and stack buffer
+                            << "        Queue(m.id(), m.data(), m.length());\n" // Queue message
+                            << "    }\n\n";
+
+                        serverRequestHandlers << parameterDeclarationString << ") = 0;\n"; // virtual void On$(methodName)($(parameters)) = 0; // Pure virtual function call to the handler
+                    } else { // No parameters so avoid all the extra stuff
+                        clientRequests << ") const {\n"
+                            << "        Queue(RequestID::" << async->methodName << ", nullptr, 0);\n"
+                            << "    }\n\n";
+
+                        serverRequestHandlers << ") = 0;\n";
+                    }
+                    break;
+                } case StatementSynchronousMethod: {
+                    auto sync = std::dynamic_pointer_cast<SynchronousMethod, Statement>(st);
+
+                    std::stringstream parameters;
+                    std::stringstream parameterDeclarations;
+                    clientRequests << "    " << sync->methodName << "Response " << sync->methodName << "("; // $(methodName)Response  $(methodName)(
+                    serverRequestHandlers << "    virtual " << sync->methodName << "Response On" << sync->methodName << "("; // $(methodName)Response  $(methodName)(
+
+					requestIDs << "        " << sync->methodName << " = " << nextID++ << ",\n"; // $(interfaceName)$(methodName)% = $(nextID);
+					responseIDs << "        " << sync->methodName << "Response = " << nextID++ << ",\n"; // $(interfaceName)$(methodName)% = $(nextID);
+                    
+                    if(sync->parameters.parameters.size()){
+                        std::stringstream parameters;
+                        std::stringstream parameterDeclarations;
+                        auto it = sync->parameters.parameters.begin();
+                        while(it != sync->parameters.parameters.end()){
+                            auto& param = *it;
+
+                            try{
+                                CppType type = cppTypes[param.first];
+
+                                if(type.constReference){
+                                    parameterDeclarations << "const " << type.typeName << "& " << param.second; // TYPE IDENTIFIER
+                                } else {
+                                    parameterDeclarations << type.typeName << " " << param.second; // TYPE IDENTIFIER
+                                }
+
+                                parameters << param.second;
+                            } catch(const std::out_of_range& e){
+                                fprintf(stderr, "No mapping for type %d!\n", param.first);
+                                exit(5);
+                            }
+
+                            it++;
+                            if(it != sync->parameters.parameters.end()){
+                                parameters << ", "; // Not at the end so add a separator
+                                parameterDeclarations << ", "; // Not at the end so add a separator
+                            }
+                        }
+                        
+                        std::string parameterDeclarationString = parameterDeclarations.str();
+                        std::string parameterString = parameters.str();
+
+                        clientRequests << parameterDeclarationString << ") const {\n"
+                            << "        uint16_t size = Message::GetSize(" << parameterString << ");\n"
+                            << "        uint8_t buffer[msgSize] // Stack allocation to prevent heap overhead\n\n" // Allocate on stack to avoid heap allocations
+                            << "        Message m = Message(buffer, size, RequestID::" << sync->methodName << ", " << parameterString << ");\n"
+                            << "        Call(m, ResponseID::" << sync->methodName << ");\n\n"
+                            << "        " << sync->methodName << "Response response = Response();\n" // $(methodName)Response response;
+                            << "        if(m.Decode(response)){\n"
+                            << "            return response; // Error decoding response\n"
+                            << "        }\n\n"
+                            << "        return response"
+                            << "    }\n\n";
+
+                        serverRequestHandlers << parameterDeclarationString << ") = 0;\n";
+                    } else {
+                        clientRequests << ") const {\n"
+                            << "        Queue(RequestID::" << sync->methodName << ", nullptr, 0);\n"
+                            << "    }\n\n";
+
+                        serverRequestHandlers << ") = 0;\n";
+                    }
+
+					responses << "    struct " << sync->methodName << "Response {\n    "; // struct $(methodName)Response { $(parameterType) $(parameterName) ... };
+					for(auto& param : sync->returnParameters.parameters){
                         try{
                             CppType type = cppTypes[param.first];
 
-                            if(type.constReference){
-                                client << "const " << type.typeName << "& " << param.second; // TYPE IDENTIFIER
-                            } else {
-                                client << type.typeName << " " << param.second; // TYPE IDENTIFIER
-                            }
+                            responses << "    " << type.typeName << " " << param.second << ";\n    ";
                         } catch(const std::out_of_range& e){
                             fprintf(stderr, "No mapping for type %d!\n", param.first);
                             exit(5);
                         }
-
-                        it++;
-                        if(it != async->parameters.parameters.end()){
-                            client << ", "; // Not at the end so add a separator
-                        }
-                    }
-
-                    client << ") const {" << std::endl;
-
-                    client << "\t\tQueue(Message(";
-
-                    it = async->parameters.parameters.begin();
-                    while(it != async->parameters.parameters.end()){
-                        auto& param = *it;
-
-                        client << param.second;
-
-                        it++;
-                        if(it != async->parameters.parameters.end()){
-                            client << ", "; // Not at the end so add a separator
-                        }
-                    }
-
-                    client << "));" << std::endl
-                        << "\t}" << std::endl << std::endl;
-                    break;
-                } case StatementSynchronousMethod: {
+					}
+					responses << "};\n\n";
                     break;
                 } default:
                     break;
                 }
             }
 
-            client << "};" << std::endl;
+			requestIDs << "    };\n\n";
+			responseIDs << "    };\n\n";
 
-            server << "class " << interfaceStatement->interfaceName << " {}" << std::endl;
+			client << clientRequests.rdbuf();
+            client << "};\n";
 
-            out << server.rdbuf();
-            out << client.rdbuf();
+            server << serverRequestHandlers.rdbuf()
+                << "\n" << "public:\n"
+			    << requestIDs.rdbuf()
+                << responseIDs.rdbuf()
+			    << responses.rdbuf();
+
+            server << "    void HandleMessage(const Lemon::Message& m){\n"
+                << "        switch(m.id) {\n"
+                << serverRequestCondition.rdbuf()
+                << "        }\n"
+                << "    }\n"
+                << "};\n\n";
+
+            out << server.rdbuf() << std::endl;
+            out << client.rdbuf() << std::endl;
         }
     }
 }
@@ -394,42 +515,8 @@ int main(int argc, char** argv){
     BuildTokens(input);
 
     Parse();
-    
-    for(auto& st : statements){
-        assert(st.get());
-        
-        switch(st->type){
-            case StatementDeclareInterface:
-                for(auto& ifSt : std::dynamic_pointer_cast<InterfaceDeclarationStatement, Statement>(st)->children){
-                    assert(ifSt.get());
-
-                    switch(ifSt->type){
-                        case StatementSynchronousMethod: {
-                            auto method = std::dynamic_pointer_cast<SynchronousMethod, Statement>(ifSt);
-                            assert(method.get());
-
-                            printf("Synchronous Method '%s':\n", method->methodName.c_str());
-                            for(auto& param : method->parameters.parameters){
-                                printf("\t{%d, %s}\n", param.first, param.second.c_str());
-                            }
-                            break;
-                        } case StatementAsynchronousMethod: {
-                            auto method = std::dynamic_pointer_cast<ASynchronousMethod, Statement>(ifSt);
-                            assert(method.get());
-
-                            printf("Asynchronous Method '%s':\n", method->methodName.c_str());
-                            for(auto& param : method->parameters.parameters){
-                                printf("\t{%d, %s}\n", param.first, param.second.c_str());
-                            }
-                            break;
-                        }
-                    }
-                }
-                break;
-        }
-    }
 
     Generate(std::cout);
 
-    exit(0);
+    return 0;
 }

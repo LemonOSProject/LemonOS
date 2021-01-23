@@ -7,6 +7,9 @@
 #include <timer.h>
 #include <errno.h>
 
+#include <objects/service.h>
+#include <objects/interface.h>
+
 #define NET_INTERFACE_STACKSIZE 32768
 
 namespace Network::Interface{
@@ -66,12 +69,26 @@ namespace Network::Interface{
 		}
 	}
 
+	void OnRecieveMessage(){
+		
+	}
+
 	[[noreturn]] void InterfaceThread(){
 		Log::Info("[Network] Initializing network interface layer...");
 
 		assert(mainAdapter);
 
-		while(mainAdapter->GetLink() != LinkUp) Scheduler::Yield();
+		FancyRefPtr<MessageInterface> msgInterface;
+		if(long e =ServiceFS::Instance()->kernelService->CreateInterface(msgInterface, "Network", 512); e){
+			Log::Error("[Network] Failed to create message interface for network!");
+			
+			Scheduler::EndProcess(Scheduler::GetCurrentProcess());
+			
+			for(;;) {
+				Scheduler::GetCurrentProcess()->state = ThreadStateBlocked;
+				Scheduler::Yield();
+			}
+		}
 
 		for(;;){
 			NetworkPacket* p;
