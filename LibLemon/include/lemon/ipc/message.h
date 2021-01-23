@@ -63,7 +63,7 @@ namespace Lemon{
         }
     public:
         template<typename T>
-        static inline constexpr uint16_t GetSize(const T& obj) {
+        static uint16_t GetSize(const T& obj) {
             return sizeof(obj);
         }
 
@@ -103,7 +103,7 @@ namespace Lemon{
         }
 
         template<typename ...T>
-        Message(uint8_t* data, uint16_t size, uint64_t id, const T&... objects) : msize(size), mid(id), mdata(data){ // Don't calculate the size as the caller should know the size beforehand as they have created a buffer
+        Message(uint8_t* data, uint16_t size, uint64_t id, const T&... objects) : mdata(data), msize(size), mid(id){ // Don't calculate the size as the caller should know the size beforehand as they have created a buffer
             uint16_t pos = 0;
             (void)std::initializer_list<int>{ ((void)Insert(pos, objects), 0)... }; // HACK: Call insert for each object
         }
@@ -157,10 +157,10 @@ namespace Lemon{
     };
 
     template<>
-    uint16_t Message::GetSize<MessageRawDataObject>(const MessageRawDataObject& obj) const;
+    uint16_t Message::GetSize<MessageRawDataObject>(const MessageRawDataObject& obj);
     
     template<>
-    uint16_t Message::GetSize<std::string>(const std::string& obj) const;
+    uint16_t Message::GetSize<std::string>(const std::string& obj);
 
     template<>
     void Message::Insert<MessageRawDataObject>(uint16_t& pos, const MessageRawDataObject& obj);

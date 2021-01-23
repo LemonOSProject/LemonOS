@@ -1,4 +1,4 @@
-# LemonWM
+# Using LemonWM
 
 LemonWM is the window manager for Lemon OS.
 

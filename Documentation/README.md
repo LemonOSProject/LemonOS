@@ -4,8 +4,6 @@
 
 [System/](System/README.md) System Interfaces and Design
 
-[API/](API/README.md) System APIs
-
 [Userspace/](Userspace/README.md) Userspace applications (CLI and GUI) 
 
 [Build/](Build/README.md) Building Lemon OS and Lemon OS toolchain 

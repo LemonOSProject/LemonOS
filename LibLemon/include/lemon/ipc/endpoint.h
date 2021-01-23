@@ -134,15 +134,6 @@ namespace Lemon{
             return EndpointQueue(handle, m.id(), m.length(), (m.length() > 8) ? reinterpret_cast<uintptr_t>(m.data()) : *(reinterpret_cast<const uint64_t*>(m.data())));
         }
 
-        template<typename ...T>
-        inline long QueueObjects(uint64_t id, const T&... objects){
-            uint16_t size = Message::GetSize(objects) + ...;
-            uint8_t buffer[size]; // Faster than heap
-
-            Message m = Message(buffer, size, objects); // Create a message with our stack allocated buffer
-            return Queue(m);
-        }
-
         inline long Poll(Message& m) const{
             uint64_t id;
             uint16_t size;
@@ -173,12 +164,12 @@ namespace Lemon{
 
         inline long Call(Message& call, uint64_t id) const { // Use the same buffer for return
             uint16_t size = call.length();
-            uint8_t* data = new uint8_t[msgSize];
+            uint8_t* data = const_cast<uint8_t*>(call.data());
 
             long ret = EndpointCall(handle, call.id(), (call.length() > 8) ? reinterpret_cast<uintptr_t>(call.data()) : *(reinterpret_cast<const uint64_t*>(call.data())), id, reinterpret_cast<uintptr_t>(call.data()), &size);
 
             if(!ret){
-                rmsg.Set(data, size, id);
+                call.Set(data, size, id);
             } else {
                 delete[] data;
             }
