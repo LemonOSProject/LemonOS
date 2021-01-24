@@ -41,8 +41,6 @@ namespace Network{
     };
 
     int supportedDeviceCount = 23;
-    
-    Vector<Intel8254x*> cards;
 
     void Intel8254x::InterruptHandler(Intel8254x* card, regs64_t* r){
         card->OnInterrupt();
@@ -86,8 +84,10 @@ namespace Network{
         for(int i = 0; i < supportedDeviceCount; i++){
             if(PCI::FindDevice(supportedDevices[i], INTEL_VENDOR_ID)){
                 Intel8254x* card = new Intel8254x(PCI::GetPCIDevice(supportedDevices[i], INTEL_VENDOR_ID));
-                cards.add_back(card);
-                DeviceManager::RegisterDevice(*card);
+
+                if(card->dState == DriverState::OK){
+                    NetFS::GetInstance()->RegisterAdapter(card);
+                }
                 return;
             }
         }
@@ -234,7 +234,7 @@ namespace Network{
         WriteMem32(I8254_REGISTER_TCTRL, (TCTRL_ENABLE | TCTRL_PSP));
     }
 
-    Intel8254x::Intel8254x(PCIDevice& device) : pciDevice(device){
+    Intel8254x::Intel8254x(PCIDevice& device) : NetworkAdapter(NetworkAdapterEthernet), pciDevice(device){
         assert(device.vendorID != 0xFFFF);
 
         txTail = rxTail = 0;
@@ -254,6 +254,7 @@ namespace Network{
 
         if(!hasEEPROM){
             Log::Error("[i8254x] No EEPROM Present!");
+            dState = DriverState::Error;
             return;
         }
 
@@ -292,12 +293,26 @@ namespace Network{
 
         mac = macAddr;
 
-        AddAdapter(this);
+        char tempName[NAME_MAX];
+        char bus[16];
+        char slot[16];
+
+        itoa(pciDevice.bus, bus, 10);
+        itoa(pciDevice.slot, slot, 10);
+
+        strcpy(tempName, "e1k");
+        strcat(tempName, bus);
+        strcat(tempName, "s");
+        strcat(tempName, slot);
+
+        SetName(tempName); // Name format: e1k%pciBus%s%pciSlot%
 
         WriteMem32(I8254_REGISTER_CTRL, ReadMem32(I8254_REGISTER_CTRL) | CTRL_SLU | CTRL_ASDE);
 
         InitializeRx();
         InitializeTx();
+
+        dState = DriverState::OK;
 
         maxCache = 256;
         for(unsigned i = 0; i < maxCache; i++){

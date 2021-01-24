@@ -12,12 +12,6 @@
 
 #define NET_INTERFACE_STACKSIZE 32768
 
-struct MessageSetInterfaceConfiguration {
-	uint32_t ipAddress;
-	uint32_t defaultGateway;
-	uint32_t subnetMask;
-};
-
 namespace Network::Interface{
 	IPv4Address gateway = {0, 0, 0, 0};
 	IPv4Address subnet = {255, 255, 255, 255};
@@ -75,26 +69,10 @@ namespace Network::Interface{
 		}
 	}
 
-	void OnRecieveMessage(){
-		
-	}
-
 	[[noreturn]] void InterfaceThread(){
 		Log::Info("[Network] Initializing network interface layer...");
 
 		assert(mainAdapter);
-
-		FancyRefPtr<MessageInterface> msgInterface;
-		if(long e = ServiceFS::Instance()->kernelService->CreateInterface(msgInterface, "Network", 512); e){
-			Log::Error("[Network] Failed to create message interface for network!");
-			
-			Scheduler::EndProcess(Scheduler::GetCurrentProcess());
-			
-			for(;;) {
-				Scheduler::GetCurrentProcess()->state = ThreadStateBlocked;
-				Scheduler::Yield();
-			}
-		}
 
 		for(;;){
 			NetworkPacket* p;

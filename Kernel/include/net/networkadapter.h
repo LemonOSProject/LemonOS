@@ -11,6 +11,14 @@ enum {
 
 namespace Network{
     class NetworkAdapter : public Device {
+        friend class NetFS;
+
+    public:
+        enum AdapterType {
+            NetworkAdapterLoopback,
+            NetworkAdapterEthernet,
+        };
+
     protected:
         static int nextDeviceNumber;
         unsigned maxCache = 256; // Maximum amount of cached packets, NIC drivers are free to change this
@@ -25,10 +33,23 @@ namespace Network{
 
         lock_t threadLock = 0;
         Scheduler::GenericThreadBlocker blocker;
+
+        AdapterType type;
+
     public:
+        enum DriverState{
+            OK,
+            Uninitialized,
+            Error,
+        };
+        DriverState dState = Uninitialized;
+
         MACAddress mac;
+        IPv4Address adapterIP;
+        IPv4Address gatewayIP;
+        IPv4Address subnetMask;
         
-        NetworkAdapter();
+        NetworkAdapter(AdapterType aType);
         
         virtual void SendPacket(void* data, size_t len);
 

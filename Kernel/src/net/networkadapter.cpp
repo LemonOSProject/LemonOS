@@ -6,14 +6,7 @@
 
 namespace Network {
     NetworkAdapter* mainAdapter;
-
-    List<NetworkAdapter*> adapters;
-
-    int NetworkAdapter::nextDeviceNumber = 0;
-
-    void AddAdapter(NetworkAdapter* a){
-        adapters.add_back(a);
-    }
+    extern Vector<NetworkAdapter*> adapters;
 
     void FindMainAdapter(){
         for(unsigned i = 0; i < adapters.get_length(); i++){
@@ -24,14 +17,8 @@ namespace Network {
         }
     }
 
-    NetworkAdapter::NetworkAdapter() : Device(TypeNetworkAdapterDevice) {
+    NetworkAdapter::NetworkAdapter(AdapterType aType) : Device(TypeNetworkAdapterDevice), type(aType) {
         flags = FS_NODE_CHARDEVICE;
-
-        char buf[16];
-        strcpy(buf, "eth");
-        itoa(nextDeviceNumber++, buf + 3, 10);
-
-        SetName(buf);
     }
 
     void NetworkAdapter::SendPacket(void* data, size_t len){

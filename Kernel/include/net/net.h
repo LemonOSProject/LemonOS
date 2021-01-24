@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <endian.h>
 #include <string.h>
+#include <device.h>
 
 class Socket;
 
@@ -14,12 +15,12 @@ class Socket;
 
 #define ETHERNET_MAX_PACKET_SIZE 1518
 
-class NetworkAdapter;
+namespace Network{ class NetworkAdapter; }
 struct NetworkPacket{
     size_t length;
     uint8_t data[1518];
 
-    NetworkAdapter* adapter;
+    Network::NetworkAdapter* adapter;
 
     NetworkPacket* next;
     NetworkPacket* prev;
@@ -142,6 +143,20 @@ namespace Network {
         IPv4ProtocolICMP = 0x1,
         IPv4ProtocolTCP = 0x6,
         IPv4ProtocolUDP = 0x11,
+    };
+
+    class NetFS : public Device{
+    private:
+        static NetFS* instance;
+
+    public:
+        NetFS();
+
+        int ReadDir(DirectoryEntry* dirent, uint32_t index);
+        FsNode* FindDir(char* name);
+        void RegisterAdapter(NetworkAdapter* adapter);
+
+        inline static NetFS* GetInstance() { return instance; }
     };
 
     static inline BigEndian<uint16_t> CaclulateChecksum(void* data, size_t size){
