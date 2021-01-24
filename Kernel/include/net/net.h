@@ -1,5 +1,7 @@
 #pragma once
 
+#include <net/if.h>
+
 #include <stdint.h>
 #include <stddef.h>
 #include <endian.h>

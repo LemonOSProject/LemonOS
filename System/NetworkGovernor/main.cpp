@@ -4,6 +4,9 @@
 #include <math.h>
 #include <time.h>
 #include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <vector>
 
 #include "dhcp.h"
@@ -30,6 +33,12 @@ void SendDHCPMessage(DHCPHeader& header, std::vector<void*>& options){
 }
 
 int main(){
+	int netFS = open("/dev/net", O_RDONLY | O_DIRECTORY);
+	if(netFS < 0){
+		perror("Error opening /dev/net");
+		return 1;
+	}
+
 	dhcpSocket = socket(AF_INET, SOCK_DGRAM, 0);
 
 	if(!dhcpSocket){

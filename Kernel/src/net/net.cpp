@@ -10,6 +10,8 @@
 
 namespace Network {
     NetFS netFS;
+
+    lock_t adaptersLock = 0;
     Vector<NetworkAdapter*> adapters;
 
     int nextEthernetAdapter = 0;
@@ -82,6 +84,11 @@ namespace Network {
     }
 
     void NetFS::RegisterAdapter(NetworkAdapter* adapter){
+        acquireLock(&adaptersLock);
+
+        adapter->adapterIndex = adapters.get_length();
         adapters.add_back(adapter);
+
+        releaseLock(&adaptersLock);
     }
 }

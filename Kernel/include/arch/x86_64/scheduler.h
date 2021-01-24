@@ -36,6 +36,7 @@ typedef struct process {
 	uint8_t state = ThreadStateRunning; // Process state
 	Vector<thread_t*> threads;
 	uint32_t threadCount = 0; // Amount of threads
+	int32_t euid = 0; // Effective UID
 	int32_t uid = 0;
 	int32_t gid = 0;
 

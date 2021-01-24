@@ -78,7 +78,7 @@
 #define TX_DESC_COUNT 256
 
 namespace Network{
-    class Intel8254x : public NetworkAdapter {
+    class Intel8254x final : public NetworkAdapter {
         typedef struct {
             uint64_t addr; // Buffer Address
             uint16_t length; // Length

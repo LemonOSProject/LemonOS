@@ -3,6 +3,7 @@
 #include <fs/filesystem.h>
 
 #include <net/net.h>
+#include <net/if.h>
 
 #include <stdint.h>
 #include <stddef.h>
@@ -25,14 +26,6 @@
 #define SOCK_NONBLOCK 0x10000
 
 #define STREAM_MAX_BUFSIZE 0x20000 // 128 KB
-
-typedef unsigned int sa_family_t;
-typedef uint32_t socklen_t;
-
-typedef struct sockaddr {
-    sa_family_t family;
-    char data[14];
-} sockaddr_t;
 
 struct sockaddr_un {
     sa_family_t sun_family;               /* AF_UNIX */
@@ -87,7 +80,7 @@ enum {
     // Packet is considered obsolete
 };
 
-enum {
+enum SocketProtocol {
     InternetProtocol = 1,
     InternetProtocol6 = 2,
     UnixDomain = 3,

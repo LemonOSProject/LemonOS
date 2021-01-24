@@ -45,11 +45,16 @@ namespace Network{
         DriverState dState = Uninitialized;
 
         MACAddress mac;
-        IPv4Address adapterIP;
-        IPv4Address gatewayIP;
-        IPv4Address subnetMask;
+
+        // All of these are big-endian
+        IPv4Address adapterIP = 0; // 0.0.0.0
+        IPv4Address gatewayIP = 0xFFFFFFFF; // 255.255.255.255
+        IPv4Address subnetMask = 0x00FFFFFF; // 255.255.255.0
+        int adapterIndex = 0; // Index in the adapters list
         
         NetworkAdapter(AdapterType aType);
+
+        virtual int Ioctl(uint64_t cmd, uint64_t arg);
         
         virtual void SendPacket(void* data, size_t len);
 

@@ -1,4 +1,5 @@
 .vscode
+!.vscode/c_cpp_properties.json
 .cache
 *.img
 *.wad
