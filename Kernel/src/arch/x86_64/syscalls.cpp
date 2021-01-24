@@ -115,8 +115,10 @@
 #define SYS_KERNELOBJECT_WAIT_ONE 84
 #define SYS_KERNELOBJECT_WAIT 85
 #define SYS_KERNELOBJECT_DESTROY 86
+#define SYS_SET_SOCKET_OPTIONS 87
+#define SYS_GET_SOCKET_OPTIONS 88
 
-#define NUM_SYSCALLS 87
+#define NUM_SYSCALLS 89
 
 #define EXEC_CHILD 1
 
@@ -1031,7 +1033,7 @@ long SysInfo(regs64_t* r){
 	lemon_sysinfo_t* s = (lemon_sysinfo_t*)SC_ARG0(r);
 
 	if(!s){
-		return -1;
+		return -EFAULT;
 	}
 
 	s->usedMem = Memory::usedPhysicalBlocks * 4;
@@ -1054,7 +1056,7 @@ long SysMunmap(regs64_t* r){
 	if(Memory::CheckRegion(address, count * PAGE_SIZE_4K, Scheduler::GetCurrentProcess()->addressSpace) /*Check availibilty of the requested map*/){
 		//Memory::Free4KPages((void*)address, count, Scheduler::GetCurrentProcess()->addressSpace);
 	} else {
-		return -1;
+		return -EFAULT;
 	}
 
 	return 0;
@@ -1115,7 +1117,7 @@ long SysUnmapSharedMemory(regs64_t* r){
 	int64_t key = SC_ARG1(r);
 
 	shared_mem_t* sMem = Memory::GetSharedMemory(key);
-	if(!sMem) return -1;
+	if(!sMem) return -EINVAL;
 
 	if(!Memory::CheckRegion(address, sMem->pgCount * PAGE_SIZE_4K, Scheduler::GetCurrentProcess()->addressSpace)) // Make sure the process is not screwing with kernel memory
 		return -1;
@@ -1160,9 +1162,11 @@ long SysSocket(regs64_t* r){
 	int type = SC_ARG1(r);
 	int protocol = SC_ARG2(r);
 
-	Socket* sock = Socket::CreateSocket(domain, type, protocol);
+	Socket* sock = nullptr;
+	int e = Socket::CreateSocket(domain, type, protocol, &sock);
 
-	if(!sock) return -1;
+	if(e < 0) return e;
+	assert(sock);
 	
 	fs_fd_t* fDesc = fs::Open(sock, 0);
 
@@ -1186,23 +1190,29 @@ long SysSocket(regs64_t* r){
  */
 long SysBind(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
-	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
+	long fd = SC_ARG0(r);
+
+	if(fd >= proc->fileDescriptors.get_length()){
+		Log::Warning("SysBind: Invalid file descriptor: ", fd);
+		return -EBADF; 
+	}
+	fs_fd_t* handle = proc->fileDescriptors.get_at(fd);
 	if(!handle){ 
-		Log::Warning("sys_bind: Invalid file descriptor: ", SC_ARG0(r));
-		return -1; 
+		Log::Warning("SysBind: Invalid file descriptor: ", fd);
+		return -EBADF; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_bind: File (Descriptor: %d) is not a socket", SC_ARG0(r));
-		return -2;
+		Log::Warning("SysBind: File (Descriptor: %d) is not a socket", SC_ARG0(r));
+		return -ENOTSOCK;
 	}
 
 	socklen_t len = SC_ARG2(r);
 	
 	sockaddr_t* addr = (sockaddr_t*)SC_ARG1(r);
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
-		Log::Warning("sys_bind: Invalid sockaddr ptr");
-		return -3;
+		Log::Warning("SysBind: Invalid sockaddr ptr");
+		return -EINVAL;
 	}
 
 	Socket* sock = (Socket*)handle->node;
@@ -1222,50 +1232,49 @@ long SysListen(regs64_t* r){
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
 		Log::Warning("sys_listen: Invalid file descriptor: ", SC_ARG0(r));
-		return -1; 
+		return -EINVAL; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_listen: File (Descriptor: %d) is not a socket", SC_ARG0(r));
-		return -2;
+		return -ENOTSOCK;
 	}
 
 	Socket* sock = (Socket*)handle->node;
 	return sock->Listen(SC_ARG1(r));
 }
 
-/* 
- * SysAccept (sockfd, addr, addrlen) - Accept socket connection
- * sockfd - Socket file descriptor
- * addr - sockaddr structure
- * addrlen - size of addr
- *
- * On Success - return file descriptor of accepted socket
- * On Failure - return -1
- */
+/////////////////////////////
+/// \name SysAccept (sockfd, addr, addrlen) - Accept socket connection
+/// \param sockfd - Socket file descriptor
+/// \param addr - sockaddr structure
+/// \param addrlen - pointer to size of addr
+///
+/// \return File descriptor of accepted socket or negative error code
+/////////////////////////////
 long SysAccept(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
 		Log::Warning("sys_accept: Invalid file descriptor: ", SC_ARG0(r));
-		return -1; 
+		return -EINVAL; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_accept: File (Descriptor: %d) is not a socket", SC_ARG0(r));
-		return -2;
+		return -ENOTSOCK;
 	}
 
 	socklen_t* len = (socklen_t*)SC_ARG2(r);
 	if(len && !Memory::CheckUsermodePointer(SC_ARG2(r), sizeof(socklen_t), proc->addressSpace)){
 		Log::Warning("sys_accept: Invalid socklen ptr");
-		return -3;
+		return -EFAULT;
 	}
 	
 	sockaddr_t* addr = (sockaddr_t*)SC_ARG1(r);
 	if(addr && !Memory::CheckUsermodePointer(SC_ARG1(r), *len, proc->addressSpace)){
 		Log::Warning("sys_accept: Invalid sockaddr ptr");
-		return -3;
+		return -EFAULT;
 	}
 
 	Socket* sock = (Socket*)handle->node;
@@ -1285,26 +1294,25 @@ long SysAccept(regs64_t* r){
 		return -1;
 }
 
-/* 
- * SysConnect (sockfd, addr, addrlen) - Initiate socket connection
- * sockfd - Socket file descriptor
- * addr - sockaddr structure
- * addrlen - size of addr
- *
- * On Success - return 0
- * On Failure - return -1
- */
+/////////////////////////////
+/// \name SysConnect (sockfd, addr, addrlen) - Initiate socket connection
+/// \param sockfd - Socket file descriptor
+/// \param addr - sockaddr structure
+/// \param addrlen - size of addr
+///
+/// \return 0 on success or negative error code on failure
+/////////////////////////////
 long SysConnect(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
 		Log::Warning("sys_connect: Invalid file descriptor: ", SC_ARG0(r));
-		return -1; 
+		return -EINVAL; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_connect: File (Descriptor: %d) is not a socket", SC_ARG0(r));
-		return -2;
+		return -EFAULT;
 	}
 
 	socklen_t len = SC_ARG2(r);
@@ -1312,7 +1320,7 @@ long SysConnect(regs64_t* r){
 	sockaddr_t* addr = (sockaddr_t*)SC_ARG1(r);
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
 		Log::Warning("sys_connect: Invalid sockaddr ptr");
-		return -3;
+		return -EFAULT;
 	}
 
 	Socket* sock = (Socket*)handle->node;
@@ -1339,17 +1347,17 @@ long SysSend(regs64_t* r){
 
 	if(!handle){ 
 		Log::Warning("sys_send: Invalid file descriptor: ", SC_ARG0(r));
-		return -1; 
+		return -EINVAL; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", SC_ARG0(r));
-		return -2;
+		return -ENOTSOCK;
 	}
 	
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
 		Log::Warning("sys_send: Invalid buffer ptr");
-		return -3;
+		return -EFAULT;
 	}
 
 	Socket* sock = (Socket*)handle->node;
@@ -1377,17 +1385,17 @@ long SysSendTo(regs64_t* r){
 
 	if(!handle){ 
 		Log::Warning("sys_send: Invalid file descriptor: ", SC_ARG0(r));
-		return -1; 
+		return -EINVAL; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", SC_ARG0(r));
-		return -2;
+		return -ENOTSOCK;
 	}
 	
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
 		Log::Warning("sys_send: Invalid buffer ptr");
-		return -3;
+		return -EFAULT;
 	}
 	
 	socklen_t slen = SC_ARG2(r);
@@ -1418,17 +1426,17 @@ long SysReceive(regs64_t* r){
 
 	if(!handle){ 
 		Log::Warning("sys_send: Invalid file descriptor: ", SC_ARG0(r));
-		return -1; 
+		return -EINVAL; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", SC_ARG0(r));
-		return -2;
+		return -ENOTSOCK;
 	}
 	
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
 		Log::Warning("sys_send: Invalid buffer ptr");
-		return -3;
+		return -EINVAL;
 	}
 
 	Socket* sock = (Socket*)handle->node;
@@ -1456,17 +1464,17 @@ long SysReceiveFrom(regs64_t* r){
 
 	if(!handle){ 
 		Log::Warning("sys_send: Invalid file descriptor: ", SC_ARG0(r));
-		return -1; 
+		return -EINVAL; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
 		Log::Warning("sys_send: File (Descriptor: %d) is not a socket", SC_ARG0(r));
-		return -2;
+		return -ENOTSOCK;
 	}
 	
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), len, proc->addressSpace)){
 		Log::Warning("sys_send: Invalid buffer ptr");
-		return -3;
+		return -EFAULT;
 	}
 	
 	socklen_t* slen = (socklen_t*)SC_ARG2(r);
@@ -1494,7 +1502,21 @@ long SysGetUID(regs64_t* r){
  * On Failure - Return negative value
  */
 long SysSetUID(regs64_t* r){
-	return -ENOSYS;
+	process_t* proc = Scheduler::GetCurrentProcess();
+	uid_t requestedUID = SC_ARG0(r);
+
+	if(proc->uid == requestedUID){
+		return 0;
+	}
+
+	if(proc->euid == 0){
+		proc->uid = requestedUID;
+		proc->euid = requestedUID;
+	} else {
+		return -EPERM;
+	}
+
+	return 0;
 }
 
 /* 
@@ -1641,8 +1663,10 @@ long SysSendMsg(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
 	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
-		Log::Warning("sys_sendmsg: Invalid File Descriptor: %d", SC_ARG0(r));
-		return -1;
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("sys_sendmsg: Invalid File Descriptor: %d", SC_ARG0(r));
+		});
+		return -EBADF;
 	}
 
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
@@ -1651,40 +1675,61 @@ long SysSendMsg(regs64_t* r){
 	uint64_t flags = SC_ARG3(r);
 
 	if(!handle){ 
-		Log::Warning("sys_sendmsg: Invalid file descriptor: ", SC_ARG0(r));
-		return -1; 
+		
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("sys_sendmsg: Invalid file descriptor: ", SC_ARG0(r));
+		});
+		return -EBADF; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_sendmsg: File (Descriptor: %d) is not a socket", SC_ARG0(r));
-		return -2;
+		
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("sys_sendmsg: File (Descriptor: %d) is not a socket", SC_ARG0(r));
+		});
+		return -ENOTSOCK;
 	}
 	
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(msghdr), proc->addressSpace)){
-		Log::Warning("sys_sendmsg: Invalid msg ptr");
+		
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("sys_sendmsg: Invalid msg ptr");
+		});
 		return -EFAULT;
 	}
 	
-	if(!Memory::CheckUsermodePointer((uintptr_t)msg->iov, sizeof(iovec) * msg->iovlen, proc->addressSpace)){
-		Log::Warning("sys_sendmsg: msg: Invalid iovec ptr");
+	if(!Memory::CheckUsermodePointer((uintptr_t)msg->msg_iov, sizeof(iovec) * msg->msg_iovlen, proc->addressSpace)){
+		
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("sys_sendmsg: msg: Invalid iovec ptr");
+		});
 		return -EFAULT;
 	}
 	
-	if(msg->name && !Memory::CheckUsermodePointer((uintptr_t)msg->name, msg->namelen, proc->addressSpace)){
-		Log::Warning("sys_sendmsg: msg: Invalid name ptr and name not null");
+	if(msg->msg_name && msg->msg_namelen && !Memory::CheckUsermodePointer((uintptr_t)msg->msg_name, msg->msg_namelen, proc->addressSpace)){
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("sys_sendmsg: msg: Invalid name ptr and name not null");
+		});
+		return -EFAULT;
+	}
+
+	if(msg->msg_control && msg->msg_controllen && !Memory::CheckUsermodePointer((uintptr_t)msg->msg_control, msg->msg_controllen, proc->addressSpace)){
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("sys_sendmsg: msg: Invalid control ptr and control null");
+		});
 		return -EFAULT;
 	}
 
 	long sent = 0;
 	Socket* sock = (Socket*)handle->node;
 
-	for(unsigned i = 0; i < msg->iovlen; i++){
-		if(!Memory::CheckUsermodePointer((uintptr_t)msg->iov[i].base, msg->iov[i].len, proc->addressSpace)){
+	for(unsigned i = 0; i < msg->msg_iovlen; i++){
+		if(!Memory::CheckUsermodePointer((uintptr_t)msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len, proc->addressSpace)){
 			Log::Warning("sys_sendmsg: msg: Invalid iovec entry base");
 			return -EFAULT;
 		}
 
-		long ret = sock->SendTo(msg->iov[i].base, msg->iov[i].len, flags, (sockaddr*)msg->name, msg->namelen);
+		long ret = sock->SendTo(msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len, flags, (sockaddr*)msg->msg_name, msg->msg_namelen, msg->msg_control, msg->msg_controllen);
 
 		if(ret < 0) return ret;
 
@@ -1707,8 +1752,10 @@ long SysRecvMsg(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
 	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
-		Log::Warning("sys_sendmsg: Invalid File Descriptor: %d", SC_ARG0(r));
-		return -1;
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("SysRecvMsg: Invalid File Descriptor: %d", SC_ARG0(r));
+			});
+		return -EBADF;
 	}
 
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
@@ -1717,35 +1764,52 @@ long SysRecvMsg(regs64_t* r){
 	uint64_t flags = SC_ARG3(r);
 
 	if(!handle){ 
-		Log::Warning("sys_recvmsg: Invalid file descriptor: ", SC_ARG0(r));
-		return -1; 
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("SysRecvMsg: Invalid file descriptor: ", SC_ARG0(r));
+		});
+		return -EBADF; 
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
-		Log::Warning("sys_recvmsg: File (Descriptor: %d) is not a socket", SC_ARG0(r));
-		return -2;
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("SysRecvMsg: File (Descriptor: %d) is not a socket", SC_ARG0(r));
+		});
+		return -ENOTSOCK;
 	}
 	
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(msghdr), proc->addressSpace)){
-		Log::Warning("sys_recvmsg: Invalid msg ptr");
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("SysRecvMsg: Invalid msg ptr");
+		});
 		return -EFAULT;
 	}
 	
-	if(!Memory::CheckUsermodePointer((uintptr_t)msg->iov, sizeof(iovec) * msg->iovlen, proc->addressSpace)){
-		Log::Warning("sys_recvmsg: msg: Invalid iovec ptr");
+	if(!Memory::CheckUsermodePointer((uintptr_t)msg->msg_iov, sizeof(iovec) * msg->msg_iovlen, proc->addressSpace)){
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("SysRecvMsg: msg: Invalid iovec ptr");
+		});
+		return -EFAULT;
+	}
+
+	if(msg->msg_control && msg->msg_controllen && !Memory::CheckUsermodePointer((uintptr_t)msg->msg_control, msg->msg_controllen, proc->addressSpace)){
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("SysRecvMsg: msg: Invalid control ptr and control null");
+		});
 		return -EFAULT;
 	}
 
 	long read = 0;
 	Socket* sock = (Socket*)handle->node;
 
-	for(unsigned i = 0; i < msg->iovlen; i++){
-		if(!Memory::CheckUsermodePointer((uintptr_t)msg->iov[i].base, msg->iov[i].len, proc->addressSpace)){
-			Log::Warning("sys_recvmsg: msg: Invalid iovec entry base");
+	for(unsigned i = 0; i < msg->msg_iovlen; i++){
+		if(!Memory::CheckUsermodePointer((uintptr_t)msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len, proc->addressSpace)){
+			Log::Warning("SysRecvMsg: msg: Invalid iovec entry base");
 			return -EFAULT;
 		}
 
-		long ret = sock->ReceiveFrom(msg->iov[i].base, msg->iov[i].len, flags, reinterpret_cast<sockaddr*>(msg->name), &msg->namelen);
+		socklen_t len = msg->msg_namelen;
+		long ret = sock->ReceiveFrom(msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len, flags, reinterpret_cast<sockaddr*>(msg->msg_name), &len, msg->msg_control, msg->msg_controllen);
+		msg->msg_namelen = len;
 
 		if(ret < 0) {
 			return ret;
@@ -1763,7 +1827,7 @@ long SysRecvMsg(regs64_t* r){
 /// \return Process EUID (int)
 /////////////////////////////
 long SysGetEUID(regs64_t* r){
-	return Scheduler::GetCurrentProcess()->uid;
+	return Scheduler::GetCurrentProcess()->euid;
 }
 
 /////////////////////////////
@@ -1772,8 +1836,21 @@ long SysGetEUID(regs64_t* r){
 /// \return On success return 0, otherwise return negative error code
 /////////////////////////////
 long SysSetEUID(regs64_t* r){
-	Log::Warning("SysSetEUID is a stub!");
-	return -ENOSYS;
+	process_t* proc = Scheduler::GetCurrentProcess();
+	uid_t requestedEUID = SC_ARG0(r);
+
+	// Unprivileged processes may only set the effective user ID to the real user ID or the effective user ID
+	if(proc->euid == requestedEUID){
+		return 0;
+	}
+
+	if(proc->uid == 0 || proc->uid == requestedEUID){
+		proc->euid = requestedEUID;
+	} else {
+		return -EPERM;
+	}
+	
+	return 0;
 }
 
 /////////////////////////////
@@ -2595,7 +2672,6 @@ long SysKernelObjectWait(regs64_t* r){
 	return 0;
 }
 
-
 /////////////////////////////
 /// \brief SysKernelObjectDestroy (object)
 ///
@@ -2625,6 +2701,83 @@ long SysKernelObjectDestroy(regs64_t* r){
 	Scheduler::DestroyHandle(currentProcess, SC_ARG0(r));
 	return 0;
 }
+
+/////////////////////////////
+/// \brief SysSetSocketOptions(sockfd, level, optname, optval, optlen)
+///
+/// Set options on sockets 
+///
+/// \param sockfd Socket file desscriptor
+/// \param level
+/// \param optname
+/// \param optval
+/// \param optlen
+///
+/// \return 0 on success negative error code on failure
+/////////////////////////////
+long SysSetSocketOptions(regs64_t* r){
+	int fd = SC_ARG0(r);
+	int level = SC_ARG1(r);
+	int opt = SC_ARG2(r);
+	const void* optVal = reinterpret_cast<void*>(SC_ARG3(r));
+	socklen_t optLen = SC_ARG4(r);
+
+	fs_fd_t* handle;
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	if(static_cast<unsigned>(fd) >= currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
+		return -EBADF;
+	}
+
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
+		return -ENOTSOCK; //  Not a socket
+	}
+
+	if(opt && optLen && !Memory::CheckUsermodePointer(SC_ARG3(r), optLen, currentProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	Socket* sock = reinterpret_cast<Socket*>(handle->node);
+	return sock->SetSocketOptions(level, opt, optVal, optLen);
+}
+
+/////////////////////////////
+/// \brief SysGetSocketOptions(sockfd, level, optname, optval, optlen)
+///
+/// Get options on sockets 
+///
+/// \param sockfd Socket file desscriptor
+/// \param level
+/// \param optname
+/// \param optval
+/// \param optlen
+///
+/// \return 0 on success negative error code on failure
+/////////////////////////////
+long SysGetSocketOptions(regs64_t* r){
+	int fd = SC_ARG0(r);
+	int level = SC_ARG1(r);
+	int opt = SC_ARG2(r);
+	void* optVal = reinterpret_cast<void*>(SC_ARG3(r));
+	socklen_t* optLen = reinterpret_cast<socklen_t*>(SC_ARG4(r));
+
+	fs_fd_t* handle;
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	if(static_cast<unsigned>(fd) >= currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
+		return -EBADF;
+	}
+
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
+		return -ENOTSOCK; //  Not a socket
+	}
+
+	if(opt && *optLen && !Memory::CheckUsermodePointer(SC_ARG3(r), *optLen, currentProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	Socket* sock = reinterpret_cast<Socket*>(handle->node);
+	return sock->GetSocketOptions(level, opt, optVal, optLen);
+}
+
 
 syscall_t syscalls[]{
 	SysDebug,
@@ -2714,6 +2867,8 @@ syscall_t syscalls[]{
 	SysKernelObjectWaitOne,
 	SysKernelObjectWait,		// 85
 	SysKernelObjectDestroy,
+	SysSetSocketOptions,
+	SysGetSocketOptions,
 };
 
 int lastSyscall = 0;

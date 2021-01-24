@@ -96,8 +96,7 @@ namespace Network{
 
     void Intel8254x::OnInterrupt(){
         uint32_t status = ReadMem32(I8254_REGISTER_INT_READ);
-        Log::Info("Net Interrupt, Status: %x", status);
-
+        
         if(status & 0x4){
             Log::Info("[i8254x] Initializing Link...");
 

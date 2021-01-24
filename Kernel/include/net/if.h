@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include <abi-bits/in.h>
+
 #define IF_NAMESIZE 16
 
 #define SIOCADDRT 0x890B
@@ -41,9 +43,6 @@
 #define SIOCDIFADDR 0x8936
 #define SIOCSIFHWBROADCAST 0x8937
 #define SIOCGIFCOUNT 0x8938
-
-typedef unsigned int sa_family_t;
-typedef uint32_t socklen_t;
 
 typedef struct sockaddr {
     sa_family_t family;

@@ -140,7 +140,7 @@ namespace Network::UDP{
         return -EOPNOTSUPP;
     }
 
-    int64_t UDPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen){
+    int64_t UDPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
         if(!packets.get_length()){
             if(flags & MSG_DONTWAIT){
                 return -EAGAIN; // Don't wait
@@ -181,7 +181,7 @@ namespace Network::UDP{
         return finalLength;
     }
 
-    int64_t UDPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen){
+    int64_t UDPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
         IPv4Address sendIPAddress;
         BigEndian<uint16_t> destPort;
 

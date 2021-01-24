@@ -11,19 +11,11 @@
 #include <stream.h>
 #include <list.h>
 
-#define MSG_CTRUNC 0x1
-#define MSG_DONTROUTE 0x2
-#define MSG_EOR 0x4
-#define MSG_OOB 0x8
-#define MSG_NOSIGNAL 0x10
-#define MSG_PEEK 0x20
-#define MSG_TRUNC 0x40
-#define MSG_WAITALL 0x80
-#define MSG_DONTWAIT 0x1000
+#include <abi-bits/in.h>
+#include <abi-bits/socket.h>
+#include <bits/posix/socklen_t.h>
 
 #define CONNECTION_BACKLOG 128
-
-#define SOCK_NONBLOCK 0x10000
 
 #define STREAM_MAX_BUFSIZE 0x20000 // 128 KB
 
@@ -32,30 +24,10 @@ struct sockaddr_un {
     char        sun_path[108];            /* Pathname */
 };
 
-struct in_addr {
-    uint32_t s_addr;
-};
-
-struct sockaddr_in {
-	sa_family_t sin_family;
-	uint16_t sin_port;
-	struct in_addr sin_addr;
-	uint8_t pad[8];
-};
-
-struct iovec {
-    void* base;
-    size_t len;
-};
-
-struct msghdr {
-    void* name;
-    socklen_t namelen;
-    struct iovec* iov;
-    size_t iovlen;
-    void* control;
-    size_t controllen;
-    int flags;
+struct cmsghdr {
+	socklen_t cmsg_len;
+	int cmsg_level;
+	int cmsg_type;
 };
 
 struct poll {
@@ -72,19 +44,19 @@ struct SocketConnection {
 };
 
 enum {
-    StreamSocket = 4,
-    DatagramSocket = 1,
-    SequencedSocket = 3,
-    RawSocket = 0x10000,
-    ReliableDatagramSocket = 0x20000,
+    StreamSocket = SOCK_STREAM,
+    DatagramSocket = SOCK_DGRAM,
+    SequencedSocket = SOCK_SEQPACKET,
+    RawSocket = SOCK_RAW,
+    ReliableDatagramSocket = SOCK_RDM,
     // Packet is considered obsolete
 };
 
 enum SocketProtocol {
-    InternetProtocol = 1,
-    InternetProtocol6 = 2,
-    UnixDomain = 3,
-    LocalDomain = 3,
+    UnixDomain = PF_UNIX,
+    LocalDomain = PF_LOCAL,
+    InternetProtocol = PF_INET,
+    InternetProtocol6 = PF_INET6,
 };
 
 enum {
@@ -102,11 +74,11 @@ protected:
     bool bound = false; // Has it been bound to an address>
     bool passive = false; // Listening?
     bool blocking = true;
-public:
+public: 
     bool connected = false; // Connected?
     int role; // Server/Client
     
-    static Socket* CreateSocket(int domain, int type, int protocol);
+    static int CreateSocket(int domain, int type, int protocol, Socket** sock);
 
     Socket(int type, int protocol);
     virtual ~Socket();
@@ -117,13 +89,16 @@ public:
     virtual int Connect(const sockaddr* addr, socklen_t addrlen);
     virtual int Listen(int backlog);
     
-    virtual int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
+    virtual int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
     virtual int64_t Receive(void* buffer, size_t len, int flags);
     virtual ssize_t Read(size_t offset, size_t size, uint8_t* buffer);
     
-    virtual int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
+    virtual int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
     virtual int64_t Send(void* buffer, size_t len, int flags);
     virtual ssize_t Write(size_t offset, size_t size, uint8_t* buffer);
+
+    virtual int SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength);
+    virtual int GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength);
     
     virtual fs_fd_t* Open(size_t flags);
     virtual void Close();
@@ -165,8 +140,8 @@ public:
     fs_fd_t* Open(size_t flags);
     void Close();
     
-    int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
-    int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
+    int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
+    int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
     
     void Watch(FilesystemWatcher& watcher, int events);
     void Unwatch(FilesystemWatcher& watcher);
@@ -180,7 +155,11 @@ protected:
     BigEndian<uint16_t> port = 0;
     BigEndian<uint16_t> destinationPort = 0;
 
+    bool pktInfo = false; // Check for packet info field?
+
     List<NetworkPacket> pQueue;
+
+    Network::NetworkAdapter* adapter = nullptr; // Bound adapter
 
     virtual unsigned short AllocatePort() = 0;
     virtual int AcquirePort(uint16_t port) = 0;
@@ -195,10 +174,13 @@ public:
     int Connect(const sockaddr* addr, socklen_t addrlen);
     int Listen(int backlog);
 
+    int SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength);
+    int GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength);
+
     void Close();
     
-    virtual int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
-    virtual int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
+    virtual int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
+    virtual int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
 };
 
 namespace Network::UDP{
@@ -231,8 +213,8 @@ namespace Network::UDP{
         int Connect(const sockaddr* addr, socklen_t addrlen);
         int Listen(int backlog);
 
-        int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen);
-        int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen);
+        int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
+        int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
     };
 }
 

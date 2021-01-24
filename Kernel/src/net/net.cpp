@@ -22,6 +22,8 @@ namespace Network {
     }
 
     void InitializeConnections(){
+        FindMainAdapter();
+
         if(!mainAdapter) {
             Log::Info("No network adapter found!");
             return;
@@ -90,5 +92,15 @@ namespace Network {
         adapters.add_back(adapter);
 
         releaseLock(&adaptersLock);
+    }
+
+    NetworkAdapter* NetFS::FindAdapter(const char* name, size_t len){
+        for(NetworkAdapter* adapter : adapters){
+            if(strncmp(name, adapter->name, len) == 0){
+                return adapter;
+            }
+        }
+
+        return nullptr;
     }
 }

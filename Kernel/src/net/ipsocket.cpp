@@ -53,7 +53,7 @@ int IPSocket::Listen(int backlog){
 	return -ENOSYS;
 }
     
-int64_t IPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen){
+int64_t IPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
 	if(flags & SOCK_NONBLOCK && !pQueue.get_length()){
 		return -EAGAIN;
 	}
@@ -67,7 +67,53 @@ int64_t IPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src
 	}
 }
 
-int64_t IPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen){
+int64_t IPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
+	return -ENOSYS;
+}
+
+int IPSocket::SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength){
+	if(level == SOL_IP){
+		switch(opt){
+		case IP_PKTINFO:
+			if(type != DatagramSocket){
+				return -ENOPROTOOPT;
+			}
+
+			if(optLength > 4){
+				pktInfo = *(int32_t*)optValue;
+			} else {
+				return -EINVAL;
+			}
+			break;
+		default:
+			return -EINVAL;
+		}
+	} else if(level == SOL_SOCKET && opt == SO_BINDTODEVICE) {
+		const char* req = reinterpret_cast<const char*>(optValue);
+		
+		Network::NetworkAdapter* a = Network::NetFS::GetInstance()->FindAdapter(req, optLength);
+
+		if(a){
+			adapter = a;
+		} else {
+			return -EINVAL; // No such interface found
+		}
+
+		return 0;
+	} else if(level == SOL_SOCKET && opt == SO_BINDTOIFINDEX) {
+		if(optLength >= sizeof(ifreq)){
+			return -ENOSYS; // TODO: Bind to interface index
+		} else {
+			return -EINVAL;
+		}
+	} else {
+		return Socket::SetSocketOptions(level, opt, optValue, optLength);
+	}
+	
+	return 0;
+}
+
+int IPSocket::GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength){
 	return -ENOSYS;
 }
 

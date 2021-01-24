@@ -5,30 +5,36 @@
 #include <errno.h>
 #include <scheduler.h>
 
-Socket* Socket::CreateSocket(int domain, int type, int protocol){
+int Socket::CreateSocket(int domain, int type, int protocol, Socket** sock){
     if(type & SOCK_NONBLOCK) type &= ~SOCK_NONBLOCK;
 
     if(domain != UnixDomain && domain != InternetProtocol){
         Log::Warning("CreateSocket: domain %d is not supported", domain);
-        return nullptr;
+        return -EAFNOSUPPORT;
     }
     if(type != StreamSocket && type != DatagramSocket){
         Log::Warning("CreateSocket: type %d is not supported", type);
-        return nullptr;
+        return -EPROTONOSUPPORT;
     }
+    
     if(protocol){
         Log::Warning("CreateSocket: protocol is ignored");
     }
     
     if(domain == UnixDomain){
-        return new LocalSocket(type, protocol);
+        *sock = new LocalSocket(type, protocol);
+        return 0;
     } else if (domain == InternetProtocol){
         if(type == DatagramSocket){
-            return new Network::UDP::UDPSocket(type, protocol);
+            *sock = new Network::UDP::UDPSocket(type, protocol);
+            return 0;
+        } else if(type == StreamSocket){
+            //*sock = new Network::TCP::TCPSocket(type, protocol);
+            return -EPROTONOSUPPORT;
         }
     }
 
-    return nullptr;
+    return -EINVAL;
 }
 
 Socket::Socket(int type, int protocol){
@@ -78,7 +84,7 @@ int64_t Socket::Receive(void* buffer, size_t len, int flags){
     return ReceiveFrom(buffer, len, flags, nullptr, nullptr);
 }
 
-int64_t Socket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen){
+int64_t Socket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
     assert(!"ReceiveFrom has been called from socket base");
 
     return -1; // We should not return but get the compiler to shut up
@@ -92,10 +98,18 @@ int64_t Socket::Send(void* buffer, size_t len, int flags){
     return SendTo(buffer, len, flags, nullptr, 0);
 }
     
-int64_t Socket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen){
+int64_t Socket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
     assert(!"SendTo has been called from socket base");
 
     return -1; // We should not return but get the compiler to shut up
+}
+
+int Socket::GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength){
+    return -ENOSYS;
+}
+
+int Socket::SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength){
+    return -ENOSYS;
 }
 
 fs_fd_t* Socket::Open(size_t flags){
@@ -294,7 +308,7 @@ int LocalSocket::Listen(int backlog){
     return 0;
 }
 
-int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen){
+int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
     if(type == StreamSocket){
         if(src || addrlen){
             return -EISCONN;
@@ -323,7 +337,7 @@ int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* 
     }
 }
 
-int64_t LocalSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen){
+int64_t LocalSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
     if(type == StreamSocket){
         if(src || addrlen){
             return -EISCONN;

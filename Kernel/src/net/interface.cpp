@@ -118,12 +118,14 @@ namespace Network::Interface{
 		Scheduler::CreateProcess((void*)InterfaceThread);
 	}
 
-	void Send(void* data, size_t length){
-		if(mainAdapter)
+	void Send(void* data, size_t length, NetworkAdapter* adapter){
+		if(adapter)
+			adapter->SendPacket(data, length);
+		else if(mainAdapter)
 			mainAdapter->SendPacket(data, length);
 	}
 
-    int SendIPv4(void* data, size_t length, IPv4Address& destination, uint8_t protocol){
+    int SendIPv4(void* data, size_t length, IPv4Address& destination, uint8_t protocol, NetworkAdapter* adapter){
 		if(length > 1518 - sizeof(EthernetFrame) - sizeof(IPv4Header)){
 			return -EMSGSIZE;
 		}
@@ -150,12 +152,12 @@ namespace Network::Interface{
 
 		memcpy(ipHeader->data, data, length);
 
-		Send(ethFrame, sizeof(EthernetFrame) + sizeof(IPv4Header) + length);
+		Send(ethFrame, sizeof(EthernetFrame) + sizeof(IPv4Header) + length, adapter);
 
 		return 0;
 	}
 
-    int SendUDP(void* data, size_t length, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort){
+    int SendUDP(void* data, size_t length, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter){
 		if(length > 1518){
 			return -EMSGSIZE;
 		}
@@ -172,6 +174,6 @@ namespace Network::Interface{
 
 		//header->checksum = CaclulateChecksum(header, sizeof(UDPHeader));
 
-		return SendIPv4(header, header->length, destination, IPv4ProtocolUDP);
+		return SendIPv4(header, header->length, destination, IPv4ProtocolUDP, adapter);
 	}
 }

@@ -156,7 +156,9 @@ namespace Network {
 
         int ReadDir(DirectoryEntry* dirent, uint32_t index);
         FsNode* FindDir(char* name);
+
         void RegisterAdapter(NetworkAdapter* adapter);
+        NetworkAdapter* FindAdapter(const char* name, size_t nameLen);
 
         inline static NetFS* GetInstance() { return instance; }
     };
@@ -191,9 +193,9 @@ namespace Network {
     namespace Interface {
         void Initialize();
 
-        void Send(void* data, size_t length);
-        int SendIPv4(void* data, size_t length, IPv4Address& destination, uint8_t protocol);
-        int SendUDP(void* data, size_t length, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort);
+        void Send(void* data, size_t length, NetworkAdapter* adapter = nullptr);
+        int SendIPv4(void* data, size_t length, IPv4Address& destination, uint8_t protocol, NetworkAdapter* adapter = nullptr);
+        int SendUDP(void* data, size_t length, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter = nullptr);
     }
     
     namespace UDP{

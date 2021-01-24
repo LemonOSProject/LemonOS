@@ -6,14 +6,41 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <dirent.h>
 
 #include <vector>
+#include <string>
+#include <string_view>
 
 #include "dhcp.h"
 
 int dhcpSocket;
 sockaddr_in dhcpClientAddress;
 sockaddr_in dhcpServerAddress;
+
+class NetworkInterface{
+	std::string_view name;
+	int sock;
+
+public:
+	uint32_t interfaceIP;
+	uint32_t gatewayIP;
+	uint32_t subnetMask;
+
+	std::vector<uint32_t> dnsServers;
+	NetworkInterface(const char* ifName, int ifSocket){
+		name = strdup(ifName);
+		sock = ifSocket;
+
+		printf("Initializing interface %s!\n", ifName);
+	}
+
+	int GetLink();
+
+	~NetworkInterface(){
+		close(sock);
+	}
+};
 
 void SendDHCPMessage(DHCPHeader& header, std::vector<void*>& options){
 	uint8_t* headerOptions = header.options;
@@ -32,11 +59,34 @@ void SendDHCPMessage(DHCPHeader& header, std::vector<void*>& options){
 	sendto(dhcpSocket, &header, sizeof(DHCPHeader), 0, (sockaddr*)&dhcpServerAddress, sizeof(sockaddr_in));
 }
 
+std::vector<NetworkInterface*> interfaces;
 int main(){
-	int netFS = open("/dev/net", O_RDONLY | O_DIRECTORY);
-	if(netFS < 0){
+	DIR* netFS = opendir("/dev/net");
+	if(!netFS){
 		perror("Error opening /dev/net");
 		return 1;
+	}
+
+	while(dirent* entry = readdir(netFS)){
+		if(strcmp(entry->d_name, "..") == 0 || strcmp(entry->d_name, ".") == 0){
+			continue; // Ignore . and ..
+		}
+
+		int sock = socket(AF_INET, SOCK_DGRAM, 0);
+		if(sock < 0){
+			perror("Error creating UDP socket");
+			continue;
+		}
+
+		int status = setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, entry->d_name, strlen(entry->d_name));
+		if(status){
+			fprintf(stderr, "Error binding to interface '%s': %s\n", entry->d_name, strerror(errno));
+
+			close(sock);
+			continue;
+		}
+
+		interfaces.push_back(new NetworkInterface(entry->d_name, sock));
 	}
 
 	dhcpSocket = socket(AF_INET, SOCK_DGRAM, 0);
