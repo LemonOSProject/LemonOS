@@ -19,6 +19,34 @@
 
 #define STREAM_MAX_BUFSIZE 0x20000 // 128 KB
 
+struct rtentry {
+	unsigned long rt_pad1;
+	struct sockaddr rt_dst;
+	struct sockaddr rt_gateway;
+	struct sockaddr rt_genmask;
+	unsigned short rt_flags;
+	short rt_pad2;
+	unsigned long rt_pad3;
+	void *rt_pad4;
+	short rt_metric;
+	char *rt_dev;
+	unsigned long rt_mtu;
+	unsigned long rt_window;
+	unsigned short rt_irtt;
+};
+
+#define RTF_UP 0x0001 // Route not deleted
+#define RTF_GATEWAY 0x0002 // Route points not to the ultimate destination but to an immediate destination
+#define RTF_HOST 0x0004
+#define RTF_REINSTATE 0x0008
+#define RTF_DYNAMIC 0x0010
+#define RTF_MODIFIED 0x0020
+#define RTF_MTU 0x0040
+#define RTF_MSS RTF_MTU
+#define RTF_WINDOW 0x0080
+#define RTF_IRTT 0x0100
+#define RTF_REJECT 0x0200
+
 struct sockaddr_un {
     sa_family_t sun_family;               /* AF_UNIX */
     char        sun_path[108];            /* Pathname */
@@ -168,6 +196,8 @@ protected:
 public:
     IPSocket(int type, int protocol);
     virtual ~IPSocket();
+
+    int Ioctl(uint64_t cmd, uint64_t arg);
     
     Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
     int Bind(const sockaddr* addr, socklen_t addrlen);
@@ -176,6 +206,7 @@ public:
 
     int SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength);
     int GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength);
+    
 
     void Close();
     

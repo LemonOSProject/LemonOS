@@ -399,7 +399,9 @@ namespace Scheduler{
         asm("sti");
         
         for(auto& h : process->handles){
-            h.ko->Destroy();
+            if(h.id && h.ko.get()){
+                h.ko->Destroy();
+            }
         }
 
         process->handles.clear();

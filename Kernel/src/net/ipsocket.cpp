@@ -1,5 +1,7 @@
 #include <net/net.h>
 #include <net/socket.h>
+#include <net/networkadapter.h>
+
 #include <errno.h>
 #include <logging.h>
 
@@ -10,6 +12,14 @@ IPSocket::IPSocket(int type, int protocol) : Socket(type, protocol) {
 
 IPSocket::~IPSocket(){
 	
+}
+
+int IPSocket::Ioctl(uint64_t cmd, uint64_t arg){
+	if(adapter){
+		return adapter->Ioctl(cmd, arg); // Adapter ioctls
+	} else {
+		return -ENODEV; // We are not bound to an interface
+	}
 }
 
 int64_t IPSocket::OnReceive(void* buffer, size_t len){
@@ -31,6 +41,14 @@ int IPSocket::Bind(const sockaddr* addr, socklen_t addrlen){
 	if(addrlen < sizeof(sockaddr_in)){
 		Log::Warning("[UDPSocket] Invalid address length");
 		return -EINVAL;
+	}
+
+	if(inetAddr->sin_addr.s_addr == INADDR_ANY){
+		adapter = Network::mainAdapter;
+	} else if(Network::NetworkAdapter* a = Network::NetFS::GetInstance()->FindAdapter(inetAddr->sin_addr.s_addr); a){
+		adapter = a;
+	} else {
+		return -EADDRNOTAVAIL; // Address does not exist
 	}
 
 	address = inetAddr->sin_addr.s_addr;

@@ -159,6 +159,7 @@ namespace Network {
 
         void RegisterAdapter(NetworkAdapter* adapter);
         NetworkAdapter* FindAdapter(const char* name, size_t nameLen);
+        NetworkAdapter* FindAdapter(uint32_t ip);
 
         inline static NetFS* GetInstance() { return instance; }
     };

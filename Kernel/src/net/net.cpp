@@ -103,4 +103,14 @@ namespace Network {
 
         return nullptr;
     }
+
+    NetworkAdapter* NetFS::FindAdapter(uint32_t ip){
+        for(NetworkAdapter* adapter : adapters){
+            if(adapter->adapterIP.value == ip){
+                return adapter; // Found adapter with IP address
+            }
+        }
+
+        return nullptr;
+    }
 }

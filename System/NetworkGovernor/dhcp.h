@@ -13,8 +13,8 @@ enum {
 };
 
 enum {
-    DHCPOpCodeDiscover = 1,
-    DHCPOpCodeOffset = 2,
+    BootPRequest = 0x1,
+    BootPReply = 0x2,
 };
 
 enum {
