@@ -133,6 +133,28 @@ struct UDPHeader {
     uint8_t data[];
 } __attribute__((packed));
 
+struct TCPHeader {
+    BigEndian<uint16_t> srcPort; // Source Port
+    BigEndian<uint16_t> destPort; // Destination Port
+    BigEndian<uint32_t> sequence; // Sequence Number
+    BigEndian<uint32_t> ack; // Acknowledgement Number
+    uint8_t dataOffset : 4; // Size of the tcp header in DWORDs (min 5, max 15)
+    uint8_t reserved : 3;
+    uint8_t ns : 1; // Nonce
+    uint8_t cwr : 1; // Congestion window reduced
+    uint8_t ece : 1; // If SYN is set: ECN capable, if SYN clear: packet with Congestion Experienced set received
+    uint8_t urg : 1; // Urgent pointer used
+    uint8_t ack : 1; // Acknowledgement number used, all packets after the first SYN should have this flag set
+    uint8_t psh : 1; // Push function, push buffered data to the recieving application
+    uint8_t rst : 1; // Reset the connection
+    uint8_t syn : 1; // Synchronize sequence numbers, should be sent at start of transmission
+    uint8_t fin : 1; // Last packet from sender
+    BigEndian<uint16_t> windowSize;
+    BigEndian<uint16_t> checksum; // Checksum of TCP header, payload and IP pseudoheader consisting of source IP, dest IP, length and protocol number
+    BigEndian<uint16_t> urgentPointer; // If URG set, offset from the sequence number indicating last urgent byte
+    // Options...
+} __attribute__((packed));
+
 struct ICMPHeader{
     uint8_t type;
     uint8_t code;

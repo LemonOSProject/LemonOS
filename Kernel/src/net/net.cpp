@@ -54,7 +54,7 @@ namespace Network {
         arp->destPrAddr = ip.value;
         arp->srcPrAddr = adapter->adapterIP.value;
         arp->pLength = 4;
-        arp->prType = EtherTypeIPv4;
+        arp->prType = EtherTypeARP;
 
         arp->opcode = ARPHeader::ARPRequest;
 
