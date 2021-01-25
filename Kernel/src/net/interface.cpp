@@ -12,13 +12,57 @@
 
 #define NET_INTERFACE_STACKSIZE 32768
 
-namespace Network::Interface{
-	IPv4Address gateway = {0, 0, 0, 0};
-	IPv4Address subnet = {255, 255, 255, 255};
+namespace Network{
+	extern HashMap<uint32_t, MACAddress> addressCache;;
 
-	MACAddress IPLookup(IPv4Address& ip){
-		Log::Warning("[Network] IPLookup not implemented");
-		return {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};	
+	void OnReceiveARP(void* data, size_t length){
+		if(length < sizeof(ARPHeader)){
+			IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
+				Log::Warning("[Network] [ARP] Discarding packet (too short)");
+			});
+
+			return;
+		}
+
+		ARPHeader* arp = reinterpret_cast<ARPHeader*>(data);
+
+		if(arp->opcode == arp->ARPRequest){
+			NetworkAdapter* adapter = NetFS::GetInstance()->FindAdapter(arp->destPrAddr.value); // Find corresponding adapter to ip address
+
+			if(adapter){ // One of our adapters!
+				IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
+					Log::Info("[Network] [ARP] Who is %d.%d.%d.%d? %d.%d.%d.%d it is us at %x:%x:%x:%x:%x:%x!",
+						arp->destPrAddr.data[0], arp->destPrAddr.data[1], arp->destPrAddr.data[2], arp->destPrAddr.data[3],
+						arp->srcPrAddr.data[0], arp->srcPrAddr.data[1], arp->srcPrAddr.data[2], arp->srcPrAddr.data[3],
+						adapter->mac.data[0], adapter->mac.data[1], adapter->mac.data[2], adapter->mac.data[3], adapter->mac.data[4], adapter->mac.data[5]);
+				});
+
+				uint8_t buffer[sizeof(EthernetFrame) + sizeof(ARPHeader)];
+				
+				EthernetFrame* ethFrame = reinterpret_cast<EthernetFrame*>(buffer);
+				ethFrame->etherType = EtherTypeIPv4;
+				ethFrame->src = adapter->mac;
+				ethFrame->dest = arp->srcHwAddr;
+
+				ARPHeader* reply = reinterpret_cast<ARPHeader*>(buffer + sizeof(EthernetFrame));
+				reply->destHwAddr = arp->srcHwAddr;
+				reply->srcHwAddr = adapter->mac;
+				reply->hLength = 6;
+				reply->hwType = 1; // Ethernet
+
+				reply->destPrAddr = arp->srcPrAddr;
+				reply->srcPrAddr = adapter->adapterIP.value;
+				reply->pLength = 4;
+				reply->prType = EtherTypeIPv4;
+
+				reply->opcode = ARPHeader::ARPReply;
+
+				Network::Send(buffer, sizeof(EthernetFrame) + sizeof(ARPHeader), adapter);
+			}
+		}
+
+		// Insert into cache regardless of whether it was a reply or request
+		addressCache.insert(arp->srcPrAddr.value, arp->srcHwAddr);
 	}
 
 	void OnReceiveICMP(void* data, size_t length){
@@ -29,9 +73,6 @@ namespace Network::Interface{
 
 		ICMPHeader* header = (ICMPHeader*)data;
 		Log::Info("[Network] [ICMP] Received packet, Type: %d, Code: %d", header->type, header->code);
-	}
-
-	void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length){
 	}
 
     void OnReceiveIPv4(void* data, size_t length){
@@ -77,10 +118,6 @@ namespace Network::Interface{
 		for(;;){
 			NetworkPacket* p;
 			while((p = mainAdapter->DequeueBlocking())){
-				IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
-					Log::Info("got packet!");
-				});
-				
 				if(p->length < sizeof(EthernetFrame)){
 					Log::Warning("[Network] Discarding packet (too short)");
 
@@ -100,10 +137,13 @@ namespace Network::Interface{
 					//Log::Warning("[Network] Discarding packet (invalid MAC address %x:%x:%x:%x:%x:%x)", etherFrame->dest[0], etherFrame->dest[1], etherFrame->dest[2], etherFrame->dest[3], etherFrame->dest[4], etherFrame->dest[5]);
 				}
 				
-				switch (etherFrame->etherType)
+				switch ((uint16_t)etherFrame->etherType)
 				{
 				case EtherTypeIPv4:
 					OnReceiveIPv4(etherFrame->data, len - sizeof(EthernetFrame));
+					break;
+				case EtherTypeARP:
+					OnReceiveARP(etherFrame->data, len - sizeof(EthernetFrame));
 					break;
 				default:
 					Log::Warning("[Network] Discarding packet (invalid EtherType %x)", etherFrame->etherType);
@@ -113,7 +153,7 @@ namespace Network::Interface{
 		}
 	}
 
-	void Initialize(){
+	void InitializeNetworkThread(){
 		//Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), (uintptr_t)InterfaceThread, (uintptr_t)kmalloc(NET_INTERFACE_STACKSIZE) + NET_INTERFACE_STACKSIZE, KERNEL_CS, KERNEL_SS);
 		Scheduler::CreateProcess((void*)InterfaceThread);
 	}
@@ -125,7 +165,7 @@ namespace Network::Interface{
 			mainAdapter->SendPacket(data, length);
 	}
 
-    int SendIPv4(void* data, size_t length, IPv4Address& destination, uint8_t protocol, NetworkAdapter* adapter){
+    int SendIPv4(void* data, size_t length, IPv4Address& destination, MACAddress& immediateDestination, uint8_t protocol, NetworkAdapter* adapter){
 		if(length > 1518 - sizeof(EthernetFrame) - sizeof(IPv4Header)){
 			return -EMSGSIZE;
 		}
@@ -135,7 +175,7 @@ namespace Network::Interface{
 		EthernetFrame* ethFrame = (EthernetFrame*)buffer;
 		ethFrame->etherType = EtherTypeIPv4;
 		ethFrame->src = mainAdapter->mac;
-		ethFrame->dest = IPLookup(destination);
+		ethFrame->dest = immediateDestination;
 
 		IPv4Header* ipHeader = (IPv4Header*)ethFrame->data;
 		ipHeader->ihl = 5; // 5 dwords (20 bytes)
@@ -146,7 +186,7 @@ namespace Network::Interface{
 		ipHeader->protocol = protocol;
 		ipHeader->headerChecksum = 0;
 		ipHeader->destIP = destination;
-		ipHeader->sourceIP = gateway;
+		ipHeader->sourceIP = adapter->adapterIP;
 
 		ipHeader->headerChecksum = CaclulateChecksum(ipHeader, sizeof(IPv4Header));
 
@@ -155,25 +195,5 @@ namespace Network::Interface{
 		Send(ethFrame, sizeof(EthernetFrame) + sizeof(IPv4Header) + length, adapter);
 
 		return 0;
-	}
-
-    int SendUDP(void* data, size_t length, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter){
-		if(length > 1518){
-			return -EMSGSIZE;
-		}
-
-		uint8_t buffer[1600];
-
-		UDPHeader* header = (UDPHeader*)buffer;
-		header->destPort = destinationPort;
-		header->srcPort = sourcePort;
-		header->length = sizeof(UDPHeader) + length;
-		header->checksum = 0;
-
-		memcpy(header->data, data, length);
-
-		//header->checksum = CaclulateChecksum(header, sizeof(UDPHeader));
-
-		return SendIPv4(header, header->length, destination, IPv4ProtocolUDP, adapter);
 	}
 }

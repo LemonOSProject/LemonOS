@@ -48,8 +48,8 @@ namespace Network{
 
         // All of these are big-endian
         IPv4Address adapterIP = 0; // 0.0.0.0
-        IPv4Address gatewayIP = 0xFFFFFFFF; // 255.255.255.255
-        IPv4Address subnetMask = 0x00FFFFFF; // 255.255.255.0
+        IPv4Address gatewayIP = 0; // 0.0.0.0
+        IPv4Address subnetMask = 0xFFFFFFFF; // 255.255.255.255 (no subnet)
         int adapterIndex = 0; // Index in the adapters list
         
         NetworkAdapter(AdapterType aType);

@@ -44,7 +44,8 @@ int IPSocket::Bind(const sockaddr* addr, socklen_t addrlen){
 	}
 
 	if(inetAddr->sin_addr.s_addr == INADDR_ANY){
-		adapter = Network::mainAdapter;
+		adapter = nullptr;
+		address.value = INADDR_ANY;
 	} else if(Network::NetworkAdapter* a = Network::NetFS::GetInstance()->FindAdapter(inetAddr->sin_addr.s_addr); a){
 		adapter = a;
 	} else {
@@ -55,9 +56,9 @@ int IPSocket::Bind(const sockaddr* addr, socklen_t addrlen){
 
 	port.value = inetAddr->sin_port; // Should already be big endian
 	if(!port.value){
-		port.value = AllocatePort();
+		port = AllocatePort();
 	} else {
-		return AcquirePort(port.value);
+		return AcquirePort((uint16_t)port);
 	}
 
 	return 0;

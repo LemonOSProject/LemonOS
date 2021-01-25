@@ -92,6 +92,18 @@ public:
 		return T();
 	}
 
+	int find(K key){
+		auto& bucket = buckets[hash(key) % bucketCount];
+
+		for(KeyValuePair& val : bucket){
+			if(val.key == key){
+				return 1;
+			}
+		}
+
+		return 0;
+	}
+
 	~HashMap(){
 		delete[](buckets);
 	}

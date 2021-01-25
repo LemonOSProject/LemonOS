@@ -23,7 +23,7 @@
 
 sockaddr_in dhcpClientAddress;
 sockaddr_in dhcpServerAddress;
-int dhcpResponseTimeout = 10; // 10 seconds
+int dhcpResponseTimeout = 8; // 8 seconds
 
 void SendDHCPMessage(int sock, DHCPHeader& header, std::vector<void*>& options){
 	uint8_t* headerOptions = header.options;
@@ -119,7 +119,7 @@ public:
 			timespec currentTime;
 			clock_gettime(CLOCK_BOOTTIME, &currentTime);
 			if(currentTime.tv_sec - t.tv_sec >= dhcpResponseTimeout){
-				fprintf(stderr, "Failed to acquire DHCP lease for %s: timed out after %i seconds\n", this->name.data(), dhcpResponseTimeout);
+				fprintf(stderr, "Failed to acquire DHCP lease for %s: timed out waiting for OFFER after %i seconds\n", this->name.data(), dhcpResponseTimeout);
 				return;
 			}
 
@@ -143,8 +143,12 @@ public:
 			return;
 		}
 
+		clock_gettime(CLOCK_BOOTTIME, &t);
+
 		header.clientIP = recvHeader.yourIP; // Request the IP from the offer
 		header.serverIP = recvHeader.serverIP;
+
+		header.flags = 0;
 
 		DHCPOption<0>* option = reinterpret_cast<DHCPOption<0>*>(recvHeader.options);
 		while(option->optionCode != 0xff /* end marker */ && reinterpret_cast<void*>(option) < recvHeader.options + 312){
@@ -197,7 +201,7 @@ public:
 			timespec currentTime;
 			clock_gettime(CLOCK_BOOTTIME, &currentTime);
 			if(currentTime.tv_sec - t.tv_sec >= dhcpResponseTimeout){
-				fprintf(stderr, "Failed to acquire DHCP lease for %s: timed out after %i seconds\n", this->name.data(), dhcpResponseTimeout);
+				fprintf(stderr, "Failed to acquire DHCP lease for %s: timed out waiting for ACK after %i seconds\n", this->name.data(), dhcpResponseTimeout);
 				return;
 			}
 
@@ -210,10 +214,10 @@ public:
 		leaseAcquired = true;
 
 		printf("received dhcp response:\n\
-				IP Address: %d.%d.%d.%d\n\
-				Subnet Mask: %d.%d.%d.%d\n\
-				Default Gateway: %d.%d.%d.%d\n\
-				DNS Server: %d.%d.%d.%d\n",
+IP Address: %d.%d.%d.%d\n\
+Subnet Mask: %d.%d.%d.%d\n\
+Default Gateway: %d.%d.%d.%d\n\
+DNS Server: %d.%d.%d.%d\n",
 				interfaceIP & 0xff, (interfaceIP >> 8) & 0xff, (interfaceIP >> 16) & 0xff, (interfaceIP >> 24) & 0xff,
 				subnetMask & 0xff, (subnetMask >> 8) & 0xff, (subnetMask >> 16) & 0xff, (subnetMask >> 24) & 0xff,
 				defaultGateway & 0xff, (defaultGateway >> 8) & 0xff, (defaultGateway >> 16) & 0xff, (defaultGateway >> 24) & 0xff,

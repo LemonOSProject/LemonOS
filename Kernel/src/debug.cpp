@@ -16,4 +16,4 @@ const int debugLevelMessageEndpoint = 0;
 
 const int debugLevelSyscalls = DebugLevelNormal;
 
-const int debugLevelNetwork = DebugLevelNormal;
+const int debugLevelNetwork = DebugLevelVerbose;

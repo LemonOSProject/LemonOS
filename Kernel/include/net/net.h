@@ -109,6 +109,11 @@ struct EthernetFrame {
 } __attribute__((packed));
 
 struct ARPHeader {
+    enum {
+        ARPRequest = 1,
+        ARPReply = 2,
+    };
+
     BigEndian<uint16_t> hwType; // Hardware Type
     BigEndian<uint16_t> prType; // Protocol Type
     uint8_t hLength = 6; // Hardware Address Length
@@ -187,20 +192,18 @@ namespace Network {
     void InitializeDrivers();
     void InitializeConnections();
     
-    unsigned short AllocatePort(Socket& sock);
-    int AcquirePort(Socket& sock, unsigned int port);
-    void ReleasePort(unsigned short port);
+    int IPLookup(NetworkAdapter* adapter, const IPv4Address& ip, MACAddress& mac);
+    int Route(const IPv4Address& local, const IPv4Address& dest, MACAddress& mac, NetworkAdapter*& adapter);
 
-    namespace Interface {
-        void Initialize();
+    void InitializeNetworkThread();
 
-        void Send(void* data, size_t length, NetworkAdapter* adapter = nullptr);
-        int SendIPv4(void* data, size_t length, IPv4Address& destination, uint8_t protocol, NetworkAdapter* adapter = nullptr);
-        int SendUDP(void* data, size_t length, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter = nullptr);
-    }
+    void Send(void* data, size_t length, NetworkAdapter* adapter = nullptr);
+    int SendIPv4(void* data, size_t length, IPv4Address& destination, MACAddress& immediateDestination, uint8_t protocol, NetworkAdapter* adapter = nullptr);
     
     namespace UDP{
         Socket* FindSocket(BigEndian<uint16_t> port);
+
+        int SendUDP(void* data, size_t length, IPv4Address& destination, MACAddress& immediateDestination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter = nullptr);
         void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length);
     }
 }

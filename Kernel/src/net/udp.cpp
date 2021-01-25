@@ -1,4 +1,5 @@
 #include <net/socket.h>
+#include <net/net.h>
 
 #include <hash.h>
 #include <errno.h>
@@ -58,6 +59,26 @@ namespace Network::UDP{
         return 0;
     }
 
+    int SendUDP(void* data, size_t length, IPv4Address& destination, MACAddress& immediateDestination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter){
+		if(length > 1518){
+			return -EMSGSIZE;
+		}
+
+		uint8_t buffer[1600];
+
+		UDPHeader* header = (UDPHeader*)buffer;
+		header->destPort = destinationPort;
+		header->srcPort = sourcePort;
+		header->length = sizeof(UDPHeader) + length;
+		header->checksum = 0;
+
+		memcpy(header->data, data, length);
+
+		//header->checksum = CaclulateChecksum(header, sizeof(UDPHeader));
+
+		return SendIPv4(header, header->length, destination, immediateDestination, IPv4ProtocolUDP, adapter);
+	}
+
     void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length){
 		if(length < sizeof(UDPHeader)){
 			Log::Warning("[Network] [UDP] Discarding packet (too short)");
@@ -74,7 +95,7 @@ namespace Network::UDP{
 		    Log::Info("[Network] [UDP] Receiving Packet (Source port: %d, Destination port: %d)", (uint16_t)header->srcPort, (uint16_t)header->destPort);
         });
 
-        if(UDPSocket* sock = sockets.get(header->destPort.value); sock){
+        if(UDPSocket* sock = sockets.get((uint16_t)header->destPort); sock){
             sock->OnReceive(ipHeader.sourceIP, header->srcPort, header->data, header->length);
         }
     }
@@ -142,7 +163,7 @@ namespace Network::UDP{
 
     int64_t UDPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
         if(!packets.get_length()){
-            if(flags & MSG_DONTWAIT){
+            if(flags & (MSG_DONTWAIT | SOCK_NONBLOCK)){
                 return -EAGAIN; // Don't wait
             } else {
                 Scheduler::BlockCurrentThread(waiting, waitingLock);
@@ -151,8 +172,8 @@ namespace Network::UDP{
 
         acquireLock(&packetsLock);
         if(packets.get_length() <= 0){
-                releaseLock(&packetsLock);
-            if(flags & MSG_DONTWAIT){
+            releaseLock(&packetsLock);
+            if(flags & (MSG_DONTWAIT | SOCK_NONBLOCK)){
                 return -EAGAIN; // Don't wait
             } else while(packets.get_length() <= 0){
                 Scheduler::Yield();
@@ -205,6 +226,14 @@ namespace Network::UDP{
             destPort = destinationPort;
         }
 
+        MACAddress destinationMAC;
+
+        if(sendIPAddress.value == INADDR_BROADCAST){
+            destinationMAC = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+        } else if(int status = Route(this->address, sendIPAddress, destinationMAC, adapter); status < 0){
+            return status;
+        }
+
         if(!port){
             port = AllocatePort();
 
@@ -214,7 +243,7 @@ namespace Network::UDP{
             }
         }
 
-        if(int e = Network::Interface::SendUDP(buffer, len, sendIPAddress, port, destPort)){
+        if(int e = SendUDP(buffer, len, sendIPAddress, destinationMAC, port, destPort)){
             return e;
         }
 

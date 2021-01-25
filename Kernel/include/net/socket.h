@@ -19,6 +19,8 @@
 
 #define STREAM_MAX_BUFSIZE 0x20000 // 128 KB
 
+#define SOCK_NONBLOCK O_NONBLOCK
+
 struct rtentry {
 	unsigned long rt_pad1;
 	struct sockaddr rt_dst;

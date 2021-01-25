@@ -1758,16 +1758,27 @@ long SysRecvMsg(regs64_t* r){
 		return -EBADF;
 	}
 
-	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
+	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){ 
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("SysRecvMsg: Invalid file descriptor: ", SC_ARG0(r));
+		});
+		return -EBADF; 
+	}
 
-	msghdr* msg = (msghdr*)SC_ARG1(r);
-	uint64_t flags = SC_ARG3(r);
+	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
 	if(!handle){ 
 		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
 			Log::Warning("SysRecvMsg: Invalid file descriptor: ", SC_ARG0(r));
 		});
 		return -EBADF; 
+	}
+
+	msghdr* msg = (msghdr*)SC_ARG1(r);
+	uint64_t flags = SC_ARG3(r);
+
+	if(handle->mode & O_NONBLOCK){
+		flags |= MSG_DONTWAIT; // Don't wait if socket marked as nonblock
 	}
 
 	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_SOCKET){
