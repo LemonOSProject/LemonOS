@@ -42,10 +42,12 @@ int DiskDevice::InitializePartitions(){
                 vol = new fs::Ext2::Ext2Volume(partitions.get_at(i), "system");
             }
 
-            if(!vol->Error())
+            if(!vol->Error()){
                 fs::volumes->add_back(vol);
-            else
+                //fs::volumes->add_back(new fs::LinkVolume(fs::FindDir(vol->mountPoint, "lib"), "lib"));
+            } else {
                 delete vol;
+            }
         }
     }
     

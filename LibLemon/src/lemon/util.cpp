@@ -11,6 +11,10 @@ pid_t lemon_spawn(const char* path, int argc, char* const argv[], int flags){
 	return syscall(SYS_EXEC, (uintptr_t)path, argc, (uintptr_t)argv, flags, environ);
 } 
 
+pid_t lemon_spawn(const char* path, int argc, char* const argv[], int flags, char** envp){
+	return syscall(SYS_EXEC, (uintptr_t)path, argc, (uintptr_t)argv, flags, envp);
+} 
+
 namespace Lemon{
     void Yield(){
         syscall(SYS_YIELD, 0, 0, 0, 0, 0);

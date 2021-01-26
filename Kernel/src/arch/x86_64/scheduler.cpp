@@ -562,7 +562,7 @@ namespace Scheduler{
         TaskSwitch(&cpu->currentThread->registers, cpu->currentThread->parent->addressSpace->pml4Phys);
     }
 
-    process_t* CreateELFProcess(void* elf, int argc, char** argv, int envc, char** envp) {
+    process_t* CreateELFProcess(void* elf, int argc, char** argv, int envc, char** envp, const char* execPath) {
         if(!VerifyELF(elf)) return nullptr;
 
         // Create process structure
@@ -639,6 +639,14 @@ namespace Scheduler{
             }
         }
 
+        char* execPathValue = nullptr;
+        if(execPath){
+            stackStr -= strlen(execPath) +  1;
+            strcpy((char*)stackStr, execPath);
+
+            execPathValue = stackStr;
+        }
+
         stackStr -= (uintptr_t)stackStr & 0xf; // align the stack
 
         stack = (uint64_t*)stackStr;
@@ -659,6 +667,11 @@ namespace Scheduler{
 
         stack -= sizeof(auxv_t)/sizeof(*stack);
         *((auxv_t*)stack) = {.a_type = AT_ENTRY, .a_val = elfInfo.entry}; // AT_ENTRY
+
+        if(execPath && execPathValue){
+            stack -= sizeof(auxv_t)/sizeof(*stack);
+            *((auxv_t*)stack) = {.a_type = AT_EXECPATH, .a_val = (uint64_t)execPathValue}; // AT_EXECPATH
+        }
 
         stack--;
         *stack = 0; // null

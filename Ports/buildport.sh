@@ -12,5 +12,8 @@ export LEMON_PREFIX=/system
 
 . ./$1.sh
 
-unpack 
+if [ "$2" != build ]; then
+    unpack 
+fi
+
 buildp

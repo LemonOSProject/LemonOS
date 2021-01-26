@@ -213,7 +213,7 @@ namespace fs{
 	}
 	
 	FsNode* ResolveParent(const char* path, const char* workingDir){
-		char* pathCopy = (char*)kmalloc(strlen(path) + 1);
+		char pathCopy[strlen(path) + 1];
 		strcpy(pathCopy, path);
 
 		if(pathCopy[strlen(pathCopy) - 1] == '/'){ // Remove trailing slash
@@ -228,10 +228,13 @@ namespace fs{
 			parentDirectory = fs::ResolvePath(workingDir);
 		} else {
 			*(dirPath - 1) = 0; // Cut off the directory name from the path copy
-			parentDirectory = fs::ResolvePath(pathCopy, workingDir);
+			if(!strlen(pathCopy)){ // Root
+				return fs::GetRoot();
+			} else {
+				parentDirectory = fs::ResolvePath(pathCopy, workingDir);
+			}
 		}
 
-		kfree(pathCopy);
 		return parentDirectory;
 	}
 	

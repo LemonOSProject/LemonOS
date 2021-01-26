@@ -80,7 +80,7 @@ namespace Scheduler{
     pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss);
 
     process_t* CreateProcess(void* entry);
-	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr, int envc = 0, char** envp = nullptr);
+	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr, int envc = 0, char** envp = nullptr, const char* execPath = nullptr);
 
 	inline static process_t* GetCurrentProcess(){
         asm("cli");

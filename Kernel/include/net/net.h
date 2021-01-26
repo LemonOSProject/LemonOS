@@ -137,7 +137,7 @@ struct TCPHeader {
     BigEndian<uint16_t> srcPort; // Source Port
     BigEndian<uint16_t> destPort; // Destination Port
     BigEndian<uint32_t> sequence; // Sequence Number
-    BigEndian<uint32_t> ack; // Acknowledgement Number
+    BigEndian<uint32_t> acknowledgementNumber; // Acknowledgement Number
     uint8_t dataOffset : 4; // Size of the tcp header in DWORDs (min 5, max 15)
     uint8_t reserved : 3;
     uint8_t ns : 1; // Nonce

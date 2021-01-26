@@ -194,7 +194,7 @@ long SysExec(regs64_t* r){
 		strcpy(kernelArgv[i], argv[i]);
 	}
 
-	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp);
+	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp, filepath);
 
 	// TODO: Do not run process until we have finished
 
@@ -321,7 +321,7 @@ open:
 			FsNode* parent = fs::ResolveParent(filepath, proc->workingDir);
 			char* basename = fs::BaseName(filepath);
 
-			Log::Info("sys_open: Creating %s", basename);
+			Log::Info("sys_open: Creating %s", filepath);
 
 			if(!parent) {
 				Log::Warning("sys_open: Could not resolve parent directory of new file %s", basename);
