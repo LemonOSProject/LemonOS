@@ -9,6 +9,10 @@ namespace fs{
         volume_id_t volumeID;
         FsNode* mountPoint;
         DirectoryEntry mountPointDirent;
+
+        virtual void SetVolumeID(volume_id_t id);
+
+        virtual ~FsVolume() = default;
     };    
 
     class LinkVolume : public FsVolume{

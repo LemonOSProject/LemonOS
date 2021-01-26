@@ -1146,6 +1146,10 @@ namespace fs::Ext2{
             return -EROFS;
         }
 
+        if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+            return -EISDIR;
+        }
+
         uint32_t blockIndex = LocationToBlock(offset); // Index of first block to write
         uint32_t fileBlockCount = node->e2inode.blockCount / (blocksize / 512); // Size of file in blocks
         uint32_t blockLimit = LocationToBlock(offset + size); // Amount of blocks to write
@@ -1361,6 +1365,10 @@ namespace fs::Ext2{
         if(!ent->inode){
             Log::Error("[Ext2] Link: Invalid inode %d", ent->inode);
             return -EINVAL;
+        }
+
+        if(file->volumeID != volumeID){
+            return -EXDEV; // Different filesystem
         }
 
         List<DirectoryEntry> entries;

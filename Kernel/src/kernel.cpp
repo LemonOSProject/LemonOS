@@ -20,6 +20,7 @@
 #include <devicemanager.h>
 #include <gui.h>
 #include <fs/tar.h>
+#include <fs/tmp.h>
 #include <sharedmem.h>
 #include <net/net.h>
 #include <cpu.h>
@@ -141,14 +142,18 @@ extern "C"
 
 	Log::Info("Used RAM: %d MB", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);
 	
+	assert(fs::GetRoot());
+
 	Log::Info("Initializing Ramdisk...");
 	
 	fs::tar::TarVolume* tar = new fs::tar::TarVolume(HAL::bootModules[0].base, HAL::bootModules[0].size, "initrd");
-	fs::volumes->add_back(tar);
+	fs::RegisterVolume(tar);
 	fs::volumes->add_back(new fs::LinkVolume(tar, "lib"));
+
 	Log::Write("OK");
 
-	assert(fs::GetRoot());
+	fs::RegisterVolume(new fs::Temp::TempVolume("tmp")); // Create tmpfs instance
+
 	FsNode* initrd = fs::FindDir(fs::GetRoot(), "initrd");
 	FsNode* splashFile = nullptr;
 

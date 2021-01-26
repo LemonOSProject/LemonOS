@@ -62,12 +62,13 @@ cpp_files = [
     'src/lock.cpp',
     'src/debug.cpp',
 
-    'src/fs/fat32.cpp',
     'src/fs/ext2.cpp',
+    'src/fs/fat32.cpp',
     'src/fs/filesystem.cpp',
+    'src/fs/fsnodestubs.cpp',
     'src/fs/fsvolume.cpp',
     'src/fs/tar.cpp',
-    'src/fs/fsnodestubs.cpp',
+    'src/fs/tmp.cpp',
 
     'src/liballoc/_liballoc.cpp',
     'src/liballoc/liballoc.c',

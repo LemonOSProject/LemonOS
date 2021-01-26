@@ -4,6 +4,8 @@
 #include <logging.h>
 #include <errno.h>
 
+#include <debug.h>
+
 namespace fs{
 	volume_id_t nextVID = 1; // Next volume ID
 	
@@ -36,7 +38,7 @@ namespace fs{
 
 	void RegisterVolume(FsVolume* vol){
 		vol->mountPoint->parent = &root;
-		vol->volumeID = GetVolumeID();
+		vol->SetVolumeID(GetVolumeID());
 		volumes->add_back(vol);
 	}
 
@@ -158,21 +160,28 @@ namespace fs{
 		while(file != NULL){ // Iterate through the directories to find the file
 			FsNode* node = fs::FindDir(currentNode,file);
 			if(!node) {
-				Log::Warning("%s not found!", path);
+				IF_DEBUG((debugLevelFilesystem >= DebugLevelVerbose), {
+					Log::Warning("%s not found!", path);
+				});
+
 				return nullptr;
 			}
 
 			size_t amountOfSymlinks = 0;
 			while(followSymlinks && ((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)){ // Check for symlinks
 				if(amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT){
-					Log::Warning("ResolvePath: Reached maximum number of symlinks");
+					IF_DEBUG((debugLevelFilesystem >= DebugLevelVerbose), {
+						Log::Warning("ResolvePath: Reached maximum number of symlinks");
+					});
 					return nullptr;
 				}
 
 				node = FollowLink(node, currentNode);
 
 				if(!node){
-					Log::Warning("ResolvePath: Unresolved symlink!");
+					IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal), {
+						Log::Warning("ResolvePath: Unresolved symlink!");
+					});
 					kfree(tempPath);
 					return node;
 				}
@@ -185,21 +194,27 @@ namespace fs{
 			}
 
 			if((file = strtok(NULL, "/"))){
-				Log::Warning("%s is not a directory!", file);
+				IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal), {
+					Log::Warning("%s is not a directory!", file);
+				});
 				return nullptr;
 			}
 
 			amountOfSymlinks = 0;
 			while(followSymlinks && ((currentNode->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)){ // Check for symlinks
 				if(amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT){
-					Log::Warning("ResolvePath: Reached maximum number of symlinks");
+					IF_DEBUG((debugLevelFilesystem >= DebugLevelVerbose), {
+						Log::Warning("ResolvePath: Reached maximum number of symlinks");
+					});
 					return nullptr;
 				}
 
 				currentNode = FollowLink(node, currentNode);
 
 				if(!node){
-					Log::Warning("ResolvePath: Unresolved symlink!");
+					IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal), {
+						Log::Warning("ResolvePath: Unresolved symlink!");
+					});
 					kfree(tempPath);
 					return currentNode;
 				}

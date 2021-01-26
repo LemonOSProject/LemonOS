@@ -8,46 +8,6 @@ struct thread;
 #include <thread.h>
 #include <logging.h>
 
-class FilesystemLock {
-    unsigned activeReaders = 0;
-    lock_t fileLock = 0;
-
-    FastList<thread*> readers;
-    FastList<thread*> writers;
-public:
-    lock_t lock = 0;
-
-    FilesystemLock() {}
-
-    void AcquireRead(){
-        acquireLock(&lock);
-
-        activeReaders++;
-
-        if(activeReaders == 1){
-            acquireLock(&fileLock);
-        }
-
-        releaseLock(&lock);
-    }
-
-    void AcquireWrite(){
-        acquireLock(&fileLock);
-    }
-
-    void ReleaseRead(){
-        if(activeReaders == 1){
-            releaseLock(&fileLock);
-        }
-
-        activeReaders--;
-    }
-
-    void ReleaseWrite(){
-        releaseLock(&fileLock);
-    }
-};
-
 class Semaphore : public Scheduler::GenericThreadBlocker{
 protected:
     lock_t value = 0;
@@ -81,3 +41,47 @@ public:
         }
     }
 };
+
+class ReadWriteLock {
+    unsigned activeReaders = 0;
+    lock_t fileLock = 0;
+
+    FastList<thread*> readers;
+    FastList<thread*> writers;
+public:
+    lock_t lock = 0;
+
+    ReadWriteLock() {}
+
+    void AcquireRead(){
+        acquireLock(&lock);
+
+        activeReaders++;
+
+        if(activeReaders == 1){
+            acquireLock(&fileLock);
+        }
+
+        releaseLock(&lock);
+    }
+
+    void AcquireWrite(){
+        acquireLock(&lock); // Stop more threads from reading
+        acquireLock(&fileLock);
+    }
+
+    void ReleaseRead(){
+        if(activeReaders == 1){
+            releaseLock(&fileLock);
+        }
+
+        activeReaders--;
+    }
+
+    void ReleaseWrite(){
+        releaseLock(&fileLock);
+        releaseLock(&lock);
+    }
+};
+
+using FilesystemLock = ReadWriteLock;

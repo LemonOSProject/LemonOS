@@ -8,6 +8,8 @@
 
 #include <types.h>
 
+#include <abi-bits/abi.h>
+
 #define FD_SETSIZE 1024
 
 #define PATH_MAX 4096
@@ -57,18 +59,18 @@
 #define O_SEARCH 4
 #define O_WRONLY 5
 
-#define O_APPEND 0x0008
-#define O_CREAT 0x0010
-#define O_DIRECTORY 0x0020
-#define O_EXCL 0x0040
-#define O_NOCTTY 0x0080
-#define O_NOFOLLOW 0x0100
-#define O_TRUNC 0x0200
-#define O_NONBLOCK 0x0400
-#define O_DSYNC 0x0800
-#define O_RSYNC 0x1000
-#define O_SYNC 0x2000
-#define O_CLOEXEC 0x4000
+#define O_APPEND __MLIBC_O_APPEND
+#define O_CREAT __MLIBC_O_CREAT
+#define O_DIRECTORY __MLIBC_O_DIRECTORY
+#define O_EXCL __MLIBC_O_EXCL
+#define O_NOCTTY __MLIBC_O_NOCTTY
+#define O_NOFOLLOW __MLIBC_O_NOFOLLOW
+#define O_TRUNC __MLIBC_O_TRUNC
+#define O_NONBLOCK __MLIBC_O_NONBLOCK
+#define O_DSYNC __MLIBC_O_DSYNC
+#define O_RSYNC __MLIBC_O_RSYNC
+#define O_SYNC __MLIBC_O_SYNC
+#define O_CLOEXEC __MLIBC_O_CLOEXEC
 
 #define POLLIN 0x01
 #define POLLOUT 0x02
@@ -189,8 +191,8 @@ public:
     virtual int ReadDir(DirectoryEntry*, uint32_t); // Read Directory
     virtual FsNode* FindDir(char* name); // Find in directory
 
-    virtual int Create(DirectoryEntry*, uint32_t);
-    virtual int CreateDirectory(DirectoryEntry*, uint32_t);
+    virtual int Create(DirectoryEntry* ent, uint32_t mode);
+    virtual int CreateDirectory(DirectoryEntry* ent, uint32_t mode);
     
     virtual ssize_t ReadLink(char* pathBuffer, size_t bufSize);
     virtual int Link(FsNode*, DirectoryEntry*);
@@ -206,6 +208,13 @@ public:
 
     virtual void Watch(FilesystemWatcher& watcher, int events);
     virtual void Unwatch(FilesystemWatcher& watcher);
+
+    virtual inline bool IsFile() { return (flags & FS_NODE_TYPE) == FS_NODE_FILE; }
+    virtual inline bool IsDirectory() { return (flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY; }
+    virtual inline bool IsBlockDevice() { return (flags & FS_NODE_TYPE) == FS_NODE_BLKDEVICE; }
+    virtual inline bool IsSymlink() { return (flags & FS_NODE_TYPE) == FS_NODE_SYMLINK; }
+    virtual inline bool IsCharDevice() { return (flags & FS_NODE_TYPE) == FS_NODE_CHARDEVICE; }
+    virtual inline bool IsSocket() { return (flags & FS_NODE_TYPE) == FS_NODE_SOCKET; }
 
     FsNode* link;
     FsNode* parent;
@@ -225,7 +234,8 @@ public:
     mode_t flags = 0;
 
     DirectoryEntry(FsNode* node, const char* name) { 
-        this->node = node; strcpy(this->name, name);
+        this->node = node;
+        strncpy(this->name, name, NAME_MAX);
 
         switch(node->flags & FS_NODE_TYPE){
             case FS_NODE_FILE:
@@ -248,6 +258,7 @@ public:
                 break;
         }
     }
+
     DirectoryEntry() {}
 };
 

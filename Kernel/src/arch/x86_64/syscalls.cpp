@@ -321,10 +321,12 @@ open:
 			FsNode* parent = fs::ResolveParent(filepath, proc->workingDir);
 			char* basename = fs::BaseName(filepath);
 
-			Log::Info("sys_open: Creating %s", filepath);
+			IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+				Log::Info("SysOpen: Creating %s", filepath);
+			});
 
 			if(!parent) {
-				Log::Warning("sys_open: Could not resolve parent directory of new file %s", basename);
+				Log::Warning("SysOpen: Could not resolve parent directory of new file %s", basename);
 				return -ENOENT;
 			}
 
@@ -337,7 +339,9 @@ open:
 			flags &= ~O_CREAT;
 			goto open;
 		} else {
-			Log::Warning("sys_open: Failed to open file %s", filepath);
+			IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+				Log::Warning("SysOpen (flags %x): Failed to open file %s", flags, filepath);
+			});
 			return -ENOENT;
 		}
 	}
@@ -939,18 +943,16 @@ long SysGetCWD(regs64_t* r){
 long SysWaitPID(regs64_t* r){
 	uint64_t pid = SC_ARG0(r);
 
-	lock_t unused = 0;
 	process_t* proc = nullptr;
-
 	if((proc = Scheduler::FindProcessByPID(pid))){
-		Scheduler::BlockCurrentThread(proc->blocking, unused);
+		Scheduler::BlockCurrentThread(proc->blocking);
 	}
 
 	if((proc = Scheduler::FindProcessByPID(pid))) {
 		return -1;
 	}
 
-	return 0;
+	return pid;
 }
 
 long SysNanoSleep(regs64_t* r){
@@ -2105,6 +2107,9 @@ long SysFutexWait(regs64_t* r){
 /////////////////////////////
 long SysDup(regs64_t* r){
 	int fd = static_cast<int>(SC_ARG0(r));
+	[[gnu::unused]] long flags = SC_ARG1(r);
+	int requestedFd = static_cast<int>(SC_ARG2(r));
+
 	fs_fd_t* handle;
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
@@ -2117,7 +2122,24 @@ long SysDup(regs64_t* r){
 	newHandle->node->handleCount++;
 
 	int newFd = currentProcess->fileDescriptors.get_length();
-	currentProcess->fileDescriptors.add_back(newHandle);
+	if(requestedFd >= 0){
+		if(static_cast<unsigned>(requestedFd) >= currentProcess->fileDescriptors.get_length()){
+			Log::Error("SysDup: We do not support (yet) requesting unallocated fds."); // TODO: Requested file descriptors out of range
+			return -ENOSYS;
+		}
+
+		newFd = requestedFd;
+		fs_fd_t* existingHandle = currentProcess->fileDescriptors[requestedFd];
+
+		if(existingHandle){
+			existingHandle->node->Close();
+			delete existingHandle;
+		}
+
+		currentProcess->fileDescriptors[requestedFd] = newHandle;
+	} else {
+		currentProcess->fileDescriptors.add_back(newHandle);
+	}
 
 	return newFd;
 }

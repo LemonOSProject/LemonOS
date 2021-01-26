@@ -202,7 +202,7 @@ void ParseLine(){
 	if(strchr(argv[0], '/') && (fd = open(currentDir, O_RDONLY | O_DIRECTORY))){
 		pid_t pid = lemon_spawn(argv[0], argc, argv.data(), 1);
 		if(pid > 0){
-			syscall(SYS_WAIT_PID, pid, 0, 0, 0, 0);
+			syscall(SYS_WAIT_PID, pid);
 		}
 
 		close(fd);
@@ -226,7 +226,7 @@ void ParseLine(){
 					pid_t pid = lemon_spawn(path.c_str(), argc, argv.data(), 1);
 
 					if(pid){
-						syscall(SYS_WAIT_PID, pid, 0, 0, 0, 0);
+						syscall(SYS_WAIT_PID, pid);
 					} else {
 						printf("Error executing %s\n", dirent.name);
 					}
