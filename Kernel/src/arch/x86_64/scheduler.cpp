@@ -324,7 +324,7 @@ namespace Scheduler{
             IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
                 Log::Info("ending child: %s (%d)", process->children.get_front()->name, process->children.get_front()->pid);
             });
-            EndProcess(process->children.remove_at(0));
+            EndProcess(process->children.get_front()); // Processes remove themselves from the list
         }
         
         CPU* cpu = GetCPULocal();
@@ -361,6 +361,10 @@ namespace Scheduler{
 
         acquireLock(&cpu->runQueueLock);
         asm("cli");
+
+        IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
+            Log::Info("removing threads from run queue...");
+        });
 
         for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
             if(cpu->runQueue->get_at(j)->parent == process) cpu->runQueue->remove_at(j);

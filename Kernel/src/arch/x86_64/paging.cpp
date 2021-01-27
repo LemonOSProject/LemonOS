@@ -275,7 +275,9 @@ namespace Memory{
 		uint64_t pml4Index = 0;
 		for(int d = 0; d < 512; d++){
 			uint64_t pdptIndex = d;
-			if(!(addressSpace->pdpt[d] & 0x1)) continue;
+			if(!(addressSpace->pdpt[d] & 0x1)) {
+				continue;
+			}
 			/* Attempt 1: Already Allocated Page Tables*/
 			for(int i = 0; i < TABLES_PER_DIR; i++){
 				if(addressSpace->pageDirs[d][i] & 0x1 && !(addressSpace->pageDirs[d][i] & 0x80)){
@@ -346,8 +348,7 @@ namespace Memory{
 			Log::Info("new dir");
 		}
 
-		const char* reasons[1] = {"Out of Virtual Memory!"};
-		KernelPanic(reasons, 1);
+		assert(!"Out of virtual memory!");
 	}
 
 	void* KernelAllocate4KPages(uint64_t amount){
@@ -612,8 +613,9 @@ namespace Memory{
 
 		Log::Info(regs->rip);
 
-		Log::Info("Process:");
-		Log::Info(Scheduler::GetCurrentProcess()->pid);
+		if(process_t* proc = Scheduler::GetCurrentProcess(); proc){
+			Log::Info("Process: %s (%d)", proc->name, proc->pid);
+		}
 
 		IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
 			DumpLastSyscall();
@@ -651,14 +653,14 @@ namespace Memory{
 		};
 
 		// Kernel Panic so tell other processors to stop executing
-			APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
+		APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
 			
 		PrintStackTrace(regs->rbp);
 
 		char temp[16];
 		char temp2[16];
-		char temp3[16];
-		const char* reasons[]{"Page Fault","RIP: ", itoa(regs->rip, temp, 16),"Address: ",itoa(faultAddress, temp2, 16), "Process:", itoa(Scheduler::GetCurrentProcess()->pid,temp3,10)};;
+
+		const char* reasons[]{"Page Fault","RIP: ", itoa(regs->rip, temp, 16),"Address: ",itoa(faultAddress, temp2, 16)};;
 		KernelPanic(reasons,7);
 		for (;;);
 	}

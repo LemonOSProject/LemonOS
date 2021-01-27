@@ -226,6 +226,10 @@ namespace fs::Temp{
             return -ENOTDIR;
         }
 
+        if(Find(ent->name)){
+            return -EEXIST;
+        }
+
         TempNode* newNode = new TempNode(vol, FS_NODE_FILE);
         
         *ent = DirectoryEntry(newNode, ent->name);
@@ -247,6 +251,10 @@ namespace fs::Temp{
             });
 
             return -ENOTDIR;
+        }
+
+        if(Find(ent->name)){
+            return -EEXIST;
         }
 
         TempNode* newNode = new TempNode(vol, FS_NODE_DIRECTORY);

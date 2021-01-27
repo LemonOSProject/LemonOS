@@ -23,6 +23,7 @@
 #include <objects/service.h>
 #include <debug.h>
 #include <strace.h>
+#include <math.h>
 
 #define SC_ARG0(r) (r)->rdi
 #define SC_ARG1(r) (r)->rsi
@@ -313,6 +314,7 @@ long SysOpen(regs64_t* r){
 	IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
 		Log::Info("Opening: %s (flags: %u)", filepath, flags);
 	});
+	
 	long fd;
 	if(strcmp(filepath,"/") == 0){
 		fd = proc->fileDescriptors.get_length();
@@ -376,8 +378,6 @@ open:
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(handle);
 	fs::Open(node, flags);
-
-	Log::Info("fd: %d", fd);
 
 	return fd;
 }
@@ -541,6 +541,32 @@ long SysAlloc(regs64_t* r){
 }
 
 long SysChmod(regs64_t* r){
+	process_t* proc = Scheduler::GetCurrentProcess();
+
+	const char* path = reinterpret_cast<const char*>(SC_ARG0(r));
+	mode_t mode = SC_ARG1(r);
+
+	size_t pathLen = 0;
+	if(strlenSafe(path, pathLen, proc->addressSpace)){
+		return -EFAULT;
+	}
+
+	if(pathLen > PATH_MAX){
+		return -ENAMETOOLONG;
+	}
+
+	char tempPath[pathLen + 1];
+	strcpy(tempPath, path);
+
+	FsNode* file = fs::ResolvePath(tempPath, proc->workingDir);
+	if(!file){
+		return -ENOENT;
+	}
+
+	Log::Warning("SysChmod: chmod is a stub!");
+
+	(void)mode;
+
 	return 0;
 }
 
@@ -830,7 +856,7 @@ long SysUptime(regs64_t* r){
 }
 
 long SysDebug(regs64_t* r){
-	Log::Info("%s, %d", (char*)SC_ARG0(r), SC_ARG1(r));
+	Log::Info("(%s): %s, %d", Scheduler::GetCurrentProcess()->name, (char*)SC_ARG0(r), SC_ARG1(r));
 	return 0;
 }
 
@@ -2826,7 +2852,6 @@ long SysGetSocketOptions(regs64_t* r){
 	return sock->GetSocketOptions(level, opt, optVal, optLen);
 }
 
-
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -2934,13 +2959,12 @@ void DumpLastSyscall(){
 
 extern "C"
 void SyscallHandler(regs64_t* regs) {
-	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
+	if (regs->rax >= NUM_SYSCALLS || !syscalls[regs->rax]) // If syscall is non-existant then return
 		return;
 		
 	asm("sti"); // By reenabling interrupts, a thread in a syscall can be preempted
 
 	thread_t* thread = GetCPULocal()->currentThread;
-	if(!syscalls[regs->rax]) return;
 	if(thread->state == ThreadStateZombie) for(;;);
 
 	#ifdef KERNEL_DEBUG
