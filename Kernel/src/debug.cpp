@@ -2,6 +2,7 @@
 
 const int debugLevelHAL = 0;
 const int debugLevelMisc = 0;
+const int debugLevelScheduler = 0;
 
 const int debugLevelACPI = 0;
 const int debugLevelAHCI = 0;

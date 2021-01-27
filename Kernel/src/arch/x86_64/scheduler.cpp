@@ -17,6 +17,7 @@
 #include <smp.h>
 #include <apic.h>
 #include <timer.h>
+#include <debug.h>
 
 extern "C" [[noreturn]] void TaskSwitch(regs64_t* r, uint64_t pml4);
 
@@ -315,8 +316,16 @@ namespace Scheduler{
 
     void EndProcess(process_t* process){
         asm("sti");
-        while(process->children.get_length())
-            EndProcess(process->children.get_front());
+
+        IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
+            Log::Info("ending process: %s (%d)", process->name, process->pid);
+        });
+        while(process->children.get_length()){
+            IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
+                Log::Info("ending child: %s (%d)", process->children.get_front()->name, process->children.get_front()->pid);
+            });
+            EndProcess(process->children.remove_at(0));
+        }
         
         CPU* cpu = GetCPULocal();
         for(unsigned i = 0; i < process->threads.get_length(); i++){
@@ -350,54 +359,61 @@ namespace Scheduler{
             thread->timeSlice = thread->timeSliceDefault = 0;
         }
 
-        for(unsigned i = 0; i < process->fileDescriptors.get_length(); i++){
-            if(process->fileDescriptors[i]){
-                fs::Close(process->fileDescriptors[i]);
-            }
-        }
-
         acquireLock(&cpu->runQueueLock);
         asm("cli");
 
         for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
             if(cpu->runQueue->get_at(j)->parent == process) cpu->runQueue->remove_at(j);
         }
-
-        for(fs_fd_t* fd : process->fileDescriptors){
-            if(fd && fd->node)
-                fd->node->Close();
-        }
-        process->fileDescriptors.clear();
         
         for(unsigned i = 0; i < SMP::processorCount; i++){
             if(i == cpu->id) continue; // Is current processor?
 
-            if(SMP::cpus[i]->currentThread->parent == process){
-                SMP::cpus[i]->currentThread = nullptr;
-            }
+            CPU* cpu = SMP::cpus[i];
+            /*asm("sti");
+            acquireLock(&cpu->runQueueLock);
+            asm("cli");*/
 
-            asm("sti");
-            //acquireLock(&SMP::cpus[i]->runQueueLock);
-            asm("cli");
+            if(cpu->currentThread->parent == process){
+                cpu->currentThread->state = ThreadStateBlocked;
+                cpu->currentThread = nullptr;
+            }
             
-            for(unsigned j = 0; j < SMP::cpus[i]->runQueue->get_length(); j++){
-                thread_t* thread = SMP::cpus[i]->runQueue->get_at(j);
+            for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
+                thread_t* thread = cpu->runQueue->get_at(j);
 
                 assert(thread);
 
                 if(thread->parent == process){
-                    SMP::cpus[i]->runQueue->remove(thread);
+                    cpu->runQueue->remove(thread);
                 }
             }
             
-            //releaseLock(&SMP::cpus[i]->runQueueLock);
+            //releaseLock(&cpu->runQueueLock);
 
-            if(SMP::cpus[i]->currentThread == nullptr){
+            if(cpu->currentThread == nullptr){
                 APIC::Local::SendIPI(i, ICR_DSH_SELF, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
             }
         }
         asm("sti");
+
+        IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
+            Log::Info("closing fds...");
+        });
+
+        for(fs_fd_t* fd : process->fileDescriptors){
+            if(fd && fd->node)
+                fd->node->Close();
+            
+            fd->node = nullptr;
+            delete fd;
+        }
+        process->fileDescriptors.clear();
         
+        IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
+            Log::Info("closing handles...");
+        });
+
         for(auto& h : process->handles){
             if(h.id && h.ko.get()){
                 h.ko->Destroy();
@@ -426,9 +442,9 @@ namespace Scheduler{
         if(cpu->currentThread->parent == process){
             cpu->currentThread = nullptr; // Force reschedule
             kfree_unlocked(process);
+            alloc_unlock();
 
             releaseLock(&cpu->runQueueLock);
-            alloc_unlock();
             asm("sti");
 
             Schedule(nullptr, nullptr);
@@ -438,8 +454,8 @@ namespace Scheduler{
             }
         }
 
-        releaseLock(&cpu->runQueueLock);
         alloc_unlock();
+        releaseLock(&cpu->runQueueLock);
         asm("sti");
 
         delete process;
@@ -497,10 +513,6 @@ namespace Scheduler{
         acquireLock(&thread->stateLock);
         thread->state = ThreadStateRunning;
         releaseLock(&thread->stateLock);
-
-        /*for(List<thread_t*>* l : thread->waiting){
-            l->remove(thread);
-        }*/
     }
 
     void Tick(regs64_t* r){

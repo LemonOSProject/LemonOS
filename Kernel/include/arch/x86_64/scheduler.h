@@ -83,7 +83,6 @@ namespace Scheduler{
 	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr, int envc = 0, char** envp = nullptr, const char* execPath = nullptr);
 
 	inline static process_t* GetCurrentProcess(){
-        asm("cli");
         CPU* cpu = GetCPULocal();
 
         process_t* ret = nullptr;
@@ -91,7 +90,6 @@ namespace Scheduler{
         if(cpu->currentThread)
             ret = cpu->currentThread->parent;
 
-        asm("sti");
         return ret;
     }
 

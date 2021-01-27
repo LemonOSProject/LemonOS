@@ -94,19 +94,19 @@ namespace Log{
 				n -= (n - logBufferMaxSize);
 			}
 
-			if(n + logBufferPos > logBufferMaxSize){
-				size_t discard = (n + logBufferPos) - logBufferMaxSize; // Amount of bytes to discard
-
-				logBufferPos -= discard;
-				memcpy(logBuffer, logBuffer + discard, logBufferPos); 
-			}
-
 			if(n + logBufferPos > logBufferSize){
-				logBufferSize += 4096;
-				char* oldBuf = logBuffer;
-				logBuffer = (char*)kmalloc(logBufferSize);
-				memcpy(logBuffer, oldBuf, logBufferPos);
-				kfree(oldBuf);
+				if(n + logBufferPos > logBufferMaxSize || !CheckInterrupts()){
+					size_t discard = (n + logBufferPos) - logBufferMaxSize; // Amount of bytes to discard
+
+					logBufferPos -= discard;
+					memcpy(logBuffer, logBuffer + discard, logBufferPos); 
+				} else {
+					logBufferSize += 4096;
+					char* oldBuf = logBuffer;
+					logBuffer = (char*)kmalloc(logBufferSize);
+					memcpy(logBuffer, oldBuf, logBufferPos);
+					kfree(oldBuf);
+				}
 			}
 
 			memcpy(logBuffer + logBufferPos, str, n);

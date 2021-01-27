@@ -177,6 +177,12 @@ long SysExec(regs64_t* r){
 		}
 	}
 
+	char* kernelArgv[argc];
+	for(int i = 0; i < argc; i++){
+		kernelArgv[i] = (char*)kmalloc(strlen(argv[i]) + 1);
+		strcpy(kernelArgv[i], argv[i]);
+	}
+
 	Log::Info("Loading: %s", (char*)SC_ARG0(r));
 	timeval_t tv = Timer::GetSystemUptimeStruct();
 	uint8_t* buffer = (uint8_t*)kmalloc(node->size);
@@ -188,18 +194,13 @@ long SysExec(regs64_t* r){
 	timeval_t tvnew = Timer::GetSystemUptimeStruct();
 	Log::Info("Done (took %d ms)", Timer::TimeDifference(tvnew, tv));
 
-	char* kernelArgv[argc];
-	for(int i = 0; i < argc; i++){
-		kernelArgv[i] = (char*)kmalloc(strlen(argv[i]) + 1);
-		strcpy(kernelArgv[i], argv[i]);
-	}
-
 	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp, filepath);
+	kfree(buffer);
 
 	// TODO: Do not run process until we have finished
 
 	if(flags & EXEC_CHILD){
-		Scheduler::GetCurrentProcess()->children.add_back(proc);
+		currentProcess->children.add_back(proc);
 		proc->parent = Scheduler::GetCurrentProcess();
 
 		proc->fileDescriptors[0] = new fs_fd_t(*Scheduler::GetCurrentProcess()->fileDescriptors.get_at(0));
@@ -222,7 +223,6 @@ long SysExec(regs64_t* r){
 	for(int i = 0; i < envCount; i++){
 		kfree(kernelEnvp[i]);
 	}
-	kfree(buffer);
 
 	if(!proc) {
 		for(int i = 0; i < argc; i++){
@@ -266,7 +266,7 @@ long SysRead(regs64_t* r){
 long SysWrite(regs64_t* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	if(SC_ARG0(r) > proc->fileDescriptors.get_length()){
+	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
 		Log::Warning("Invalid File Descriptor: %d", SC_ARG0(r));
 		return -EBADF;
 	}
@@ -305,7 +305,7 @@ long SysOpen(regs64_t* r){
 
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	//Log::Info("Opening: %s", filepath);
+	Log::Info("Opening: %s", filepath);
 	long fd;
 	if(strcmp(filepath,"/") == 0){
 		fd = proc->fileDescriptors.get_length();
@@ -368,6 +368,8 @@ open:
 	fd = Scheduler::GetCurrentProcess()->fileDescriptors.get_length();
 	Scheduler::GetCurrentProcess()->fileDescriptors.add_back(handle);
 	fs::Open(node, flags);
+
+	Log::Info("fd: %d", fd);
 
 	return fd;
 }
@@ -965,12 +967,17 @@ long SysNanoSleep(regs64_t* r){
 }
 
 long SysPRead(regs64_t* r){
-	if(SC_ARG0(r) > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
+	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	if(SC_ARG0(r) >= currentProcess->fileDescriptors.get_length()){
 		return -EBADF;
 	}
+
 	FsNode* node;
-	if(Scheduler::GetCurrentProcess()->fileDescriptors.get_at(SC_ARG0(r)) || !(node = Scheduler::GetCurrentProcess()->fileDescriptors.get_at(SC_ARG0(r))->node)){ 
-		Log::Warning("sys_pread: Invalid file descriptor: %d", SC_ARG0(r));
+	if(!currentProcess->fileDescriptors.get_at(SC_ARG0(r)) || !(node = currentProcess->fileDescriptors.get_at(SC_ARG0(r))->node)){ 
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
+			Log::Warning("sys_pread: Invalid file descriptor: %d", SC_ARG0(r));
+			
+		});
 		return -EBADF; 
 	}
 	

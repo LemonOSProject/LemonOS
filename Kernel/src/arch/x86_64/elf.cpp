@@ -47,6 +47,7 @@ elf_info_t LoadELFSegments(process_t* proc, void* _elf, uintptr_t base){
     }
 
     char* linkPath = nullptr;
+    uintptr_t pml4Phys = Scheduler::GetCurrentProcess()->addressSpace->pml4Phys;
 
     for(int i = 0; i < elfHdr.phNum; i++){
         elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
@@ -57,7 +58,7 @@ elf_info_t LoadELFSegments(process_t* proc, void* _elf, uintptr_t base){
             asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
             memset((void*)(base + elfPHdr.vaddr),0,elfPHdr.memSize);
             memcpy((void*)(base + elfPHdr.vaddr),(void*)(elf + elfPHdr.offset), elfPHdr.fileSize);
-            asm volatile("mov %%rax, %%cr3" :: "a"(Scheduler::GetCurrentProcess()->addressSpace->pml4Phys));
+            asm volatile("mov %%rax, %%cr3" :: "a"(pml4Phys));
             asm("sti");
             releaseLock(&cpuLocal->runQueueLock);
         } else if (elfPHdr.type == PT_PHDR) {
