@@ -16,7 +16,7 @@ ssize_t FsNode::Write(size_t, size_t, uint8_t *){
 }
 
 fs_fd_t* FsNode::Open(size_t flags){
-    fs_fd_t* fDesc = (fs_fd_t*)kmalloc(sizeof(fs_fd_t));
+    fs_fd_t* fDesc = new fs_fd_t;
 
     fDesc->pos = 0;
     fDesc->mode = flags;

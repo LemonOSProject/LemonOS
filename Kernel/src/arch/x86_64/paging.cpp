@@ -10,6 +10,7 @@
 #include <panic.h>
 #include <apic.h>
 #include <strace.h>
+#include <syscalls.h>
 
 //extern uint32_t kernel_end;
 
@@ -274,7 +275,7 @@ namespace Memory{
 		uint64_t pml4Index = 0;
 		for(int d = 0; d < 512; d++){
 			uint64_t pdptIndex = d;
-			if(!(addressSpace->pdpt[d] & 0x1)) break;
+			if(!(addressSpace->pdpt[d] & 0x1)) continue;
 			/* Attempt 1: Already Allocated Page Tables*/
 			for(int i = 0; i < TABLES_PER_DIR; i++){
 				if(addressSpace->pageDirs[d][i] & 0x1 && !(addressSpace->pageDirs[d][i] & 0x80)){
@@ -527,8 +528,8 @@ namespace Memory{
 		while(amount--){
 			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
 			pageIndex = PAGE_TABLE_GET_INDEX(virt);
+			kernelHeapDirTables[pageDirIndex][pageIndex] = flags;
 			SetPageFrame(&(kernelHeapDirTables[pageDirIndex][pageIndex]), phys);
-			kernelHeapDirTables[pageDirIndex][pageIndex] |= flags;
 			invlpg(virt);
 			phys += PAGE_SIZE_4K;
 			virt += PAGE_SIZE_4K;
@@ -614,6 +615,10 @@ namespace Memory{
 		Log::Info("Process:");
 		Log::Info(Scheduler::GetCurrentProcess()->pid);
 
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
+			DumpLastSyscall();
+		});
+
 		Log::Info("\r\nFault address: ");
 		Log::Info(faultAddress);
 
@@ -647,8 +652,6 @@ namespace Memory{
 
 		// Kernel Panic so tell other processors to stop executing
 			APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
-
-		Log::Info("Last syscall: %d", lastSyscall);
 			
 		PrintStackTrace(regs->rbp);
 

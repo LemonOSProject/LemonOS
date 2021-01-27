@@ -1,6 +1,7 @@
 #include <fs/tmp.h>
 
 #include <errno.h>
+#include <debug.h>
 
 namespace fs::Temp{
     TempVolume::TempVolume(const char* name){
@@ -29,15 +30,17 @@ namespace fs::Temp{
             node->bufferSize = 0;
         } else if(newBufferSize > node->bufferSize){
             if(!node->buffer){
-                node->buffer = new uint8_t[node->size];
+                node->buffer = new uint8_t[newBufferSize];
 
                 memoryUsage += newBufferSize;
             } else {
                 uint8_t* newBuffer = new uint8_t[newBufferSize];
                 memcpy(newBuffer, node->buffer, node->bufferSize);
 
-                delete node->buffer;
+                uint8_t* oldBuffer = node->buffer;
                 node->buffer = newBuffer;
+
+                delete oldBuffer;
 
                 memoryUsage += newBufferSize - node->bufferSize;
             }
@@ -65,6 +68,11 @@ namespace fs::Temp{
     TempNode::TempNode(TempVolume* v, int createFlags){
         vol = v;
         volumeID = v->volumeID;
+
+        handleCount = 0;
+        size = 0;
+
+        nlink = 1;
 
         flags = createFlags;
 
@@ -122,8 +130,12 @@ namespace fs::Temp{
             return -EISDIR;
         }
 
+        if(off < 0){
+            return -EINVAL;
+        }
+
         bufferLock.AcquireWrite();
-        if(off + writeSize > size){
+        if(!buffer || off + writeSize > size){
             size = off + writeSize;
 
             vol->ReallocateNode(this);
@@ -156,24 +168,24 @@ namespace fs::Temp{
 
     int TempNode::ReadDir(DirectoryEntry* dirent, uint32_t index){
         if(index >= children.get_length() + 2){
-            return -ENOENT; // Out of range
+            return 0; // Out of range
         }
 
         if(index == 0){
             strcpy(dirent->name, ".");
             dirent->flags = flags;
             
-            return 0;
+            return 1;
         } else if(index == 1){
             strcpy(dirent->name, "..");
             dirent->flags = parent->flags;
 
-            return 0;
+            return 1;
         } else {
-            *dirent = children[index];
+            *dirent = children[index - 2];
             dirent->flags = dirent->node->flags;
 
-            return 0;
+            return 1;
         }
     }
 
@@ -184,24 +196,44 @@ namespace fs::Temp{
 
         if(strcmp(name, "..") == 0){
             if(this == reinterpret_cast<TempNode*>(&vol->mountPoint)){
-                return fs::GetRoot();
+                return parent;
             } else {
                 return this;
             }
         }
 
-        return Find(name);
+        for(DirectoryEntry& ent : children){
+            if(strncmp(ent.name, name, NAME_MAX) == 0){
+                IF_DEBUG(debugLevelTmpFS >= DebugLevelVerbose, {
+                    Log::Info("found node: %x (%s)", ent.node, ent.name);
+                });
+                return ent.node;
+            }
+            IF_DEBUG(debugLevelTmpFS >= DebugLevelVerbose, {
+                Log::Info("searched node: %x (%s)", ent.node, ent.name);
+            });
+        }
+
+        return nullptr;
     }
 
     int TempNode::Create(DirectoryEntry* ent, uint32_t mode){
         if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+            IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
+                Log::Warning("[tmpfs] Create: Node is not a directory!");
+            });
+
             return -ENOTDIR;
         }
 
         TempNode* newNode = new TempNode(vol, FS_NODE_FILE);
         
+        *ent = DirectoryEntry(newNode, ent->name);
         DirectoryEntry dirent = *ent;
-        dirent.node = newNode;
+
+        IF_DEBUG(debugLevelTmpFS, {
+            Log::Info("[tmp] created %s (addr: %x, nlink: %d)!", dirent.name, newNode, newNode->nlink);
+        });
 
         children.add_back(dirent);
 
@@ -210,14 +242,18 @@ namespace fs::Temp{
 
     int TempNode::CreateDirectory(DirectoryEntry* ent, uint32_t mode){
         if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+            IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
+                Log::Warning("[tmpfs] CreateDirectory: Node is not a directory!");
+            });
+
             return -ENOTDIR;
         }
 
         TempNode* newNode = new TempNode(vol, FS_NODE_DIRECTORY);
         newNode->parent = this;
         
+        *ent = DirectoryEntry(newNode, ent->name);
         DirectoryEntry dirent = *ent;
-        dirent.node = newNode;
 
         children.add_back(dirent);
 
@@ -235,6 +271,8 @@ namespace fs::Temp{
 
         DirectoryEntry dirent = *ent;
         ent->node = file;
+
+        file->nlink++;
 
         children.add_back(dirent);
 
@@ -263,10 +301,25 @@ namespace fs::Temp{
         return 0;
     }
 
+    fs_fd_t* TempNode::Open(size_t flags){
+        fs_fd_t* fDesc = new fs_fd_t;
+
+        fDesc->pos = 0;
+        fDesc->mode = flags;
+        fDesc->node = this;
+
+        handleCount++;
+
+        return fDesc;
+    }
+
     void TempNode::Close(){
         handleCount--;
 
         if(handleCount <= 0 && nlink <= 0){ // No hard links or open handles to node
+            IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
+                Log::Warning("[tmpfs] Deleting node!");
+            });
             delete this;
         }
     }

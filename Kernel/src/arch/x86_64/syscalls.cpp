@@ -24,12 +24,12 @@
 #include <debug.h>
 #include <strace.h>
 
-#define SC_ARG0(r) r->rdi
-#define SC_ARG1(r) r->rsi
-#define SC_ARG2(r) r->rdx
-#define SC_ARG3(r) r->r10
-#define SC_ARG4(r) r->r9
-#define SC_ARG5(r) r->r8
+#define SC_ARG0(r) (r)->rdi
+#define SC_ARG1(r) (r)->rsi
+#define SC_ARG2(r) (r)->rdx
+#define SC_ARG3(r) (r)->r10
+#define SC_ARG4(r) (r)->r9
+#define SC_ARG5(r) (r)->r8
 
 #define SYS_EXIT 1
 #define SYS_EXEC 2
@@ -128,6 +128,11 @@ long SysExit(regs64_t* r){
 	int64_t code = SC_ARG0(r);
 
 	Log::Info("Process %s (PID: %d) exiting with code %d", Scheduler::GetCurrentProcess()->name, Scheduler::GetCurrentProcess()->pid, code);
+
+	IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
+		Log::Info("rip: %x", r->rip);
+		UserPrintStackTrace(r->rbp, Scheduler::GetCurrentProcess()->addressSpace);
+	});
 
 	Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 	return 0;
@@ -305,7 +310,9 @@ long SysOpen(regs64_t* r){
 
 	process_t* proc = Scheduler::GetCurrentProcess();
 
-	Log::Info("Opening: %s", filepath);
+	IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
+		Log::Info("Opening: %s (flags: %u)", filepath, flags);
+	});
 	long fd;
 	if(strcmp(filepath,"/") == 0){
 		fd = proc->fileDescriptors.get_length();
@@ -321,10 +328,6 @@ open:
 			FsNode* parent = fs::ResolveParent(filepath, proc->workingDir);
 			char* basename = fs::BaseName(filepath);
 
-			IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
-				Log::Info("SysOpen: Creating %s", filepath);
-			});
-
 			if(!parent) {
 				Log::Warning("SysOpen: Could not resolve parent directory of new file %s", basename);
 				return -ENOENT;
@@ -332,6 +335,11 @@ open:
 
 			DirectoryEntry ent;
 			strcpy(ent.name, basename);
+
+			IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+				Log::Info("SysOpen: Creating %s", filepath);
+			});
+
 			parent->Create(&ent, flags);
 
 			kfree(basename);
@@ -2911,7 +2919,19 @@ syscall_t syscalls[]{
 	SysGetSocketOptions,
 };
 
-int lastSyscall = 0;
+regs64_t lastSyscall;
+
+void DumpLastSyscall(){
+	Log::Info("Last syscall:\nCall: %d, arg0: %i (%x), arg1: %i (%x), arg2: %i (%x), arg3: %i (%x), arg4: %i (%x), arg5: %i (%x)",
+		lastSyscall.rax,
+		SC_ARG0(&lastSyscall), SC_ARG0(&lastSyscall),
+		SC_ARG1(&lastSyscall), SC_ARG1(&lastSyscall),
+		SC_ARG2(&lastSyscall), SC_ARG2(&lastSyscall),
+		SC_ARG3(&lastSyscall), SC_ARG3(&lastSyscall),
+		SC_ARG4(&lastSyscall), SC_ARG4(&lastSyscall),
+		SC_ARG5(&lastSyscall), SC_ARG5(&lastSyscall));
+}
+
 extern "C"
 void SyscallHandler(regs64_t* regs) {
 	if (regs->rax >= NUM_SYSCALLS) // If syscall is non-existant then return
@@ -2923,12 +2943,18 @@ void SyscallHandler(regs64_t* regs) {
 	if(!syscalls[regs->rax]) return;
 	if(thread->state == ThreadStateZombie) for(;;);
 
+	#ifdef KERNEL_DEBUG
 	uint64_t rsp = 0;
 	asm volatile("mov %%rsp, %0" : "=r"(rsp));
 
-	IF_DEBUG((rsp < KERNEL_VIRTUAL_BASE), {
+	if(rsp < KERNEL_VIRTUAL_BASE){
 		Log::Info("warning: call: %d, thread rip: %x, kstack: %x, kernel rsp: %x, tss rsp0: %x, thread cs: %x, thread ss: %x", regs->rax, regs->rip, GetCPULocal()->currentThread->kernelStack, rsp, GetCPULocal()->tss.rsp0, regs->cs, regs->ss);
-	});
+	}
+
+	if(debugLevelSyscalls >= DebugLevelVerbose){
+		lastSyscall = *regs;
+	}
+	#endif
 
 	acquireLock(&thread->lock);
 	regs->rax = syscalls[regs->rax](regs); // Call syscall

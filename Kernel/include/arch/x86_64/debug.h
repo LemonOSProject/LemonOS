@@ -26,6 +26,7 @@ extern const int debugLevelNVMe;
 extern const int debugLevelPartitions;
 
 extern const int debugLevelFilesystem;
+extern const int debugLevelTmpFS;
 extern const int debugLevelExt2;
 
 extern const int debugLevelXHCI;

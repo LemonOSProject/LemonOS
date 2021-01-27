@@ -7,6 +7,7 @@
 #include <scheduler.h>
 #include <apic.h>
 #include <strace.h>
+#include <syscalls.h>
 
 idt_entry_t idt[256];
 
@@ -275,6 +276,9 @@ extern "C"
 			// Kernel Panic so tell other processors to stop executing
 			APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
 
+			IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
+				DumpLastSyscall();
+			});
 			Log::Error("Fatal Kernel Exception: ");
 			Log::Info(int_num);
 			Log::Info("RIP: ");

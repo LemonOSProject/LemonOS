@@ -18,6 +18,15 @@ namespace fs{
 
 		int ReadDir(DirectoryEntry*, uint32_t);
 		FsNode* FindDir(char* name);
+
+    	int Create(DirectoryEntry* ent, uint32_t mode){
+			Log::Warning("[RootFS] Attempted to create a file!");
+			return -EROFS;
+		}
+
+    	int CreateDirectory(DirectoryEntry* ent, uint32_t mode){
+			return -EROFS;
+		}
 	};
 
     Root root;
@@ -426,10 +435,12 @@ namespace fs{
     void Close(fs_fd_t* fd){
 		if(!fd) return;
 
+		assert(fd->node);
+
         fd->node->Close();
 		fd->node = nullptr;
 
-		kfree(fd);
+		delete fd;
     }
 
     int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index){

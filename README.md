@@ -35,6 +35,7 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 ### Work In Progress
 - Network Stack (TCP, DNS and DHCP Client)
 - XHCI Driver
+- Clang/LLVM Port
 
 ### System requirements
 - 256 MB RAM (512 is more optimal)
