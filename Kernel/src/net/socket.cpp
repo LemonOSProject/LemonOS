@@ -71,7 +71,7 @@ int Socket::Connect(const sockaddr* addr, socklen_t addrlen){
 }
 
 int Socket::Listen(int backlog){
-    return 0;
+    return -EOPNOTSUPP; // If Listen has not been implemented assume that the socket is not connection-oriented
 }
 
 ssize_t Socket::Read(size_t offset, size_t size, uint8_t* buffer){

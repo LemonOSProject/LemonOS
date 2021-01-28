@@ -228,4 +228,11 @@ namespace Network {
         int SendUDP(void* data, size_t length, IPv4Address& destination, MACAddress& immediateDestination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter = nullptr);
         void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length);
     }
+    
+    namespace TCP{
+        Socket* FindSocket(BigEndian<uint16_t> port);
+
+        int SendTCP(void* data, size_t length, IPv4Address& destination, MACAddress& immediateDestination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter = nullptr);
+        void OnReceiveTCP(IPv4Header& ipHeader, void* data, size_t length);
+    }
 }

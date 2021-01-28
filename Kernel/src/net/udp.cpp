@@ -17,12 +17,12 @@ namespace Network::UDP{
     int AcquirePort(UDPSocket* sock, unsigned int port){
         if(!port || port > PORT_MAX){
             Log::Warning("[Network] AcquirePort: Invalid port: %d", port);
-            return -1;
+            return -EINVAL;
         }
 
         if(sockets.get(port)){
             Log::Warning("[Network] AcquirePort: Port %d in use!", port);
-            return -2;
+            return -EADDRINUSE;
         }
 
         sockets.insert(port, sock);
@@ -104,6 +104,12 @@ namespace Network::UDP{
         assert(type == DatagramSocket);
     }
 
+    UDPSocket::~UDPSocket(){
+        if(bound){
+            ReleasePort(port);
+        }
+    }
+
     unsigned short UDPSocket::AllocatePort(){
         return Network::UDP::AllocatePort(this);
     }
@@ -141,7 +147,10 @@ namespace Network::UDP{
     }
 
     int UDPSocket::Bind(const sockaddr* addr, socklen_t addrlen){
-        
+        if(bound){
+            return -EINVAL;
+        }
+
         if(int e = IPSocket::Bind(addr, addrlen)){
             if(e == -2){
                 return -EADDRINUSE; // Failed to acquire port
@@ -149,6 +158,8 @@ namespace Network::UDP{
         }
 
         assert(port && port < PORT_MAX);
+
+        bound = true;
 
         return 0;
     }

@@ -57,11 +57,9 @@ int IPSocket::Bind(const sockaddr* addr, socklen_t addrlen){
 	port.value = inetAddr->sin_port; // Should already be big endian
 	if(!port.value){
 		port = AllocatePort();
-	} else {
-		return AcquirePort((uint16_t)port);
 	}
-
-	return 0;
+	
+	return AcquirePort((uint16_t)port);
 }
 
 int IPSocket::Connect(const sockaddr* addr, socklen_t addrlen){

@@ -240,6 +240,7 @@ namespace Network::UDP{
         int64_t OnReceive(IPv4Address& sourceIP, BigEndian<uint16_t> sourcePort, void* buffer, size_t len);
     public:
         UDPSocket(int type, int protocol);
+        ~UDPSocket();
 
         Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
         int Bind(const sockaddr* addr, socklen_t addrlen);
@@ -248,6 +249,29 @@ namespace Network::UDP{
 
         int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
         int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
+    };
+}
+
+namespace Network::TCP {
+    class TCPSocket final : public IPSocket {
+    protected:
+        friend void OnReceiveTCP(IPv4Header& ipHeader, void* data, size_t length);
+
+        void Synchronize(); // TCP SYN (Establish a connection to the server)
+        void Acknowledge(); // TCP ACK (Acknowledge connection)
+        void SynchronizeAcknowledge(); // TCP SYN-ACK (Establish connection to client and acknowledge the connection)
+
+        unsigned short AllocatePort();
+        int AcquirePort(uint16_t port);
+        int ReleasePort(uint16_t port);
+    public:
+        TCPSocket(int type, int protocol);
+        ~TCPSocket();
+
+        Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
+        int Bind(const sockaddr* addr, socklen_t addrlen);
+        int Connect(const sockaddr* addr, socklen_t addrlen);
+        int Listen(int backlog);
     };
 }
 
