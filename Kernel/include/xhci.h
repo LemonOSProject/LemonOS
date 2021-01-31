@@ -50,7 +50,7 @@
 namespace USB{
     class XHCIController{
     protected:
-        friend void XHCIIRQHandler(XHCIController* xHC, regs64_t* r);
+        friend void XHCIIRQHandler(XHCIController* xHC, RegisterContext* r);
         
         enum XHCIExtendedCapabilities{
             XHCIExtCapLegacySupport = 1,
@@ -702,7 +702,7 @@ namespace USB{
         void InitializeProtocols();
         void InitializePorts();
 
-        void IRQHandler(regs64_t* r);
+        void IRQHandler(RegisterContext* r);
 
         void SendCommand(void* data);
         void EnableSlot();

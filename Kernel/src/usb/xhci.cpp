@@ -16,7 +16,7 @@ namespace USB{
     uint8_t xhciSubclass = PCI_SUBCLASS_USB;
     uint8_t xhciProgIF = PCI_PROGIF_XHCI;
 
-    void XHCIIRQHandler(XHCIController* xHC, regs64_t* r){
+    void XHCIIRQHandler(XHCIController* xHC, RegisterContext* r){
         xHC->OnInterrupt();
     }
 

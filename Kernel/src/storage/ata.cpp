@@ -91,7 +91,7 @@ namespace ATA{
 		return 0;
 	}
 
-	void IRQHandler(regs64_t* r){
+	void IRQHandler(RegisterContext* r){
 		Log::Info("Disk IRQ");
 		//irqWatcher.Signal();
 	}

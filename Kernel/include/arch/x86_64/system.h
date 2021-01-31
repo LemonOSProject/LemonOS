@@ -16,7 +16,7 @@ extern "C"{
     uint32_t inportl(uint16_t port);
 }
 
-typedef struct {
+struct RegisterContext {
     uint64_t r15;
     uint64_t r14;
     uint64_t r13;
@@ -37,7 +37,7 @@ typedef struct {
     uint64_t rflags;
     uint64_t rsp;
     uint64_t ss;
-} __attribute__((packed)) regs64_t;
+};
 
 typedef struct {
     uint16_t fcw; // FPU Control Word

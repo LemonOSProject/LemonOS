@@ -7,6 +7,7 @@
 #include <scheduler.h>
 #include <assert.h>
 #include <cpu.h>
+#include <errno.h>
 
 cc_t c_cc_default[NCCS]{
 	4,			// VEOF
@@ -167,36 +168,49 @@ PTY::PTY(const char* name) : masterFile(name), slaveFile(name){
 	ptys->add_back(this);
 }
 
-size_t PTY::Master_Read(char* buffer, size_t count){
+ssize_t PTY::Master_Read(char* buffer, size_t count){
 	return master.Read(buffer, count);
 }
 
-size_t PTY::Slave_Read(char* buffer, size_t count){
-	thread_t* thread = GetCPULocal()->currentThread;
+ssize_t PTY::Slave_Read(char* buffer, size_t count){
+	Thread* thread = GetCPULocal()->currentThread;
 
-	while(thread->state != ThreadStateZombie && IsCanonical() && !slave.lines) Scheduler::BlockCurrentThread(slaveBlocker);
-	while(thread->state != ThreadStateZombie && !IsCanonical() && !slave.bufferPos) Scheduler::BlockCurrentThread(slaveBlocker);
+	while(IsCanonical() && !slave.lines){
+		FilesystemBlocker blocker(&slaveFile);
 
-	if(thread->state == ThreadStateZombie){
-		slaveBlocker.Remove(thread);
-		return -1;
+		if(thread->Block(&blocker)){
+			return -EINTR;
+		}
+	}
+
+	while(!IsCanonical() && !slave.bufferPos){
+		FilesystemBlocker blocker(&slaveFile);
+
+		if(thread->Block(&blocker)){
+			return -EINTR;
+		}
 	}
 
 	return slave.Read(buffer, count);
 }
 
-size_t PTY::Master_Write(char* buffer, size_t count){
-	size_t ret = slave.Write(buffer, count);
+ssize_t PTY::Master_Write(char* buffer, size_t count){
+	ssize_t ret = slave.Write(buffer, count);
 
-	if(slaveBlocker.blocked.get_length()){
+	if(slaveFile.blocked.get_length()){
 		if(IsCanonical()){
-			while(slave.lines && slaveBlocker.blocked.get_length()){
-				Scheduler::UnblockThread(slaveBlocker.blocked.remove_at(0));
+			acquireLock(&slaveFile.blockedLock);
+			while(slave.lines && slaveFile.blocked.get_length()){
+				slaveFile.blocked.remove_at(0)->Unblock();
 			}
+			releaseLock(&slaveFile.blockedLock);
 		} else {
-			while(slave.bufferPos && slaveBlocker.blocked.get_length()){
-				Scheduler::UnblockThread(slaveBlocker.blocked.remove_at(0));
+			acquireLock(&slaveFile.blockedLock);
+			while(slave.bufferPos && slaveFile.blocked.get_length()){
+				slaveFile.blocked.remove_at(0)->Unblock();
+				Log::Info("unblocked!");
 			}
+			releaseLock(&slaveFile.blockedLock);
 		}
 	}
 
@@ -227,8 +241,14 @@ size_t PTY::Master_Write(char* buffer, size_t count){
 	return ret;
 }
 
-size_t PTY::Slave_Write(char* buffer, size_t count){
-	size_t written = master.Write(buffer, count);
+ssize_t PTY::Slave_Write(char* buffer, size_t count){
+	ssize_t written = master.Write(buffer, count);
+
+	acquireLock(&masterFile.blockedLock);
+	while(master.bufferPos && masterFile.blocked.get_length()){
+		masterFile.blocked.remove_at(0)->Unblock();
+	}
+	releaseLock(&masterFile.blockedLock);
 
 	if(master.bufferPos && watchingMaster.get_length()){
 		while(watchingMaster.get_length()){

@@ -16,7 +16,7 @@ typedef struct {
 
 class Stream {
 protected:
-    List<thread_t*> waiting;
+    List<Thread*> waiting;
 
 public:
     virtual void Wait();

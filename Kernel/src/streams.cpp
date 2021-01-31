@@ -102,7 +102,8 @@ int64_t DataStream::Write(void* data, size_t len){
 
     if(bufferPos > 0 && waiting.get_length() > 0) {
         while(waiting.get_length()){
-            Scheduler::UnblockThread(waiting.remove_at(0));
+            //Scheduler::UnblockThread(waiting.remove_at(0));
+            // TODO: Reinstate blocker
         }
     }
 
@@ -118,7 +119,8 @@ int64_t DataStream::Empty(){
 void DataStream::Wait(){
     if(!Empty()) return;
     
-    Scheduler::BlockCurrentThread(waiting, streamLock);
+    //Scheduler::BlockCurrentThread(waiting, streamLock);
+     // TODO: Reinstate blocker
 
     while(Empty()){
         Scheduler::Yield();
@@ -161,7 +163,8 @@ int64_t PacketStream::Write(void* buffer, size_t len){
 
     if(packets.get_length() > 0 && waiting.get_length() > 0) {
         while(waiting.get_length()){
-            Scheduler::UnblockThread(waiting.remove_at(0));
+            //Scheduler::UnblockThread(waiting.remove_at(0));
+            // TODO: Reinstate blocker
         }
     }
 

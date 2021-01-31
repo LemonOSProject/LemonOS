@@ -19,8 +19,6 @@
 
 #define STREAM_MAX_BUFSIZE 0x20000 // 128 KB
 
-#define SOCK_NONBLOCK O_NONBLOCK
-
 struct rtentry {
 	unsigned long rt_pad1;
 	struct sockaddr rt_dst;
@@ -229,8 +227,6 @@ namespace Network::UDP{
         };
 
         lock_t packetsLock = 0;
-        lock_t waitingLock = 0;
-        List<thread_t*> waiting;
         List<UDPPacket> packets;
 
         unsigned short AllocatePort();

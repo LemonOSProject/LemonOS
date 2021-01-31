@@ -42,7 +42,7 @@ namespace Network{
 
     int supportedDeviceCount = 23;
 
-    void Intel8254x::InterruptHandler(Intel8254x* card, regs64_t* r){
+    void Intel8254x::InterruptHandler(Intel8254x* card, RegisterContext* r){
         card->OnInterrupt();
     }
 
@@ -120,17 +120,13 @@ namespace Network{
                     memcpy(pkt->data, rxDescriptorsVirt[rxTail], pkt->length);
                     
                     queue.add_back(pkt);
+                    packetSemaphore.Signal();
                 } else {
                     // TODO: Do something that isn't dropping the packet when the cache is empty
                 }
 
                 WriteMem32(I8254_REGISTER_RDESC_TAIL, rxTail);
             } while(1);
-
-            for(auto& t : blocker.blocked){
-                Scheduler::UnblockThread(t);
-            }
-            blocker.blocked.clear();
         }
     }
 

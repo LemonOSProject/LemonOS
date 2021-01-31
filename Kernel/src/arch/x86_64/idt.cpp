@@ -129,12 +129,12 @@ extern uint64_t int_vectors[];
 int errCode = 0;
 
 namespace IDT{
-	void IPIHalt(void*, regs64_t* r){
+	void IPIHalt(void*, RegisterContext* r){
 		asm("cli");
 		asm("hlt");
 	}
 
-	void InvalidInterruptHandler(void*, regs64_t* r){
+	void InvalidInterruptHandler(void*, RegisterContext* r){
 		Log::Warning("Invalid interrupt handler called!");
 	}
 
@@ -266,7 +266,7 @@ namespace IDT{
 }
 
 extern "C"
-	void isr_handler(int int_num, regs64_t* regs, int err_code) {
+	void isr_handler(int int_num, RegisterContext* regs, int err_code) {
 		errCode = err_code;
 		if (interrupt_handlers[int_num].handler != 0) {
 			interrupt_handlers[int_num].handler(interrupt_handlers[int_num].data, regs);
@@ -305,9 +305,9 @@ extern "C"
 			Log::Info("Stack Trace:");
 			PrintStackTrace(regs->rbp);
 
-			char temp[16];
-			char temp2[16];
-			char temp3[16];
+			char temp[19];
+			char temp2[19];
+			char temp3[19];
 			const char* reasons[]{"Generic Exception","RIP: ", itoa(regs->rip, temp, 16),"Exception: ",itoa(int_num, temp2, 16), "Process:", itoa(Scheduler::GetCurrentProcess() ? (Scheduler::GetCurrentProcess()->pid) : 0,temp3,10)};;
 			KernelPanic(reasons, 7);
 			for (;;);
@@ -325,7 +325,7 @@ extern "C"
 	}
 
 	extern "C"
-	void irq_handler(int int_num, regs64_t* regs) {
+	void irq_handler(int int_num, RegisterContext* regs) {
 		LocalAPICEOI();
 		
 		if (__builtin_expect(interrupt_handlers[int_num].handler != 0, 1)) {
@@ -338,7 +338,7 @@ extern "C"
 	}
 	
 	extern "C"
-	void ipi_handler(int int_num, regs64_t* regs) {
+	void ipi_handler(int int_num, RegisterContext* regs) {
 		LocalAPICEOI();
 
 		if (__builtin_expect(interrupt_handlers[int_num].handler != 0, 1)) {

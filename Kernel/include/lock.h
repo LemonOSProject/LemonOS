@@ -8,38 +8,49 @@ struct thread;
 #include <thread.h>
 #include <logging.h>
 
-class Semaphore : public Scheduler::GenericThreadBlocker{
+class Semaphore {
 protected:
     lock_t value = 0;
-    lock_t blockedLock = 0;
+    lock_t lock = 0;
+
+    class SemaphoreBlocker : public ThreadBlocker{
+        friend class Semaphore;
+    public:
+        SemaphoreBlocker* next = nullptr;
+        SemaphoreBlocker* prev = nullptr;
+
+        Semaphore* semaphore;
+
+        inline SemaphoreBlocker(Semaphore* sema) : semaphore(sema) {
+
+        }
+
+        void Interrupt(){
+            interrupted = true;
+            shouldBlock = false;
+
+            acquireLock(&semaphore->lock);
+            semaphore->blocked.remove(this);
+            releaseLock(&semaphore->lock);
+        }
+    };
+
+    FastList<SemaphoreBlocker*> blocked;
 public:
-    Semaphore(int val){
+    Semaphore(int val) : value(val) {};
+
+    inline void SetValue(int val){
         value = val;
     }
 
-    void SetValue(int val){
-        value = val;
-    }
-
-    lock_t GetValue(){
+    inline lock_t GetValue(){
         return value;
     }
 
-    void Wait();
+    [[nodiscard]] bool Wait();
+    [[nodiscard]] bool WaitTimeout(long& timeout);
 
-    void WaitTimeout(long timeout);
-
-    inline void Signal(){
-        __sync_fetch_and_add(&value, 1);
-
-        if(blocked.get_length() > 0){
-            acquireLock(&blockedLock);
-            if(blocked.get_length() > 0){
-                Scheduler::UnblockThread(blocked.remove_at(0));
-            }
-            releaseLock(&blockedLock);
-        }
-    }
+    void Signal();
 };
 
 class ReadWriteLock {

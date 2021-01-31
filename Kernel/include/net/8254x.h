@@ -128,7 +128,7 @@ namespace Network{
 
         void UpdateLink();
         void OnInterrupt();
-        static void InterruptHandler(Intel8254x* card, regs64_t* r);
+        static void InterruptHandler(Intel8254x* card, RegisterContext* r);
 
         public:
         Intel8254x(PCIDevice& device);

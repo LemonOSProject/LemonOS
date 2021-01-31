@@ -356,8 +356,8 @@ namespace AHCI{
         int blocksize = 512;
 		AHCIStatus status = AHCIStatus::Uninitialized;
 	private:
-		unsigned AcquireBuffer();
-		void ReleaseBuffer(unsigned index);
+		int AcquireBuffer();
+		void ReleaseBuffer(int index);
 
 		int FindCmdSlot();
 		int Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write);
@@ -375,8 +375,7 @@ namespace AHCI{
 		lock_t bufferLocks[8];
 
 		Semaphore bufferSemaphore = Semaphore(8);
-		//Semaphore portLock = Semaphore(1); // Binary semaphore for the AHCI port
-		lock_t portLock = 0;
+		Semaphore portLock = Semaphore(1); // Binary semaphore for the AHCI port
 	};
 
 	int Init();

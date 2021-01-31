@@ -279,7 +279,12 @@ namespace Memory{
 				continue;
 			}
 			/* Attempt 1: Already Allocated Page Tables*/
-			for(int i = 0; i < TABLES_PER_DIR; i++){
+			int i = 0;
+			if(d == 0){
+				i = 1; // Prevent 0 from being allocated
+				pageDirOffset = 1;
+			}
+			for(; i < TABLES_PER_DIR; i++){
 				if(addressSpace->pageDirs[d][i] & 0x1 && !(addressSpace->pageDirs[d][i] & 0x80)){
 					for(int j = 0; j < PAGES_PER_TABLE; j++){
 						if(addressSpace->pageTables[d][i][j] & 0x1){
@@ -292,7 +297,7 @@ namespace Memory{
 						counter++;
 
 						if(counter >= amount){
-							address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (pageDirOffset * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
+							address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (pageDirOffset * PAGE_SIZE_2M) + (offset * PAGE_SIZE_4K);
 							while(counter--){
 								if(offset >= 512){
 									pageDirOffset++;
@@ -317,7 +322,12 @@ namespace Memory{
 			counter = 0;
 
 			/* Attempt 2: Allocate Page Tables*/
-			for(int i = 0; i < TABLES_PER_DIR; i++){
+			i = 0;
+			if(d == 0){
+				i = 1; // Prevent 0 from being allocated
+				pageDirOffset = 1;
+			}
+			for(; i < TABLES_PER_DIR; i++){
 				if(!(addressSpace->pageDirs[d][i] & 0x1)){
 					
 					CreatePageTable(d,i,addressSpace);
@@ -429,9 +439,7 @@ namespace Memory{
 			}
 		}
 
-		Log::Error("Kernel Out of Virtual Memory");
-		const char* reasons[1] = {"Kernel Out of Virtual Memory!"};
-		KernelPanic(reasons, 1);
+		assert(!"Kernel Out of Virtual Memory");
 	}
 
 	void* KernelAllocate2MPages(uint64_t amount){
@@ -581,7 +589,7 @@ namespace Memory{
 		currentAddressSpace = addressSpace;
 	}
 
-	void PageFaultHandler(void*, regs64_t* regs)
+	void PageFaultHandler(void*, RegisterContext* regs)
 	{
 		asm("cli");
 		write_serial_n("Page Fault\r\n", 12);
@@ -657,8 +665,8 @@ namespace Memory{
 			
 		PrintStackTrace(regs->rbp);
 
-		char temp[16];
-		char temp2[16];
+		char temp[19];
+		char temp2[19];
 
 		const char* reasons[]{"Page Fault","RIP: ", itoa(regs->rip, temp, 16),"Address: ",itoa(faultAddress, temp2, 16)};;
 		KernelPanic(reasons,7);

@@ -19,10 +19,10 @@ struct CPU{
     uint64_t id; // APIC/CPU id
     void* gdt; // GDT
 	gdt_ptr_t gdtPtr;
-	thread_t* currentThread = nullptr;
+	Thread* currentThread = nullptr;
 	process* idleProcess = nullptr;
 	volatile int runQueueLock = 0;
-	FastList<thread_t*>* runQueue;
+	FastList<Thread*>* runQueue;
     tss_t tss __attribute__((aligned(16))); 
 };
 

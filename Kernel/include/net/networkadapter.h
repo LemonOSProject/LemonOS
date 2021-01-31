@@ -20,6 +20,7 @@ namespace Network{
         };
 
     protected:
+
         static int nextDeviceNumber;
         unsigned maxCache = 256; // Maximum amount of cached packets, NIC drivers are free to change this
     
@@ -28,11 +29,12 @@ namespace Network{
         FastList<NetworkPacket*> cache;
         FastList<NetworkPacket*> queue;
 
+        Semaphore packetSemaphore = Semaphore(0);
+
         lock_t cacheLock = 0;
         lock_t queueLock = 0;
 
         lock_t threadLock = 0;
-        Scheduler::GenericThreadBlocker blocker;
 
         AdapterType type;
 
@@ -61,15 +63,17 @@ namespace Network{
         virtual int GetLink() { return linkState; }
         virtual int QueueSize() { return queue.get_length(); }
         virtual NetworkPacket* Dequeue() { 
+
             if(queue.get_length()) {
+                packetSemaphore.SetValue(queue.get_length() - 1);
                 return queue.remove_at(0); 
             } else {
                 return nullptr;
             }
         }
         virtual NetworkPacket* DequeueBlocking() {
-            if(!queue.get_length()){
-                Scheduler::BlockCurrentThread(blocker, threadLock);
+            if(packetSemaphore.Wait()){
+                return nullptr; // We were interrupted
             }
 
             if(queue.get_length()){

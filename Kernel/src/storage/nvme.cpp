@@ -76,9 +76,9 @@ namespace NVMe{
 
         *submissionDB = sqTail;
 
-        timeval_t tv = Timer::GetSystemUptimeStruct();
+        timeval tv = Timer::GetSystemUptimeStruct();
         while(completionCycleState == !completionQueue[cqHead].phaseTag){
-            if(Timer::TimeDifference(Timer::GetSystemUptimeStruct(), tv) >= 500){
+            if(Timer::TimeDifference(Timer::GetSystemUptimeStruct(), tv) >= 500000){
                 complet.status = 32767;
                 return; // Timeout
             }
@@ -408,7 +408,9 @@ namespace NVMe{
     }
 
     NVMeQueue* Controller::AcquireIOQueue(){
-        queueAvailability.Wait();
+        if(queueAvailability.Wait()){
+            return nullptr;
+        }
 
         assert(ioQueues.get_length() > 0);
         return ioQueues.remove_at(0);

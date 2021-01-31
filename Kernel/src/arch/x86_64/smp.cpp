@@ -9,6 +9,7 @@
 #include <tss.h>
 #include <idt.h>
 #include <hal.h>
+#include <memory.h>
 
 #include "smpdefines.inc"
 
@@ -57,7 +58,7 @@ namespace SMP{
 
         APIC::Local::Enable();
 
-        cpu->runQueue = new FastList<thread_t*>();
+        cpu->runQueue = new FastList<Thread*>();
         
         doneInit = true;
 
@@ -117,7 +118,7 @@ namespace SMP{
         cpus[0]->gdtPtr = GDT64Pointer64;
         cpus[0]->currentThread = nullptr;
         cpus[0]->runQueueLock = 0;
-        cpus[0]->runQueue = new FastList<thread_t*>();
+        cpus[0]->runQueue = new FastList<Thread*>();
         SetCPULocal(cpus[0]);
 
         if(HAL::disableSMP) {

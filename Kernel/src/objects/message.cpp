@@ -97,7 +97,9 @@ int64_t MessageEndpoint::Call(uint64_t id, uint16_t size, uint64_t data, uint64_
     Write(id, size, data); // Send message
 
     // TODO: timeout
-    s.Wait(); // Await reponse
+    if(s.Wait()){ // Await reponse
+        return -EINTR; // Interrupted
+    }
 
     *rSize = m.size;
 
@@ -155,7 +157,9 @@ int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
     }
     releaseLock(&peer->waitingResponseLock);
 
-    queueAvailablilitySemaphore.Wait();
+    if(queueAvailablilitySemaphore.Wait()){
+        return -EINTR;
+    }
 
     acquireLock(&peer->queueLock);
     peer->queue.Enqueue(&msg);

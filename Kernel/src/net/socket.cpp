@@ -149,7 +149,9 @@ LocalSocket::LocalSocket(int type, int protocol) : Socket(type, protocol){
 int LocalSocket::ConnectTo(Socket* client){
     assert(passive);
 
-    pendingConnections.Wait();
+    if(pendingConnections.Wait()){
+        return -EINTR;
+    }
 
     pending.add_back(client);
 
@@ -284,9 +286,7 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen){
         return -ENOSYS;
     }
 
-    ((LocalSocket*)sock)->ConnectTo(this);
-
-    return 0;
+    return ((LocalSocket*)sock)->ConnectTo(this);
 }
 
 int LocalSocket::Listen(int backlog){

@@ -131,23 +131,26 @@ static inline void FD_CLR(int fd, fd_set_t* fds) {
 	assert(fd < FD_SETSIZE);
 	fds->fds_bits[fd / 8] &= ~(1 << (fd % 8));
 }
+
 static inline int FD_ISSET(int fd, fd_set_t* fds) {
 	assert(fd < FD_SETSIZE);
 	return fds->fds_bits[fd / 8] & (1 << (fd % 8));
 }
+
 static inline void FD_SET(int fd, fd_set_t* fds) {
 	assert(fd < FD_SETSIZE);
 	fds->fds_bits[fd / 8] |= 1 << (fd % 8);
-}
-static inline void FD_ZERO(fd_set_t* fds) {
-	memset(fds, 0, sizeof(fd_set_t));
 }
 
 class FilesystemWatcher;
 class DirectoryEntry;
 
 class FsNode{
+    friend class FilesystemBlocker;
 public:
+    lock_t blockedLock = 0;
+    FastList<class FilesystemBlocker*> blocked;
+
     uint32_t flags = 0; // Flags
     uint32_t pmask = 0; // Permission mask
     uid_t uid = 0; // User id
@@ -233,31 +236,7 @@ public:
 
     mode_t flags = 0;
 
-    DirectoryEntry(FsNode* node, const char* name) { 
-        this->node = node;
-        strncpy(this->name, name, NAME_MAX);
-
-        switch(node->flags & FS_NODE_TYPE){
-            case FS_NODE_FILE:
-                flags = DT_REG;
-                break;
-            case FS_NODE_DIRECTORY:
-                flags = DT_DIR;
-                break;
-            case FS_NODE_CHARDEVICE:
-                flags = DT_CHR;
-                break;
-            case FS_NODE_BLKDEVICE:
-                flags = DT_BLK;
-                break;
-            case FS_NODE_SOCKET:
-                flags = DT_SOCK;
-                break;
-            case FS_NODE_SYMLINK:
-                flags = DT_LNK;
-                break;
-        }
-    }
+    DirectoryEntry(FsNode* node, const char* name);
 
     DirectoryEntry() {}
 };
@@ -272,7 +251,7 @@ public:
 
     }
 
-    void WatchNode(FsNode* node, int events){
+    inline void WatchNode(FsNode* node, int events){
         node->Watch(*this, events);
 
         watching.add_back(node);
@@ -281,6 +260,38 @@ public:
     ~FilesystemWatcher(){
         for(auto& node : watching){
             node->Unwatch(*this);
+        }
+    }
+};
+
+class FilesystemBlocker : public ThreadBlocker {
+    friend FsNode;
+    friend FastList<FilesystemBlocker*>;
+private:
+    FsNode* node = nullptr;
+
+    FilesystemBlocker* next;
+    FilesystemBlocker* prev;
+public:
+	FilesystemBlocker(FsNode* _node) : node(_node) {
+        acquireLock(&node->blockedLock);
+        node->blocked.add_back(this);
+        releaseLock(&node->blockedLock);
+    }
+    
+    inline void Interrupt() {
+        shouldBlock = false;
+        interrupted = true;
+
+        acquireLock(&lock);
+        node->blocked.remove(this);
+        node = nullptr;
+        releaseLock(&lock);
+    }
+
+    inline ~FilesystemBlocker(){
+        if(node){
+            node->blocked.remove(this);
         }
     }
 };

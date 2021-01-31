@@ -59,7 +59,7 @@ namespace Keyboard{
     KeyboardDevice kbDev("keyboard0");
 
     // Interrupt handler
-    void Handler(void*, regs64_t* r)
+    void Handler(void*, RegisterContext* r)
     {
         // Read from the keyboard's data buffer
         uint8_t key = inportb(0x60);

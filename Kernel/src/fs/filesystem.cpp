@@ -6,6 +6,32 @@
 
 #include <debug.h>
 
+DirectoryEntry::DirectoryEntry(FsNode* node, const char* name) { 
+	this->node = node;
+	strncpy(this->name, name, NAME_MAX);
+
+	switch(node->flags & FS_NODE_TYPE){
+		case FS_NODE_FILE:
+			flags = DT_REG;
+			break;
+		case FS_NODE_DIRECTORY:
+			flags = DT_DIR;
+			break;
+		case FS_NODE_CHARDEVICE:
+			flags = DT_CHR;
+			break;
+		case FS_NODE_BLKDEVICE:
+			flags = DT_BLK;
+			break;
+		case FS_NODE_SOCKET:
+			flags = DT_SOCK;
+			break;
+		case FS_NODE_SYMLINK:
+			flags = DT_LNK;
+			break;
+	}
+}
+
 namespace fs{
 	volume_id_t nextVID = 1; // Next volume ID
 	

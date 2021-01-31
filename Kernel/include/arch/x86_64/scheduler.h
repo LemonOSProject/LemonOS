@@ -34,7 +34,7 @@ typedef struct process {
 	address_space_t* addressSpace; // Pointer to page directory and tables
 	List<mem_region_t> sharedMemory; // Used to ensure these memory regions don't get freed when a process is terminated
 	uint8_t state = ThreadStateRunning; // Process state
-	Vector<thread_t*> threads;
+	Vector<Thread*> threads;
 	uint32_t threadCount = 0; // Amount of threads
 	int32_t euid = 0; // Effective UID
 	int32_t uid = 0;
@@ -46,14 +46,14 @@ typedef struct process {
 	char workingDir[PATH_MAX];
 	char name[NAME_MAX];
 
-	timeval_t creationTime; // When the process was created
+	timeval creationTime; // When the process was created
 	uint64_t activeTicks = 0; // How many ticks this process has been active
 
 	lock_t handleLock = 0;
 	Vector<Handle> handles;
 	Vector<fs_fd_t*> fileDescriptors;
-	List<thread_t*> blocking; // Threads blocking awaiting a state change
-	HashMap<uintptr_t, Scheduler::FutexThreadBlocker*> futexWaitQueue;
+	List<Thread*> blocking; // Threads blocking awaiting a state change
+	HashMap<uintptr_t, List<FutexThreadBlocker*>*> futexWaitQueue;
 
 	uintptr_t usedMemoryBlocks;
 } process_t;
@@ -77,6 +77,8 @@ typedef struct {
 } process_info_t;
 
 namespace Scheduler{
+	extern List<process_t*>* destroyedProcesses;
+
     pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss);
 
     process_t* CreateProcess(void* entry);
@@ -92,20 +94,24 @@ namespace Scheduler{
 
         return ret;
     }
+	
+	inline static Thread* GetCurrentThread(){
+		return GetCPULocal()->currentThread;
+	}
 
 	Handle& RegisterHandle(process_t* proc, FancyRefPtr<KernelObject> ko);
 	long FindHandle(process_t* proc, handle_id_t id, Handle** ref);
 	long DestroyHandle(process_t* proc, handle_id_t id);
 
 	void Yield();
-	void Schedule(void* data, regs64_t* r);
+	void Schedule(void* data, RegisterContext* r);
 
 	process_t* FindProcessByPID(uint64_t pid);
     uint64_t GetNextProccessPID(uint64_t pid);
-	void InsertNewThreadIntoQueue(thread_t* thread);
+	void InsertNewThreadIntoQueue(Thread* thread);
 
     void Initialize();
-    void Tick(regs64_t* r);
+    void Tick(RegisterContext* r);
 
 	void EndProcess(process_t* process);
 }

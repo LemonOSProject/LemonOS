@@ -5,6 +5,7 @@
 #include <logging.h>
 #include <memory.h>
 #include <gpt.h>
+#include <errno.h>
 
 namespace ATA{
     ATADiskDevice::ATADiskDevice(int port, int drive) {
@@ -51,7 +52,10 @@ namespace ATA{
 
             if(!size) continue;
 
-            driveLock.Wait();
+            if(driveLock.Wait()){
+                return -EINTR;
+            }
+
             if(ATA::Access(this, lba, 1, false)){
                 driveLock.Signal();
                 return 1; // Error Reading Sectors
@@ -78,7 +82,10 @@ namespace ATA{
 
             if(!size) continue;
 
-            driveLock.Wait();
+            if(driveLock.Wait()){
+                return -EINTR;
+            }
+
             memcpy(prdBuffer, buffer, size);
 
             if(ATA::Access(this, lba, 1, true)){

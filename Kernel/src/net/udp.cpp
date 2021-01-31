@@ -133,11 +133,11 @@ namespace Network::UDP{
 
         packets.add_back(pkt);
 
-        acquireLock(&waitingLock);
-        while(waiting.get_length()){
-            Scheduler::UnblockThread(waiting.remove_at(0));
+        acquireLock(&blockedLock);
+        while(blocked.get_length()){
+            blocked.remove_at(0)->Unblock();
         }
-        releaseLock(&waitingLock);
+        releaseLock(&blockedLock);
 
         return 0;
     }
@@ -173,21 +173,13 @@ namespace Network::UDP{
     }
 
     int64_t UDPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
-        if(!packets.get_length()){
-            if(flags & (MSG_DONTWAIT | SOCK_NONBLOCK)){
-                return -EAGAIN; // Don't wait
-            } else {
-                Scheduler::BlockCurrentThread(waiting, waitingLock);
-            }
-        }
-
         acquireLock(&packetsLock);
         if(packets.get_length() <= 0){
             releaseLock(&packetsLock);
-            if(flags & (MSG_DONTWAIT | SOCK_NONBLOCK)){
+            if(flags & MSG_DONTWAIT){
                 return -EAGAIN; // Don't wait
-            } else while(packets.get_length() <= 0){
-                Scheduler::Yield();
+            } else if(FilesystemBlocker bl(this); Scheduler::GetCurrentThread()->Block(&bl)){
+                return -EINTR; // We were interrupted
             }
         }
 

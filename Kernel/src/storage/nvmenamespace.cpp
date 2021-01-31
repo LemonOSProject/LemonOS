@@ -2,6 +2,7 @@
 
 #include <gpt.h>
 #include <debug.h>
+#include <errno.h>
 
 namespace NVMe{
 	Namespace::Namespace(Controller* controller, uint32_t nsID, const NamespaceIdentity& id){
@@ -44,7 +45,9 @@ namespace NVMe{
 	}
 
 	int Namespace::AcquireBuffer(){
-		bufferAvailability.Wait();
+		if(bufferAvailability.Wait()){
+			return -EINTR;
+		}
 
 		for(uint8_t i = 0; i < 8; i++){
 			if(!acquireTestLock(&bufferLocks[i])){
@@ -70,9 +73,15 @@ namespace NVMe{
 		uint32_t blockCount = (count + (blocksize - 1)) / blocksize;
 		uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
 		int blockBufferIndex = AcquireBuffer();
+		if(blockBufferIndex == -EINTR){
+			return -EINTR;
+		}
 		assert(blockBufferIndex >= 0);
 
 		NVMeQueue* queue = controller->AcquireIOQueue();
+		if(!queue){
+			return -EINTR; // The only time it should be null is if we got interrupted
+		}
 
 		NVMeCompletion completion;
 
@@ -100,7 +109,7 @@ namespace NVMe{
 				IF_DEBUG(debugLevelNVMe >= DebugLevelNormal, {
 					Log::Error("[NVMe] (NSID: %d, LBA: %x) Disk Error %d", nsID, lba, completion.status);
 				});
-				return completion.status;
+				return -completion.status;
 			}
 
 			memcpy(buffer, buffers[blockBufferIndex], size);
@@ -124,9 +133,16 @@ namespace NVMe{
 		uint32_t blockCount = (count + (blocksize - 1)) / blocksize;
 		uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
 		int blockBufferIndex = AcquireBuffer();
+		if(blockBufferIndex == -EINTR){
+			return -EINTR;
+		}
+
 		assert(blockBufferIndex >= 0);
 
 		NVMeQueue* queue = controller->AcquireIOQueue();
+		if(!queue){
+			return -EINTR; // The only time it should be null is if we got interrupted
+		}
 
 		NVMeCompletion completion;
 
@@ -156,7 +172,7 @@ namespace NVMe{
 				IF_DEBUG(debugLevelNVMe >= DebugLevelNormal, {
 					Log::Error("[NVMe] (NSID: %d, LBA: %x) Disk Error %d", nsID, lba, completion.status);
 				});
-				return completion.status;
+				return -completion.status;
 			}
 
 			count -= size;

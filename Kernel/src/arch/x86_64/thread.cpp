@@ -1,0 +1,138 @@
+#include <thread.h>
+
+#include <scheduler.h>
+#include <cpu.h>
+#include <debug.h>
+
+#ifdef KERNEL_DEBUG
+	#include <strace.h>
+#endif
+
+void ThreadBlocker::Interrupt(){
+	interrupted = true;
+	shouldBlock = false;
+
+	acquireLock(&lock);
+	if(thread){
+		thread->Unblock();
+	}
+}
+
+void ThreadBlocker::Unblock() {
+	shouldBlock = false;
+
+	acquireLock(&lock);
+	if(thread){
+		thread->Unblock();
+	}
+	releaseLock(&lock);
+}
+
+bool Thread::Block(ThreadBlocker* newBlocker){
+	assert(CheckInterrupts());
+
+	acquireLock(&newBlocker->lock);
+
+	asm("cli");
+	newBlocker->thread = this;
+	if(!newBlocker->ShouldBlock()){
+		releaseLock(&newBlocker->lock); // We were unblocked before the thread was actually blocked
+		asm("sti");
+
+		return false;
+	}
+
+	blocker = newBlocker;
+
+	releaseLock(&newBlocker->lock);
+	state = ThreadStateBlocked;
+	asm("sti");
+
+	Scheduler::Yield();
+
+	blocker = nullptr;
+
+	return newBlocker->WasInterrupted();
+}
+
+bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout){
+	assert(CheckInterrupts());
+	
+	Timer::TimerCallback timerCallback = [](void* t) -> void {
+		reinterpret_cast<Thread*>(t)->Unblock();
+		reinterpret_cast<Thread*>(t)->blockTimedOut = true;
+	};
+
+	acquireLock(&newBlocker->lock);
+	if(!newBlocker->ShouldBlock()){
+		releaseLock(&newBlocker->lock); // We were unblocked before the thread was actually blocks
+
+		return false;
+	}
+
+	blockTimedOut = false;
+	blocker = newBlocker;
+
+	blocker->thread = this;
+
+	{
+		Timer::TimerEvent ev(usTimeout, timerCallback, this);
+		
+		asm("cli");
+		releaseLock(&newBlocker->lock);
+		state = ThreadStateBlocked;
+
+		// Now that the thread state has been set blocked, check if we timed out before setting to blocked
+		if(!blockTimedOut) {
+			asm("sti");
+
+			Scheduler::Yield();
+		} else {
+			state = ThreadStateRunning;
+
+			asm("sti");
+
+			blocker->Unblock(); // If the blocker re-calls Thread::Unblock that's ok
+		}
+	}
+
+	if(blockTimedOut){
+		usTimeout = 0;
+	}
+
+	return newBlocker->WasInterrupted();
+}
+
+void Thread::Sleep(long us){
+	assert(CheckInterrupts());
+	
+	Timer::TimerCallback timerCallback = [](void* t) -> void {
+		reinterpret_cast<Thread*>(t)->Unblock();
+		reinterpret_cast<Thread*>(t)->blockTimedOut = true;
+	};
+
+	blockTimedOut = false;
+
+	{
+		Timer::TimerEvent ev(us, timerCallback, this);
+		
+		asm("cli");
+		state = ThreadStateBlocked;
+
+		// Now that the thread state has been set blocked, check if we timed out before setting to blocked
+		if(!blockTimedOut) {
+			asm("sti");
+
+			Scheduler::Yield();
+		} else {
+			state = ThreadStateRunning;
+
+			asm("sti");
+		}
+	}
+}
+
+void Thread::Unblock(){
+	if(state != ThreadStateZombie)
+		state = ThreadStateRunning;
+}

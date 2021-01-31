@@ -104,8 +104,6 @@ public:
 
 class PTY{
 private:
-    Scheduler::GenericThreadBlocker slaveBlocker;
-
     List<FilesystemWatcher*> watchingSlave;
     List<FilesystemWatcher*> watchingMaster;
 public:
@@ -125,11 +123,11 @@ public:
     
     void UpdateLineCount();
 
-    size_t Master_Read(char* buffer, size_t count);
-    size_t Slave_Read(char* buffer, size_t count);
+    ssize_t Master_Read(char* buffer, size_t count);
+    ssize_t Slave_Read(char* buffer, size_t count);
 
-    size_t Master_Write(char* buffer, size_t count);
-    size_t Slave_Write(char* buffer, size_t count);
+    ssize_t Master_Write(char* buffer, size_t count);
+    ssize_t Slave_Write(char* buffer, size_t count);
 
     void WatchMaster(FilesystemWatcher& watcher, int events);
     void WatchSlave(FilesystemWatcher& watcher, int events);

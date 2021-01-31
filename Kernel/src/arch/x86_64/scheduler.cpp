@@ -19,7 +19,7 @@
 #include <timer.h>
 #include <debug.h>
 
-extern "C" [[noreturn]] void TaskSwitch(regs64_t* r, uint64_t pml4);
+extern "C" [[noreturn]] void TaskSwitch(RegisterContext* r, uint64_t pml4);
 
 extern "C"
 void IdleProcess();
@@ -31,20 +31,21 @@ namespace Scheduler{
     bool schedulerReady = false;
 
     List<process_t*>* processes;
+    List<process_t*>* destroyedProcesses;
     unsigned processTableSize = 512;
     uint64_t nextPID = 1;
 
-    void Schedule(void*, regs64_t* r);
+    void Schedule(void*, RegisterContext* r);
     
-    inline void InsertThreadIntoQueue(thread_t* thread){
+    inline void InsertThreadIntoQueue(Thread* thread){
         GetCPULocal()->runQueue->add_back(thread);
     }
 
-    inline void RemoveThreadFromQueue(thread_t* thread){
+    inline void RemoveThreadFromQueue(Thread* thread){
         GetCPULocal()->runQueue->remove(thread);
     }
     
-    void InsertNewThreadIntoQueue(thread_t* thread){
+    void InsertNewThreadIntoQueue(Thread* thread){
         CPU* cpu = SMP::cpus[0];
         for(unsigned i = 1; i < SMP::processorCount; i++){
             if(SMP::cpus[i]->runQueue->get_length() < cpu->runQueue->get_length()) {
@@ -56,8 +57,6 @@ namespace Scheduler{
             }
         }
 
-        //Log::Info("Inserting thread into run queue of CPU %d", cpu->id);
-
         asm("sti");
         acquireLock(&cpu->runQueueLock);
         asm("cli");
@@ -68,6 +67,7 @@ namespace Scheduler{
 
     void Initialize() {
         processes = new List<process_t*>();
+        destroyedProcesses = new List<process_t*>();
 
         CPU* cpu = GetCPULocal();
 
@@ -164,10 +164,10 @@ namespace Scheduler{
         proc->blocking.clear();
         proc->threads.clear();
 
-        proc->threads.add_back(new thread_t);
+        proc->threads.add_back(new Thread);
         proc->threadCount = 1;
 
-        memset(proc->threads[0], 0, sizeof(thread_t));
+        memset(proc->threads[0], 0, sizeof(Thread));
 
         proc->creationTime = Timer::GetSystemUptimeStruct();
 
@@ -200,7 +200,7 @@ namespace Scheduler{
         proc->pid = nextPID++; // Set Process ID to the next availiable
 
         // Create structure for the main thread
-        thread_t* thread = proc->threads[0];
+        Thread* thread = proc->threads[0];
 
         thread->stack = 0;
         thread->priority = 1;
@@ -213,8 +213,8 @@ namespace Scheduler{
         thread->prev = nullptr;
         thread->parent = proc;
 
-        regs64_t* registers = &thread->registers;
-        memset((uint8_t*)registers, 0, sizeof(regs64_t));
+        RegisterContext* registers = &thread->registers;
+        memset((uint8_t*)registers, 0, sizeof(RegisterContext));
         registers->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
         registers->cs = KERNEL_CS; // Kernel CS
         registers->ss = KERNEL_SS; // Kernel SS
@@ -251,7 +251,7 @@ namespace Scheduler{
 
     process_t* CreateProcess(void* entry) {
         process_t* proc = InitializeProcessStructure();
-        thread_t* thread = proc->threads[0];
+        Thread* thread = proc->threads[0];
 
         void* stack = (void*)Memory::KernelAllocate4KPages(32);
         for(int i = 0; i < 32; i++){
@@ -273,9 +273,9 @@ namespace Scheduler{
 
     pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss){
         pid_t threadID = process->threadCount++;
-        process->threads.add_back(new thread_t);
+        process->threads.add_back(new Thread);
 
-        thread_t& thread = *process->threads[threadID];
+        Thread& thread = *process->threads[threadID];
 
         thread.tid = threadID;
 
@@ -297,7 +297,7 @@ namespace Scheduler{
         memset(kernelStack, 0, PAGE_SIZE_4K * 32);
         thread.kernelStack = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * 32);
         
-        regs64_t* registers = &thread.registers;
+        RegisterContext* registers = &thread.registers;
         registers->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
         thread.registers.cs = cs;
         thread.registers.ss = ss;
@@ -315,11 +315,10 @@ namespace Scheduler{
     }
 
     void EndProcess(process_t* process){
-        asm("sti");
-
         IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
             Log::Info("ending process: %s (%d)", process->name, process->pid);
         });
+
         while(process->children.get_length()){
             IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
                 Log::Info("ending child: %s (%d)", process->children.get_front()->name, process->children.get_front()->pid);
@@ -328,74 +327,83 @@ namespace Scheduler{
         }
         
         CPU* cpu = GetCPULocal();
+        List<Thread*> runningThreads;
         for(unsigned i = 0; i < process->threads.get_length(); i++){
-            thread_t* thread = process->threads[i];
+            Thread* thread = process->threads[i];
             if(thread != cpu->currentThread && thread){
                 thread->state = ThreadStateZombie;
-                acquireLock(&thread->lock); // Make sure we acquire a lock on all threads to ensure that they are not in a syscall and are not retaining a lock
+                if(thread->blocker){
+                    thread->blocker->Interrupt(); // Stop the thread from blocking
+                    thread->blocker = nullptr;
+                }
+
+                if(acquireTestLock(&thread->lock)){
+                    runningThreads.add_back(thread); // Thread lock could not be acquired
+                } else {
+                    thread->state = ThreadStateBlocked; // We have acquired the lock so prevent the thread from getting scheduled
+                    thread->timeSlice = thread->timeSliceDefault = 0;
+                }
             }
         }
-        
-        if(process->parent){
-            process->parent->children.remove(process);
-        }
-        
-        processes->remove(process);
 
-        for(thread_t* t : process->blocking){
-            UnblockThread(t);
-        }
+        while(runningThreads.get_length()){
+            for(auto it = runningThreads.begin(); it != runningThreads.end(); it++){
+                Thread* thread = *it;
+                if(!acquireTestLock(&thread->lock)){ // Loop through all of the threads so we can acquire their locks
+                    runningThreads.remove(it);
 
-        for(unsigned i = 0; i < process->threads.get_length(); i++){
-            thread_t* thread = process->threads[i];
-
-            for(List<thread_t*>* queue : thread->waiting){
-                queue->remove(thread);
+                    thread->state = ThreadStateBlocked;
+                    thread->timeSlice = thread->timeSliceDefault = 0;
+                }
             }
-            
-            process->threads[i]->waiting.clear();
 
-            thread->state = ThreadStateBlocked;
-            thread->timeSlice = thread->timeSliceDefault = 0;
+            Scheduler::GetCurrentThread()->Sleep(50000); // Sleep for 50 ms so we do not chew through CPU time in the event of a deadlock
         }
 
-        acquireLock(&cpu->runQueueLock);
-        asm("cli");
+        /*for(Blocker* b : process->blocking){
+            t->Unblock();
+        }*/
 
         IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
             Log::Info("removing threads from run queue...");
         });
 
+        acquireLock(&cpu->runQueueLock);
+        asm("cli");
+
         for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
-            if(cpu->runQueue->get_at(j)->parent == process) cpu->runQueue->remove_at(j);
+            if(Thread* thread = cpu->runQueue->get_at(j); thread != cpu->currentThread && thread->parent == process) cpu->runQueue->remove_at(j);
         }
+
+        releaseLock(&cpu->runQueueLock);
+        asm("sti");
         
         for(unsigned i = 0; i < SMP::processorCount; i++){
             if(i == cpu->id) continue; // Is current processor?
 
-            CPU* cpu = SMP::cpus[i];
-            /*asm("sti");
-            acquireLock(&cpu->runQueueLock);
-            asm("cli");*/
+            CPU* other = SMP::cpus[i];
+            asm("sti");
+            acquireLock(&other->runQueueLock);
+            asm("cli");
 
-            if(cpu->currentThread->parent == process){
-                cpu->currentThread->state = ThreadStateBlocked;
-                cpu->currentThread = nullptr;
-            }
+            while(other->currentThread && other->currentThread->parent == process); // The thread state should be blocked so just wait a few ticks
             
-            for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
-                thread_t* thread = cpu->runQueue->get_at(j);
+            for(unsigned j = 0; j < other->runQueue->get_length(); j++){
+                Thread* thread = other->runQueue->get_at(j);
 
                 assert(thread);
 
                 if(thread->parent == process){
-                    cpu->runQueue->remove(thread);
+                    other->runQueue->remove(thread);
+
+                    delete thread;
                 }
             }
             
-            //releaseLock(&cpu->runQueueLock);
+            releaseLock(&other->runQueueLock);
+            asm("sti");
 
-            if(cpu->currentThread == nullptr){
+            if(other->currentThread == nullptr){
                 APIC::Local::SendIPI(i, ICR_DSH_SELF, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
             }
         }
@@ -425,101 +433,56 @@ namespace Scheduler{
         }
 
         process->handles.clear();
-        
-        for(unsigned i = 0; i < process->threadCount; i++){
-            process->threads[i]->waiting.clear();
-        }
-
-        alloc_lock();
-        asm("cli");
-
-        if(cpu->currentThread->parent == process){
-            asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE)); // If we are using the PML4 of the current process switch to the kernel's
-        }
 
         for(unsigned i = 0; i < process->sharedMemory.get_length(); i++){
             Memory::Free4KPages((void*)process->sharedMemory[i].base, process->sharedMemory[i].pageCount, process->addressSpace); // Make sure the physical memory does not get freed
         }
 
-        Memory::DestroyAddressSpace(process->addressSpace);
+        address_space_t* addressSpace = process->addressSpace;
+
+        processes->remove(process);
+        
+        if(process->parent){
+            process->parent->children.remove(process);
+        }
+
+        destroyedProcesses->add_back(process);
 
         if(cpu->currentThread->parent == process){
+            acquireLock(&cpu->runQueueLock);
+            asm("cli");
+
+            asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE)); // If we are using the PML4 of the current process switch to the kernel's
+
+            cpu->runQueue->remove(cpu->currentThread);
+
+            delete cpu->currentThread;
+        }
+        
+        IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
+            Log::Info("destroying address space...");
+        });
+
+        Memory::DestroyAddressSpace(addressSpace);
+
+        if(cpu->currentThread->parent == process){
+            IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
+                Log::Info("rescheduling...");
+            });
+
             cpu->currentThread = nullptr; // Force reschedule
-            kfree_unlocked(process);
-            alloc_unlock();
 
             releaseLock(&cpu->runQueueLock);
             asm("sti");
 
             Schedule(nullptr, nullptr);
             for(;;) {
-                asm("hlt");
                 Schedule(nullptr, nullptr);
             }
         }
-
-        alloc_unlock();
-        releaseLock(&cpu->runQueueLock);
-        asm("sti");
-
-        delete process;
     }
 
-	void BlockCurrentThread(List<thread_t*>& list, lock_t& lock){
-        CPU* cpu = GetCPULocal();
-
-        acquireLock(&lock);
-        acquireLock(&cpu->currentThread->stateLock);
-        list.add_back(cpu->currentThread); // Add as soon as we acquire the state lock to avoid locking the heap for too long
-        asm("cli");
-        releaseLock(&cpu->currentThread->lock);
-        cpu->currentThread->state = ThreadStateBlocked;
-        releaseLock(&cpu->currentThread->stateLock);
-        releaseLock(&lock);
-        asm("sti");
-
-        Yield();
-        
-        acquireLock(&cpu->currentThread->lock);
-    }
-
-	void BlockCurrentThread(ThreadBlocker& blocker, lock_t& lock){
-        CPU* cpu = GetCPULocal();
-
-        acquireLock(&lock);
-        acquireLock(&cpu->currentThread->stateLock);
-        alloc_lock();
-        asm("cli");
-        releaseLock(&cpu->currentThread->lock);
-        blocker.Block(cpu->currentThread);
-        cpu->currentThread->state = ThreadStateBlocked;
-        alloc_unlock();
-        releaseLock(&cpu->currentThread->stateLock);
-        releaseLock(&lock);
-        asm("sti");
-
-        Yield();
-        
-        acquireLock(&cpu->currentThread->lock);
-    }
-
-	void BlockCurrentThread(ThreadBlocker& blocker){
-        lock_t none = 0;
-        BlockCurrentThread(blocker, none);
-    }
-
-	void BlockCurrentThread(List<thread_t*>& list){
-        lock_t none = 0;
-        BlockCurrentThread(list, none);
-    }
-    
-	void UnblockThread(thread_t* thread){
-        acquireLock(&thread->stateLock);
-        thread->state = ThreadStateRunning;
-        releaseLock(&thread->stateLock);
-    }
-
-    void Tick(regs64_t* r){
+    void Tick(RegisterContext* r){
         if(!schedulerReady) return;
 
         APIC::Local::SendIPI(0, ICR_DSH_OTHER, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
@@ -527,7 +490,7 @@ namespace Scheduler{
         Schedule(nullptr, r);
     }
 
-    void Schedule(void* data, regs64_t* r){
+    void Schedule(void* data, RegisterContext* r){
         CPU* cpu = GetCPULocal();
 
         if(cpu->currentThread) {
@@ -557,7 +520,7 @@ namespace Scheduler{
         }
             
         if(cpu->currentThread->state == ThreadStateBlocked){
-            thread_t* first = cpu->currentThread;
+            Thread* first = cpu->currentThread;
 
             do {
                 cpu->currentThread = cpu->currentThread->next;
@@ -584,7 +547,7 @@ namespace Scheduler{
         // Create process structure
         process_t* proc = InitializeProcessStructure();
 
-        thread_t* thread = proc->threads[0];
+        Thread* thread = proc->threads[0];
         thread->registers.cs = USER_CS; // We want user mode so use user mode segments, make sure RPL is 3
         thread->registers.ss = USER_SS;
         thread->timeSliceDefault = THREAD_TIMESLICE_DEFAULT;

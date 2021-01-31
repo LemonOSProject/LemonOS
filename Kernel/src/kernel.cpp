@@ -54,8 +54,15 @@ void KernelProcess(){
 
 	ServiceFS::Initialize();
 
+	Network::InitializeDrivers();
+	Network::InitializeConnections();
+
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 + 24 * 3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+
+	if(FsNode* node = fs::ResolvePath("/system/lemon")){
+		fs::volumes->add_back(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
+	}
 
 	Log::Info("Loading Init Process...");
 	FsNode* initFsNode = nullptr;
@@ -74,6 +81,8 @@ void KernelProcess(){
 		}
 	}
 
+	Log::Write("OK");
+
 	void* initElf = (void*)kmalloc(initFsNode->size);
 	fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 
@@ -82,20 +91,14 @@ void KernelProcess(){
 	strcpy(initProc->workingDir, "/");
 	strcpy(initProc->name, "Init");
 
-	Log::Write("OK");
-
-	if(FsNode* node = fs::ResolvePath("/system/lemon")){
-		fs::volumes->add_back(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
-	}
-	
-	Network::InitializeDrivers();
-	Network::InitializeConnections();
-
-	Scheduler::EndProcess(Scheduler::GetCurrentProcess());
-
 	for(;;) {
-		GetCPULocal()->currentThread->state = ThreadStateBlocked;
-		Scheduler::Yield();
+		while(Scheduler::destroyedProcesses->get_length()){
+			process_t* proc = Scheduler::destroyedProcesses->remove_at(0);
+
+			delete proc;
+		}
+
+		Scheduler::GetCurrentThread()->Sleep(1000000);
 	}
 }
 

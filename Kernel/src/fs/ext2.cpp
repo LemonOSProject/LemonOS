@@ -444,7 +444,7 @@ namespace fs::Ext2{
             if(uint8_t* cachedBitmap = bitmapCache.get(group.blockBitmap)){
                 memcpy(bitmap, cachedBitmap, blocksize);
             } else {
-                if(int e = ReadBlock(group.blockBitmap, bitmap)){
+                if(int e = ReadBlockCached(group.blockBitmap, bitmap)){
                     Log::Error("[Ext2] Disk error (%d) reading block bitmap (group %d)", e, i);
                     error = DiskReadError;
                     return 0;
@@ -505,7 +505,11 @@ namespace fs::Ext2{
         if(uint8_t* cachedBitmap = bitmapCache.get(group.blockBitmap)){
             memcpy(bitmap, cachedBitmap, blocksize);
         } else {
-            if(int e = ReadBlock(group.blockBitmap, bitmap)){
+            if(int e = ReadBlockCached(group.blockBitmap, bitmap)){
+                if(e == -EINTR){
+                    return -EINTR;
+                }
+
                 Log::Error("[Ext2] Disk error (%d) reading block bitmap (group %d)", e, block / super.blocksPerGroup);
                 error = DiskReadError;
                 return -1;
@@ -520,7 +524,7 @@ namespace fs::Ext2{
             memcpy(cachedBitmap, bitmap, blocksize);
         }
 
-        if(int e = WriteBlock(group.blockBitmap, bitmap)){
+        if(int e = WriteBlockCached(group.blockBitmap, bitmap)){
             Log::Error("[Ext2] Disk error (%d) write block bitmap (group %d)", e, block / super.blocksPerGroup);
             error = DiskWriteError;
             return -1;
@@ -658,7 +662,11 @@ namespace fs::Ext2{
         if(uint8_t* cachedBitmap = bitmapCache.get(group.inodeBitmap)){
             memcpy(bitmap, cachedBitmap, blocksize);
         } else {
-            if(int e = ReadBlock(group.inodeBitmap, bitmap)){
+            if(int e = ReadBlockCached(group.inodeBitmap, bitmap)){
+                if(e == -EINTR){
+                    return -EINTR;
+                }
+
                 Log::Error("[Ext2] Disk error (%d) reading inode bitmap (group %d)", e, inode / super.inodesPerGroup);
                 error = DiskReadError;
                 return -1;
@@ -703,14 +711,18 @@ namespace fs::Ext2{
 
         ext2_inode_t& ino = node->e2inode;
 
-        uint8_t* buffer = (uint8_t*)kmalloc(blocksize);
+        uint8_t buffer[blocksize];
         uint32_t currentBlockIndex = 0;
         uint32_t blockOffset = 0;
         uint32_t totalOffset = 0;
 
         ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
 
-        if(ReadBlock(GetInodeBlock(currentBlockIndex, ino), buffer)){
+        if(int e = ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
+            if(e == -EINTR){
+                return -EINTR;
+            }
+            
             Log::Warning("[Ext2] ListDir: Error reading block %d", ino.blocks[currentBlockIndex]);
             error = DiskReadError;
             return -1;
@@ -741,7 +753,11 @@ namespace fs::Ext2{
                 }
 
                 blockOffset = 0;
-                if(ReadBlock(GetInodeBlock(currentBlockIndex, ino), buffer)){
+                if(int e = ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
+                    if(e == -EINTR){
+                        return -EINTR;
+                    }
+
                     error = DiskReadError;
                     return -1;
                 }
@@ -1433,9 +1449,11 @@ namespace fs::Ext2{
             }
         } else {
             ext2_inode_t e2inode;
-            if(ReadInode(ent->inode, e2inode)){
-                Log::Error("[Ext2] Link: Error reading inode %d", ent->inode);
-                return -1;
+            if(int e =ReadInode(ent->inode, e2inode)){
+                IF_DEBUG(debugLevelExt2 >= DebugLevelNormal, {
+                    Log::Error("[Ext2] Link: Error reading inode %d", ent->inode);
+                });
+                return e;
             }
 
             if((e2inode.mode & EXT2_S_IFMT) == EXT2_S_IFDIR){

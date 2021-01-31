@@ -23,7 +23,7 @@ typedef struct {
 	uint64_t base;
 } __attribute__((packed)) idt_ptr_t;
 
-typedef void(*isr_t)(void*, regs64_t*);
+typedef void(*isr_t)(void*, RegisterContext*);
 
 extern "C" void idt_flush();
 

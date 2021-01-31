@@ -123,9 +123,9 @@
 
 #define EXEC_CHILD 1
 
-typedef long(*syscall_t)(regs64_t*);
+typedef long(*syscall_t)(RegisterContext*);
 
-long SysExit(regs64_t* r){
+long SysExit(RegisterContext* r){
 	int64_t code = SC_ARG0(r);
 
 	Log::Info("Process %s (PID: %d) exiting with code %d", Scheduler::GetCurrentProcess()->name, Scheduler::GetCurrentProcess()->pid, code);
@@ -139,7 +139,7 @@ long SysExit(regs64_t* r){
 	return 0;
 }
 
-long SysExec(regs64_t* r){
+long SysExec(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	size_t filePathLength;
@@ -190,15 +190,15 @@ long SysExec(regs64_t* r){
 	}
 
 	Log::Info("Loading: %s", (char*)SC_ARG0(r));
-	timeval_t tv = Timer::GetSystemUptimeStruct();
+	timeval tv = Timer::GetSystemUptimeStruct();
 	uint8_t* buffer = (uint8_t*)kmalloc(node->size);
 	size_t read = fs::Read(node, 0, node->size, buffer);
 	if(!read){
 		Log::Warning("Could not read file: %s", filepath);
 		return 0;
 	}
-	timeval_t tvnew = Timer::GetSystemUptimeStruct();
-	Log::Info("Done (took %d ms)", Timer::TimeDifference(tvnew, tv));
+	timeval tvnew = Timer::GetSystemUptimeStruct();
+	Log::Info("Done (took %d us)", Timer::TimeDifference(tvnew, tv));
 
 	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp, filepath);
 	kfree(buffer);
@@ -245,7 +245,7 @@ long SysExec(regs64_t* r){
 	return proc->pid;
 }
 
-long SysRead(regs64_t* r){
+long SysRead(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
 		Log::Warning("Invalid File Descriptor: %d", SC_ARG0(r));
@@ -269,7 +269,7 @@ long SysRead(regs64_t* r){
 	return ret;
 }
 
-long SysWrite(regs64_t* r){
+long SysWrite(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
 	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
@@ -302,7 +302,7 @@ long SysWrite(regs64_t* r){
  * On success: return file descriptor
  * On failure: return -1
  */
-long SysOpen(regs64_t* r){
+long SysOpen(RegisterContext* r){
 	char* filepath = (char*)kmalloc(strlen((char*)SC_ARG0(r)) + 1);
 	strcpy(filepath, (char*)SC_ARG0(r));
 	FsNode* root = fs::GetRoot();
@@ -382,7 +382,7 @@ open:
 	return fd;
 }
 
-long SysClose(regs64_t* r){
+long SysClose(RegisterContext* r){
 	int fd = SC_ARG0(r);
 	
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
@@ -402,15 +402,15 @@ long SysClose(regs64_t* r){
 	return 0;
 }
 
-long SysSleep(regs64_t* r){
+long SysSleep(RegisterContext* r){
 	return 0;
 }
 
-long SysCreate(regs64_t* r){
+long SysCreate(RegisterContext* r){
 	return 0;
 }
 
-long SysLink(regs64_t* r){
+long SysLink(RegisterContext* r){
 	const char* oldpath = (const char*)SC_ARG0(r);
 	const char* newpath = (const char*)SC_ARG1(r);
 
@@ -447,7 +447,7 @@ long SysLink(regs64_t* r){
 	return parentDirectory->Link(file, &entry);
 }
 
-long SysUnlink(regs64_t* r){
+long SysUnlink(RegisterContext* r){
 	const char* path = (const char*)SC_ARG0(r);
 	
 	process_t* proc = Scheduler::GetCurrentProcess();
@@ -475,7 +475,7 @@ long SysUnlink(regs64_t* r){
 	return parentDirectory->Unlink(&entry);
 }
 
-long SysChdir(regs64_t* r){
+long SysChdir(RegisterContext* r){
 	if(SC_ARG0(r)){
 		char* path =  fs::CanonicalizePath((char*)SC_ARG0(r), Scheduler::GetCurrentProcess()->workingDir);
 		FsNode* n = fs::ResolvePath(path);
@@ -490,11 +490,11 @@ long SysChdir(regs64_t* r){
 	return 0;
 }
 
-long SysTime(regs64_t* r){
+long SysTime(RegisterContext* r){
 	return 0;
 }
 
-long SysMapFB(regs64_t *r){
+long SysMapFB(RegisterContext *r){
 	video_mode_t vMode = Video::GetVideoMode();
 
 	uint64_t pageCount = (vMode.height * vMode.pitch + 0xFFF) >> 12;
@@ -520,7 +520,7 @@ long SysMapFB(regs64_t *r){
 	return 0;
 }
 
-long SysAlloc(regs64_t* r){
+long SysAlloc(RegisterContext* r){
 	uint64_t pageCount = SC_ARG0(r);
 	uintptr_t* addressPointer = (uintptr_t*)SC_ARG1(r);
 
@@ -540,7 +540,7 @@ long SysAlloc(regs64_t* r){
 	return 0;
 }
 
-long SysChmod(regs64_t* r){
+long SysChmod(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
 	const char* path = reinterpret_cast<const char*>(SC_ARG0(r));
@@ -570,7 +570,7 @@ long SysChmod(regs64_t* r){
 	return 0;
 }
 
-long SysFStat(regs64_t* r){
+long SysFStat(RegisterContext* r){
 	stat_t* stat = (stat_t*)SC_ARG0(r);
 	int fd = SC_ARG1(r);
 
@@ -606,7 +606,7 @@ long SysFStat(regs64_t* r){
 	return 0;
 }
 
-long SysStat(regs64_t* r){
+long SysStat(RegisterContext* r){
 	stat_t* stat = (stat_t*)SC_ARG0(r);
 	char* filepath = (char*)SC_ARG1(r);
 	uint64_t flags = SC_ARG2(r);
@@ -650,7 +650,7 @@ long SysStat(regs64_t* r){
 	return 0;
 }
 
-long SysLSeek(regs64_t* r){
+long SysLSeek(RegisterContext* r){
 	long ret = 0;
 	int fd = SC_ARG0(r);
 
@@ -681,7 +681,7 @@ long SysLSeek(regs64_t* r){
 	return ret;
 }
 
-long SysGetPID(regs64_t* r){
+long SysGetPID(RegisterContext* r){
 	uint64_t* pid = (uint64_t*)SC_ARG0(r);
 
 	*pid = Scheduler::GetCurrentProcess()->pid;
@@ -689,11 +689,11 @@ long SysGetPID(regs64_t* r){
 	return 0;
 }
 
-long SysMount(regs64_t* r){
+long SysMount(RegisterContext* r){
 	return 0;
 }
 
-long SysMkdir(regs64_t* r){
+long SysMkdir(RegisterContext* r){
 	char* path = (char*)SC_ARG0(r);
 	mode_t mode = SC_ARG1(r);
 
@@ -726,7 +726,7 @@ long SysMkdir(regs64_t* r){
 	return ret;
 }
 
-long SysRmdir(regs64_t* r){
+long SysRmdir(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 1, proc->addressSpace)){
 		return -EFAULT;
@@ -755,7 +755,7 @@ long SysRmdir(regs64_t* r){
 	return 0;
 }
 
-long SysRename(regs64_t* r){
+long SysRename(RegisterContext* r){
 	char* oldpath = (char*)SC_ARG0(r);
 	char* newpath = (char*)SC_ARG1(r);
 
@@ -781,7 +781,7 @@ long SysRename(regs64_t* r){
 	return fs::Rename(olddir, fs::BaseName(oldpath), newdir, fs::BaseName(newpath));
 }
 
-long SysYield(regs64_t* r){
+long SysYield(RegisterContext* r){
 	Scheduler::Yield();
 	return 0;
 }
@@ -798,7 +798,7 @@ long SysYield(regs64_t* r){
  * Negative value on failure
  * 
  */
-long SysReadDirNext(regs64_t* r){
+long SysReadDirNext(RegisterContext* r){
 	unsigned int fd = SC_ARG0(r);
 	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 		return -EBADF;
@@ -828,22 +828,22 @@ long SysReadDirNext(regs64_t* r){
 	return ret;
 }
 
-long SysRenameAt(regs64_t* r){
+long SysRenameAt(RegisterContext* r){
 	Log::Warning("SysRenameAt is a stub!");
 	return -ENOSYS;
 }
 
 // SendMessage(message_t* msg) - Sends an IPC message to a process
-long SysSendMessage(regs64_t* r){
+long SysSendMessage(RegisterContext* r){
 	return -ENOSYS;
 }
 
 // RecieveMessage(message_t* msg) - Grabs next message on queue and copies it to msg
-long SysReceiveMessage(regs64_t* r){
+long SysReceiveMessage(RegisterContext* r){
 	return -ENOSYS;
 }
 
-long SysUptime(regs64_t* r){
+long SysUptime(RegisterContext* r){
 	uint64_t* seconds = (uint64_t*)SC_ARG0(r);
 	uint64_t* milliseconds = (uint64_t*)SC_ARG1(r);
 	if(seconds){
@@ -855,12 +855,12 @@ long SysUptime(regs64_t* r){
 	return 0;
 }
 
-long SysDebug(regs64_t* r){
+long SysDebug(RegisterContext* r){
 	Log::Info("(%s): %s, %d", Scheduler::GetCurrentProcess()->name, (char*)SC_ARG0(r), SC_ARG1(r));
 	return 0;
 }
 
-long SysGetVideoMode(regs64_t* r){
+long SysGetVideoMode(RegisterContext* r){
 	video_mode_t vMode = Video::GetVideoMode();
 	fb_info_t fbInfo;
 	fbInfo.width = vMode.width;
@@ -874,14 +874,14 @@ long SysGetVideoMode(regs64_t* r){
 	return 0;
 }
 
-long SysUName(regs64_t* r){
+long SysUName(RegisterContext* r){
 	char* str = (char*)SC_ARG0(r);
 	strcpy(str, Lemon::versionString);
 
 	return 0;
 }
 
-long SysReadDir(regs64_t* r){
+long SysReadDir(RegisterContext* r){
 	int fd = SC_ARG0(r);
 
 	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
@@ -909,13 +909,13 @@ long SysReadDir(regs64_t* r){
 	return ret;
 }
 
-long SysSetFsBase(regs64_t* r){
+long SysSetFsBase(RegisterContext* r){
 	asm volatile ("wrmsr" :: "a"(SC_ARG0(r) & 0xFFFFFFFF) /*Value low*/, "d"((SC_ARG0(r) >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
 	GetCPULocal()->currentThread->fsBase = SC_ARG0(r);
 	return 0;
 }
 
-long SysMmap(regs64_t* r){
+long SysMmap(RegisterContext* r){
 	uint64_t* address = (uint64_t*)SC_ARG0(r);
 	size_t count = SC_ARG1(r);
 	uintptr_t hint = SC_ARG2(r);
@@ -943,7 +943,7 @@ long SysMmap(regs64_t* r){
 	return 0;
 }
 
-long SysGrantPTY(regs64_t* r){
+long SysGrantPTY(RegisterContext* r){
 	if(!SC_ARG0(r)) return 1;
 
 	PTY* pty = GrantPTY(Scheduler::GetCurrentProcess()->pid);
@@ -961,7 +961,7 @@ long SysGrantPTY(regs64_t* r){
 	return 0;
 }
 
-long SysGetCWD(regs64_t* r){
+long SysGetCWD(RegisterContext* r){
 	char* buf = (char*)SC_ARG0(r);
 	size_t sz = SC_ARG1(r);
 
@@ -976,12 +976,13 @@ long SysGetCWD(regs64_t* r){
 	return 0;
 }
 
-long SysWaitPID(regs64_t* r){
+long SysWaitPID(RegisterContext* r){
 	uint64_t pid = SC_ARG0(r);
 
 	process_t* proc = nullptr;
 	if((proc = Scheduler::FindProcessByPID(pid))){
-		Scheduler::BlockCurrentThread(proc->blocking);
+		//Scheduler::BlockCurrentThread(proc->blocking);
+		while(proc->state == ThreadStateRunning); // TODO: reinstate blocker
 	}
 
 	if((proc = Scheduler::FindProcessByPID(pid))) {
@@ -991,16 +992,15 @@ long SysWaitPID(regs64_t* r){
 	return pid;
 }
 
-long SysNanoSleep(regs64_t* r){
+long SysNanoSleep(RegisterContext* r){
 	uint64_t nanoseconds = SC_ARG0(r);
 
-	uint64_t ticks = nanoseconds * Timer::GetFrequency() / 1000000000;
-	Timer::SleepCurrentThread(ticks);
+	Scheduler::GetCurrentThread()->Sleep(nanoseconds / 1000);
 
 	return 0;
 }
 
-long SysPRead(regs64_t* r){
+long SysPRead(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 	if(SC_ARG0(r) >= currentProcess->fileDescriptors.get_length()){
 		return -EBADF;
@@ -1025,7 +1025,7 @@ long SysPRead(regs64_t* r){
 	return fs::Read(node, off, count, buffer);
 }
 
-long SysPWrite(regs64_t* r){
+long SysPWrite(RegisterContext* r){
 	if(SC_ARG0(r) > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 		return -EBADF;
 	}
@@ -1044,7 +1044,7 @@ long SysPWrite(regs64_t* r){
 	return fs::Write(node, off, SC_ARG2(r), (uint8_t*)SC_ARG1(r));
 }
 
-long SysIoctl(regs64_t* r){
+long SysIoctl(RegisterContext* r){
 	int fd = SC_ARG0(r);
 	uint64_t request = SC_ARG1(r);
 	uint64_t arg = SC_ARG2(r);
@@ -1072,7 +1072,7 @@ long SysIoctl(regs64_t* r){
 	return ret;
 }
 
-long SysInfo(regs64_t* r){
+long SysInfo(RegisterContext* r){
 	lemon_sysinfo_t* s = (lemon_sysinfo_t*)SC_ARG0(r);
 
 	if(!s){
@@ -1092,7 +1092,7 @@ long SysInfo(regs64_t* r){
  * On success - return 0
  * On failure - return -1
  */
-long SysMunmap(regs64_t* r){
+long SysMunmap(RegisterContext* r){
 	uint64_t address = SC_ARG0(r);
 	size_t count = SC_ARG1(r);
 	
@@ -1115,7 +1115,7 @@ long SysMunmap(regs64_t* r){
  * On Success - Return 0, key greater than 1
  * On Failure - Return -1, key null
  */
-long SysCreateSharedMemory(regs64_t* r){
+long SysCreateSharedMemory(RegisterContext* r){
 	int64_t* key = (int64_t*)SC_ARG0(r);
 	uint64_t size = SC_ARG1(r);
 	uint64_t flags = SC_ARG2(r);
@@ -1137,7 +1137,7 @@ long SysCreateSharedMemory(regs64_t* r){
  * On Success - ptr > 0
  * On Failure - ptr = 0
  */
-long SysMapSharedMemory(regs64_t* r){
+long SysMapSharedMemory(RegisterContext* r){
 	void** ptr = (void**)SC_ARG0(r);
 	int64_t key = SC_ARG1(r);
 	uint64_t hint = SC_ARG2(r);
@@ -1155,7 +1155,7 @@ long SysMapSharedMemory(regs64_t* r){
  * On Success - return 0
  * On Failure - return -1
  */
-long SysUnmapSharedMemory(regs64_t* r){
+long SysUnmapSharedMemory(RegisterContext* r){
 	uint64_t address = SC_ARG0(r);
 	int64_t key = SC_ARG1(r);
 
@@ -1181,7 +1181,7 @@ long SysUnmapSharedMemory(regs64_t* r){
  * On Success - return 0
  * On Failure - return -1
  */
-long SysDestroySharedMemory(regs64_t* r){
+long SysDestroySharedMemory(RegisterContext* r){
 	uint64_t key = SC_ARG0(r);
 
 	if(Memory::CanModifySharedMemory(Scheduler::GetCurrentProcess()->pid, key)){
@@ -1200,7 +1200,7 @@ long SysDestroySharedMemory(regs64_t* r){
  * On Success - return file descriptor
  * On Failure - return -1
  */
-long SysSocket(regs64_t* r){
+long SysSocket(RegisterContext* r){
 	int domain = SC_ARG0(r);
 	int type = SC_ARG1(r);
 	int protocol = SC_ARG2(r);
@@ -1231,7 +1231,7 @@ long SysSocket(regs64_t* r){
  * On Success - return 0
  * On Failure - return -1
  */
-long SysBind(regs64_t* r){
+long SysBind(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	long fd = SC_ARG0(r);
 
@@ -1270,7 +1270,7 @@ long SysBind(regs64_t* r){
  * On Success - return 0
  * On Failure - return -1
  */
-long SysListen(regs64_t* r){
+long SysListen(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
@@ -1295,7 +1295,7 @@ long SysListen(regs64_t* r){
 ///
 /// \return File descriptor of accepted socket or negative error code
 /////////////////////////////
-long SysAccept(regs64_t* r){
+long SysAccept(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
@@ -1345,7 +1345,7 @@ long SysAccept(regs64_t* r){
 ///
 /// \return 0 on success or negative error code on failure
 /////////////////////////////
-long SysConnect(regs64_t* r){
+long SysConnect(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
@@ -1380,7 +1380,7 @@ long SysConnect(regs64_t* r){
  * On Success - return amount of data sent
  * On Failure - return -1
  */
-long SysSend(regs64_t* r){
+long SysSend(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
@@ -1418,7 +1418,7 @@ long SysSend(regs64_t* r){
  * On Success - return amount of data sent
  * On Failure - return -1
  */
-long SysSendTo(regs64_t* r){
+long SysSendTo(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
@@ -1459,7 +1459,7 @@ long SysSendTo(regs64_t* r){
  * On Success - return amount of data read
  * On Failure - return -1
  */
-long SysReceive(regs64_t* r){
+long SysReceive(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
@@ -1497,7 +1497,7 @@ long SysReceive(regs64_t* r){
  * On Success - return amount of data read
  * On Failure - return -1
  */
-long SysReceiveFrom(regs64_t* r){
+long SysReceiveFrom(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
@@ -1534,7 +1534,7 @@ long SysReceiveFrom(regs64_t* r){
  * On Success - Return process UID
  * On Failure - Does not fail
  */
-long SysGetUID(regs64_t* r){
+long SysGetUID(RegisterContext* r){
 	return Scheduler::GetCurrentProcess()->uid;
 }
 
@@ -1544,7 +1544,7 @@ long SysGetUID(regs64_t* r){
  * On Success - Return process UID
  * On Failure - Return negative value
  */
-long SysSetUID(regs64_t* r){
+long SysSetUID(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	uid_t requestedUID = SC_ARG0(r);
 
@@ -1571,12 +1571,12 @@ long SysSetUID(regs64_t* r){
  * On Success - return number of file descriptors
  * On Failure - return -1
  */
-long SysPoll(regs64_t* r){
+long SysPoll(RegisterContext* r){
 	pollfd* fds = (pollfd*)SC_ARG0(r);
 	unsigned nfds = SC_ARG1(r);
 	long timeout = SC_ARG2(r);
 
-	thread_t* thread = GetCPULocal()->currentThread;
+	Thread* thread = GetCPULocal()->currentThread;
 	process_t* proc = Scheduler::GetCurrentProcess();
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), nfds * sizeof(pollfd), proc->addressSpace)){
 		Log::Warning("sys_poll: Invalid pointer to file descriptor array");
@@ -1638,18 +1638,21 @@ long SysPoll(regs64_t* r){
 	}
 
 	if(!eventCount && timeout){
-		timeval_t tVal = Timer::GetSystemUptimeStruct();
+		timeval tVal = Timer::GetSystemUptimeStruct();
 
 		FilesystemWatcher fsWatcher;
 		for(unsigned i = 0; i < nfds; i++){
 			fsWatcher.WatchNode(files[i]->node, fds[i].events);
 		}
 
-		releaseLock(&GetCPULocal()->currentThread->lock);
 		if(timeout > 0){
-			fsWatcher.WaitTimeout(timeout);
-		} else {
-			fsWatcher.Wait();
+			if(fsWatcher.WaitTimeout(timeout)){
+				return -EINTR; // Interrupted
+			} else if(timeout <= 0){
+				return 0; // Timed out
+			}
+		} else if(fsWatcher.Wait()){
+			return -EINTR; // Interrupted
 		}
 
 		do{
@@ -1686,7 +1689,10 @@ long SysPoll(regs64_t* r){
 
 				if(hasEvent) eventCount++;
 			}
-			Scheduler::Yield();
+
+			if(eventCount){
+				Scheduler::Yield();
+			}
 		} while(thread->state != ThreadStateZombie && (timeout < 0 || Timer::TimeDifference(Timer::GetSystemUptimeStruct(), tVal) < timeout)); // Wait until timeout, unless timeout is negative in which wait infinitely
 	}
 	
@@ -1702,7 +1708,7 @@ long SysPoll(regs64_t* r){
  * On Success - return amount of data sent
  * On Failure - return -1
  */
-long SysSendMsg(regs64_t* r){
+long SysSendMsg(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
 	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
@@ -1791,7 +1797,7 @@ long SysSendMsg(regs64_t* r){
  * On Success - return amount of data received
  * On Failure - return -1
  */
-long SysRecvMsg(regs64_t* r){
+long SysRecvMsg(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
 	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
@@ -1880,7 +1886,7 @@ long SysRecvMsg(regs64_t* r){
 /// 
 /// \return Process EUID (int)
 /////////////////////////////
-long SysGetEUID(regs64_t* r){
+long SysGetEUID(RegisterContext* r){
 	return Scheduler::GetCurrentProcess()->euid;
 }
 
@@ -1889,7 +1895,7 @@ long SysGetEUID(regs64_t* r){
 /// 
 /// \return On success return 0, otherwise return negative error code
 /////////////////////////////
-long SysSetEUID(regs64_t* r){
+long SysSetEUID(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 	uid_t requestedEUID = SC_ARG0(r);
 
@@ -1916,7 +1922,7 @@ long SysSetEUID(regs64_t* r){
 /// \return On Success - Return 0
 /// \return On Failure - Return error as negative value
 /////////////////////////////
-long SysGetProcessInfo(regs64_t* r){
+long SysGetProcessInfo(RegisterContext* r){
 	uint64_t pid = SC_ARG0(r);
 	process_info_t* pInfo = reinterpret_cast<process_info_t*>(SC_ARG1(r));
 
@@ -1941,7 +1947,7 @@ long SysGetProcessInfo(regs64_t* r){
 
 	strcpy(pInfo->name, reqProcess->name);
 
-	pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.seconds;
+	pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.tv_sec;
 	pInfo->activeUs = reqProcess->activeTicks * 1000000 / Timer::GetFrequency();
 
 	pInfo->usedMem = reqProcess->usedMemoryBlocks / 4;
@@ -1958,7 +1964,7 @@ long SysGetProcessInfo(regs64_t* r){
 /// \return No more processes - Return 1
 /// On Failure - Return error as negative value
 /////////////////////////////
-long SysGetNextProcessInfo(regs64_t* r){
+long SysGetNextProcessInfo(RegisterContext* r){
 	uint64_t* pidP = reinterpret_cast<uint64_t*>(SC_ARG0(r));
 	process_info_t* pInfo = reinterpret_cast<process_info_t*>(SC_ARG1(r));
 
@@ -1993,7 +1999,7 @@ long SysGetNextProcessInfo(regs64_t* r){
 
 	strcpy(pInfo->name, reqProcess->name);
 
-	pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.seconds;
+	pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.tv_sec;
 	pInfo->activeUs = reqProcess->activeTicks * 1000000 / Timer::GetFrequency();
 
 	pInfo->usedMem = reqProcess->usedMemoryBlocks / 4;
@@ -2010,7 +2016,7 @@ long SysGetNextProcessInfo(regs64_t* r){
 /// \return Amount of bytes read on success
 /// \return Negative value on failure
 /////////////////////////////
-long SysReadLink(regs64_t* r){
+long SysReadLink(RegisterContext* r){
 	process_t* proc = Scheduler::GetCurrentProcess();
 
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 0, proc->addressSpace)){
@@ -2041,7 +2047,7 @@ long SysReadLink(regs64_t* r){
 ///
 /// \return (pid_t) thread id
 /////////////////////////////
-long SysSpawnThread(regs64_t* r){
+long SysSpawnThread(RegisterContext* r){
 	auto tid = Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), SC_ARG0(r), SC_ARG1(r), USER_CS, USER_SS);
 
 	return tid;
@@ -2055,7 +2061,7 @@ long SysSpawnThread(regs64_t* r){
 /// \return Undefined, always succeeds
 /////////////////////////////
 [[noreturn]]
-long SysExitThread(regs64_t* r){
+long SysExitThread(RegisterContext* r){
 	Log::Warning("SysExitThread is unimplemented! Hanging!");
 	
 	releaseLock(&GetCPULocal()->currentThread->lock);
@@ -2072,7 +2078,7 @@ long SysExitThread(regs64_t* r){
 ///
 /// \return 0 on success, error code on failure
 /////////////////////////////
-long SysFutexWake(regs64_t* r){
+long SysFutexWake(RegisterContext* r){
 	int* futex = reinterpret_cast<int*>(SC_ARG0(r));
 
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)){
@@ -2081,18 +2087,16 @@ long SysFutexWake(regs64_t* r){
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
-	Scheduler::FutexThreadBlocker* blocker = currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex));
+	List<FutexThreadBlocker*>* blocked = currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex));
 
-	if(!blocker){
+	if(!blocked || !blocked->get_length()){
 		return 0;
 	}
 
-	auto front = blocker->blocked.get_front();
+	auto front = blocked->remove_at(0);
 
 	if(front){
-		blocker->Remove(front);
-
-		Scheduler::UnblockThread(front);
+		front->Unblock();
 	}
 
 	return 0;
@@ -2108,7 +2112,7 @@ long SysFutexWake(regs64_t* r){
 ///
 /// \return 0 on success, error code on failure
 /////////////////////////////
-long SysFutexWait(regs64_t* r){
+long SysFutexWait(RegisterContext* r){
 	int* futex = reinterpret_cast<int*>(SC_ARG0(r));
 
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)){
@@ -2122,19 +2126,24 @@ long SysFutexWait(regs64_t* r){
 	}
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Thread* currentThread = Scheduler::GetCurrentThread();
 
-	Scheduler::FutexThreadBlocker* blocker = currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex));
+	List<FutexThreadBlocker*>* blocked = currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex));
 
-	if(!blocker){
-		blocker = new Scheduler::FutexThreadBlocker();
+	if(!blocked){
+		blocked = new List<FutexThreadBlocker*>();
 
-		currentProcess->futexWaitQueue.insert(reinterpret_cast<uintptr_t>(futex), blocker);
+		currentProcess->futexWaitQueue.insert(reinterpret_cast<uintptr_t>(futex), blocked);
 	}
 
-	releaseLock(&GetCPULocal()->currentThread->lock);
+	FutexThreadBlocker blocker;
+	blocked->add_back(&blocker);
 
-	lock_t temp = 0;
-	Scheduler::BlockCurrentThread(*blocker, temp);
+	if(currentThread->Block(&blocker)){
+		blocked->remove(&blocker);
+		
+		return -EINTR; // We were interrupted
+	}
 
 	return 0;
 }
@@ -2146,7 +2155,7 @@ long SysFutexWait(regs64_t* r){
 ///
 /// \return new file descriptor (int) on success, negative error code on failure
 /////////////////////////////
-long SysDup(regs64_t* r){
+long SysDup(RegisterContext* r){
 	int fd = static_cast<int>(SC_ARG0(r));
 	[[gnu::unused]] long flags = SC_ARG1(r);
 	int requestedFd = static_cast<int>(SC_ARG2(r));
@@ -2192,7 +2201,7 @@ long SysDup(regs64_t* r){
 ///
 /// \return flags on success, negative error code on failure
 /////////////////////////////
-long SysGetFileStatusFlags(regs64_t* r){
+long SysGetFileStatusFlags(RegisterContext* r){
 	int fd = static_cast<int>(SC_ARG0(r));
 	fs_fd_t* handle;
 
@@ -2212,7 +2221,7 @@ long SysGetFileStatusFlags(regs64_t* r){
 ///
 /// \return 0 on success, negative error code on failure
 /////////////////////////////
-long SysSetFileStatusFlags(regs64_t* r){
+long SysSetFileStatusFlags(RegisterContext* r){
 	int fd = static_cast<int>(SC_ARG0(r));
 	int nFlags = static_cast<int>(SC_ARG1(r));
 	fs_fd_t* handle;
@@ -2240,7 +2249,7 @@ long SysSetFileStatusFlags(regs64_t* r){
 ///
 /// \return number of events on success, negative error code on failure
 /////////////////////////////
-long SysSelect(regs64_t* r){
+long SysSelect(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	int nfds = static_cast<int>(SC_ARG0(r));
@@ -2338,7 +2347,7 @@ long SysSelect(regs64_t* r){
 		return evCount;
 	}
 
-	timeval_t timeEnd = {.seconds = timeout->tv_sec + Timer::GetSystemUptimeStruct().seconds, .milliseconds = timeout->tv_nsec / 1000000 + Timer::GetSystemUptimeStruct().milliseconds};
+	timeval timeEnd = {.tv_sec = timeout->tv_sec + Timer::GetSystemUptimeStruct().tv_sec, .tv_usec = timeout->tv_nsec / 1000 + Timer::GetSystemUptimeStruct().tv_usec};
 	while(Timer::GetSystemUptimeStruct() < timeEnd){
 		evCount = 0;
 
@@ -2377,7 +2386,7 @@ long SysSelect(regs64_t* r){
 ///
 /// \return Handle ID on success, error code on failure
 /////////////////////////////
-long SysCreateService(regs64_t* r){
+long SysCreateService(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	size_t nameLength;
@@ -2411,7 +2420,7 @@ long SysCreateService(regs64_t* r){
 ///
 /// \return Handle ID of service on success, negative error code on failure
 /////////////////////////////
-long SysCreateInterface(regs64_t* r){
+long SysCreateInterface(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* svcHandle;
@@ -2457,7 +2466,7 @@ long SysCreateInterface(regs64_t* r){
 ///
 /// \return Handle ID of endpoint on success, 0 when no pending connections, negative error code on failure
 /////////////////////////////
-long SysInterfaceAccept(regs64_t* r){
+long SysInterfaceAccept(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* ifHandle;
@@ -2491,7 +2500,7 @@ long SysInterfaceAccept(regs64_t* r){
 ///
 /// \return Handle ID of endpoint on success, negative error code on failure
 /////////////////////////////
-long SysInterfaceConnect(regs64_t* r){
+long SysInterfaceConnect(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	size_t sz = 0;
@@ -2542,7 +2551,7 @@ long SysInterfaceConnect(regs64_t* r){
 ///
 /// \return 0 on success, negative error code on failure
 /////////////////////////////
-long SysEndpointQueue(regs64_t* r){
+long SysEndpointQueue(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* endpHandle;
@@ -2578,7 +2587,7 @@ long SysEndpointQueue(regs64_t* r){
 ///
 /// \return 0 on empty, 1 on success, negative error code on failure
 /////////////////////////////
-long SysEndpointDequeue(regs64_t* r){
+long SysEndpointDequeue(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* endpHandle;
@@ -2624,7 +2633,7 @@ long SysEndpointDequeue(regs64_t* r){
 ///
 /// \return 0 on success, negative error code on failure
 /////////////////////////////
-long SysEndpointCall(regs64_t* r){
+long SysEndpointCall(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* endpHandle;
@@ -2658,7 +2667,7 @@ long SysEndpointCall(regs64_t* r){
 ///
 /// \return 0 on success, negative error code on failure
 /////////////////////////////
-long SysEndpointInfo(regs64_t* r){
+long SysEndpointInfo(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	MessageEndpointInfo* info = reinterpret_cast<MessageEndpointInfo*>(SC_ARG1(r));
@@ -2693,7 +2702,7 @@ long SysEndpointInfo(regs64_t* r){
 ///
 /// \return negative error code on failure
 /////////////////////////////
-long SysKernelObjectWaitOne(regs64_t* r){
+long SysKernelObjectWaitOne(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* handle;
@@ -2705,7 +2714,9 @@ long SysKernelObjectWaitOne(regs64_t* r){
 	KernelObjectWatcher watcher;
 
 	watcher.WatchObject(handle->ko, 0);
-	watcher.Wait();
+	if(watcher.Wait()){
+		return -EINTR;
+	}
 
 	return 0;
 }
@@ -2720,7 +2731,7 @@ long SysKernelObjectWaitOne(regs64_t* r){
 ///
 /// \return negative error code on failure
 /////////////////////////////
-long SysKernelObjectWait(regs64_t* r){
+long SysKernelObjectWait(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 	unsigned count = SC_ARG1(r);
 
@@ -2741,7 +2752,10 @@ long SysKernelObjectWait(regs64_t* r){
 
 		watcher.WatchObject(handles[i]->ko, 0);
 	}
-	watcher.Wait();
+
+	if(watcher.Wait()){
+		return -EINTR;
+	}
 
 	return 0;
 }
@@ -2755,7 +2769,7 @@ long SysKernelObjectWait(regs64_t* r){
 ///
 /// \return negative error code on failure
 /////////////////////////////
-long SysKernelObjectDestroy(regs64_t* r){
+long SysKernelObjectDestroy(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* h;
@@ -2789,7 +2803,7 @@ long SysKernelObjectDestroy(regs64_t* r){
 ///
 /// \return 0 on success negative error code on failure
 /////////////////////////////
-long SysSetSocketOptions(regs64_t* r){
+long SysSetSocketOptions(RegisterContext* r){
 	int fd = SC_ARG0(r);
 	int level = SC_ARG1(r);
 	int opt = SC_ARG2(r);
@@ -2827,7 +2841,7 @@ long SysSetSocketOptions(regs64_t* r){
 ///
 /// \return 0 on success negative error code on failure
 /////////////////////////////
-long SysGetSocketOptions(regs64_t* r){
+long SysGetSocketOptions(RegisterContext* r){
 	int fd = SC_ARG0(r);
 	int level = SC_ARG1(r);
 	int opt = SC_ARG2(r);
@@ -2944,7 +2958,7 @@ syscall_t syscalls[]{
 	SysGetSocketOptions,
 };
 
-regs64_t lastSyscall;
+RegisterContext lastSyscall;
 
 void DumpLastSyscall(){
 	Log::Info("Last syscall:\nCall: %d, arg0: %i (%x), arg1: %i (%x), arg2: %i (%x), arg3: %i (%x), arg4: %i (%x), arg5: %i (%x)",
@@ -2958,13 +2972,13 @@ void DumpLastSyscall(){
 }
 
 extern "C"
-void SyscallHandler(regs64_t* regs) {
+void SyscallHandler(RegisterContext* regs) {
 	if (regs->rax >= NUM_SYSCALLS || !syscalls[regs->rax]) // If syscall is non-existant then return
 		return;
 		
 	asm("sti"); // By reenabling interrupts, a thread in a syscall can be preempted
 
-	thread_t* thread = GetCPULocal()->currentThread;
+	Thread* thread = GetCPULocal()->currentThread;
 	if(thread->state == ThreadStateZombie) for(;;);
 
 	#ifdef KERNEL_DEBUG

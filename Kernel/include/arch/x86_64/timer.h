@@ -2,15 +2,12 @@
 
 #include <stdint.h>
 
+#include <bits/posix/timeval.h>
+
 typedef long time_t;
 
-typedef struct {
-    long seconds;
-    long milliseconds;
-} timeval_t;
-
-static inline bool operator<(timeval_t l, timeval_t r){
-    return (l.seconds < r.seconds) || (l.seconds == r.seconds && l.milliseconds < r.milliseconds);
+static inline bool operator<(timeval l, timeval r){
+    return (l.tv_sec < r.tv_sec) || (l.tv_sec == r.tv_sec && l.tv_usec < r.tv_usec);
 }
 
 typedef struct timespec {
@@ -21,18 +18,16 @@ typedef struct timespec {
 struct thread;
 
 namespace Timer{
-
-    timeval_t GetSystemUptimeStruct();
-    int TimeDifference(timeval_t newTime, timeval_t oldTime);
-
     uint64_t GetSystemUptime();
     uint32_t GetTicks();
     uint32_t GetFrequency();
 
+    timeval GetSystemUptimeStruct();
+    int TimeDifference(timeval newTime, timeval oldTime);
+
     void Wait(long ms);
 
-    void SleepCurrentThread(timeval_t& time);
-    void SleepCurrentThread(long ticks);
+    void SleepCurrentThread(timeval& time);
 
     // Initialize
     void Initialize(uint32_t freq);
