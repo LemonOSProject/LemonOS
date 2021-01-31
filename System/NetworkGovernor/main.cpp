@@ -304,7 +304,5 @@ int main(){
 		netIf->ConfigureInterface();
 	}
 
-	for(;;){
-
-	}
+	return 0;
 }
