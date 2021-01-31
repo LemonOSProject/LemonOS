@@ -1,6 +1,6 @@
 #pragma once
 
-#include <memory.h>
+#include <liballoc.h>
 #include <spin.h>
 #include <assert.h>
 
@@ -124,6 +124,30 @@ public:
 		num++;
 	}
 
+	void insert(const T& obj, T& it){
+		if(it == front){
+			add_front(obj);
+			return;
+		}
+
+		if(it == back){
+			add_back(obj);
+			return;
+		}
+
+		assert(it);
+
+		obj->prev = it->prev;
+		obj->next = it;
+
+		if(it->prev){
+			it->prev->next = obj;
+		}
+		it->prev = obj;
+
+		num++;
+	}
+
 	T operator[](unsigned pos) {
 		return get_at(pos);
 	}
@@ -177,12 +201,12 @@ public:
 		if(!num) front = back = nullptr;
 	}
 
-	T get_front()
+	__attribute__((always_inline)) inline T get_front()
 	{
 		return front;
 	}
 
-	T get_back()
+	__attribute__((always_inline)) inline T get_back()
 	{
 		return back;
 	}
