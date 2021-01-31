@@ -2,6 +2,8 @@
 
 #include <fs/filesystem.h>
 
+#include <string.h>
+
 namespace fs{
 
     class FsVolume{
@@ -17,14 +19,14 @@ namespace fs{
 
     class LinkVolume : public FsVolume{
     public:
-        LinkVolume(FsVolume* link, char* name){
+        inline LinkVolume(FsVolume* link, char* name){
             strcpy(mountPointDirent.name, name);
             mountPointDirent.node = link->mountPoint;
             mountPointDirent.flags = link->mountPointDirent.flags;
             mountPointDirent.node->nlink++;
         }
 
-        LinkVolume(FsNode* link, char* name){
+        inline LinkVolume(FsNode* link, char* name){
             strcpy(mountPointDirent.name, name);
             mountPointDirent.node = link;
             mountPointDirent.flags = DT_DIR;

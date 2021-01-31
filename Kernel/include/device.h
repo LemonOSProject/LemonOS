@@ -4,6 +4,7 @@
 #include <list.h>
 #include <fs/filesystem.h>
 #include <logging.h>
+#include <string.h>
 
 enum DeviceType{
     TypeGenericDevice,
@@ -28,15 +29,15 @@ public:
         this->type = type;
     }
 
-    const char* GetName() const{
+    inline const char* GetName() const{
         return name;
     }
 protected:
-    void SetName(const char* name){
+    inline void SetName(const char* name){
         this->name = strdup(name);
     }
 
-    void SetDescription(const char* desc){
+    inline void SetDescription(const char* desc){
         this->description = strdup(desc);
     }
 

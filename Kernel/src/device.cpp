@@ -6,6 +6,7 @@
 #include <fs/fsvolume.h>
 #include <math.h>
 #include <timer.h>
+#include <string.h>
 	
 class URandom : public Device {
 public:
