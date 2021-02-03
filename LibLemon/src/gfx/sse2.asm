@@ -94,15 +94,16 @@ memcpy_optimized:
 
 .pad2: ; pad out the end
 	mov rcx, rdx
-	jz .ret
+	jz ._ret
 
 .pad2l:
 	lodsd
 	stosd
 	loop .pad2l
 
+._ret:
 	sfence
-.ret:
+
 	ret
 
 .largecpyloopua:
@@ -160,9 +161,10 @@ memcpy_optimized:
 	stosd
 	loop .pad2lua
 
-	sfence
 
 .retua:
+	sfence
+	
 	ret
 
 memcpy_sse2:

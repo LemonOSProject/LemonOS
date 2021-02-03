@@ -590,9 +590,13 @@ int main(int argc, char** argv){
 			for(int i = 0; i < len; i++){
 				PrintChar(_buf[i]);
 			}
+
+			paintAll = true;
 		}
 
-		window->Paint();
+		if(paintAll){
+			window->Paint();
+		}
 
 		//poll(fds.data(), fds.size(), -1);
 	}

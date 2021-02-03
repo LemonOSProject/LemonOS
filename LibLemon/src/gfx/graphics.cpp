@@ -230,14 +230,14 @@ namespace Lemon::Graphics{
         int i = 0;
 
         if(offset.y < 0){
-            i += offset.y;
+            i += -offset.y;
             offset.y = 0;
         }
 
         for(; i < src->height && i < dest->height - offset.y; i++){
             if(rowSize <= 0) return;
 
-            memcpy_optimized(dest->buffer + ((i+offset.y)*(dest->width*4) + offset.x*4), src->buffer + i*src->width*4 + rowOffset, rowSize);
+            memcpy_optimized(dest->buffer + ((i + offset.y) * (dest->width * 4) + offset.x * 4), src->buffer + i * src->width * 4 + rowOffset, rowSize);
         }
     }
 
@@ -250,27 +250,23 @@ namespace Lemon::Graphics{
         int rowSize = srcWidth;
 
         if(offset.x < 0){
-            rowOffset += abs(offset.x);
+            rowOffset -= offset.x;
             rowSize += offset.x;
             offset.x = 0;
-        }
-
-        if(rowOffset + rowSize >= src->width){
-            rowSize = src->width - rowOffset;
         }
 
         if(offset.x + rowSize >= dest->width){
             rowSize = dest->width - offset.x;
         }
 
+        if(rowSize <= 0 || rowOffset >= src->width) return;
+
         int i = 0;
 
         if(offset.y < 0){
-            i += abs(offset.y);
+            i -= offset.y;
             offset.y = 0;
         }
-
-        if(rowSize <= 0 || rowOffset >= src->width) return;
         
         unsigned destPitch = dest->width << 2;
         unsigned srcPitch = src->width << 2;
