@@ -92,11 +92,22 @@ void KernelProcess(){
 	strcpy(initProc->name, "Init");
 
 	for(;;) {
-		while(Scheduler::destroyedProcesses->get_length()){
-			process_t* proc = Scheduler::destroyedProcesses->remove_at(0);
+		acquireLock(&Scheduler::destroyedProcessesLock);
+		for(auto it = Scheduler::destroyedProcesses->begin(); it != Scheduler::destroyedProcesses->end(); it++){
+			if(!acquireTestLock(&(*it)->processLock)){
+				delete *it;
+				Scheduler::destroyedProcesses->remove(it);
+			}
 
-			delete proc;
+			if(it == Scheduler::destroyedProcesses->end()){
+				it = Scheduler::destroyedProcesses->begin();
+
+				if(it == Scheduler::destroyedProcesses->end()){
+					break;
+				}
+			}
 		}
+		releaseLock(&Scheduler::destroyedProcessesLock);
 
 		Scheduler::GetCurrentThread()->Sleep(1000000);
 	}

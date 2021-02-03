@@ -9,9 +9,10 @@
 typedef uint64_t pid_t;
 
 enum {
-	ThreadStateRunning,
-	ThreadStateBlocked,
-	ThreadStateZombie,
+	ThreadStateRunning, // Thread is running
+	ThreadStateBlocked, // Thread is blocked, do not schedule
+	ThreadStateZombie, // Waiting on thread to close a resource/exit a syscall
+	ThreadStateDying, // Thread is actively being killed
 };
 
 struct process;

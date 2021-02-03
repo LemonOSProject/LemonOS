@@ -19,7 +19,7 @@ protected:
         SemaphoreBlocker* next = nullptr;
         SemaphoreBlocker* prev = nullptr;
 
-        Semaphore* semaphore;
+        Semaphore* semaphore = nullptr;
 
         inline SemaphoreBlocker(Semaphore* sema) : semaphore(sema) {
 
@@ -31,7 +31,27 @@ protected:
 
             acquireLock(&semaphore->lock);
             semaphore->blocked.remove(this);
+
+            semaphore = nullptr;
             releaseLock(&semaphore->lock);
+        }
+
+        void Unblock(){
+            shouldBlock = false;
+
+            acquireLock(&lock);
+            semaphore = nullptr;
+
+            if(thread){
+                thread->Unblock();
+            }
+            releaseLock(&lock);
+        }
+
+        ~SemaphoreBlocker(){
+            if(semaphore){
+                semaphore->blocked.remove(this);
+            }
         }
     };
 

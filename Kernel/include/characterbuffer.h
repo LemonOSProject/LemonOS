@@ -3,6 +3,7 @@
 #define CHARBUFFER_START_SIZE 1024
 
 #include <stddef.h>
+#include <types.h>
 
 class CharacterBuffer{
 public:
@@ -14,8 +15,8 @@ public:
 
     CharacterBuffer();
 
-    size_t Write(char* buffer, size_t size);
-    size_t Read(char* buffer, size_t count);
+    ssize_t Write(char* buffer, size_t size);
+    ssize_t Read(char* buffer, size_t count);
 
     void Flush();
 private:

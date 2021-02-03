@@ -283,15 +283,31 @@ public:
         shouldBlock = false;
         interrupted = true;
 
+        acquireLock(&node->blockedLock);
         acquireLock(&lock);
         node->blocked.remove(this);
         node = nullptr;
+        releaseLock(&lock);
+        releaseLock(&node->blockedLock);
+    }
+
+    inline void Unblock(){
+        shouldBlock = false;
+
+        acquireLock(&lock);
+        node = nullptr;
+
+        if(thread){
+            thread->Unblock();
+        }
         releaseLock(&lock);
     }
 
     inline ~FilesystemBlocker(){
         if(node){
+            acquireLock(&node->blockedLock);
             node->blocked.remove(this);
+            releaseLock(&node->blockedLock);
         }
     }
 };

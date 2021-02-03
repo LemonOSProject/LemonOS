@@ -49,6 +49,8 @@ typedef struct process {
 	timeval creationTime; // When the process was created
 	uint64_t activeTicks = 0; // How many ticks this process has been active
 
+	lock_t processLock = 0;
+
 	lock_t handleLock = 0;
 	Vector<Handle> handles;
 	Vector<fs_fd_t*> fileDescriptors;
@@ -77,6 +79,7 @@ typedef struct {
 } process_info_t;
 
 namespace Scheduler{
+	extern lock_t destroyedProcessesLock;
 	extern List<process_t*>* destroyedProcesses;
 
     pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss);

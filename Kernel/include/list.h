@@ -25,6 +25,7 @@ public:
 	ListIterator(const ListIterator<T>&) = default;
 
 	ListIterator& operator++(){
+		assert(node);
 		node = node->next;
 
 		return *this;
@@ -33,6 +34,7 @@ public:
 	ListIterator operator++(int){ // Post decrement
 		ListIterator<T> v = ListIterator<T>(*this);
 
+		assert(node);
 		node = node->next;
 
 		return v;
@@ -105,6 +107,7 @@ public:
 
 			obj->prev = back;
 			back->next = obj;
+			front->prev = obj;
 		}
 
 		back = obj;
@@ -113,9 +116,10 @@ public:
 
 	void add_front(const T& obj) {
 		if (!back) {
+			obj->prev = obj;
+			obj->next = obj;
 			back = obj;
-		}
-		else if(front) {
+		} else if(front) {
 			front->prev = obj;
 			obj->next = front;
 		}
@@ -191,8 +195,22 @@ public:
 	}
 
 	void remove(T obj){
-		if (obj->next) obj->next->prev = obj->prev;
-		if (obj->prev) obj->prev->next = obj->next;
+		if (obj->next){
+			/*assert(obj->next->prev == obj);
+			if(obj->next->prev != obj){
+				return; // obj must have already been from list
+			}*/
+			
+			obj->next->prev = obj->prev;
+		} 
+		if (obj->prev){
+			/*assert(obj->prev->next == obj);
+			if(obj->prev->next != obj){
+				return;
+			}*/
+
+			obj->prev->next = obj->next;
+		}
 		if (front == obj) front = obj->next;
 		if (back == obj) back = obj->prev;
 

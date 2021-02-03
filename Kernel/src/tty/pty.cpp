@@ -207,8 +207,8 @@ ssize_t PTY::Master_Write(char* buffer, size_t count){
 		} else {
 			acquireLock(&slaveFile.blockedLock);
 			while(slave.bufferPos && slaveFile.blocked.get_length()){
-				slaveFile.blocked.remove_at(0)->Unblock();
-				Log::Info("unblocked!");
+				slaveFile.blocked.get_front()->Unblock();
+				slaveFile.blocked.remove_at(0);
 			}
 			releaseLock(&slaveFile.blockedLock);
 		}

@@ -31,7 +31,10 @@ namespace Scheduler{
     bool schedulerReady = false;
 
     List<process_t*>* processes;
+
+    lock_t destroyedProcessesLock = 0;
     List<process_t*>* destroyedProcesses;
+    
     unsigned processTableSize = 512;
     uint64_t nextPID = 1;
 
@@ -221,7 +224,7 @@ namespace Scheduler{
 
         thread->fxState = Memory::KernelAllocate4KPages(1); // Allocate Memory for the FPU/Extended Register State
         Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)thread->fxState, 1);
-        memset(thread->fxState, 0, 1024);
+        memset(thread->fxState, 0, 4096);
 
         void* kernelStack = Memory::KernelAllocate4KPages(32); // Allocate Memory For Kernel Stack (128KB)
         for(int i = 0; i < 32; i++){
@@ -347,13 +350,16 @@ namespace Scheduler{
         }
 
         while(runningThreads.get_length()){
-            for(auto it = runningThreads.begin(); it != runningThreads.end(); it++){
+            auto it = runningThreads.begin();
+            while(it != runningThreads.end()){
                 Thread* thread = *it;
                 if(!acquireTestLock(&thread->lock)){ // Loop through all of the threads so we can acquire their locks
-                    runningThreads.remove(it);
+                    runningThreads.remove(*(it++));
 
                     thread->state = ThreadStateBlocked;
                     thread->timeSlice = thread->timeSliceDefault = 0;
+                } else {
+                    it++;
                 }
             }
 
@@ -372,7 +378,10 @@ namespace Scheduler{
         asm("cli");
 
         for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
-            if(Thread* thread = cpu->runQueue->get_at(j); thread != cpu->currentThread && thread->parent == process) cpu->runQueue->remove_at(j);
+            if(Thread* thread = cpu->runQueue->get_at(j); thread != cpu->currentThread && thread->parent == process) {
+                cpu->runQueue->remove_at(j);
+                Log::Error("removing thread");
+            }
         }
 
         releaseLock(&cpu->runQueueLock);
@@ -438,7 +447,11 @@ namespace Scheduler{
             Memory::Free4KPages((void*)process->sharedMemory[i].base, process->sharedMemory[i].pageCount, process->addressSpace); // Make sure the physical memory does not get freed
         }
 
-        address_space_t* addressSpace = process->addressSpace;
+        //address_space_t* addressSpace = process->addressSpace;
+        
+        IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
+            Log::Info("removing process...");
+        });
 
         processes->remove(process);
         
@@ -446,39 +459,40 @@ namespace Scheduler{
             process->parent->children.remove(process);
         }
 
+        acquireLock(&destroyedProcessesLock);
+        acquireLock(&process->processLock);
+
         destroyedProcesses->add_back(process);
 
-        if(cpu->currentThread->parent == process){
-            acquireLock(&cpu->runQueueLock);
-            asm("cli");
+        releaseLock(&destroyedProcessesLock);
 
-            asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE)); // If we are using the PML4 of the current process switch to the kernel's
-
-            cpu->runQueue->remove(cpu->currentThread);
-
-            delete cpu->currentThread;
+        bool isProcessToKill = cpu->currentThread->parent == process;
+        if(!isProcessToKill){
+            releaseLock(&process->processLock);
         }
         
         IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
             Log::Info("destroying address space...");
         });
 
-        Memory::DestroyAddressSpace(addressSpace);
+        if(isProcessToKill){
+            asm("cli");
 
-        if(cpu->currentThread->parent == process){
+            asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE));
+
+            Memory::DestroyAddressSpace(process->addressSpace);
+
+            releaseLock(&process->processLock);
+
+            cpu->currentThread->state = ThreadStateDying;
+            cpu->currentThread->timeSlice = 0;
+            
             IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
                 Log::Info("rescheduling...");
             });
 
-            cpu->currentThread = nullptr; // Force reschedule
-
-            releaseLock(&cpu->runQueueLock);
-            asm("sti");
-
-            Schedule(nullptr, nullptr);
-            for(;;) {
-                Schedule(nullptr, nullptr);
-            }
+            asm volatile("sti; int $0xFD"); // IPI_SCHEDULE
+            assert(!"We should not be here");
         }
     }
 
@@ -490,7 +504,7 @@ namespace Scheduler{
         Schedule(nullptr, r);
     }
 
-    void Schedule(void* data, RegisterContext* r){
+    void Schedule(__attribute__((unused)) void* data, RegisterContext* r){
         CPU* cpu = GetCPULocal();
 
         if(cpu->currentThread) {
@@ -505,37 +519,44 @@ namespace Scheduler{
             return;
         }
 
-        if (__builtin_expect(cpu->runQueue->get_length() <= 0 || !cpu->runQueue->front, 0)){
+    
+        if (__builtin_expect(cpu->runQueue->get_length() <= 0 || !cpu->currentThread, 0)){
             cpu->currentThread = cpu->idleProcess->threads[0];
-        } else if(__builtin_expect(cpu->currentThread && cpu->currentThread->parent != cpu->idleProcess, 1)){
-            cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
-
-            asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
-
-            cpu->currentThread->registers = *r;
-
-            cpu->currentThread = cpu->currentThread->next;
         } else {
-            cpu->currentThread = cpu->runQueue->front;
-        }
-            
-        if(cpu->currentThread->state == ThreadStateBlocked){
-            Thread* first = cpu->currentThread;
-
-            do {
-                cpu->currentThread = cpu->currentThread->next;
-            } while(cpu->currentThread->state == ThreadStateBlocked && cpu->currentThread != first);
-
-            if(cpu->currentThread->state == ThreadStateBlocked){
+            if(__builtin_expect(cpu->currentThread->state == ThreadStateDying, 0)){
+                cpu->runQueue->remove(cpu->currentThread);
                 cpu->currentThread = cpu->idleProcess->threads[0];
+            } else if(__builtin_expect(cpu->currentThread->parent != cpu->idleProcess, 1)){
+                cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
+
+                asm volatile ("fxsave64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
+
+                cpu->currentThread->registers = *r;
+
+                cpu->currentThread = cpu->currentThread->next;
+            } else {
+                cpu->currentThread = cpu->runQueue->front;
+            }
+            
+            if(cpu->currentThread->state == ThreadStateBlocked){
+                Thread* first = cpu->currentThread;
+
+                do {
+                    cpu->currentThread = cpu->currentThread->next;
+                } while(cpu->currentThread->state == ThreadStateBlocked && cpu->currentThread != first);
+
+                if(cpu->currentThread->state == ThreadStateBlocked){
+                    cpu->currentThread = cpu->idleProcess->threads[0];
+                }
             }
         }
 
         releaseLock(&cpu->runQueueLock);
+
         asm volatile ("fxrstor64 (%0)" :: "r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 
 	    asm volatile ("wrmsr" :: "a"(cpu->currentThread->fsBase & 0xFFFFFFFF) /*Value low*/, "d"((cpu->currentThread->fsBase >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
-        
+
         TSS::SetKernelStack(&cpu->tss, (uintptr_t)cpu->currentThread->kernelStack);
 	
         TaskSwitch(&cpu->currentThread->registers, cpu->currentThread->parent->addressSpace->pml4Phys);

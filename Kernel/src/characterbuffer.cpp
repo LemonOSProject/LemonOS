@@ -12,7 +12,7 @@ CharacterBuffer::CharacterBuffer(){
     lines = 0;
 }
 
-size_t CharacterBuffer::Write(char* _buffer, size_t size){
+ssize_t CharacterBuffer::Write(char* _buffer, size_t size){
     acquireLock(&(this->lock));
 
     if((bufferPos + size) > bufferSize) {
@@ -23,7 +23,7 @@ size_t CharacterBuffer::Write(char* _buffer, size_t size){
         kfree(oldBuf);
     }
 
-    size_t written = 0;
+    ssize_t written = 0;
 
     for(unsigned i = 0; i < size; i++){
         if(_buffer[i] == '\b' /*Backspace*/ && !ignoreBackspace){
@@ -45,7 +45,7 @@ size_t CharacterBuffer::Write(char* _buffer, size_t size){
     return written;
 }
 
-size_t CharacterBuffer::Read(char* _buffer, size_t count){
+ssize_t CharacterBuffer::Read(char* _buffer, size_t count){
     acquireLock(&(this->lock));
 
     if(count > bufferPos) {

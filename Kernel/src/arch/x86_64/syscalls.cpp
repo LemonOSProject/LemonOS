@@ -980,9 +980,9 @@ long SysWaitPID(RegisterContext* r){
 	uint64_t pid = SC_ARG0(r);
 
 	process_t* proc = nullptr;
-	if((proc = Scheduler::FindProcessByPID(pid))){
+	while((proc = Scheduler::FindProcessByPID(pid))){
 		//Scheduler::BlockCurrentThread(proc->blocking);
-		while(proc->state == ThreadStateRunning); // TODO: reinstate blocker
+		// TODO: reinstate blocker
 	}
 
 	if((proc = Scheduler::FindProcessByPID(pid))) {
