@@ -180,6 +180,8 @@ void WMInstance::Poll(){
                 }
 
                 win->Resize({width, height}, wBufferKey, wBufferInfo);
+
+                redrawBackground = true;
             } else if(cmd == Lemon::GUI::WMDestroyWindow){
                 printf("Destroying Window\n");
                 WMWindow* win = FindWindow(client);
