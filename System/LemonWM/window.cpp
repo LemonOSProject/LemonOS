@@ -57,7 +57,8 @@ void WMWindow::DrawDecoration(surface_t* surface, rect_t clip) const{
 }
 
 void WMWindow::DrawClip(surface_t* surface, rect_t clip){
-	windowSurface.buffer = (windowBufferInfo->currentBuffer == 0) ? buffer1 : buffer2;
+	windowSurface.buffer = windowBufferInfo->currentBuffer ? buffer2 : buffer1;
+	windowBufferInfo->drawing = 1;
 
 	if(!(flags & WINDOW_FLAGS_NODECORATION)){
 		// Ensure that the clip rect is only within bounds of the render surface
@@ -77,6 +78,8 @@ void WMWindow::DrawClip(surface_t* surface, rect_t clip){
 	} else {
 		Lemon::Graphics::surfacecpy(surface, &windowSurface, clip.pos, {clip.pos - pos, clip.size});
 	}
+
+	windowBufferInfo->drawing = 0;
 }
 
 /*void WMWindow::Draw(surface_t* surface){
