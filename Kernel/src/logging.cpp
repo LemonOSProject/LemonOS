@@ -95,6 +95,10 @@ namespace Log{
 			}
 
 			if(n + logBufferPos > logBufferSize){
+				if(n > logBufferMaxSize){
+					n = logBufferMaxSize;
+				}
+
 				if(n + logBufferPos > logBufferMaxSize || !CheckInterrupts()){
 					size_t discard = (n + logBufferPos) - logBufferMaxSize; // Amount of bytes to discard
 

@@ -479,7 +479,7 @@ namespace AHCI{
             Timer::Wait(1);
         }
 
-        if(spin >= 1000000){
+        if(spin >= 100){
             Log::Warning("[SATA] Port Hung");
             return;
         }
