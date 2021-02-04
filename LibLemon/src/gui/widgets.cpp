@@ -333,7 +333,7 @@ namespace Lemon::GUI {
         surface.height = fixedBounds.size.y;
     }
     
-    Bitmap::Bitmap(rect_t _bounds, surface_t* surf) : Widget({_bounds.pos, (vector2i_t){surf->width, surf->height}}){
+    Bitmap::Bitmap(rect_t _bounds, surface_t* surf) : Widget({_bounds.pos, (vector2i_t){surf->width, surf->height}}, LayoutSize::Fixed, LayoutSize::Fixed){
         surface = *surf;
     }
 
@@ -1150,6 +1150,7 @@ namespace Lemon::GUI {
     }
 
     void ScrollView::OnMouseDown(vector2i_t mousePos){
+        mousePos -= fixedBounds.pos;
         if(mousePos.x >= fixedBounds.width - 16){
             sBarVertical.OnMouseDownRelative(mousePos - (vector2i_t){fixedBounds.width - 16, 0});
         } else if(mousePos.y >= fixedBounds.height - 16){
@@ -1169,6 +1170,8 @@ namespace Lemon::GUI {
         if(active){
             active->OnMouseUp(mousePos);
         }
+
+        UpdateFixedBounds();
     }
 
     void ScrollView::OnMouseMove(vector2i_t mousePos){
@@ -1194,11 +1197,11 @@ namespace Lemon::GUI {
             w->UpdateFixedBounds();
 
             if(w->GetFixedBounds().width + w->GetFixedBounds().x > scrollBounds.width){
-                scrollBounds.width = w->GetFixedBounds().width + w->GetFixedBounds().x;
+                scrollBounds.width = w->GetFixedBounds().width + (w->GetFixedBounds().x - fixedBounds.x);
             }
 
             if(w->GetFixedBounds().height + w->GetFixedBounds().y > scrollBounds.height){
-                scrollBounds.height = w->GetFixedBounds().height + w->GetFixedBounds().y;
+                scrollBounds.height = w->GetFixedBounds().height + (w->GetFixedBounds().y - fixedBounds.y);
             }
         }
 

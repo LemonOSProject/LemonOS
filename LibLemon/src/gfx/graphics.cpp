@@ -230,8 +230,7 @@ namespace Lemon::Graphics{
         int i = 0;
 
         if(offset.y < 0){
-            i += -offset.y;
-            offset.y = 0;
+            i -= offset.y;
         }
 
         for(; i < src->height && i < dest->height - offset.y; i++){

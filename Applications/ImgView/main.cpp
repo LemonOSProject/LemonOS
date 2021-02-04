@@ -57,12 +57,14 @@ int main(int argc, char** argv){
     fileMenu.first = "File";
 	fileMenu.second.push_back({.id = IMGVIEW_OPEN, .name = std::string("Open...")});
 
-    window = new Lemon::GUI::Window("Image Viewer", {800, 500}, 0, Lemon::GUI::WindowType::GUI);
+    window = new Lemon::GUI::Window("Image Viewer", {800, 500}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
     window->CreateMenuBar();
     window->menuBar->items.push_back(fileMenu);
 	window->OnMenuCmd = OnWindowCmd;
 
-    sv = new Lemon::GUI::ScrollView({{0, 0}, {window->GetSize().x, window->GetSize().y}});
+    sv = new Lemon::GUI::ScrollView({{0, 0}, {0, 0}});
+    sv->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
+
     imgWidget = new Lemon::GUI::Bitmap({{0, 0}, {0, 0}}, &image);
 
     sv->AddWidget(imgWidget);
