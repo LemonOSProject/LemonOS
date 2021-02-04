@@ -40,6 +40,7 @@ namespace Lemon::GUI{
 		path += box->contents.front();
 
 		struct stat sResult;
+
 		int e = stat(path.c_str(), &sResult);
 		if(e && dflags & FILE_DIALOG_CREATE && errno == ENOENT){
 			FileDialogOnFileOpened(path.c_str(), dialogFileView);
@@ -103,14 +104,17 @@ namespace Lemon::GUI{
 		fileBox->OnSubmit = FileDialogOnFileBoxSubmit;
 		dialogFileBox = fileBox;
 
+		win->Paint();
+
 		while(!win->closed && !selectedPth){
+			win->WaitEvent();
+
 			LemonEvent ev;
 			while(win->PollEvent(ev)){
 				win->GUIHandleEvent(ev);
 			}
 
 			win->Paint();
-			win->WaitEvent();
 		}
 
 		delete win;

@@ -125,12 +125,10 @@ void SaveOpenFile(){
 }
 
 void OnWindowPaint(surface_t* surface){
-	Lemon::Graphics::DrawRect(0, window->GetSize().y - 20, window->GetSize().x, 20, 160, 160, 160, surface);
-
 	char buf[38];
 	sprintf(buf, "Line: %d    Col: %d", textBox->cursorPos.y + 1, textBox->cursorPos.x + 1); // lines and columns don't start at 0
 
-	Lemon::Graphics::DrawString(buf, 4 + WINDOW_MENUBAR_HEIGHT, window->GetSize().y - 20 + 4, 0, 0, 0, surface);
+	Lemon::Graphics::DrawString(buf, 4 + WINDOW_MENUBAR_HEIGHT, window->GetSize().y - 20 + 4, Lemon::colours[Lemon::Colour::Text], surface);
 }
 
 void OnWindowCmd(unsigned short cmd, Lemon::GUI::Window* win){
