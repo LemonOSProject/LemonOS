@@ -63,6 +63,8 @@ struct TerminalChar {
 	char c;
 };
 
+rgba_colour_t* colours = coloursProfile2;
+
 Lemon::Graphics::Font* terminalFont;
 
 TermState state = defaultState;

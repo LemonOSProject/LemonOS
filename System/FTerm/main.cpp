@@ -25,7 +25,7 @@ struct TermState{
 	bool reverse : 1 = false;
 	bool strikethrough: 1 = false;
 
-	uint8_t fgColour = 136;
+	uint8_t fgColour = 15;
 	uint8_t bgColour = 0;
 };
 
