@@ -29,6 +29,10 @@ typedef struct HandleIndex {
 	handle_t handle;
 } handle_index_t;
 
+namespace Scheduler{
+	class ProcessStateThreadBlocker;
+}
+
 typedef struct process {
 	pid_t pid = -1; // PID
 	address_space_t* addressSpace; // Pointer to page directory and tables
@@ -49,12 +53,12 @@ typedef struct process {
 	timeval creationTime; // When the process was created
 	uint64_t activeTicks = 0; // How many ticks this process has been active
 
-	lock_t processLock = 0;
+	ReadWriteLock processLock;
 
 	lock_t handleLock = 0;
 	Vector<Handle> handles;
 	Vector<fs_fd_t*> fileDescriptors;
-	List<Thread*> blocking; // Threads blocking awaiting a state change
+	List<Scheduler::ProcessStateThreadBlocker*> blocking; // Threads blocking awaiting a state change
 	HashMap<uintptr_t, List<FutexThreadBlocker*>*> futexWaitQueue;
 
 	uintptr_t usedMemoryBlocks;
@@ -79,6 +83,45 @@ typedef struct {
 } process_info_t;
 
 namespace Scheduler{
+	class ProcessStateThreadBlocker : public ThreadBlocker {
+	protected:
+		int& pid;
+		List<process_t*> waitingOn;
+
+	public:
+		ProcessStateThreadBlocker(int& pidRef) : pid(pidRef){
+
+		}
+
+		void WaitOn(process_t* process);
+
+		inline void Unblock(){
+			assert(!"ProcessStateThreadBlocker: Base Unblock() not allowed!");
+		}
+
+		inline void Unblock(process_t* process){
+			pid = process->pid;
+			shouldBlock = false;
+
+			acquireLock(&lock);
+			for(auto it = waitingOn.begin(); it != waitingOn.end(); it++){
+				if(*it == process){
+					waitingOn.remove(it);
+					process->blocking.remove(this);
+
+					break;
+				}
+			}
+
+			if(thread){
+				thread->Unblock();
+			}
+			releaseLock(&lock);
+		}
+
+		~ProcessStateThreadBlocker();
+	};
+
 	extern lock_t destroyedProcessesLock;
 	extern List<process_t*>* destroyedProcesses;
 

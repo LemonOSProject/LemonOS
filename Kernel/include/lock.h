@@ -76,15 +76,17 @@ public:
 class ReadWriteLock {
     unsigned activeReaders = 0;
     lock_t fileLock = 0;
+    lock_t lock = 0;
+
+    bool writerAcquiredLock = false; // Whether or not the writer has acquired lock (but not fileLock) 
 
     FastList<thread*> readers;
     FastList<thread*> writers;
 public:
-    lock_t lock = 0;
 
     ReadWriteLock() {}
 
-    void AcquireRead(){
+    inline void AcquireRead(){
         acquireLock(&lock);
 
         activeReaders++;
@@ -96,12 +98,26 @@ public:
         releaseLock(&lock);
     }
 
-    void AcquireWrite(){
+    inline void AcquireWrite(){
         acquireLock(&lock); // Stop more threads from reading
         acquireLock(&fileLock);
     }
 
-    void ReleaseRead(){
+    inline bool TryAcquireWrite(){
+        if(!writerAcquiredLock && acquireTestLock(&lock)){ // Stop more threads from reading
+            return true;
+        }
+        writerAcquiredLock = true; // No need to acquire lock next time when we come back
+
+        if(acquireTestLock(&fileLock)){
+            return true;
+        }
+        writerAcquiredLock = false;
+
+        return false;
+    }
+
+    inline void ReleaseRead(){
         if(activeReaders == 1){
             releaseLock(&fileLock);
         }
@@ -109,7 +125,7 @@ public:
         activeReaders--;
     }
 
-    void ReleaseWrite(){
+    inline void ReleaseWrite(){
         releaseLock(&fileLock);
         releaseLock(&lock);
     }

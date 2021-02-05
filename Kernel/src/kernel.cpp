@@ -94,7 +94,7 @@ void KernelProcess(){
 	for(;;) {
 		acquireLock(&Scheduler::destroyedProcessesLock);
 		for(auto it = Scheduler::destroyedProcesses->begin(); it != Scheduler::destroyedProcesses->end(); it++){
-			if(!acquireTestLock(&(*it)->processLock)){
+			if(!((*it)->processLock.TryAcquireWrite())){
 				delete *it;
 				Scheduler::destroyedProcesses->remove(it);
 			}

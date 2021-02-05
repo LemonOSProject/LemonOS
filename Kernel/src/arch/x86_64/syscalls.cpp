@@ -977,12 +977,18 @@ long SysGetCWD(RegisterContext* r){
 }
 
 long SysWaitPID(RegisterContext* r){
-	uint64_t pid = SC_ARG0(r);
+	int64_t pid = SC_ARG0(r);
 
 	process_t* proc = nullptr;
-	while((proc = Scheduler::FindProcessByPID(pid))){
-		//Scheduler::BlockCurrentThread(proc->blocking);
-		// TODO: reinstate blocker
+	if((proc = Scheduler::FindProcessByPID(pid))){
+		int pid = 0;
+		Scheduler::ProcessStateThreadBlocker bl = Scheduler::ProcessStateThreadBlocker(pid);
+
+		bl.WaitOn(proc);
+
+		if(Scheduler::GetCurrentThread()->Block(&bl)){
+			return -EINTR;
+		}
 	}
 
 	if((proc = Scheduler::FindProcessByPID(pid))) {

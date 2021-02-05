@@ -98,6 +98,22 @@ namespace Scheduler{
         for(;;);
     }
 
+    void ProcessStateThreadBlocker::WaitOn(process_t* process){
+        waitingOn.add_back(process);
+        process->blocking.add_back(this);
+    }
+
+    ProcessStateThreadBlocker::~ProcessStateThreadBlocker(){
+        acquireLock(&lock);
+
+        for(process_t* process : waitingOn){
+            process->blocking.remove(this);
+        }
+        waitingOn.clear();
+
+        releaseLock(&lock);
+    }
+
 	Handle& RegisterHandle(process_t* proc, FancyRefPtr<KernelObject> ko){
         Handle h;
         h.ko = ko;
@@ -366,9 +382,9 @@ namespace Scheduler{
             Scheduler::GetCurrentThread()->Sleep(50000); // Sleep for 50 ms so we do not chew through CPU time in the event of a deadlock
         }
 
-        /*for(Blocker* b : process->blocking){
-            t->Unblock();
-        }*/
+        while(process->blocking.get_length()){
+            process->blocking.get_front()->Unblock(process); // It will handle list removal for us
+        }
 
         IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
             Log::Info("removing threads from run queue...");
@@ -460,7 +476,7 @@ namespace Scheduler{
         }
 
         acquireLock(&destroyedProcessesLock);
-        acquireLock(&process->processLock);
+        process->processLock.AcquireWrite();
 
         destroyedProcesses->add_back(process);
 
@@ -468,7 +484,7 @@ namespace Scheduler{
 
         bool isProcessToKill = cpu->currentThread->parent == process;
         if(!isProcessToKill){
-            releaseLock(&process->processLock);
+            process->processLock.ReleaseWrite();
         }
         
         IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
@@ -482,7 +498,7 @@ namespace Scheduler{
 
             Memory::DestroyAddressSpace(process->addressSpace);
 
-            releaseLock(&process->processLock);
+            process->processLock.ReleaseWrite();
 
             cpu->currentThread->state = ThreadStateDying;
             cpu->currentThread->timeSlice = 0;
