@@ -30,6 +30,7 @@
 
 Lemon::GUI::Window* window;
 
+bool paint = true;
 bool paintAll = true;
 
 struct TermState{
@@ -104,7 +105,7 @@ void Scroll(){
 void OnPaint(surface_t* surface){
 	int fontHeight = terminalFont->lineHeight;
 
-	if(true){
+	if(paintAll){
 		for(int i = 0; i < rowCount && (bufferOffset + i) < static_cast<int>(buffer.size()); i++){
 			int j = 0;
 			for(; j < static_cast<int>(buffer[bufferOffset + i].size()); j++){
@@ -222,6 +223,8 @@ void DoAnsiCSI(char ch){
 
 			curPos.y -= amount;
 			if(curPos.y < 0) curPos.y = 0;
+
+			paintAll = true;
 			break;
 		}
 	case ANSI_CSI_CUD:
@@ -233,6 +236,8 @@ void DoAnsiCSI(char ch){
 
 			curPos.y += amount;
 			Scroll();
+
+			paintAll = true;
 			break;
 		}
 	case ANSI_CSI_CUF:
@@ -383,7 +388,7 @@ void DoAnsiCSI(char ch){
 		}
 		break;
 	default:
-		//fprintf(stderr, "Unknown Control Sequence Introducer (CSI) '%c'\n", ch);
+		//fprintf(stderr, "Unknown Control Sbequence Introducer (CSI) '%c'\n", ch);
 		break;
 	}
 }
@@ -591,11 +596,13 @@ int main(int argc, char** argv){
 				PrintChar(_buf[i]);
 			}
 
-			paintAll = true;
+			paint = true;
 		}
 
-		if(paintAll){
+		if(paint){
 			window->Paint();
+
+			paint = false;
 		}
 
 		//poll(fds.data(), fds.size(), -1);
