@@ -153,7 +153,7 @@ int main(int argc, char** argv){
 	window->menuBar->items.push_back(fileMenu);
 
 	window->OnMenuCmd = OnWindowCmd;
-	window->OnPaint = OnWindowPaint;
+	window->OnPaintEnd = OnWindowPaint;
 
 	textBox = new ExtendedTextBox({{0, 0}, {0, 20}});
 	window->AddWidget(textBox);

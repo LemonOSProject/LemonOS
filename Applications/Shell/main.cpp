@@ -83,6 +83,8 @@ void AddWindow(ShellWindow* win){
 	taskbarWindows.insert(std::pair<ShellWindow*, WindowButton*>(win, btn));
 
 	taskbarWindowsContainer->AddWidget(btn);
+
+	paintTaskbar = true;
 }
 
 void RemoveWindow(ShellWindow* win){
@@ -91,6 +93,8 @@ void RemoveWindow(ShellWindow* win){
 
 	taskbarWindowsContainer->RemoveWidget(btn);
 	delete btn;
+
+	paintTaskbar = true;
 }
 
 void OnTaskbarPaint(surface_t* surface){

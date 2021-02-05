@@ -146,6 +146,8 @@ namespace Lemon::GUI{
     }
 
     void Window::Paint(){
+        if(OnPaint) OnPaint(&surface);
+
         if(windowType == WindowType::GUI) {
             if(menuBar){
                 menuBar->Paint(&surface);
@@ -154,7 +156,7 @@ namespace Lemon::GUI{
             rootContainer.Paint(&surface);
         }
 
-        if(OnPaint) OnPaint(&surface);
+        if(OnPaintEnd) OnPaintEnd(&surface);
 
         SwapBuffers();
     }

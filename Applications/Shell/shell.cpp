@@ -64,10 +64,10 @@ void ShellInstance::PollCommands(){
             }
 
             ShellWindow* win;
-            try{
-                win = windows.at(id);
-            } catch (const std::out_of_range& e){
-                printf("[Shell] Warning: LemonShellSetActive: Window ID out of range\n");
+            if(auto it = windows.find(id); it != windows.end()){
+                win = it->second;
+            } else {
+                printf("[Shell] Warning: LemonShellRemoveWindow: Window ID out of range\n");
                 break;
             }
 
@@ -87,9 +87,9 @@ void ShellInstance::PollCommands(){
             }
 
             ShellWindow* win;
-            try{
-                win = windows.at(id);
-            } catch (const std::out_of_range& e){
+            if(auto it = windows.find(id); it != windows.end()){
+                win = it->second;
+            } else {
                 printf("[Shell] Warning: LemonShellSetActive: Window ID out of range\n");
                 break;
             }

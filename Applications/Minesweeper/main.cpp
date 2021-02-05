@@ -275,9 +275,11 @@ int main(int argc, char** argv){
 
     Lemon::Graphics::LoadImage("/initrd/minesweeper.png", &resources);
 
+    window->AddWidget(&game);
+
+    game.Generate(EasyDifficulty);
     UpdateWindowSize();
 
-    window->AddWidget(&game);
     window->Paint();
 
     while(!window->closed){

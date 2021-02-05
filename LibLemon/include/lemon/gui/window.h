@@ -235,5 +235,12 @@ namespace Lemon::GUI {
         /// Called when Paint() is called. Is run \e before the widgets are painted and the window buffers are swapped
         /////////////////////////////
         WindowPaintHandler OnPaint = nullptr;
+
+        /////////////////////////////
+        /// \brief OnPaint callback
+        ///
+        /// Called when Paint() is called. Is run \e after the widgets are painted and the window buffers are swapped
+        /////////////////////////////
+        WindowPaintHandler OnPaintEnd = nullptr;
     };
 }
