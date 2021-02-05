@@ -5,13 +5,13 @@ sfdisk /dev/nbd0 < Scripts/partitions.sfdisk
 
 partprobe /dev/nbd0
 
-if [ ! -e /dev/nbd0p2 ]; then
+while [ ! -e /dev/nbd0p2 ]; do
 	sleep 1 # Wait a second if does not exist
 
     partprobe /dev/nbd0
 
     sleep 0.5
-fi
+done
 
 mkfs.ext2 -b 4096 /dev/nbd0p2
 mkfs.vfat -F 32 /dev/nbd0p3
