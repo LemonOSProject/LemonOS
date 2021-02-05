@@ -12,7 +12,7 @@
 
 namespace Timer{
     int frequency; // Timer frequency
-    int ticks = 0; // Timer tick counter
+    long ticks = 0; // Timer tick counter
     long long uptime = 0; // System uptime in seconds since the timer was initialized
 
     lock_t sleepQueueLock = 0;
@@ -23,6 +23,11 @@ namespace Timer{
     FastList<TimerEvent*> sleeping;
 
     TimerEvent::TimerEvent(long _us, void (*_callback)(void*), void* _data) : ticks(_us * frequency / 1000000), callback(_callback), data(_data) {
+        if(ticks <= 0){
+            callback(data);
+            return;
+        }
+        
         acquireLock(&sleepQueueLock);
         if(!sleeping.get_length()){
             sleeping.add_front(this); // No sleeping threads in queue, just add

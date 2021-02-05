@@ -83,7 +83,7 @@ namespace Lemon{
         }
 
         ~Endpoint(){
-            
+            DestroyKObject(handle);
         }
 
         /////////////////////////////

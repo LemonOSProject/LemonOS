@@ -35,8 +35,6 @@ namespace Lemon::GUI{
         DestroyWindow();
 
         Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey);
-
-        usleep(100);
     }
 
     void Window::UpdateGUITheme(const std::string& path){
