@@ -113,5 +113,18 @@ typedef struct Rect{
 } rect_t; // Rectangle
 
 typedef struct RGBAColour{
-    uint8_t r, g, b, a; /* Red, Green, Blue, Alpha (Transparency) Respectively*/
+    union{
+        struct{
+            uint8_t r, g, b, a; /* Red, Green, Blue, Alpha (Transparency) Respectively*/
+        };
+        uint32_t val;
+    };
+
+    inline static constexpr const RGBAColour FromRGB(uint32_t rgb){
+        return { .val = __builtin_bswap32((rgb << 8) | 0xff)}; // Set alpha channel to 255
+    }
+
+    inline static constexpr const RGBAColour FromARGB(uint32_t argb){
+        return { .val = __builtin_bswap32((argb << 8) | ((argb >> 24) & 0xff))}; // Swap alpha
+    }
 } __attribute__ ((packed)) rgba_colour_t;
