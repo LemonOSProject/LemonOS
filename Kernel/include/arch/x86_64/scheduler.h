@@ -59,7 +59,7 @@ typedef struct process {
 	Vector<Handle> handles;
 	Vector<fs_fd_t*> fileDescriptors;
 	List<Scheduler::ProcessStateThreadBlocker*> blocking; // Threads blocking awaiting a state change
-	HashMap<uintptr_t, List<FutexThreadBlocker*>*> futexWaitQueue;
+	HashMap<uintptr_t, List<FutexThreadBlocker*>*> futexWaitQueue = HashMap<uintptr_t, List<FutexThreadBlocker*>*>(8);
 
 	uintptr_t usedMemoryBlocks;
 } process_t;

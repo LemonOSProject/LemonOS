@@ -197,8 +197,6 @@ namespace fs::Ext2{
 
     class Ext2Node : public FsNode{ 
     protected:
-        List<uint32_t> cachedBlocks;
-
         Ext2Volume* vol;
         ext2_inode_t e2inode;
 
@@ -248,8 +246,8 @@ namespace fs::Ext2{
         uint32_t inodeSize = 128;
 
         HashMap<uint32_t, Ext2Node*> inodeCache;
-        HashMap<uint32_t, uint8_t*> blockCache;
-        HashMap<uint32_t, uint8_t*> bitmapCache;
+        HashMap<uint32_t, uint8_t*> blockCache = HashMap<uint32_t, uint8_t*>(1024);
+        HashMap<uint32_t, uint8_t*> bitmapCache = HashMap<uint32_t, uint8_t*>(256);
         unsigned blockCacheMemoryUsage;
 
         inline uint32_t LocationToBlock(uint64_t l){
