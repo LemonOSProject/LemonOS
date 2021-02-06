@@ -52,15 +52,23 @@ namespace Timer{
     }
 
     TimerEvent::~TimerEvent(){
+        acquireLock(&lock);
+        acquireLock(&sleepQueueLock);
+
         if(!dispatched){
-            acquireLock(&sleepQueueLock);
-            if(ticks >= 0 && next != sleeping.get_front()){
+            if(ticks >= 0 && next && next != sleeping.get_front()){
                 next->ticks += ticks;
             }
 
-            sleeping.remove(this); // Remove from queue
-            releaseLock(&sleepQueueLock);
+            if(next){
+                sleeping.remove(this); // Remove from queue
+            }
+
+            dispatched = true;
         }
+
+        releaseLock(&sleepQueueLock);
+        releaseLock(&lock);
     }
 
     uint64_t GetSystemUptime(){
@@ -115,6 +123,8 @@ namespace Timer{
         if(!(acquireTestLock(&sleepQueueLock))){
             if(sleeping.get_length()){ // Make sure the queue has not changed inbetween checking the length and acquiring the lock
                 TimerEvent* cnt = sleeping.get_front();
+
+                assert(cnt);
                 cnt->ticks--;
 
                 if(cnt->ticks <= 0){

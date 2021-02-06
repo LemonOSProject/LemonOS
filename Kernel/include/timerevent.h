@@ -25,7 +25,11 @@ namespace Timer{
         void* data = nullptr; // Generic data pointer (Could be used to point to a class, etc.)
 
         inline void Dispatch() {
+            acquireLock(&lock);
+
             dispatched = true;
+
+            releaseLock(&lock);
             callback(data);
         }
     public:
