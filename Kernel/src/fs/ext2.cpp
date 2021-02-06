@@ -392,7 +392,7 @@ namespace fs::Ext2{
 
         #ifndef EXT2_NO_CACHE
         uint8_t* cachedBlock;
-        if((cachedBlock = blockCache.get(block))){
+        if(blockCache.get(block, cachedBlock)){
             memcpy(buffer, cachedBlock, blocksize);
         } else {
             cachedBlock = (uint8_t*)kmalloc(blocksize);
@@ -420,7 +420,7 @@ namespace fs::Ext2{
 
         #ifndef EXT2_NO_CACHE
         uint8_t* cachedBlock = nullptr;
-        if((cachedBlock = blockCache.get(block))){
+        if((blockCache.get(block, cachedBlock))){
             memcpy(cachedBlock, buffer, blocksize);
         }
         #endif
@@ -441,7 +441,7 @@ namespace fs::Ext2{
 
             uint8_t bitmap[blocksize / sizeof(uint8_t)];
 
-            if(uint8_t* cachedBitmap = bitmapCache.get(group.blockBitmap)){
+            if(uint8_t* cachedBitmap; bitmapCache.get(group.blockBitmap, cachedBitmap)){
                 memcpy(bitmap, cachedBitmap, blocksize);
             } else {
                 if(int e = ReadBlockCached(group.blockBitmap, bitmap)){
@@ -472,7 +472,7 @@ namespace fs::Ext2{
                 continue;
             }
 
-            if(uint8_t* cachedBitmap = bitmapCache.get(group.blockBitmap)){
+            if(uint8_t* cachedBitmap; bitmapCache.get(group.blockBitmap, cachedBitmap)){
                 memcpy(cachedBitmap, bitmap, blocksize);
             }
 
@@ -502,7 +502,7 @@ namespace fs::Ext2{
 
         uint8_t bitmap[blocksize / sizeof(uint8_t)];
 
-        if(uint8_t* cachedBitmap = bitmapCache.get(group.blockBitmap)){
+        if(uint8_t* cachedBitmap; bitmapCache.get(group.blockBitmap, cachedBitmap)){
             memcpy(bitmap, cachedBitmap, blocksize);
         } else {
             if(int e = ReadBlockCached(group.blockBitmap, bitmap)){
@@ -520,7 +520,7 @@ namespace fs::Ext2{
         int bitmask = ~(1 << (block % 8));
         bitmap[bmapIndex] &= bitmask;
 
-        if(uint8_t* cachedBitmap = bitmapCache.get(group.blockBitmap)){
+        if(uint8_t* cachedBitmap; bitmapCache.get(group.blockBitmap, cachedBitmap)){
             memcpy(cachedBitmap, bitmap, blocksize);
         }
 
@@ -624,7 +624,7 @@ namespace fs::Ext2{
         for(unsigned i = 0; i < e2inode.blockCount * (blocksize / 512); i++){
             uint32_t block = GetInodeBlock(i, e2inode);
             FreeBlock(block);
-            if(blockCache.get(block)){
+            if(blockCache.find(block)){
                 blockCache.remove(block);
             }
         }
@@ -642,7 +642,7 @@ namespace fs::Ext2{
                 
                 for(unsigned i = 0; i < (blocksize / sizeof(uint32_t)) && blockPointers[i] != 0; i++){
                     FreeBlock(blockPointers[i]);
-                    if(blockCache.get(blockPointers[i])){
+                    if(blockCache.find(blockPointers[i])){
                         blockCache.remove(blockPointers[i]);
                     }
                 }
@@ -659,7 +659,7 @@ namespace fs::Ext2{
 
         uint8_t bitmap[blocksize / sizeof(uint8_t)];
 
-        if(uint8_t* cachedBitmap = bitmapCache.get(group.inodeBitmap)){
+        if(uint8_t* cachedBitmap; bitmapCache.get(group.inodeBitmap, cachedBitmap)){
             memcpy(bitmap, cachedBitmap, blocksize);
         } else {
             if(int e = ReadBlockCached(group.inodeBitmap, bitmap)){
@@ -677,7 +677,7 @@ namespace fs::Ext2{
         int bitmask = ~(1 << (inode % 8));
         bitmap[bmapIndex] &= bitmask;
 
-        if(uint8_t* cachedBitmap = bitmapCache.get(group.inodeBitmap)){
+        if(uint8_t* cachedBitmap; bitmapCache.get(group.inodeBitmap, cachedBitmap)){
             memcpy(cachedBitmap, bitmap, blocksize);
         }
 
@@ -1044,9 +1044,9 @@ namespace fs::Ext2{
             return nullptr;
         }
 
-        Ext2Node* returnNode = inodeCache.get(e2dirent->inode);
+        Ext2Node* returnNode;
 
-        if(!returnNode){ // Could not locate inode in cache
+        if(!inodeCache.get(e2dirent->inode, returnNode) || !returnNode){ // Could not locate inode in cache
             ext2_inode_t direntInode;
             if(ReadInode(e2dirent->inode, direntInode)){
                 Log::Error("[Ext2] Failed to read inode of directory (inode %d) entry %s", node->inode, e2dirent->name);
@@ -1433,7 +1433,7 @@ namespace fs::Ext2{
             return -EINVAL;
         }
 
-        if(Ext2Node* file = inodeCache.get(ent->inode)){
+        if(Ext2Node* file; inodeCache.get(ent->inode, file)){
             if((file->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
                 if(!unlinkDirectories){
                     return -EISDIR;

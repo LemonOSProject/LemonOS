@@ -104,6 +104,8 @@ namespace Network{
 				UDP::OnReceiveUDP(*header, header->data, length - sizeof(IPv4Header));
 				break;
 			case IPv4ProtocolTCP:
+				TCP::OnReceiveTCP(*header, header->data, length - sizeof(IPv4Header));
+				break;
 			default:
 				Log::Warning("[Network] [IPv4] Discarding packet (invalid protocol %x)", header->protocol);
 				break;
@@ -165,7 +167,7 @@ namespace Network{
 			mainAdapter->SendPacket(data, length);
 	}
 
-    int SendIPv4(void* data, size_t length, IPv4Address& destination, MACAddress& immediateDestination, uint8_t protocol, NetworkAdapter* adapter){
+    int SendIPv4(void* data, size_t length, IPv4Address& source, IPv4Address& destination, uint8_t protocol, NetworkAdapter* adapter){
 		if(length > 1518 - sizeof(EthernetFrame) - sizeof(IPv4Header)){
 			return -EMSGSIZE;
 		}
@@ -175,7 +177,12 @@ namespace Network{
 		EthernetFrame* ethFrame = (EthernetFrame*)buffer;
 		ethFrame->etherType = EtherTypeIPv4;
 		ethFrame->src = mainAdapter->mac;
-		ethFrame->dest = immediateDestination;
+		
+		if(destination.value == INADDR_BROADCAST){
+			ethFrame->dest = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; // Broadcast MAC Address
+		} else if(int status = Route(source, destination, ethFrame->dest, adapter); status < 0){
+			return status;
+		}
 
 		IPv4Header* ipHeader = (IPv4Header*)ethFrame->data;
 		ipHeader->ihl = 5; // 5 dwords (20 bytes)

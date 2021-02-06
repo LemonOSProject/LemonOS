@@ -38,7 +38,7 @@ private:
 	};
 
 	List<KeyValuePair>* buckets;
-	unsigned bucketCount = 2048;
+	unsigned bucketCount = 512;
 
 	lock_t lock = 0;
 public:
@@ -50,13 +50,23 @@ public:
 	HashMap(unsigned bCount){
 		bucketCount = bCount;
 
-		HashMap();
+		buckets = new List<KeyValuePair>[bucketCount];
+		lock = 0;
 	}
 
 	void insert(K key, const T& value){
 		auto& bucket = buckets[hash(key) % bucketCount];
 
 		acquireLock(&lock);
+		for(KeyValuePair& v : bucket){
+			if(v.key == key){ // Already exists, just replace
+				v.value = value;
+				releaseLock(&lock);
+
+				return;
+			}
+		}
+
 		bucket.add_back(KeyValuePair(key, value));
 		releaseLock(&lock);
 	}
@@ -77,19 +87,21 @@ public:
 		return T();
 	}
 
-	T get(K key){
+	int get(const K& key, T& value){
 		auto& bucket = buckets[hash(key) % bucketCount];
 
 		acquireLock(&lock);
 		for(KeyValuePair& val : bucket){
 			if(val.key == key){
 				releaseLock(&lock);
-				return val.value;
+
+				value = val.value;
+				return 1;
 			}
 		}
 		releaseLock(&lock);
 
-		return T();
+		return 0;
 	}
 
 	int find(K key){

@@ -273,20 +273,10 @@ namespace Network{
 		macAddr[4] = t & 0xFF;
 		macAddr[5] = t >> 8;
 
-        Log::Write(", MAC Address: ");
-        Log::Write(macAddr[0]);
-        Log::Write(":");
-        Log::Write(macAddr[1]);
-        Log::Write(":");
-        Log::Write(macAddr[2]);
-        Log::Write(":");
-        Log::Write(macAddr[3]);
-        Log::Write(":");
-        Log::Write(macAddr[4]);
-        Log::Write(":");
-        Log::Write(macAddr[5]);
-
         mac = macAddr;
+
+        Log::Info("[i8254x] MAC Address: %x:%x:%x:%x:%x:%x",
+            mac[0], mac[1],mac[2], mac[3], mac[4], mac[5]);
 
         char tempName[NAME_MAX];
         char bus[16];

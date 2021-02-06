@@ -2093,9 +2093,8 @@ long SysFutexWake(RegisterContext* r){
 
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 
-	List<FutexThreadBlocker*>* blocked = currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex));
-
-	if(!blocked || !blocked->get_length()){
+	List<FutexThreadBlocker*>* blocked = nullptr;
+	if(!currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex), blocked) || !blocked->get_length()){
 		return 0;
 	}
 
@@ -2134,9 +2133,8 @@ long SysFutexWait(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 	Thread* currentThread = Scheduler::GetCurrentThread();
 
-	List<FutexThreadBlocker*>* blocked = currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex));
-
-	if(!blocked){
+	List<FutexThreadBlocker*>* blocked;
+	if(!currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex), blocked)){
 		blocked = new List<FutexThreadBlocker*>();
 
 		currentProcess->futexWaitQueue.insert(reinterpret_cast<uintptr_t>(futex), blocked);

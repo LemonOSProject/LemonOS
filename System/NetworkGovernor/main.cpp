@@ -243,6 +243,7 @@ DNS Server: %d.%d.%d.%d\n",
 
 		rtentry route;
 		route.rt_gateway.sa_family = AF_INET;
+		route.rt_flags = RTF_GATEWAY | RTF_UP;
 		reinterpret_cast<sockaddr_in*>(&route.rt_gateway)->sin_addr.s_addr = defaultGateway;
 		route.rt_dev = const_cast<char*>(name.data());
 		ioctl(sock, SIOCADDRT, &route);
@@ -302,6 +303,22 @@ int main(){
 
 	for(auto& netIf : interfaces){
 		netIf->ConfigureInterface();
+	}
+
+	int testSocket = socket(AF_INET, SOCK_STREAM, 0);
+	if(testSocket < 0){
+		perror("socket");
+		return 1;
+	}
+
+	sockaddr_in testAddr;
+	uint8_t ip[4] = {66,198,240,50}; // lemonos.org
+	testAddr.sin_addr.s_addr = *(uint32_t*)(ip);
+	testAddr.sin_family = AF_INET;
+	testAddr.sin_port = htons(80);
+	
+	if(connect(testSocket, (sockaddr*)&testAddr, sizeof(sockaddr_in)) < 0){
+		perror("connect");
 	}
 
 	return 0;

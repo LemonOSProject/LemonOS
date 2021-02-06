@@ -29,8 +29,8 @@ int Socket::CreateSocket(int domain, int type, int protocol, Socket** sock){
             *sock = new Network::UDP::UDPSocket(type, protocol);
             return 0;
         } else if(type == StreamSocket){
-            //*sock = new Network::TCP::TCPSocket(type, protocol);
-            return -EPROTONOSUPPORT;
+            *sock = new Network::TCP::TCPSocket(type, protocol);
+            return 0;
         }
     }
 

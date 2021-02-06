@@ -7,11 +7,17 @@
 #include <debug.h>
 
 namespace Network::UDP{
-    HashMap<uint16_t, UDPSocket*> sockets;
+    HashMap<uint16_t, UDPSocket*> sockets = HashMap<uint16_t, UDPSocket*>(256); // 256 buuckets is enough
     uint16_t nextEphemeralPort = EPHEMERAL_PORT_RANGE_START;
 
     Socket* FindSocket(BigEndian<uint16_t> port){
-        return sockets.get(port.value);
+        UDPSocket* sock = nullptr;
+            
+        if(!sockets.get(port.value, sock)){
+            return nullptr;
+        }
+
+        return sock;
     }
 
     int AcquirePort(UDPSocket* sock, unsigned int port){
@@ -20,7 +26,7 @@ namespace Network::UDP{
             return -EINVAL;
         }
 
-        if(sockets.get(port)){
+        if(sockets.find(port)){
             Log::Warning("[Network] AcquirePort: Port %d in use!", port);
             return -EADDRINUSE;
         }
@@ -59,7 +65,7 @@ namespace Network::UDP{
         return 0;
     }
 
-    int SendUDP(void* data, size_t length, IPv4Address& destination, MACAddress& immediateDestination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter){
+    int SendUDP(void* data, size_t length, IPv4Address& source, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter){
 		if(length > 1518){
 			return -EMSGSIZE;
 		}
@@ -76,7 +82,7 @@ namespace Network::UDP{
 
 		//header->checksum = CaclulateChecksum(header, sizeof(UDPHeader));
 
-		return SendIPv4(header, header->length, destination, immediateDestination, IPv4ProtocolUDP, adapter);
+		return SendIPv4(header, header->length, source, destination, IPv4ProtocolUDP, adapter);
 	}
 
     void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length){
@@ -95,7 +101,8 @@ namespace Network::UDP{
 		    Log::Info("[Network] [UDP] Receiving Packet (Source port: %d, Destination port: %d)", (uint16_t)header->srcPort, (uint16_t)header->destPort);
         });
 
-        if(UDPSocket* sock = sockets.get((uint16_t)header->destPort); sock){
+        UDPSocket* sock = nullptr;
+        if(sockets.get((uint16_t)header->destPort, sock) && sock){
             sock->OnReceive(ipHeader.sourceIP, header->srcPort, header->data, header->length);
         }
     }
@@ -209,7 +216,7 @@ namespace Network::UDP{
         IPv4Address sendIPAddress;
         BigEndian<uint16_t> destPort;
 
-        if(src){
+        if(src && addrlen){
             const sockaddr_in* inetAddr = (const sockaddr_in*)src;
 
             if(src->family != InternetProtocol){
@@ -229,14 +236,6 @@ namespace Network::UDP{
             destPort = destinationPort;
         }
 
-        MACAddress destinationMAC;
-
-        if(sendIPAddress.value == INADDR_BROADCAST){
-            destinationMAC = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
-        } else if(int status = Route(this->address, sendIPAddress, destinationMAC, adapter); status < 0){
-            return status;
-        }
-
         if(!port){
             port = AllocatePort();
 
@@ -246,7 +245,7 @@ namespace Network::UDP{
             }
         }
 
-        if(int e = SendUDP(buffer, len, sendIPAddress, destinationMAC, port, destPort)){
+        if(int e = SendUDP(buffer, len, address, sendIPAddress, port, destPort)){
             return e;
         }
 

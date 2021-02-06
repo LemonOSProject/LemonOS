@@ -33,15 +33,14 @@ namespace Network {
     }
 
     int IPLookup(NetworkAdapter* adapter, const IPv4Address& ip, MACAddress& mac){
-        if(addressCache.find(ip.value)){
-            mac = addressCache.get(ip.value);
+        if(addressCache.get(ip.value, mac)){
             return 0;
         }
 
         uint8_t buffer[sizeof(EthernetFrame) + sizeof(ARPHeader)];
         
 		EthernetFrame* ethFrame = reinterpret_cast<EthernetFrame*>(buffer);
-		ethFrame->etherType = EtherTypeIPv4;
+		ethFrame->etherType = EtherTypeARP;
 		ethFrame->src = adapter->mac;
 		ethFrame->dest = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
@@ -73,7 +72,7 @@ namespace Network {
             return -EADDRNOTAVAIL;
         }
 
-        mac = addressCache.get(ip.value);
+        addressCache.get(ip.value, mac);
 
         return 0;
     }
@@ -112,16 +111,17 @@ namespace Network {
             }
         }
 
-        if(isLocalDestination){
-            MACAddress mac;
+        if(!adapter){
+            Log::Warning("[Network] Could not find any adapters!");
+            return -ENETUNREACH;
+        }
 
+        if(isLocalDestination){
             int status = IPLookup(adapter, dest, mac);
             if(status < 0){
                 return status; // Error obtaining MAC address for IP
             }
         } else {
-            MACAddress mac;
-
             int status = IPLookup(adapter, adapter->gatewayIP, mac);
             if(status < 0){
                 return status; // Error obtaining MAC address for IP

@@ -180,6 +180,7 @@ public:
 class IPSocket : public Socket {
 protected:
     IPv4Address address = 0;
+    IPv4Address peerAddress = 0;
     BigEndian<uint16_t> port = 0;
     BigEndian<uint16_t> destinationPort = 0;
 
@@ -253,13 +254,28 @@ namespace Network::TCP {
     protected:
         friend void OnReceiveTCP(IPv4Header& ipHeader, void* data, size_t length);
 
-        void Synchronize(); // TCP SYN (Establish a connection to the server)
-        void Acknowledge(); // TCP ACK (Acknowledge connection)
-        void SynchronizeAcknowledge(); // TCP SYN-ACK (Establish connection to client and acknowledge the connection)
+        int Synchronize(); // TCP SYN (Establish a connection to the server)
+        int Acknowledge(uint32_t ackNumber); // TCP ACK (Acknowledge connection)
+        int SynchronizeAcknowledge(uint32_t ackNumber); // TCP SYN-ACK (Establish connection to client and acknowledge the connection)
 
         unsigned short AllocatePort();
         int AcquirePort(uint16_t port);
         int ReleasePort(uint16_t port);
+
+        // As per RFC 793
+        enum State {
+            TCPStateUnknown,
+            TCPStateListen, // Awaiting incoming connections/SYN packets
+            TCPStateSyn, // SYN has been sent, awaitng a SYN-ACK response
+            TCPStateSynAck, // SYN-ACK has been sent, awaiting an ACK response
+            TCPStateEstablished, // Connection has been established
+            TCPStateFinWait1,
+            TCPStateFinWait2,
+            TCPCloseWait,
+            TCPTimeWait,
+        };
+
+        State state = TCPStateUnknown;
     public:
         TCPSocket(int type, int protocol);
         ~TCPSocket();

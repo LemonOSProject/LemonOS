@@ -17,6 +17,9 @@ class Socket;
 
 #define ETHERNET_MAX_PACKET_SIZE 1518
 
+#define TCP_RETRY_MIN 200000 // 200 ms minimum retry period
+#define TCP_RETRY_MAX 32000000 // 32s
+
 namespace Network{ class NetworkAdapter; }
 struct NetworkPacket{
     size_t length;
@@ -77,26 +80,47 @@ struct IPv4Header{ // Keep in mind that our architecture is little endian so the
     IPv4Address sourceIP; // Source IP Address
     IPv4Address destIP; // Destination IP Address
     uint8_t data[];
+
+    IPv4Header() = default;
+    inline IPv4Header(const IPv4Address& src, const IPv4Address& dest, uint8_t proto, uint16_t len){
+		ihl = 5; // 5 dwords (20 bytes)
+		version = 4; // Internet Protocol version 4
+		length = len + sizeof(IPv4Header);
+		flags = 0;
+		ttl = 64;
+		protocol = proto;
+		headerChecksum = 0;
+		destIP = dest;
+		sourceIP = src;
+    }
+
 } __attribute__((packed));
 
 typedef struct MACAddress {
     uint8_t data[6];
 
-    MACAddress& operator=(const uint8_t newData[]){
-        memcpy(data, newData, 6);
+    inline constexpr MACAddress& operator=(const uint8_t* const newData){
+        data[0] = newData[0];
+        data[1] = newData[1];
+        data[2] = newData[2];
+        data[3] = newData[3];
+        data[4] = newData[4];
+        data[5] = newData[5];
 
         return *this;
     }
 
-    bool operator==(const MACAddress& r) const{
+    inline bool operator==(const MACAddress& r) const{
         return !memcmp(data, r.data, 6);
     }
 
-    bool operator!=(const MACAddress& r) const{
+    inline bool operator!=(const MACAddress& r) const{
         return !operator==(r);
     }
 
     uint8_t& operator[](unsigned pos){
+        assert(pos < 6);
+        
         return data[pos];
     }
 } __attribute__((packed)) mac_address_t;
@@ -138,22 +162,29 @@ struct TCPHeader {
     BigEndian<uint16_t> destPort; // Destination Port
     BigEndian<uint32_t> sequence; // Sequence Number
     BigEndian<uint32_t> acknowledgementNumber; // Acknowledgement Number
-    uint8_t dataOffset : 4; // Size of the tcp header in DWORDs (min 5, max 15)
-    uint8_t reserved : 3;
-    uint8_t ns : 1; // Nonce
-    uint8_t cwr : 1; // Congestion window reduced
-    uint8_t ece : 1; // If SYN is set: ECN capable, if SYN clear: packet with Congestion Experienced set received
-    uint8_t urg : 1; // Urgent pointer used
-    uint8_t ack : 1; // Acknowledgement number used, all packets after the first SYN should have this flag set
-    uint8_t psh : 1; // Push function, push buffered data to the recieving application
-    uint8_t rst : 1; // Reset the connection
-    uint8_t syn : 1; // Synchronize sequence numbers, should be sent at start of transmission
-    uint8_t fin : 1; // Last packet from sender
-    BigEndian<uint16_t> windowSize;
+    union {
+        struct {
+            uint8_t ns : 1; // Nonce
+            uint8_t reserved : 3;
+            uint8_t dataOffset : 4; // Size of the tcp header in DWORDs (min 5, max 15)
+            uint8_t fin : 1; // Last packet from sender
+            uint8_t syn : 1; // Synchronize sequence numbers, should be sent at start of transmission
+            uint8_t rst : 1; // Reset the connection
+            uint8_t psh : 1; // Push function, push buffered data to the recieving application
+            uint8_t ack : 1; // Acknowledgement number used, all packets after the first SYN should have this flag set
+            uint8_t urg : 1; // Urgent pointer used
+            uint8_t ece : 1; // If SYN is set: ECN capable, if SYN clear: packet with Congestion Experienced set received
+            uint8_t cwr : 1; // Congestion window reduced
+        };
+        uint16_t flags = 0;
+    };
+    BigEndian<uint16_t> windowSize = 0;
     BigEndian<uint16_t> checksum; // Checksum of TCP header, payload and IP pseudoheader consisting of source IP, dest IP, length and protocol number
-    BigEndian<uint16_t> urgentPointer; // If URG set, offset from the sequence number indicating last urgent byte
+    BigEndian<uint16_t> urgentPointer = 0; // If URG set, offset from the sequence number indicating last urgent byte
+    uint8_t options[];
     // Options...
 } __attribute__((packed));
+static_assert(!(sizeof(TCPHeader) & (sizeof(uint32_t) - 1)));
 
 struct ICMPHeader{
     uint8_t type;
@@ -191,7 +222,7 @@ namespace Network {
         inline static NetFS* GetInstance() { return instance; }
     };
 
-    static inline BigEndian<uint16_t> CaclulateChecksum(void* data, size_t size){
+    static inline BigEndian<uint16_t> CaclulateChecksum(void* data, uint16_t size){
         uint16_t* ptr = (uint16_t*)data;
         size_t count = size;
         uint32_t checksum = 0;
@@ -220,19 +251,21 @@ namespace Network {
     void InitializeNetworkThread();
 
     void Send(void* data, size_t length, NetworkAdapter* adapter = nullptr);
-    int SendIPv4(void* data, size_t length, IPv4Address& destination, MACAddress& immediateDestination, uint8_t protocol, NetworkAdapter* adapter = nullptr);
+    int SendIPv4(void* data, size_t length, IPv4Address& source, IPv4Address& destination, uint8_t protocol, NetworkAdapter* adapter = nullptr);
     
     namespace UDP{
         Socket* FindSocket(BigEndian<uint16_t> port);
 
-        int SendUDP(void* data, size_t length, IPv4Address& destination, MACAddress& immediateDestination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter = nullptr);
+        int SendUDP(void* data, size_t length, IPv4Address& source, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter = nullptr);
         void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length);
     }
     
     namespace TCP{
         Socket* FindSocket(BigEndian<uint16_t> port);
 
-        int SendTCP(void* data, size_t length, IPv4Address& destination, MACAddress& immediateDestination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter = nullptr);
+        BigEndian<uint16_t> CalculateTCPChecksum(const IPv4Address& src, const IPv4Address& dest, void* data, uint16_t size);
+
+        int SendTCP(void* data, size_t length, IPv4Address& source, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter = nullptr);
         void OnReceiveTCP(IPv4Header& ipHeader, void* data, size_t length);
     }
 }
