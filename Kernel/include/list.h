@@ -123,8 +123,10 @@ public:
 			front->prev = obj;
 			obj->next = front;
 		}
+
 		front = obj;
 		obj->prev = back;
+
 		num++;
 	}
 
@@ -158,9 +160,6 @@ public:
 
 	T get_at(unsigned pos) {
 		assert(num > 0 && pos < num && front);
-		/*if (num <= 0 || pos >= num || front == NULL) {
-			return nullptr;
-		}*/
 
 		T current = front;
 
@@ -195,17 +194,22 @@ public:
 	}
 
 	void remove(T obj){
+		if(!front || !num){
+			assert(front && num);
+			return;
+		}
+
 		if (obj->next){
-			/*assert(obj->next->prev == obj);
-			if(obj->next->prev != obj){
+			assert(obj->next->prev == obj);
+			/*if(obj->next->prev != obj){
 				return; // obj must have already been from list
 			}*/
 			
 			obj->next->prev = obj->prev;
 		} 
 		if (obj->prev){
-			/*assert(obj->prev->next == obj);
-			if(obj->prev->next != obj){
+			assert(obj->prev->next == obj);
+			/*if(obj->prev->next != obj){
 				return;
 			}*/
 
