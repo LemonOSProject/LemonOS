@@ -151,7 +151,17 @@ namespace Log{
 			const char* format_begun_at = format++;
 
 			bool hex = true;
+			bool isHalf = false;
+			bool isLong = false;
+			again:
 			switch(*format){
+				case 'h':
+					if(!isLong){
+						isHalf = true;
+					}
+					format++;
+
+					goto again;
 				case 'c': {
 					format++;
 					auto arg = (char) va_arg(args, int /* char promotes to int */);
@@ -171,7 +181,14 @@ namespace Log{
 				} case 'd': 
 				  case 'i': {
 					format++;
-					long arg = va_arg(args, long);
+					long arg = 0;
+					
+					if(isHalf){
+						arg = va_arg(args, int /* short promotes to int */);
+					} else {
+						arg = va_arg(args, long);
+					}
+
 					if(arg < 0){
 						WriteN("-", 1);
 						Write(-arg, false);
@@ -184,8 +201,14 @@ namespace Log{
 					[[fallthrough]];
 				} case 'x': {
 					format++;
-					auto arg = va_arg(args, unsigned long long);
-					Write(arg, hex);
+
+					if(isHalf){
+						auto arg = va_arg(args, unsigned int);
+						Write(arg, hex);
+					} else {
+						auto arg = va_arg(args, unsigned long long);
+						Write(arg, hex);
+					}
 					break;
 				} default:
 					format = format_begun_at;
