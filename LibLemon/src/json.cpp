@@ -124,6 +124,8 @@ namespace Lemon{
 
             if(c == '0' && Peek(1) != '.'){ // Number, Leading zeros are not allowed unless value == 0 or is a decimal
                 v = JSONValue(0L);
+
+                Eat();
             } else {
                 std::string_view num = EatWhile([] (char c) -> bool { return isdigit(c) || c == '.'; });
 

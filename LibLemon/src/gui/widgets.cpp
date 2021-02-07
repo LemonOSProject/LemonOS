@@ -469,6 +469,7 @@ namespace Lemon::GUI {
         int xpos = 2;
         int ypos = 2;
         int curYOffset = 0;
+        int cursorX = 0;
 
         if(multiline){
             curYOffset = cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos + 2;
@@ -522,6 +523,10 @@ namespace Lemon::GUI {
                 }
 
                 xpos += Graphics::DrawChar(ch, fixedBounds.pos.x + xpos, fixedBounds.pos.y + ypos, textColour.r, textColour.g, textColour.b, surface, font);
+
+                if(static_cast<int>(j) + 1 == cursorPos.x){
+                    cursorX = xpos;
+                }
             }
         }
 
@@ -531,7 +536,7 @@ namespace Lemon::GUI {
 
             long msec = (t.tv_nsec / 1000000.0);
             if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
-                Graphics::DrawRect(fixedBounds.pos.x + Graphics::GetTextLength(contents[cursorPos.y].c_str(), cursorPos.x, font) + 2, fixedBounds.pos.y + curYOffset, 2, font->height + 2, textColour.r, textColour.g, textColour.b, surface);
+                Graphics::DrawRect(fixedBounds.pos.x + cursorX + 2, fixedBounds.pos.y + curYOffset, 2, font->height + 2, textColour.r, textColour.g, textColour.b, surface);
         }
     }
 

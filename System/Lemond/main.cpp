@@ -33,6 +33,7 @@ int main(int argc, char** argv){
 
 	__attribute__((unused)) char* lemonwm = "/system/lemon/lemonwm.lef";
 	__attribute__((unused)) char* netgov = "/system/lemon/netgov.lef";
+	__attribute__((unused)) char* login = "/system/lemon/login.lef";
 	__attribute__((unused)) char* shell = "/system/bin/shell.lef";
 
 	if(long ret = lemon_spawn(lemonwm, 1, &lemonwm); ret <= 0){

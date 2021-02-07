@@ -8,7 +8,7 @@ namespace Lemon{
     // Provides a simple base for a more complex lexer
     class BasicLexer {
     protected:
-        int line = 0;
+        int line = 1;
         std::string_view sv;
         const char* it;
     public:
