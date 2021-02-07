@@ -87,6 +87,25 @@ public:
 		return T();
 	}
 
+	void removeValue(T value){
+		acquireLock(&lock);
+		for(unsigned b = 0; b < bucketCount; b++){
+			auto& bucket = buckets[b];
+
+			for(unsigned i = 0; i < bucket.get_length(); i++){
+				if(bucket[i].value == value){
+					bucket.remove_at(i);
+					releaseLock(&lock);
+					
+					return;
+				}
+			}
+		}
+		releaseLock(&lock);
+
+		return;
+	}
+
 	int get(const K& key, T& value){
 		auto& bucket = buckets[hash(key) % bucketCount];
 

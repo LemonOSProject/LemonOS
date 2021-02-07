@@ -3,6 +3,8 @@
 #include <videoconsole.h>
 #include <stdarg.h>
 
+#include <debug.h>
+
 namespace Log{
     extern VideoConsole* console;
 
@@ -31,4 +33,18 @@ namespace Log{
     //void Info(const char* str);
     void Info(unsigned long long num, bool hex = true);
     void Info(const char* __restrict fmt, ...);
+
+    #ifdef KERNEL_DEBUG
+    __attribute__((always_inline)) inline static void Debug(const int& var, const int lvl, const char* __restrict fmt, ...){
+        if(var >= lvl){
+		    Write("\r\n[INFO]    ");
+            va_list args;
+            va_start(args, fmt);
+            WriteF(fmt, args);
+            va_end(args);
+        }
+    }
+    #else
+    __attribute__ ((unused, always_inline)) inline static void Debug(...){}
+    #endif
 } 
