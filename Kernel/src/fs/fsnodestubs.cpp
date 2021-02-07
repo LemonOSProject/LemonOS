@@ -85,3 +85,13 @@ void FsNode::Unwatch(FilesystemWatcher& watcher){
 void FsNode::Sync(){
     
 }
+
+void FsNode::UnblockAll(){
+    acquireLock(&blockedLock);
+    
+    while(blocked.get_length()){
+        blocked.remove_at(0)->Unblock();
+    }
+
+    releaseLock(&blockedLock);
+}

@@ -219,6 +219,8 @@ public:
     virtual inline bool IsCharDevice() { return (flags & FS_NODE_TYPE) == FS_NODE_CHARDEVICE; }
     virtual inline bool IsSocket() { return (flags & FS_NODE_TYPE) == FS_NODE_SOCKET; }
 
+    void UnblockAll();
+
     FsNode* link;
     FsNode* parent;
 
