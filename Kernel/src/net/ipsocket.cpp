@@ -136,7 +136,7 @@ int IPSocket::GetSocketOptions(int level, int opt, void* optValue, socklen_t* op
 
 void IPSocket::Close(){
 	if(port){
-		ReleasePort(port);
+		ReleasePort();
 	}
 
 	Socket::Close();

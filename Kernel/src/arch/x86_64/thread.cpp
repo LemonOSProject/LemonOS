@@ -20,6 +20,7 @@ void ThreadBlocker::Interrupt(){
 
 void ThreadBlocker::Unblock() {
 	shouldBlock = false;
+    removed = true;
 
 	acquireLock(&lock);
 	if(thread){
@@ -92,7 +93,7 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout){
 
 			asm("sti");
 
-			blocker->Unblock(); // If the blocker re-calls Thread::Unblock that's ok
+			blocker->Interrupt(); // If the blocker re-calls Thread::Unblock that's ok
 		}
 	}
 
@@ -100,7 +101,7 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout){
 		usTimeout = 0;
 	}
 
-	return newBlocker->WasInterrupted();
+	return (!blockTimedOut) && newBlocker->WasInterrupted();
 }
 
 void Thread::Sleep(long us){

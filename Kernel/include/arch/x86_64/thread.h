@@ -26,6 +26,7 @@ protected:
 
 	bool shouldBlock = true; // If Unblock() is called before the thread is blocked or the lock is acquired then tell the thread not to block
 	bool interrupted = false; // Returned by Block so the thread knows it has been interrupted
+	bool removed = false; // Has the blocker been removed from queue(s)?
 public:
 	virtual ~ThreadBlocker() = default;
 

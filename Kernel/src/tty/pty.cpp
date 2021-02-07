@@ -201,14 +201,13 @@ ssize_t PTY::Master_Write(char* buffer, size_t count){
 		if(IsCanonical()){
 			acquireLock(&slaveFile.blockedLock);
 			while(slave.lines && slaveFile.blocked.get_length()){
-				slaveFile.blocked.remove_at(0)->Unblock();
+				slaveFile.blocked.get_front()->Unblock();
 			}
 			releaseLock(&slaveFile.blockedLock);
 		} else {
 			acquireLock(&slaveFile.blockedLock);
 			while(slave.bufferPos && slaveFile.blocked.get_length()){
 				slaveFile.blocked.get_front()->Unblock();
-				slaveFile.blocked.remove_at(0);
 			}
 			releaseLock(&slaveFile.blockedLock);
 		}
@@ -246,7 +245,7 @@ ssize_t PTY::Slave_Write(char* buffer, size_t count){
 
 	acquireLock(&masterFile.blockedLock);
 	while(master.bufferPos && masterFile.blocked.get_length()){
-		masterFile.blocked.remove_at(0)->Unblock();
+		masterFile.blocked.get_front()->Unblock();
 	}
 	releaseLock(&masterFile.blockedLock);
 

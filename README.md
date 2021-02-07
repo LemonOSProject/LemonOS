@@ -19,7 +19,8 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 
 ### Features
 - Symmetric Multiprocessing (SMP)
-- UNIX Domain and UDP Sockets
+- UNIX/BSD Sockets (local/UNIX domain and internet)
+- Network Stack (UDP, TCP (WIP), DHCP)
 - Window Manager/Server (LemonWM)
 - Graphical Shell
 - Terminal Emulator
@@ -33,7 +34,7 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 - [DOOM Port](https://github.com/fido2020/LemonDOOM)
 
 ### Work In Progress
-- Network Stack (TCP, DNS and DHCP Client)
+- Network Stack (TCP and DNS)
 - XHCI Driver
 - Clang/LLVM Port
 

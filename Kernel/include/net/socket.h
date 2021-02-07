@@ -154,6 +154,7 @@ public:
     Stream* outbound = nullptr;
 
     LocalSocket(int type, int protocol);
+    ~LocalSocket();
 
     int ConnectTo(Socket* client);
     void DisconnectPeer();
@@ -192,7 +193,7 @@ protected:
 
     virtual unsigned short AllocatePort() = 0;
     virtual int AcquirePort(uint16_t port) = 0;
-    virtual int ReleasePort(uint16_t port) = 0;
+    virtual int ReleasePort() = 0;
     int64_t OnReceive(void* buffer, size_t len);
 public:
     IPSocket(int type, int protocol);
@@ -208,6 +209,10 @@ public:
     int SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength);
     int GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength);
     
+    inline IPv4Address LocalIPAddress() { return address; }
+    inline IPv4Address PeerIPAddress() { return peerAddress; }
+    inline uint16_t LocalPort() { return port; }
+    inline uint16_t PeerPort() { return destinationPort; }
 
     void Close();
     
@@ -232,7 +237,7 @@ namespace Network::UDP{
 
         unsigned short AllocatePort();
         int AcquirePort(uint16_t port);
-        int ReleasePort(uint16_t port);
+        int ReleasePort();
 
         int64_t OnReceive(IPv4Address& sourceIP, BigEndian<uint16_t> sourcePort, void* buffer, size_t len);
     public:
@@ -252,15 +257,28 @@ namespace Network::UDP{
 namespace Network::TCP {
     class TCPSocket final : public IPSocket {
     protected:
+        bool fileClosed = false;
+
         friend void OnReceiveTCP(IPv4Header& ipHeader, void* data, size_t length);
 
-        int Synchronize(); // TCP SYN (Establish a connection to the server)
+        void OnReceive(const IPv4Address& source, const IPv4Address& dest, void* data, size_t length);
+
+        int Synchronize(uint32_t seqNumber); // TCP SYN (Establish a connection to the server)
         int Acknowledge(uint32_t ackNumber); // TCP ACK (Acknowledge connection)
-        int SynchronizeAcknowledge(uint32_t ackNumber); // TCP SYN-ACK (Establish connection to client and acknowledge the connection)
+        int SynchronizeAcknowledge(uint32_t seqNumber, uint32_t ackNumber); // TCP SYN-ACK (Establish connection to client and acknowledge the connection)
+        int Finish(); // TCP FIN (Last packet from sender)
+        int FinishAcknowledge(uint32_t ackNumber); // TCP FIN-ACK (Last packet from sender, acknowledge)
+        int Reset(); // TCP RST (Abort connection)
 
         unsigned short AllocatePort();
         int AcquirePort(uint16_t port);
-        int ReleasePort(uint16_t port);
+        int ReleasePort();
+
+        struct TCPPacket {
+            TCPHeader* header;
+            size_t length;
+            uint8_t* data;
+        };
 
         // As per RFC 793
         enum State {
@@ -269,13 +287,21 @@ namespace Network::TCP {
             TCPStateSyn, // SYN has been sent, awaitng a SYN-ACK response
             TCPStateSynAck, // SYN-ACK has been sent, awaiting an ACK response
             TCPStateEstablished, // Connection has been established
-            TCPStateFinWait1,
-            TCPStateFinWait2,
-            TCPCloseWait,
-            TCPTimeWait,
+            TCPStateFinWait1, // Waiting for an ACK or FIN-ACK after our FIN
+            TCPStateFinWait2, // Waiting for the peer to send FIN
+            TCPStateCloseWait, // Waiting for the last process to close the socket
+            TCPStateLastAck, // Waiting for a final ACK after our FIN 
+            TCPStateTimeWait, // Waiting to ensure that the peer recieved its ACK
         };
 
         State state = TCPStateUnknown;
+        uint32_t sequenceNumber;
+        uint32_t lastAcknowledged; // Last acknowledged sequence number
+
+        uint32_t remoteSequenceNumber; // Sequence number of the remote endpoint
+
+        List<TCPPacket> unacknowledgedPackects;
+        List<TCPPacket> packets;
     public:
         TCPSocket(int type, int protocol);
         ~TCPSocket();
@@ -284,6 +310,11 @@ namespace Network::TCP {
         int Bind(const sockaddr* addr, socklen_t addrlen);
         int Connect(const sockaddr* addr, socklen_t addrlen);
         int Listen(int backlog);
+
+        int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
+        int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
+
+        void Close();
     };
 }
 

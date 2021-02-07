@@ -63,6 +63,8 @@ struct IPv4Address{
 
         return *this;
     }
+
+
 } __attribute__((packed));
 
 struct IPv4Header{ // Keep in mind that our architecture is little endian so the bitfields are swapped
@@ -158,6 +160,19 @@ struct UDPHeader {
 } __attribute__((packed));
 
 struct TCPHeader {
+    enum Flags{
+        FIN = 0x1,
+        SYN = 0x2,
+        RST = 0x4,
+        PSH = 0x8,
+        ACK = 0x10,
+        URG = 0x20,
+        ECE = 0x40,
+        CWR = 0x80,
+        NS = 0x100,
+        FlagsMask = 0x1ff,
+    };
+
     BigEndian<uint16_t> srcPort; // Source Port
     BigEndian<uint16_t> destPort; // Destination Port
     BigEndian<uint32_t> sequence; // Sequence Number
@@ -176,7 +191,7 @@ struct TCPHeader {
             uint8_t ece : 1; // If SYN is set: ECN capable, if SYN clear: packet with Congestion Experienced set received
             uint8_t cwr : 1; // Congestion window reduced
         };
-        uint16_t flags = 0;
+        BigEndian<uint16_t> flags = 0;
     };
     BigEndian<uint16_t> windowSize = 0;
     BigEndian<uint16_t> checksum; // Checksum of TCP header, payload and IP pseudoheader consisting of source IP, dest IP, length and protocol number
@@ -254,14 +269,14 @@ namespace Network {
     int SendIPv4(void* data, size_t length, IPv4Address& source, IPv4Address& destination, uint8_t protocol, NetworkAdapter* adapter = nullptr);
     
     namespace UDP{
-        Socket* FindSocket(BigEndian<uint16_t> port);
+        class UDPSocket;
 
         int SendUDP(void* data, size_t length, IPv4Address& source, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter = nullptr);
         void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length);
     }
     
     namespace TCP{
-        Socket* FindSocket(BigEndian<uint16_t> port);
+        class TCPSocket;
 
         BigEndian<uint16_t> CalculateTCPChecksum(const IPv4Address& src, const IPv4Address& dest, void* data, uint16_t size);
 

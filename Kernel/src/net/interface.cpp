@@ -185,6 +185,8 @@ namespace Network{
 		}
 
 		IPv4Header* ipHeader = (IPv4Header*)ethFrame->data;
+		memset(ipHeader, 0, sizeof(IPv4Header));
+
 		ipHeader->ihl = 5; // 5 dwords (20 bytes)
 		ipHeader->version = 4; // Internet Protocol version 4
 		ipHeader->length = length + sizeof(IPv4Header);

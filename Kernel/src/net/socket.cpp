@@ -43,9 +43,6 @@ Socket::Socket(int type, int protocol){
 }
 
 Socket::~Socket(){
-    if(bound){
-        SocketManager::DestroySocket(this);
-    }
 }
 
 Socket* Socket::Accept(sockaddr* addr, socklen_t* addrlen){
@@ -119,16 +116,13 @@ fs_fd_t* Socket::Open(size_t flags){
     fDesc->mode = flags;
     fDesc->node = this;
 
+    handleCount++;
+
     return fDesc;
 }
 
 void Socket::Close(){
-    if(bound){
-        SocketManager::DestroySocket(this);
-    }
 
-    if(handleCount == 0)
-        delete this;
 }
 
 void Socket::Watch(FilesystemWatcher& watcher, int events){
@@ -144,6 +138,12 @@ LocalSocket::LocalSocket(int type, int protocol) : Socket(type, protocol){
     flags = FS_NODE_SOCKET;
 
     assert(type == StreamSocket || type == DatagramSocket);
+}
+
+LocalSocket::~LocalSocket(){
+    if(bound){
+        SocketManager::DestroySocket(this);
+    }
 }
 
 int LocalSocket::ConnectTo(Socket* client){
@@ -389,7 +389,12 @@ void LocalSocket::Close(){
         DisconnectPeer();
     }
 
-    Socket::Close();
+    if(bound){
+        SocketManager::DestroySocket(this);
+    }
+
+    if(handleCount == 0)
+        delete this;
 }
 
 void LocalSocket::Watch(FilesystemWatcher& watcher, int events){

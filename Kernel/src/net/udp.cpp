@@ -113,7 +113,7 @@ namespace Network::UDP{
 
     UDPSocket::~UDPSocket(){
         if(bound){
-            ReleasePort(port);
+            ReleasePort();
         }
     }
 
@@ -125,7 +125,7 @@ namespace Network::UDP{
         return Network::UDP::AcquirePort(this, port);
     }
 
-    int UDPSocket::ReleasePort(uint16_t port){
+    int UDPSocket::ReleasePort(){
         return Network::UDP::ReleasePort(port);
     }
 

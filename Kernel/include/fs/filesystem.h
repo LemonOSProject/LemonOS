@@ -288,7 +288,7 @@ public:
         acquireLock(&node->blockedLock);
         acquireLock(&lock);
         node->blocked.remove(this);
-        node = nullptr;
+        removed = true;
         releaseLock(&lock);
         releaseLock(&node->blockedLock);
     }
@@ -297,7 +297,11 @@ public:
         shouldBlock = false;
 
         acquireLock(&lock);
-        node = nullptr;
+        if(node && !removed){ // It is assumed that the caller has acquired the node's blocked lock
+            node->blocked.remove(this);
+
+            removed = true;
+        }
 
         if(thread){
             thread->Unblock();
@@ -306,7 +310,7 @@ public:
     }
 
     inline ~FilesystemBlocker(){
-        if(node){
+        if(node && !removed){
             acquireLock(&node->blockedLock);
             node->blocked.remove(this);
             releaseLock(&node->blockedLock);
