@@ -54,7 +54,7 @@ TermState defaultState {
 	.blink = 0,
 	.reverse = 0,
 	.strikethrough = 0,
-	.fgColour = 7,
+	.fgColour = 15,
 	.bgColour = 0,
 };
 
@@ -459,6 +459,8 @@ void PrintChar(char ch){
 			curPos.y++;
 			curPos.x = 0;
 			Scroll();
+
+			paintAll = true;
 			break;
 		case '\b':
 			if(curPos.x > 0) curPos.x--;

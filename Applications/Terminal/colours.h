@@ -276,7 +276,7 @@ rgba_colour_t coloursProfile2[] = {
 	RGBAColour::FromRGB(0x06b6ef), // Blue
 	RGBAColour::FromRGB(0x815ba4), // Magenta
 	RGBAColour::FromRGB(0x5bc4bf), // Cyan
-	RGBAColour::FromRGB(0xa39e9b), // White
+	RGBAColour::FromRGB(0xe7e9db), // White
 	{ 0, 0, 0, 255 },
 	{ 0, 0, 95, 255 },
 	{ 0, 0, 135, 255 },
