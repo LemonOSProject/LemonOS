@@ -101,10 +101,10 @@ namespace Network{
 				OnReceiveICMP(header->data, length - sizeof(IPv4Header));
 				break;
 			case IPv4ProtocolUDP:
-				UDP::OnReceiveUDP(*header, header->data, length - sizeof(IPv4Header));
+				UDP::OnReceiveUDP(*header, header->data, ((uint16_t)header->length) - sizeof(IPv4Header));
 				break;
 			case IPv4ProtocolTCP:
-				TCP::OnReceiveTCP(*header, header->data, length - sizeof(IPv4Header));
+				TCP::OnReceiveTCP(*header, header->data, ((uint16_t)header->length) - sizeof(IPv4Header));
 				break;
 			default:
 				Log::Warning("[Network] [IPv4] Discarding packet (invalid protocol %x)", header->protocol);

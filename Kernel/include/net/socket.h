@@ -261,7 +261,7 @@ namespace Network::TCP {
 
         friend void OnReceiveTCP(IPv4Header& ipHeader, void* data, size_t length);
 
-        void OnReceive(const IPv4Address& source, const IPv4Address& dest, void* data, size_t length);
+        void OnReceive(const IPv4Address& source, const IPv4Address& dest, uint8_t* data, size_t length);
 
         int Synchronize(uint32_t seqNumber); // TCP SYN (Establish a connection to the server)
         int Acknowledge(uint32_t ackNumber); // TCP ACK (Acknowledge connection)
@@ -275,8 +275,9 @@ namespace Network::TCP {
         int ReleasePort();
 
         struct TCPPacket {
-            TCPHeader* header;
-            size_t length;
+            TCPHeader header;
+            uint32_t sequenceNumber;
+            uint32_t length;
             uint8_t* data;
         };
 
@@ -300,8 +301,9 @@ namespace Network::TCP {
 
         uint32_t remoteSequenceNumber; // Sequence number of the remote endpoint
 
-        List<TCPPacket> unacknowledgedPackects;
-        List<TCPPacket> packets;
+        lock_t unacknowledgedPacketsLock = 0;
+        List<TCPPacket> unacknowledgedPackets; // Unacknowledged outbound packets
+        DataStream inboundData = DataStream(512);
     public:
         TCPSocket(int type, int protocol);
         ~TCPSocket();

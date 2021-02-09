@@ -196,7 +196,6 @@ struct TCPHeader {
     BigEndian<uint16_t> windowSize = 0;
     BigEndian<uint16_t> checksum; // Checksum of TCP header, payload and IP pseudoheader consisting of source IP, dest IP, length and protocol number
     BigEndian<uint16_t> urgentPointer = 0; // If URG set, offset from the sequence number indicating last urgent byte
-    uint8_t options[];
     // Options...
 } __attribute__((packed));
 static_assert(!(sizeof(TCPHeader) & (sizeof(uint32_t) - 1)));

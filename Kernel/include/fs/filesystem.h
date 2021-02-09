@@ -269,13 +269,28 @@ public:
 class FilesystemBlocker : public ThreadBlocker {
     friend FsNode;
     friend FastList<FilesystemBlocker*>;
-private:
+public:
+    enum BlockType {
+        BlockRead,
+        BlockWrite,
+    };
+protected:
     FsNode* node = nullptr;
 
     FilesystemBlocker* next;
     FilesystemBlocker* prev;
+
+    int blockType = BlockType::BlockRead;
+
+    size_t requestedLength = 1; // How much data was requested?
 public:
 	FilesystemBlocker(FsNode* _node) : node(_node) {
+        acquireLock(&node->blockedLock);
+        node->blocked.add_back(this);
+        releaseLock(&node->blockedLock);
+    }
+
+	FilesystemBlocker(FsNode* _node, size_t len) : node(_node), requestedLength(len) {
         acquireLock(&node->blockedLock);
         node->blocked.add_back(this);
         releaseLock(&node->blockedLock);
@@ -308,6 +323,8 @@ public:
         }
         releaseLock(&lock);
     }
+
+    inline size_t RequestedLength() { return requestedLength; }
 
     inline ~FilesystemBlocker(){
         if(node && !removed){

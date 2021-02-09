@@ -223,12 +223,20 @@ public:
 		if(!num) front = back = nullptr;
 	}
 
-	__attribute__((always_inline)) inline T get_front()
+	__attribute__((always_inline)) inline T next(const T& o) const {
+		if(o->next == front){
+			return nullptr;
+		}
+		
+		return o->next;
+	}
+
+	__attribute__((always_inline)) inline T get_front() const
 	{
 		return front;
 	}
 
-	__attribute__((always_inline)) inline T get_back()
+	__attribute__((always_inline)) inline T get_back() const
 	{
 		return back;
 	}
@@ -597,6 +605,8 @@ public:
 			if (front == current) front = current->next;
 			if (back == current) back = current->prev;
 
+			it.node = current->prev;
+
 			num--;
 
 			if(cache.get_length() >= maxCache){
@@ -606,8 +616,6 @@ public:
 			}
 
 			releaseLock(&lock);
-
-			it.node = nullptr;
 		}
 	}
 
