@@ -8,7 +8,7 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 Website: https://lemonos.org
 Discord Server: https://discord.gg/NAYp6AUYWM
 
-![Lemon OS Screenshot](Screenshots/image4.png)
+![Lemon OS Screenshot](Screenshots/image5.png)
 
 ### Prebuilt Image
 [Latest Prebuilt Image](https://github.com/fido2020/Lemon-OS/releases/tag/0.2.2)
@@ -20,7 +20,8 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 ### Features
 - Symmetric Multiprocessing (SMP)
 - UNIX/BSD Sockets (local/UNIX domain and internet)
-- Network Stack (UDP, TCP (WIP), DHCP)
+- Network Stack (UDP, TCP, DHCP)
+- A small HTTP client/downloader called `steal`
 - Window Manager/Server (LemonWM)
 - Graphical Shell
 - Terminal Emulator
@@ -34,7 +35,6 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 - [DOOM Port](https://github.com/fido2020/LemonDOOM)
 
 ### Work In Progress
-- Network Stack (TCP and DNS)
 - XHCI Driver
 - Clang/LLVM Port
 
@@ -62,6 +62,7 @@ or [Building Lemon OS](https://github.com/fido2020/Lemon-OS/wiki/Building-Lemon-
 | Screenshots/  | Screenshots                        |
 | System/       | Core system programs and services  |
 
+![Lemon OS Screenshot](Screenshots/image4.png)
 ![Lemon OS Screenshot](Screenshots/image3.png)
 ![Lemon OS Screenshot](Screenshots/image.png)
 ![Lemon OS Screenshot](Screenshots/image2.png)

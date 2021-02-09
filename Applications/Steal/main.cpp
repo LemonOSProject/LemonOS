@@ -11,11 +11,6 @@
 int main(int argc, char** argv){
     int help = false;
     int verbose = false;
-
-    if(argc < 2){
-        std::cout << "Usage: " << argv[0] << "[options] <url>\nSee " << argv[0] << "--help\n";
-        return 1;
-    }
     
     option opts[] = {
         {"help", no_argument, &help, true},
@@ -34,10 +29,18 @@ int main(int argc, char** argv){
         }
     }
 
+    if(argc - optind < 1){
+        std::cout << "Usage: " << argv[0] << " [options] <url>\nSee " << argv[0] << " --help\n";
+        return 1;
+    }
+
     if(help){
         std::cout << "steal [options] <url>\n"
             << "Steal data from <url> (Default HTTP)\n\n"
+            << "--help              Show Help\n"
             << "-v, --verbose       Show extra information\n";
+
+        return 0;
     }
 
     Lemon::URL url(argv[optind]);

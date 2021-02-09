@@ -51,6 +51,6 @@ namespace Lemon{
             }
         }
 
-        char Peek(ssize_t ahead = 0) const;
+        char Peek(long ahead = 0) const;
     };
 }

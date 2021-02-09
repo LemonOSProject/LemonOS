@@ -1,6 +1,7 @@
 #include <lemon/core/lexer.h>
 
 #include <cassert>
+#include <cstring>
 
 namespace Lemon{
     BasicLexer::BasicLexer(const std::string_view& v){
@@ -49,7 +50,7 @@ namespace Lemon{
         return ch == c;
     }
 
-    char BasicLexer::Peek(ssize_t ahead) const{
+    char BasicLexer::Peek(long ahead) const{
         assert(it + ahead < sv.end());
 
         return *(it + ahead);
