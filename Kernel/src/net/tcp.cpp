@@ -641,6 +641,8 @@ namespace Network {
 
             state = TCPStateSyn;
 
+            Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] Connecting to %hd.%hd.%hd.%hd:%hd", peerAddress.data[0], peerAddress.data[1], peerAddress.data[2], peerAddress.data[3], (uint16_t)destinationPort);
+
             sequenceNumber = (Timer::GetSystemUptime() % 512) * (rand() % 255) + Timer::GetTicks() + 1;
             Synchronize(sequenceNumber - 1); // The peer should acknowledge the sent sequence number + 1, so just send (sequenceNumber - 1)
 
@@ -656,6 +658,10 @@ namespace Network {
                 if(timeout <= 0){
                     retryPeriod *= retryPeriod;
                 }
+            }
+
+            if(state != TCPStateEstablished){
+                return -ECONNREFUSED;
             }
 
             remoteSequenceNumber += 1;
