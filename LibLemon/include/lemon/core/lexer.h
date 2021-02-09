@@ -15,6 +15,7 @@ namespace Lemon{
         BasicLexer() = default;
         BasicLexer(const std::string_view& v);
 
+        inline void Restart(){ it = sv.begin(); }
         inline bool End(){ return it >= sv.end(); }
 
         char Eat();

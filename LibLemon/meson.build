@@ -44,6 +44,7 @@ cpp_files = [
     'src/lexer.cpp',
     'src/json.cpp',
     'src/sha.cpp',
+    'src/url.cpp',
 ]
 
 asm_files = [
