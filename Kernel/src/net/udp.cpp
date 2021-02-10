@@ -142,7 +142,7 @@ namespace Network::UDP{
 
         acquireLock(&blockedLock);
         while(blocked.get_length()){
-            blocked.remove_at(0)->Unblock();
+            blocked.get_front()->Unblock();
         }
         releaseLock(&blockedLock);
 

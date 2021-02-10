@@ -52,19 +52,19 @@ namespace Timer{
     }
 
     TimerEvent::~TimerEvent(){
-        acquireLock(&lock);
         acquireLock(&sleepQueueLock);
+        acquireLock(&lock);
 
         if(!dispatched){
-            if(ticks >= 0 && next && next != sleeping.get_front()){
-                next->ticks += ticks;
-            }
+            dispatched = true;
 
             if(next){
+                if(next && ticks >= 0 && next != sleeping.get_front()){
+                    next->ticks += ticks;
+                }
+
                 sleeping.remove(this); // Remove from queue
             }
-
-            dispatched = true;
         }
 
         releaseLock(&sleepQueueLock);
@@ -128,10 +128,12 @@ namespace Timer{
                 cnt->ticks--;
 
                 if(cnt->ticks <= 0){
-                    sleeping.remove_at(0)->Dispatch();
+                    sleeping.get_front()->Dispatch();
+                    sleeping.remove_at(0);
                     
                     while(sleeping.get_length() && sleeping.get_front()->ticks <= 0){
-                        sleeping.remove_at(0)->Dispatch();
+                        sleeping.get_front()->Dispatch();
+                        sleeping.remove_at(0);
                     }
                 }
                 

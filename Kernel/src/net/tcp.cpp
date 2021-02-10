@@ -126,8 +126,6 @@ namespace Network {
             while(count >= 2){
                 checksum += *ptr++;
                 count -= 2;
-
-                checksum = (checksum & 0xFFFF) + (checksum >> 16);
             }
 
             ptr = (uint16_t*)data;
@@ -135,15 +133,13 @@ namespace Network {
             while(count >= 2){
                 checksum += *ptr++;
                 count -= 2;
-
-                checksum = (checksum & 0xFFFF) + (checksum >> 16);
             }
 
             if(count){ // Uneven amount of data
-                checksum += ((uint16_t)(*reinterpret_cast<uint8_t*>(ptr))) << 8;
-
-                checksum = (checksum & 0xFFFF) + (checksum >> 16);
+                checksum += ((uint16_t)(*reinterpret_cast<uint8_t*>(ptr)));
             }
+
+            checksum = (checksum & 0xFFFF) + (checksum >> 16);
 
             BigEndian<uint16_t> ret;
             ret.value = ~checksum;
