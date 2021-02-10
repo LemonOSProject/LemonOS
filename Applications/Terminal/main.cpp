@@ -107,6 +107,8 @@ void Scroll(){
 void OnPaint(surface_t* surface){
 	int fontHeight = terminalFont->lineHeight;
 
+	paintAll = true;
+
 	if(paintAll){
 		for(int i = 0; i < rowCount && (bufferOffset + i) < static_cast<int>(buffer.size()); i++){
 			int j = 0;
@@ -120,7 +122,7 @@ void OnPaint(surface_t* surface){
 			
 			Lemon::Graphics::DrawRect(j * 8, i * fontHeight, window->GetSize().x - j * 8, fontHeight, colours[state.bgColour], surface);
 		}
-	} else {
+	} else if(static_cast<unsigned>(curPos.y) < buffer.size()) {
 		int j = 0;
 		for(; j < static_cast<int>(buffer[bufferOffset + curPos.y].size()); j++){
 			TerminalChar ch = buffer[bufferOffset + curPos.y][j];
@@ -220,8 +222,6 @@ void DoAnsiCSI(char ch){
 			if(strlen(escBuf)){
 				amount = atoi(escBuf);
 			}
-
-			paintAll = true;
 
 			curPos.y -= amount;
 			if(curPos.y < 0) curPos.y = 0;
@@ -444,7 +444,6 @@ void PrintChar(char ch){
 		escapeSequence = 0;
 		escapeType = 0;
 	} else {
-
 		switch (ch)
 		{
 		case ANSI_ESC:
@@ -607,9 +606,10 @@ int main(int argc, char** argv){
 			window->Paint();
 
 			paint = false;
+			paintAll = false;
 		}
 
-		//poll(fds.data(), fds.size(), -1);
+		poll(fds.data(), fds.size(), 20000);
 	}
 	return 0;
 }
