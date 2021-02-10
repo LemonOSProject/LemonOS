@@ -119,9 +119,12 @@ public:
 			obj->prev = obj;
 			obj->next = obj;
 			back = obj;
-		} else if(front) {
-			front->prev = obj;
+		} else {
+			assert(front);
+
 			obj->next = front;
+			front->prev = obj;
+			back->next = obj;
 		}
 
 		front = obj;
@@ -188,6 +191,8 @@ public:
 		if (front == current) front = current->next;
 		if (back == current) back = current->prev;
 
+		current->next = current->prev = nullptr;
+
 		if(!(--num)) front = back = nullptr;
 
 		return current;
@@ -199,24 +204,20 @@ public:
 			return;
 		}
 
-		if (obj->next){
+		if (obj->next && obj->next != obj){
 			assert(obj->next->prev == obj);
-			/*if(obj->next->prev != obj){
-				return; // obj must have already been from list
-			}*/
 			
 			obj->next->prev = obj->prev;
 		} 
-		if (obj->prev){
+		if (obj->prev && obj->prev != obj){
 			assert(obj->prev->next == obj);
-			/*if(obj->prev->next != obj){
-				return;
-			}*/
 
 			obj->prev->next = obj->next;
 		}
 		if (front == obj) front = obj->next;
 		if (back == obj) back = obj->prev;
+
+		obj->next = obj->prev = nullptr;
 
 		--num;
 

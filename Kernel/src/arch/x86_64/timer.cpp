@@ -71,6 +71,17 @@ namespace Timer{
         releaseLock(&lock);
     }
 
+    void TimerEvent::Dispatch() {
+        acquireLock(&lock);
+        if(!dispatched){
+            dispatched = true;
+            sleeping.remove(this);
+
+            callback(data);
+        }
+        releaseLock(&lock);
+    }
+
     uint64_t GetSystemUptime(){
         return uptime;
     }
@@ -129,11 +140,9 @@ namespace Timer{
 
                 if(cnt->ticks <= 0){
                     sleeping.get_front()->Dispatch();
-                    sleeping.remove_at(0);
                     
                     while(sleeping.get_length() && sleeping.get_front()->ticks <= 0){
                         sleeping.get_front()->Dispatch();
-                        sleeping.remove_at(0);
                     }
                 }
                 
