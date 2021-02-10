@@ -1,10 +1,12 @@
 #include <iostream>
 #include <vector>
+#include <fstream>
 
 #include <lemon/core/url.h>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
 #include <getopt.h>
 
@@ -15,13 +17,19 @@ int main(int argc, char** argv){
     option opts[] = {
         {"help", no_argument, &help, true},
         {"verbose", no_argument, nullptr, 'v'},
+        {"output", required_argument, nullptr, 'o'},
     };
+
+    char* outFile = nullptr;
     
     int option;
     while((option = getopt_long(argc, argv, "v", opts, nullptr)) >= 0){
         switch(option){
             case 'v':
                 verbose = true;
+                break;
+            case 'o':
+                outFile = optarg;
                 break;
             case '?':
                 std::cout << "Usage: " << argv[0] << "[options] <url>\nSee " << argv[0] << "--help\n";
@@ -55,12 +63,36 @@ int main(int argc, char** argv){
         return 2;
     }
 
+    std::ostream* out = nullptr;
+
+    if(outFile){
+        auto file = new std::ofstream(outFile, std::ofstream::out | std::ofstream::binary);
+
+        if(!file->is_open()){
+            return 3;
+        }
+
+        out = reinterpret_cast<std::ostream*>(file);
+    } else {
+        out = &std::cout;
+    }
+
+redirect:
     uint32_t ip;
     if(inet_pton(AF_INET, url.Host().c_str(), &ip) > 0){
 
     } else {
-        std::cout << "steal: Failed to resolve host '" << url.Host() << "'\n";
-        return 3; // No DNS support yet
+        addrinfo hint;
+        memset(&hint, 0, sizeof(addrinfo));
+        hint = { .ai_family = AF_INET, .ai_socktype = SOCK_STREAM };
+
+        addrinfo* result;
+        if(getaddrinfo(url.Host().c_str(), nullptr, &hint, &result)){
+            std::cout << "steal: Failed to resolve host '" << url.Host() << "': " << strerror(errno) << "\n";
+            return 4;
+        }
+
+        ip = reinterpret_cast<sockaddr_in*>(result->ai_addr)->sin_addr.s_addr;
     }
 
     int sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -75,12 +107,11 @@ int main(int argc, char** argv){
         return 10;
     }
 
-    std::ostream& out = std::cout;
-
     char request[4096];
     int reqLength = snprintf(request, 4096, "GET /%s HTTP/1.1\r\n\
 Host: %s\r\n\
 User-Agent: steal/0.1\r\n\
+Upgrade-Insecure-Requests: 0\r\n\
 Accept: */*\r\n\
 \r\n", url.Resource().c_str(), url.Host().c_str());
 
@@ -100,7 +131,6 @@ Accept: */*\r\n\
 
     bool recievedHeader = false;
 
-    char responseHeaderBuffer[4096];
     char receiveBuffer[4096];
     while(ssize_t len = recv(sock, receiveBuffer, 4096, 0)){
         if(len < 0){
@@ -109,39 +139,42 @@ Accept: */*\r\n\
         }
 
         if(!(recievedHeader || verbose)){
-            bool cr = false;
-            bool lf = false;
-            bool emptyLine = false;
+            std::string line;
             unsigned i = 0;
             for(; i < len; i++){
                 char c = receiveBuffer[i];
-                if(c == '\r'){
-                    if(cr && lf){
-                        emptyLine = true; // Carriage return right after previous CRLF, now we just need an LF
-                    } else {
-                        cr = true;
-                    }
-                } else if(c == '\n') { 
-                    if(emptyLine){
-                        recievedHeader = true;
+                if(c == '\n'){
+                    if(line.find("Location: ") == 0){
+                        url = Lemon::URL(line.substr(10).c_str());
 
-                        i++;
+                        if(!url.IsValid() || !url.Host().length()){
+                            std::cout << "steal: Invalid/malformed redirect URL '" << line.substr(10) << "'.\n";
+                            return 2;
+                        }
+
+                        if(url.Protocol().length() && url.Protocol().compare("http")){
+                            std::cout << "steal: Unsupported redirect protocol: '" << url.Protocol() << "'\n";
+                            return 2;
+                        }
+                        goto redirect;
+                    } else if(!line.length()){
+                        recievedHeader = true; // Empty line, header finished
                         break;
-                    } else {
-                        lf = true;
                     }
-                } else {
-                    cr = lf = emptyLine = false;
 
-                    responseHeaderBuffer[i] = c;
+                    line.clear();
+                } else if(c == '\r'){
+                    // Ignore carriage return
+                } else {
+                    line += c;
                 }
             }
 
             if(recievedHeader){
-                out.write(receiveBuffer + i, len - i);
+                out->write(receiveBuffer + i, len - i);
             }
         } else {
-            out.write(receiveBuffer, len);
+            out->write(receiveBuffer, len);
         }
 
         if(len < 4096){

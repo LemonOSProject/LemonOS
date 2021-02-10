@@ -20,7 +20,8 @@ namespace Lemon{
 				std::string_view scheme = lex.EatWhile(isalnum);
 
 				if(lex.End()){
-					return;
+					host = scheme;
+					break;
 				}
 				
 				char c = lex.Eat();
@@ -29,6 +30,10 @@ namespace Lemon{
 				case ':':
 					if(lex.Peek() == '/'){
 						protocol = scheme;
+
+						lex.EatOne('/');
+						lex.EatOne('/'); // Consume up to two slashes
+
 						break; // If the next character is a slash then this is a scheme
 						// otherwise scheme probably does not exist and it is a port
 					}
