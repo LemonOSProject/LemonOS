@@ -65,15 +65,51 @@ ssize_t PTYDevice::Read(size_t offset, size_t size, uint8_t *buffer){
 
 	return 0;
 }
-	
+
 ssize_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
 	assert(pty);
 	assert(device == PTYSlaveDevice || device == PTYMasterDevice);
 
-	if(pty && device == PTYSlaveDevice)
-		return pty->Slave_Write((char*)buffer,size);
-	else if(pty && device == PTYMasterDevice){
-		return pty->Master_Write((char*)buffer,size);
+	if(pty && device == PTYSlaveDevice){
+		ssize_t written = pty->Slave_Write((char*)buffer,size);
+
+		if(written > 0 || written == size){
+			return written; // Check either for an error or if all bytes were written
+		}
+
+		// Buffer must be full so just keep trying
+		buffer += written;
+		while(written < size){
+			ssize_t ret = pty->Slave_Write((char*)buffer, size - written);
+
+			if(ret < 0){
+				return ret; // Error 
+			}
+			
+			buffer += written;
+		}
+
+		return written;
+	} else if(pty && device == PTYMasterDevice){
+		ssize_t written = pty->Master_Write((char*)buffer,size);
+
+		if(written > 0 || written == size){
+			return written; // Check either for an error or if all bytes were written
+		}
+
+		// Buffer must be full so just keep trying
+		buffer += written;
+		while(written < size){
+			ssize_t ret = pty->Master_Write((char*)buffer, size - written);
+
+			if(ret < 0){
+				return ret; // Error 
+			}
+
+			buffer += written;
+		}
+
+		return written;
 	} else {
 		assert(!"PTYDevice::Write: PTYDevice is designated neither slave nor master");
 	}

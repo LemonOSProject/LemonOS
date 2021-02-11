@@ -1099,11 +1099,29 @@ long SysInfo(RegisterContext* r){
  * On failure - return -1
  */
 long SysMunmap(RegisterContext* r){
+	process_t* process = Scheduler::GetCurrentProcess();
+
 	uint64_t address = SC_ARG0(r);
 	size_t count = SC_ARG1(r);
-	
-	if(Memory::CheckRegion(address, count * PAGE_SIZE_4K, Scheduler::GetCurrentProcess()->addressSpace) /*Check availibilty of the requested map*/){
-		//Memory::Free4KPages((void*)address, count, Scheduler::GetCurrentProcess()->addressSpace);
+
+	uint64_t endAddress = address + count * PAGE_SIZE_4K;
+
+	if(Memory::CheckRegion(address, endAddress, Scheduler::GetCurrentProcess()->addressSpace) /*Check availibilty of the requested map*/){
+		for(mem_region_t& shRegion : process->sharedMemory){
+			if((address >= shRegion.base && address <= shRegion.base + shRegion.pageCount * PAGE_SIZE_4K) || (endAddress >= shRegion.base && address <= shRegion.base + shRegion.pageCount * PAGE_SIZE_4K)){
+				return -EINVAL;
+			} else if((shRegion.base >= address && shRegion.base <= endAddress) || (shRegion.base + shRegion.pageCount * PAGE_SIZE_4K >= address && shRegion.base + shRegion.pageCount * PAGE_SIZE_4K <= endAddress)){
+				return -EINVAL; // Check for overlap with shared memory
+			} // TODO: Unmap around shared memory, maybe keep tack fo all memory regions, not just shared
+		}
+
+		for(unsigned i = 0; i < count; i++){
+			if(uintptr_t mem = Memory::VirtualToPhysicalAddress(address + i * PAGE_SIZE_4K, process->addressSpace); mem){
+				Memory::FreePhysicalMemoryBlock(mem);
+			}
+		}
+
+		Memory::Free4KPages((void*)address, count, Scheduler::GetCurrentProcess()->addressSpace);
 	} else {
 		return -EFAULT;
 	}

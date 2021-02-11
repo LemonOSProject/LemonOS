@@ -956,11 +956,11 @@ namespace Lemon::GUI {
         
         assert(items.size() < INT32_MAX);
 
-        if((static_cast<int>(items.size()) / itemsPerRow * itemSize.y) > fixedBounds.size.y) showScrollBar = true;
+        if((static_cast<int>(items.size() + itemsPerRow - 1) / itemsPerRow * itemSize.y) > fixedBounds.size.y) showScrollBar = true;
         else showScrollBar = false;
 
         if(showScrollBar)
-            sBar.ResetScrollBar(fixedBounds.size.y, (items.size() / itemsPerRow) * itemSize.y);
+            sBar.ResetScrollBar(fixedBounds.size.y, ((items.size() + itemsPerRow - 1) / itemsPerRow) * itemSize.y);
     }
 
     void GridView::Paint(surface_t* surface){

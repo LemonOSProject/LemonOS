@@ -13,6 +13,14 @@ CharacterBuffer::CharacterBuffer(){
 }
 
 ssize_t CharacterBuffer::Write(char* _buffer, size_t size){
+    if(bufferPos + size > maxBufferSize){
+        size = maxBufferSize - bufferPos;
+    }
+
+    if(size == 0){
+        return 0;
+    }
+
     acquireLock(&(this->lock));
 
     if((bufferPos + size) > bufferSize) {
