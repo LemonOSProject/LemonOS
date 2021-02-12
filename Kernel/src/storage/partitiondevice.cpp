@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk) : Device(TypePartitionDevice){
+PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk) : Device(DeviceTypeStoragePartition){
     this->startLBA = startLBA;
     this->endLBA = endLBA;
     this->parentDisk = disk;

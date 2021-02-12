@@ -15,6 +15,7 @@
 #include <liballoc.h>
 #include <smp.h>
 #include <videoconsole.h>
+#include <device.h>
 
 #include <debug.h>
 

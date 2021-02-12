@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <lock.h>
+#include <device.h>
 
 enum
 {
@@ -336,8 +337,6 @@ typedef struct tagHBA_CMD_TBL
 #define HBA_PxSSTS_DET 0xfULL
 #define HBA_PxSSTS_DET_INIT 1
 #define HBA_PxSSTS_DET_PRESENT 3
-
-#include <devicemanager.h>
 
 namespace AHCI{
 	enum AHCIStatus{

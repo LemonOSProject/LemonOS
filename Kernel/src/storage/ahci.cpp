@@ -79,9 +79,7 @@ namespace AHCI{
 
 					ports[i] = new Port(i, &ahciHBA->ports[i], ahciHBA);
 					
-					if(ports[i]->status == AHCIStatus::Active)
-						DeviceManager::RegisterDevice(*(ports[i]));
-					else {
+					if(ports[i]->status != AHCIStatus::Active){
 						delete ports[i];
 						ports[i] = nullptr;
 					}

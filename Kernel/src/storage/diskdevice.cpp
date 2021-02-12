@@ -7,7 +7,7 @@
 
 static int nextDeviceNumber = 0;
 
-DiskDevice::DiskDevice() : Device(TypeDiskDevice){
+DiskDevice::DiskDevice() : Device(DeviceTypeStorageDevice){
     flags = FS_NODE_CHARDEVICE;
 
     char buf[16];

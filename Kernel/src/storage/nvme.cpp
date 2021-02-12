@@ -263,9 +263,11 @@ namespace NVMe{
             Memory::KernelFree4KPages(namespaceIdentity, 1);
         }
 
-        for(auto& ns : namespaces){
-            if(ns->nsStatus == Namespace::NamespaceStatus::Active){
-                DeviceManager::RegisterDevice(*ns);
+        for(auto it = namespaces.begin(); it != namespaces.end(); it++){
+            auto& ns = *it;
+
+            if(ns->nsStatus != Namespace::NamespaceStatus::Active){
+                delete ns;
             }
         }
     }

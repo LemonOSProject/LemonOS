@@ -131,15 +131,13 @@ namespace Network {
     }
 
     NetFS* NetFS::instance = nullptr;
-    NetFS::NetFS() : Device("net", TypeNetworkStackDevice){
+    NetFS::NetFS() : Device("net", DeviceTypeNetworkStack){
         if(instance){
             return; // Instance already exists!
         }
 
         instance = this;
         flags = FS_NODE_DIRECTORY;
-
-        DeviceManager::RegisterDevice(*instance);
     }
 
     int NetFS::ReadDir(DirectoryEntry* dirent, uint32_t index){

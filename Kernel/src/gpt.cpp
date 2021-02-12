@@ -3,7 +3,6 @@
 #include <memory.h>
 #include <logging.h>
 #include <device.h>
-#include <devicemanager.h>
 
 #include <debug.h>
 
@@ -46,7 +45,6 @@ namespace GPT{
             if((entry.endLBA - entry.startLBA)){
                 PartitionDevice* part = new PartitionDevice(entry.startLBA, entry.endLBA, disk);
                 disk->partitions.add_back(part);
-                DeviceManager::RegisterDevice(*part);
             }
         }
 

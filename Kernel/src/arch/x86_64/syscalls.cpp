@@ -24,6 +24,7 @@
 #include <debug.h>
 #include <strace.h>
 #include <math.h>
+#include <device.h>
 
 #define SC_ARG0(r) (r)->rdi
 #define SC_ARG1(r) (r)->rsi
@@ -118,6 +119,7 @@
 #define SYS_KERNELOBJECT_DESTROY 86
 #define SYS_SET_SOCKET_OPTIONS 87
 #define SYS_GET_SOCKET_OPTIONS 88
+#define SYS_DEVICE_MANAGEMENT 89
 
 #define NUM_SYSCALLS 89
 
@@ -2888,6 +2890,50 @@ long SysGetSocketOptions(RegisterContext* r){
 	return sock->GetSocketOptions(level, opt, optVal, optLen);
 }
 
+long SysDeviceManagement(RegisterContext* r){
+	process_t* process = Scheduler::GetCurrentProcess();
+
+	int64_t request = SC_ARG0(r);
+	
+	switch(request){
+	case DeviceManager::RequestDeviceManagerGetDeviceCount:
+		return -ENOSYS;
+	case DeviceManager::RequestDeviceManagerEnumerateDevices:
+		return -ENOSYS;
+	case DeviceManager::RequestDeviceResolveFromPath: {
+		const char* path = reinterpret_cast<const char*>(SC_ARG1(r));
+		long* deviceID = reinterpret_cast<long*>(SC_ARG2(r));
+
+		(void)path;
+		(void)deviceID;
+		return -ENOSYS;
+	} case DeviceManager::RequestDeviceGetName:
+		return -ENOSYS;
+	case DeviceManager::RequestDeviceGetPCIInformation:
+		
+		return -ENOSYS;
+	case DeviceManager::RequestDeviceIOControl:
+		return -ENOSYS;
+	case DeviceManager::RequestDeviceGetType: {
+		long id = SC_ARG1(r);
+		long* type = reinterpret_cast<long*>(SC_ARG2(r));
+
+		if(!Memory::CheckUsermodePointer(SC_ARG2(r), sizeof(long), process->addressSpace)){
+			return -EFAULT;
+		}
+
+		(void)type;
+		(void)id;
+		return -ENOSYS;
+	} case DeviceManager::RequestDeviceGetChildCount:
+		return -ENOSYS;
+	case DeviceManager::RequestDeviceEnumerateChildren:
+		return -ENOSYS;
+	default:
+		return -EINVAL;
+	}
+}
+
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -2978,6 +3024,7 @@ syscall_t syscalls[]{
 	SysKernelObjectDestroy,
 	SysSetSocketOptions,
 	SysGetSocketOptions,
+	SysDeviceManagement,
 };
 
 RegisterContext lastSyscall;
@@ -3011,7 +3058,7 @@ void SyscallHandler(RegisterContext* regs) {
 		Log::Info("warning: call: %d, thread rip: %x, kstack: %x, kernel rsp: %x, tss rsp0: %x, thread cs: %x, thread ss: %x", regs->rax, regs->rip, GetCPULocal()->currentThread->kernelStack, rsp, GetCPULocal()->tss.rsp0, regs->cs, regs->ss);
 	}
 
-	if(debugLevelSyscalls >= DebugLevelVerbose){
+	if(debugLevelSyscalls >= DebugLevelNormal){
 		lastSyscall = *regs;
 	}
 	#endif

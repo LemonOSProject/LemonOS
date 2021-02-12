@@ -1,7 +1,7 @@
 #include <smp.h>
 
 #include <cpu.h>
-#include <devicemanager.h>
+#include <device.h>
 #include <apic.h>
 #include <logging.h>
 #include <timer.h>

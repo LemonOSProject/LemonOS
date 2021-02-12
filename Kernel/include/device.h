@@ -6,44 +6,77 @@
 #include <logging.h>
 #include <string.h>
 
+struct DevicePCIInformation {
+    uint16_t vendorID; // PCI Vendor ID
+    uint16_t deviceID; // PCI Device ID
+
+    uint8_t bus; // PCI Bus
+    uint8_t slot; // PCI Slot
+    uint8_t func; // PCI Func
+
+    uint8_t classCode; // PCI Class
+    uint8_t subclass; // PCI Subclass
+    uint8_t progIf; // PCI Programming Interface
+
+    uintptr_t bars[6]; // PCI BARs
+};
+
 enum DeviceType{
-    TypeGenericDevice,
-    TypeDiskDevice,
-    TypePartitionDevice,
-    TypeNetworkStackDevice,
-    TypeNetworkAdapterDevice,
-    TypePseudoterminalDevice,
-    TypeInputDevice,
+    DeviceTypeUnknown,
+    DeviceTypeUNIXPseudo,
+    DeviceTypeUNIXPseudoTerminal,
+    DeviceTypeKernelLog,
+    DeviceTypeGenericPCI,
+    DeviceTypeGenericACPI,
+    DeviceTypeStorageController,
+    DeviceTypeStorageDevice,
+    DeviceTypeStoragePartition,
+    DeviceTypeNetworkStack,
+    DeviceTypeNetworkAdapter,
+    DeviceTypeUSBController,
+    DeviceTypeGenericUSB,
+    DeviceTypeLegacyHID,
+    DeviceTypeUSBHID,
 };
 
 class Device : public FsNode {
 public:
-    Device(DeviceType type){
-        name = "";
+    Device(DeviceType type);
+    Device(const char* name, DeviceType type);
+    Device(DeviceType type, Device* parent);
+    Device(const char* name, DeviceType type, Device* parent);
 
-        this->type = type;
+    ~Device();
+
+    inline void SetID(int64_t id){
+        assert(deviceID == 0); // Device ID should only be set once
+
+        deviceID = id;
     }
 
-    Device(const char* name, DeviceType type){
-        this->name = strdup(name);
-        this->type = type;
-    }
-
-    inline const char* GetName() const{
+    inline const char* GetName() const {
         return name;
     }
+
+    inline int64_t ID() const { return deviceID; }
+    inline bool IsRootDevice() const { return isRootDevice; }
 protected:
-    inline void SetName(const char* name){
-        this->name = strdup(name);
-    }
+    void SetName(const char*);
 
     inline void SetDescription(const char* desc){
         this->description = strdup(desc);
     }
 
-    char* name = "";
+    bool isRootDevice = true;
+
+    char* name = nullptr;
     char* description = nullptr;
-    DeviceType type = TypeGenericDevice;
+
+    DeviceType type = DeviceTypeUnknown;
+
+    int64_t deviceID = 0;
+
+    static int nextUnnamedDeviceNumber; // Used when a name was not provided
 };
 
 class PartitionDevice;
@@ -88,6 +121,22 @@ private:
 };
 
 namespace DeviceManager{
+
+    enum DeviceManagementRequests{
+        RequestDeviceManagerGetDeviceCount,
+        RequestDeviceManagerEnumerateDevices,
+        RequestDeviceResolveFromPath,
+        RequestDeviceGetName,
+        RequestDeviceGetDescription,
+        RequestDeviceGetPCIInformation,
+        RequestDeviceIOControl,
+        RequestDeviceGetType,
+        RequestDeviceGetChildCount,
+        RequestDeviceEnumerateChildren,
+    };
+
+    void Initialize();
+    
     /////////////////////////////
     /// \brief Initialize basic devices (null, urandom, etc.)
     /////////////////////////////
@@ -96,11 +145,20 @@ namespace DeviceManager{
     /////////////////////////////
     /// \brief Register a device
     ///
-    /// Add device to devfs
+    /// Register a device and assign an ID
     ///
     /// \param dev reference to Device to add
     /////////////////////////////
-    void RegisterDevice(Device& dev);
+    void RegisterDevice(Device* dev);
+
+    /////////////////////////////
+    /// \brief Unregister a device
+    ///
+    /// Remove a device from the device map. Remove device from devfs if nescessary.
+    ///
+    /// \param dev reference to Device to add
+    /////////////////////////////
+    void UnregisterDevice(Device* dev);
 
     /////////////////////////////
     /// \brief Get devfs

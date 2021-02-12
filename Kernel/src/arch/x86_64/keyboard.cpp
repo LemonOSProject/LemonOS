@@ -36,7 +36,7 @@ namespace Keyboard{
 	public:
         DirectoryEntry dirent;
 
-		KeyboardDevice(char* name) : Device(name, TypeInputDevice){
+		KeyboardDevice(char* name) : Device(name, DeviceTypeLegacyHID){
             flags = FS_NODE_CHARDEVICE;
             strcpy(dirent.name, name);
             dirent.flags = flags;
@@ -80,8 +80,6 @@ namespace Keyboard{
 
     // Register interrupt handler
     void Install() {
-        DeviceManager::RegisterDevice(kbDev);
-
         IDT::RegisterInterruptHandler(IRQ0 + 1, Handler);
 		APIC::IO::MapLegacyIRQ(1);
 

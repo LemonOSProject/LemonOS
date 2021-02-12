@@ -7,10 +7,12 @@
 #include <math.h>
 #include <timer.h>
 #include <string.h>
+#include <hash.h>
+#include <assert.h>
 	
 class URandom : public Device {
 public:
-    URandom(const char* name) : Device(name, TypeGenericDevice) { 
+    URandom(const char* name) : Device(name, DeviceTypeUNIXPseudo) { 
         flags = FS_NODE_CHARDEVICE;
     }
 
@@ -20,7 +22,7 @@ public:
 	
 class Null : public Device {
 public:
-    Null(const char* name) : Device(name, TypeGenericDevice) { 
+    Null(const char* name) : Device(name, DeviceTypeUNIXPseudo) { 
         flags = FS_NODE_CHARDEVICE;
     }
 
@@ -28,9 +30,56 @@ public:
     ssize_t Write(size_t, size_t, uint8_t*);
 };
 
-ssize_t Null::Read(size_t offset, size_t size, uint8_t *buffer){
+int Device::nextUnnamedDeviceNumber = 0;
 
+Device::Device(DeviceType type) : isRootDevice(true), type(type) {
+    char nameBuf[20];
+    strcpy(nameBuf, "unknown");
+    itoa(nextUnnamedDeviceNumber++, nameBuf + strlen(nameBuf), 10);
+
+    name = strdup(nameBuf);
+
+    DeviceManager::RegisterDevice(this);
+}
+
+Device::Device(const char* name, DeviceType type) : isRootDevice(true), type(type) {
+    this->name = strdup(name);
+
+    DeviceManager::RegisterDevice(this);
+}
+
+Device::Device(DeviceType type, Device* parent) : isRootDevice(false), type(type) {
+    char nameBuf[20];
+    strcpy(nameBuf, "unknown");
+    itoa(nextUnnamedDeviceNumber++, nameBuf + strlen(nameBuf), 10);
+
+    name = strdup(nameBuf);
+
+    DeviceManager::RegisterDevice(this);
+}
+
+Device::Device(const char* name, DeviceType type, Device* parent) : isRootDevice(false), type(type) {
+    this->name = strdup(name);
+    this->parent = parent;
+
+    DeviceManager::RegisterDevice(this);
+}
+
+Device::~Device(){
+    DeviceManager::UnregisterDevice(this);
+}
+
+void Device::SetName(const char* name){
+    if(this->name){
+        kfree(this->name);
+    }
+
+    this->name = strdup(name);
+}
+
+ssize_t Null::Read(size_t offset, size_t size, uint8_t *buffer){
     memset(buffer, -1, size);
+
     return size;
 }
 
@@ -58,7 +107,9 @@ Null null = Null("null");
 URandom urand = URandom("urandom");
 
 namespace DeviceManager{
-    List<Device*> devices;
+    int64_t nextDeviceID = 1;
+    List<Device*>* rootDevices;
+    HashMap<int64_t, Device*>* devices;
 
     class DevFS : public FsNode{
     private:
@@ -75,7 +126,7 @@ namespace DeviceManager{
         }
 
         int ReadDir(DirectoryEntry* dirPtr, uint32_t index) final {
-            if(index >= devices.get_length() + 2){
+            if(index >= rootDevices->get_length() + 2){
                 return 0;
             }
 
@@ -90,7 +141,7 @@ namespace DeviceManager{
 
                 return 1;
             } else {
-                strcpy(dirPtr->name, devices[index - 2]->GetName());
+                strcpy(dirPtr->name, rootDevices->get_at(index - 2)->GetName());
                 
                 return 1;
             }
@@ -103,7 +154,7 @@ namespace DeviceManager{
                 return fs::GetRoot();
             }
 
-            for(auto& dev : devices){
+            for(auto& dev : *rootDevices){
                 if(!strcmp(dev->GetName(), name)){
                     return dev;
                 }
@@ -113,18 +164,36 @@ namespace DeviceManager{
         }
     };
 
-    DevFS devfs = DevFS("dev");
+    DevFS* devfs;
 
-    void InitializeBasicDevices(){
-        RegisterDevice(null);
-        RegisterDevice(urand);
+    void Initialize(){
+        devfs = new DevFS("dev");
+
+        devices = new HashMap<int64_t, Device*>();
+        rootDevices = new List<Device*>();
     }
 
-    void RegisterDevice(Device& dev){
-        devices.add_back(&dev);
+    void RegisterDevice(Device* dev){
+        dev->SetID(nextDeviceID++);
+
+        devices->insert(dev->ID(), dev);
+
+        if(dev->IsRootDevice()){
+            rootDevices->add_back(dev);
+        }
+    }
+
+    void UnregisterDevice(Device* dev){
+        assert(devices->find(dev->ID()));
+
+        if(dev->IsRootDevice()){
+            rootDevices->remove(dev);
+        }
+
+        devices->remove(dev->ID());
     }
 
     FsNode* GetDevFS(){
-        return &devfs;
+        return devfs;
     }
 }

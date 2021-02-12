@@ -355,7 +355,7 @@ namespace NVMe{
 		uintptr_t controllerIdentityPhys = 0;
 
 		Vector<uint32_t> namespaceIDs;
-		Vector<Namespace*> namespaces;
+		List<Namespace*> namespaces;
 
 		List<NVMeQueue*> ioQueues;
 		uint16_t nextQueueID = 1;

@@ -47,7 +47,7 @@ PTY* GrantPTY(uint64_t pid){
 	return pty;
 }
 
-PTYDevice::PTYDevice(const char* name) : Device(name, TypePseudoterminalDevice){
+PTYDevice::PTYDevice(const char* name) : Device(name, DeviceTypeUNIXPseudoTerminal){
 	dirent.node = this;
 }
 
@@ -198,8 +198,6 @@ PTY::PTY(const char* name) : masterFile(name), slaveFile(name){
 	slaveFile.device = PTYSlaveDevice;
 
 	for(int i = 0; i < NCCS; i++) tios.c_cc[i] = c_cc_default[i];
-
-	DeviceManager::RegisterDevice(slaveFile);
 
 	ptys->add_back(this);
 }

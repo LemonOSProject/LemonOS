@@ -26,7 +26,7 @@ namespace Log{
 
 	class LogDevice : public Device{
 	public:
-		LogDevice(char* name) : Device(name, TypeGenericDevice){
+		LogDevice(char* name) : Device(name, DeviceTypeKernelLog){
 			flags = FS_NODE_FILE;
 		}
 
@@ -52,16 +52,14 @@ namespace Log{
 		}
 	};
 
-	LogDevice* logDevice;
+	LogDevice* logDevice = nullptr;
 
     void Initialize(){
 		initialize_serial();
-
-		logDevice = new LogDevice("kernellog");
     }
 
 	void LateInitialize(){
-		DeviceManager::RegisterDevice(*logDevice);
+		logDevice = new LogDevice("kernellog");
 	}
 
 	void SetVideoConsole(VideoConsole* con){

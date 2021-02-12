@@ -17,7 +17,6 @@
 #include <ahci.h>
 #include <ata.h>
 #include <xhci.h>
-#include <devicemanager.h>
 #include <gui.h>
 #include <fs/tar.h>
 #include <fs/tmp.h>
@@ -131,13 +130,12 @@ extern "C"
 	HAL::Init(mb_info);
 
 	fs::Initialize();
+    DeviceManager::Initialize();
+	Log::LateInitialize();
 	
 	InitializeConstructors(); // Call global constructors
 
-	Log::LateInitialize();
     Log::EnableBuffer();
-
-	DeviceManager::InitializeBasicDevices();
 
 	videoMode = Video::GetVideoMode();
 

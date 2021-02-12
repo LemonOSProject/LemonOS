@@ -19,7 +19,7 @@ namespace Network {
         }
     }
 
-    NetworkAdapter::NetworkAdapter(AdapterType aType) : Device(TypeNetworkAdapterDevice), type(aType) {
+    NetworkAdapter::NetworkAdapter(AdapterType aType) : Device(DeviceTypeNetworkAdapter, NetFS::GetInstance()), type(aType) {
         flags = FS_NODE_CHARDEVICE;
     }
 

@@ -7,7 +7,7 @@
 #include <physicalallocator.h>
 #include <memory.h>
 #include <idt.h>
-#include <devicemanager.h>
+#include <device.h>
 #include <apic.h>
 #include <timer.h>
 
@@ -161,7 +161,6 @@ namespace ATA{
 					}
 
 					drives[i * 2 + j] = new ATADiskDevice(i, j);
-					DeviceManager::RegisterDevice(*drives[i * 2 + j]);
 				}
 			}
 		}
