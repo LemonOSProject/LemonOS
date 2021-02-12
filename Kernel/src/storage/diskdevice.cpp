@@ -14,7 +14,7 @@ DiskDevice::DiskDevice() : Device(DeviceTypeStorageDevice){
     strcpy(buf, "hd");
     itoa(nextDeviceNumber++, buf + 2, 10);
 
-    SetName(buf);
+    SetInstanceName(buf);
 }
 
 int DiskDevice::InitializePartitions(){

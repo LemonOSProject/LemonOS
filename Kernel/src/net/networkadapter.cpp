@@ -84,7 +84,7 @@ namespace Network {
                     return -ENOENT;
                 }
                 
-                strcpy(req->ifr_name, adapters[req->ifr_ifindex]->name);
+                strcpy(req->ifr_name, adapters[req->ifr_ifindex]->instanceName);
                 break;
             case SIOCGIFADDR: {
                 sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&req->ifr_addr);

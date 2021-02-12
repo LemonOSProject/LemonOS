@@ -158,7 +158,7 @@ namespace Network {
         }
 
         NetworkAdapter* adapter = adapters[index - 2];
-        strcpy(dirent->name, adapter->name);
+        strcpy(dirent->name, adapter->InstanceName());
 
         dirent->flags = FS_NODE_CHARDEVICE;
 
@@ -173,7 +173,7 @@ namespace Network {
         }
 
         for(NetworkAdapter* adapter : adapters){
-            if(strcmp(name, adapter->name) == 0){
+            if(strcmp(name, adapter->InstanceName()) == 0){
                 return adapter;
             }
         }
@@ -192,7 +192,7 @@ namespace Network {
 
     NetworkAdapter* NetFS::FindAdapter(const char* name, size_t len){
         for(NetworkAdapter* adapter : adapters){
-            if(strncmp(name, adapter->name, len) == 0){
+            if(strncmp(name, adapter->InstanceName(), len) == 0){
                 return adapter;
             }
         }

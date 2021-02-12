@@ -49,6 +49,8 @@ PTY* GrantPTY(uint64_t pid){
 
 PTYDevice::PTYDevice(const char* name) : Device(name, DeviceTypeUNIXPseudoTerminal){
 	dirent.node = this;
+
+	SetDeviceName("UNIX Pseudoterminal Device");
 }
 
 ssize_t PTYDevice::Read(size_t offset, size_t size, uint8_t *buffer){

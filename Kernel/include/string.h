@@ -9,7 +9,7 @@
 ///
 /// Get the length of a usermode string and check if the pointer is valid
 ///
-/// \return 0 on success, 1 when no incoming connections, negative error code on failure
+/// \return 0 on success, 1 when invalid pointer / not null terminated
 /////////////////////////////
 long strlenSafe(const char* str, size_t& size, address_space_t* aSpace);
 

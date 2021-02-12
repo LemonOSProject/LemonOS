@@ -7,7 +7,7 @@
 #include <math.h>
 #include <timer.h>
 #include <string.h>
-#include <hash.h>
+#include <vector.h>
 #include <assert.h>
 	
 class URandom : public Device {
@@ -33,33 +33,49 @@ public:
 int Device::nextUnnamedDeviceNumber = 0;
 
 Device::Device(DeviceType type) : isRootDevice(true), type(type) {
+    if(type == DeviceTypeDevFS){
+        return; // No need to register device or set name
+    }
+
     char nameBuf[20];
     strcpy(nameBuf, "unknown");
     itoa(nextUnnamedDeviceNumber++, nameBuf + strlen(nameBuf), 10);
 
-    name = strdup(nameBuf);
+    instanceName = strdup(nameBuf);
 
     DeviceManager::RegisterDevice(this);
 }
 
 Device::Device(const char* name, DeviceType type) : isRootDevice(true), type(type) {
-    this->name = strdup(name);
+    if(type == DeviceTypeDevFS){
+        return; // No need to register device or set name
+    }
+
+    instanceName = strdup(name);
 
     DeviceManager::RegisterDevice(this);
 }
 
 Device::Device(DeviceType type, Device* parent) : isRootDevice(false), type(type) {
+    if(type == DeviceTypeDevFS){
+        return; // No need to register device or set name
+    }
+
     char nameBuf[20];
     strcpy(nameBuf, "unknown");
     itoa(nextUnnamedDeviceNumber++, nameBuf + strlen(nameBuf), 10);
 
-    name = strdup(nameBuf);
+    instanceName = strdup(nameBuf);
 
     DeviceManager::RegisterDevice(this);
 }
 
 Device::Device(const char* name, DeviceType type, Device* parent) : isRootDevice(false), type(type) {
-    this->name = strdup(name);
+    if(type == DeviceTypeDevFS){
+        return; // No need to register device or set name
+    }
+
+    this->instanceName = strdup(name);
     this->parent = parent;
 
     DeviceManager::RegisterDevice(this);
@@ -69,12 +85,20 @@ Device::~Device(){
     DeviceManager::UnregisterDevice(this);
 }
 
-void Device::SetName(const char* name){
-    if(this->name){
-        kfree(this->name);
+void Device::SetInstanceName(const char* name){
+    if(this->instanceName){
+        kfree(this->instanceName);
     }
 
-    this->name = strdup(name);
+    this->instanceName = strdup(name);
+}
+
+void Device::SetDeviceName(const char* name){
+    if(this->deviceName){
+        kfree(this->deviceName);
+    }
+
+    this->deviceName = strdup(name);
 }
 
 ssize_t Null::Read(size_t offset, size_t size, uint8_t *buffer){
@@ -109,14 +133,14 @@ URandom urand = URandom("urandom");
 namespace DeviceManager{
     int64_t nextDeviceID = 1;
     List<Device*>* rootDevices;
-    HashMap<int64_t, Device*>* devices;
+    Vector<Device*>* devices;
 
-    class DevFS : public FsNode{
+    class DevFS : public Device{
     private:
         fs::FsVolume vol;
 
     public:
-        DevFS(const char* name){
+        DevFS(const char* name) : Device(DeviceTypeDevFS){
             flags = FS_NODE_DIRECTORY;
 
             vol.mountPoint = this;
@@ -141,7 +165,7 @@ namespace DeviceManager{
 
                 return 1;
             } else {
-                strcpy(dirPtr->name, rootDevices->get_at(index - 2)->GetName());
+                strcpy(dirPtr->name, rootDevices->get_at(index - 2)->InstanceName());
                 
                 return 1;
             }
@@ -155,7 +179,7 @@ namespace DeviceManager{
             }
 
             for(auto& dev : *rootDevices){
-                if(!strcmp(dev->GetName(), name)){
+                if(!strcmp(dev->InstanceName(), name)){
                     return dev;
                 }
             }
@@ -169,14 +193,14 @@ namespace DeviceManager{
     void Initialize(){
         devfs = new DevFS("dev");
 
-        devices = new HashMap<int64_t, Device*>();
+        devices = new Vector<Device*>();
         rootDevices = new List<Device*>();
     }
 
     void RegisterDevice(Device* dev){
         dev->SetID(nextDeviceID++);
 
-        devices->insert(dev->ID(), dev);
+        devices->add_back(dev);
 
         if(dev->IsRootDevice()){
             rootDevices->add_back(dev);
@@ -184,16 +208,106 @@ namespace DeviceManager{
     }
 
     void UnregisterDevice(Device* dev){
-        assert(devices->find(dev->ID()));
-
         if(dev->IsRootDevice()){
             rootDevices->remove(dev);
         }
 
-        devices->remove(dev->ID());
+        devices->remove(dev);
     }
 
     FsNode* GetDevFS(){
         return devfs;
+    }
+
+    Device* DeviceFromID(int64_t deviceID){
+        for(auto& device : *devices){
+            if(device->ID() == deviceID){
+                return device;
+            }
+        }
+
+        return nullptr;
+    }
+
+    Device* ResolveDevice(const char* path){
+        while(*path == '/'){
+            path++; // Eat leading slashes
+        }
+
+        if(strncmp(path, "dev/", 4) == 0){ // Ignore dev/ at the start
+            path += 4;
+        }
+
+        while(*path == '/'){
+            path++; // Eat leading slashes
+        }
+
+        if(*path){
+            return nullptr; // Empty string, only slashes or just /dev/
+        }
+
+        char pathBuf[PATH_MAX];
+        if(strlen(path) > PATH_MAX){
+            return nullptr;
+        }
+
+        strcpy(pathBuf, path);
+
+		char* file = strtok(pathBuf,"/");
+
+        Device* currentDev = devfs;
+		while(file != NULL){ // Iterate through the directories to find the file
+			FsNode* node = fs::FindDir(currentDev,file);
+			if(!node) {
+				Log::Warning("Device %s not found!", file);
+				return nullptr;
+			}
+
+			if(((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)){ // Check for symlinks
+				assert(!"Symlinks not supported in DevFS");
+
+                return nullptr;
+			}
+
+			if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+				currentDev = reinterpret_cast<Device*>(node);
+				file = strtok(NULL, "/");
+				continue;
+			}
+
+			if((file = strtok(NULL, "/"))){
+				Log::Warning("%s is not a device parent!", file);
+				return nullptr;
+			}
+
+			if(((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)){ // Check for symlinks
+				assert(!"Symlinks not supported in DevFS");
+
+                return nullptr;
+			}
+
+			currentDev = reinterpret_cast<Device*>(node);
+			break;
+		}
+		
+		return currentDev;
+    }
+
+    int64_t EnumerateDevices(int64_t offset, int64_t count, int64_t* list){
+        if(offset >= devices->get_length()){
+            return 0;
+        }
+
+        if(offset + count >= devices->get_length()){
+            count = devices->get_length() - offset;
+        }
+
+        memcpy(&devices[offset], list, sizeof(int64_t) * count);
+
+        return count;
+    }
+
+    int64_t DeviceCount(){
+        return devices->get_length();
     }
 }

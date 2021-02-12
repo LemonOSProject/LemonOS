@@ -23,6 +23,7 @@ struct DevicePCIInformation {
 
 enum DeviceType{
     DeviceTypeUnknown,
+    DeviceTypeDevFS,
     DeviceTypeUNIXPseudo,
     DeviceTypeUNIXPseudoTerminal,
     DeviceTypeKernelLog,
@@ -37,6 +38,13 @@ enum DeviceType{
     DeviceTypeGenericUSB,
     DeviceTypeLegacyHID,
     DeviceTypeUSBHID,
+};
+
+enum DeviceBus {
+    DeviceBusNone,
+    DeviceBusSoftware,
+    DeviceBusPCI,
+    DeviceBusUSB,
 };
 
 class Device : public FsNode {
@@ -54,23 +62,24 @@ public:
         deviceID = id;
     }
 
-    inline const char* GetName() const {
-        return name;
+    inline const char* InstanceName() const {
+        return instanceName;
+    }
+
+    inline const char* DeviceName() const {
+        return deviceName;
     }
 
     inline int64_t ID() const { return deviceID; }
     inline bool IsRootDevice() const { return isRootDevice; }
 protected:
-    void SetName(const char*);
-
-    inline void SetDescription(const char* desc){
-        this->description = strdup(desc);
-    }
+    void SetInstanceName(const char* name);
+    void SetDeviceName(const char* name);
 
     bool isRootDevice = true;
 
-    char* name = nullptr;
-    char* description = nullptr;
+    char* instanceName = nullptr;
+    char* deviceName = strdup("Unknown Device");
 
     DeviceType type = DeviceTypeUnknown;
 
@@ -123,8 +132,8 @@ private:
 namespace DeviceManager{
 
     enum DeviceManagementRequests{
-        RequestDeviceManagerGetDeviceCount,
-        RequestDeviceManagerEnumerateDevices,
+        RequestDeviceManagerGetRootDeviceCount,
+        RequestDeviceManagerEnumerateRootDevices,
         RequestDeviceResolveFromPath,
         RequestDeviceGetName,
         RequestDeviceGetDescription,
@@ -161,9 +170,45 @@ namespace DeviceManager{
     void UnregisterDevice(Device* dev);
 
     /////////////////////////////
-    /// \brief Get devfs
+    /// \brief Get DevFS
     ///
     /// \return FsNode* object representing devfs root
     /////////////////////////////
     FsNode* GetDevFS();
+
+    /////////////////////////////
+    /// \brief Find device from device ID
+    ///
+    /// \return Corresponding device, nullptr if it does not exist
+    /////////////////////////////
+    Device* DeviceFromID(int64_t deviceID);
+
+    /////////////////////////////
+    /// \brief Find device from path (relative to DevFS root)
+    ///
+    /// \param path Path of device (relative to DevFS)
+    ///
+    /// \return Corresponding device, nullptr if it does not exist
+    /////////////////////////////
+    Device* ResolveDevice(const char* path);
+
+    /////////////////////////////
+    /// \brief Get device count
+    ///
+    /// \return Device count
+    /////////////////////////////
+    int64_t DeviceCount();
+
+    /////////////////////////////
+    /// \brief Enumerate root devices
+    ///
+    /// Gets a list of device IDs
+    ///
+    /// \param offset Index of first ID to retrieve
+    /// \param count Amount of IDs to retrieve
+    /// \param list Buffer to store retireved device IDs
+    ///
+    /// \return Amount of IDs inserted into list
+    /////////////////////////////
+    int64_t EnumerateDevices(int64_t offset, int64_t count, int64_t* list);
 }

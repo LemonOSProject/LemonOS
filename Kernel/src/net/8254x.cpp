@@ -290,7 +290,8 @@ namespace Network{
         strcat(tempName, "s");
         strcat(tempName, slot);
 
-        SetName(tempName); // Name format: e1k%pciBus%s%pciSlot%
+        SetInstanceName(tempName); // Name format: e1k%pciBus%s%pciSlot%
+        SetDeviceName("Intel 8254x Ethernet Adapter");
 
         WriteMem32(I8254_REGISTER_CTRL, ReadMem32(I8254_REGISTER_CTRL) | CTRL_SLU | CTRL_ASDE);
 

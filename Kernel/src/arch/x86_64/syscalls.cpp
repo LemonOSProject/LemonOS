@@ -2894,22 +2894,53 @@ long SysDeviceManagement(RegisterContext* r){
 	process_t* process = Scheduler::GetCurrentProcess();
 
 	int64_t request = SC_ARG0(r);
+
+	if(request == DeviceManager::RequestDeviceManagerGetRootDeviceCount){
+		return DeviceManager::DeviceCount();
+	} else if(request == DeviceManager::RequestDeviceManagerEnumerateRootDevices){
+		int64_t offset = SC_ARG1(r);
+		int64_t requestedDeviceCount = SC_ARG2(r);
+		int64_t* idList = reinterpret_cast<int64_t*>(SC_ARG3(r));
+
+		if(!Memory::CheckUsermodePointer(SC_ARG3(r), sizeof(int64_t) * requestedDeviceCount, process->addressSpace)){
+			return -EFAULT;
+		}
+
+		return DeviceManager::EnumerateDevices(offset, requestedDeviceCount, idList);
+	}
 	
 	switch(request){
-	case DeviceManager::RequestDeviceManagerGetDeviceCount:
-		return -ENOSYS;
-	case DeviceManager::RequestDeviceManagerEnumerateDevices:
-		return -ENOSYS;
 	case DeviceManager::RequestDeviceResolveFromPath: {
 		const char* path = reinterpret_cast<const char*>(SC_ARG1(r));
-		long* deviceID = reinterpret_cast<long*>(SC_ARG2(r));
 
-		(void)path;
-		(void)deviceID;
-		return -ENOSYS;
-	} case DeviceManager::RequestDeviceGetName:
-		return -ENOSYS;
-	case DeviceManager::RequestDeviceGetPCIInformation:
+		size_t pathLen;
+		if(strlenSafe(path, pathLen, process->addressSpace)){
+			return -EFAULT;
+		}
+
+		Device* dev = DeviceManager::ResolveDevice(path);
+		if(!dev){
+			return -ENOENT; // No such device 
+		}
+
+		return dev->ID();
+	} case DeviceManager::RequestDeviceGetName: {
+		int64_t deviceID = SC_ARG1(r);
+		char* name = reinterpret_cast<char*>(SC_ARG2(r));
+		size_t nameBufferSize = SC_ARG3(r);
+
+		if(!Memory::CheckUsermodePointer(SC_ARG2(r), nameBufferSize, process->addressSpace)){
+			return -EFAULT;
+		}
+
+		Device* dev = DeviceManager::DeviceFromID(deviceID);
+		if(!dev){
+			return -ENOENT;
+		}
+
+		strncpy(name, dev->DeviceName(), nameBufferSize);
+		return 0;
+	} case DeviceManager::RequestDeviceGetPCIInformation:
 		
 		return -ENOSYS;
 	case DeviceManager::RequestDeviceIOControl:

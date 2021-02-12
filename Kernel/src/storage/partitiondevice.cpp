@@ -10,11 +10,11 @@ PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice*
     flags = FS_NODE_BLKDEVICE;
 
     char buf[18];
-    strcpy(buf, parentDisk->GetName());
+    strcpy(buf, parentDisk->InstanceName());
     strcat(buf, "p");
     itoa(parentDisk->nextPartitionNumber++, buf + strlen(buf), 10);
 
-    SetName(buf);
+    SetInstanceName(buf);
 }
 
 int PartitionDevice::ReadAbsolute(uint64_t offset, uint32_t count, void* buffer){

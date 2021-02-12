@@ -147,6 +147,17 @@ public:
 		return data[--count];
 	}
 
+	void remove(const T& val){
+		for(unsigned i = 0; i < count; i++){
+			if(data[i] == val){
+				memcpy(&data[i], &data[i + 1], count - i - 1);
+
+				count--;
+				return;
+			}
+		}
+	}
+
 	~Vector(){
 		if(data){
 			delete[] data;
