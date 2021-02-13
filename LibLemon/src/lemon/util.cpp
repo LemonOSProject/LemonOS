@@ -17,12 +17,12 @@ pid_t lemon_spawn(const char* path, int argc, char* const argv[], int flags, cha
 
 namespace Lemon{
     void Yield(){
-        syscall(SYS_YIELD, 0, 0, 0, 0, 0);
+        syscall(SYS_YIELD);
     }
 
-    int GetProcessInfo(uint64_t pid, lemon_process_info_t& pInfo){
+    int GetProcessInfo(pid_t pid, lemon_process_info_t& pInfo){
         long ret = -1;
-        if((ret = syscall(SYS_GET_PROCESS_INFO, pid, &pInfo, 0, 0, 0))){
+        if((ret = syscall(SYS_GET_PROCESS_INFO, pid, &pInfo))){
             errno = -ret;
             return -1;
         }
@@ -30,9 +30,9 @@ namespace Lemon{
         return 0;
     }
 
-    int GetNextProcessInfo(uint64_t* pid, lemon_process_info_t& pInfo){
+    int GetNextProcessInfo(pid_t* pid, lemon_process_info_t& pInfo){
         long ret = 1;
-        if((ret = syscall(SYS_GET_NEXT_PROCESS_INFO, pid, &pInfo, 0, 0, 0)) < 0){
+        if((ret = syscall(SYS_GET_NEXT_PROCESS_INFO, pid, &pInfo)) < 0){
             errno = -ret;
             return -1;
         }
@@ -41,7 +41,7 @@ namespace Lemon{
     }
 
     void GetProcessList(std::vector<lemon_process_info_t>& list){
-        uint64_t pid = 0;
+        pid_t pid = 0;
 
         list.clear();
 

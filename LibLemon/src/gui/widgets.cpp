@@ -716,18 +716,32 @@ namespace Lemon::GUI {
 
     }
 
-    void ListView::Paint(surface_t* surface){
-        assert(items.size() < INT_MAX);
+    void ListView::SetModel(DataModel* model){
+        this->model = model;
 
+        model->Refresh();
+
+        for(int i = 0; i < model->ColumnCount(); i++){
+            columnDisplayWidths.push_back(model->SizeHint(i));
+        }
+    }
+
+    void ListView::Paint(surface_t* surface){
         Graphics::DrawRect(fixedBounds.x, fixedBounds.y, fixedBounds.width, columnDisplayHeight, colours[Colour::Background], surface);
+        Graphics::DrawRect(fixedBounds.x, fixedBounds.y + columnDisplayHeight, fixedBounds.width, fixedBounds.height - 20, colours[Colour::ContentBackground], surface);
+
+        if(!model){
+            return; // If there is no model there is no data to display
+        }
+
         rgba_colour_t textColour = colours[Colour::Text];
         
         int totalColumnWidth;
         int xPos = fixedBounds.x;
-        for(ListColumn col : columns){
-            Graphics::DrawString(col.name.c_str(), xPos + 4, fixedBounds.y + 4, textColour.r, textColour.g, textColour.b, surface);
+        for(int i = 0; i < model->ColumnCount(); i++){
+            Graphics::DrawString(model->ColumnName(i).c_str(), xPos + 4, fixedBounds.y + 4, textColour.r, textColour.g, textColour.b, surface);
 
-            xPos += col.displayWidth;
+            xPos += columnDisplayWidths.at(i);
 
             Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, textColour, surface); // Divider
             xPos++;
@@ -739,28 +753,32 @@ namespace Lemon::GUI {
 
         int yPos = fixedBounds.y + columnDisplayHeight;
 
-        Graphics::DrawRect(fixedBounds.x, fixedBounds.y + columnDisplayHeight, fixedBounds.width, fixedBounds.height - 20, colours[Colour::ContentBackground], surface);
-
         int index = 0;
 
         if(showScrollBar) index = sBar.scrollPos / itemHeight;
         int maxItem = index + fixedBounds.height / itemHeight;
 
-        for(; index < static_cast<int>(items.size()) && index < maxItem; index++){
-            ListItem item = items[index];
-
+        for(; index < model->RowCount() && index < maxItem; index++){
             xPos = fixedBounds.x;
 
-            for(unsigned i = 0; i < item.details.size() && i < columns.size(); i++){
+            for(int i = 0; i < model->ColumnCount(); i++){
+                std::string str = "";
 
-                std::string str = item.details[i];
+                Variant value = model->GetData(index, i);
+                if(std::holds_alternative<std::string>(value)){
+                    str = std::get<std::string>(value);
+                } else if(std::holds_alternative<int>(value)){
+                    str = std::to_string(std::get<int>(value));
+                } else {
+                    assert(!"GUI::ListView: Unsupported type!");
+                }
 
-                if(Graphics::GetTextLength(str.c_str()) > columns[i].displayWidth - 2) {
+                if(Graphics::GetTextLength(str.c_str()) > columnDisplayWidths[i] - 2) {
                     int l = str.length() - 1;
                     while(l){
                         str = str.substr(0, l);
 
-                        if(Graphics::GetTextLength(str.c_str()) < columns[i].displayWidth + 2) {
+                        if(Graphics::GetTextLength(str.c_str()) < columnDisplayWidths[i] + 2) {
                             if(l > 2){
                                 str.erase(str.end() - 1); // Omit last character
                                 str.append("..."); // We have a variable width font should we should only have to omit 1 character
@@ -781,7 +799,7 @@ namespace Lemon::GUI {
                     Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour.r, textColour.g, textColour.b, surface, fixedBounds);
                 }
 
-                xPos += columns[i].displayWidth + 2;
+                xPos += columnDisplayWidths[i] + 2;
             }
 
             yPos += itemHeight;
@@ -793,29 +811,11 @@ namespace Lemon::GUI {
             editbox.Paint(surface);
         }
     }
-
-    void ListView::AddColumn(ListColumn& column){
-        columns.push_back(ListColumn(column));
-    }
-
-    int ListView::AddItem(ListItem& item){
-        int index = items.size();
-
-        items.push_back(ListItem(item));
-
-        ResetScrollBar();
-
-        return index;
-    }
-
-    void ListView::ClearItems(){
-        items.clear();
-
-        ResetScrollBar();
-    }
     
     void ListView::OnMouseDown(vector2i_t mousePos){
-        assert(items.size() < INT32_MAX);
+        if(!model){
+            return;
+        }
 
         if(editing){
             if(Graphics::PointInRect(editbox.GetFixedBounds(), mousePos)){
@@ -838,35 +838,36 @@ namespace Lemon::GUI {
         if(lastSelected == selected){
             int index = 0;
             int xPos = 0;
-            ListColumn* col = nullptr;
-            for(auto& column : columns){
-                if(mousePos.x - fixedBounds.x >= xPos && mousePos.x - fixedBounds.x <= xPos + column.displayWidth){
-                    col = &column;
+            for(int width : columnDisplayWidths){
+                if(mousePos.x - fixedBounds.x >= xPos && mousePos.x - fixedBounds.x <= xPos + width){
+                    selectedCol = index;
                     break; // We clicked on this column
                 }
 
-                xPos += column.displayWidth;
+                xPos += width;
                 index++;
             }
 
-            if(col && col->editable){
+            /*if(selectedCol && col->editable){
                 editbox.SetBounds({xPos, columnDisplayHeight + selected * itemHeight - sBar.scrollPos + 2, col->displayWidth, itemHeight - 4});
                 editing = true;
                 editingColumnIndex = index;
                 editbox.LoadText(items[selected].details[editingColumnIndex].c_str()); // Load with column data
             } else {
                 editing = false;
-            }
+            }*/
         }
 
         if(selected < 0) selected = 0;
-        if(selected >= (int)items.size()) selected = (int)items.size() - 1;
+        if(selected >= model->RowCount()) selected = (int)model->RowCount() - 1;
 
-        if(OnSelect) OnSelect(items[selected], this);
+        if(OnSelect) OnSelect(selected, this);
     }
 
     void ListView::OnDoubleClick(vector2i_t mousePos){
-        assert(items.size() < INT32_MAX);
+        if(!model){
+            return;
+        }
 
         if(!Graphics::PointInRect({fixedBounds.x, fixedBounds.y + columnDisplayHeight, fixedBounds.width - (showScrollBar ? 16 : 0), fixedBounds.height - columnDisplayHeight}, mousePos)){
             OnMouseDown(mousePos);
@@ -875,12 +876,12 @@ namespace Lemon::GUI {
             int clickedItem = floor(((double)mousePos.y + sBar.scrollPos - fixedBounds.pos.y - columnDisplayHeight) / itemHeight);
 
             if(selected == clickedItem){ // Make sure the same item was clicked twice
-                if(OnSubmit) OnSubmit(items[selected], this);
+                if(OnSubmit) OnSubmit(selected, this);
             } else {
                 selected = clickedItem;
 
                 if(selected < 0) selected = 0;
-                if(selected >= (int)items.size()) selected = items.size() - 1;
+                if(selected >= model->ColumnCount()) selected = model->RowCount() - 1;
             }
         }
     }
@@ -896,7 +897,9 @@ namespace Lemon::GUI {
     }
 
     void ListView::OnKeyPress(int key){
-        assert(items.size() < INT32_MAX);
+        if(!model){
+            return;
+        }
 
         if(editing){
             editbox.OnKeyPress(key);
@@ -911,12 +914,12 @@ namespace Lemon::GUI {
                 selected++;
                 break;
             case KEY_ENTER:
-                if(OnSubmit) OnSubmit(items[selected], this);
+                if(OnSubmit) OnSubmit(selected, this);
                 return;
         }
 
         if(selected < 0) selected = 0;
-        if(selected >= (int)items.size()) selected = items.size() - 1;
+        if(selected >= model->RowCount()) selected = model->RowCount() - 1;
     }
     
     void ListView::OnInactive(){
@@ -925,12 +928,15 @@ namespace Lemon::GUI {
     }
 
     void ListView::ResetScrollBar(){
-        assert(items.size() < INT32_MAX);
+        if(!model){
+            showScrollBar = false;
+            return;
+        }
 
-        if(((int)items.size() * itemHeight) > (fixedBounds.size.y - columnDisplayHeight)) showScrollBar = true;
+        if((model->RowCount() * itemHeight) > (fixedBounds.size.y - columnDisplayHeight)) showScrollBar = true;
         else showScrollBar = false;
 
-        sBar.ResetScrollBar(fixedBounds.size.y - columnDisplayHeight, items.size() * itemHeight);
+        sBar.ResetScrollBar(fixedBounds.size.y - columnDisplayHeight, model->RowCount() * itemHeight);
     }
 
     void ListView::UpdateFixedBounds(){
@@ -942,10 +948,10 @@ namespace Lemon::GUI {
     void ListView::OnEditboxSubmit(){
         if(!editing) return;
 
-        items[selected].details[editingColumnIndex] = editbox.contents.front();
+        //items[selected].details[editingColumnIndex] = editbox.contents.front();
 
         if(OnEdit){
-            OnEdit(items[selected], this);
+            OnEdit(selected, this);
         }
 
         editing = false;

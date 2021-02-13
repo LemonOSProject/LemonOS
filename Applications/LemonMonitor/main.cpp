@@ -10,84 +10,121 @@
 #include <unistd.h>
 #include <math.h>
 
-struct ProcessCPUTime{
-    uint64_t diff;
-    uint64_t activeUs;
-    short lastUsage;
-};
-std::map<uint64_t, ProcessCPUTime> processTimer;
-
 Lemon::GUI::Window* window;
-
 Lemon::GUI::ListView* listView;
-Lemon::GUI::ListColumn procName = {.name = "Process", .displayWidth = 168};
-Lemon::GUI::ListColumn procID = {.name = "PID", .displayWidth = 48};
-Lemon::GUI::ListColumn procCPUUsage = {.name = "CPU Usage", .displayWidth = 48};
-Lemon::GUI::ListColumn procMemUsage = {.name = "Mem Usage", .displayWidth = 80};
-Lemon::GUI::ListColumn procUptime = {.name = "Uptime", .displayWidth = 80};
+
+class ProcessModel : public Lemon::GUI::DataModel {
+public:
+    struct ProcessEntry {
+        lemon_process_info_t info;
+
+        uint64_t activeTimeDiff;
+        uint64_t lastActiveUs;
+
+        bool operator==(const int pid){
+            return info.pid == pid;
+        }
+    };
+
+    int ColumnCount() const {
+        return columns.size();
+    }
+
+    int RowCount() const {
+        return processes.size();
+    }
+
+    const std::string& ColumnName(int column) const {
+        return columns.at(column).Name();
+    }
+
+    Lemon::GUI::Variant GetData(int row, int column){
+        ProcessEntry& process = processes.at(row);
+
+        switch(column){
+        case 0:
+            return std::string(process.info.name);
+        case 1:
+            return process.info.pid;
+        case 2:
+            char usage[6];
+            if(process.activeTimeDiff && activeTimeSum){
+                snprintf(usage, 5, "%lu%%", (process.activeTimeDiff * 100) / activeTimeSum); // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
+            } else {
+                strcpy(usage, "0%");
+            }
+
+            return std::string(usage);
+        case 3: {
+            char usedMem[40];
+            snprintf(usedMem, 39, "%lu KB", process.info.usedMem);
+
+            return std::string(usedMem);
+        } case 4: {
+            char uptime[40];
+            snprintf(uptime, 39, "%lum %lus", process.info.runningTime / 60, process.info.runningTime % 60);
+
+            return std::string(uptime);
+        } default:
+            return 0;
+        }
+    }
+
+    int SizeHint(int column){
+        switch (column) {
+        case 0: // Name
+            return 132;
+        case 1: // PID
+            return 36;
+        case 2: // CPU Usage
+            return 36;
+        case 3: // Memory Usage
+            return 100;
+        case 4: // Uptime
+        default:
+            return 76;
+        }
+    }
+
+    void Refresh(){
+        lemon_process_info_t info;
+        pid_t pid = 0;
+
+        activeTimeSum = 0; // Get the sum of the amount of time the processes have been active to calculate CPU usage 
+        while(!Lemon::GetNextProcessInfo(&pid, info)){
+            if(auto it = std::find(processes.begin(), processes.end(), info.pid); it != processes.end()){
+                uint64_t diff = (info.activeUs - it->lastActiveUs);
+                activeTimeSum += diff;
+
+                *it = { .info = info, .activeTimeDiff = diff, .lastActiveUs = info.activeUs };
+            } else {
+                processes.push_back({ .info = info, .activeTimeDiff = 0, .lastActiveUs = info.activeUs });
+            }
+        }
+
+        std::vector<lemon_process_info_t> pv;
+        Lemon::GetProcessList(pv);
+    }
+private:
+    uint64_t activeTimeSum = 0;
+
+    std::vector<Column> columns = { Column("Name"), Column("PID"), Column("CPU"), Column("Memory"), Column("Uptime") };
+    std::vector<ProcessEntry> processes;
+};
 
 int main(int argc, char** argv){
     window = new Lemon::GUI::Window("LemonMonitor", {424, 480}, 0, Lemon::GUI::WindowType::GUI);
     
     listView = new Lemon::GUI::ListView({0, 0, 0, 0});
-    listView->AddColumn(procName);
-    listView->AddColumn(procID);
-    listView->AddColumn(procCPUUsage);
-    listView->AddColumn(procMemUsage);
-    listView->AddColumn(procUptime);
     listView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
 
     window->AddWidget(listView);
 
-    std::vector<lemon_process_info_t> processes;
+    ProcessModel model;
+    listView->SetModel(&model);
+
     while(!window->closed){
-        Lemon::GetProcessList(processes);
-
-        uint64_t activeTimeSum = 0;
-
-        for(lemon_process_info_t proc : processes){
-            if(processTimer.find(proc.pid) != processTimer.end()){
-                ProcessCPUTime& pTime = processTimer.at(proc.pid);
-
-                uint64_t diff = proc.activeUs - pTime.activeUs;
-                activeTimeSum += diff;
-
-                pTime.activeUs = proc.activeUs; // Update the entry
-                pTime.diff = diff;
-            } else {
-                processTimer[proc.pid] = {.diff = 0, .activeUs = proc.activeUs, .lastUsage = 0 };
-            }
-        }
-
-        listView->ClearItems();
-        for(lemon_process_info_t proc : processes){
-
-            char uptime[40];
-            snprintf(uptime, 39, "%lum %lus", proc.runningTime / 60, proc.runningTime % 60);
-
-            char usedMem[40];
-            snprintf(usedMem, 39, "%lu KB", proc.usedMem);
-
-            char usage[6];
-            if(processTimer.find(proc.pid) != processTimer.end()){
-                ProcessCPUTime& pTime = processTimer.at(proc.pid);
-                
-                if(pTime.diff && activeTimeSum){
-                    snprintf(usage, 5, "%lu%%", (pTime.diff * 100) / activeTimeSum); // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
-                    pTime.lastUsage = static_cast<short>((pTime.diff * 100) / activeTimeSum);
-                } else {
-                    strcpy(usage, "0%");
-                    pTime.lastUsage = 0;
-                }
-            } else {
-                strcpy(usage, "0%");
-
-                processTimer[proc.pid] = {.diff = 0, .activeUs = proc.activeUs, .lastUsage = 0 };
-            }
-
-            Lemon::GUI::ListItem pItem = {.details = {proc.name, std::to_string(proc.pid), usage, usedMem, uptime}};
-            listView->AddItem(pItem);
-        }
+        model.Refresh();
 
         window->Paint();
 

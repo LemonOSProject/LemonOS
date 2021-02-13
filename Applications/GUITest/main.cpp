@@ -80,10 +80,7 @@ int main(){
     Lemon::GUI::ListColumn col2;
     col2.displayWidth = 130;
     col2.name = "Random Integer";
-
-    lView->AddColumn(col1);
-    lView->AddColumn(col2);
-
+    
     Lemon::GUI::ContextMenuEntry ent;
     ent.id = 1;
     ent.name = std::string("Add Item...");
@@ -94,17 +91,6 @@ int main(){
     ent.name = std::string("Exit");
 
     cxt.push_back(ent);
-
-    int i = 0;
-    for(; i < 10; i++){
-        Lemon::GUI::ListItem item;
-        int randI = rand() % 1000;
-        char buf[80];
-        sprintf(buf, "Item #%d", i);
-        item.details.push_back(buf);
-        item.details.push_back(std::to_string(randI));
-        lView->AddItem(item);
-    }
 
     while(!win->closed){
         Lemon::LemonEvent ev;

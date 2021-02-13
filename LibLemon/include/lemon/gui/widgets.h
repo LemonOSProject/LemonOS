@@ -4,6 +4,7 @@
 #include <lemon/gfx/graphics.h>
 #include <lemon/gui/ctxentry.h>
 #include <lemon/gui/colours.h>
+#include <lemon/gui/model.h>
 
 #include <vector>
 #include <string>
@@ -260,10 +261,10 @@ namespace Lemon::GUI {
     };
 
     class ListView : public Widget{
-        ListColumn primaryColumn;
-        std::vector<ListColumn> columns;
-        std::vector<ListItem> items;
+        DataModel* model = nullptr;
+        std::vector<int> columnDisplayWidths;
 
+        int selectedCol = 0;
         int selected = 0;
         short itemHeight = 20;
         int columnDisplayHeight = 20;
@@ -285,10 +286,11 @@ namespace Lemon::GUI {
 
         ListEditTextbox editbox = ListEditTextbox(this, {0,0,0,0});
         bool editing = false;
-        int editingColumnIndex = 0;
     public:
         ListView(rect_t bounds);
         ~ListView();
+
+        void SetModel(DataModel* model);
 
         void Paint(surface_t* surface);
 
@@ -299,17 +301,13 @@ namespace Lemon::GUI {
         void OnKeyPress(int key);
         void OnInactive();
 
-        void AddColumn(ListColumn& column);
-        int AddItem(ListItem& item);
-        void ClearItems();
-
         void UpdateFixedBounds();
 
         void OnEditboxSubmit();
 
-        void(*OnEdit)(ListItem&, ListView*) = nullptr;
-        void(*OnSubmit)(ListItem&, ListView*) = nullptr;
-        void(*OnSelect)(ListItem&, ListView*) = nullptr;
+        void(*OnEdit)(int, ListView*) = nullptr;
+        void(*OnSubmit)(int, ListView*) = nullptr;
+        void(*OnSelect)(int, ListView*) = nullptr;
     };
 
     class GridItem{
