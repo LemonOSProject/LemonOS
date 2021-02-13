@@ -152,8 +152,8 @@ namespace Scheduler{
 	void Yield();
 	void Schedule(void* data, RegisterContext* r);
 
-	process_t* FindProcessByPID(uint64_t pid);
-    uint64_t GetNextProccessPID(uint64_t pid);
+	process_t* FindProcessByPID(pid_t pid);
+    pid_t GetNextProccessPID(pid_t pid);
 	void InsertNewThreadIntoQueue(Thread* thread);
 
     void Initialize();

@@ -62,16 +62,13 @@ public:
         deviceID = id;
     }
 
-    inline const char* InstanceName() const {
-        return instanceName;
-    }
-
-    inline const char* DeviceName() const {
-        return deviceName;
-    }
-
-    inline int64_t ID() const { return deviceID; }
     inline bool IsRootDevice() const { return isRootDevice; }
+
+    inline const char* InstanceName() const { return instanceName; }
+    inline const char* DeviceName() const { return deviceName; }
+
+    inline DeviceType Type() const { return type; }
+    inline int64_t ID() const { return deviceID; }
 protected:
     void SetInstanceName(const char* name);
     void SetDeviceName(const char* name);

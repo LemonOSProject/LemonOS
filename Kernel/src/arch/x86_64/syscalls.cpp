@@ -121,7 +121,7 @@
 #define SYS_GET_SOCKET_OPTIONS 88
 #define SYS_DEVICE_MANAGEMENT 89
 
-#define NUM_SYSCALLS 89
+#define NUM_SYSCALLS 90
 
 #define EXEC_CHILD 1
 
@@ -1991,7 +1991,7 @@ long SysGetProcessInfo(RegisterContext* r){
 /// On Failure - Return error as negative value
 /////////////////////////////
 long SysGetNextProcessInfo(RegisterContext* r){
-	uint64_t* pidP = reinterpret_cast<uint64_t*>(SC_ARG0(r));
+	pid_t* pidP = reinterpret_cast<pid_t*>(SC_ARG0(r));
 	process_info_t* pInfo = reinterpret_cast<process_info_t*>(SC_ARG1(r));
 
 	process_t* cProcess = Scheduler::GetCurrentProcess();
@@ -1999,7 +1999,7 @@ long SysGetNextProcessInfo(RegisterContext* r){
 		return -EFAULT;
 	}
 
-	if(!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(uint64_t), cProcess->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(pid_t), cProcess->addressSpace)){
 		return -EFAULT;
 	}
 
@@ -2946,16 +2946,18 @@ long SysDeviceManagement(RegisterContext* r){
 	case DeviceManager::RequestDeviceIOControl:
 		return -ENOSYS;
 	case DeviceManager::RequestDeviceGetType: {
-		long id = SC_ARG1(r);
-		long* type = reinterpret_cast<long*>(SC_ARG2(r));
-
+		long deviceID = SC_ARG1(r);
+		
 		if(!Memory::CheckUsermodePointer(SC_ARG2(r), sizeof(long), process->addressSpace)){
 			return -EFAULT;
 		}
 
-		(void)type;
-		(void)id;
-		return -ENOSYS;
+		Device* dev = DeviceManager::DeviceFromID(deviceID);
+		if(!dev){
+			return -ENOENT;
+		}
+
+		return dev->Type();
 	} case DeviceManager::RequestDeviceGetChildCount:
 		return -ENOSYS;
 	case DeviceManager::RequestDeviceEnumerateChildren:

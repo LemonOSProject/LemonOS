@@ -150,7 +150,7 @@ namespace Scheduler{
         return 0;
     }
 
-    process_t* FindProcessByPID(uint64_t pid){
+    process_t* FindProcessByPID(pid_t pid){
         for(process_t* proc : *processes){
             if(proc->pid == pid) return proc;
         }
@@ -158,15 +158,15 @@ namespace Scheduler{
         return nullptr;
     }
 
-    uint64_t GetNextProccessPID(uint64_t pid){
-        uint64_t newPID = UINT64_MAX;
+    pid_t GetNextProccessPID(pid_t pid){
+        pid_t newPID = INT32_MAX;
         for(process_t* proc : *processes){
             if(proc->pid > pid && proc->pid < newPID){
                 newPID = proc->pid;
             }
         }
 
-        if(newPID == UINT64_MAX){
+        if(newPID == INT32_MAX){
             return 0;
         }
 

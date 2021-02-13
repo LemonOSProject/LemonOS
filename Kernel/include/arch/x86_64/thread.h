@@ -5,8 +5,9 @@
 #include <timerevent.h>
 #include <system.h>
 
+#include <abi-bits/pid_t.h>
+
 #define THREAD_TIMESLICE_DEFAULT 5
-typedef uint64_t pid_t;
 
 enum {
 	ThreadStateRunning, // Thread is running
