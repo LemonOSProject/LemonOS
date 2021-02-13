@@ -41,6 +41,8 @@ namespace Keyboard{
             strcpy(dirent.name, name);
             dirent.flags = flags;
             dirent.node = this;
+
+			SetDeviceName("PS/2 Keyboard Device");
 		}
 
 		ssize_t Read(size_t offset, size_t size, uint8_t *buffer){

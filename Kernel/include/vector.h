@@ -19,6 +19,13 @@ class Vector{
 			return *this;
 		}
 
+		VectorIterator& operator++(int){
+			auto it = *this;
+
+			pos++;
+			return it;
+		}
+
 		VectorIterator& operator=(const VectorIterator& other){
 			VectorIterator(other.vector);
 
@@ -36,19 +43,11 @@ class Vector{
 		}
 
 		friend bool operator==(const VectorIterator& l, const VectorIterator& r){
-			if(l.pos == r.pos){
-				return true;
-			} else {
-				return false;
-			}
+			return l.pos == r.pos;
 		}
 
 		friend bool operator!=(const VectorIterator& l, const VectorIterator& r){
-			if(l.pos != r.pos){
-				return true;
-			} else {
-				return false;
-			}
+			return l.pos != r.pos;
 		}
 	};
 private:

@@ -133,6 +133,7 @@ namespace DeviceManager{
         RequestDeviceManagerEnumerateRootDevices,
         RequestDeviceResolveFromPath,
         RequestDeviceGetName,
+        RequestDeviceGetInstanceName,
         RequestDeviceGetDescription,
         RequestDeviceGetPCIInformation,
         RequestDeviceIOControl,

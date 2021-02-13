@@ -19,6 +19,8 @@ namespace AHCI{
 		registers->cmd &= ~HBA_PxCMD_ST;
 		registers->cmd &= ~HBA_PxCMD_FRE;
 
+        SetDeviceName("SATA Hard Disk");
+
         stopCMD(registers);
 
         uintptr_t phys;

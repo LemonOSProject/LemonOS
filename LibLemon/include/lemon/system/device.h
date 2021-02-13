@@ -9,6 +9,7 @@ namespace Lemon{
         RequestDeviceManagerEnumerateRootDevices,
         RequestDeviceResolveFromPath,
         RequestDeviceGetName,
+        RequestDeviceGetInstanceName,
         RequestDeviceGetDescription,
         RequestDeviceGetPCIInformation,
         RequestDeviceIOControl,
@@ -41,5 +42,6 @@ namespace Lemon{
 
     long ResolveDevice(const char* path);
     long DeviceGetName(int64_t id, char* name, size_t nameBufferSize);
+    long DeviceGetInstanceName(int64_t id, char* name, size_t nameBufferSize);
     long DeviceGetType(int64_t id);
 }

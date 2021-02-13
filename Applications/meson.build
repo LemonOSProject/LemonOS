@@ -70,6 +70,10 @@ steal_src = [
     'Steal/main.cpp'
 ]
 
+devicemanager_src = [
+    'DeviceManager/main.cpp'
+]
+
 executable('fileman.lef', fileman_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('lsh.lef', lsh_src, cpp_args : application_cpp_args, link_args : ['-llemon'], install : true)
 executable('shell.lef', shell_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
@@ -85,3 +89,4 @@ executable('ipctest.lef', ipctest_src, cpp_args : application_cpp_args, install 
 executable('jsondump.lef', jsondump_src, cpp_args : application_cpp_args, install : true, link_args : ['-llemon'])
 executable('minesweeper.lef', minesweeper_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
 executable('steal.lef', steal_src, cpp_args : application_cpp_args, link_args : ['-llemon'], install : true)
+executable('devmgr.lef', devicemanager_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)

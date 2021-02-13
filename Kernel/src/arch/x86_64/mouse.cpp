@@ -121,6 +121,8 @@ namespace Mouse{
 			strcpy(dirent.name, name);
 			dirent.flags = flags;
 			dirent.node = this;
+
+			SetDeviceName("PS/2 Mouse Device");
 		}
 
 		ssize_t Read(size_t offset, size_t size, uint8_t *buffer){

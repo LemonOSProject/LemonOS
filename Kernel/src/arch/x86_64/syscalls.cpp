@@ -2940,14 +2940,29 @@ long SysDeviceManagement(RegisterContext* r){
 
 		strncpy(name, dev->DeviceName(), nameBufferSize);
 		return 0;
+	} case DeviceManager::RequestDeviceGetInstanceName: {
+		int64_t deviceID = SC_ARG1(r);
+		char* name = reinterpret_cast<char*>(SC_ARG2(r));
+		size_t nameBufferSize = SC_ARG3(r);
+
+		if(!Memory::CheckUsermodePointer(SC_ARG2(r), nameBufferSize, process->addressSpace)){
+			return -EFAULT;
+		}
+
+		Device* dev = DeviceManager::DeviceFromID(deviceID);
+		if(!dev){
+			return -ENOENT;
+		}
+
+		strncpy(name, dev->InstanceName(), nameBufferSize);
+		return 0;
 	} case DeviceManager::RequestDeviceGetPCIInformation:
-		
 		return -ENOSYS;
 	case DeviceManager::RequestDeviceIOControl:
 		return -ENOSYS;
 	case DeviceManager::RequestDeviceGetType: {
 		long deviceID = SC_ARG1(r);
-		
+
 		if(!Memory::CheckUsermodePointer(SC_ARG2(r), sizeof(long), process->addressSpace)){
 			return -EFAULT;
 		}

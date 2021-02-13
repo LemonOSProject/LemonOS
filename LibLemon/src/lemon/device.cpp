@@ -41,6 +41,15 @@ namespace Lemon{
         return 0;
     }
 
+    long DeviceGetInstanceName(int64_t id, char* name, size_t nameBufferSize){
+        if(long e = syscall(SYS_DEVICE_MANAGEMENT, RequestDeviceGetInstanceName, id, name, nameBufferSize); e){
+            errno = -e;
+            return -1;
+        }
+
+        return 0;
+    }
+
     long DeviceGetType(int64_t id){
         long ret = syscall(SYS_DEVICE_MANAGEMENT, RequestDeviceGetType, id);
         if(ret < 0){

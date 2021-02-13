@@ -141,7 +141,7 @@ int main(int argc, char** argv){
                 window->Paint();
             }
 
-            usleep(50000); // 50ms
+            usleep(100000); // 100ms
         }
     }
     

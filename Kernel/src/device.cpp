@@ -14,6 +14,8 @@ class URandom : public Device {
 public:
     URandom(const char* name) : Device(name, DeviceTypeUNIXPseudo) { 
         flags = FS_NODE_CHARDEVICE;
+
+        SetDeviceName("UNIX Random Device");
     }
 
     ssize_t Read(size_t, size_t, uint8_t*);
@@ -24,6 +26,8 @@ class Null : public Device {
 public:
     Null(const char* name) : Device(name, DeviceTypeUNIXPseudo) { 
         flags = FS_NODE_CHARDEVICE;
+
+        SetDeviceName("UNIX Null Device");
     }
 
     ssize_t Read(size_t, size_t, uint8_t*);
@@ -302,7 +306,9 @@ namespace DeviceManager{
             count = devices->get_length() - offset;
         }
 
-        memcpy(&devices[offset], list, sizeof(int64_t) * count);
+        for(unsigned i = offset; i - offset < count && i < devices->get_length(); i++){
+            list[i - offset] = devices->get_at(i)->ID();
+        }
 
         return count;
     }

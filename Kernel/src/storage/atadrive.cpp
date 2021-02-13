@@ -38,6 +38,20 @@ namespace ATA{
             break;
         }
 
+        if(port){
+            if(drive){
+                SetDeviceName("ATA Secondary Slave");
+            } else {
+                SetDeviceName("ATA Secondary Master");
+            }
+        } else {
+            if(drive){
+                SetDeviceName("ATA Primary Slave");
+            } else {
+                SetDeviceName("ATA Primary Master");
+            }
+        }
+
         InitializePartitions();
     }
 
