@@ -1,4 +1,5 @@
 cpp_files += files(
+    'device.cpp',
     'fb.cpp',
     'filesystem.cpp',
     'info.cpp',

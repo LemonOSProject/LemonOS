@@ -12,7 +12,7 @@
 #include <sys/types.h>
 
 typedef struct {
-	uint64_t pid; // Process ID
+	pid_t pid; // Process ID
 
 	uint32_t threadCount; // Process Thread Count
 
@@ -45,7 +45,7 @@ namespace Lemon{
     ///
     /// \return 0 on success, -1 on failure (errno is set)
     /////////////////////////////
-    int GetProcessInfo(uint64_t pid, lemon_process_info_t& pInfo);
+    int GetProcessInfo(pid_t pid, lemon_process_info_t& pInfo);
 
     /////////////////////////////
     /// \brief Get information about next process
@@ -57,7 +57,7 @@ namespace Lemon{
     ///
     /// \return 0 on success, 1 on end, -1 on failure (errno is set)
     /////////////////////////////
-    int GetNextProcessInfo(uint64_t* pid, lemon_process_info_t& pInfo);
+    int GetNextProcessInfo(pid_t* pid, lemon_process_info_t& pInfo);
 
     /////////////////////////////
     /// \brief Retrieve a list of all processes
