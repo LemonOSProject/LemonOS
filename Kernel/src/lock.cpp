@@ -44,8 +44,7 @@ void Semaphore::Signal(){
 
     __sync_fetch_and_add(&value, 1);
     if(blocked.get_length() > 0){
-        SemaphoreBlocker* blocker = blocked.remove_at(0);
-        blocker->Unblock();
+        blocked.get_front()->Unblock();
     }
 
     releaseLock(&lock);

@@ -29,17 +29,22 @@ protected:
             interrupted = true;
             shouldBlock = false;
 
-            acquireLock(&semaphore->lock);
-            semaphore->blocked.remove(this);
+            acquireLock(&lock);
+            if(semaphore){
+                semaphore->blocked.remove(this);
 
-            semaphore = nullptr;
-            releaseLock(&semaphore->lock);
+                semaphore = nullptr;
+            }
+            releaseLock(&lock);
         }
 
         void Unblock(){
             shouldBlock = false;
 
             acquireLock(&lock);
+            if(semaphore){
+                semaphore->blocked.remove(this);
+            }
             semaphore = nullptr;
 
             if(thread){

@@ -157,6 +157,10 @@ namespace Memory{
 
 	void DestroyAddressSpace(address_space_t* addressSpace){
 		for(int i = 0; i < DIRS_PER_PDPT; i++){
+			if(!addressSpace->pageDirs[i]){
+				continue;
+			}
+
 			if(addressSpace->pageDirsPhys[i] < PHYSALLOC_BLOCK_SIZE){
 				continue;
 			}
