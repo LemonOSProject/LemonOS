@@ -13,6 +13,8 @@ namespace Memory{
     uint64_t usedPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS * 32;
     uint64_t maxPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS * 32;
 
+    uint64_t nextChunk = 1;
+
     lock_t allocatorLock = 0;
 
     // Initialize the physical page allocator
@@ -25,27 +27,61 @@ namespace Memory{
     }
 
     // Sets a bit in the physical memory bitmap
-    inline void SetBit(uint64_t bit) {  
-        physicalMemoryBitmap[bit >> 5] |= (1 << (bit % 32));
+    __attribute__((always_inline)) inline void SetBit(uint64_t bit) {  
+        physicalMemoryBitmap[bit >> 5] |= (1 << (bit & 31));
     }
 
     // Clears a bit in the physical memory bitmap
-    inline void ClearBit(uint64_t bit) {
-        physicalMemoryBitmap[bit >> 5] &= ~ (1 << (bit % 32));
+    __attribute__((always_inline)) inline void ClearBit(uint64_t bit) {
+        physicalMemoryBitmap[bit >> 5] &= (~ (1 << (bit & 31)));
     }
 
     // Tests a bit in the physical memory bitmap
-    inline bool TestBit(uint64_t bit) {
-        return physicalMemoryBitmap[bit >> 5] & (1 << (bit % 32));
+    __attribute__((always_inline)) inline bool TestBit(uint64_t bit) {
+        return physicalMemoryBitmap[bit >> 5] & (1 << (bit & 31));
     }
 
     // Finds the first free block in physical memory
     uint64_t GetFirstFreeMemoryBlock() {
-        for (uint32_t i = 1; i < maxPhysicalBlocks / 32; i++)
+        if(nextChunk == 0){
+            nextChunk = 1;
+        }
+
+        for (uint32_t i = nextChunk; i < (maxPhysicalBlocks >> 5); i++){
             if (physicalMemoryBitmap[i] != 0xffffffff) // If all 32 bits at the index are used then ignore them
-                for (uint32_t j = 0; j < 32; j++) // Test each bit in the dword
-                    if (!(physicalMemoryBitmap[i] & (1 << j)))
-                        return (i << 5) + j;
+                for (uint32_t j = 0; j < 32; j++){ // Test each bit in the dword
+                    if (!(physicalMemoryBitmap[i] & (1 << j))){
+                        nextChunk = i;
+
+                        #ifdef KERNEL_DEBUG
+                            uint64_t value = (i << 5) + j;
+                            assert(value > 0);
+
+                            return value; // Make sure we don't return zero
+                        #else
+                            return (i << 5) + j;
+                        #endif
+                    }
+                }
+        }
+
+        for (uint32_t i = 1; i < (maxPhysicalBlocks >> 5); i++){ // Retry searching every chunk
+            if (physicalMemoryBitmap[i] != 0xffffffff) // If all 32 bits at the index are used then ignore them
+                for (uint32_t j = 0; j < 32; j++){ // Test each bit in the dword
+                    if (!(physicalMemoryBitmap[i] & (1 << j))){
+                        nextChunk = i;
+
+                        #ifdef KERNEL_DEBUG
+                            uint64_t value = (i << 5) + j;
+                            assert(value > 0);
+
+                            return value; // Make sure we don't return zero
+                        #else
+                            return (i << 5) + j;
+                        #endif
+                    }
+                }
+        }
 
         // The first block is always reserved
         return 0;
@@ -69,10 +105,10 @@ namespace Memory{
 
         uint64_t index = GetFirstFreeMemoryBlock();
         if (!index){
+            asm("cli");
             Log::Error("Out of memory!");
             KernelPanic((const char**)(&"Out of memory!"),1);
             for(;;);
-            //return 0;
         }
 
         SetBit(index);
@@ -80,7 +116,7 @@ namespace Memory{
 
         releaseLock(&allocatorLock);
 
-        return index * PHYSALLOC_BLOCK_SIZE;
+        return index << PHYSALLOC_BLOCK_SHIFT;
     }
 
     // Allocates a block of 2MB physical memory
@@ -113,9 +149,17 @@ namespace Memory{
 
     // Frees a block of physical memory
     void FreePhysicalMemoryBlock(uint64_t addr) {
-        uint64_t index = addr >> 12;
-        ClearBit(index);
+        uint64_t index = addr >> PHYSALLOC_BLOCK_SHIFT;
+        assert(index); // If memory < 4096 is getting freed we have a serious problem
+
+        uint64_t chunk = index >> 5;
+
+        physicalMemoryBitmap[chunk] = physicalMemoryBitmap[chunk] & (~(1U << (index & 31)));
         usedPhysicalBlocks--;
+
+        if(chunk < nextChunk){
+            nextChunk = chunk;
+        }
     }
 
     // Frees a block of physical memory

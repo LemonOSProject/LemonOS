@@ -157,14 +157,26 @@ namespace Memory{
 
 	void DestroyAddressSpace(address_space_t* addressSpace){
 		for(int i = 0; i < DIRS_PER_PDPT; i++){
+			if(addressSpace->pageDirsPhys[i] < PHYSALLOC_BLOCK_SIZE){
+				continue;
+			}
+
 			for(int j = 0; j < TABLES_PER_DIR; j++){
 				pd_entry_t dirEnt = addressSpace->pageDirs[i][j];
 				if(dirEnt & PAGE_PRESENT){
 					uint64_t phys = GetPageFrame(dirEnt);
+					if(phys < PHYSALLOC_BLOCK_SIZE){
+						continue;
+					}
 
 					for(int k = 0; k < PAGES_PER_TABLE; k++){
 						if(addressSpace->pageTables[i][j][k] & 0x1){
 							uint64_t pagePhys = GetPageFrame(addressSpace->pageTables[i][j][k]);
+
+							if(pagePhys < PHYSALLOC_BLOCK_SIZE){
+								continue;
+							}
+
 							FreePhysicalMemoryBlock(pagePhys);
 						}
 					}

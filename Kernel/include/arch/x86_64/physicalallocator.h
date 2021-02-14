@@ -7,6 +7,7 @@
 
 // The size of a block in phyiscal memory
 #define PHYSALLOC_BLOCK_SIZE 4096
+#define PHYSALLOC_BLOCK_SHIFT 12
 // The amount of blocks in a byte
 #define PHYSALLOC_BLOCKS_PER_BYTE 8
 
