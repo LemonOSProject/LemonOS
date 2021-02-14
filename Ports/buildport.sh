@@ -1,8 +1,10 @@
 export JOBCOUNT=$(nproc)
 
 if [ -z "$LEMON_SYSROOT" ]; then
-    echo "error: LEMON_SYSROOT not set"
-    exit
+    export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
+
+    echo "warning: LEMON_SYSROOT not set. Automatically set to $LEMON_SYSROOT"
+    read
 fi
 
 export CC=lemon-clang
@@ -16,4 +18,6 @@ if [ "$2" != build ]; then
     unpack 
 fi
 
-buildp
+if [ "$2" != unpack ]; then
+    buildp
+fi
