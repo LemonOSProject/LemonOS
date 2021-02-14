@@ -7,10 +7,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <lemon/syscall.h>
 #include <string>
 #include <termios.h>
 #include <vector>
+#include <sys/wait.h>
 
 termios execAttributes; // Set before executing
 termios readAttributes; // Set on ReadLine
@@ -202,7 +202,8 @@ void ParseLine(){
 	if(strchr(argv[0], '/') && (fd = open(currentDir, O_RDONLY | O_DIRECTORY))){
 		pid_t pid = lemon_spawn(argv[0], argc, argv.data(), 1);
 		if(pid > 0){
-			syscall(SYS_WAIT_PID, pid);
+			int status = 0;
+			waitpid(pid, &status, 0);
 		}
 
 		close(fd);
@@ -226,7 +227,8 @@ void ParseLine(){
 					pid_t pid = lemon_spawn(path.c_str(), argc, argv.data(), 1);
 
 					if(pid){
-						syscall(SYS_WAIT_PID, pid);
+						int status = 0;
+						waitpid(pid, &status, 0);
 					} else {
 						printf("Error executing %s\n", dirent.name);
 					}
