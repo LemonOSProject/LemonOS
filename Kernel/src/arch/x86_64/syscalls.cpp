@@ -125,6 +125,13 @@
 
 #define EXEC_CHILD 1
 
+#define WCONTINUED 1
+#define WNOHANG 2
+#define WUNTRACED 4
+#define WEXITED 8
+#define WNOWAIT 16
+#define WSTOPPED 32
+
 typedef long(*syscall_t)(RegisterContext*);
 
 long SysExit(RegisterContext* r){
@@ -626,7 +633,7 @@ long SysStat(RegisterContext* r){
 	FsNode* node = fs::ResolvePath(filepath, proc->workingDir, followSymlinks);
 
 	if(!node){
-		Log::Warning("sys_stat: Invalid filepath %s", filepath);
+		Log::Debug(debugLevelSyscalls, DebugLevelVerbose, "sys_stat: Invalid filepath %s", filepath);
 		return -ENOENT;
 	}
 
@@ -801,14 +808,16 @@ long SysYield(RegisterContext* r){
  * 
  */
 long SysReadDirNext(RegisterContext* r){
+	process_t* process = Scheduler::GetCurrentProcess();
+
 	unsigned int fd = SC_ARG0(r);
 	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
 		return -EBADF;
-	} 
+	}
 	
 	fs_dirent_t* direntPointer = (fs_dirent_t*)SC_ARG1(r);
-	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[fd];
 
+	fs_fd_t* handle = process->fileDescriptors[fd];
 	if(!handle){
 		return -EBADF;
 	}
@@ -817,7 +826,7 @@ long SysReadDirNext(RegisterContext* r){
 		return -EFAULT;
 	}
 
-	if((Scheduler::GetCurrentProcess()->fileDescriptors[fd]->node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+	if((handle->node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
 		return -ENOTDIR;
 	}
 
@@ -980,9 +989,14 @@ long SysGetCWD(RegisterContext* r){
 
 long SysWaitPID(RegisterContext* r){
 	int64_t pid = SC_ARG0(r);
+	int64_t flags = SC_ARG2(r);
 
 	process_t* proc = nullptr;
 	if((proc = Scheduler::FindProcessByPID(pid))){
+		if(flags & WNOHANG){
+			return 0;
+		}
+
 		int pid = 0;
 		Scheduler::ProcessStateThreadBlocker bl = Scheduler::ProcessStateThreadBlocker(pid);
 
@@ -1114,12 +1128,13 @@ long SysMunmap(RegisterContext* r){
 				return -EINVAL;
 			} else if((shRegion.base >= address && shRegion.base <= endAddress) || (shRegion.base + shRegion.pageCount * PAGE_SIZE_4K >= address && shRegion.base + shRegion.pageCount * PAGE_SIZE_4K <= endAddress)){
 				return -EINVAL; // Check for overlap with shared memory
-			} // TODO: Unmap around shared memory, maybe keep tack fo all memory regions, not just shared
+			} // TODO: Unmap around shared memory, maybe keep track of all memory regions, not just shared
 		}
 
 		for(unsigned i = 0; i < count; i++){
 			if(uintptr_t mem = Memory::VirtualToPhysicalAddress(address + i * PAGE_SIZE_4K, process->addressSpace); mem){
 				Memory::FreePhysicalMemoryBlock(mem);
+				Log::Info("freeing mem %d", mem);
 			}
 		}
 
@@ -3111,7 +3126,10 @@ void SyscallHandler(RegisterContext* regs) {
 	}
 	#endif
 
-	acquireLock(&thread->lock);
+	if(acquireTestLock(&thread->lock)){
+		for(;;);
+	}
+	
 	regs->rax = syscalls[regs->rax](regs); // Call syscall
 	releaseLock(&thread->lock);
 }

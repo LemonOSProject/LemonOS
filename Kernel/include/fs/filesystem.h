@@ -247,21 +247,26 @@ public:
 // A thread can wait on it like any semaphore,
 // and when a file is ready it will signal and waiting thread(s) will get woken
 class FilesystemWatcher : public Semaphore{
-    List<FsNode*> watching;
+    List<fs_fd_t*> watching;
 public:
     FilesystemWatcher() : Semaphore(0){
 
     }
 
     inline void WatchNode(FsNode* node, int events){
-        node->Watch(*this, events);
+        fs_fd_t* desc = node->Open(0);
+        assert(desc);
 
-        watching.add_back(node);
+        desc->node->Watch(*this, events);
+
+        watching.add_back(desc);
     }
 
     ~FilesystemWatcher(){
-        for(auto& node : watching){
-            node->Unwatch(*this);
+        for(auto& fd : watching){
+            fd->node->Unwatch(*this);
+
+            fd->node->Close();
         }
     }
 };

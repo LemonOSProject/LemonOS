@@ -27,6 +27,7 @@ namespace fs::Temp{
                 node->buffer = nullptr;
             }
 
+            memoryUsage -= node->bufferSize;
             node->bufferSize = 0;
         } else if(newBufferSize > node->bufferSize){
             if(!node->buffer){
@@ -88,7 +89,11 @@ namespace fs::Temp{
     }
 
     TempNode::~TempNode(){
-        if(buffer){
+        if(IsDirectory()){ // Check if we are a directory
+            for(auto& ent : children){
+                Unlink(&ent, true); // Unlink all files
+            }
+        } else if(buffer){
             delete buffer;
         }
     }
@@ -141,6 +146,8 @@ namespace fs::Temp{
             vol->ReallocateNode(this);
         }
 
+        Log::Debug(debugLevelTmpFS, DebugLevelVerbose, "Writing (offset: %u, size: %u, nsize: %u, bsize: %u)", off, writeSize, size, bufferSize);
+
         memcpy(buffer + off, writeBuffer, writeSize);
         bufferLock.ReleaseWrite();
 
@@ -184,6 +191,7 @@ namespace fs::Temp{
         } else {
             *dirent = children[index - 2];
             dirent->flags = dirent->node->flags;
+            dirent->node = nullptr; // Do not expose node
 
             return 1;
         }
@@ -231,12 +239,13 @@ namespace fs::Temp{
         }
 
         TempNode* newNode = new TempNode(vol, FS_NODE_FILE);
+        newNode->parent = this;
         
         *ent = DirectoryEntry(newNode, ent->name);
         DirectoryEntry dirent = *ent;
 
-        IF_DEBUG(debugLevelTmpFS, {
-            Log::Info("[tmp] created %s (addr: %x, nlink: %d)!", dirent.name, newNode, newNode->nlink);
+        IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
+            Log::Info("[tmpfs] created %s (addr: %x, nlink: %d)!", dirent.name, newNode, newNode->nlink);
         });
 
         children.add_back(dirent);
@@ -277,8 +286,14 @@ namespace fs::Temp{
             return -EXDEV; // Different filesystem
         }
 
-        DirectoryEntry dirent = *ent;
-        ent->node = file;
+        if(file->IsDirectory()){
+            IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
+                Log::Warning("[tmpfs] Link: File to hard link is a directory!");
+            });
+            return -EPERM; // Don't hard link directories
+        }
+
+        DirectoryEntry dirent(file, ent->name);
 
         file->nlink++;
 
@@ -289,20 +304,38 @@ namespace fs::Temp{
 
     int TempNode::Unlink(DirectoryEntry* ent, bool unlinkDirectories){
         if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+            IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
+                Log::Warning("[tmpfs] Unlink: Node not a directory!");
+            });
             return -ENOTDIR;
         }
 
         TempNode* node = Find(ent->name);
         if(!node){
+            IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
+                Log::Warning("[tmpfs] Unlink: '%s' does not exist!", ent->name);
+            });
             return -ENOENT; // Could not find entry with the name in ent
         }
 
         if(!unlinkDirectories && node->IsDirectory()){
+            IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
+                Log::Warning("[tmpfs] Unlink: Entry is a directory!");
+            });
             return -EISDIR; // Don't unlink directories unless explicitly told to do so
         }
 
         node->nlink--;
-        if(node->handleCount <= 0){ // Check if there are any open handles to the node
+
+        for(auto it = children.begin(); it != children.end(); it++){
+            if(it->node == node){
+                children.remove(it);
+                break;
+            }
+        }
+
+        if(node->nlink <= 0 && node->handleCount <= 0){ // Check if there are any open handles to the node
+            Log::Debug(debugLevelTmpFS, DebugLevelVerbose, "[tmpfs] Deleting node (%s)!", ent->name);
             delete node;
         }
 
@@ -325,9 +358,7 @@ namespace fs::Temp{
         handleCount--;
 
         if(handleCount <= 0 && nlink <= 0){ // No hard links or open handles to node
-            IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
-                Log::Warning("[tmpfs] Deleting node!");
-            });
+            Log::Debug(debugLevelTmpFS, DebugLevelNormal, "[tmpfs] Deleting node!");
             delete this;
         }
     }

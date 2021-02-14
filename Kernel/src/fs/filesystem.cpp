@@ -123,7 +123,9 @@ namespace fs{
 		while(file != NULL){ // Iterate through the directories to find the file
 			FsNode* node = fs::FindDir(currentNode,file);
 			if(!node) {
-				Log::Warning("%s not found!", file);
+				IF_DEBUG(debugLevelFilesystem >= DebugLevelNormal, {
+					Log::Warning("%s not found!", file);
+				});
 				kfree(tempPath);
 				return nullptr;
 			}
@@ -195,7 +197,7 @@ namespace fs{
 		while(file != NULL){ // Iterate through the directories to find the file
 			FsNode* node = fs::FindDir(currentNode,file);
 			if(!node) {
-				IF_DEBUG((debugLevelFilesystem >= DebugLevelVerbose), {
+				IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal), {
 					Log::Warning("%s not found!", path);
 				});
 

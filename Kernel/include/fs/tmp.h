@@ -6,7 +6,7 @@
 #include <hash.h>
 #include <spin.h>
 
-#define TEMP_BUFFER_CHUNK_SIZE 256UL // Must be power of two
+#define TEMP_BUFFER_CHUNK_SIZE 1024UL // Must be power of two
 static_assert((TEMP_BUFFER_CHUNK_SIZE & (TEMP_BUFFER_CHUNK_SIZE - 1)) == 0);
 
 namespace fs::Temp{
@@ -16,11 +16,11 @@ namespace fs::Temp{
         friend class TempVolume;
     protected:
         TempVolume* vol;
+        TempNode* parent;
 
         union {
             struct{
                 List<DirectoryEntry> children;
-                TempNode* parent;
             };
             struct {
                 ReadWriteLock bufferLock;
