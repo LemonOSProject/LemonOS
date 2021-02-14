@@ -46,16 +46,14 @@ public:
             return std::string(process.info.name);
         case 1:
             return process.info.pid;
-        case 2:
-            char usage[6];
+        case 2: {
+            short usage = 0;
             if(process.activeTimeDiff && activeTimeSum){
-                snprintf(usage, 5, "%lu%%", (process.activeTimeDiff * 100) / activeTimeSum); // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
-            } else {
-                strcpy(usage, "0%");
+                usage = (process.activeTimeDiff * 100) / activeTimeSum; // Multiply by 100 to get a percentage between 0 and 100 as opposed to 0 to 1
             }
 
-            return std::string(usage);
-        case 3: {
+            return usage;
+        } case 3: {
             char usedMem[40];
             snprintf(usedMem, 39, "%lu KB", process.info.usedMem);
 
@@ -123,26 +121,33 @@ int main(int argc, char** argv){
     ProcessModel model;
     listView->SetModel(&model);
 
+    timespec lastTime;
+    clock_gettime(CLOCK_BOOTTIME, &lastTime);
     while(!window->closed){
-        model.Refresh();
+        timespec cTime;
+        clock_gettime(CLOCK_BOOTTIME, &cTime);
 
-        window->Paint();
+        bool paint = false;
+        if((cTime.tv_sec * 1000 + cTime.tv_nsec / 1000000) - (lastTime.tv_sec * 1000 + lastTime.tv_nsec / 1000000) >= 800){
+            model.Refresh();
 
-        for(unsigned i = 0; i < 10 && !window->closed; i++){ // Update the task list every 500ms, poll for events every 50ms, paint every 500ms or when an event is recieved
-            Lemon::LemonEvent ev;
-
-            bool paint = false;
-            while(window->PollEvent(ev)){
-                window->GUIHandleEvent(ev);
-                paint = true;
-            }
-
-            if(paint){
-                window->Paint();
-            }
-
-            usleep(100000); // 100ms
+            lastTime = cTime;
+            paint = true; // Refresh processes every 800ms
         }
+
+        Lemon::LemonEvent ev;
+
+        while(window->PollEvent(ev)){
+            window->GUIHandleEvent(ev);
+            
+            paint = true;
+        }
+
+        if(paint){
+            window->Paint();
+        }
+
+        window->WaitEvent(800000); // Wait up to 800ms
     }
     
     return 0;

@@ -172,8 +172,8 @@ namespace Lemon::GUI{
         return false;
     }
     
-    void Window::WaitEvent(){
-        Wait();
+    void Window::WaitEvent(long tm){
+        Wait(tm);
     }
 
     void Window::GUIHandleEvent(LemonEvent& ev){

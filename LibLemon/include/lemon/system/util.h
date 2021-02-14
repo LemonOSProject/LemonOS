@@ -36,6 +36,11 @@ namespace Lemon{
     void Yield();
 
     /////////////////////////////
+    /// \brief Interrupts blocking thread
+    /////////////////////////////
+    long InterruptThread(pid_t tid);
+
+    /////////////////////////////
     /// \brief Get information about process
     ///
     /// Fill a lemon_process_info struct with information about the process specified.

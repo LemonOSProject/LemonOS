@@ -163,9 +163,11 @@ namespace Lemon::GUI {
         /////////////////////////////
         /// \brief Wait for an event
         ///
+        /// \param timeout Timeout in microseconds
+        ///
         /// Blocks the thread until an event has been recieved
         /////////////////////////////
-        void WaitEvent();
+        void WaitEvent(long timeout = -1);
         
         /////////////////////////////
         /// \brief Send event
