@@ -120,8 +120,9 @@
 #define SYS_SET_SOCKET_OPTIONS 87
 #define SYS_GET_SOCKET_OPTIONS 88
 #define SYS_DEVICE_MANAGEMENT 89
+#define SYS_INTERRUPT_THREAD 90
 
-#define NUM_SYSCALLS 90
+#define NUM_SYSCALLS 91
 
 #define EXEC_CHILD 1
 
@@ -2738,6 +2739,7 @@ long SysEndpointInfo(RegisterContext* r){
 /// Wait on one KernelObject
 ///
 /// \param object (handle_t) Object to wait on
+/// \param timeout (long) Timeout in microseconds
 ///
 /// \return negative error code on failure
 /////////////////////////////
@@ -2750,11 +2752,20 @@ long SysKernelObjectWaitOne(RegisterContext* r){
 		return -EINVAL;
 	}
 
+	long timeout = SC_ARG1(r);
+
 	KernelObjectWatcher watcher;
 
 	watcher.WatchObject(handle->ko, 0);
-	if(watcher.Wait()){
-		return -EINTR;
+	
+	if(timeout > 0){
+		if(watcher.WaitTimeout(timeout)){
+			return -EINTR;
+		}
+	} else {
+		if(watcher.Wait()){
+			return -EINTR;
+		}
 	}
 
 	return 0;
@@ -2767,12 +2778,14 @@ long SysKernelObjectWaitOne(RegisterContext* r){
 ///
 /// \param objects (handle_t*) Pointer to array of handles to wait on
 /// \param count (size_t) Amount of objects to wait on
+/// \param timeout (long) Timeout in microseconds
 ///
 /// \return negative error code on failure
 /////////////////////////////
 long SysKernelObjectWait(RegisterContext* r){
 	process_t* currentProcess = Scheduler::GetCurrentProcess();
 	unsigned count = SC_ARG1(r);
+	long timeout = SC_ARG2(r);
 
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), count * sizeof(handle_id_t), currentProcess->addressSpace)){
 		return -EFAULT;
@@ -2792,8 +2805,14 @@ long SysKernelObjectWait(RegisterContext* r){
 		watcher.WatchObject(handles[i]->ko, 0);
 	}
 
-	if(watcher.Wait()){
-		return -EINTR;
+	if(timeout > 0){
+		if(watcher.WaitTimeout(timeout)){
+			return -EINTR;
+		}
+	} else {
+		if(watcher.Wait()){
+			return -EINTR;
+		}
 	}
 
 	return 0;
@@ -2997,6 +3016,28 @@ long SysDeviceManagement(RegisterContext* r){
 	}
 }
 
+long SysInterruptThread(RegisterContext* r){
+	process_t* process = Scheduler::GetCurrentProcess();
+
+	long tid = SC_ARG0(r);
+
+	if(tid < 0 || tid > process->threads.get_length()){
+		return -EINVAL; // Thread does not exist
+	}
+
+	Thread* th = process->threads.get_at(tid);
+	if(!th){
+		return -ESRCH; // Thread has already been killed
+	}
+	
+	if(th->blocker){
+		th->blocker->Interrupt(); // Stop the thread from blocking
+		th->Unblock();
+	}
+
+	return 0;
+}
+
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -3088,6 +3129,7 @@ syscall_t syscalls[]{
 	SysSetSocketOptions,
 	SysGetSocketOptions,
 	SysDeviceManagement,
+	SysInterruptThread,
 };
 
 RegisterContext lastSyscall;

@@ -57,12 +57,18 @@ void LShBuiltin_Export(int argc, char** argv){
 
 void LShBuiltin_Clear(int argc, char** argv){
 	printf("\033c");
+	fflush(stdout);
+}
+
+void LShBuiltin_Exit(int argc, char** argv){
+	exit(0);
 }
 
 builtin_t builtinCd = {.name = "cd", .func = LShBuiltin_Cd};
 builtin_t builtinPwd = {.name = "pwd", .func = LShBuiltin_Pwd};
 builtin_t builtinExport = {.name = "export", .func = LShBuiltin_Export};
 builtin_t builtinClear = {.name = "clear", .func = LShBuiltin_Clear};
+builtin_t builtinExit = {.name = "exit", .func = LShBuiltin_Exit};
 
 void ReadLine(){
 	tcsetattr(STDOUT_FILENO, TCSANOW, &readAttributes);
@@ -204,6 +210,10 @@ void ParseLine(){
 		if(pid > 0){
 			int status = 0;
 			waitpid(pid, &status, 0);
+		} else if(errno == ENOENT) {
+			printf("\nNo such file or directory: %s\n", argv[0]);
+		} else {
+			perror("Error spawning process");
 		}
 
 		close(fd);
@@ -226,9 +236,11 @@ void ParseLine(){
 					
 					pid_t pid = lemon_spawn(path.c_str(), argc, argv.data(), 1);
 
-					if(pid){
+					if(pid > 0){
 						int status = 0;
 						waitpid(pid, &status, 0);
+					} else if(errno == ENOENT) {
+						printf("\nUnknown Command: %s\n", argv[0]);
 					} else {
 						printf("Error executing %s\n", dirent.name);
 					}
@@ -263,6 +275,7 @@ int main(){
 	builtins.push_back(builtinCd);
 	builtins.push_back(builtinExport);
 	builtins.push_back(builtinClear);
+	builtins.push_back(builtinExit);
 
 	std::string pathEnv = getenv("PATH");
 	std::string temp;

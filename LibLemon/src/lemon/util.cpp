@@ -8,7 +8,13 @@
 extern char** environ;
 
 pid_t lemon_spawn(const char* path, int argc, char* const argv[], int flags){
-	return syscall(SYS_EXEC, (uintptr_t)path, argc, (uintptr_t)argv, flags, environ);
+	pid_t ret = syscall(SYS_EXEC, (uintptr_t)path, argc, (uintptr_t)argv, flags, environ);
+    if(ret < 0){
+        errno = -ret;
+        return -1;
+    }
+
+    return ret;
 } 
 
 pid_t lemon_spawn(const char* path, int argc, char* const argv[], int flags, char** envp){
@@ -18,6 +24,15 @@ pid_t lemon_spawn(const char* path, int argc, char* const argv[], int flags, cha
 namespace Lemon{
     void Yield(){
         syscall(SYS_YIELD);
+    }
+
+    long InterruptThread(pid_t tid){
+        if(long e = syscall(SYS_INTERRUPT_THREAD, tid); e < 0){
+            errno = e;
+            return -1;
+        }
+
+        return 0;
     }
 
     int GetProcessInfo(pid_t pid, lemon_process_info_t& pInfo){
