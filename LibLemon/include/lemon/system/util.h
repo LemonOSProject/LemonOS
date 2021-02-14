@@ -4,30 +4,14 @@
     #error "Lemon OS Only"
 #endif
 
+#include <lemon/system/info.h>
+#include <lemon/system/abi/process.h>
+
+#include <sys/types.h>
 #include <stdint.h>
 #include <limits.h>
+
 #include <vector>
-
-#include <lemon/system/info.h>
-#include <sys/types.h>
-
-typedef struct {
-	pid_t pid; // Process ID
-
-	uint32_t threadCount; // Process Thread Count
-
-	int32_t uid; // User ID
-	int32_t gid; // Group ID
-
-	uint8_t state; // Process State
-
-	char name[NAME_MAX]; // Process Name
-
-	uint64_t runningTime; // Amount of time in seconds that the process has been running
-	uint64_t activeUs;
-
-	uint64_t usedMem; // Used memory in KB
-} lemon_process_info_t;
 
 namespace Lemon{
     /////////////////////////////
