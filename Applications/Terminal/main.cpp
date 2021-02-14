@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <sys/wait.h>
 
 #include <vector>
 
@@ -87,7 +88,10 @@ const int escBufMax = 256;
 
 char escBuf[escBufMax];
 
-char charactersPerLine;
+char charactersPerLine; // Characters displayed per line
+
+int masterPTYFd; // PTY file desc
+pid_t lsh; // LSh Process PID
 
 void Scroll(){
 	if(curPos.y >= rowCount){
@@ -500,7 +504,31 @@ void PrintChar(char ch){
 	}
 }
 
-extern "C"
+[[noreturn]] void* PTYThread(void*){
+	std::vector<pollfd> fds;
+	fds.push_back({.fd = masterPTYFd, .events = POLLIN, .revents = 0});
+
+	char buf[512];
+
+	while(waitpid(lsh, nullptr, WNOHANG) <= 0){
+		poll(fds.data(), fds.size(), 500000); // Wake up every 500ms to check if LSh has exited
+
+		while(int len = read(masterPTYFd, buf, 512)){
+			for(int i = 0; i < len; i++){
+				PrintChar(buf[i]);
+			}
+
+			paint = true;
+		}
+
+		if(paint){
+			Lemon::InterruptThread(0);
+		}
+	}
+
+	exit(0); // LSh must have exited
+}
+
 int main(int argc, char** argv){
 	terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
 	if(!terminalFont){
@@ -518,18 +546,18 @@ int main(int argc, char** argv){
 		buffer.push_back(std::vector<TerminalChar>());
 	}
 
-
-	int masterPTYFd;
 	syscall(SYS_GRANT_PTY, (uintptr_t)&masterPTYFd, 0, 0, 0, 0);
-
 	setenv("TERM", "xterm-256color", 1); // the Lemon OS terminal is (fairly) xterm compatible (256 colour, etc.)
 
 	char* const _argv[] = {const_cast<char*>("/system/bin/lsh.lef")};
-	lemon_spawn(_argv[0], 1, _argv, 1);
+	lsh = lemon_spawn(_argv[0], 1, _argv, 1);
+
+	if(lsh < 0){
+		perror("Error running lsh");
+		return 1;
+	}
 	
 	window->OnPaint = OnPaint;
-
-	char* _buf = (char*)malloc(512);
 
 	winsize wSz = {
 		.ws_row = static_cast<unsigned short>(rowCount),
@@ -540,11 +568,12 @@ int main(int argc, char** argv){
 
 	ioctl(masterPTYFd, TIOCSWINSZ, &wSz);
 
-	std::vector<pollfd> fds;
-	fds.push_back({.fd = masterPTYFd, .events = POLLIN, .revents = 0});
+	pthread_t ptyThread;
+	if(pthread_create(&ptyThread, nullptr, PTYThread, nullptr)){
+		perror("Error creating PTY thread");
+		return 2;
+	}
 
-	//auto& wMHandler = window->GetHandler();
-	//fds.insert(fds.begin(), wMHandler.GetFileDescriptors().begin(), wMHandler.GetFileDescriptors().end());
 	for(;;){
 		Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){
@@ -594,22 +623,15 @@ int main(int argc, char** argv){
 			}
 		}
 
-		while(int len = read(masterPTYFd, _buf, 512)){
-			for(int i = 0; i < len; i++){
-				PrintChar(_buf[i]);
-			}
-
-			paint = true;
-		}
-
-		if(paint){
+		if(paint || paintAll){
 			window->Paint();
 
 			paint = false;
 			paintAll = false;
 		}
 
-		poll(fds.data(), fds.size(), 20000);
+		window->WaitEvent();
 	}
+
 	return 0;
 }
