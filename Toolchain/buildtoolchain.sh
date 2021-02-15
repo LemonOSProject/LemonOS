@@ -52,7 +52,7 @@ _prepare(){
 	mkdir -p $LEMON_SYSROOT/system/lib
 	mkdir -p $LEMON_SYSROOT/system/bin
 	
-	curl https://lemonos.org/sysroot.tar.gz | tar -zxf - sysroot/system -C $LEMON_SYSROOT/..
+	curl https://api.lemonos.org/sysroot.tar.gz | tar -zxf - sysroot/system -C $LEMON_SYSROOT/..
 }
 
 _llvm(){

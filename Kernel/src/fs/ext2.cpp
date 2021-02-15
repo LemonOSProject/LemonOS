@@ -143,7 +143,7 @@ namespace fs::Ext2{
 
         memcpy(buffer + ((index * sizeof(ext2_blockgrp_desc_t)) % blocksize), &blockGroups[index], sizeof(ext2_blockgrp_desc_t));
         
-        if(WriteBlock(block, buffer)){
+        if(WriteBlockCached(block, buffer)){
             Log::Info("[Ext2] WriteBlock: Error writing block %d", block);
             return;
         }
@@ -476,7 +476,7 @@ namespace fs::Ext2{
                 memcpy(cachedBitmap, bitmap, blocksize);
             }
 
-            if(int e = WriteBlock(group.blockBitmap, bitmap)){
+            if(int e = WriteBlockCached(group.blockBitmap, bitmap)){
                 Log::Error("[Ext2] Disk error (%d) write block bitmap (group %d)", e, i);
                 error = DiskWriteError;
                 return 0;
@@ -586,7 +586,7 @@ namespace fs::Ext2{
 
             ino.blocks[0] = AllocateBlock(); // Give it one block
             ino.uid = 0;
-            ino.mode = 0;
+            ino.mode = 0644;
             ino.accessTime = ino.createTime = ino.deleteTime = ino.modTime = 0;
             ino.gid = 0;
             ino.blockCount = blocksize / 512;
@@ -598,9 +598,11 @@ namespace fs::Ext2{
             super.freeInodeCount--;
             blockGroups[i].freeInodeCount--;
 
-            Ext2Node* node = new Ext2Node(this, ino, inode);
             WriteSuperblock();
             WriteBlockGroupDescriptor(i);
+            SyncInode(ino, inode);
+            
+            Ext2Node* node = new Ext2Node(this, ino, inode);
 
             if(debugLevelExt2 >= DebugLevelVerbose){
                 Log::Info("[Ext2] Created inode %d", node->inode);
@@ -681,7 +683,7 @@ namespace fs::Ext2{
             memcpy(cachedBitmap, bitmap, blocksize);
         }
 
-        if(int e = WriteBlock(group.blockBitmap, bitmap)){
+        if(int e = WriteBlockCached(group.blockBitmap, bitmap)){
             Log::Error("[Ext2] Disk error (%d) write block bitmap (group %d)", e, inode / super.inodesPerGroup);
             error = DiskWriteError;
             return -1;
@@ -1072,9 +1074,9 @@ namespace fs::Ext2{
         uint32_t blockLimit = LocationToBlock(offset + size);
         uint8_t blockBuffer[blocksize];
 
-        if(debugLevelExt2 >= DebugLevelVerbose){
+        /*if(debugLevelExt2 >= DebugLevelVerbose){
             Log::Info("[Ext2] Reading: Block index: %d, Block limit: %d, Offset: %d, Size: %d, Node size: %d", blockIndex, blockLimit, offset, size, node->size);
-        }
+        }*/
 
         #ifdef EXT2_ENABLE_TIMER
         timeval_t blktv1 = Timer::GetSystemUptimeStruct();
@@ -1201,10 +1203,11 @@ namespace fs::Ext2{
             Log::Info("[Ext2] Writing: Block index: %d, Blockcount: %d, Offset: %d, Size: %d", blockIndex, blockLimit - blockIndex + 1, offset, size);
         }
 
-        size_t ret = size;
+        ssize_t ret = size;
+        Vector<uint32_t> blocks = GetInodeBlocks(blockIndex, blockLimit - blockIndex + 1, node->e2inode);
 
-        for(; blockIndex <= blockLimit && size > 0; blockIndex++){
-            uint32_t block = GetInodeBlock(blockIndex, node->e2inode);
+        for(uint32_t block : blocks){
+            if(size <= 0) break;
             
             if(offset % blocksize){
                 ReadBlockCached(block, blockBuffer);
@@ -1215,22 +1218,48 @@ namespace fs::Ext2{
                 if(writeSize > size) writeSize = size;
 
                 memcpy(blockBuffer + writeOffset, buffer, writeSize);
-                WriteBlockCached(block, blockBuffer);
+                if(int e = WriteBlockCached(block, blockBuffer); e){
+                    if(int e = WriteBlockCached(block, blockBuffer); e){ // Try again
+                        Log::Warning("[Ext2] Error %i writing block %u", e, block);
+                        error = DiskReadError;
+                        break;
+                    }
+                }
 
                 size -= writeSize;
                 buffer += writeSize;
                 offset += writeSize;
             } else if(size >= blocksize){
                 memcpy(blockBuffer, buffer, blocksize);
-                WriteBlockCached(block, blockBuffer);
+                if(int e = WriteBlockCached(block, blockBuffer); e){
+                    if(int e = WriteBlockCached(block, blockBuffer); e){ // Try again
+                        Log::Warning("[Ext2] Error %i writing block %u", e, block);
+                        error = DiskReadError;
+                        break;
+                    }
+                }
 
                 size -= blocksize;
                 buffer += blocksize;
                 offset += blocksize;
             } else {
-                ReadBlockCached(block, blockBuffer);
+                if(int e = ReadBlockCached(block, blockBuffer); e){
+                    if(int e = ReadBlockCached(block, blockBuffer); e){ // Try again
+                        Log::Info("[Ext2] Error %i reading block %u", e, block);
+                        error = DiskReadError;
+                        break;
+                    }
+                }
+
                 memcpy(blockBuffer, buffer, size);
-                WriteBlockCached(block, blockBuffer);
+
+                if(int e = WriteBlockCached(block, blockBuffer); e){
+                    if(int e = WriteBlockCached(block, blockBuffer); e){ // Try again
+                        Log::Warning("[Ext2] Error %i writing block %u", e, block);
+                        error = DiskReadError;
+                        break;
+                    }
+                }
 
                 buffer += size;
                 offset += size;
@@ -1240,6 +1269,9 @@ namespace fs::Ext2{
         }
 
         if(size > 0){
+            if(debugLevelExt2 >= DebugLevelVerbose){
+                Log::Info("[Ext2] Tried to write %d bytes, wrote %d bytes (offset: %d)", ret, ret - size, offset);
+            }
             ret -= size;
         }
 
