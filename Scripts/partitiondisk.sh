@@ -1,4 +1,7 @@
 modprobe nbd
+
+set -e 1
+
 qemu-nbd -c /dev/nbd0 Disks/Lemon.vhd
 
 sfdisk /dev/nbd0 < Scripts/partitions.sfdisk
@@ -28,6 +31,8 @@ grub-install --target=i386-pc --boot-directory=/mnt/Lemon/lemon/boot /dev/nbd0
 
 umount /mnt/Lemon
 umount /mnt/LemonEFI
+
+qemu-nbd -d /dev/nbd0 
+
 rmdir /mnt/Lemon
 rmdir /mnt/LemonEFI
-qemu-nbd -d /dev/nbd0 

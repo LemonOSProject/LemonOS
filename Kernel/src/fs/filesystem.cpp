@@ -3,8 +3,49 @@
 #include <fs/fsvolume.h>
 #include <logging.h>
 #include <errno.h>
+#include <scheduler.h>
 
 #include <debug.h>
+
+void FilesystemBlocker::Interrupt() {
+	shouldBlock = false;
+	interrupted = true;
+
+retry:
+	acquireLock(&lock);
+	if(node && !removed){
+		if(acquireTestLock(&node->blockedLock)){
+			releaseLock(&lock);
+
+			Scheduler::Yield();
+			goto retry;
+		}
+
+		node->blocked.remove(this);
+		removed = true;
+
+		releaseLock(&node->blockedLock);
+	}
+	releaseLock(&lock);
+}
+
+FilesystemBlocker::~FilesystemBlocker() {
+retry:
+	acquireLock(&lock);
+
+	if(node && !removed){
+		if(acquireTestLock(&node->blockedLock)){
+			releaseLock(&lock);
+
+			
+			goto retry;
+		}
+
+		node->blocked.remove(this);
+		releaseLock(&node->blockedLock);
+	}
+	releaseLock(&lock);
+}
 
 DirectoryEntry::DirectoryEntry(FsNode* node, const char* name) { 
 	this->node = node;

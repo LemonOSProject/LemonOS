@@ -87,7 +87,9 @@ void FsNode::Sync(){
 }
 
 void FsNode::UnblockAll(){
+    acquireLock(&blockedLock);
     while(blocked.get_length()){
         blocked.get_front()->Unblock();
     }
+    releaseLock(&blockedLock);
 }

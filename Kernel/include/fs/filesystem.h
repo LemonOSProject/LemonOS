@@ -290,28 +290,22 @@ protected:
     size_t requestedLength = 1; // How much data was requested?
 public:
 	FilesystemBlocker(FsNode* _node) : node(_node) {
+        lock = 0;
+
         acquireLock(&node->blockedLock);
         node->blocked.add_back(this);
         releaseLock(&node->blockedLock);
     }
 
 	FilesystemBlocker(FsNode* _node, size_t len) : node(_node), requestedLength(len) {
+        lock = 0;
+
         acquireLock(&node->blockedLock);
         node->blocked.add_back(this);
         releaseLock(&node->blockedLock);
     }
     
-    inline void Interrupt() {
-        shouldBlock = false;
-        interrupted = true;
-
-        acquireLock(&node->blockedLock);
-        acquireLock(&lock);
-        node->blocked.remove(this);
-        removed = true;
-        releaseLock(&lock);
-        releaseLock(&node->blockedLock);
-    }
+    void Interrupt();
 
     inline void Unblock(){
         shouldBlock = false;
@@ -331,13 +325,7 @@ public:
 
     inline size_t RequestedLength() { return requestedLength; }
 
-    inline ~FilesystemBlocker(){
-        if(node && !removed){
-            acquireLock(&node->blockedLock);
-            node->blocked.remove(this);
-            releaseLock(&node->blockedLock);
-        }
-    }
+    ~FilesystemBlocker();
 };
 
 typedef struct fs_dirent {
