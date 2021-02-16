@@ -334,11 +334,19 @@ void DoAnsiCSI(char ch){
 				curPos.y = 0;
 				curPos.x = 0;
 
-				buffer.erase(buffer.begin() + bufferOffset);
+				bufferOffset = 0;
+				buffer.clear();
 				paintAll = true;
 				break;
 			case 1: // Clear from cursor to beginning of line
-				buffer[bufferOffset + curPos.y].erase(buffer[bufferOffset + curPos.y].begin(), buffer[bufferOffset + curPos.y].begin() + curPos.x);
+				if(bufferOffset + curPos.y < static_cast<int>(buffer.size())){
+					if(curPos.x < static_cast<int>(buffer[bufferOffset + curPos.y].size())){
+						buffer[bufferOffset + curPos.y].erase(buffer[bufferOffset + curPos.y].begin(), buffer[bufferOffset + curPos.y].begin() + curPos.x);
+					} else {
+						buffer[bufferOffset + curPos.y].clear();
+					}
+					curPos.x = 0;
+				}
 				break;
 			case 0: // Clear from cursor to end of line
 			default:
@@ -472,6 +480,8 @@ void PrintChar(char ch){
 				curPos.x = buffer[bufferOffset + curPos.y].size();
 
 				paintAll = true;
+			} else {
+				break;
 			}
 			
 			buffer[bufferOffset + curPos.y].erase(buffer[bufferOffset + curPos.y].begin() + curPos.x);
