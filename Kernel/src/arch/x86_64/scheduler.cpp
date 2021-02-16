@@ -350,11 +350,10 @@ namespace Scheduler{
         for(unsigned i = 0; i < process->threads.get_length(); i++){
             Thread* thread = process->threads[i];
             if(thread != cpu->currentThread && thread){
-                thread->state = ThreadStateZombie;
-                if(thread->blocker){
+                if(thread->blocker && thread->state == ThreadStateBlocked){
                     thread->blocker->Interrupt(); // Stop the thread from blocking
-                    thread->blocker = nullptr;
                 }
+                thread->state = ThreadStateZombie;
 
                 if(acquireTestLock(&thread->lock)){
                     runningThreads.add_back(thread); // Thread lock could not be acquired
@@ -365,6 +364,7 @@ namespace Scheduler{
             }
         }
 
+        asm("sti");
         while(runningThreads.get_length()){
             auto it = runningThreads.begin();
             while(it != runningThreads.end()){

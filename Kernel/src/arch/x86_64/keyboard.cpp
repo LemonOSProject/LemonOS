@@ -50,11 +50,13 @@ namespace Keyboard{
 
             if(!size) return 0;
 
-            for(unsigned short i = 0; i < size; i++){
-                ReadKey(buffer++); // Insert key and increment
+            unsigned short i = 0; 
+            for(; i < size; i++){
+                if(!ReadKey(buffer++)) // Insert key and increment
+                    break;
             }
 
-            return size;
+            return i;
 		}
 	};
 

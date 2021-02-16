@@ -60,7 +60,7 @@ namespace fs::Temp{
         TempNode* tempMountPoint;
         unsigned memoryUsage = 0;
 
-        void ReallocateNode(TempNode* node);
+        void ReallocateNode(TempNode* node, size_t old);
     public:
 
         TempVolume(const char* name);

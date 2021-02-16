@@ -16,6 +16,7 @@ void ThreadBlocker::Interrupt(){
 	if(thread){
 		thread->Unblock();
 	}
+	releaseLock(&lock);
 }
 
 void ThreadBlocker::Unblock() {
