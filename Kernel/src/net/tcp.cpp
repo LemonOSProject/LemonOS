@@ -187,12 +187,12 @@ namespace Network {
 
             TCPSocket* sock = FindSocket(TCPConnectionIdentifier(ipHeader.destIP, ipHeader.sourceIP, tcpHeader->destPort, tcpHeader->srcPort));
             if(!sock){
-                Log::Info("no such sock!");
+                Log::Info("no such sock! (Source: %hd.%hd.%hd.%hd:%hu)", ipHeader.sourceIP.data[0], ipHeader.sourceIP.data[1], ipHeader.sourceIP.data[2], ipHeader.sourceIP.data[3], tcpHeader->srcPort);
                 return; // Port not bound to socket
             }
 
             if(sock->state == TCPSocket::TCPStateUnknown){
-                return; // Has not attempted to open connection and is not a listen socket
+                return; // Has not attempted to open connecction and is not a listen socket
             }
 
             sock->OnReceive(ipHeader.sourceIP, ipHeader.destIP, reinterpret_cast<uint8_t*>(data), length);
@@ -224,6 +224,8 @@ namespace Network {
 
             if(tcpHeader->rst){
                 state = TCPStateUnknown; // Abort connection
+
+                UnblockAll();
             } else if(state == TCPStateSyn){
                 bool ack = tcpHeader->ack;
                 bool syn = tcpHeader->syn;
@@ -237,7 +239,7 @@ namespace Network {
                 }
 
                 if(ack && syn){ // It is important that we recieve a SYN and ACK
-                    Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] (State: SYN-SENT) Recieved SYN-ACK from %d.%d.%d.%d:%d", source.data[0], source.data[1], source.data[2], source.data[3], (uint16_t)tcpHeader->srcPort);
+                    Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] (State: SYN-SENT) Recieved SYN-ACK (Sequence number: %u) from %d.%d.%d.%d:%d", tcpHeader->sequence, source.data[0], source.data[1], source.data[2], source.data[3], (uint16_t)tcpHeader->srcPort);
 
                     remoteSequenceNumber = tcpHeader->sequence;
                     lastAcknowledged = tcpHeader->acknowledgementNumber;
@@ -322,19 +324,22 @@ namespace Network {
                     }
                     releaseLock(&blockedLock);
 
-                    remoteSequenceNumber += dataLength;
+                    remoteSequenceNumber = tcpHeader->sequence + dataLength;
 
                     Acknowledge(remoteSequenceNumber);
                 }
 
                 if(psh){
                     Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] PSH!");
+
                     UnblockAll();
                 }
 
                 if(fin){
                     Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] (State: ESTABLISHED) Peer closed connection with FIN, entering CLOSE-WAIT");
                     state = TCPStateCloseWait; // Connection ended, wait for process(es) to close file descriptors
+
+                    UnblockAll();
                 }
             } else if(state == TCPStateFinWait1){
                 bool ack = tcpHeader->ack;
@@ -684,7 +689,7 @@ namespace Network {
         }
 
         int64_t TCPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
-            if(state != TCPStateEstablished){
+            if(state != TCPStateEstablished && state != TCPStateCloseWait){
                 return -ENOTCONN;
             }
 
@@ -694,7 +699,7 @@ namespace Network {
                 *addrlen = sizeof(sockaddr_in);
             }
 
-            if(inboundData.Pos() < len){
+            if(state == TCPStateEstablished && inboundData.Pos() < len){ // We do not want to block when in CLOSE-WAIT
                 FilesystemBlocker bl(this, len);
 
                 if(Scheduler::GetCurrentThread()->Block(&bl)){
@@ -704,6 +709,10 @@ namespace Network {
 
             if(len > inboundData.Pos()){
                 len = inboundData.Pos(); // We could have been unblocked earlier by a PSH or FIN
+
+                if(!len){
+                    return 0;
+                }
             }
 
             return inboundData.Read(buffer, len);

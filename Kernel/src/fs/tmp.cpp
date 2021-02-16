@@ -17,8 +17,8 @@ namespace fs::Temp{
         mountPoint->volumeID = volumeID;
     }
 
-    void TempVolume::ReallocateNode(TempNode* node){
-        unsigned newBufferSize = (node->size + (TEMP_BUFFER_CHUNK_SIZE - 1)) & ~(TEMP_BUFFER_CHUNK_SIZE - 1); // Round up to multiple of the chunk size
+    void TempVolume::ReallocateNode(TempNode* node, size_t oldSize){
+        unsigned newBufferSize = (node->size + (TEMP_BUFFER_CHUNK_SIZE - 1)) & (~(TEMP_BUFFER_CHUNK_SIZE - 1)); // Round up to multiple of the chunk size
 
         if(newBufferSize <= 0){
             if(node->buffer){
@@ -36,12 +36,10 @@ namespace fs::Temp{
                 memoryUsage += newBufferSize;
             } else {
                 uint8_t* newBuffer = new uint8_t[newBufferSize];
-                memcpy(newBuffer, node->buffer, node->bufferSize);
+                memcpy(newBuffer, node->buffer, oldSize);
 
-                uint8_t* oldBuffer = node->buffer;
+                delete node->buffer;
                 node->buffer = newBuffer;
-
-                delete oldBuffer;
 
                 memoryUsage += newBufferSize - node->bufferSize;
             }
@@ -124,7 +122,7 @@ namespace fs::Temp{
         }
 
         bufferLock.AcquireRead();
-        memcpy(readBuffer, buffer, readSize);
+        memcpy(readBuffer, buffer + off, readSize);
         bufferLock.ReleaseRead();
 
         return readSize;
@@ -135,15 +133,14 @@ namespace fs::Temp{
             return -EISDIR;
         }
 
-        if(off < 0){
-            return -EINVAL;
-        }
-
         bufferLock.AcquireWrite();
         if(!buffer || off + writeSize > size){
+            size_t old = size;
             size = off + writeSize;
 
-            vol->ReallocateNode(this);
+            if(size >= bufferSize){
+                vol->ReallocateNode(this, old);
+            }
         }
 
         Log::Debug(debugLevelTmpFS, DebugLevelVerbose, "Writing (offset: %u, size: %u, nsize: %u, bsize: %u)", off, writeSize, size, bufferSize);
@@ -165,8 +162,9 @@ namespace fs::Temp{
 
         bufferLock.AcquireWrite();
 
+        size_t old = size;
         size = length;
-        vol->ReallocateNode(this);
+        vol->ReallocateNode(this, old);
 
         bufferLock.ReleaseWrite();
 
