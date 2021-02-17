@@ -269,6 +269,7 @@ namespace Network {
                 bool psh = tcpHeader->psh;
                 bool fin = tcpHeader->fin;
                 
+                bool doUnblock = false;
                 uint16_t other = (tcpHeader->flags & (TCPHeader::FlagsMask ^ (TCPHeader::ACK | TCPHeader::PSH | TCPHeader::FIN | TCPHeader::ECE))); // Get all other flags
 
                 if(other){
@@ -332,13 +333,18 @@ namespace Network {
                 if(psh){
                     Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] PSH!");
 
-                    UnblockAll();
+                    doUnblock = true;
                 }
 
                 if(fin){
                     Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] (State: ESTABLISHED) Peer closed connection with FIN, entering CLOSE-WAIT");
                     state = TCPStateCloseWait; // Connection ended, wait for process(es) to close file descriptors
 
+                    Acknowledge(remoteSequenceNumber);
+                    doUnblock = true;
+                }
+
+                if(doUnblock){
                     UnblockAll();
                 }
             } else if(state == TCPStateFinWait1){
@@ -689,7 +695,7 @@ namespace Network {
         }
 
         int64_t TCPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
-            if(state != TCPStateEstablished && state != TCPStateCloseWait){
+            if(state != TCPStateEstablished && !inboundData.Pos()){
                 return -ENOTCONN;
             }
 
@@ -705,6 +711,10 @@ namespace Network {
                 if(Scheduler::GetCurrentThread()->Block(&bl)){
                     return -EINTR; // We were interrupted
                 }
+            }
+
+            if(state == TCPStateUnknown){
+                return -ECONNRESET; // If state is now unknown we recieved an RST
             }
 
             if(len > inboundData.Pos()){
