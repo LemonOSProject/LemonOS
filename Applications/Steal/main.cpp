@@ -138,7 +138,7 @@ Accept: */*\r\n\
                         receivedHeader = true; // Empty line so end of header
 
                         if(verbose){
-                            std::cout.write(receiveBuffer, i++);
+                            std::cout.write(receiveBuffer, i);
                         }
 
                         if(auto it = response.fields.find("Content-Length"); it != response.fields.end()){ // Check for Content-Length field
@@ -149,6 +149,7 @@ Accept: */*\r\n\
                             return 0;
                         }
                         
+                        i++;
                         break;
                     } else if(!response.status.length()){
                         response.status = line;
@@ -172,9 +173,9 @@ Accept: */*\r\n\
             }
 
             if(receivedHeader){
-                receivedData = len - i - 1;
-                stream->write(receiveBuffer + i + 1, len - i - 1);
-                expectedData -= (len - i - 1);
+                receivedData = len - i;
+                stream->write(receiveBuffer + i, len - i);
+                expectedData -= (len - i);
             } else if(verbose){
                 std::cout << receiveBuffer;
             }
