@@ -5,7 +5,6 @@
 #include <stdlib.h>
 
 namespace Lemon::Shell {
-
     void AddWindow(long id, short state, const std::string& title, Endpoint& client){
         client.Queue(Message(Lemon::Shell::LemonShellAddWindow, id, state, title));
     }

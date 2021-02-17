@@ -32,11 +32,16 @@ namespace Lemon{
     };
 
     class Endpoint : public Waitable {
-    protected:
-        handle_t handle = 0;
-        uint16_t msgSize = 512;
     public:
         Endpoint() = default;
+
+        Endpoint(const Lemon::Endpoint& other) : handle(other.handle), msgSize(other.msgSize){
+            
+        }
+
+        Endpoint(Lemon::Endpoint&& other) : handle(other.handle), msgSize(other.msgSize){
+            other.handle = 0;
+        }
 
         Endpoint(handle_t h, uint16_t msgSize){
             handle = h;
@@ -80,6 +85,22 @@ namespace Lemon{
                 }
             }
             this->msgSize = endpInfo.msgSize;
+        }
+
+        Lemon::Endpoint& operator=(const Lemon::Endpoint& other){
+            handle = other.handle;
+            msgSize = other.msgSize;
+
+            return *this;
+        }
+
+        Lemon::Endpoint& operator=(Lemon::Endpoint&& other){
+            handle = other.handle;
+            msgSize = other.msgSize;
+
+            other.handle = 0;
+
+            return *this;
         }
 
         ~Endpoint(){
@@ -175,5 +196,8 @@ namespace Lemon{
             }
             return ret;
         }
+    protected:
+        handle_t handle = 0;
+        uint16_t msgSize = 512;
     };
 };
