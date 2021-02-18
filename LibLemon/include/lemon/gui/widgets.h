@@ -138,6 +138,8 @@ namespace Lemon::GUI {
         void ResetScrollBar(int displayHeight /* Region that can be displayed at one time */, int areaHeight /* Total Scroll Area*/);
         void Paint(surface_t* surface, vector2i_t offset, int width = 16);
 
+        void ScrollTo(int pos);
+
         void OnMouseDownRelative(vector2i_t relativePosition); // Relative to the position of the scroll bar.
         void OnMouseMoveRelative(vector2i_t relativePosition);
     };

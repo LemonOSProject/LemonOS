@@ -364,6 +364,11 @@ namespace Lemon::GUI {
         height = displayHeight;
     }
 
+    void ScrollBar::ScrollTo(int pos){
+        scrollPos = pos;
+        scrollBar.pos.y = pos / scrollIncrement;
+    }
+
     void ScrollBar::Paint(surface_t* surface, vector2i_t offset, int width){
         Graphics::DrawRect(offset.x, offset.y, width, height, 128, 128, 128, surface);
         if(pressed) 
@@ -468,40 +473,42 @@ namespace Lemon::GUI {
         Graphics::DrawRectOutline(fixedBounds, colours[Colour::ContentShadow], surface);
         int xpos = 2;
         int ypos = 2;
-        int curYOffset = 0;
+        int cursorY = 0;
         int cursorX = 0;
 
         if(multiline){
-            curYOffset = cursorPos.y * (font->height + lineSpacing) - 1 - sBar.scrollPos + 2;
+            cursorY = cursorPos.y * font->lineHeight - sBar.scrollPos;
 
-            for(size_t i = 0; i < contents.size(); i++){
+            for(size_t i = sBar.scrollPos / (font->lineHeight); i < contents.size() && i < static_cast<size_t>(sBar.scrollPos + fixedBounds.height) / font->lineHeight + 1; i++){
+                ypos = i * font->lineHeight + 2;
+                
                 for(size_t j = 0; j < contents[i].length(); j++){
                     if(contents[i][j] == '\t'){
                         xpos += font->tabWidth * font->width;
-                        continue;
                     } else if (isspace(contents[i][j])) {
                         xpos += font->width;
+                    } else if (!isgraph(contents[i][j])) {
                         continue;
+                    } else {
+                        xpos += Graphics::DrawChar(contents[i][j], fixedBounds.pos.x + xpos, fixedBounds.pos.y + ypos - sBar.scrollPos, textColour.r, textColour.g, textColour.b, surface, fixedBounds, font);
                     }
-                    else if (!isgraph(contents[i][j])) continue;
 
-                    xpos += Graphics::DrawChar(contents[i][j], fixedBounds.pos.x + xpos, fixedBounds.pos.y + ypos - sBar.scrollPos, textColour.r, textColour.g, textColour.b, surface, font);
+                    if(cursorPos.y == static_cast<int>(i) && static_cast<int>(j) + 1 == cursorPos.x){
+                        cursorX = xpos;
+                    }
 
                     if((xpos > (fixedBounds.size.x - 8 - 16))){
-                        //xpos = 0;
-                        //ypos += font->height + lineSpacing;
                         break;
                     }
                 }
-                ypos += font->height + lineSpacing;
                 xpos = 0;
-                if(ypos - sBar.scrollPos + font->height + lineSpacing >= fixedBounds.size.y) break;
+                if(ypos - sBar.scrollPos + font->lineHeight >= fixedBounds.size.y) break;
             }
 
             sBar.Paint(surface, {fixedBounds.pos.x + fixedBounds.size.x - 16, fixedBounds.pos.y});
         } else {
             ypos = fixedBounds.height / 2 - font->height / 2;
-            curYOffset = ypos;
+            cursorY = ypos;
 
             std::string& line = contents.front();
             for(size_t j = 0; j < contents[0].length(); j++){
@@ -536,7 +543,7 @@ namespace Lemon::GUI {
 
             long msec = (t.tv_nsec / 1000000.0);
             if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
-                Graphics::DrawRect(fixedBounds.pos.x + cursorX + 2, fixedBounds.pos.y + curYOffset, 2, font->height + 2, textColour.r, textColour.g, textColour.b, surface);
+                Graphics::DrawRect(fixedBounds.pos.x + cursorX, fixedBounds.pos.y + cursorY, 2, font->lineHeight, textColour.r, textColour.g, textColour.b, surface);
         }
     }
 
@@ -586,7 +593,7 @@ namespace Lemon::GUI {
         }
 
         if(multiline){
-            cursorPos.y = (sBar.scrollPos + mousePos.y - 2 + lineSpacing / 2) / (font->height + lineSpacing);
+            cursorPos.y = (sBar.scrollPos + mousePos.y) / (font->lineHeight);
             if(cursorPos.y >= static_cast<int>(contents.size())) cursorPos.y = contents.size() - 1;
         }
 
@@ -621,7 +628,7 @@ namespace Lemon::GUI {
 
 
     void TextBox::ResetScrollBar(){
-        sBar.ResetScrollBar(fixedBounds.size.y, contents.size() * (font->height + lineSpacing));
+        sBar.ResetScrollBar(fixedBounds.size.y, contents.size() * (font->lineHeight));
     }
 
     void TextBox::OnKeyPress(int key){
@@ -656,6 +663,7 @@ namespace Lemon::GUI {
                 contents[cursorPos.y].erase(cursorPos.x); // Erase all that was after the cursor
                 contents.insert(contents.begin() + (++cursorPos.y), s); // Insert new line after cursor and move to that line
                 cursorPos.x = 0;
+
                 ResetScrollBar();
             } else if (OnSubmit){
                 OnSubmit(this);
@@ -671,7 +679,8 @@ namespace Lemon::GUI {
             cursorPos.x++;
             if(cursorPos.x > static_cast<int>(contents[cursorPos.y].length())){
                 if(cursorPos.y < static_cast<int>(contents.size())){
-                    cursorPos.x = contents[++cursorPos.y].length();
+                    cursorPos.x = 0;
+                    cursorPos.y++;
                 } else cursorPos.x = contents[cursorPos.y].length();
             }
         } else if (key == KEY_ARROW_UP){ // Move cursor up
@@ -688,6 +697,21 @@ namespace Lemon::GUI {
                     cursorPos.x = static_cast<int>(contents[cursorPos.y].length());
                 }
             } else cursorPos.x = contents[cursorPos.y].length();
+        }
+
+        if(cursorPos.y >= static_cast<int>(contents.size())){
+            cursorPos.y = contents.size() - 1;
+            cursorPos.x = contents[cursorPos.y].length() - 1;
+        }
+
+        if(cursorPos.y * font->lineHeight < sBar.scrollPos){
+            sBar.ScrollTo(cursorPos.y * font->lineHeight); // Make sure cursor is on screen
+        } else if((cursorPos.y + 1) * font->lineHeight > (sBar.scrollPos + fixedBounds.height)){
+            sBar.ScrollTo(cursorPos.y * font->lineHeight - (fixedBounds.height - font->lineHeight)); // Make sure cursor is on screen
+        }
+
+        if(sBar.scrollPos < 0){
+            sBar.ScrollTo(0);
         }
     }
 
