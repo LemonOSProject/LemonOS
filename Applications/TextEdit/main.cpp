@@ -174,6 +174,8 @@ int main(int argc, char** argv){
 		}
 
 		window->Paint();
+
+		window->WaitEvent();
 	}
 
 	delete window;

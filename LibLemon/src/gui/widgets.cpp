@@ -1088,7 +1088,9 @@ namespace Lemon::GUI {
 
     void GridView::OnMouseMove(vector2i_t mousePos){
         vector2i_t sBarPos = {fixedBounds.x + fixedBounds.width - 16, fixedBounds.y};
-        sBar.OnMouseMoveRelative(mousePos - sBarPos);
+        if(sBar.pressed){
+            sBar.OnMouseMoveRelative(mousePos - sBarPos);
+        }
     }
 
     void GridView::OnDoubleClick(vector2i_t mousePos){
@@ -1125,6 +1127,10 @@ namespace Lemon::GUI {
             if(selected / itemsPerRow < static_cast<int>(items.size()) / itemsPerRow){
                 selected += itemsPerRow;
 
+                if(selected >= static_cast<int>(items.size())){
+                    selected = items.size() - 1;
+                }
+
                 if(selected >= 0 && static_cast<unsigned>(selected) < items.size()){
                     if(OnSelect) OnSelect(items[selected], this);
                 }
@@ -1141,11 +1147,11 @@ namespace Lemon::GUI {
 
         if(selected >= 0 && static_cast<unsigned>(selected) < items.size()){
             if(selected >= 0 && ((selected / itemsPerRow + 1) * itemSize.y) > sBar.scrollPos + fixedBounds.height){ // Check if bottom of item is in view
-                sBar.scrollPos = ((selected / itemsPerRow + 1) * itemSize.y) - fixedBounds.height; // Scroll down to selected item
+                sBar.ScrollTo(((selected / itemsPerRow + 1) * itemSize.y) - fixedBounds.height); // Scroll down to selected item
             }
 
             if(selected >= 0 && (selected / itemsPerRow * itemSize.y) < sBar.scrollPos){
-                sBar.scrollPos = (selected / itemsPerRow * itemSize.y); // Scroll up to selected item
+                sBar.ScrollTo(selected / itemsPerRow * itemSize.y); // Scroll up to selected item
             }
         }
     }

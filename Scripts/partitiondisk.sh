@@ -8,6 +8,8 @@ sfdisk /dev/nbd0 < Scripts/partitions.sfdisk
 
 partprobe /dev/nbd0
 
+sleep 0.5
+
 while [ ! -e /dev/nbd0p2 ]; do
 	sleep 1 # Wait a second if does not exist
 
