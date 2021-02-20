@@ -1,10 +1,10 @@
 BITS    32
 
 global entry
+global entryst2
 global kernel_pml4
 global kernel_pdpt
 global kernel_pdpt2
-extern kmain
 
 global GDT64
 global GDT64.TSS
@@ -14,6 +14,9 @@ global GDT64.TSS.high
 global GDT64.TSS.high32
 
 global GDT64Pointer64
+
+extern kinit_multiboot2
+extern kinit_stivale2
 
 KERNEL_VIRTUAL_BASE equ 0xFFFFFFFF80000000
 KERNEL_BASE_PML4_INDEX equ (((KERNEL_VIRTUAL_BASE) >> 39) & 0x1FF)
@@ -213,14 +216,32 @@ BITS 64
 
 
 fb_addr:
-dd 0
+  dd 0
 fb_pitch:
-dd 0
+  dd 0
 fb_height:
-dd 0
+  dd 0
 mb_addr:
-dd 0
-dd 0
+  dd 0
+  dd 0
+
+section .stivale2hdr
+stivale2hdr:
+  dq entryst2 ; Use a different entry point for stivale2
+  dq 0 ; Bootloader does not need to set up stack for us
+  dq 0
+  dq st2fbtag
+
+section .data
+st2fbtag: ; Tag asks the bootloader to set up a framebuffer for us
+  dq 0x3ecc1bc43d0f7971
+  dq st2fbwctag ; Next tag
+  dq 0 ; Width
+  dq 0 ; Height
+  dq 32 ; BPP
+st2fbwctag: ; Ask the bootloader to set framebuffer as writecombining in MTRRs
+  dq 0x4c7bb07731282e00
+  dq 0 ; No next tag
 
 extern _bss
 extern _bss_end
@@ -228,7 +249,6 @@ extern _bss_end
 BITS 64
 section .text
 entry64:
-
   lgdt [GDT64Pointer64]
 
   mov ax, 0x10
@@ -267,7 +287,62 @@ entry64:
   xor rbp, rbp
   mov rdi, qword[mb_addr] ; Pass multiboot info struct
   add rdi, KERNEL_VIRTUAL_BASE
-  call kmain
+  call kinit_multiboot2
+
+  cli
+  hlt
+  
+entryst2:
+  lgdt [GDT64Pointer64]
+
+  mov rbx, rdi ; Save RDI as it contains bootloader information
+
+  mov rdi, _bss
+  mov rcx, _bss_end
+  sub rcx, _bss
+  xor rax, rax
+  rep stosb
+
+  mov rdi, rbx ; Restore RDI
+
+  mov rsp, stack_top
+  mov rbp, rsp
+
+  push 0x10
+  push rbp
+  pushf
+  push 0x8
+  push .cont
+  iretq ; We need to load cs as 0x8, and segments don't really exist because we are in long mode, so use iretq
+
+.cont:
+  mov ax, 0x10
+  mov ds, ax
+  mov es, ax
+  mov fs, ax
+  mov gs, ax
+  mov ss, ax
+
+  mov rax, cr0
+	and ax, 0xFFFB		; Clear coprocessor emulation
+	or ax, 0x2			; Set coprocessor monitoring
+	mov cr0, rax
+
+	;Enable SSE
+	mov rax, cr4
+	or ax, 3 << 9		; Set flags for SSE
+	mov cr4, rax
+
+  mov rcx, 0x277 ; PAT Model Specific Register
+  rdmsr
+  mov rbx, 0xFFFFFFFFFFFFFF
+  and rax, rbx
+  mov rbx, 0x100000000000000
+  or rax, rbx  ; Set PA7 to Write-combining (0x1, WC)
+  wrmsr
+
+  xor rbp, rbp
+  call kinit_stivale2
 
   cli
   hlt
@@ -279,7 +354,7 @@ __cxa_atexit:
 section .bss
 align 64
 stack_bottom:
-resb 16384
+resb 32768
 stack_top:
 
 global __dso_handle

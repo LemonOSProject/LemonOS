@@ -126,9 +126,7 @@ void InitializeConstructors(){
 }
 
 extern "C"
-[[noreturn]] void kmain(multiboot2_info_header_t* mb_info){
-	HAL::Init(mb_info);
-
+[[noreturn]] void kmain(){
 	fs::Initialize();
     DeviceManager::Initialize();
 	Log::LateInitialize();

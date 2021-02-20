@@ -226,8 +226,6 @@ namespace IDT{
 		SetGate(46, (uint64_t)irq14, 0x08, 0x8E);
 		SetGate(47, (uint64_t)irq15, 0x08, 0x8E);
 		
-		__asm__ __volatile__("sti");
-
 		RegisterInterruptHandler(IPI_HALT, IPIHalt);
 	}	
 

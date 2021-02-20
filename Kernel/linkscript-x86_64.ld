@@ -6,14 +6,17 @@ SECTIONS
 
     .boot.text : {
        *(.boot.text)
-   }
+    }
 
-   .boot.data :
-   {
-        *(.boot.data)
-        . = ALIGN(4096);
-   }
+    .boot.data :
+    {
+            *(.boot.data)
+            . = ALIGN(4096);
+    }
     . += KERNEL_VMA;
+    .stivale2hdr : AT(ADDR(.stivale2hdr) - KERNEL_VMA){
+        KEEP(*(.stivale2hdr))
+    }
 
     .text : AT(ADDR(.text) - KERNEL_VMA)
     {

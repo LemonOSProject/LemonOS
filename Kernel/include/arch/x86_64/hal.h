@@ -13,11 +13,11 @@ namespace HAL{
     extern bool disableSMP;
     extern bool useKCon;
 
-    void InitCore(multiboot2_info_header_t* mb_info);
+    void InitCore();
 
     void InitVideo();
-
     void InitExtra();
 
-    void Init(multiboot2_info_header_t* mb_info);
+    void InitMultiboot2(multiboot2_info_header_t* mbInfo);
+    void InitStivale2(stivale2_info_header_t* st2Info);
 }

@@ -183,6 +183,92 @@ typedef union {
 	// There is extra colour info here that we ignore for now
 } __attribute__((packed)) multiboot2_framebuffer_info_t;
 
+typedef struct {
+	char brand[64]; // Null-terminated brand string
+	char version[64]; // Null terminated version string
+
+	uint64_t tags;
+} __attribute__((packed)) stivale2_info_header_t;
+
+enum {
+	Stivale2TagCmdLine = 0xe5e76a1b4597a781,
+	Stivale2TagMemoryMap = 0x2187f79e8612de07,
+	Stivale2TagFramebufferInfo = 0x506461d2950408fa,
+	Stivale2TagModules = 0x4b6fe466aade04ce,
+	Stivale2TagACPIRSDP = 0x9e1786930a375e78,
+};
+
+typedef struct {
+	uint64_t id;
+	uint64_t nextTag;
+} __attribute__((packed)) stivale2_tag_t;
+
+typedef struct {
+	uint64_t id;
+	uint64_t nextTag;
+	uint64_t cmdLine;
+} __attribute__((packed)) stivale2_tag_cmdline_t;
+
+typedef struct {
+	uint64_t base;
+	uint64_t length;
+	uint32_t type;
+	uint32_t unused;
+} __attribute__((packed)) stivale2_memory_map_entry_t;
+
+enum {
+    Stivale2MMUsable = 1,
+    Stivale2MMReserved = 2,
+    Stivale2MMACPIReclaimable = 3,
+    Stivale2MMACPINVS = 4,
+    Stivale2MMBadMemory = 5,
+    Stivale2MMBootloaderReclaimable = 0x1000,
+    Stivale2MMKernelOrModule = 0x1001,
+};
+
+typedef struct {
+	uint64_t id;
+	uint64_t nextTag;
+	uint64_t entryCount;
+	stivale2_memory_map_entry_t entries[];
+} __attribute__((packed)) stivale2_tag_memory_map_t;
+
+typedef struct {
+	uint64_t id;
+	uint64_t nextTag;
+	uint64_t fbAddress;
+	uint16_t fbWidth;
+	uint16_t fbHeight;
+	uint16_t fbPitch;
+	uint16_t fbBpp;
+	uint8_t memoryModel; //  1 = RGB
+	uint8_t redMaskSize;
+	uint8_t redMaskShift;
+	uint8_t greenMaskSize;
+	uint8_t greenMaskShift;
+	uint8_t blueMaskSize;
+	uint8_t blueMaskShift;
+} __attribute__((packed)) stivale2_tag_framebuffer_info_t;
+
+typedef struct {
+	uint64_t begin;
+	uint64_t end;
+	char string[128];
+} __attribute__((packed)) stivale2_module_t;
+
+typedef struct {
+	uint64_t id;
+	uint64_t nextTag;
+	uint64_t moduleCount;
+	stivale2_module_t modules[];
+} __attribute__((packed)) stivale2_tag_modules_t;
+
+typedef struct {
+	uint64_t id;
+	uint64_t nextTag;
+	uint64_t rsdp;
+} __attribute__((packed)) stivale2_tag_rsdp_t;
+
 enum {
 	VideoModeIndexed = 0,
 	VideoModeRGB = 1,

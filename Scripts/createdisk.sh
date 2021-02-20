@@ -2,12 +2,15 @@
 
 SPATH=$(dirname $(readlink -f "$0"))
 
-set -e
+set -e 1
 
 cd $SPATH/..
 export LEMONDIR=$(pwd)
 
 mkdir -p Disks
-qemu-img create -f vpc Disks/Lemon.vhd 1048072K
 
-sudo Scripts/partitiondisk.sh
+dd if=/dev/zero of=Disks/Lemon.img bs=512 count=2097152
+sfdisk Disks/Lemon.img < Scripts/partitions.sfdisk
+
+echo "Formatting disk!"
+sudo Scripts/formatdisk.sh

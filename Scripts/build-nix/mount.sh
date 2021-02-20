@@ -1,17 +1,9 @@
-#!/bin/bash
+#!/bin/sh
+
+set -e 1
 
 sudo mkdir /mnt/Lemon
-sudo qemu-nbd -c /dev/nbd0 Disks/Lemon.vhd
 
-if sudo [ ! -b /dev/nbd0p2 ]; then
-	sleep 0.5 # Wait half a second if does not exist
-fi
+LOOPBACK_DEVICE=$(losetup --find --partscan --show Disks/Lemon.img)
 
-sudo partprobe /dev/nbd0
-
-if sudo [ ! -b /dev/nbd0p2 ]; then
-	>&2 echo "error mounting disk image"
-	exit 1
-fi
-
-sudo mount /dev/nbd0p2 /mnt/Lemon
+sudo mount ${LOOPBACK_DEVICE}p2 /mnt/Lemon
