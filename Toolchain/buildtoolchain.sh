@@ -7,6 +7,12 @@ cd $SPATH
 export BINUTILS_SRC_DIR=binutils-2.32
 export LLVM_SRC_DIR=llvm-project
 export LIMINE_SRC_DIR=limine-1.0
+
+if [ -z "$JOBCOUNT" ]; then
+    export JOBCOUNT=$(nproc)
+    echo "\$JOBCOUNT not set. Setting \$JOBCOUNT to $JOBCOUNT"
+    read
+fi
  	
 _unpack_binutils(){
     curl -L "http://ftpmirror.gnu.org/binutils/binutils-2.32.tar.gz" -o binutils-2.32.tar.gz
@@ -37,9 +43,9 @@ _build_binutils(){
 }
 
 _build_llvm(){
-    if [ -z "$JOBCOUNT" ]; then
-        export JOBCOUNT=$(nproc)
-        echo "Compiling llvm will use a lot of memory, if you run out of memory try setting \$JOBCOUNT to a lower value (automatically set to $JOBCOUNT)."
+    if [ -z "$LINKCOUNT" ]; then
+        export LINKCOUNT=4
+        echo "Linking llvm will use a lot of memory, if you run out of memory try reducing the amount of link jobs by setting \$LINKCOUNT to a lower value (automatically set to $LINKCOUNT)."
         read
     fi
 
@@ -47,10 +53,13 @@ _build_llvm(){
 
     mkdir build
     cd build
-    cmake -C ../clang/cmake/caches/Lemon.cmake -DCMAKE_INSTALL_PREFIX=$TOOLCHAIN_PREFIX -DDEFAULT_SYSROOT=$LEMON_SYSROOT -DLLVM_PARALLEL_LINK_JOBS=4 ../llvm -G Ninja
+    cmake -C ../clang/cmake/caches/Lemon.cmake -DCMAKE_INSTALL_PREFIX=$TOOLCHAIN_PREFIX -DDEFAULT_SYSROOT=$LEMON_SYSROOT -DLLVM_PARALLEL_LINK_JOBS=$LINKCOUNT ../llvm -G Ninja
 
     ninja -j $JOBCOUNT
     ninja install
+
+    ln -sf clang $TOOLCHAIN_PREFIX/bin/lemon-clang
+    ln -sf clang++ $TOOLCHAIN_PREFIX/bin/lemon-clang++
 }
 
 _build_limine(){
@@ -66,7 +75,9 @@ _prepare(){
 	mkdir -p $LEMON_SYSROOT/system/lib
 	mkdir -p $LEMON_SYSROOT/system/bin
 	
-	curl https://api.lemonos.org/sysroot.tar.gz | tar -zxf - sysroot/system -C $LEMON_SYSROOT/..
+    pushd $LEMON_SYSROOT/..
+	curl https://api.lemonos.org/sysroot.tar.gz | tar -zxf - sysroot/system
+    popd
 }
 
 _binutils(){

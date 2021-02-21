@@ -1,5 +1,11 @@
 SPATH=$(dirname $(readlink -f "$0"))
 
+if [ -z "$LEMON_SYSROOT" ]; then
+    export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
+    echo "LEMON_SYSROOT not set, continuing will use defaults:\n$LEMON_SYSROOT\n"
+    read
+fi
+
 set -e
 
 ln -sfT ../../../include/c++ $HOME/.local/share/lemon/sysroot/system/include/c++
@@ -27,12 +33,6 @@ meson build --cross $SPATH/lemon-crossfile.txt
 
 cd ../Kernel
 meson build --cross $SPATH/lemon-crossfile.txt
-
-if [ -z "$LEMON_SYSROOT" ]; then
-    export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
-    echo "LEMON_SYSROOT not set, continuing will use defaults:\n$LEMON_SYSROOT\n"
-    read
-fi
 
 cd ../Ports
 ./buildport.sh zlib
