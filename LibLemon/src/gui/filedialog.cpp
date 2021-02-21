@@ -27,7 +27,7 @@ namespace Lemon::GUI{
 	}
 
 	void FileDialogOnCancelPress(Lemon::GUI::Button* btn){
-		btn->window->closed = true; // Tell FileDialog() that we want to close the window
+		btn->GetWindow()->closed = true; // Tell FileDialog() that we want to close the window
 	}
 
 	void FileDialogOnFileBoxSubmit(Lemon::GUI::TextBox* box){
@@ -79,7 +79,7 @@ namespace Lemon::GUI{
 		dialogFileView = nullptr;
 		dialogFileBox = nullptr;
 
-		Window* win = new Window("Open...", {480, 300}, WINDOW_FLAGS_RESIZABLE, WindowType::GUI);
+		Window* win = new Window("Open...", {504, 300}, WINDOW_FLAGS_RESIZABLE, WindowType::GUI);
 
 		FileView* fv = new FileView({0, 0, 0, 63}, path, FileDialogOnFileOpened);
 		win->AddWidget(fv);

@@ -59,26 +59,7 @@ namespace Lemon::GUI {
     };
 
     class Window : public WMClient{
-    private:
-        WindowBuffer* windowBufferInfo;
-        uint8_t* buffer1;
-        uint8_t* buffer2;
-        uint64_t windowBufferKey;
-
-        uint32_t flags;
-
-        int windowType = WindowType::Basic;
-
-        timespec lastClick;
-
-        void UpdateGUITheme(const std::string& path);
     public:
-        vector2i_t lastMousePos = {-1, -1};
-        WindowMenuBar* menuBar = nullptr;
-        Container rootContainer;
-        surface_t surface = {0, 0, 32, nullptr};
-        bool closed = false; // Set to true when close button pressed
-
         Window(const char* title, vector2i_t size, uint32_t flags = 0, int type = WindowType::Basic, vector2i_t pos = {20, 20});
         ~Window();
 
@@ -198,6 +179,13 @@ namespace Lemon::GUI {
         void RemoveWidget(Widget* w);
 
         /////////////////////////////
+        /// \brief Set widget as active
+        ///
+        /// \param w Pointer to widget
+        /////////////////////////////
+        void SetActive(Widget* w);
+
+        /////////////////////////////
         /// \brief Display a context menu on screen
         ///
         /// Get the window manager to display a context menu on the screen. An EventWindowCommand will be returned if/when an item in the context menu is clicked.
@@ -244,5 +232,25 @@ namespace Lemon::GUI {
         /// Called when Paint() is called. Is run \e after the widgets are painted and the window buffers are swapped
         /////////////////////////////
         WindowPaintHandler OnPaintEnd = nullptr;
+
+        vector2i_t lastMousePos = {-1, -1};
+        WindowMenuBar* menuBar = nullptr;
+        Container rootContainer;
+        surface_t surface = {0, 0, 32, nullptr};
+        bool closed = false; // Set to true when close button pressed
+
+    private:
+        WindowBuffer* windowBufferInfo;
+        uint8_t* buffer1;
+        uint8_t* buffer2;
+        uint64_t windowBufferKey;
+
+        uint32_t flags;
+
+        int windowType = WindowType::Basic;
+
+        timespec lastClick = {0, 0};
+
+        void UpdateGUITheme(const std::string& path);
     };
 }

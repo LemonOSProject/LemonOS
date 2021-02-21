@@ -34,6 +34,7 @@ namespace Lemon::GUI {
     class Widget {
     protected:
         Widget* parent = nullptr;
+        Window* window = nullptr;
 
         short layoutSizeX = LayoutSize::Fixed;
         short layoutSizeY = LayoutSize::Fixed;
@@ -48,14 +49,16 @@ namespace Lemon::GUI {
         WidgetAlignment verticalAlign = WAlignTop;
     public:
         Widget* active = nullptr; // Only applies to containers, etc. is so widgets know whether they are active or not
-        Window* window = nullptr;
 
         Widget();
         Widget(rect_t bounds, LayoutSize newSizeX = LayoutSize::Fixed, LayoutSize newSizeY = LayoutSize::Fixed);
         virtual ~Widget();
 
+        inline Window* GetWindow() { return window; }
+        virtual void SetWindow(Window* win) { window = win; }
+
         virtual void SetParent(Widget* newParent) { parent = newParent; UpdateFixedBounds(); };
-        Widget* GetParent() { return parent; }
+        inline Widget* GetParent() { return parent; }
 
         virtual void SetLayout(LayoutSize newSizeX, LayoutSize newSizeY, WidgetAlignment newAlign = WAlignLeft, WidgetAlignment newAlignVert = WAlignTop){ sizeX = newSizeX; sizeY = newSizeY; align = newAlign; verticalAlign = newAlignVert; UpdateFixedBounds(); };
 
@@ -75,8 +78,10 @@ namespace Lemon::GUI {
 
         virtual void UpdateFixedBounds();
 
-        rect_t GetBounds() { return bounds; }
-        rect_t GetFixedBounds() { return fixedBounds; }
+        inline virtual bool IsActive() { assert(parent); return parent->active == this; }
+
+        inline rect_t GetBounds() { return bounds; }
+        inline rect_t GetFixedBounds() { return fixedBounds; }
 
         virtual void SetBounds(rect_t bounds) { this->bounds = bounds; UpdateFixedBounds(); };
     };
@@ -89,6 +94,8 @@ namespace Lemon::GUI {
         rgba_colour_t background = Lemon::colours[Lemon::Colour::Background];
 
         Container(rect_t bounds);
+
+        void SetWindow(Window* w); // We need to set the windows of the children
 
         void AddWidget(Widget* w);
         void RemoveWidget(Widget* w);
@@ -321,7 +328,7 @@ namespace Lemon::GUI {
     class GridView : public Widget{
         std::vector<GridItem> items;
 
-        const vector2i_t itemSize = {80, 80};
+        const vector2i_t itemSize = {96, 80};
 
         int selected = -1;
         int itemsPerRow = 1;

@@ -9,12 +9,12 @@ namespace Lemon::GUI
 	int pressed = 1;
 	void OnMessageBoxOKPressed(Lemon::GUI::Button* b){
 		pressed = 1;
-		b->window->closed = true;
+		b->GetWindow()->closed = true;
 	}
 	
 	void OnMessageBoxCancelPressed(Lemon::GUI::Button* b){
 		pressed = 0;
-		b->window->closed = true;
+		b->GetWindow()->closed = true;
 	}
 
 	int DisplayMessageBox(const char* title, const char* message, MsgBoxButtons buttons){

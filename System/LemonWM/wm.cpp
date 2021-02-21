@@ -473,9 +473,9 @@ void WMInstance::MouseMove(){
                     ev.event = Lemon::EventMouseEnter;
                 }
 
-                ev.mousePos = input.mouse.pos - active->pos;
+                ev.mousePos = input.mouse.pos - win->pos;
 
-                if(!(active->flags & WINDOW_FLAGS_NODECORATION)) ev.mousePos = ev.mousePos - (vector2i_t){1, 25};
+                if(!(active->flags & WINDOW_FLAGS_NODECORATION)) ev.mousePos = ev.mousePos - (vector2i_t){WINDOW_BORDER_THICKNESS, WINDOW_TITLEBAR_HEIGHT};
 
                 PostEvent(ev, win);
 

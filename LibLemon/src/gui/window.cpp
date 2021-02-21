@@ -12,7 +12,7 @@ namespace Lemon::GUI{
         windowType = type;
         this->flags = flags;
 
-        rootContainer.window = this;
+        rootContainer.SetWindow(this);
 
         windowBufferKey = CreateWindow(pos.x, pos.y, size.x, size.y, flags, title);
         if(windowBufferKey <= 0){
@@ -243,7 +243,7 @@ namespace Lemon::GUI{
             case EventMouseEnter:
             case EventMouseMoved:
                 lastMousePos = ev.mousePos;
-
+                
                 if(menuBar && ev.mousePos.y < menuBar->GetFixedBounds().height){
                     menuBar->OnMouseMove(ev.mousePos);
                 } else if (menuBar){
@@ -286,6 +286,10 @@ namespace Lemon::GUI{
         rootContainer.RemoveWidget(w);
     }
 
+    void Window::SetActive(Widget* w){
+        rootContainer.active = w;
+    }
+
     void Window::DisplayContextMenu(const std::vector<ContextMenuEntry>& entries, vector2i_t pos){
         if(pos.x == -1 && pos.y == -1){
             pos = lastMousePos;
@@ -303,7 +307,7 @@ namespace Lemon::GUI{
 
     void Window::CreateMenuBar(){
         menuBar = new WindowMenuBar();
-        menuBar->window = this;
+        menuBar->SetWindow(this);
 
         rootContainer.SetBounds({0, WINDOW_MENUBAR_HEIGHT, surface.width, surface.height - WINDOW_MENUBAR_HEIGHT});
     }

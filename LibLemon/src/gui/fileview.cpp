@@ -143,14 +143,14 @@ namespace Lemon::GUI {
         OnFileOpened = _OnFileOpened;
         currentPath = path;
 
-        fileList = new GridView({sidepanelWidth, 24, 0, 0});
+        fileList = new GridView({sidepanelWidth, 30, 0, 0});
         AddWidget(fileList);
         fileList->SetLayout(LayoutSize::Stretch, LayoutSize::Stretch, WidgetAlignment::WAlignLeft);
 
         fileList->OnSubmit = OnListSubmit;
         fileList->OnSelect = FileViewOnListSelect;
 
-        pathBox = new TextBox({2, 2, 2, 20}, false);
+        pathBox = new TextBox({2, 3, 2, 24}, false);
         AddWidget(pathBox);
         pathBox->SetLayout(LayoutSize::Stretch, LayoutSize::Fixed, WidgetAlignment::WAlignLeft);
         pathBox->OnSubmit =  OnTextBoxSubmit;

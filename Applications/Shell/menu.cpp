@@ -259,7 +259,7 @@ void InitializeMenu(){
     close(itemsDir);
 
     menuContainer = new Lemon::GUI::LayoutContainer({0, 0, 0, 0}, {36, 36});
-    menuContainer->background = {0x2a, 0x29, 0x27, 255};
+    menuContainer->background = {0x1d, 0x1c, 0x1b, 255};
     menuContainer->xPadding = 0;
     menuContainer->yPadding = 0;
 

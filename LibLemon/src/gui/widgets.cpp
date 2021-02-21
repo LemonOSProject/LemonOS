@@ -94,18 +94,26 @@ namespace Lemon::GUI {
 
     }
 
+    void Container::SetWindow(Window* w){
+        window = w;
+
+        for(auto* child : children){
+            child->SetWindow(w);
+        }
+    }
+
     void Container::AddWidget(Widget* w){
         children.push_back(w);
 
         w->SetParent(this);
-        w->window = window;
+        w->SetWindow(window);
         
         UpdateFixedBounds();
     }
 
     void Container::RemoveWidget(Widget* w){
         w->SetParent(nullptr);
-        w->window = nullptr;
+        w->SetWindow(nullptr);
 
         if(active == w) active = nullptr;
 
@@ -265,7 +273,7 @@ namespace Lemon::GUI {
         }
 
         if(labelAlignment == TextAlignment::Centre){
-            Graphics::DrawString(label.c_str(), btnPos.x + (fixedBounds.size.x / 2) - (labelLength / 2), btnPos.y + (bounds.size.y / 2 - 8), colour.r, colour.g, colour.b, surface);
+            Graphics::DrawString(label.c_str(), btnPos.x + (fixedBounds.size.x / 2) - (labelLength / 2), btnPos.y + (fixedBounds.size.y / 2 - 8), colour.r, colour.g, colour.b, surface);
         } else {
             Graphics::DrawString(label.c_str(), btnPos.x + 2, btnPos.y + (fixedBounds.size.y / 2 - 6), colour.r, colour.g, colour.b, surface);
         }
@@ -273,34 +281,32 @@ namespace Lemon::GUI {
 
     void Button::Paint(surface_t* surface){
         vector2i_t btnPos = fixedBounds.pos;
-        rect_t bounds = fixedBounds;
 
         if(pressed){
-            Graphics::DrawRect(btnPos.x+1, btnPos.y+1, bounds.size.x-2, (bounds.size.y)/2 - 1, 224/1.1, 224/1.1, 219/1.1, surface, parent->GetFixedBounds());
-            Graphics::DrawRect(btnPos.x+1, btnPos.y + bounds.size.y / 2, bounds.size.x-2, bounds.size.y/2-1, 224/1.1, 224/1.1, 219/1.1, surface);
+            Graphics::DrawRect(btnPos.x+1, btnPos.y+1, fixedBounds.size.x-2, (fixedBounds.size.y)/2 - 1, 224/1.1, 224/1.1, 219/1.1, surface, parent->GetFixedBounds());
+            Graphics::DrawRect(btnPos.x+1, btnPos.y + fixedBounds.size.y / 2, fixedBounds.size.x-2, fixedBounds.size.y/2-1, 224/1.1, 224/1.1, 219/1.1, surface);
 
             DrawButtonBorders(surface, false);
         } else {
             switch(style){
                 case 1: // Blue
-                    Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + 1, bounds.size.x - 2, bounds.size.y - 2,{50,50,150,255},{45,45,130,255},surface);
+                    Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2,{50,50,150,255},{45,45,130,255},surface);
                     DrawButtonBorders(surface, true);
                     if(drawText) DrawButtonLabel(surface, true);
                     break;
                 case 2: // Red
-                    Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + 1, bounds.size.x - 2, bounds.size.y - 2,{180,60,60,255},{160,55,55,255},surface);
+                    Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2,{180,60,60,255},{160,55,55,255},surface);
                     DrawButtonBorders(surface, true);
                     if(drawText) DrawButtonLabel(surface, true);
                     break;
                 case 3: // Yellow
-                    Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + 1, bounds.size.x - 2, bounds.size.y - 2,{200,160,50,255},{180,140,45,255},surface);
+                    Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2,{200,160,50,255},{180,140,45,255},surface);
                     DrawButtonBorders(surface, true);
                     if(drawText) DrawButtonLabel(surface, true);
                     break;
                 default:
-                    Graphics::DrawRect(btnPos.x + 1, btnPos.y + 1, bounds.size.x - 2, bounds.size.y - 4, colours[Colour::ContentBackground],surface);
-                    Graphics::DrawGradientVertical(btnPos.x + 1, btnPos.y + bounds.size.y - 5, bounds.size.x - 2, 4,colours[Colour::ContentBackground],colours[Colour::Background],surface);
-                    //Graphics::DrawRect(btnPos.x + 1, btnPos.y + bounds.size.y - 3, bounds.size.x - 2, 2, colours[Colour::ContentShadow],surface);
+                    Graphics::DrawRect(btnPos.x + 1, btnPos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y, colours[Colour::ContentBackground],surface);
+                    Graphics::DrawRect(btnPos.x + 1, btnPos.y + fixedBounds.size.y - 3, fixedBounds.size.x - 2, 2, colours[Colour::ContentShadow],surface);
                     DrawButtonBorders(surface, false);
                     if(drawText) DrawButtonLabel(surface, false);
                     break;
@@ -308,7 +314,6 @@ namespace Lemon::GUI {
 
             if(Graphics::PointInRect(fixedBounds, window->lastMousePos)){
                 Graphics::DrawRectOutline(fixedBounds.x + 1, fixedBounds.y + 1, fixedBounds.width - 2, fixedBounds.height - 2, colours[Colour::Foreground], surface);
-                Graphics::DrawRectOutline(fixedBounds.x + 2, fixedBounds.y + 2, fixedBounds.width - 4, fixedBounds.height - 4, colours[Colour::Foreground], surface);
             }
         }
     }
@@ -470,7 +475,12 @@ namespace Lemon::GUI {
 
     void TextBox::Paint(surface_t* surface){
         Graphics::DrawRect(fixedBounds.pos.x + 1, fixedBounds.pos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2, colours[Colour::ContentBackground], surface);
-        Graphics::DrawRectOutline(fixedBounds, colours[Colour::ContentShadow], surface);
+
+        if(IsActive() || Graphics::PointInRect(fixedBounds, window->lastMousePos)){
+            Graphics::DrawRectOutline(fixedBounds, colours[Colour::Foreground], surface);
+        } else {
+            Graphics::DrawRectOutline(fixedBounds, colours[Colour::ContentShadow], surface);
+        }
         int xpos = 2;
         int ypos = 2;
         int cursorY = 0;
@@ -995,6 +1005,11 @@ namespace Lemon::GUI {
 
     void GridView::Paint(surface_t* surface){
         Graphics::DrawRect(fixedBounds, colours[Colour::ContentBackground], surface);
+        if(Graphics::PointInRect(fixedBounds, window->lastMousePos)){
+            Graphics::DrawRectOutline(fixedBounds, colours[Colour::Foreground], surface);
+        } else {
+            Graphics::DrawRectOutline(fixedBounds, colours[Colour::ContentShadow], surface);
+        }
 
         int xPos = 0;
         int yPos = sBar.scrollPos ? -(sBar.scrollPos % itemSize.y) : 0;
@@ -1054,7 +1069,7 @@ namespace Lemon::GUI {
             
             xPos += itemSize.x;
 
-            if(xPos + itemSize.x >= fixedBounds.width){
+            if(xPos + itemSize.x > fixedBounds.width){
                 xPos = 0;
                 yPos += itemSize.y;
             }
@@ -1070,11 +1085,12 @@ namespace Lemon::GUI {
     }
 
     void GridView::OnMouseDown(vector2i_t mousePos){
-        vector2i_t sBarPos = {fixedBounds.x + fixedBounds.width - 16, fixedBounds.y};
-        if(showScrollBar && Graphics::PointInRect((rect_t){sBarPos, {16, fixedBounds.height}}, mousePos)){
-            sBar.OnMouseDownRelative(mousePos - sBarPos);
+        mousePos -= fixedBounds.pos;
+
+        if(showScrollBar && Graphics::PointInRect((rect_t){{fixedBounds.width - 16, 0}, {16, fixedBounds.height}}, mousePos)){
+            sBar.OnMouseDownRelative(mousePos);
         } else {
-            selected = PosToItem(mousePos - fixedBounds.pos + (vector2i_t){0, sBar.scrollPos}); // Position relative to position of GridView, but absolute from scroll position
+            selected = PosToItem(mousePos + (vector2i_t){0, sBar.scrollPos}); // Position relative to position of GridView, but absolute from scroll position
 
             if(OnSelect) OnSelect(items[selected], this);
         }
@@ -1185,7 +1201,7 @@ namespace Lemon::GUI {
         children.push_back(w);
 
         w->SetParent(this);
-        w->window = window;
+        w->SetWindow(window);
 
         UpdateFixedBounds();
     }

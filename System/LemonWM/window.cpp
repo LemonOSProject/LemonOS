@@ -37,7 +37,7 @@ void WMWindow::DrawDecoration(surface_t* surface, rect_t clip) const{
 
 	Lemon::Graphics::DrawRectOutline(pos.x, pos.y, size.x + WINDOW_BORDER_THICKNESS * 2, size.y + WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS * 2, WINDOW_BORDER_COLOUR, surface, clip);
 	Lemon::Graphics::DrawRectOutline(pos.x + (WINDOW_BORDER_THICKNESS / 2), pos.y + WINDOW_TITLEBAR_HEIGHT + (WINDOW_BORDER_THICKNESS / 2), size.x + WINDOW_BORDER_THICKNESS, size.y + WINDOW_BORDER_THICKNESS, {42, 50, 64}, surface, clip);
-	Lemon::Graphics::DrawGradientVertical({pos + (vector2i_t){1,1}, {size.x + WINDOW_BORDER_THICKNESS, WINDOW_TITLEBAR_HEIGHT}}, {0x2a, 0x29, 0x27, 255}, {0x27, 0x27, 0x27, 255}, surface, clip);
+	Lemon::Graphics::DrawGradientVertical({pos + (vector2i_t){1,1}, {size.x + WINDOW_BORDER_THICKNESS, WINDOW_TITLEBAR_HEIGHT}}, {0x1d, 0x1c, 0x1b, 255}, {0x1b, 0x1b, 0x1b, 255}, surface, clip);
 
 	Lemon::Graphics::DrawString(title.c_str(), pos.x + 6, pos.y + 6, 255, 255, 255, surface, clip);
 
@@ -81,46 +81,6 @@ void WMWindow::DrawClip(surface_t* surface, rect_t clip){
 
 	windowBufferInfo->drawing = 0;
 }
-
-/*void WMWindow::Draw(surface_t* surface){
-	if(minimized) return;
-
-	if(flags & WINDOW_FLAGS_NODECORATION){
-		surface_t wSurface = {.width = size.x, .height = size.y, .buffer = ((windowBufferInfo->currentBuffer == 0) ? buffer1 : buffer2)};
-		Lemon::Graphics::surfacecpy(surface, &wSurface, pos);
-		return;
-	}
-
-	Lemon::Graphics::DrawRectOutline(pos.x, pos.y, size.x + WINDOW_BORDER_THICKNESS * 2, size.y + WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS * 2, WINDOW_BORDER_COLOUR, surface);
-	Lemon::Graphics::DrawRectOutline(pos.x + (WINDOW_BORDER_THICKNESS / 2), pos.y + WINDOW_TITLEBAR_HEIGHT + (WINDOW_BORDER_THICKNESS / 2), size.x + WINDOW_BORDER_THICKNESS, size.y + WINDOW_BORDER_THICKNESS, {42, 50, 64}, surface);
-	Lemon::Graphics::DrawGradientVertical({pos + (vector2i_t){1,1}, {size.x + WINDOW_BORDER_THICKNESS, WINDOW_TITLEBAR_HEIGHT}}, {0x33, 0x2c, 0x29, 255}, {0x2e, 0x29, 0x29, 255}, surface);
-
-	Lemon::Graphics::DrawString(title.c_str(), pos.x + 6, pos.y + 6, 255, 255, 255, surface);
-
-	surface_t* buttons = &wm->compositor.windowButtons;
-
-	if(Lemon::Graphics::PointInRect({{closeRect.x + pos.x, closeRect.y + pos.y}, closeRect.size}, wm->input.mouse.pos)){
-		Lemon::Graphics::surfacecpy(surface, buttons, pos + closeRect.pos, {{0, 19}, {19, 19}}); // Close button
-	} else {
-		Lemon::Graphics::surfacecpyTransparent(surface, buttons, pos + closeRect.pos, {{0, 0}, {19, 19}}); // Close button
-	}
-
-	if(Lemon::Graphics::PointInRect({{pos.x + minimizeRect.x, pos.y + minimizeRect.y}, minimizeRect.size}, wm->input.mouse.pos)){
-		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {{19, 19}, {19, 19}}); // Minimize button
-	} else {
-		Lemon::Graphics::surfacecpyTransparent(surface, buttons, pos + minimizeRect.pos, {{19, 0}, {19, 19}}); // Minimize button
-	}
-
-	windowBufferInfo->drawing = 1;
-    surface_t wSurface = {.width = size.x, .height = size.y, .buffer = ((windowBufferInfo->currentBuffer == 0) ? buffer1 : buffer2)};
-	
-	vector2i_t clipOffset =  pos + (vector2i_t){WINDOW_BORDER_THICKNESS, WINDOW_BORDER_THICKNESS + WINDOW_TITLEBAR_HEIGHT};
-	
-	Lemon::Graphics::surfacecpy(surface, &wSurface, clipOffset);
-
-	windowBufferInfo->drawing = 0;
-	windowBufferInfo->dirty = 1;
-}*/
 
 void WMWindow::Minimize(bool state){
 	minimized = state;
