@@ -2022,9 +2022,13 @@ long SysExitThread(RegisterContext* r){
 	
 	releaseLock(&GetCPULocal()->currentThread->lock);
 
+	GetCPULocal()->currentThread->blocker = nullptr;
 	GetCPULocal()->currentThread->state = ThreadStateBlocked;
 
-	for(;;) Scheduler::Yield();
+	for(;;) {
+		GetCPULocal()->currentThread->state = ThreadStateBlocked;
+		Scheduler::Yield();
+	}
 }
 
 /////////////////////////////
@@ -2510,12 +2514,12 @@ long SysEndpointQueue(RegisterContext* r){
 
 	Handle* endpHandle;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
-		Log::Warning("SysEndpointQueue: Invalid handle ID %d", SC_ARG0(r));
+		Log::Warning("(%s): SysEndpointQueue: Invalid handle ID %d", currentProcess->name, SC_ARG0(r));
 		return -EINVAL;
 	}
 
 	if(!endpHandle->ko->IsType(MessageEndpoint::TypeID())){
-		Log::Warning("SysEndpointQueue: Invalid handle type (ID %d)", SC_ARG0(r));
+		Log::Warning("(%s): SysEndpointQueue: Invalid handle type (ID %d)", SC_ARG0(r));
 		return -EINVAL;
 	}
 
@@ -2546,7 +2550,7 @@ long SysEndpointDequeue(RegisterContext* r){
 
 	Handle* endpHandle;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
-		Log::Warning("SysEndpointDequeue: Invalid handle ID %d", SC_ARG0(r));
+		Log::Warning("(%s): SysEndpointDequeue: Invalid handle ID %d", currentProcess->name, SC_ARG0(r));
 		return -EINVAL;
 	}
 
