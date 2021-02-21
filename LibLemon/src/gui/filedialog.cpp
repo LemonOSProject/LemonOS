@@ -81,7 +81,7 @@ namespace Lemon::GUI{
 
 		Window* win = new Window("Open...", {504, 300}, WINDOW_FLAGS_RESIZABLE, WindowType::GUI);
 
-		FileView* fv = new FileView({0, 0, 0, 63}, path, FileDialogOnFileOpened);
+		FileView* fv = new FileView({0, 0, 0, 62}, path, FileDialogOnFileOpened);
 		win->AddWidget(fv);
 		fv->SetLayout(LayoutSize::Stretch, LayoutSize::Stretch, WAlignLeft);
 		fv->OnFileSelected = FileDialogOnFileSelected;
@@ -98,7 +98,7 @@ namespace Lemon::GUI{
 		cancelBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignRight, WAlignBottom);
 		cancelBtn->OnPress = FileDialogOnCancelPress;
 
-		TextBox* fileBox = new TextBox({125, 36, 110, 20}, false);
+		TextBox* fileBox = new TextBox({120, 34, 110, 24}, false);
 		win->AddWidget(fileBox);
 		fileBox->SetLayout(LayoutSize::Stretch, LayoutSize::Fixed, WAlignLeft, WAlignBottom);
 		fileBox->OnSubmit = FileDialogOnFileBoxSubmit;

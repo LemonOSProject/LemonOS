@@ -250,15 +250,15 @@ namespace Lemon::GUI {
         rect_t bounds = fixedBounds;
 
         if(white){
-            Graphics::DrawRect(bounds.pos.x+1, btnPos.y, bounds.size.x - 2, 1, 250, 250, 250, surface);
-            Graphics::DrawRect(btnPos.x+1, btnPos.y + bounds.size.y - 1, bounds.size.x - 2, 1, 250, 250, 250, surface);
-            Graphics::DrawRect(btnPos.x, btnPos.y + 1, 1, bounds.size.y - 2, 250, 250, 250, surface);
-            Graphics::DrawRect(btnPos.x + bounds.size.x - 1, btnPos.y + 1, 1, bounds.size.y-2, 250, 250, 250, surface);
+            Graphics::DrawRect(bounds.pos.x+1, btnPos.y, bounds.size.x - 2, 1, colours[Colour::ContentShadow], surface);
+            Graphics::DrawRect(btnPos.x+1, btnPos.y + bounds.size.y - 1, bounds.size.x - 2, 1, colours[Colour::ContentShadow], surface);
+            Graphics::DrawRect(btnPos.x, btnPos.y + 1, 1, bounds.size.y - 2, colours[Colour::ContentShadow], surface);
+            Graphics::DrawRect(btnPos.x + bounds.size.x - 1, btnPos.y + 1, 1, bounds.size.y - 2, colours[Colour::ContentShadow], surface);
         } else {
-            Graphics::DrawRect(btnPos.x+1, btnPos.y, bounds.size.x - 2, 1, 96, 96, 96, surface);
-            Graphics::DrawRect(btnPos.x+1, btnPos.y + bounds.size.y - 1, bounds.size.x - 2, 1, 96, 96, 96, surface);
-            Graphics::DrawRect(btnPos.x, btnPos.y + 1, 1, bounds.size.y - 2, 96, 96, 96, surface);
-            Graphics::DrawRect(btnPos.x + bounds.size.x - 1, btnPos.y + 1, 1, bounds.size.y-2, 96, 96, 96, surface);
+            Graphics::DrawRect(bounds.pos.x+1, btnPos.y, bounds.size.x - 2, 1, colours[Colour::ContentShadow], surface);
+            Graphics::DrawRect(btnPos.x+1, btnPos.y + bounds.size.y - 1, bounds.size.x - 2, 1, colours[Colour::ContentShadow], surface);
+            Graphics::DrawRect(btnPos.x, btnPos.y + 1, 1, bounds.size.y - 2, colours[Colour::ContentShadow], surface);
+            Graphics::DrawRect(btnPos.x + bounds.size.x - 1, btnPos.y + 1, 1, bounds.size.y - 2, colours[Colour::ContentShadow], surface);
         }
     }
 
@@ -306,7 +306,6 @@ namespace Lemon::GUI {
                     break;
                 default:
                     Graphics::DrawRect(btnPos.x + 1, btnPos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y, colours[Colour::ContentBackground],surface);
-                    Graphics::DrawRect(btnPos.x + 1, btnPos.y + fixedBounds.size.y - 3, fixedBounds.size.x - 2, 2, colours[Colour::ContentShadow],surface);
                     DrawButtonBorders(surface, false);
                     if(drawText) DrawButtonLabel(surface, false);
                     break;
