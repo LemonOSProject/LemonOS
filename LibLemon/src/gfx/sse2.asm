@@ -15,7 +15,7 @@ memcpy_optimized:
 
 	mov rcx, rdi
 	and rcx, 0xf ; check if destination is aligned
-	jz .largecpy
+	jz .smlcpy
 
 	shr rcx, 2 ; Addresses should be 32-bit aligned
 
@@ -29,53 +29,15 @@ memcpy_optimized:
 	stosd
 	loop .pad1
 
-.largecpy:
-	mov rcx, rdx
-	and rcx, ~0x1f
-	jz .smlcpyua
-
-	shl rcx, 2
-
-	lea rsi, [rsi + rcx]
-	lea rdi, [rdi + rcx]
-
-	neg rcx
-
+.smlcpy:
 	mov rax, rsi
 	and rax, 0xf
-	jnz .largecpyloopua
+	jnz .smlcpyua
 
-.largecpyloopa:
-	prefetchnta [rsi + rcx + 512]
-
-	movdqa xmm0, [rsi + rcx] ; 4 byte units, 16 byte sse registers, 128 bytes per loop
-	movdqa xmm1, [rsi + rcx + 16] 
-	movdqa xmm2, [rsi + rcx + 32] 
-	movdqa xmm3, [rsi + rcx + 48] 
-	movdqa xmm4, [rsi + rcx + 64] 
-	movdqa xmm5, [rsi + rcx + 80] 
-	movdqa xmm6, [rsi + rcx + 96] 
-	movdqa xmm7, [rsi + rcx + 112] 
-
-	movntdq [rdi + rcx], xmm0
-	movntdq [rdi + rcx + 16], xmm1
-	movntdq [rdi + rcx + 32], xmm2
-	movntdq [rdi + rcx + 48], xmm3
-	movntdq [rdi + rcx + 64], xmm4
-	movntdq [rdi + rcx + 80], xmm5
-	movntdq [rdi + rcx + 96], xmm6
-	movntdq [rdi + rcx + 112], xmm7
-
-	add rcx, 128
-	jnz .largecpyloopa
-
-	and rdx, 0x1f ; we shouldn't have more than 124 (31 dwords) bytes left
-	
-.smlcpy:
 	mov rcx, rdx
-	shl rcx, 2
-	and rcx, ~0xf
+	and rcx, ~0x3
 	jz .pad2
+	shl rcx, 2
 
 	lea rsi, [rsi + rcx]
 	lea rdi, [rdi + rcx]
@@ -83,6 +45,8 @@ memcpy_optimized:
 	neg rcx
 
 .smlcpyloop:
+	prefetchnta [rsi + rcx + 16]
+
 	movdqu xmm0, [rsi + rcx]
 
 	movntdq [rdi + rcx], xmm0
@@ -106,36 +70,13 @@ memcpy_optimized:
 
 	ret
 
-.largecpyloopua:
-	prefetchnta [rsi + rcx + 128]
-
-	movdqu xmm0, [rsi + rcx] ; 4 byte units, 16 byte sse registers, 128 bytes per loop
-	movdqu xmm1, [rsi + rcx + 16] 
-	movdqu xmm2, [rsi + rcx + 32] 
-	movdqu xmm3, [rsi + rcx + 48] 
-	movdqu xmm4, [rsi + rcx + 64] 
-	movdqu xmm5, [rsi + rcx + 80] 
-	movdqu xmm6, [rsi + rcx + 96] 
-	movdqu xmm7, [rsi + rcx + 112] 
-
-	movntdq [rdi + rcx], xmm0
-	movntdq [rdi + rcx + 16], xmm1
-	movntdq [rdi + rcx + 32], xmm2
-	movntdq [rdi + rcx + 48], xmm3
-	movntdq [rdi + rcx + 64], xmm4
-	movntdq [rdi + rcx + 80], xmm5
-	movntdq [rdi + rcx + 96], xmm6
-	movntdq [rdi + rcx + 112], xmm7
-
-	add rcx, 128
-	jnz .largecpyloopua
-
-	and rdx, 0x1f ; we shouldn't have more than 124 (31 dwords) bytes left
 .smlcpyua:
+	prefetchnta [rsi + rcx + 16]
+
 	mov rcx, rdx
+	and rcx, ~0x3
+	jz .pad2u
 	shl rcx, 2
-	and rcx, ~0xf
-	jz .pad2
 
 	lea rsi, [rsi + rcx]
 	lea rdi, [rdi + rcx]
@@ -152,7 +93,7 @@ memcpy_optimized:
 
 	and rdx, 0x3
 
-;.pad2: ; pad out the end
+.pad2u: ; pad out the end
 	mov rcx, rdx
 	jz .retua
 
@@ -160,7 +101,6 @@ memcpy_optimized:
 	lodsd
 	stosd
 	loop .pad2lua
-
 
 .retua:
 	sfence
