@@ -14,6 +14,7 @@ namespace Lemon::GUI{
         WMMinimizeOtherWindow = 106,
         WMDisplayContextMenu = 107,
         WMInitializeShellConnection = 108,
+        WMUpdateWindowFlags = 109,
     };
 
     class WMClient : public Endpoint {
@@ -26,6 +27,7 @@ namespace Lemon::GUI{
         void DestroyWindow() const;
 
         void SetTitle(const std::string& title) const;
+        void UpdateFlags(uint32_t flags) const;
         void Relocate(int x, int y) const;
         int64_t Resize(int width, int height) const;
         void Minimize(bool minimized) const;

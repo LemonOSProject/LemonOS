@@ -5,6 +5,7 @@
 #include <string>
 #include <math.h>
 #include <lemon/gui/colours.h>
+#include <lemon/gui/model.h>
 #include <lemon/gui/window.h>
 #include <assert.h>
 #include <algorithm>
@@ -1014,11 +1015,9 @@ namespace Lemon::GUI {
         int yPos = sBar.scrollPos ? -(sBar.scrollPos % itemSize.y) : 0;
 
         unsigned idx = 0;
-        if(sBar.scrollPos){
-            idx = sBar.scrollPos / itemSize.y * itemsPerRow;
-        }
+        idx = sBar.scrollPos / itemSize.y * itemsPerRow;
 
-        for(; idx < items.size(); idx++){
+        for(; idx < items.size() && yPos < fixedBounds.height; idx++){
             GridItem& item = items[idx];
             if(item.icon){
                 vector2i_t pos = fixedBounds.pos + (vector2i_t){xPos + itemSize.x / 2 - 32, yPos + 2};

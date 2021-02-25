@@ -367,6 +367,10 @@ namespace Lemon::GUI{
         Queue(Message(WMSetWindowTitle, title));
     }
 
+    void WMClient::UpdateFlags(uint32_t flags) const {
+        Queue(Message(WMUpdateWindowFlags, flags));
+    }
+
     void WMClient::Relocate(int x, int y) const {
         Queue(Message(WMCreateWindow, x, y));
     }

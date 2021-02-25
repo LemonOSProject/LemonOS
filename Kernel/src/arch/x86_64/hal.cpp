@@ -226,7 +226,6 @@ namespace HAL{
 
         char* cmdLine = nullptr;
 
-        Log::Info("tagphys: %x, st2: %x", tagPhys, st2Info);
         while(tagPhys){
             stivale2_tag_t* tag = reinterpret_cast<stivale2_tag_t*>(tagPhys);
             Log::Debug(debugLevelHAL, DebugLevelVerbose, "[HAL] [stivale2] Found tag with ID: %x", tag->id);

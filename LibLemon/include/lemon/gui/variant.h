@@ -1,3 +1,5 @@
+#pragma once
+
 #include <variant>
 
 namespace Lemon::GUI {

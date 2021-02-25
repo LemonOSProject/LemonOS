@@ -4,13 +4,13 @@
 #include <lemon/gfx/graphics.h>
 #include <lemon/gui/ctxentry.h>
 #include <lemon/gui/colours.h>
-#include <lemon/gui/model.h>
 
 #include <vector>
 #include <string>
 
 namespace Lemon::GUI {
     class Window;
+    class DataModel;
 
     enum LayoutSize {
         Fixed,      // Fixed Size in Pixels

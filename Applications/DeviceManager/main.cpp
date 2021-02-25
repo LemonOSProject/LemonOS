@@ -1,4 +1,5 @@
 #include <lemon/gui/window.h>
+#include <lemon/gui/model.h>
 
 #include <lemon/system/device.h>
 

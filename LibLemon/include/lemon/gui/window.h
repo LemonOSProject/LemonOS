@@ -16,11 +16,7 @@
 #define WINDOW_MENUBAR_HEIGHT 20
 
 namespace Lemon::GUI {
-    __attribute__((unused)) static const char* wmSocketAddress = "lemonwm";
-
 	typedef void(*WindowPaintHandler)(surface_t*);
-    typedef void(*MessageReceiveHandler)();
-    typedef void(*EventCallback)();
 
     enum {
         WindowBufferReturn = 100,
@@ -114,7 +110,7 @@ namespace Lemon::GUI {
         ///
         /// \param flags New Flags
         /////////////////////////////
-        void UpdateFlags(uint32_t flags);
+        inline void UpdateFlags(uint32_t flags) { this->flags = flags; WMClient::UpdateFlags(flags); }
 
         /////////////////////////////
         /// \brief Paint window

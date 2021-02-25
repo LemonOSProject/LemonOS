@@ -217,6 +217,20 @@ void WMInstance::Poll(){
                 }
 
                 win->title = title;
+            } else if(cmd == Lemon::GUI::WMUpdateWindowFlags) {
+                WMWindow* win = FindWindow(client);
+
+                if(!win){
+                    printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+                    continue;
+                }
+                
+                uint32_t flags;
+                if(m.Decode(flags)){
+                    continue; // Invalid or corrupted message
+                }
+
+                win->flags = flags;
             } else if(cmd == Lemon::GUI::WMMinimizeWindow){
                 bool minimized = true;
                 if(m.Decode(minimized)){
