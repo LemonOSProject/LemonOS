@@ -2,8 +2,6 @@ SPATH=$(dirname $(readlink -f "$0"))
 
 if [ -z "$LEMON_SYSROOT" ]; then
     export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
-    echo "LEMON_SYSROOT not set, continuing will use defaults:\n$LEMON_SYSROOT\n"
-    read
 fi
 
 set -e
@@ -18,8 +16,12 @@ cd $SPATH/..
 export LEMONDIR=$(pwd)
 
 if ! [ -x "$(command -v lemon-clang)" ]; then
-	echo "Lemon cross toolchain not found (Did you forget to build toolchain? Or is it just not in PATH?)"
-	exit 1
+    export PATH="$HOME/.local/share/lemon/bin:$PATH"
+
+    if ! [ -x "$(command -v lemon-clang)" ]; then
+        echo "Lemon cross toolchain not found (Did you forget to build toolchain?)"
+        exit 1
+    fi
 fi
 
 cd LibLemon
@@ -38,5 +40,4 @@ cd ../Ports
 ./buildport.sh zlib
 ./buildport.sh libpng
 ./buildport.sh freetype
-./buildport.sh lemon-binutils
-./buildport.sh nyancat
+./buildport.sh libressl

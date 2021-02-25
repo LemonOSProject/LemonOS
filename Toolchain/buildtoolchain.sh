@@ -116,8 +116,8 @@ _build(){
 if [ -z "$LEMON_SYSROOT" -o -z "$TOOLCHAIN_PREFIX" ]; then
     export TOOLCHAIN_PREFIX=$HOME/.local/share/lemon
     export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
-    echo "LEMON_SYSROOT or TOOLCHAIN_PREFIX not set, continuing will use defaults:\nTOOLCHAIN_PREFIX: $TOOLCHAIN_PREFIX\nLEMON_SYSROOT: $LEMON_SYSROOT"
-    read
+    echo "LEMON_SYSROOT or TOOLCHAIN_PREFIX not set, using defaults: \
+    TOOLCHAIN_PREFIX: $TOOLCHAIN_PREFIX\nLEMON_SYSROOT: $LEMON_SYSROOT"
 fi
 
 if [ -z "$1" ]; then

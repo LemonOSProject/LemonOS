@@ -33,7 +33,7 @@ jobs:
         run: git submodule update --init
 
       - name: Build the toolchain
-        run: Toolchain/buildtoolchain.sh
+        run: Toolchain/buildtoolchain.sh build
 
       - name: Configure dependencies
         run: Scripts/configure.sh
