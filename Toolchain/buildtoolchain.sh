@@ -10,8 +10,6 @@ export LIMINE_SRC_DIR=limine-1.0
 
 if [ -z "$JOBCOUNT" ]; then
     export JOBCOUNT=$(nproc)
-    echo "\$JOBCOUNT not set. Setting \$JOBCOUNT to $JOBCOUNT"
-    read
 fi
  	
 _unpack_binutils(){
