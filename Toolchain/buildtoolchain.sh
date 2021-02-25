@@ -14,8 +14,17 @@ fi
  	
 _unpack_binutils(){
     curl -L "http://ftpmirror.gnu.org/binutils/binutils-2.32.tar.gz" -o binutils-2.32.tar.gz
-    tar -xzvf binutils-2.32.tar.gz
+    tar -xzf binutils-2.32.tar.gz
  	rm binutils-2.32.tar.gz
+
+    pushd $BINUTILS_SRC_DIR
+    patch -p1 < ../lemon-binutils-2.32.patch
+    cd ld
+    aclocal
+    automake
+    autoreconf
+    cd ..
+    popd
 }
 
 _unpack_llvm(){
@@ -29,13 +38,9 @@ _unpack_limine(){
 
 _build_binutils(){
     cd $BINUTILS_SRC_DIR
-    patch -p1 < ../lemon-binutils-2.32.patch
-    cd ld
-    aclocal
-    automake
-    autoreconf
-    cd ..
+
     ./configure --target=x86_64-lemon --prefix=$TOOLCHAIN_PREFIX --with-sysroot=$LEMON_SYSROOT --disable-werror --enable-shared
+    
     make -j $JOBCOUNT
     make install
 }
@@ -79,18 +84,27 @@ _prepare(){
 }
 
 _binutils(){
-    _unpack_binutils
+    if [ ! -d "$BINUTILS_SRC_DIR" ]; then
+        _unpack_binutils
+    fi
+
     _build_binutils
 }
 
 _llvm(){
-    _unpack_llvm
+    if [ ! -d "$LLVM_SRC_DIR" ]; then
+        _unpack_llvm
+    fi
+
     _build_llvm
 }
 
 
 _limine(){
-    _unpack_limine
+    if [ ! -d "$LIMINE_SRC_DIR" ]; then
+        _unpack_limine
+    fi
+    
     _build_limine
 }
 

@@ -22,6 +22,9 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+
+      - name: Update PATH
+        run: echo "$HOME/.local/share/lemon/bin" >> $GITHUB_PATH
       
       - name: Install dependencies
         run: |
@@ -40,7 +43,8 @@ jobs:
       - name: Cache the toolchain and sysroot
         uses: actions/cache@v2
         with:
-          path: ~/.local/share/lemon
+          path: |
+            **/Toolchain/
           key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('~/llvm-hash.txt') }}-${{ hashFiles('**/Toolchain/buildtoolchain.sh', '**/Toolchain/lemon-binutils-2.32.patch') }}
           restore-keys: |
             ${{ runner.os }}-lemon-toolchain-

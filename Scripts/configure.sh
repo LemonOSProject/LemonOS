@@ -4,6 +4,8 @@ if [ -z "$LEMON_SYSROOT" ]; then
     export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
 fi
 
+export PATH="$HOME/.local/share/lemon/bin:$PATH"
+
 set -e
 
 ln -sfT ../../../include/c++ $HOME/.local/share/lemon/sysroot/system/include/c++
@@ -16,12 +18,8 @@ cd $SPATH/..
 export LEMONDIR=$(pwd)
 
 if ! [ -x "$(command -v lemon-clang)" ]; then
-    export PATH="$HOME/.local/share/lemon/bin:$PATH"
-
-    if ! [ -x "$(command -v lemon-clang)" ]; then
-        echo "Lemon cross toolchain not found (Did you forget to build toolchain?)"
-        exit 1
-    fi
+    echo "Lemon cross toolchain not found (Did you forget to build toolchain?)"
+    exit 1
 fi
 
 cd LibLemon
