@@ -7,6 +7,8 @@ Install the following (Arch) packages:\
 `git`, `docker`, `qemu`\
 Or Debian, Ubuntu, etc.:\
 `git`, `docker.io`, `qemu-utils`
+For building the disk image:\
+`grub-pc`, `grub-efi-amd64-bin`, `e2fsprogs`, `dosfstools`
 
 ## Cloning
 Make sure you use `--recurse-submodules` to get the submodules

@@ -9,7 +9,9 @@ _NOTE: Building on WSL2 is doable, however I strongly recommend an actual UNIX s
 As well as the following (Arch) packages:\
 `base-devel`, `autoconf`, `python3`, `ninja`, `wget`, `qemu`, `pip`, `nasm`\
 Or Debian, etc.:\
-`build-essential`, `autoconf`, `python3`, `python3-pip`, `ninja-build`, `qemu-utils`, `nasm`
+`build-essential`, `autoconf`, `libtool`, `python3`, `python3-pip`, `ninja-build`, `qemu-utils`, `nasm`\
+For building the disk image:\
+`grub-pc`, `grub-efi-amd64-bin`, `e2fsprogs`, `dosfstools`
 
 ## Cloning
 Make sure you use `--recurse-submodules` to get the submodules
