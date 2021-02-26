@@ -21,7 +21,20 @@ grub-install --target=x86_64-efi --boot-directory=/mnt/Lemon/lemon/boot --efi-di
 umount /mnt/Lemon
 umount /mnt/LemonEFI
 
-limine-install "${LOOPBACK_DEVICE}"
+if [ -x "$(command -v limine-install)" ]; then
+    limine-install "${LOOPBACK_DEVICE}"
+else
+    export PATH=$PATH:$HOME/.local/share/lemon/bin
+    
+    if [ -x "$(command -v limine-install)" ]; then
+        limine-install "${LOOPBACK_DEVICE}"
+    elif [ -e "Toolchain/limine-1.0/limine-install" ]; then
+        Toolchain/limine-1.0/limine-install "${LOOPBACK_DEVICE}"
+    else
+        echo "Failed to find limine-install!"
+        exit 1
+    fi
+fi
 
 losetup -d "${LOOPBACK_DEVICE}"
 
