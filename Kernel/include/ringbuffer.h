@@ -6,16 +6,6 @@
 
 template<typename T>
 class RingBuffer{
-private:
-    T* buffer = nullptr;
-    T* bufferEnd = nullptr;
-    size_t bufferSize = 0;
-
-    T* enqueuePointer = nullptr;
-    T* dequeuePointer = nullptr;
-
-    lock_t enqueueLock = 0;
-    lock_t dequeueLock = 0;
 public:
     RingBuffer(){
         bufferSize = 64;
@@ -78,4 +68,14 @@ public:
 
         return counter;
     }
+private:
+    T* buffer = nullptr;
+    T* bufferEnd = nullptr;
+    size_t bufferSize = 0;
+
+    T* enqueuePointer = nullptr;
+    T* dequeuePointer = nullptr;
+
+    lock_t enqueueLock = 0;
+    lock_t dequeueLock = 0;
 };

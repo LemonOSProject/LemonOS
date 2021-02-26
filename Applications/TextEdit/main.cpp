@@ -87,11 +87,9 @@ void SaveFile(const char* path){
 }
 
 void OpenFile(){
-
 	char* filePath = Lemon::GUI::FileDialog("/");
 
 	if(!filePath){
-		Lemon::GUI::DisplayMessageBox("Message", "Invalid filepath!", Lemon::GUI::MsgButtonsOK);
 		return;
 	}
 

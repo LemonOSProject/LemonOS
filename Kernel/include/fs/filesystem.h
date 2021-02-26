@@ -145,7 +145,7 @@ static inline void FD_SET(int fd, fd_set_t* fds) {
 class FilesystemWatcher;
 class DirectoryEntry;
 
-class FsNode{
+class FsNode {
     friend class FilesystemBlocker;
 public:
     lock_t blockedLock = 0;

@@ -185,7 +185,7 @@ long SysRead(RegisterContext* r){
 	uint64_t count = SC_ARG2(r);
 
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), count, proc->addressSpace)){
-		Log::Warning("Invalid Memory Buffer: %x", SC_ARG1(r));
+		Log::Warning("SysRead: Invalid Memory Buffer: %x", SC_ARG1(r));
 		return -EFAULT;
 	}
 
@@ -210,7 +210,7 @@ long SysWrite(RegisterContext* r){
 	uint64_t count = SC_ARG2(r);
 
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), count, proc->addressSpace)){
-		Log::Warning("Invalid Memory Buffer: %x", SC_ARG1(r));
+		Log::Warning("SysWrite: Invalid Memory Buffer: %x", SC_ARG1(r));
 		return -EFAULT;
 	}
 
