@@ -10,16 +10,16 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 [Website](https://lemonos.org) \
 [Discord Server](https://discord.gg/NAYp6AUYWM)
 
-![Lemon OS Screenshot](Screenshots/image5.png)\
-[More screenshots](Screenshots)
-
 ## Building
 - [Building Lemon OS with Docker (Recommended)](Documentation/Build/Building-Lemon-OS-with-Docker.md)
 - [Building Lemon OS](Documentation/Build/Building-Lemon-OS.md)
 
 ## Prebuilt Image
-[Latest Prebuilt Image](https://github.com/LemonOSProject/LemonOS/releases/latest)
+[Nightly Images](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml?query=is%3Asuccess+branch%3Amaster) - Go to latest job, disk images located under Artifacts\
+[Latest Release](https://github.com/LemonOSProject/LemonOS/releases/latest)
 
+![Lemon OS Screenshot](Screenshots/image5.png)\
+[More screenshots](Screenshots)
 ## Features
 - Symmetric Multiprocessing (SMP)
 - UNIX/BSD Sockets (local/UNIX domain and internet)

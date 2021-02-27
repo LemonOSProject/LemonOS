@@ -56,9 +56,6 @@ jobs:
 
       - name: Configure dependencies
         run: Scripts/configure.sh
-        
-      - name: Configure dependencies
-        run: Scripts/configure.sh
 
       - name: Creating disk image
         run: Scripts/createdisk.sh
