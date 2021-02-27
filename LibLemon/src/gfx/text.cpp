@@ -279,7 +279,7 @@ namespace Lemon::Graphics{
         return GetTextLength(str, strlen(str));
     }
 
-    TextObject::TextObject(vector2i_t pos, std::string& text, Font* font){
+    TextObject::TextObject(vector2i_t pos, const std::string& text, Font* font){
         this->pos = pos;
         this->text = text;
         this->font = font;

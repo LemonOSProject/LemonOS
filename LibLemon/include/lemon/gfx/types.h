@@ -2,7 +2,7 @@
 
 #include <list>
 
-typedef struct Vector2i{
+typedef struct Vector2i {
     int x, y;
 } vector2i_t; // Two dimensional integer vector
 

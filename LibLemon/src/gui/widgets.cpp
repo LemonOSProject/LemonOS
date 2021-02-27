@@ -13,7 +13,7 @@
 namespace Lemon::GUI {
     Widget::Widget() {}
 
-    Widget::Widget(rect_t bounds, LayoutSize newSizeX, LayoutSize newSizeY){
+    Widget::Widget(rect_t bounds, LayoutSize newSizeX, LayoutSize newSizeY) {
         this->bounds = bounds;
 
         sizeX = newSizeX;
@@ -24,17 +24,23 @@ namespace Lemon::GUI {
 
     Widget::~Widget(){}
 
-    void Widget::Paint(__attribute__((unused)) surface_t* surface){}
+    void Widget::Paint(__attribute__((unused)) surface_t* surface) {}
 
-    void Widget::OnMouseDown(__attribute__((unused)) vector2i_t mousePos){}
+    void Widget::OnMouseEnter(vector2i_t mousePos) {
+        OnMouseMove(mousePos);
+    }
 
-    void Widget::OnMouseUp(__attribute__((unused)) vector2i_t mousePos){}
+    void Widget::OnMouseExit(__attribute__((unused)) vector2i_t mousePos) {}
 
-    void Widget::OnRightMouseDown(__attribute__((unused)) vector2i_t mousePos){}
+    void Widget::OnMouseDown(__attribute__((unused)) vector2i_t mousePos) {}
 
-    void Widget::OnRightMouseUp(__attribute__((unused)) vector2i_t mousePos){}
+    void Widget::OnMouseUp(__attribute__((unused)) vector2i_t mousePos) {}
 
-    void Widget::OnHover(__attribute__((unused)) vector2i_t mousePos){}
+    void Widget::OnRightMouseDown(__attribute__((unused)) vector2i_t mousePos) {}
+
+    void Widget::OnRightMouseUp(__attribute__((unused)) vector2i_t mousePos) {}
+
+    void Widget::OnHover(__attribute__((unused)) vector2i_t mousePos) {}
 
     void Widget::OnMouseMove(__attribute__((unused)) vector2i_t mousePos) {}
     
@@ -108,6 +114,10 @@ namespace Lemon::GUI {
 
         w->SetParent(this);
         w->SetWindow(window);
+
+        if(!active){
+            active = w;
+        }
         
         UpdateFixedBounds();
     }
@@ -117,6 +127,7 @@ namespace Lemon::GUI {
         w->SetWindow(nullptr);
 
         if(active == w) active = nullptr;
+        if(lastMousedOver == w) lastMousedOver = nullptr;
 
         children.erase(std::remove(children.begin(), children.end(), w), children.end());
     }
@@ -127,6 +138,25 @@ namespace Lemon::GUI {
         for(Widget* w : children){
             w->Paint(surface);
         }
+    }
+
+    void Container::OnMouseEnter(vector2i_t mousePos){
+        for(Widget* w : children){
+            if(Graphics::PointInRect(w->GetFixedBounds(), mousePos)){
+                w->OnMouseEnter(mousePos);
+
+                lastMousedOver = w;
+                break;
+            }
+        }
+    }
+
+    void Container::OnMouseExit(vector2i_t mousePos){
+        if(lastMousedOver){
+            lastMousedOver->OnMouseExit(mousePos);
+        }
+
+        lastMousedOver = nullptr;
     }
 
     void Container::OnMouseDown(vector2i_t mousePos){
@@ -169,6 +199,24 @@ namespace Lemon::GUI {
     }
 
     void Container::OnMouseMove(vector2i_t mousePos){
+        for(Widget* w : children){
+            if(Graphics::PointInRect(w->GetFixedBounds(), mousePos)){
+                if(w == lastMousedOver){
+                    break;
+                } else {
+                    if(lastMousedOver){
+                        lastMousedOver->OnMouseExit(mousePos);
+                    }
+
+                    w->OnMouseEnter(mousePos);
+
+                    lastMousedOver = w;
+                }
+            } else if(w == lastMousedOver){
+                lastMousedOver = nullptr;
+            }
+        }
+        
         if(active){
             active->OnMouseMove(mousePos);
         }

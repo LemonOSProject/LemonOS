@@ -33,7 +33,7 @@ namespace Lemon::Graphics{
 
         void CalculateSizes();
     public:
-        TextObject(vector2i_t pos, std::string& text, Font* font = DefaultFont());
+        TextObject(vector2i_t pos, const std::string& text, Font* font = DefaultFont());
         TextObject(vector2i_t pos, const char* text, Font* font = DefaultFont());
         TextObject(vector2i_t pos = {0, 0}, Font* font = DefaultFont());
 
@@ -53,6 +53,28 @@ namespace Lemon::Graphics{
             assert(font);
 
             this->font = font;
+            textDirty = true;
+        }
+
+        /////////////////////////////
+        /// \brief Set TextObject text
+        ///
+        /// \param text Text to render
+        /////////////////////////////
+        inline void SetText(const char* t){
+            text = t;
+            
+            textDirty = true;
+        }
+
+        /////////////////////////////
+        /// \brief Set TextObject text
+        ///
+        /// \param text Text to render
+        /////////////////////////////
+        inline void SetText(const std::string& t){
+            text = t;
+
             textDirty = true;
         }
 

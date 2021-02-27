@@ -32,24 +32,7 @@ namespace Lemon::GUI {
     };
 
     class Widget {
-    protected:
-        Widget* parent = nullptr;
-        Window* window = nullptr;
-
-        short layoutSizeX = LayoutSize::Fixed;
-        short layoutSizeY = LayoutSize::Fixed;
-
-        rect_t bounds;
-        rect_t fixedBounds;
-
-        LayoutSize sizeX;
-        LayoutSize sizeY;
-
-        WidgetAlignment align = WAlignLeft;
-        WidgetAlignment verticalAlign = WAlignTop;
     public:
-        Widget* active = nullptr; // Only applies to containers, etc. is so widgets know whether they are active or not
-
         Widget();
         Widget(rect_t bounds, LayoutSize newSizeX = LayoutSize::Fixed, LayoutSize newSizeY = LayoutSize::Fixed);
         virtual ~Widget();
@@ -64,6 +47,8 @@ namespace Lemon::GUI {
 
         virtual void Paint(surface_t* surface);
 
+        virtual void OnMouseEnter(vector2i_t mousePos);
+        virtual void OnMouseExit(vector2i_t mousePos);
         virtual void OnMouseDown(vector2i_t mousePos);
         virtual void OnMouseUp(vector2i_t mousePos);
         virtual void OnMouseMove(vector2i_t mousePos);
@@ -84,12 +69,26 @@ namespace Lemon::GUI {
         inline rect_t GetFixedBounds() { return fixedBounds; }
 
         virtual void SetBounds(rect_t bounds) { this->bounds = bounds; UpdateFixedBounds(); };
+
+        Widget* active = nullptr; // Only applies to containers, etc. is so widgets know whether they are active or not
+    protected:
+        Widget* parent = nullptr;
+        Window* window = nullptr;
+
+        short layoutSizeX = LayoutSize::Fixed;
+        short layoutSizeY = LayoutSize::Fixed;
+
+        rect_t bounds;
+        rect_t fixedBounds;
+
+        LayoutSize sizeX;
+        LayoutSize sizeY;
+
+        WidgetAlignment align = WAlignLeft;
+        WidgetAlignment verticalAlign = WAlignTop;
     };
 
     class Container : public Widget {
-    protected:
-        std::vector<Widget*> children;
-
     public:
         rgba_colour_t background = Lemon::colours[Lemon::Colour::Background];
 
@@ -102,6 +101,8 @@ namespace Lemon::GUI {
 
         void Paint(surface_t* surface);
 
+        void OnMouseEnter(vector2i_t mousePos);
+        void OnMouseExit(vector2i_t mousePos);
         void OnMouseDown(vector2i_t mousePos);
         void OnMouseUp(vector2i_t mousePos);
         void OnRightMouseDown(vector2i_t mousePos);
@@ -111,6 +112,11 @@ namespace Lemon::GUI {
         void OnKeyPress(int key);
 
         void UpdateFixedBounds();
+
+    protected:
+        std::vector<Widget*> children;
+
+        Widget* lastMousedOver = nullptr;
     };
 
     class LayoutContainer : public Container {

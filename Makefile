@@ -41,7 +41,6 @@ clean:
 	
 cleanall:
 	rm -rf LibC/build LibLemon/build Applications/build Kernel/build System/build
-	find Base/ -type f -not -name '*.cfg' -not -name '*.py' -not -name '*.asm' -not -name 'localtime' -delete
 	rm -rf Initrd/*
 	rm initrd.tar
 	
