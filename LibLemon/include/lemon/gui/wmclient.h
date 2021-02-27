@@ -15,6 +15,13 @@ namespace Lemon::GUI{
         WMDisplayContextMenu = 107,
         WMInitializeShellConnection = 108,
         WMUpdateWindowFlags = 109,
+        WMGetWindowPosition = 110,
+    };
+
+    enum {
+        WindowBufferReturn = 100,
+        WindowEvent = 101,
+        WindowPositionReturn = 102,
     };
 
     class WMClient : public Endpoint {
@@ -28,8 +35,11 @@ namespace Lemon::GUI{
 
         void SetTitle(const std::string& title) const;
         void UpdateFlags(uint32_t flags) const;
+
         void Relocate(int x, int y) const;
         int64_t Resize(int width, int height) const;
+        vector2i_t GetPosition() const;
+
         void Minimize(bool minimized) const;
         void Minimize(long windowID, bool minimized) const;
         void DisplayContextMenu(int x, int y, const std::string& serializedEntries) const;

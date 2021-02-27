@@ -19,11 +19,6 @@ namespace Lemon::GUI {
 	typedef void(*WindowPaintHandler)(surface_t*);
 
     enum {
-        WindowBufferReturn = 100,
-        WindowEvent = 101,
-    };
-
-    enum {
         WMCxtEntryTypeCommand,
         WMCxtEntryTypeDivider,
         WMCxtEntryTypeExpand,
@@ -117,7 +112,7 @@ namespace Lemon::GUI {
         ///
         /// Call OnPaint(), if relevant draw GUI Widgets, then swap the window buffers.
         /////////////////////////////
-        void Paint();
+        virtual void Paint();
 
         /////////////////////////////
         /// \brief Swap the window buffers
@@ -200,6 +195,19 @@ namespace Lemon::GUI {
         void CreateMenuBar();
 
         void (*OnMenuCmd)(unsigned short, Window*) = nullptr;
+
+        /////////////////////////////
+        /// \brief Set toolip
+        ///
+        /// \param text Tooltip text
+        /// \param pos Position (absolute) of tooltip
+        /////////////////////////////
+        void SetTooltip(const char* text, vector2i_t pos);
+
+        /////////////////////////////
+        /// \brief Hide toolip
+        /////////////////////////////
+        inline void HideTooltip() const { if(tooltipWindow.get()) tooltipWindow->Minimize(true); }
         
         /////////////////////////////
         /// \brief Get Window Flags
@@ -214,6 +222,13 @@ namespace Lemon::GUI {
         /// \return window size
         /////////////////////////////
         inline vector2i_t GetSize() const { return {surface.width, surface.height}; };
+
+        /////////////////////////////
+        /// \brief Get Window Size
+        ///
+        /// \return window position
+        /////////////////////////////
+        inline vector2i_t GetPosition() const { return WMClient::GetPosition(); };
 
         /////////////////////////////
         /// \brief OnPaint callback
@@ -231,12 +246,36 @@ namespace Lemon::GUI {
 
         vector2i_t lastMousePos = {-1, -1};
         WindowMenuBar* menuBar = nullptr;
+        Widget* tooltipOwner = nullptr;
         Container rootContainer;
         surface_t surface = {0, 0, 32, nullptr};
         bool closed = false; // Set to true when close button pressed
 
     private:
-        WindowBuffer* windowBufferInfo;
+        class TooltipWindow : protected WMClient {
+        public:
+            TooltipWindow(const char* text, vector2i_t pos, const RGBAColour& bgColour);
+
+            void SetText(const char* text);
+            inline void Relocate(vector2i_t pos) const { WMClient::Relocate(pos.x, pos.y); }
+
+            void Paint();
+
+            inline void Minimize(bool minimized) const { WMClient::Minimize(minimized); }
+        
+        private:
+            Graphics::TextObject textObject;
+            RGBAColour backgroundColour;
+
+            WindowBuffer* windowBufferInfo;
+            uint8_t* buffer1;
+            uint8_t* buffer2;
+            uint64_t windowBufferKey;
+
+            surface_t surface = {0, 0, 32, nullptr};
+        };
+        
+        WindowBuffer* windowBufferInfo = nullptr;
         uint8_t* buffer1;
         uint8_t* buffer2;
         uint64_t windowBufferKey;
@@ -246,6 +285,8 @@ namespace Lemon::GUI {
         int windowType = WindowType::Basic;
 
         timespec lastClick = {0, 0};
+
+        std::unique_ptr<TooltipWindow> tooltipWindow = nullptr;
 
         void UpdateGUITheme(const std::string& path);
     };

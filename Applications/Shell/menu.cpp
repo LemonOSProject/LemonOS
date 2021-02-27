@@ -155,6 +155,17 @@ public:
         }
     }
 
+    void OnMouseEnter(vector2i_t pos){
+        window->tooltipOwner = this;
+        window->SetTooltip(obj->name.c_str(), window->GetPosition() + (vector2i_t){ window->GetSize().x + 8, fixedBounds.y + (fixedBounds.height / 2 - 8)});
+    }
+
+    void OnMouseExit(vector2i_t pos){
+        if(window->tooltipOwner == this){
+            window->HideTooltip();
+        }
+    }
+
     void OnMouseUp(vector2i_t pos){
         obj->Open(fixedBounds.pos + (vector2i_t){fixedBounds.size.x, 0});
     }

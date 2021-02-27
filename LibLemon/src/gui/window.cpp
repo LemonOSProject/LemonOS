@@ -22,7 +22,7 @@ namespace Lemon::GUI{
 
         windowBufferInfo = (WindowBuffer*)Lemon::MapSharedMemory(windowBufferKey);
 
-        windowBufferInfo->currentBuffer = 0;
+        windowBufferInfo->currentBuffer = 1;
         buffer1 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer1Offset;
         buffer2 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer2Offset;
 
@@ -113,6 +113,8 @@ namespace Lemon::GUI{
         windowBufferKey = WMClient::Resize(size.x, size.y);
         if(windowBufferKey <= 0){
             printf("[LibLemon] Warning: Window::Resize: Failed to obtain window buffer!\n");
+
+            surface.buffer = nullptr;
             return;
         }
 
@@ -240,11 +242,16 @@ namespace Lemon::GUI{
 
                 rootContainer.OnRightMouseUp(ev.mousePos);
                 break;
+            case EventMouseExit:
+                lastMousePos = {INT_MIN, INT_MIN}; // Prevent anything from staying selected
+                rootContainer.OnMouseExit(ev.mousePos);
+
+                break;
             case EventMouseEnter:
             case EventMouseMoved:
                 lastMousePos = ev.mousePos;
                 
-                if(menuBar && ev.mousePos.y < menuBar->GetFixedBounds().height){
+                if(menuBar && ev.mousePos.y >= 0 && ev.mousePos.y < menuBar->GetFixedBounds().height){
                     menuBar->OnMouseMove(ev.mousePos);
                 } else if (menuBar){
                     //ev.mousePos.y -= menuBar->GetFixedBounds().height;
@@ -271,9 +278,6 @@ namespace Lemon::GUI{
                 } else {
                     rootContainer.OnCommand(ev.windowCmd);
                 }
-                break;
-            case EventMouseExit:
-                lastMousePos = {-1, -1}; // Prevent anything from staying selected
                 break;
         }
     }
@@ -310,6 +314,84 @@ namespace Lemon::GUI{
         menuBar->SetWindow(this);
 
         rootContainer.SetBounds({0, WINDOW_MENUBAR_HEIGHT, surface.width, surface.height - WINDOW_MENUBAR_HEIGHT});
+    }
+
+    void Window::SetTooltip(const char* text, vector2i_t pos){
+        if(!tooltipWindow.get()){
+            tooltipWindow = std::make_unique<TooltipWindow>(text, pos, colours[Colour::ContentBackground]);
+        } else {
+            tooltipWindow->SetText(text);
+
+            tooltipWindow->Minimize(false);
+            tooltipWindow->Relocate(pos);
+        }
+    }
+
+    Window::TooltipWindow::TooltipWindow(const char* text, vector2i_t pos, const RGBAColour& bgColour) : textObject({4, 4}, text), backgroundColour(bgColour) {
+        windowBufferKey = CreateWindow(pos.x, pos.y, textObject.Size().x + 8, textObject.Size().y + 8, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, "");
+        if(windowBufferKey <= 0){
+            printf("[LibLemon] Warning: Window::TooltipWindow::TooltipWindow: Failed to obtain window buffer!\n");
+            return;
+        }
+
+        textObject.SetColour(colours[Colour::Text]);
+
+        windowBufferInfo = (WindowBuffer*)Lemon::MapSharedMemory(windowBufferKey);
+
+        windowBufferInfo->currentBuffer = 0;
+        buffer1 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer1Offset;
+        buffer2 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer2Offset;
+
+        surface.buffer = buffer1;
+        surface.width = textObject.Size().x + 8;
+        surface.height = textObject.Size().y + 8;
+
+        Paint();
+    }
+
+    void Window::TooltipWindow::SetText(const char* text){
+        textObject.SetText(text);
+
+        Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey);
+        surface.buffer = nullptr; // Invalidate surface buffer
+
+        windowBufferKey = Resize(textObject.Size().x + 8, textObject.Size().y + 8);
+        if(windowBufferKey <= 0){
+            printf("[LibLemon] Warning: Window::TooltipWindow::Resize: Failed to obtain window buffer!\n");
+            return;
+        }
+
+        windowBufferInfo = (WindowBuffer*)Lemon::MapSharedMemory(windowBufferKey);
+
+        windowBufferInfo->currentBuffer = 1;
+        buffer1 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer1Offset;
+        buffer2 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer2Offset;
+
+        surface.buffer = buffer1;
+        surface.width = textObject.Size().x + 8;
+        surface.height = textObject.Size().y + 8;
+
+        Paint();
+    }
+
+    void Window::TooltipWindow::Paint(){
+        if(!surface.buffer){
+            return;
+        }
+
+        Graphics::DrawRect(0, 0, surface.width, surface.height, backgroundColour, &surface);
+
+        textObject.Render(&surface);
+
+        if(surface.buffer == buffer1){
+            windowBufferInfo->currentBuffer = 0;
+            surface.buffer = buffer2;
+        } else {
+            windowBufferInfo->currentBuffer = 1;
+            surface.buffer = buffer1;
+        }
+
+        windowBufferInfo->dirty = 1;
     }
 
     void WindowMenuBar::Paint(surface_t* surface){
@@ -372,7 +454,7 @@ namespace Lemon::GUI{
     }
 
     void WMClient::Relocate(int x, int y) const {
-        Queue(Message(WMCreateWindow, x, y));
+        Queue(Message(WMRelocateWindow, x, y));
     }
 
     int64_t WMClient::Resize(int width, int height) const {
@@ -386,6 +468,19 @@ namespace Lemon::GUI{
         }
 
         return key;
+    }
+
+    vector2i_t WMClient::GetPosition() const {
+        Message ret;
+        
+        Call(Message(WMGetWindowPosition), ret, WindowPositionReturn);
+
+        vector2i_t sz;
+        if(ret.Decode(sz.x, sz.y)){
+            return {0, 0};
+        }
+
+        return sz;
     }
 
     void WMClient::Minimize(bool minimized) const {

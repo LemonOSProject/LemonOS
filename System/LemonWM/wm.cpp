@@ -289,6 +289,35 @@ void WMInstance::Poll(){
 
                 redrawBackground = true;
                 contextMenuActive = true;
+            } else if(cmd == Lemon::GUI::WMRelocateWindow){
+                WMWindow* win = FindWindow(client);
+
+                if(!win){
+                    printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+                    continue;
+                }
+
+                vector2i_t pos;
+                if(m.Decode(pos.x, pos.y)){
+                    continue;
+                }
+
+                if(pos.x >= surface.width){
+                    pos.x = surface.width - 1;
+                } else if(pos.y >= surface.height){
+                    pos.y = surface.height - 1;
+                }
+
+                win->pos = pos;
+            } else if(cmd == Lemon::GUI::WMGetWindowPosition){
+                WMWindow* win = FindWindow(client);
+
+                if(!win){
+                    printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+                    continue;
+                }
+
+                win->SendPosition();
             }
         }
     }
