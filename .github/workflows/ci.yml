@@ -65,3 +65,9 @@ jobs:
         
       - name: Building system
         run: make all
+      
+      - name: Uploading image as artefact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Lemon
+          path: Disks/Lemon.img
