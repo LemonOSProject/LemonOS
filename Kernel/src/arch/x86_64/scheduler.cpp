@@ -579,7 +579,9 @@ namespace Scheduler{
     }
 
     process_t* CreateELFProcess(void* elf, int argc, char** argv, int envc, char** envp, const char* execPath) {
-        if(!VerifyELF(elf)) return nullptr;
+        if(!VerifyELF(elf)) {
+            return nullptr;
+        }
 
         // Create process structure
         process_t* proc = InitializeProcessStructure();

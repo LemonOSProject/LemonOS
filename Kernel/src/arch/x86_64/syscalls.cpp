@@ -126,6 +126,26 @@ long SysExec(RegisterContext* r){
 
 	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp, filepath);
 	kfree(buffer);
+	
+	for(int i = 0; i < envCount; i++){
+		kfree(kernelEnvp[i]);
+	}
+
+	if(!proc) {
+		for(int i = 0; i < argc; i++){
+			kfree(kernelArgv[i]);
+		}
+
+		return -1;
+	}
+
+	for(int i = 0; i < argc; i++){
+		kfree(kernelArgv[i]);
+	}
+
+	if(!proc){
+		return -1; // Failed to create process
+	}
 
 	// TODO: Do not run process until we have finished
 
@@ -149,22 +169,6 @@ long SysExec(RegisterContext* r){
 	strncpy(proc->name, name, NAME_MAX);
 
 	kfree(name);
-	
-	for(int i = 0; i < envCount; i++){
-		kfree(kernelEnvp[i]);
-	}
-
-	if(!proc) {
-		for(int i = 0; i < argc; i++){
-			kfree(kernelArgv[i]);
-		}
-
-		return -1;
-	}
-
-	for(int i = 0; i < argc; i++){
-		kfree(kernelArgv[i]);
-	}
 
 	return proc->pid;
 }
