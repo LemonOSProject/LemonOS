@@ -79,7 +79,7 @@ public:
     void DrawClip(surface_t* surface, rect_t clip);
     //void Draw(surface_t* surface);
 
-    void PostEvent(Lemon::LemonEvent& ev) { Queue(Lemon::GUI::WindowEvent, reinterpret_cast<uintptr_t>(&ev), (uint16_t)sizeof(Lemon::LemonEvent)); }
+    void PostEvent(const Lemon::LemonEvent& ev) { Queue(Lemon::GUI::WindowEvent, reinterpret_cast<uintptr_t>(&ev), (uint16_t)sizeof(Lemon::LemonEvent)); }
 
     void Minimize(bool state);
     void Resize(vector2i_t size, int64_t bufferKey, WindowBuffer* bufferInfo);
@@ -187,7 +187,7 @@ protected:
 
     void* InitializeShellConnection();
     void Poll();
-    void PostEvent(Lemon::LemonEvent& ev, WMWindow* win);
+    void PostEvent(const Lemon::LemonEvent& ev, WMWindow* win);
     WMWindow* FindWindow(int id);
 
     void MinimizeWindow(WMWindow* win, bool state);

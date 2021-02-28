@@ -10,42 +10,11 @@
 
 #include <objects/kobject.h>
 
-struct Message{
-    union{
-        uint64_t data; // Empty, pointer or integer
-        uint8_t* dataP;
-    };
-    uint64_t id = 0;
-    uint16_t size = 0;
-};
-
-struct Reponse{
-    Message* ret;
-    uint64_t id;
-};
-
 struct MessageEndpointInfo{
     uint16_t msgSize;
 };
 
 class MessageEndpoint final : public KernelObject{
-private:
-    friend Pair<FancyRefPtr<MessageEndpoint>,FancyRefPtr<MessageEndpoint>> CreatePair();
-    uint16_t maxMessageSize = 8;
-    uint16_t messageQueueLimit = 128;
-    lock_t queueLock = 0;
-
-    Semaphore queueAvailablilitySemaphore = Semaphore(messageQueueLimit);
-
-    RingBuffer<Message> queue;
-
-    FancyRefPtr<MessageEndpoint> peer;
-
-    List<KernelObjectWatcher*> waiting;
-    List<Pair<Semaphore*, Reponse>> waitingResponse;
-
-    lock_t waitingLock = 0;
-    lock_t waitingResponseLock = 0;
 public:
     static const uint16_t maxMessageSizeLimit = UINT16_MAX;
     
@@ -71,11 +40,11 @@ public:
     ///
     /// \param id Pointer to the ID to be populated
     /// \param size Pointer to the message size to be populated
-    /// \param data Pointer to an unsigned integer representing either 8 bytes of data (size <= 8) or a pointer to a buffer of size length containing message data
+    /// \param data Pointer to data
     ///
     /// \return 0 on success, 1 on empty, negative error code on failure
     /////////////////////////////
-    int64_t Read(uint64_t* id, uint16_t* size, uint64_t* data);
+    int64_t Read(uint64_t* id, uint16_t* size, uint8_t* data);
     
     /////////////////////////////
     /// \brief Send a message and return the response
@@ -85,7 +54,7 @@ public:
     ///
     /// \param id ID of the message to be sent
     /// \param size Size of the message to be sent
-    /// \param data Either a pointer to data (size > 8) or 8 bytes of data to be sent (size <= 8)
+    /// \param data Pointer to data
     ///
     /// \param rID ID of the expected message
     /// \param size Pointer to the message size to be populated
@@ -95,7 +64,7 @@ public:
     ///
     /// \return 0 on success, 1 on timeout, negative error code on failure
     /////////////////////////////
-    int64_t Call(uint64_t id, uint16_t size, uint64_t data, uint64_t rID, uint16_t* rSize, uint64_t* rData, int64_t timeout);
+    int64_t Call(uint64_t id, uint16_t size, uint64_t data, uint64_t rID, uint16_t* rSize, uint8_t* rData, int64_t timeout);
     
     /////////////////////////////
     /// \brief Send a message
@@ -104,7 +73,7 @@ public:
     ///
     /// \param id ID of the message to be sent
     /// \param size Size of the message to be sent
-    /// \param data Either a pointer to data (size > 8) or 8 bytes of data to be sent (size <= 8)
+    /// \param data Pointer to data
     ///
     /// \return 0 on success, negative error code on failure
     /////////////////////////////
@@ -124,4 +93,28 @@ public:
 
     inline static constexpr kobject_id_t TypeID() { return KOBJECT_ID_MESSAGE_ENDPOINT; }
     inline kobject_id_t InstanceTypeID() const { return TypeID(); }
+
+private:
+    struct Response{
+        uint64_t id;
+        uint16_t* size;
+        uint8_t** buffer;
+    };
+
+    friend Pair<FancyRefPtr<MessageEndpoint>,FancyRefPtr<MessageEndpoint>> CreatePair();
+    uint16_t maxMessageSize = 8;
+    uint16_t messageQueueLimit = 128;
+    lock_t queueLock = 0;
+
+    Semaphore queueAvailablilitySemaphore = Semaphore(messageQueueLimit);
+
+    RawRingBuffer queue;
+
+    FancyRefPtr<MessageEndpoint> peer;
+
+    List<KernelObjectWatcher*> waiting;
+    List<Pair<Semaphore*, Response>> waitingResponse;
+
+    lock_t waitingLock = 0;
+    lock_t waitingResponseLock = 0;
 };

@@ -24,58 +24,52 @@ MessageEndpoint::~MessageEndpoint(){
 }
 
 void MessageEndpoint::Destroy(){
-    Message m;
-    while(queue.Dequeue(&m, 1)){
-        if(m.size > 8 && m.dataP){
-            delete[] m.dataP;
-        }
-    }
-
     if(peer.get()){
         peer->peer = nullptr;
     }
 }
 
-int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint64_t* data){
+int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint8_t* data){
     assert(id);
     assert(size);
     assert(data);
 
-    Message m;
-    
-    acquireLock(&queueLock);
-    int r = queue.Dequeue(&m, 1);
-    releaseLock(&queueLock);
-    if(r < 1){
+    if(queue.Empty()){
         if(!peer.get()){
             return -ENOTCONN;
         }
+        
         return 0;
     }
 
+    acquireLock(&queueLock);
+
+    queue.Dequeue(reinterpret_cast<uint8_t*>(id), sizeof(uint64_t));
+    queue.Dequeue(reinterpret_cast<uint8_t*>(size), sizeof(uint16_t));
+
+    if(*size){
+        size_t read = queue.Dequeue(data, *size);
+        if(read < *size){
+            Log::Warning("[MessageEndpoint] Draining message queue (expected %u bytes, only got %u)!", *size, read);
+            queue.Drain(); // Not all data has been written, drain the buffer
+
+            releaseLock(&queueLock);
+            return 0;
+        }
+    }
+
+    releaseLock(&queueLock);
+
     queueAvailablilitySemaphore.Signal();
 
-    *id = m.id;
-    *size = m.size;
-
-    if(m.size <= 8){
-        *data = m.data;
-    } else {
-        memcpy(data, m.dataP, m.size);
-    }
-
     if(debugLevelMessageEndpoint >= DebugLevelVerbose){
-        Log::Info("[MessageEndpoint] Receiving message (ID: %u, Size: %u)", m.id, m.size);
-    }
-
-    if(m.size > 8 && m.dataP){
-        delete[] m.dataP;
+        Log::Info("[MessageEndpoint] Receiving message (ID: %u, Size: %u)", *id, *size);
     }
 
     return 1;
 }
 
-int64_t MessageEndpoint::Call(uint64_t id, uint16_t size, uint64_t data, uint64_t rID, uint16_t* rSize, uint64_t* rData, int64_t timeout){
+int64_t MessageEndpoint::Call(uint64_t id, uint16_t size, uint64_t data, uint64_t rID, uint16_t* rSize, uint8_t* rData, int64_t timeout){
     if(!peer.get()){
         return -ENOTCONN;
     }
@@ -88,31 +82,31 @@ int64_t MessageEndpoint::Call(uint64_t id, uint16_t size, uint64_t data, uint64_
     assert(rData);
     
     Semaphore s = Semaphore(0);
-    Message m;
-
     acquireLock(&waitingResponseLock);
-    waitingResponse.add_back({&s, {&m, rID}});
+    
+    uint8_t* buffer = nullptr;
+    uint16_t returnSize; // We cannot use rSize as it lies within the process' address space, not the kernel's
+    waitingResponse.add_back({&s, {.id = rID, .size = &returnSize, .buffer = &buffer}});
+
     releaseLock(&waitingResponseLock);
 
     Write(id, size, data); // Send message
 
     // TODO: timeout
-    if(s.Wait()){ // Await reponse
+    if(s.Wait()){ // Await response
+        if(buffer){
+            delete buffer;
+        }
+
         return -EINTR; // Interrupted
     }
+    
+    if(buffer){
+        memcpy(rData, buffer, returnSize);
+        *rSize = returnSize;
 
-    *rSize = m.size;
-
-    if(m.size <= 8){
-        *rData = m.data;
-    } else {
-        memcpy(rData, m.dataP, m.size);
+        delete buffer;
     }
-
-    if(m.size > 8){
-        delete[] m.dataP;
-    }
-
     return 0;
 }
 
@@ -125,29 +119,23 @@ int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
         return -EINVAL;
     }
 
-    Message msg;
-
-    msg.id = id;
-    msg.size = size;
-
-    if(msg.size <= 8){
-        msg.data = data;
-    } else {
-        assert(data);
-
-        msg.dataP = new uint8_t[maxMessageSize];
-
-        memcpy(msg.dataP, reinterpret_cast<uint8_t*>(data), size);
-    }
-
     acquireLock(&peer->waitingResponseLock);
     for(auto it = peer->waitingResponse.begin(); it != peer->waitingResponse.end(); it++){
         if(it->item2.id == id){
+            Response& response = it->item2;
+
+            if(size){
+                *it->item2.buffer = new uint8_t[size];
+
+                memcpy(*it->item2.buffer, reinterpret_cast<uint8_t*>(data), size);
+            }
+
+            *response.size = size;
+
             it->item1->Signal();
-            *it->item2.ret = msg; 
 
             if(debugLevelMessageEndpoint >= DebugLevelVerbose){
-                Log::Info("[MessageEndpoint] Sending response (ID: %u, Size: %u) to peer", msg.id, msg.size);
+                Log::Info("[MessageEndpoint] Sending response (ID: %u, Size: %u) to peer", id, size);
             }
 
             peer->waitingResponse.remove(it);
@@ -162,7 +150,11 @@ int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
     }
 
     acquireLock(&peer->queueLock);
-    peer->queue.Enqueue(&msg);
+    if(size) {
+        peer->queue.EnqueueObjects(id, size, Pair((uint8_t*)data, size));
+    } else {
+        peer->queue.EnqueueObjects(id, size);
+    }
 
     acquireLock(&peer->waitingLock);
     while(peer->waiting.get_length() > 0){
@@ -171,7 +163,7 @@ int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
     releaseLock(&peer->waitingLock);
 
     if(debugLevelMessageEndpoint >= DebugLevelVerbose){
-        Log::Info("[MessageEndpoint] Sending message (ID: %u, Size: %u) to peer", msg.id, msg.size);
+        Log::Info("[MessageEndpoint] Sending message (ID: %u, Size: %u) to peer", id, size);
     }
 
     releaseLock(&peer->queueLock);

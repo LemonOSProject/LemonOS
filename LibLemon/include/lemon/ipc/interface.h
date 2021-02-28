@@ -73,7 +73,7 @@ namespace Lemon{
         /// \param m (const Message&) Message to send
         /////////////////////////////
         inline long Queue(handle_t h, Message& m) const{
-            return EndpointQueue(h, m.id(), m.length(), (m.length() > 8) ? reinterpret_cast<uintptr_t>(m.data()) : *(reinterpret_cast<const uint64_t*>(m.data())));
+            return EndpointQueue(h, m.id(), m.length(), reinterpret_cast<uintptr_t>(m.data()));
         }
 
         void RegisterObject(const std::string& name, int id);

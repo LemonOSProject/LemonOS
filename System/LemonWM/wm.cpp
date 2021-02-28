@@ -60,13 +60,30 @@ void WMInstance::MinimizeWindow(int id, bool state){
     }
 
     MinimizeWindow(win, state);
+
+    if(lastMousedOver == win){
+        Lemon::LemonEvent ev;
+        ev.event = Lemon::EventMouseExit;
+
+        PostEvent(ev, win);
+    }
 }
 
 void WMInstance::SetActive(WMWindow* win){
     if(active == win) return;
 
-    if(shellConnected && active && !(active->flags & WINDOW_FLAGS_NOSHELL) && !active->minimized){
-        Lemon::Shell::SetWindowState(active->clientID, Lemon::Shell::ShellWindowStateNormal, shellClient);
+    if(active){
+        if(shellConnected && !(active->flags & WINDOW_FLAGS_NOSHELL) && !active->minimized){
+            Lemon::Shell::SetWindowState(active->clientID, Lemon::Shell::ShellWindowStateNormal, shellClient);
+        }
+
+        if(active == lastMousedOver){
+            Lemon::LemonEvent ev;
+
+            ev.event = Lemon::EventMouseExit;
+
+            PostEvent(ev, win);
+        }
     }
 
     active = win;
@@ -323,7 +340,7 @@ void WMInstance::Poll(){
     }
 }
 
-void WMInstance::PostEvent(Lemon::LemonEvent& ev, WMWindow* win){
+void WMInstance::PostEvent(const Lemon::LemonEvent& ev, WMWindow* win){
     win->PostEvent(ev);
 }
 
@@ -497,23 +514,29 @@ void WMInstance::MouseMove(){
         
         resizeStartPos = input.mouse.pos;
     } else {
-        if(lastMousedOver && !PointInWindowProper(lastMousedOver, input.mouse.pos)){ // Check if the last window moused over is still under the cursor
-            Lemon::LemonEvent ev;
-            ev.event = Lemon::EventMouseExit;
+        bool windowFound = false;
+        for(auto it = windows.rbegin(); it != windows.rend(); it++){ 
+            WMWindow* win = *it;
 
-            PostEvent(ev, lastMousedOver);
+            if(win->minimized){
+                continue;
+            }
 
-            lastMousedOver = nullptr; // Set to null in case the mouse is not above any window
-        }
-
-        for(WMWindow* win : windows){ 
             if(PointInWindowProper(win, input.mouse.pos)){
+                windowFound = true;
                 Lemon::LemonEvent ev;
 
                 if(win == lastMousedOver){
                     ev.event = Lemon::EventMouseMoved;
                 } else {
                     ev.event = Lemon::EventMouseEnter;
+
+                    if(lastMousedOver){
+                        Lemon::LemonEvent ev;
+                        ev.event = Lemon::EventMouseExit;
+
+                        PostEvent(ev, lastMousedOver);
+                    }
                 }
 
                 ev.mousePos = input.mouse.pos - win->pos;
@@ -523,9 +546,19 @@ void WMInstance::MouseMove(){
                 PostEvent(ev, win);
 
                 lastMousedOver = win; // This window is now the last moused over
-
                 break;
             }
+        }
+
+        if(!windowFound){ // Check if the last window moused over is still under the cursor
+            if(lastMousedOver){
+                Lemon::LemonEvent ev;
+                ev.event = Lemon::EventMouseExit;
+
+                PostEvent(ev, lastMousedOver);
+            }
+
+            lastMousedOver = nullptr; // Set to null in case the mouse is not above any window
         }
     }
 }

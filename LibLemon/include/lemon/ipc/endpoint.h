@@ -143,19 +143,19 @@ namespace Lemon{
             return msgSize;
         }
 
-        inline long Queue(uint64_t id, uint8_t* data, uint16_t size) const{
+        inline long Queue(uint64_t id, uint8_t* data, uint16_t size) const {
             return EndpointQueue(handle, id, size, reinterpret_cast<uintptr_t>(data));
         }
 
-        inline long Queue(uint64_t id, uint64_t data, uint16_t size) const{
+        inline long Queue(uint64_t id, uint64_t data, uint16_t size) const {
             return EndpointQueue(handle, id, size, data);
         }
 
-        inline long Queue(const Message& m) const{
-            return EndpointQueue(handle, m.id(), m.length(), (m.length() > 8) ? reinterpret_cast<uintptr_t>(m.data()) : *(reinterpret_cast<const uint64_t*>(m.data())));
+        inline long Queue(const Message& m) const {
+            return EndpointQueue(handle, m.id(), m.length(), reinterpret_cast<uintptr_t>(m.data()));
         }
 
-        inline long Poll(Message& m) const{
+        inline long Poll(Message& m) const {
             uint64_t id;
             uint16_t size;
             uint8_t* data = new uint8_t[msgSize];
@@ -173,7 +173,7 @@ namespace Lemon{
             uint16_t size = call.length();
             uint8_t* data = new uint8_t[msgSize];
 
-            long ret = EndpointCall(handle, call.id(), (call.length() > 8) ? reinterpret_cast<uintptr_t>(call.data()) : *(reinterpret_cast<const uint64_t*>(call.data())), id, reinterpret_cast<uintptr_t>(data), &size);
+            long ret = EndpointCall(handle, call.id(), reinterpret_cast<uintptr_t>(call.data()), id, reinterpret_cast<uintptr_t>(data), &size);
 
             if(!ret){
                 rmsg.Set(data, size, id);
@@ -187,7 +187,7 @@ namespace Lemon{
             uint16_t size = call.length();
             uint8_t* data = const_cast<uint8_t*>(call.data());
 
-            long ret = EndpointCall(handle, call.id(), (call.length() > 8) ? reinterpret_cast<uintptr_t>(call.data()) : *(reinterpret_cast<const uint64_t*>(call.data())), id, reinterpret_cast<uintptr_t>(call.data()), &size);
+            long ret = EndpointCall(handle, call.id(), reinterpret_cast<uintptr_t>(call.data()), id, reinterpret_cast<uintptr_t>(call.data()), &size);
 
             if(!ret){
                 call.Set(data, size, id);

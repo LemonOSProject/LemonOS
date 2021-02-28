@@ -2509,7 +2509,7 @@ long SysInterfaceConnect(RegisterContext* r){
 /// \param endpoint (handle_id_t) Handle ID of specified endpoint
 /// \param id (uint64_t) Message ID
 /// \param size (uint64_t) Message Size
-/// \param data (uint8_t*/uint64_t) Message data, if size <= 8 then treated as an integer containing message data, if size > 8 then treated as a pointer to message data
+/// \param data (uint8_t*) Pointer to message data
 ///
 /// \return 0 on success, negative error code on failure
 /////////////////////////////
@@ -2519,6 +2519,8 @@ long SysEndpointQueue(RegisterContext* r){
 	Handle* endpHandle;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
 		Log::Warning("(%s): SysEndpointQueue: Invalid handle ID %d", currentProcess->name, SC_ARG0(r));
+		UserPrintStackTrace(r->rbp, Scheduler::GetCurrentProcess()->addressSpace);
+		
 		return -EINVAL;
 	}
 
@@ -2528,7 +2530,7 @@ long SysEndpointQueue(RegisterContext* r){
 	}
 
 	size_t size = SC_ARG2(r);
-	if(size > 8 && !Memory::CheckUsermodePointer(SC_ARG3(r), size, currentProcess->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG3(r), size, currentProcess->addressSpace)){
 		return -EFAULT; // Data greater than 8 and invalid pointer
 	}
 
@@ -2577,7 +2579,7 @@ long SysEndpointDequeue(RegisterContext* r){
 		return -EFAULT;
 	}
 
-	return endpoint->Read(reinterpret_cast<uint64_t*>(SC_ARG1(r)), reinterpret_cast<uint16_t*>(SC_ARG2(r)), reinterpret_cast<uint64_t*>(SC_ARG3(r)));
+	return endpoint->Read(reinterpret_cast<uint64_t*>(SC_ARG1(r)), reinterpret_cast<uint16_t*>(SC_ARG2(r)), reinterpret_cast<uint8_t*>(SC_ARG3(r)));
 }
 
 /////////////////////////////
@@ -2587,11 +2589,11 @@ long SysEndpointDequeue(RegisterContext* r){
 ///
 /// \param endpoint (handle_id_t) Handle ID of specified endpoint
 /// \param id (uint64_t) id of message to send
-/// \param data (uint8_t*/uint64_t) Message data to be sent, if size <= 8 then treated as an integer containing message data, if size > 8 then treated as a pointer to message data
+/// \param data (uint8_t*) Message data to be sent
 /// \param rID (uint64_t) id of expected returned message
 /// \param rData (uint8_t*) Return message data buffer
 /// \param size (uint32_t*) Pointer containing size of message to be sent and size of returned message
-/// \param timeout (uint64_t*) timeout in us
+/// \param timeout (int64_t) timeout in us
 ///
 /// \return 0 on success, negative error code on failure
 /////////////////////////////
@@ -2610,13 +2612,13 @@ long SysEndpointCall(RegisterContext* r){
 	}
 
 	uint16_t* size = reinterpret_cast<uint16_t*>(SC_ARG5(r));
-	if((*size) > 8 && !Memory::CheckUsermodePointer(SC_ARG3(r), *size, currentProcess->addressSpace)){
-		return -EFAULT; // Data greater than 8 and invalid pointer
+	if(!Memory::CheckUsermodePointer(SC_ARG3(r), *size, currentProcess->addressSpace)){
+		return -EFAULT; // Size greater than 8 and invalid data pointer
 	}
 
 	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle->ko.get());
 
-	return endpoint->Call(SC_ARG1(r), *size, SC_ARG2(r), SC_ARG3(r), size, reinterpret_cast<uint64_t*>(SC_ARG4(r)), -1);
+	return endpoint->Call(SC_ARG1(r), *size, SC_ARG2(r), SC_ARG3(r), size, reinterpret_cast<uint8_t*>(SC_ARG4(r)), -1);
 }
 
 /////////////////////////////
@@ -2640,12 +2642,12 @@ long SysEndpointInfo(RegisterContext* r){
 
 	Handle* endpHandle;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
-		Log::Warning("SysEndpointQueue: Invalid handle ID %d", SC_ARG0(r));
+		Log::Warning("SysEndpointInfo: Invalid handle ID %d", SC_ARG0(r));
 		return -EINVAL;
 	}
 
 	if(!endpHandle->ko->IsType(MessageEndpoint::TypeID())){
-		Log::Warning("SysEndpointQueue: Invalid handle type (ID %d)", SC_ARG0(r));
+		Log::Warning("SysEndpointInfo: Invalid handle type (ID %d)", SC_ARG0(r));
 		return -EINVAL;
 	}
 

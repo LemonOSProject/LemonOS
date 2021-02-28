@@ -70,7 +70,7 @@ namespace Lemon{
     /// \param endpoint (handle_t) Handle ID of specified endpoint
     /// \param id (uint64_t) Message ID
     /// \param size (uint64_t) Message Size
-    /// \param data (uint8_t*/uint64_t) Message data, if size <= 8 then treated as an integer containing message data, if size > 8 then treated as a pointer to message data
+    /// \param data (uint8_t*) Message data
     ///
     /// \return 0 on success, negative error code on failure
     /////////////////////////////
@@ -101,7 +101,7 @@ namespace Lemon{
     ///
     /// \param endpoint (handle_id_t) Handle ID of specified endpoint
     /// \param id (uint64_t) id of message to send
-    /// \param data (uint8_t*/uint64_t) Message data to be sent, if size <= 8 then treated as an integer containing message data, if size > 8 then treated as a pointer to message data
+    /// \param data (uint8_t*/uint64_t) Message data to be sent
     /// \param rID (uint64_t) id of expected returned message
     /// \param rData (uint8_t*) Return message data buffer
     /// \param size (uint32_t*) Pointer containing size of message to be sent and size of returned message
