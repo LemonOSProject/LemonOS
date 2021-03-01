@@ -26,18 +26,23 @@ public:
         dequeuePointer = buffer;
     }
 
-    void Enqueue(const T* data){
+    virtual ~RingBuffer(){
+        delete buffer;
+    }
+
+    void Enqueue(const T& data){
         acquireLock(&enqueueLock);
         acquireLock(&dequeueLock);
 
-        memcpy(enqueuePointer++, data, sizeof(T));
+        *enqueuePointer++ = data;
         
         if(enqueuePointer >= bufferEnd){
-            enqueuePointer = buffer;
+            enqueuePointer = buffer; // Wrap around to start
         }
 
         if(enqueuePointer == dequeuePointer){
             Resize((bufferSize + 2) << 1);
+            // If after increasing the enqueue pointer it is equal to dequeue pointer then the queue is full
         }
 
         releaseLock(&enqueueLock);
@@ -57,14 +62,12 @@ public:
             if(buffer + wrappedCount >= dequeuePointer){
                 Resize((bufferSize << 1) + count); // Ring buffer is full
             }
+
+            memcpy(buffer, data + contiguousCount, sizeof(T) * wrappedCount);
         } 
 
         memcpy(enqueuePointer, data, sizeof(T) * contiguousCount);
         
-        if(wrappedCount > 0){
-            memcpy(buffer, data + contiguousCount, sizeof(T) * wrappedCount);
-        }
-
         size += count;
         enqueuePointer = buffer + ((enqueuePointer + count - buffer) % bufferSize); // Calculate new enqueuePointer
     }
@@ -116,6 +119,24 @@ public:
         return contiguous + wrapped;
     }
 
+    int Dequeue(T& data){
+        acquireLock(&dequeueLock);
+
+        if(dequeuePointer == enqueuePointer){
+            releaseLock(&dequeueLock);
+            return 0;
+        }
+
+        data = *dequeuePointer++;
+
+        if(dequeuePointer >= bufferEnd){
+            dequeuePointer = buffer;
+        }
+
+        releaseLock(&dequeueLock);
+        return 1;
+    }
+
     void Drain() {
         acquireLock(&enqueueLock);
         acquireLock(&dequeueLock);
@@ -162,12 +183,14 @@ protected:
         bufferEnd = &buffer[bufferSize];
         
         memcpy(bufferEnd - (oldBufferEnd - dequeuePointer), dequeuePointer, (oldBufferEnd - dequeuePointer) * sizeof(T));
+        dequeuePointer = bufferEnd - (oldBufferEnd - dequeuePointer);
+
         if(dequeuePointer > enqueuePointer){
             memcpy(buffer, oldBuffer, (enqueuePointer - oldBuffer) * sizeof(T));
+            enqueuePointer = buffer + (enqueuePointer - oldBuffer);
+        } else {
+            enqueuePointer = bufferEnd - (oldBufferEnd - enqueuePointer);
         }
-
-        dequeuePointer = bufferEnd - (oldBufferEnd - dequeuePointer);
-        enqueuePointer = buffer + (enqueuePointer - oldBuffer);
 
         kfree(oldBuffer);
     }

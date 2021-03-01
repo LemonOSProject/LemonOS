@@ -44,23 +44,16 @@ int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint8_t* data){
 
     acquireLock(&queueLock);
 
-    queue.Dequeue(reinterpret_cast<uint8_t*>(id), sizeof(uint64_t));
-    queue.Dequeue(reinterpret_cast<uint8_t*>(size), sizeof(uint16_t));
-
-    if(*size){
-        size_t read = queue.Dequeue(data, *size);
-        if(read < *size){
-            Log::Warning("[MessageEndpoint] Draining message queue (expected %u bytes, only got %u) (id: %u size:, %hu)!", *size, read, *id, *size);
-            queue.Drain(); // Not all data has been written, drain the buffer
-
-            releaseLock(&queueLock);
-
-            if(!peer.get()){
-                return -ENOTCONN;
-            }
-            return 0;
-        }
+    Message* m;
+    if(queue.Dequeue(m) <= 0){
+        return 0;
     }
+
+    memcpy(data, m->data, m->size);
+    *size = m->size;
+    *id = m->id;
+
+    cache.Enqueue(m);
 
     releaseLock(&queueLock);
 
@@ -154,11 +147,21 @@ int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
     }
 
     acquireLock(&peer->queueLock);
-    if(size) {
-        peer->queue.EnqueueObjects(id, size, Pair((uint8_t*)data, size));
+
+    Message* m;
+    if(peer->cache.Dequeue(m)){ // Check for a cached message allocaiton
+        m->size = size;
+        m->id = id;
+        memcpy(m->data, (uint8_t*)data, size);
     } else {
-        peer->queue.EnqueueObjects(id, size);
+        m = AllocateMessage(); // Nothing left in cache, allocate a new message
+
+        m->size = size;
+        m->id = id;
+        memcpy(m->data, (uint8_t*)data, size);
     }
+
+    peer->queue.Enqueue(m);
 
     acquireLock(&peer->waitingLock);
     while(peer->waiting.get_length() > 0){

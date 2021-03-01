@@ -805,10 +805,12 @@ long SysGetVideoMode(RegisterContext* r){
 }
 
 long SysUName(RegisterContext* r){
-	char* str = (char*)SC_ARG0(r);
-	strcpy(str, Lemon::versionString);
+	if(Memory::CheckUsermodePointer(SC_ARG0(r), strlen(Lemon::versionString), Scheduler::GetCurrentProcess()->addressSpace)) {
+		strcpy((char*) SC_ARG0(r), Lemon::versionString);
+		return 0;
+	}
 
-	return 0;
+	return -EFAULT;
 }
 
 long SysReadDir(RegisterContext* r){

@@ -81,7 +81,11 @@ public:
 
     void Watch(KernelObjectWatcher& watcher, int events){
         acquireLock(&waitingLock);
-        waiting.add_back(&watcher);
+        if(queue.Empty()){
+            waiting.add_back(&watcher);
+        } else {
+            watcher.Signal();
+        }
         releaseLock(&waitingLock)
     }
 
@@ -101,6 +105,18 @@ private:
         uint8_t** buffer;
     };
 
+    struct Message{
+        uint64_t id;
+        uint16_t size;
+        uint8_t data[];
+    };
+
+    inline Message* AllocateMessage(){
+        void* m = kmalloc(sizeof(Message) + maxMessageSize);
+
+        return reinterpret_cast<Message*>(m);
+    }
+
     friend Pair<FancyRefPtr<MessageEndpoint>,FancyRefPtr<MessageEndpoint>> CreatePair();
     uint16_t maxMessageSize = 8;
     uint16_t messageQueueLimit = 128;
@@ -108,7 +124,8 @@ private:
 
     Semaphore queueAvailablilitySemaphore = Semaphore(messageQueueLimit);
 
-    RawRingBuffer queue;
+    RingBuffer<Message*> queue;
+    RingBuffer<Message*> cache;
 
     FancyRefPtr<MessageEndpoint> peer;
 
