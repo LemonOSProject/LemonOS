@@ -47,6 +47,15 @@ void WMInstance::MinimizeWindow(WMWindow* win, bool state){
             SetActive(nullptr);
         }
 
+        if(lastMousedOver == win){
+            Lemon::LemonEvent ev;
+            ev.event = Lemon::EventMouseExit;
+
+            PostEvent(ev, win);
+
+            lastMousedOver = nullptr;
+        }
+
         if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL))
             Lemon::Shell::SetWindowState(win->clientID, Lemon::Shell::ShellWindowStateMinimized, shellClient);
     }
@@ -82,7 +91,7 @@ void WMInstance::SetActive(WMWindow* win){
 
             ev.event = Lemon::EventMouseExit;
 
-            PostEvent(ev, win);
+            PostEvent(ev, active);
         }
     }
 
@@ -134,6 +143,10 @@ void WMInstance::Poll(){
 
                 if(active == win){
                     SetActive(nullptr);
+                }
+
+                if(lastMousedOver == win){
+                    lastMousedOver = nullptr;
                 }
 
                 if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
@@ -210,6 +223,10 @@ void WMInstance::Poll(){
 
                 if(active == win){
                     SetActive(nullptr);
+                }
+
+                if(lastMousedOver == win){
+                    lastMousedOver = nullptr;
                 }
                 
                 if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){

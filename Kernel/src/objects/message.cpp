@@ -50,10 +50,14 @@ int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint8_t* data){
     if(*size){
         size_t read = queue.Dequeue(data, *size);
         if(read < *size){
-            Log::Warning("[MessageEndpoint] Draining message queue (expected %u bytes, only got %u)!", *size, read);
+            Log::Warning("[MessageEndpoint] Draining message queue (expected %u bytes, only got %u) (id: %u size:, %hu)!", *size, read, *id, *size);
             queue.Drain(); // Not all data has been written, drain the buffer
 
             releaseLock(&queueLock);
+
+            if(!peer.get()){
+                return -ENOTCONN;
+            }
             return 0;
         }
     }
