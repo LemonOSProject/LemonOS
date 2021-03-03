@@ -2520,10 +2520,11 @@ long SysEndpointQueue(RegisterContext* r){
 
 	Handle* endpHandle;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
-		Log::Warning("(%s): SysEndpointQueue: Invalid handle ID %d", currentProcess->name, SC_ARG0(r));
-		Log::Info("%x", r->rip);
-		UserPrintStackTrace(r->rbp, Scheduler::GetCurrentProcess()->addressSpace);
-		
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("(%s): SysEndpointQueue: Invalid handle ID %d", currentProcess->name, SC_ARG0(r));
+			Log::Info("%x", r->rip);
+			UserPrintStackTrace(r->rbp, Scheduler::GetCurrentProcess()->addressSpace);
+		});
 		return -EINVAL;
 	}
 
