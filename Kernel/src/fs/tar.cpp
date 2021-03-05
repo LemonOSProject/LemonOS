@@ -1,7 +1,7 @@
-#include <fs/tar.h>
+#include <Fs/TAR.h>
 
-#include <logging.h>
-#include <errno.h>
+#include <Logging.h>
+#include <Errno.h>
 
 inline static long OctToDec(char* str, int size) {
     long n = 0;

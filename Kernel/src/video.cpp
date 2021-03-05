@@ -1,6 +1,6 @@
-#include <video.h>
+#include <Video/Video.h>
 
-#include <math.h>
+#include <Math.h>
 
 uint8_t defaultFont[128][8] = {
 	{ 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },   // U+0000 (nul)

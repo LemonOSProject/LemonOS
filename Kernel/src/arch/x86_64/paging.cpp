@@ -1,16 +1,16 @@
-#include <paging.h>
-#include <idt.h>
-#include <memory.h>
-#include <panic.h>
-#include <string.h>
-#include <logging.h>
-#include <system.h>
-#include <scheduler.h>
-#include <physicalallocator.h>
-#include <panic.h>
-#include <apic.h>
-#include <strace.h>
-#include <syscalls.h>
+#include <Paging.h>
+#include <IDT.h>
+#include <Memory.h>
+#include <Panic.h>
+#include <String.h>
+#include <Logging.h>
+#include <System.h>
+#include <Scheduler.h>
+#include <PhysicalAllocator.h>
+#include <Panic.h>
+#include <APIC.h>
+#include <StackTrace.h>
+#include <Syscalls.h>
 
 //extern uint32_t kernel_end;
 

@@ -1,21 +1,21 @@
-#include <acpi.h>
+#include <ACPI.h>
 
-#include <string.h>
-#include <logging.h>
-#include <panic.h>
-#include <paging.h>
-#include <pci.h>
-#include <liballoc.h>
-#include <timer.h>
-#include <apic.h>
-#include <list.h>
+#include <String.h>
+#include <Logging.h>
+#include <Panic.h>
+#include <Paging.h>
+#include <PCI.h>
+#include <Liballoc.h>
+#include <Timer.h>
+#include <APIC.h>
+#include <List.h>
 
 #include <lai/core.h>
 #include <lai/helpers/pm.h>
 #include <lai/helpers/sci.h>
 #include <lai/helpers/pci.h>
 
-#include <debug.h>
+#include <Debug.h>
 
 namespace ACPI{
 	uint8_t processors[256];

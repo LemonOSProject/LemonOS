@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <panic.h>
+#include <Panic.h>
 
 #define DEFAULT_STACK_GUARD 0xdead69be69efa4db
 

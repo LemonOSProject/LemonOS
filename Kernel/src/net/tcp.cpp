@@ -1,11 +1,11 @@
-#include <net/net.h>
-#include <net/socket.h>
-#include <net/networkadapter.h>
+#include <Net/Net.h>
+#include <Net/Socket.h>
+#include <Net/Adapter.h>
 
-#include <timer.h>
-#include <math.h>
+#include <Timer.h>
+#include <Math.h>
 
-#include <errno.h>
+#include <Errno.h>
 
 // Create an identifier for a connection with the source IP, dest IP, source port and destination port.
 // This allows for one connection per port per remote address per local adddress

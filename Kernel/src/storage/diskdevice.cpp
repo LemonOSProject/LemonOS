@@ -1,9 +1,9 @@
-#include <device.h>
+#include <Device.h>
 
-#include <fs/fat32.h>
-#include <fs/ext2.h>
-#include <logging.h>
-#include <errno.h>
+#include <Fs/Fat32.h>
+#include <Fs/Ext2.h>
+#include <Logging.h>
+#include <Errno.h>
 
 static int nextDeviceNumber = 0;
 

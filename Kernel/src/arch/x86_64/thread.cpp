@@ -1,11 +1,13 @@
-#include <thread.h>
+#include <Thread.h>
 
-#include <scheduler.h>
-#include <cpu.h>
-#include <debug.h>
+#include <Scheduler.h>
+#include <CPU.h>
+#include <Debug.h>
+#include <Timer.h>
+#include <TimerEvent.h>
 
 #ifdef KERNEL_DEBUG
-	#include <strace.h>
+	#include <StackTrace.h>
 #endif
 
 void ThreadBlocker::Interrupt(){

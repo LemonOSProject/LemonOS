@@ -1,16 +1,16 @@
-#include <net/8254x.h>
+#include <Net/8254x.h>
 
-#include <pci.h>
-#include <logging.h>
-#include <paging.h>
-#include <physicalallocator.h>
-#include <system.h>
-#include <idt.h>
-#include <timer.h>
-#include <acpi.h>
-#include <apic.h>
-#include <net/net.h>
-#include <vector.h>
+#include <PCI.h>
+#include <Logging.h>
+#include <Paging.h>
+#include <PhysicalAllocator.h>
+#include <System.h>
+#include <IDT.h>
+#include <Timer.h>
+#include <ACPI.h>
+#include <APIC.h>
+#include <Net/Net.h>
+#include <Vector.h>
 
 namespace Network{
     uint16_t supportedDevices[]{

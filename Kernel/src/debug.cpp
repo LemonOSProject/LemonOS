@@ -1,4 +1,4 @@
-#include <debug.h>
+#include <Debug.h>
 
 const int debugLevelHAL = 0;
 const int debugLevelMisc = 0;

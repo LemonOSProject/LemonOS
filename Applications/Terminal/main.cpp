@@ -1,12 +1,12 @@
-#include <lemon/gfx/surface.h>
-#include <lemon/gfx/graphics.h>
-#include <lemon/gui/window.h>
-#include <lemon/core/keyboard.h>
+#include <Lemon/Graphics/Surface.h>
+#include <Lemon/Graphics/Graphics.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/Core/Keyboard.h>
 
 #include <lemon/syscall.h>
-#include <lemon/system/filesystem.h>
-#include <lemon/system/spawn.h>
-#include <lemon/system/util.h>
+#include <Lemon/System/Filesystem.h>
+#include <Lemon/System/Spawn.h>
+#include <Lemon/System/Util.h>
 
 #include <unistd.h>
 #include <fcntl.h>

@@ -1,10 +1,10 @@
-#include <net/socket.h>
-#include <net/net.h>
+#include <Net/Socket.h>
+#include <Net/Net.h>
 
-#include <hash.h>
-#include <errno.h>
-#include <math.h>
-#include <debug.h>
+#include <Hash.h>
+#include <Errno.h>
+#include <Math.h>
+#include <Debug.h>
 
 namespace Network::UDP{
     HashMap<uint16_t, UDPSocket*> sockets = HashMap<uint16_t, UDPSocket*>(256); // 256 buuckets is enough

@@ -1,17 +1,17 @@
-#include <ata.h>
-#include <atadrive.h>
+#include <Storage/ATA.h>
+#include <Storage/ATADrive.h>
 
 #include <stdint.h>
-#include <pci.h>
-#include <logging.h>
-#include <physicalallocator.h>
-#include <memory.h>
-#include <idt.h>
-#include <device.h>
-#include <apic.h>
-#include <timer.h>
+#include <PCI.h>
+#include <Logging.h>
+#include <PhysicalAllocator.h>
+#include <Memory.h>
+#include <IDT.h>
+#include <Device.h>
+#include <APIC.h>
+#include <Timer.h>
 
-#include <debug.h>
+#include <Debug.h>
 
 namespace ATA{
 

@@ -1,9 +1,9 @@
-#include <net/net.h>
-#include <net/socket.h>
-#include <net/networkadapter.h>
+#include <Net/Net.h>
+#include <Net/Socket.h>
+#include <Net/Adapter.h>
 
-#include <errno.h>
-#include <logging.h>
+#include <Errno.h>
+#include <Logging.h>
 
 IPSocket::IPSocket(int type, int protocol) : Socket(type, protocol) {
 	domain = InternetProtocol;

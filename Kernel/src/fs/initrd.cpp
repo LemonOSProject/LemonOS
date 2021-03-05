@@ -4,15 +4,15 @@
  * 
  */
 
-#include <fs/initrd.h>
+#include <Fs/Initrd.h>
 
-#include <filesystem.h>
-#include <string.h>
-#include <memory.h>
-#include <logging.h>
-#include <panic.h>
-#include <list.h>
-#include <fs/fsvolume.h>
+#include <Filesystem.h>
+#include <String.h>
+#include <Memory.h>
+#include <Logging.h>
+#include <Panic.h>
+#include <List.h>
+#include <Fs/FsVolume.h>
 
 namespace Initrd{
 	int ReadDir(fs_node_t* node, fs_dirent_t* dirent, uint32_t index);

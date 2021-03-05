@@ -1,11 +1,11 @@
-#include <atadrive.h>
+#include <Storage/ATADrive.h>
 
-#include <physicalallocator.h>
-#include <paging.h>
-#include <logging.h>
-#include <memory.h>
-#include <gpt.h>
-#include <errno.h>
+#include <PhysicalAllocator.h>
+#include <Paging.h>
+#include <Logging.h>
+#include <Memory.h>
+#include <Storage/GPT.h>
+#include <Errno.h>
 
 namespace ATA{
     ATADiskDevice::ATADiskDevice(int port, int drive) {

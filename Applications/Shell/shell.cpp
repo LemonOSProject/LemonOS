@@ -1,5 +1,5 @@
-#include <lemon/core/shell.h>
-#include <lemon/ipc/interface.h>
+#include <Lemon/Core/Shell.h>
+#include <Lemon/IPC/Interface.h>
 #include <string.h>
 #include <stdexcept>
 

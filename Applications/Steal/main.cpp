@@ -3,7 +3,7 @@
 #include <fstream>
 #include <map>
 
-#include <lemon/core/url.h>
+#include <Lemon/Core/URL.h>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>

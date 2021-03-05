@@ -1,13 +1,13 @@
-#include <idt.h>
-#include <system.h>
-#include <string.h>
-#include <logging.h>
-#include <hal.h>
-#include <panic.h>
-#include <scheduler.h>
-#include <apic.h>
-#include <strace.h>
-#include <syscalls.h>
+#include <IDT.h>
+#include <System.h>
+#include <String.h>
+#include <Logging.h>
+#include <HAL.h>
+#include <Panic.h>
+#include <Scheduler.h>
+#include <APIC.h>
+#include <StackTrace.h>
+#include <Syscalls.h>
 
 idt_entry_t idt[256];
 

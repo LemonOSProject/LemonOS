@@ -1,13 +1,13 @@
-#include <net/net.h>
+#include <Net/Net.h>
 
-#include <net/networkadapter.h>
-#include <net/8254x.h>
-#include <net/socket.h>
+#include <Net/Adapter.h>
+#include <Net/8254x.h>
+#include <Net/Socket.h>
 
-#include <endian.h>
-#include <logging.h>
-#include <errno.h>
-#include <hash.h>
+#include <Endian.h>
+#include <Logging.h>
+#include <Errno.h>
+#include <Hash.h>
 
 namespace Network {
     NetFS netFS;

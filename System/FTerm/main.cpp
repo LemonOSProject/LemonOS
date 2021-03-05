@@ -7,9 +7,9 @@
 #include <sys/ioctl.h>
 
 #include <lemon/syscall.h>
-#include <lemon/system/spawn.h>
-#include <lemon/core/fb.h>
-#include <lemon/gfx/graphics.h>
+#include <Lemon/System/Spawn.h>
+#include <Lemon/Core/Framebuffer.h>
+#include <Lemon/Graphics/Graphics.h>
 
 #include "fterm.h"
 

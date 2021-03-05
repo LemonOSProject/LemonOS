@@ -1,10 +1,10 @@
 
-#include <videoconsole.h>
+#include <Video/VideoConsole.h>
 
-#include <liballoc.h>
-#include <math.h>
-#include <string.h>
-#include <video.h>
+#include <Liballoc.h>
+#include <Math.h>
+#include <String.h>
+#include <Video/Video.h>
 
 VideoConsole::VideoConsole(int x, int y, int width, int height){
     this->x = x;

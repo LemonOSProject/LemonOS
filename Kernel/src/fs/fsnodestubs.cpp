@@ -1,7 +1,7 @@
-#include <fs/filesystem.h>
+#include <Fs/Filesystem.h>
 
-#include <errno.h>
-#include <logging.h>
+#include <Errno.h>
+#include <Logging.h>
 
 FsNode::~FsNode(){
     

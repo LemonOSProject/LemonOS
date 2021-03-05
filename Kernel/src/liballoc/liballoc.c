@@ -1,6 +1,6 @@
-#include <liballoc.h>
+#include <Liballoc.h>
 
-#include <assert.h>
+#include <Assert.h>
 
 /**  Durand's Amazing Super Duper Memory functions.  */
 

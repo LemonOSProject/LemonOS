@@ -1,11 +1,11 @@
-#include <logging.h>
+#include <Logging.h>
 
-#include <panic.h>
-#include <apic.h>
-#include <serial.h>
-#include <string.h>
-#include <idt.h>
-#include <strace.h>
+#include <Panic.h>
+#include <APIC.h>
+#include <Serial.h>
+#include <String.h>
+#include <IDT.h>
+#include <StackTrace.h>
 
 extern "C"{
 

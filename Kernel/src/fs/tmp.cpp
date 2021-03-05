@@ -1,7 +1,7 @@
-#include <fs/tmp.h>
+#include <Fs/Tmp.h>
 
-#include <errno.h>
-#include <debug.h>
+#include <Errno.h>
+#include <Debug.h>
 
 namespace fs::Temp{
     TempVolume::TempVolume(const char* name){

@@ -4,10 +4,10 @@
 #include <stdio.h>
 #include <assert.h>
 
-#include <lemon/gui/window.h>
-#include <lemon/core/fb.h>
-#include <lemon/core/input.h>
-#include <lemon/core/json.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/Core/Framebuffer.h>
+#include <Lemon/Core/Input.h>
+#include <Lemon/Core/JSON.h>
 
 #include <pthread.h>
 #include <time.h>

@@ -1,9 +1,9 @@
-#include <video.h>
+#include <Video/Video.h>
 
-#include <apic.h>
-#include <idt.h>
-#include <string.h>
-#include <logging.h>
+#include <APIC.h>
+#include <IDT.h>
+#include <String.h>
+#include <Logging.h>
 
 void KernelPanic(const char** reasons, int reasonCount){
 	asm("cli");

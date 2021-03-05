@@ -1,10 +1,10 @@
-#include <gpt.h>
+#include <Storage/GPT.h>
 
-#include <memory.h>
-#include <logging.h>
-#include <device.h>
+#include <Memory.h>
+#include <Logging.h>
+#include <Device.h>
 
-#include <debug.h>
+#include <Debug.h>
 
 namespace GPT{
     int Parse(DiskDevice* disk){

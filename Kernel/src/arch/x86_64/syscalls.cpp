@@ -1,33 +1,32 @@
-#include <syscalls.h>
+#include <Syscalls.h>
 
-#include <errno.h>
-#include <idt.h>
-#include <scheduler.h>
-#include <logging.h>
-#include <video.h>
-#include <hal.h>
-#include <fb.h>
-#include <physicalallocator.h>
-#include <gui.h>
-#include <timer.h>
-#include <pty.h>
-#include <lock.h>
-#include <lemon.h>
-#include <sharedmem.h>
-#include <cpu.h>
-#include <net/socket.h>
-#include <timer.h>
-#include <lock.h>
-#include <smp.h>
-#include <pair.h>
-#include <objects/service.h>
-#include <debug.h>
-#include <strace.h>
-#include <math.h>
-#include <device.h>
+#include <Errno.h>
+#include <IDT.h>
+#include <Scheduler.h>
+#include <Logging.h>
+#include <Video/Video.h>
+#include <HAL.h>
+#include <Framebuffer.h>
+#include <PhysicalAllocator.h>
+#include <Timer.h>
+#include <PTY.h>
+#include <Lock.h>
+#include <Lemon.h>
+#include <SharedMemory.h>
+#include <CPU.h>
+#include <Net/Socket.h>
+#include <Timer.h>
+#include <Lock.h>
+#include <SMP.h>
+#include <Pair.h>
+#include <Objects/Service.h>
+#include <Debug.h>
+#include <StackTrace.h>
+#include <Math.h>
+#include <Device.h>
 
-#include <abi/process.h>
-#include <abi/syscall.h>
+#include <ABI/Process.h>
+#include <ABI/Syscall.h>
 
 #define SC_ARG0(r) (r)->rdi
 #define SC_ARG1(r) (r)->rsi

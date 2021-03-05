@@ -1,6 +1,6 @@
-#include <lemon/gfx/graphics.h>
-#include <lemon/gfx/surface.h>
-#include <lemon/gui/window.h>
+#include <Lemon/Graphics/Graphics.h>
+#include <Lemon/Graphics/Surface.h>
+#include <Lemon/GUI/Window.h>
 
 #include <stdlib.h>
 #include <stdio.h>

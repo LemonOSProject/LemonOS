@@ -1,6 +1,6 @@
-#include <audio/hdaudio.h>
+#include <Audio/HDAudio.h>
 
-#include <pair.h>
+#include <Pair.h>
 
 namespace Audio {
 	static const Pair<uint16_t, uint16_t> controllerPCIIDs[] = {
@@ -8,6 +8,7 @@ namespace Audio {
 	};
 
 	void IntelHDAudioController::Initialize(){
-
+		(void)(cRegs);
+		(void)controllerPCIIDs;
 	}
 }

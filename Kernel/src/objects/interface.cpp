@@ -1,7 +1,7 @@
-#include <objects/interface.h>
+#include <Objects/Interface.h>
 
-#include <string.h>
-#include <scheduler.h>
+#include <String.h>
+#include <Scheduler.h>
 
 MessageInterface::MessageInterface(const char* _name, uint16_t msgSize){
     name = strdup(_name);

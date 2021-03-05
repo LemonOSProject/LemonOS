@@ -1,13 +1,13 @@
-#include <fs/filesystem.h>
-#include <string.h>
-#include <pty.h>
-#include <list.h>
-#include <types.h>
-#include <logging.h>
-#include <scheduler.h>
-#include <assert.h>
-#include <cpu.h>
-#include <errno.h>
+#include <Fs/Filesystem.h>
+#include <String.h>
+#include <PTY.h>
+#include <List.h>
+#include <Types.h>
+#include <Logging.h>
+#include <Scheduler.h>
+#include <Assert.h>
+#include <CPU.h>
+#include <Errno.h>
 
 cc_t c_cc_default[NCCS]{
 	4,			// VEOF

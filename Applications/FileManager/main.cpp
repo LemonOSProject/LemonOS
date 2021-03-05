@@ -1,9 +1,9 @@
-#include <lemon/gui/window.h>
-#include <lemon/gui/widgets.h>
-#include <lemon/gui/messagebox.h>
-#include <lemon/system/filesystem.h>
-#include <lemon/system/spawn.h>
-#include <lemon/system/util.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/GUI/Widgets.h>
+#include <Lemon/GUI/Messagebox.h>
+#include <Lemon/System/Filesystem.h>
+#include <Lemon/System/Spawn.h>
+#include <Lemon/System/Util.h>
 
 #include <stdlib.h>
 #include <fcntl.h>

@@ -1,7 +1,7 @@
-#include <objects/message.h>
+#include <Objects/Message.h>
 
-#include <errno.h>
-#include <logging.h>
+#include <Errno.h>
+#include <Logging.h>
 
 MessageEndpoint::MessageEndpoint(uint16_t maxSize){
     maxMessageSize = maxSize;

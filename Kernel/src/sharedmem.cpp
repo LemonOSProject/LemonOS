@@ -1,9 +1,9 @@
-#include <memory.h>
+#include <Memory.h>
 
-#include <lock.h>
-#include <sharedmem.h>
-#include <scheduler.h>
-#include <logging.h>
+#include <Lock.h>
+#include <SharedMemory.h>
+#include <Scheduler.h>
+#include <Logging.h>
 
 #define DEFAULT_TABLE_SIZE 65535
 

@@ -1,11 +1,11 @@
-#include <fs/filesystem.h>
+#include <Fs/Filesystem.h>
 
-#include <fs/fsvolume.h>
-#include <logging.h>
-#include <errno.h>
-#include <scheduler.h>
+#include <Fs/FsVolume.h>
+#include <Logging.h>
+#include <Errno.h>
+#include <Scheduler.h>
 
-#include <debug.h>
+#include <Debug.h>
 
 void FilesystemBlocker::Interrupt() {
 	shouldBlock = false;

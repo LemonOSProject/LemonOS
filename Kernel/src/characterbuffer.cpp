@@ -1,9 +1,9 @@
-#include <characterbuffer.h>
+#include <CharacterBuffer.h>
 
-#include <string.h>
-#include <liballoc.h>
-#include <logging.h>
-#include <lock.h>
+#include <String.h>
+#include <Liballoc.h>
+#include <Logging.h>
+#include <Lock.h>
 
 CharacterBuffer::CharacterBuffer(){
     buffer = (char*)kmalloc(bufferSize);

@@ -1,6 +1,6 @@
-#include <memory.h>
+#include <Memory.h>
 #include <stddef.h>
-#include <panic.h>
+#include <Panic.h>
 
 void *operator new(size_t size)
 {

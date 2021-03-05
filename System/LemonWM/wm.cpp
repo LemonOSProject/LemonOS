@@ -1,11 +1,12 @@
 #include "lemonwm.h"
 
-#include <lemon/gui/window.h>
-#include <lemon/core/shell.h>
-#include <lemon/core/keyboard.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/Core/Shell.h>
+#include <Lemon/Core/Keyboard.h>
+#include <Lemon/Core/SharedMemory.h>
+
 #include <algorithm>
 #include <pthread.h>
-#include <lemon/core/sharedmem.h>
 #include <unistd.h>
 
 WMInstance::WMInstance(surface_t& surface, handle_t svc, const char* ifName) : server(svc, ifName, LEMONWM_MSG_SIZE){

@@ -1,8 +1,8 @@
 #include <lemon/syscall.h>
-#include <lemon/gfx/surface.h>
-#include <lemon/gfx/graphics.h>
-#include <lemon/gui/window.h>
-#include <lemon/core/keyboard.h>
+#include <Lemon/Graphics/Surface.h>
+#include <Lemon/Graphics/Graphics.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/Core/Keyboard.h>
 #include <stdlib.h>
 #include <list>
 #include <unistd.h>

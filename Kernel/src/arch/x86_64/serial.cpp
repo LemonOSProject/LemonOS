@@ -1,8 +1,8 @@
-#include <system.h>
-#include <serial.h>
-#include <string.h>
-#include <lock.h>
-#include <cpu.h>
+#include <System.h>
+#include <Serial.h>
+#include <String.h>
+#include <Lock.h>
+#include <CPU.h>
 
 #define PORT 0x3F8 // COM 1
 

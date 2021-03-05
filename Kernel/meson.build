@@ -40,7 +40,7 @@ lai = subproject('lai')
 kernel_include_dirs = [
     include_directories('include'),
     include_directories('subprojects/lai/include'),
-    include_directories('include/arch/x86_64'),
+    include_directories('include/Arch/x86_64'),
 ]
 
 cpp_files = [

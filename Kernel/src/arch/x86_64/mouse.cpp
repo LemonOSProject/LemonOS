@@ -1,13 +1,13 @@
-#include <mouse.h>
+#include <Mouse.h>
 
-#include <idt.h>
+#include <IDT.h>
 #include <stddef.h>
-#include <fs/filesystem.h>
-#include <string.h>
-#include <system.h>
-#include <logging.h>
-#include <apic.h>
-#include <device.h>
+#include <Fs/Filesystem.h>
+#include <String.h>
+#include <System.h>
+#include <Logging.h>
+#include <APIC.h>
+#include <Device.h>
 
 #define PACKET_QUEUE_SIZE 64
 

@@ -1,12 +1,12 @@
-#include <elf.h>
+#include <ELF.h>
 
-#include <logging.h>
-#include <string.h>
-#include <scheduler.h>
-#include <paging.h>
-#include <physicalallocator.h>
-#include <scheduler.h>
-#include <math.h>
+#include <Logging.h>
+#include <String.h>
+#include <Scheduler.h>
+#include <Paging.h>
+#include <PhysicalAllocator.h>
+#include <Scheduler.h>
+#include <Math.h>
 
 int VerifyELF(void* elf){
     elf64_header_t elfHdr = *(elf64_header_t*)elf;

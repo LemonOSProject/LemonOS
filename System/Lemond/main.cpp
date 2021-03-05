@@ -1,11 +1,39 @@
-#include <lemon/system/spawn.h>
-#include <lemon/system/util.h>
-#include <lemon/core/json.h>
-#include <lemon/core/sha.h>
+#include <Lemon/System/Spawn.h>
+#include <Lemon/System/Util.h>
+#include <Lemon/Core/JSON.h>
+#include <Lemon/Core/SHA.h>
+
 #include <string.h>
 #include <vector>
 #include <unistd.h>
+#include <dirent.h>
+
 #include <string>
+
+struct Service {
+	std::string name;
+	std::string target;
+
+	enum {
+		StateStarting,
+		StateRunning,
+		StateError,
+		StateStopped,
+	} state = StateStarting;
+};
+
+std::multimap<std::string, Service> waitingServices;
+std::vector<Service> services;
+
+void StartService(const Service& srv){
+	char* const argv[] = { (char*) srv.target.c_str() };
+	lemon_spawn(srv.target.c_str(), 1, argv, 0);
+
+	auto range = waitingServices.equal_range(srv.name);
+	for(auto it = range.first; it != range.second; it++){
+		StartService(it->second);
+	}
+}
 
 int main(int argc, char** argv){
 	setenv("HOME", "/system", 1); // Default home
@@ -31,24 +59,81 @@ int main(int argc, char** argv){
         printf("[Lemond] Warning: Error parsing JSON configuration file!\n");
     }
 
-	__attribute__((unused)) char* lemonwm = "/system/lemon/lemonwm.lef";
-	__attribute__((unused)) char* netgov = "/system/lemon/netgov.lef";
-	__attribute__((unused)) char* login = "/system/lemon/login.lef";
-	__attribute__((unused)) char* shell = "/system/bin/shell.lef";
+	DIR* dir = opendir("/system/lemon/lemond");
+	if(!dir){
+		perror("[Lemond] Error: Failed to open '/system/lemon/lemond'");
 
-	if(long ret = lemon_spawn(lemonwm, 1, &lemonwm); ret <= 0){
-		printf("Error %ld attempting to load %s. Attempting to load again\n", ret, lemonwm);
-		lemon_spawn(lemonwm, 1, &lemonwm); // Attempt twice
+		return 1;
 	}
-		
-	if(long ret = lemon_spawn(shell, 1, &shell); ret <= 0){
-		printf("Error %ld attempting to load %s. Attempting to load again\n", ret, shell);
-		lemon_spawn(shell, 1, &shell); // Attempt twice
+
+	chdir("/system/lemon/lemond");
+
+	errno = 0;
+	while(dirent* ent = readdir(dir)){
+		if(ent->d_type != DT_REG){
+			continue;
+		}
+
+		FILE* f = fopen(ent->d_name, "r"); // Attempt to open service file
+		if(!f){
+			printf("[Lemond] Warning: Error opening '%s'\n", ent->d_name);
+			continue;
+		}
+
+		fseek(f, 0, SEEK_END);
+		if(ftell(f) > 4096){
+			printf("[Lemond] Warning: Abnormally large service file '%s', should not be >4K\n", ent->d_name);
+			fclose(f);
+			continue;
+		}
+		fseek(f, 0, SEEK_SET);
+
+		char buffer[4097];
+
+		unsigned len = fread(buffer, 1, 4096, f); // there is no reason why a target file should be more than 4K
+		buffer[len] = 0;
+
+		fclose(f);
+
+		std::string_view sv = { buffer };
+
+		Lemon::JSONParser json(sv);
+
+		auto root = json.Parse();
+		if(root.IsObject()){
+			auto& values = *root.object;
+
+			std::string name;
+			std::string target;
+			if(auto it = values.find("target"); it == values.end() || !it->second.IsString()){ // Check for valid name field
+				printf("[Lemond] Warning: Empty or invalid target for '%s'\n", ent->d_name);
+				continue;
+			} else if(auto it = values.find("name"); it == values.end() || !it->second.IsString()){ // Check for valid target field
+				printf("[Lemond] Warning: Empty or invalid name for '%s'\n", ent->d_name);
+				continue;
+			}
+
+			Service srv;
+
+			srv.name = values.at("name").AsString();
+			srv.target = values.at("target").AsString();
+			if(auto it = values.find("after"); it != values.end() && it->second.IsString()){ // The service is waiting for another
+				std::string after = it->second.AsString();
+				waitingServices.insert({ std::move(after), std::move(srv) });
+			} else {
+				services.push_back(std::move(srv));
+			}
+		}
 	}
+
+	if(errno){
+		perror("[Lemond] Error reading '/system/lemon/lemond'");
 		
-	if(long ret = lemon_spawn(netgov, 1, &netgov); ret <= 0){
-		printf("Error %ld attempting to load %s. Attempting to load again\n", ret, netgov);
-		lemon_spawn(netgov, 1, &netgov); // Attempt twice
+		return 2;
+	}
+
+	for(auto& srv : services){
+		StartService(srv);
 	}
 	
 	return 0;

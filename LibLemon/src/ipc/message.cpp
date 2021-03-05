@@ -1,4 +1,4 @@
-#include <lemon/ipc/message.h>
+#include <Lemon/IPC/Message.h>
 
 #include <string.h>
 

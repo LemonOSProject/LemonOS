@@ -1,13 +1,13 @@
-#include <apic.h>
+#include <APIC.h>
 
-#include <cpu.h>
-#include <logging.h>
-#include <paging.h>
-#include <smp.h>
-#include <idt.h>
-#include <acpi.h>
+#include <CPU.h>
+#include <Logging.h>
+#include <Paging.h>
+#include <SMP.h>
+#include <IDT.h>
+#include <ACPI.h>
 
-#include <debug.h>
+#include <Debug.h>
 
 namespace APIC{
     namespace Local {

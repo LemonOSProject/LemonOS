@@ -1,6 +1,6 @@
-#include <lemon/core/shell.h>
+#include <Lemon/Core/Shell.h>
 
-#include <lemon/ipc/interface.h>
+#include <Lemon/IPC/Interface.h>
 #include <string.h>
 #include <stdlib.h>
 

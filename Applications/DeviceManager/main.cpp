@@ -1,7 +1,7 @@
-#include <lemon/gui/window.h>
-#include <lemon/gui/model.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/GUI/Model.h>
 
-#include <lemon/system/device.h>
+#include <Lemon/System/Device.h>
 
 Lemon::GUI::Window* window;
 

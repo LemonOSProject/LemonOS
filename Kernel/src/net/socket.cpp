@@ -1,9 +1,9 @@
-#include <net/socket.h>
+#include <Net/Socket.h>
 
-#include <logging.h>
-#include <assert.h>
-#include <errno.h>
-#include <scheduler.h>
+#include <Logging.h>
+#include <Assert.h>
+#include <Errno.h>
+#include <Scheduler.h>
 
 int Socket::CreateSocket(int domain, int type, int protocol, Socket** sock){
     if(type & SOCK_NONBLOCK) type &= ~SOCK_NONBLOCK;

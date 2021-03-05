@@ -1,4 +1,4 @@
-#include <lemon/core/input.h>
+#include <Lemon/Core/Input.h>
 
 #include <fcntl.h>
 #include <unistd.h>

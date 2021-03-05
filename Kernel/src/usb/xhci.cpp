@@ -1,14 +1,14 @@
-#include <xhci.h>
+#include <USB/XHCI.h>
 
-#include <pci.h>
-#include <logging.h>
-#include <paging.h>
-#include <idt.h>
-#include <memory.h>
-#include <assert.h>
-#include <timer.h>
+#include <PCI.h>
+#include <Logging.h>
+#include <Paging.h>
+#include <IDT.h>
+#include <Memory.h>
+#include <Assert.h>
+#include <Timer.h>
 
-#include <debug.h>
+#include <Debug.h>
 
 namespace USB{
     Vector<XHCIController*> xhciControllers;

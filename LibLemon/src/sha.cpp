@@ -1,9 +1,11 @@
-#include <lemon/core/sha.h> 
+#include <Lemon/Core/SHA.h> 
+#include <Lemon/Core/Rotate.h>
+
 #include <string.h>
-#include <lemon/core/rotate.h>
-#include <sstream>
 #include <stdint.h>
 #include <string.h>
+
+#include <sstream>
 
 SHA256::SHA256(){
 	memcpy(hash, initialHash, SHA256_HASH_SIZE);

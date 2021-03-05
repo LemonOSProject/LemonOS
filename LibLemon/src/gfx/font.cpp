@@ -1,4 +1,4 @@
-#include <lemon/gfx/font.h>
+#include <Lemon/Graphics/Font.h>
 
 #include <cstdint>
 #include <cstdio>

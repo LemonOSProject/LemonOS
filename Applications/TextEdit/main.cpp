@@ -1,9 +1,9 @@
-#include <lemon/gfx/surface.h>
-#include <lemon/gfx/graphics.h>
-#include <lemon/gui/window.h>
-#include <lemon/gui/widgets.h>
-#include <lemon/gui/filedialog.h>
-#include <lemon/gui/messagebox.h>
+#include <Lemon/Graphics/Surface.h>
+#include <Lemon/Graphics/Graphics.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/GUI/Widgets.h>
+#include <Lemon/GUI/FileDialog.h>
+#include <Lemon/GUI/Messagebox.h>
 
 #include <stdio.h>
 #include <unistd.h>

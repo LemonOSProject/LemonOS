@@ -1,23 +1,23 @@
-#include <scheduler.h>
+#include <Scheduler.h>
 
-#include <paging.h>
-#include <liballoc.h>
-#include <physicalallocator.h>
-#include <list.h>
-#include <serial.h>
-#include <idt.h>
-#include <string.h>
-#include <system.h>
-#include <logging.h>
-#include <elf.h>
-#include <tss.h>
-#include <fs/initrd.h>
-#include <abi.h>
-#include <lock.h>
-#include <smp.h>
-#include <apic.h>
-#include <timer.h>
-#include <debug.h>
+#include <Paging.h>
+#include <Liballoc.h>
+#include <PhysicalAllocator.h>
+#include <List.h>
+#include <Serial.h>
+#include <IDT.h>
+#include <String.h>
+#include <System.h>
+#include <Logging.h>
+#include <ELF.h>
+#include <TSS.h>
+#include <Fs/Initrd.h>
+#include <ABI.h>
+#include <Lock.h>
+#include <SMP.h>
+#include <APIC.h>
+#include <Timer.h>
+#include <Debug.h>
 
 extern "C" [[noreturn]] void TaskSwitch(RegisterContext* r, uint64_t pml4);
 

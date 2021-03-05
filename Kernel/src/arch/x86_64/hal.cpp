@@ -1,23 +1,23 @@
-#include <hal.h>
+#include <HAL.h>
 
-#include <string.h>
-#include <serial.h>
-#include <logging.h>
-#include <video.h>
-#include <idt.h>
-#include <paging.h>
-#include <physicalallocator.h>
-#include <pci.h>
-#include <acpi.h>
-#include <timer.h>
-#include <tss.h>
-#include <apic.h>
-#include <liballoc.h>
-#include <smp.h>
-#include <videoconsole.h>
-#include <device.h>
+#include <String.h>
+#include <Serial.h>
+#include <Logging.h>
+#include <Video/Video.h>
+#include <IDT.h>
+#include <Paging.h>
+#include <PhysicalAllocator.h>
+#include <PCI.h>
+#include <ACPI.h>
+#include <Timer.h>
+#include <TSS.h>
+#include <APIC.h>
+#include <Liballoc.h>
+#include <SMP.h>
+#include <Video/VideoConsole.h>
+#include <Device.h>
 
-#include <debug.h>
+#include <Debug.h>
 
 extern void* _end;
 

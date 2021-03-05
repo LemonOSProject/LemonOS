@@ -1,14 +1,14 @@
-#include <device.h>
+#include <Device.h>
 
-#include <list.h>
-#include <errno.h>
-#include <fs/filesystem.h>
-#include <fs/fsvolume.h>
-#include <math.h>
-#include <timer.h>
-#include <string.h>
-#include <vector.h>
-#include <assert.h>
+#include <List.h>
+#include <Errno.h>
+#include <Fs/Filesystem.h>
+#include <Fs/FsVolume.h>
+#include <Math.h>
+#include <Timer.h>
+#include <String.h>
+#include <Vector.h>
+#include <Assert.h>
 	
 class URandom : public Device {
 public:

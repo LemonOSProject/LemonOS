@@ -1,13 +1,13 @@
-#include <ahci.h>
+#include <Storage/AHCI.h>
 
-#include <pci.h>
-#include <paging.h>
-#include <logging.h>
-#include <memory.h>
-#include <timer.h>
-#include <idt.h>
+#include <PCI.h>
+#include <Paging.h>
+#include <Logging.h>
+#include <Memory.h>
+#include <Timer.h>
+#include <IDT.h>
 
-#include <debug.h>
+#include <Debug.h>
 
 namespace AHCI{
 	uintptr_t ahciBaseAddress;

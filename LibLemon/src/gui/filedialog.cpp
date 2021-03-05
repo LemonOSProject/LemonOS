@@ -1,8 +1,8 @@
-#include <lemon/gui/window.h>
+#include <Lemon/GUI/Window.h>
 
 #include <sys/stat.h>
-#include <lemon/gui/filedialog.h>
-#include <lemon/gui/messagebox.h>
+#include <Lemon/GUI/FileDialog.h>
+#include <Lemon/GUI/Messagebox.h>
 #include <unistd.h>
 #include <errno.h>
 

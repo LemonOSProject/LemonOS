@@ -1,6 +1,6 @@
-#include <lemon/gfx/graphics.h>
-#include <lemon/gfx/font.h>
-#include <lemon/gfx/text.h>
+#include <Lemon/Graphics/Graphics.h>
+#include <Lemon/Graphics/Font.h>
+#include <Lemon/Graphics/Text.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 

@@ -1,13 +1,13 @@
 
-#include <paging.h>
-#include <physicalallocator.h>
-#include <serial.h>
-#include <string.h>
+#include <Paging.h>
+#include <PhysicalAllocator.h>
+#include <Serial.h>
+#include <String.h>
 #include <stddef.h>
-#include <lock.h>
-#include <logging.h>
-#include <scheduler.h>
-#include <cpu.h>
+#include <Lock.h>
+#include <Logging.h>
+#include <Scheduler.h>
+#include <CPU.h>
 	
 volatile int liballocLock = 0;
 

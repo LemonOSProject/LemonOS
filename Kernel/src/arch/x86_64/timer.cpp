@@ -1,14 +1,15 @@
-#include <timer.h>
+#include <Timer.h>
+#include <TimerEvent.h>
 
-#include <timerevent.h>
+#include <MiscHdr.h>
 
-#include <idt.h>
-#include <scheduler.h>
-#include <system.h>
-#include <apic.h>
-#include <list.h>
-#include <cpu.h>
-#include <logging.h>
+#include <IDT.h>
+#include <Scheduler.h>
+#include <System.h>
+#include <APIC.h>
+#include <List.h>
+#include <CPU.h>
+#include <Logging.h>
 
 namespace Timer{
     int frequency; // Timer frequency

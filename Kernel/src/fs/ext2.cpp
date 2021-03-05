@@ -1,14 +1,14 @@
-#include <fs/ext2.h>
+#include <Fs/Ext2.h>
 
-#include <logging.h>
-#include <errno.h>
-#include <assert.h>
-#include <math.h>
+#include <Logging.h>
+#include <Errno.h>
+#include <Assert.h>
+#include <Math.h>
 
-#include <debug.h>
+#include <Debug.h>
  
 #ifdef EXT2_ENABLE_TIMER
-    #include <timer.h>
+    #include <Timer.h>
 #endif
 
 namespace fs::Ext2{

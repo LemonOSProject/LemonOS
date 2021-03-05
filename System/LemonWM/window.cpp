@@ -1,8 +1,8 @@
 #include "lemonwm.h"
 
-#include <lemon/gfx/graphics.h>
-#include <lemon/gui/window.h>
-#include <lemon/core/sharedmem.h>
+#include <Lemon/Graphics/Graphics.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/Core/SharedMemory.h>
 #include <stdlib.h>
 
 WMWindow::WMWindow(WMInstance* wm, handle_t endp, handle_t id, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title) : Endpoint(endp){

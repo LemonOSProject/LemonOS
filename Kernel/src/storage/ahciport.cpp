@@ -1,14 +1,14 @@
-#include <ahci.h>
+#include <Storage/AHCI.h>
 
-#include <physicalallocator.h>
-#include <paging.h>
-#include <logging.h>
-#include <gpt.h>
-#include <ata.h>
-#include <timer.h>
-#include <errno.h>
+#include <PhysicalAllocator.h>
+#include <Paging.h>
+#include <Logging.h>
+#include <Storage/GPT.h>
+#include <Storage/ATA.h>
+#include <Timer.h>
+#include <Errno.h>
 
-#include <debug.h>
+#include <Debug.h>
 
 #define HBA_PxIS_TFES   (1 << 30)
 

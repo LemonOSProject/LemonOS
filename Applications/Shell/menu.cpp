@@ -1,10 +1,11 @@
-#include <lemon/system/fb.h>
-#include <lemon/syscall.h>
-#include <lemon/system/spawn.h>
+#include <Lemon/System/Framebuffer.h>
+#include <Lemon/System/Spawn.h>
 
-#include <lemon/gfx/graphics.h>
-#include <lemon/gui/window.h>
-#include <lemon/core/cfgparser.h>
+#include <lemon/syscall.h>
+
+#include <Lemon/Graphics/Graphics.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/Core/CFGParser.h>
 
 #include <fcntl.h>
 #include <unistd.h>

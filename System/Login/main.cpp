@@ -1,8 +1,10 @@
-#include <lemon/gui/window.h>
-#include <lemon/core/json.h>
-#include <lemon/gui/messagebox.h>
-#include <lemon/core/sha.h>
-#include <lemon/system/spawn.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/GUI/Messagebox.h>
+
+#include <Lemon/Core/JSON.h>
+#include <Lemon/Core/SHA.h>
+
+#include <Lemon/System/Spawn.h>
 
 #include <stdexcept>
 #include <unistd.h>

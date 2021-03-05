@@ -1,6 +1,6 @@
 #pragma once
 
-#include <lemon/gfx/types.h>
+#include <Lemon/Graphics/Types.h>
 
 class WMWindow;
 struct WMWindowRect {

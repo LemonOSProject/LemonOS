@@ -1,6 +1,6 @@
 #pragma once
 
-#include <lemon/gui/widgets.h>
+#include <Lemon/GUI/Widgets.h>
 
 class ExtendedTextBox : public Lemon::GUI::TextBox {
     rect_t textBoxBounds;

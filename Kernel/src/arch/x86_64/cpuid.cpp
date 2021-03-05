@@ -1,4 +1,4 @@
-#include <cpu.h>
+#include <CPU.h>
 
 cpuid_info_t CPUID() {
 	cpuid_info_t info;

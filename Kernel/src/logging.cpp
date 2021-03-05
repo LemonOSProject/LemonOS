@@ -1,14 +1,14 @@
-#include <logging.h>
+#include <Logging.h>
 
-#include <serial.h>
-#include <string.h>
-#include <videoconsole.h>
-#include <liballoc.h>
+#include <Serial.h>
+#include <String.h>
+#include <Video/VideoConsole.h>
+#include <Liballoc.h>
 #include <stdarg.h>
-#include <string.h>
-#include <fs/filesystem.h>
-#include <pty.h>
-#include <device.h>
+#include <String.h>
+#include <Fs/Filesystem.h>
+#include <PTY.h>
+#include <Device.h>
 
 namespace Log{
 

@@ -1,7 +1,7 @@
-#include <lemon/gui/window.h>
-#include <lemon/gui/messagebox.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/GUI/Messagebox.h>
 
-#include <lemon/system/spawn.h>
+#include <Lemon/System/Spawn.h>
 
 #include <vector>
 #include <cstring>

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <lemon/gfx/graphics.h>
-#include <lemon/gfx/surface.h>
+#include <Lemon/Graphics/Graphics.h>
+#include <Lemon/Graphics/Surface.h>
 
-#include <lemon/ipc/endpoint.h>
-#include <lemon/ipc/interface.h>
-#include <lemon/core/event.h>
-#include <lemon/gui/window.h>
+#include <Lemon/IPC/Endpoint.h>
+#include <Lemon/IPC/Interface.h>
+#include <Lemon/Core/Event.h>
+#include <Lemon/GUI/Window.h>
 
 #include <list>
 

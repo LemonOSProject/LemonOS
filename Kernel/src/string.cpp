@@ -1,8 +1,8 @@
-#include <string.h>
+#include <String.h>
 
 #include <stdint.h>
-#include <liballoc.h>
-#include <paging.h>
+#include <Liballoc.h>
+#include <Paging.h>
 
 void reverse(char *str, int length)
 {

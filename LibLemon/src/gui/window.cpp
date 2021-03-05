@@ -1,6 +1,6 @@
-#include <lemon/gui/window.h>
-#include <lemon/core/sharedmem.h>
-#include <lemon/core/json.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/Core/SharedMemory.h>
+#include <Lemon/Core/JSON.h>
 
 #include <stdlib.h>
 #include <unistd.h>

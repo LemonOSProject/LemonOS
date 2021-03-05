@@ -1,10 +1,10 @@
-#include <net/networkadapter.h>
+#include <Net/Adapter.h>
 
-#include <list.h>
-#include <logging.h>
-#include <assert.h>
-#include <errno.h>
-#include <net/socket.h>
+#include <List.h>
+#include <Logging.h>
+#include <Assert.h>
+#include <Errno.h>
+#include <Net/Socket.h>
 
 namespace Network {
     NetworkAdapter* mainAdapter;

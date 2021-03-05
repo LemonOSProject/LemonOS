@@ -1,6 +1,6 @@
-#include <device.h>
+#include <Device.h>
 
-#include <string.h>
+#include <String.h>
 
 PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk) : Device(DeviceTypeStoragePartition){
     this->startLBA = startLBA;

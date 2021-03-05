@@ -1,10 +1,10 @@
-#include <fs/fat32.h>
+#include <Fs/Fat32.h>
 
-#include <device.h>
-#include <logging.h>
-#include <memory.h>
-#include <string.h>
-#include <errno.h>
+#include <Device.h>
+#include <Logging.h>
+#include <Memory.h>
+#include <String.h>
+#include <Errno.h>
 
 namespace fs::FAT32{
 

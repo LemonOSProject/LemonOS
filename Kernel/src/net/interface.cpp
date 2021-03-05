@@ -1,14 +1,14 @@
-#include <net/net.h>
-#include <net/networkadapter.h>
+#include <Net/Net.h>
+#include <Net/Adapter.h>
 
-#include <scheduler.h>
-#include <logging.h>
-#include <math.h>
-#include <timer.h>
-#include <errno.h>
+#include <Scheduler.h>
+#include <Logging.h>
+#include <Math.h>
+#include <Timer.h>
+#include <Errno.h>
 
-#include <objects/service.h>
-#include <objects/interface.h>
+#include <Objects/Service.h>
+#include <Objects/Interface.h>
 
 #define NET_INTERFACE_STACKSIZE 32768
 

@@ -1,6 +1,6 @@
-#include <objects/service.h>
+#include <Objects/Service.h>
 
-#include <errno.h>
+#include <Errno.h>
 
 ServiceFS* ServiceFS::instance = nullptr;
 

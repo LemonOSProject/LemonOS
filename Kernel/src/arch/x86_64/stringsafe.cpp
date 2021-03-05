@@ -1,6 +1,6 @@
-#include <string.h>
+#include <String.h>
 
-#include <paging.h>
+#include <Paging.h>
 
 long strlenSafe(const char* str, size_t& size, address_space_t* aSpace)
 {

@@ -1,11 +1,10 @@
-#include <scheduler.h>
-#include <system.h>
-#include <idt.h>
-#include <logging.h>
-#include <gui.h>
-#include <apic.h>
-#include <fs/filesystem.h>
-#include <device.h>
+#include <Scheduler.h>
+#include <System.h>
+#include <IDT.h>
+#include <Logging.h>
+#include <APIC.h>
+#include <Fs/Filesystem.h>
+#include <Device.h>
 
 #define KEY_QUEUE_SIZE 256
 

@@ -1,6 +1,6 @@
 #include "lemonwm.h"
 
-#include <lemon/gui/colours.h>
+#include <Lemon/GUI/Colours.h>
 
 static unsigned int fCount = 0;
 static unsigned int avgFrametime = 0;

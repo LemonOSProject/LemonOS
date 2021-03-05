@@ -1,12 +1,13 @@
-#include <lemon/gui/widgets.h>
+#include <Lemon/GUI/Widgets.h>
+#include <Lemon/GUI/Colours.h>
+#include <Lemon/GUI/Model.h>
+#include <Lemon/GUI/Window.h>
 
-#include <lemon/core/keyboard.h>
+#include <Lemon/Core/Keyboard.h>
+
 #include <ctype.h>
 #include <string>
 #include <math.h>
-#include <lemon/gui/colours.h>
-#include <lemon/gui/model.h>
-#include <lemon/gui/window.h>
 #include <assert.h>
 #include <algorithm>
 

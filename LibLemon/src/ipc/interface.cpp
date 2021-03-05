@@ -1,7 +1,7 @@
-#include <lemon/ipc/interface.h>
-#include <lemon/ipc/endpoint.h>
+#include <Lemon/IPC/Interface.h>
+#include <Lemon/IPC/Endpoint.h>
 
-#include <lemon/system/ipc.h>
+#include <Lemon/System/IPC.h>
 #include <errno.h>
 
 namespace Lemon{

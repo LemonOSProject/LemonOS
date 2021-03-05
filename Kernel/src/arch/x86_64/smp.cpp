@@ -1,15 +1,15 @@
-#include <smp.h>
+#include <SMP.h>
 
-#include <cpu.h>
-#include <device.h>
-#include <apic.h>
-#include <logging.h>
-#include <timer.h>
-#include <acpi.h>
-#include <tss.h>
-#include <idt.h>
-#include <hal.h>
-#include <memory.h>
+#include <CPU.h>
+#include <Device.h>
+#include <APIC.h>
+#include <Logging.h>
+#include <Timer.h>
+#include <ACPI.h>
+#include <TSS.h>
+#include <IDT.h>
+#include <HAL.h>
+#include <Memory.h>
 
 #include "smpdefines.inc"
 

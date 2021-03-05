@@ -1,9 +1,9 @@
-#include <lock.h>
+#include <Lock.h>
 
-#include <scheduler.h>
-#include <timer.h>
-#include <cpu.h>
-#include <logging.h>
+#include <Scheduler.h>
+#include <Timer.h>
+#include <CPU.h>
+#include <Logging.h>
 
 bool Semaphore::Wait(){
     acquireLock(&lock);

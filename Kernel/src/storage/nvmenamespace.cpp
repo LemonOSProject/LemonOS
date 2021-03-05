@@ -1,8 +1,8 @@
-#include <nvme.h>
+#include <Storage/NVMe.h>
 
-#include <gpt.h>
-#include <debug.h>
-#include <errno.h>
+#include <Storage/GPT.h>
+#include <Debug.h>
+#include <Errno.h>
 
 namespace NVMe{
 	Namespace::Namespace(Controller* controller, uint32_t nsID, const NamespaceIdentity& id){

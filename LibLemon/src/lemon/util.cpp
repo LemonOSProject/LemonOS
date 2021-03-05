@@ -1,4 +1,4 @@
-#include <lemon/system/util.h>
+#include <Lemon/System/Util.h>
 #include <lemon/syscall.h>
 
 #include <sys/types.h>
@@ -17,8 +17,14 @@ pid_t lemon_spawn(const char* path, int argc, char* const argv[], int flags){
     return ret;
 } 
 
-pid_t lemon_spawn(const char* path, int argc, char* const argv[], int flags, char** envp){
-	return syscall(SYS_EXEC, (uintptr_t)path, argc, (uintptr_t)argv, flags, envp);
+pid_t lemon_spawn(const char* path, int argc, const char* const argv[], int flags, char** envp){
+	pid_t ret = syscall(SYS_EXEC, (uintptr_t)path, argc, (uintptr_t)argv, flags, envp);
+    if(ret < 0){
+        errno = -ret;
+        return -1;
+    }
+
+    return ret;
 } 
 
 namespace Lemon{

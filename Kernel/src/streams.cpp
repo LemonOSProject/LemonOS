@@ -1,8 +1,8 @@
-#include <stream.h>
+#include <Stream.h>
 
-#include <assert.h>
-#include <logging.h>
-#include <timer.h>
+#include <Assert.h>
+#include <Logging.h>
+#include <Timer.h>
 
 int64_t Stream::Read(void* buffer, size_t len){
     assert(!"Stream::Read called from base class");

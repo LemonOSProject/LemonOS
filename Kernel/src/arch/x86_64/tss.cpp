@@ -1,8 +1,8 @@
-#include <tss.h>
+#include <TSS.h>
 
-#include <string.h>
-#include <paging.h>
-#include <physicalallocator.h>
+#include <String.h>
+#include <Paging.h>
+#include <PhysicalAllocator.h>
 
 extern "C"
 void LoadTSS(uint64_t address, uint64_t gdt, uint8_t selector);

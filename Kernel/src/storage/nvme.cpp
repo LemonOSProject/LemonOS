@@ -1,10 +1,10 @@
-#include <nvme.h>
+#include <Storage/NVMe.h>
 
-#include <pci.h>
-#include <logging.h>
-#include <debug.h>
-#include <scheduler.h>
-#include <math.h>
+#include <PCI.h>
+#include <Logging.h>
+#include <Debug.h>
+#include <Scheduler.h>
+#include <Math.h>
 
 namespace NVMe{
     char* deviceName = "Generic NVMe Controller";

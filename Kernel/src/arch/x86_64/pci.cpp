@@ -1,12 +1,12 @@
-#include <pci.h>
+#include <PCI.h>
 
-#include <system.h>
-#include <logging.h>
-#include <vector.h>
-#include <acpi.h>
-#include <apic.h>
-#include <idt.h>
-#include <cpu.h>
+#include <System.h>
+#include <Logging.h>
+#include <Vector.h>
+#include <ACPI.h>
+#include <APIC.h>
+#include <IDT.h>
+#include <CPU.h>
 
 namespace PCI{
 	Vector<PCIDevice>* devices;
