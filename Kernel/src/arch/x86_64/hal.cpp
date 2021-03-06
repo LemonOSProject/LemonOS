@@ -51,7 +51,7 @@ namespace HAL{
         Log::Initialize();
 
         Log::Info("Initializing System Timer...");
-        Timer::Initialize(1000);
+        Timer::Initialize(1600);
         Log::Write("OK");
     } 
 

@@ -618,7 +618,7 @@ void WMInstance::Update(){
     if(targetFrameDelay){
         clock_gettime(CLOCK_BOOTTIME, &endTime);
         long diff = (endTime - startTime) / 1000;
-        if(diff > 0 && diff < frameDelayThreshold){
+        if(diff < frameDelayThreshold){
             usleep(targetFrameDelay - diff);
         }
     }

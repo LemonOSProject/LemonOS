@@ -103,9 +103,6 @@ public:
 };
 
 class PTY{
-private:
-    List<FilesystemWatcher*> watchingSlave;
-    List<FilesystemWatcher*> watchingMaster;
 public:
     CharacterBuffer master;
     CharacterBuffer slave;
@@ -133,6 +130,9 @@ public:
     void WatchSlave(FilesystemWatcher& watcher, int events);
     void UnwatchMaster(FilesystemWatcher& watcher);
     void UnwatchSlave(FilesystemWatcher& watcher);
+private:
+    List<FilesystemWatcher*> watchingSlave;
+    List<FilesystemWatcher*> watchingMaster;
 };
 
 PTY* GrantPTY(uint64_t pid);

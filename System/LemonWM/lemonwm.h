@@ -206,7 +206,7 @@ public:
     rect_t contextMenuBounds;
 
     long targetFrameDelay = 8333; // 8333 us (120 fps)
-    long frameDelayThreshold = 8333 - (8333 / 20); // -5% of the frame delay
+    long frameDelayThreshold = 8333 - (8333 / 4); // -25% of the frame delay
 
     surface_t surface;
     surface_t screenSurface;

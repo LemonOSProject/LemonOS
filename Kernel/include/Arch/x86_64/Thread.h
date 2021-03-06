@@ -7,7 +7,7 @@
 
 #include <abi-bits/pid_t.h>
 
-#define THREAD_TIMESLICE_DEFAULT 5
+#define THREAD_TIMESLICE_DEFAULT 10
 
 enum {
 	ThreadStateRunning, // Thread is running

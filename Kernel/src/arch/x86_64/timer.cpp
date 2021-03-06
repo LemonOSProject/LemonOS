@@ -166,8 +166,8 @@ namespace Timer{
         outportb(0x43, 0x36);
 
         // Divisor has to be sent byte-wise, so split here into upper/lower bytes.
-        uint8_t l = (uint8_t)(divisor & 0xFF);
-        uint8_t h = (uint8_t)( (divisor>>8) & 0xFF );
+        uint8_t l = divisor & 0xff;
+        uint8_t h = divisor >> 8;
 
         // Send the frequency divisor.
         outportb(0x40, l);
