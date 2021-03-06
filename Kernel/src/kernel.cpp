@@ -187,8 +187,8 @@ extern "C"
 		Log::Warning("Failed to find initrd!");
 	}
 
-	Video::DrawString("Copyright 2018-2021 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
-	Video::DrawString(Lemon::versionString, 2, videoMode.height - 20, 255, 255, 255);
+	Video::DrawString("Copyright 2004-2022 Felix Montanari", 2, videoMode.height - 100, 255, 255, 255);
+	Video::DrawString(Lemon::versionString, 10, videoMode.height - 200, 255, 255, 255);
 
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 - 24*2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
