@@ -93,25 +93,26 @@ namespace Lemon::GUI {
         rgba_colour_t background = Lemon::colours[Lemon::Colour::Background];
 
         Container(rect_t bounds);
+        virtual ~Container();
 
-        void SetWindow(Window* w); // We need to set the windows of the children
+        virtual void SetWindow(Window* w); // We need to set the windows of the children
 
-        void AddWidget(Widget* w);
-        void RemoveWidget(Widget* w);
+        virtual void AddWidget(Widget* w);
+        virtual void RemoveWidget(Widget* w);
 
-        void Paint(surface_t* surface);
+        virtual void Paint(surface_t* surface);
 
-        void OnMouseEnter(vector2i_t mousePos);
-        void OnMouseExit(vector2i_t mousePos);
-        void OnMouseDown(vector2i_t mousePos);
-        void OnMouseUp(vector2i_t mousePos);
-        void OnRightMouseDown(vector2i_t mousePos);
-        void OnRightMouseUp(vector2i_t mousePos);
-        void OnMouseMove(vector2i_t mousePos);
-        void OnDoubleClick(vector2i_t mousePos);
-        void OnKeyPress(int key);
+        virtual void OnMouseEnter(vector2i_t mousePos);
+        virtual void OnMouseExit(vector2i_t mousePos);
+        virtual void OnMouseDown(vector2i_t mousePos);
+        virtual void OnMouseUp(vector2i_t mousePos);
+        virtual void OnRightMouseDown(vector2i_t mousePos);
+        virtual void OnRightMouseUp(vector2i_t mousePos);
+        virtual void OnMouseMove(vector2i_t mousePos);
+        virtual void OnDoubleClick(vector2i_t mousePos);
+        virtual void OnKeyPress(int key);
 
-        void UpdateFixedBounds();
+        virtual void UpdateFixedBounds();
 
     protected:
         std::vector<Widget*> children;

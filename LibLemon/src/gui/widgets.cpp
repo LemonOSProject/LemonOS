@@ -96,10 +96,16 @@ namespace Lemon::GUI {
     }
 
     //////////////////////////
-    // Contianer
+    // Container
     //////////////////////////
     Container::Container(rect_t bounds) : Widget(bounds) {
 
+    }
+
+    Container::~Container(){
+        for(auto& widget : children){
+            delete widget;
+        }
     }
 
     void Container::SetWindow(Window* w){
