@@ -16,7 +16,7 @@ mount "${LOOPBACK_DEVICE}"p3 /mnt/LemonEFI
 
 mkdir -p /mnt/Lemon/lemon/boot
 
-grub-install --target=x86_64-efi --boot-directory=/mnt/Lemon/lemon/boot --efi-directory=/mnt/LemonEFI "${LOOPBACK_DEVICE}" --removable
+#grub-install --target=x86_64-efi --boot-directory=/mnt/Lemon/lemon/boot --efi-directory=/mnt/LemonEFI "${LOOPBACK_DEVICE}" --removable -s --force --recheck
 
 umount /mnt/Lemon
 umount /mnt/LemonEFI
@@ -28,7 +28,7 @@ else
     
     if [ -x "$(command -v limine-install)" ]; then
         limine-install "${LOOPBACK_DEVICE}"
-    elif [ -e "Toolchain/limine-1.0/limine-install"]; then
+    elif [ -e "Toolchain/limine-1.0/limine-install" ]; then
         Toolchain/limine-1.0/limine-install "${LOOPBACK_DEVICE}"
     else
         echo "Failed to find limine-install!"

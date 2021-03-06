@@ -1,4 +1,4 @@
-SPATH=$(dirname $(readlink -f "$0"))
+PATH=$(dirname $(readlink -f "$0"))
 
 cd $SPATH/..
 export LEMONDIR=$(pwd)
@@ -54,7 +54,7 @@ _build_llvm(){
 
     cd $LLVM_SRC_DIR
 
-    mkdir build
+    mkdir -p build
     cd build
     cmake -C ../clang/cmake/caches/Lemon.cmake -DCMAKE_INSTALL_PREFIX=$TOOLCHAIN_PREFIX -DDEFAULT_SYSROOT=$LEMON_SYSROOT -DLLVM_PARALLEL_LINK_JOBS=$LINKCOUNT ../llvm -G Ninja
 
@@ -138,3 +138,4 @@ else
 	cd $SPATH
     _$1
 fi
+
