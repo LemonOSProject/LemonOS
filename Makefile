@@ -25,7 +25,6 @@ initrd: libc
 	Scripts/buildinitrd.sh
 	
 base: applications system
-	Scripts/buildbase.sh
 
 disk:
 	Scripts/build-nix/copytodisk.sh

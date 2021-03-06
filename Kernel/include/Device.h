@@ -40,6 +40,7 @@ enum DeviceType{
     DeviceTypeGenericUSB,
     DeviceTypeLegacyHID,
     DeviceTypeUSBHID,
+    DeviceTypeAudioController,
 };
 
 enum DeviceBus {
@@ -59,7 +60,7 @@ public:
     ~Device();
 
     inline void SetID(int64_t id){
-        assert(deviceID == 0); // Device ID should only be set once
+        //assert(deviceID == 0); // Device ID should only be set once
 
         deviceID = id;
     }

@@ -24,6 +24,7 @@
 #include <CPU.h>
 #include <Lemon.h>
 #include <Objects/Service.h>
+#include <Audio/HDAudio.h>
 
 #include <Debug.h>
 
@@ -46,6 +47,8 @@ void KernelProcess(){
 	USB::XHCIController::Initialize();
 	ATA::Init();
 	AHCI::Init();
+
+	Audio::IntelHDAudioController::Initialize();
 
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 + 24 * 2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);

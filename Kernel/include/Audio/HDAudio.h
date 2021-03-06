@@ -3,9 +3,15 @@
 // Intel HD Audio Driver for Lemon OS
 
 #include <Device.h>
+#include <PCI.h>
 
 namespace Audio {
-	class IntelHDAudioController : public Device {
+	class IntelHDAudioController : public Device, private PCIDevice {
+	public:
+		static void Initialize();
+
+		IntelHDAudioController(const PCIInfo& info);
+	private:
 		struct ControllerRegs {
 			uint16_t globalCap; // Global Capabilities
 			uint8_t minorVersion;
@@ -60,7 +66,5 @@ namespace Audio {
 		} __attribute__((packed));
 
 		ControllerRegs* cRegs;
-
-		void Initialize();
 	};
 }

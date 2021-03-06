@@ -235,8 +235,6 @@ PCIDevice::PCIDevice(uint8_t _bus, uint8_t _slot, uint8_t _func) : bus(_bus), sl
 		uint8_t ptr = PCI::ConfigReadWord(bus, slot, func, PCICapabilitiesPointer) & 0xFC;
 		uint16_t cap = PCI::ConfigReadDword(bus, slot, func, ptr);
 		do {
-			//Log::Info("PCI Capability: %x", cap & 0xFF);
-
 			if((cap & 0xFF) == PCICapabilityIDs::PCICapMSI){
 				msiPtr = ptr;
 				msiCapable = true;
