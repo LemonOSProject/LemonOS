@@ -9,8 +9,8 @@
 #include <CPU.h>
 
 namespace PCI{
-	Vector<PCIDevice>* devices;
-	PCIDevice* unknownDevice;
+	Vector<PCIInfo>* devices;
+	PCIInfo* unknownDevice;
 	PCIMCFG* mcfgTable;
 	PCIConfigurationAccessMode configMode = PCIConfigurationAccessMode::Legacy;
 	Vector<PCIMCFGBaseAddress>* enhancedBaseAddresses; // Base addresses for enhanced (PCI Express) configuration mechanism
@@ -20,8 +20,7 @@ namespace PCI{
 
 		outportl(0xCF8, address);
 
-		uint32_t data;
-		data = inportl(0xCFC);
+		uint32_t data = inportl(0xCFC);
 
 		return data;
 	}
@@ -31,8 +30,7 @@ namespace PCI{
 
 		outportl(0xCF8, address);
 
-		uint16_t data;
-		data = (uint16_t)((inportl(0xCFC) >> ((offset & 2) * 8)) & 0xffff);
+		uint16_t data = (uint16_t)((inportl(0xCFC) >> ((offset & 2) * 8)) & 0xffff);
 
 		return data;
 	}
@@ -72,15 +70,31 @@ namespace PCI{
 	uint16_t GetVendor(uint8_t bus, uint8_t slot, uint8_t func){
 		uint16_t vendor;
 
-		vendor = ConfigReadWord(bus, slot, func, 0);
+		vendor = ConfigReadWord(bus, slot, func, PCIVendorID);
 		return vendor;
 	}
 
 	uint16_t GetDeviceID(uint8_t bus, uint8_t slot, uint8_t func){
 		uint16_t id;
 
-		id = ConfigReadWord(bus, slot, func, 2);
+		id = ConfigReadWord(bus, slot, func, PCIDeviceID);
 		return id;
+	}
+
+	uint8_t GetClassCode(uint8_t bus, uint8_t slot, uint8_t func){
+		return ConfigReadByte(bus, slot, func, PCIClassCode);
+	}
+
+	uint8_t GetSubclass(uint8_t bus, uint8_t slot, uint8_t func){
+		return ConfigReadByte(bus, slot, func, PCISubclass);
+	}
+
+	uint8_t GetProgIf(uint8_t bus, uint8_t slot, uint8_t func){
+		return ConfigReadByte(bus, slot, func, PCIProgIF);
+	}
+
+	uint8_t GetHeaderType(uint8_t bus, uint8_t slot, uint8_t func) {
+		return PCI::ConfigReadByte(bus, slot, func, PCIHeaderType);
 	}
 
 	bool CheckDevice(uint8_t bus, uint8_t device, uint8_t func){
@@ -111,8 +125,8 @@ namespace PCI{
 		return false;
 	}
 
-	PCIDevice& GetPCIDevice(uint16_t deviceID, uint16_t vendorID){
-		for(PCIDevice& dev : *devices){
+	const PCIInfo& GetPCIDevice(uint16_t deviceID, uint16_t vendorID){
+		for(PCIInfo& dev : *devices){
 			if(dev.deviceID == deviceID && dev.vendorID == vendorID){
 				return dev;
 			}
@@ -122,8 +136,8 @@ namespace PCI{
 		return *unknownDevice;
 	}
 
-	PCIDevice& GetGenericPCIDevice(uint8_t classCode, uint8_t subclass){
-		for(PCIDevice& dev : *devices){
+	const PCIInfo& GetGenericPCIDevice(uint8_t classCode, uint8_t subclass){
+		for(PCIInfo& dev : *devices){
 			if(dev.classCode == classCode && dev.subclass == subclass){
 				return dev;
 			}
@@ -133,19 +147,24 @@ namespace PCI{
 		return *unknownDevice;
 	}
 
-	List<PCIDevice*> GetGenericPCIDevices(uint8_t classCode, uint8_t subclass){
-		List<PCIDevice*> foundDevices;
-		for(PCIDevice& dev : *devices){
-			if(dev.classCode == classCode && dev.subclass == subclass){
-				foundDevices.add_back(&dev);
+	void EnumeratePCIDevices(uint16_t deviceID, uint16_t vendorID, void(*func)(const PCIInfo&)){
+		for(PCIInfo& dev : *devices){
+			if(dev.deviceID == deviceID && dev.vendorID == vendorID){
+				func(dev);
 			}
 		}
+	}
 
-		return foundDevices;
+	void EnumerateGenericPCIDevices(uint8_t classCode, uint8_t subclass, void(*func)(const PCIInfo&)){
+		for(PCIInfo& dev : *devices){
+			if(dev.classCode == classCode && dev.subclass == subclass){
+				func(dev);
+			}
+		}
 	}
 
 	int AddDevice(int bus, int slot, int func){
-		PCIDevice device;
+		PCIInfo device;
 
 		device.vendorID = GetVendor(bus, slot, func);
 		device.deviceID = GetDeviceID(bus, slot, func);
@@ -154,42 +173,9 @@ namespace PCI{
 		device.slot = slot;
 		device.func = func;
 
-		device.UpdateClass();
-
-		/*Log::Info("Found Device! Vendor: ");
-		Log::Write(device.vendorID);
-		Log::Write(", Device: ");
-		Log::Write(device.deviceID);
-		Log::Write(", Class: ");
-		Log::Write(device.classCode);
-		Log::Write(", Subclass: ");
-		Log::Write(device.subclass);*/
-
-		device.capabilities = new Vector<uint16_t>();
-		if(device.Status() & PCI_STATUS_CAPABILITIES){
-			uint8_t ptr = ConfigReadWord(bus, slot, func, PCICapabilitiesPointer) & 0xFC;
-			uint16_t cap = ConfigReadDword(bus, slot, func, ptr);
-			do {
-				//Log::Info("PCI Capability: %x", cap & 0xFF);
-
-				if((cap & 0xFF) == PCICapabilityIDs::PCICapMSI){
-					device.msiPtr = ptr;
-					device.msiCapable = true;
-					device.msiCap.register0 = ConfigReadDword(bus, slot, func, ptr);
-					device.msiCap.register1 = ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t));
-					device.msiCap.register2 = ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t) * 2);
-
-					if(device.msiCap.msiControl & PCI_CAP_MSI_CONTROL_64){ // 64-bit capable
-						device.msiCap.data64 = ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t) * 3);
-					}
-				}
-
-				ptr = (cap >> 8);
-				cap = ConfigReadDword(bus, slot, func, ptr);
-
-				device.capabilities->add_back(cap & 0xFF);
-			} while((cap >> 8));
-		}
+		device.classCode = GetClassCode(bus, slot, func);
+		device.subclass = GetSubclass(bus, slot, func);
+		device.progIf = GetProgIf(bus, slot, func);
 
 		int ret = devices->get_length();
 		devices->add_back(device);
@@ -197,10 +183,10 @@ namespace PCI{
 	}
 
 	void Init(){
-		unknownDevice = new PCIDevice();
+		unknownDevice = new PCIInfo;
 		unknownDevice->vendorID = unknownDevice->deviceID = 0xFFFF;
 		
-		devices = new Vector<PCIDevice>();
+		devices = new Vector<PCIInfo>();
 		enhancedBaseAddresses = new Vector<PCIMCFGBaseAddress>();
 
 		mcfgTable = ACPI::mcfg;
@@ -221,7 +207,8 @@ namespace PCI{
 			for(uint16_t j = 0; j < 32; j++){ // Slot
 				if(CheckDevice(i, j, 0)){
 					int index = AddDevice(i, j, 0);
-					if(devices->get_at(index).HeaderType() & 0x80){
+					auto& d = devices->get_at(index);
+					if(GetHeaderType(d.bus, d.slot, d.func) & 0x80){
 						for(int k = 1; k < 8; k++){ // Func
 							if(CheckDevice(i,j,k)){
 								AddDevice(i,j,k);
@@ -235,6 +222,40 @@ namespace PCI{
 	}
 }
 
+PCIDevice::PCIDevice(uint8_t _bus, uint8_t _slot, uint8_t _func) : bus(_bus), slot(_slot), func(_func) {
+	deviceID = PCI::ConfigReadWord(bus, slot, func, PCIDeviceID);
+	vendorID = PCI::ConfigReadWord(bus, slot, func, PCIVendorID);
+
+	classCode = PCI::ConfigReadByte(bus, slot, func, PCIClassCode);
+	subclass = PCI::ConfigReadByte(bus, slot, func, PCISubclass);
+	progIf = PCI::ConfigReadByte(bus, slot, func, PCIProgIF);
+
+	capabilities = new Vector<uint16_t>();
+	if(Status() & PCI_STATUS_CAPABILITIES){
+		uint8_t ptr = PCI::ConfigReadWord(bus, slot, func, PCICapabilitiesPointer) & 0xFC;
+		uint16_t cap = PCI::ConfigReadDword(bus, slot, func, ptr);
+		do {
+			//Log::Info("PCI Capability: %x", cap & 0xFF);
+
+			if((cap & 0xFF) == PCICapabilityIDs::PCICapMSI){
+				msiPtr = ptr;
+				msiCapable = true;
+				msiCap.register0 = PCI::ConfigReadDword(bus, slot, func, ptr);
+				msiCap.register1 = PCI::ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t));
+				msiCap.register2 = PCI::ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t) * 2);
+
+				if(msiCap.msiControl & PCI_CAP_MSI_CONTROL_64){ // 64-bit capable
+					msiCap.data64 = PCI::ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t) * 3);
+				}
+			}
+
+			ptr = (cap >> 8);
+			cap = PCI::ConfigReadDword(bus, slot, func, ptr);
+
+			capabilities->add_back(cap & 0xFF);
+		} while((cap >> 8));
+	}
+}
 
 uint8_t PCIDevice::AllocateVector(PCIVectors type){
 	if(type & PCIVectorMSI){

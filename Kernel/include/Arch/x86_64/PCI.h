@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+
 #include <Assert.h>
 #include <Vector.h>
 #include <List.h>
@@ -160,7 +161,19 @@ struct PCIMSICapability{
 	}
 } __attribute__((packed));
 
-class PCIDevice;
+struct PCIInfo{
+	uint16_t deviceID;
+	uint16_t vendorID;
+	
+	uint8_t bus;
+	uint8_t slot;
+	uint8_t func;
+
+	uint8_t classCode;
+	uint8_t subclass;
+	uint8_t progIf;
+};
+
 namespace PCI{
 	enum PCIConfigurationAccessMode {
 		Legacy, // PCI
@@ -181,32 +194,21 @@ namespace PCI{
 	bool FindDevice(uint16_t deviceID, uint16_t vendorID);
 	bool FindGenericDevice(uint16_t classCode, uint16_t subclass);
 
-	PCIDevice& GetPCIDevice(uint16_t deviceID, uint16_t vendorID);
-	PCIDevice& GetGenericPCIDevice(uint8_t classCode, uint8_t subclass);
-	List<PCIDevice*> GetGenericPCIDevices(uint8_t classCode, uint8_t subclass);
+	const PCIInfo& GetPCIDevice(uint16_t deviceID, uint16_t vendorID);
+	const PCIInfo& GetGenericPCIDevice(uint8_t classCode, uint8_t subclass);
+
+	void EnumeratePCIDevices(uint16_t deviceID, uint16_t vendorID, void(*func)(const PCIInfo&));
+	void EnumerateGenericPCIDevices(uint8_t classCode, uint8_t subclass, void(*func)(const PCIInfo&));
 
 	void Init();
 }
 
 class PCIDevice{
 public:
-	uint16_t deviceID;
-	uint16_t vendorID;
-	
-	uint8_t bus;
-	uint8_t slot;
-	uint8_t func;
+	PCIDevice(uint8_t bus, uint8_t slot, uint8_t func);
+	PCIDevice(const PCIInfo& info) : PCIDevice(info.bus, info.slot, info.func) {}
 
-	uint8_t classCode;
-	uint8_t subclass;
-
-	Vector<uint16_t>* capabilities; // List of capability IDs
-
-	uint8_t msiPtr;
-	PCIMSICapability msiCap;
-	bool msiCapable = false;
-
-	inline uintptr_t GetBaseAddressRegister(uint8_t idx){
+	inline uintptr_t GetBaseAddressRegister(uint8_t idx) {
 		assert(idx >= 0 && idx <= 5);
 
 		uintptr_t bar = PCI::ConfigReadDword(bus, slot, func, PCIBAR0 + (idx * sizeof(uint32_t)));
@@ -216,63 +218,48 @@ public:
 
 		return (bar & 0x1) ? (bar & 0xFFFFFFFFFFFFFFFC) : (bar & 0xFFFFFFFFFFFFFFF0);
 	}
+	inline bool BarIsIOPort(uint8_t idx){ return PCI::ConfigReadDword(bus, slot, func, PCIBAR0 + (idx * sizeof(uint32_t))) & 0x1; }
 
-	inline bool BarIsIOPort(uint8_t idx){
-		return PCI::ConfigReadDword(bus, slot, func, PCIBAR0 + (idx * sizeof(uint32_t))) & 0x1;
-	}
+	inline uint8_t GetInterruptLine(){ return PCI::ConfigReadByte(bus, slot, func, PCIInterruptLine); }
+	inline void SetInterruptLine(uint8_t irq){ PCI::ConfigWriteByte(bus, slot, func, PCIInterruptLine, irq); }
 
-	inline uint8_t GetInterruptLine(){
-		return PCI::ConfigReadByte(bus, slot, func, PCIInterruptLine);
-	}
+	inline uint16_t GetCommand() { return PCI::ConfigReadWord(bus, slot, func, PCICommand); }
+	inline void SetCommand(uint16_t val) { PCI::ConfigWriteWord(bus, slot, func, PCICommand, val); }
 
-	inline void SetInterruptLine(uint8_t irq){
-		PCI::ConfigWriteByte(bus, slot, func, PCIInterruptLine, irq);
-	}
+	inline void EnableBusMastering() { PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) | PCI_CMD_BUS_MASTER); }
+	inline void EnableInterrupts() { PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) & (~PCI_CMD_INTERRUPT_DISABLE)); }
+	inline void EnableMemorySpace() { PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) | PCI_CMD_MEMORY_SPACE); }
+	inline void EnableIOSpace() { PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) | PCI_CMD_IO_SPACE); }
 
-	inline uint16_t GetCommand(){
-		return PCI::ConfigReadWord(bus, slot, func, PCICommand);
-	}
+	inline uint8_t HeaderType() { return PCI::ConfigReadByte(bus, slot, func, PCIHeaderType); }
+	inline uint8_t GetProgIF() { return PCI::ConfigReadByte(bus, slot, func, PCIProgIF); }
+	inline uint16_t Status() { return PCI::ConfigReadWord(bus, slot, func, PCIStatus); }
 
-	inline void SetCommand(uint16_t val){
-		PCI::ConfigWriteWord(bus, slot, func, PCICommand, val);
-	}
+	inline bool HasCapability(uint16_t capability){ return false; }
 
-	inline void EnableBusMastering(){
-		PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) | PCI_CMD_BUS_MASTER);
-	}
+	inline uint8_t Bus() { return bus; }
+	inline uint8_t Slot() { return slot; }
+	inline uint8_t Func() { return func; }
 
-	inline void EnableInterrupts(){
-		PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) & (~PCI_CMD_INTERRUPT_DISABLE));
-	}
-
-	inline void EnableMemorySpace(){
-		PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) | PCI_CMD_MEMORY_SPACE);
-	}
-
-	inline void EnableIOSpace(){
-		PCI::ConfigWriteWord(bus, slot, func, PCICommand, PCI::ConfigReadWord(bus, slot, func, PCICommand) | PCI_CMD_IO_SPACE);
-	}
-
-	inline void UpdateClass(){
-		classCode = PCI::ConfigReadByte(bus, slot, func, PCIClassCode);
-		subclass = PCI::ConfigReadByte(bus, slot, func, PCISubclass);
-	}
-
-	inline uint8_t HeaderType(){
-		return PCI::ConfigReadByte(bus, slot, func, PCIHeaderType);
-	}
-
-	inline uint8_t GetProgIF(){
-		return PCI::ConfigReadByte(bus, slot, func, PCIProgIF);
-	}
-
-	inline uint16_t Status(){
-		return PCI::ConfigReadWord(bus, slot, func, PCIStatus);
-	}
-
-	inline bool HasCapability(uint16_t capability){
-		return false;
-	}
+	inline uint16_t DeviceID() { return deviceID; }
+	inline uint16_t VendorID() { return vendorID; }
 
 	uint8_t AllocateVector(PCIVectors type);
+private:
+	uint16_t deviceID = 0xffff;
+	uint16_t vendorID = 0xffff;
+	
+	uint8_t bus;
+	uint8_t slot;
+	uint8_t func;
+
+	uint8_t classCode;
+	uint8_t subclass;
+	uint8_t progIf;
+
+	Vector<uint16_t>* capabilities; // List of capability IDs
+
+	uint8_t msiPtr;
+	PCIMSICapability msiCap;
+	bool msiCapable = false;
 };

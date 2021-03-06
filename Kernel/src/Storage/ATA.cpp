@@ -102,8 +102,9 @@ namespace ATA{
 			return 1;
 		}
 
-		controllerPCIDevice = &PCI::GetGenericPCIDevice(ideClassCode, ideSubclass);
-		assert(controllerPCIDevice->vendorID != 0xFFFF);
+		const PCIInfo& dInfo = PCI::GetGenericPCIDevice(ideClassCode, ideSubclass);
+		controllerPCIDevice = new PCIDevice(dInfo);
+		assert(controllerPCIDevice->VendorID() != 0xFFFF);
 
         Log::Info("[ATA] Initializing...");
 

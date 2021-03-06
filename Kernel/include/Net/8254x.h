@@ -78,7 +78,15 @@
 #define TX_DESC_COUNT 256
 
 namespace Network{
-    class Intel8254x final : public NetworkAdapter {
+    class Intel8254x final : public NetworkAdapter, private PCIDevice {
+    public:
+        Intel8254x(const PCIInfo& device);
+
+        static void DetectAndInitialize();
+
+        void SendPacket(void* data, size_t len);
+
+    private:
         typedef struct {
             uint64_t addr; // Buffer Address
             uint16_t length; // Length
@@ -114,8 +122,6 @@ namespace Network{
         bool useIO = false;
         bool hasEEPROM = false;
 
-        PCIDevice& pciDevice;
-
         void WriteMem32(uintptr_t address, uint32_t data);
         uint32_t ReadMem32(uintptr_t address);
         uint16_t ReadEEPROM(uint8_t addr);
@@ -129,12 +135,5 @@ namespace Network{
         void UpdateLink();
         void OnInterrupt();
         static void InterruptHandler(Intel8254x* card, RegisterContext* r);
-
-        public:
-        Intel8254x(PCIDevice& device);
-
-        static void DetectAndInitialize();
-
-        void SendPacket(void* data, size_t len);
     };
 }

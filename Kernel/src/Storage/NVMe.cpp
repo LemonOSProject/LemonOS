@@ -11,10 +11,9 @@ namespace NVMe{
     Vector<Controller*> nvmControllers;
 
     void Initialize(){
-        List<PCIDevice*> devices = PCI::GetGenericPCIDevices(PCI_CLASS_STORAGE, PCI_SUBCLASS_NVM);
-        for(PCIDevice* dev : devices){
+        PCI::EnumerateGenericPCIDevices(PCI_CLASS_STORAGE, PCI_SUBCLASS_NVM, [](const PCIInfo& dev) -> void {
             nvmControllers.add_back(new Controller(dev));
-        }
+        });
     }
 
     NVMeQueue::NVMeQueue(uint16_t qid, uintptr_t cqBase, uintptr_t sqBase, void* cq, void* sq, uint32_t* cqDB, uint32_t* sqDB, uint16_t csz, uint16_t ssz){
@@ -95,8 +94,7 @@ namespace NVMe{
         releaseLock(&queueLock);
     }
 
-    Controller::Controller(PCIDevice* pciDev){
-        pciDevice = pciDev;
+    Controller::Controller(const PCIInfo& dev) : PCIDevice(dev) {
 
         cRegs = reinterpret_cast<Registers*>(Memory::KernelAllocate4KPages(4));
         Memory::KernelMapVirtualMemory4K(pciDevice->GetBaseAddressRegister(0), (uintptr_t)cRegs, 4, PAGE_PRESENT | PAGE_WRITABLE | PAGE_CACHE_DISABLED | PAGE_WRITETHROUGH);

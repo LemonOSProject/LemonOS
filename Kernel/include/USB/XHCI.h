@@ -48,7 +48,20 @@
 #define XHCI_EVENT_RING_SEGMENT_TABLE_ENTRY_SIZE 16
 
 namespace USB{
-    class XHCIController{
+    class XHCIController : private PCIDevice{
+    public:
+    public:
+        enum Status{
+            ControllerNotInitialized,
+            ControllerInitialized,
+        };
+
+        XHCIController(const PCIInfo& dev);
+        ~XHCIController();
+
+        inline Status GetControllerStatus() { return controllerStatus; }
+
+        static int Initialize();
     protected:
         friend void XHCIIRQHandler(XHCIController* xHC, RegisterContext* r);
         
@@ -655,8 +668,6 @@ namespace USB{
             size_t size; // Segment size in TRB entries
         };
 
-        PCIDevice& pciDevice;
-
         uintptr_t xhciBaseAddress;
         uintptr_t xhciVirtualAddress;
 
@@ -708,20 +719,7 @@ namespace USB{
         void EnableSlot();
         
         void OnInterrupt();
-    public:
-        enum Status{
-            ControllerNotInitialized,
-            ControllerInitialized,
-        };
-private:
+        
         Status controllerStatus = ControllerNotInitialized;
-public:
-
-        XHCIController(PCIDevice* dev);
-        ~XHCIController();
-
-        inline Status GetControllerStatus() { return controllerStatus; }
-
-        static int Initialize();
     };
 }

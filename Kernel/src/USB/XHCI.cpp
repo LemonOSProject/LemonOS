@@ -26,20 +26,19 @@ namespace USB{
             return 1;
         }
 
-        List<PCIDevice*> devices = PCI::GetGenericPCIDevices(xhciClassCode, xhciSubclass);
-        for(PCIDevice* device : devices){
-            if(device->GetProgIF() == xhciProgIF){
-                xhciControllers.add_back(new XHCIController(device));
+        PCI::EnumerateGenericPCIDevices(xhciClassCode, xhciSubclass, [](const PCIInfo& dev) -> void {
+            if(dev.progIf == xhciProgIF){
+                xhciControllers.add_back(new XHCIController(dev));
             }
-        } 
+        });
         return 0;
     }
     
-    XHCIController::XHCIController(PCIDevice* dev) : pciDevice(*dev){
-        xhciBaseAddress = pciDevice.GetBaseAddressRegister(0);
-        pciDevice.EnableBusMastering();
-        pciDevice.EnableInterrupts();
-        pciDevice.EnableMemorySpace();
+    XHCIController::XHCIController(const PCIInfo& dev) : PCIDevice(dev){
+        xhciBaseAddress = GetBaseAddressRegister(0);
+        EnableBusMastering();
+        EnableInterrupts();
+        EnableMemorySpace();
 
         xhciVirtualAddress = Memory::GetIOMapping(xhciBaseAddress);
 
@@ -79,7 +78,7 @@ namespace USB{
             }
         }
 
-        controllerIRQ = pciDevice.AllocateVector(PCIVectorAny);
+        controllerIRQ = AllocateVector(PCIVectorAny);
         if(controllerIRQ == 0xFF){
             Log::Error("[XHCI] Failed to allocate IRQ!");
             return;

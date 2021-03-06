@@ -30,10 +30,10 @@ namespace AHCI{
 			return 1;
 		}
 
-		controllerPCIDevice = &PCI::GetGenericPCIDevice(ahciClassCode, ahciSubclass);
-		assert(controllerPCIDevice->vendorID != 0xFFFF);
-		
-		Log::Info("Initializing AHCI Controller...");
+		const PCIInfo& dInfo = PCI::GetGenericPCIDevice(ahciClassCode, ahciSubclass);
+		controllerPCIDevice = new PCIDevice(dInfo);
+
+		assert(controllerPCIDevice->VendorID() != 0xFFFF);
 
 		controllerPCIDevice->EnableBusMastering();
 		controllerPCIDevice->EnableInterrupts();

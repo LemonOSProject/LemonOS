@@ -249,15 +249,23 @@ namespace NVMe{
 
 	class Namespace;
 
-	class Controller{
+	class Controller : private PCIDevice {
 	public:
-		friend class Controller;
-
 		enum DriverStatus{
 			ControllerNotReady,
 			ControllerError,
 			ControllerReady,
 		};
+
+		Controller(const PCIInfo& pciDev);
+	
+		long IdentifyController();
+		long GetNamespaceList();
+
+		NVMeQueue* AcquireIOQueue();
+		void ReleaseIOQueue(NVMeQueue* queue);
+
+		__attribute__((always_inline)) inline DriverStatus Status(){ return dStatus; }
 	private:
 		enum ControllerConfigCommandSet{
 			NVMeConfigCmdSetNVM = 0,
@@ -441,16 +449,6 @@ namespace NVMe{
 
 		long CreateIOQueue(NVMeQueue* qPtr);
 		long SetNumberOfQueues(uint16_t num);
-	public:
-		Controller(PCIDevice* pciDev);
-	
-		long IdentifyController();
-		long GetNamespaceList();
-
-		NVMeQueue* AcquireIOQueue();
-		void ReleaseIOQueue(NVMeQueue* queue);
-
-		__attribute__((always_inline)) inline DriverStatus Status(){ return dStatus; }
 	};
 
 	class Namespace final : public DiskDevice{

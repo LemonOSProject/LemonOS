@@ -82,16 +82,16 @@ namespace Network{
 
     void Intel8254x::DetectAndInitialize(){
         for(int i = 0; i < supportedDeviceCount; i++){
-            if(PCI::FindDevice(supportedDevices[i], INTEL_VENDOR_ID)){
-                Intel8254x* card = new Intel8254x(PCI::GetPCIDevice(supportedDevices[i], INTEL_VENDOR_ID));
+            PCI::EnumeratePCIDevices(supportedDevices[i], INTEL_VENDOR_ID, [](const PCIInfo& dev) -> void {
+                Intel8254x* card = new Intel8254x(dev);
 
                 if(card->dState == DriverState::OK){
                     NetFS::GetInstance()->RegisterAdapter(card);
+                } else {
+                    delete card;
                 }
-                return;
-            }
+            });
         }
-        Log::Info("[i8254x] No i8254x Network Adapter found!");
     }
 
     void Intel8254x::OnInterrupt(){
@@ -229,23 +229,23 @@ namespace Network{
         WriteMem32(I8254_REGISTER_TCTRL, (TCTRL_ENABLE | TCTRL_PSP));
     }
 
-    Intel8254x::Intel8254x(PCIDevice& device) : NetworkAdapter(NetworkAdapterEthernet), pciDevice(device){
+    Intel8254x::Intel8254x(const PCIInfo& device) : NetworkAdapter(NetworkAdapterEthernet), PCIDevice(device.bus, device.slot, device.func){
         assert(device.vendorID != 0xFFFF);
 
         txTail = rxTail = 0;
 
-        memBase = device.GetBaseAddressRegister(0);
+        memBase = GetBaseAddressRegister(0);
 
-        if(device.BarIsIOPort(1)) {
-            ioBase = device.GetBaseAddressRegister(1);
-        } else if(device.BarIsIOPort(2)) {
-            ioBase = device.GetBaseAddressRegister(2);
+        if(BarIsIOPort(1)) {
+            ioBase = GetBaseAddressRegister(1);
+        } else if(BarIsIOPort(2)) {
+            ioBase = GetBaseAddressRegister(2);
         } 
 
         memBaseVirt = (void*)Memory::GetIOMapping(memBase);
         hasEEPROM = CheckForEEPROM();
 
-        Log::Info("[i8254x]    Base Address: %x, Base Address (virtual): %x, IO Base: %x, EEPROM Present: %s, Base Address 1: %x, Base Address 2: %x", device.GetBaseAddressRegister(0), memBaseVirt, ioBase, (hasEEPROM ? "true" : "false"), device.GetBaseAddressRegister(1), device.GetBaseAddressRegister(2));
+        Log::Info("[i8254x]    Base Address: %x, Base Address (virtual): %x, IO Base: %x, EEPROM Present: %s, Base Address 1: %x, Base Address 2: %x", GetBaseAddressRegister(0), memBaseVirt, ioBase, (hasEEPROM ? "true" : "false"), GetBaseAddressRegister(1), GetBaseAddressRegister(2));
 
         if(!hasEEPROM){
             Log::Error("[i8254x] No EEPROM Present!");
@@ -253,14 +253,14 @@ namespace Network{
             return;
         }
 
-        int irqNum = device.AllocateVector(PCIVectors::PCIVectorAny);
+        int irqNum = AllocateVector(PCIVectors::PCIVectorAny);
         Log::Write(",IRQ: ");
         Log::Write(irqNum);
         IDT::RegisterInterruptHandler(irqNum, reinterpret_cast<isr_t>(&Intel8254x::InterruptHandler), this);
 
         uint8_t macAddr[6];
 
-        pciDevice.EnableBusMastering();
+        EnableBusMastering();
 
         uint32_t t;
 		t = ReadEEPROM(0);
@@ -279,16 +279,16 @@ namespace Network{
             mac[0], mac[1],mac[2], mac[3], mac[4], mac[5]);
 
         char tempName[NAME_MAX];
-        char bus[16];
-        char slot[16];
+        char busS[16];
+        char slotS[16];
 
-        itoa(pciDevice.bus, bus, 10);
-        itoa(pciDevice.slot, slot, 10);
+        itoa(Bus(), busS, 10);
+        itoa(Slot(), slotS, 10);
 
         strcpy(tempName, "e1k");
-        strcat(tempName, bus);
+        strcat(tempName, busS);
         strcat(tempName, "s");
-        strcat(tempName, slot);
+        strcat(tempName, slotS);
 
         SetInstanceName(tempName); // Name format: e1k%pciBus%s%pciSlot%
         SetDeviceName("Intel 8254x Ethernet Adapter");
