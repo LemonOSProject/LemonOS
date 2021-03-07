@@ -450,16 +450,16 @@ namespace fs{
         return NULL;
 	}
 
-    ssize_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
+    ssize_t Read(FsNode* node, size_t offset, size_t size, void* buffer){
 		assert(node);
 
-        return node->Read(offset,size,buffer);
+        return node->Read(offset, size, reinterpret_cast<uint8_t*>(buffer));
     }
 
-    ssize_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer){
+    ssize_t Write(FsNode* node, size_t offset, size_t size, void* buffer){
 		assert(node);
 
-        return node->Write(offset,size,buffer);
+        return node->Write(offset, size, reinterpret_cast<uint8_t*>(buffer));
     }
 
     fs_fd_t* Open(FsNode* node, uint32_t flags){

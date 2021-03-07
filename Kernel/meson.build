@@ -25,6 +25,7 @@ kernel_c_args = [
     '-mcmodel=large', '-mno-red-zone', '-fno-pic',
     '-mno-mmx', '-mno-sse', '-mno-sse2',
     '-fno-stack-protector', '-fno-builtin',
+    '-finline-functions',
 ]
 
 kernel_cpp_args = [
@@ -36,6 +37,7 @@ add_project_arguments(kernel_c_args, language : 'cpp')
 add_project_arguments(kernel_cpp_args, language : 'cpp')
 
 lai = subproject('lai')
+subdir('Modules')
 
 kernel_include_dirs = [
     include_directories('include'),
@@ -105,40 +107,40 @@ cpp_files = [
 ]
 
 cpp_files_x86_64 = [
-    'src/Arch/x86_64/acpi.cpp',
-    'src/Arch/x86_64/apic.cpp',
-    'src/Arch/x86_64/cpuid.cpp',
-    'src/Arch/x86_64/hal.cpp',
-    'src/Arch/x86_64/idt.cpp',
-    'src/Arch/x86_64/keyboard.cpp',
-    'src/Arch/x86_64/mouse.cpp',
-    'src/Arch/x86_64/paging.cpp',
-    'src/Arch/x86_64/pci.cpp',
-    'src/Arch/x86_64/physicalallocator.cpp',
-    'src/Arch/x86_64/scheduler.cpp',
-    'src/Arch/x86_64/serial.cpp',
-    'src/Arch/x86_64/smp.cpp',
-    'src/Arch/x86_64/ssp.cpp',
-    'src/Arch/x86_64/stringsafe.cpp',
-    'src/Arch/x86_64/syscalls.cpp',
-    'src/Arch/x86_64/system.cpp',
-    'src/Arch/x86_64/thread.cpp',
-    'src/Arch/x86_64/timer.cpp',
-    'src/Arch/x86_64/tss.cpp',
-    'src/Arch/x86_64/elf.cpp',
+    'src/Arch/x86_64/ACPI.cpp',
+    'src/Arch/x86_64/APIC.cpp',
+    'src/Arch/x86_64/CPUID.cpp',
+    'src/Arch/x86_64/ELF.cpp',
+    'src/Arch/x86_64/HAL.cpp',
+    'src/Arch/x86_64/IDT.cpp',
+    'src/Arch/x86_64/Keyboard.cpp',
+    'src/Arch/x86_64/Mouse.cpp',
+    'src/Arch/x86_64/Modules.cpp',
+    'src/Arch/x86_64/Paging.cpp',
+    'src/Arch/x86_64/PCI.cpp',
+    'src/Arch/x86_64/PhysicalAllocator.cpp',
+    'src/Arch/x86_64/Scheduler.cpp',
+    'src/Arch/x86_64/Serial.cpp',
+    'src/Arch/x86_64/SMP.cpp',
+    'src/Arch/x86_64/SSP.cpp',
+    'src/Arch/x86_64/StringSafe.cpp',
+    'src/Arch/x86_64/Syscalls.cpp',
+    'src/Arch/x86_64/System.cpp',
+    'src/Arch/x86_64/Thread.cpp',
+    'src/Arch/x86_64/Timer.cpp',
+    'src/Arch/x86_64/TSS.cpp',
 ]
 
 asm_files_x86_64 = [
-    'src/Arch/x86_64/entry.asm',
-    'src/Arch/x86_64/idt.asm',
-    'src/Arch/x86_64/scheduler.asm',
-    'src/Arch/x86_64/sse2.asm',
-    'src/Arch/x86_64/tss.asm',
-    'src/Arch/x86_64/lock.asm',
+    'src/Arch/x86_64/Entry.asm',
+    'src/Arch/x86_64/IDT.asm',
+    'src/Arch/x86_64/Scheduler.asm',
+    'src/Arch/x86_64/TSS.asm',
+    'src/Arch/x86_64/Lock.asm',
 ]
 
 asm_bin_files_x86_64 = [
-    'src/Arch/x86_64/smptrampoline.asm',
+    'src/Arch/x86_64/SMPTrampoline.asm',
 ]
 
 kernel_link_args = [

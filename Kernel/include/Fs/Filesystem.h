@@ -391,24 +391,28 @@ namespace fs{
     ///
     /// Read data from filesystem node
     ///
+    /// \param node Pointer to node to read from
     /// \param off Offset of data to read
     /// \param size Amount of data (in bytes) to read
+    /// \param buffer Buffer to write into
     /// 
     /// \return Bytes read or if negative an error code
     /////////////////////////////
-    ssize_t Read(FsNode* node, size_t offset, size_t size, uint8_t *buffer);
+    ssize_t Read(FsNode* node, size_t offset, size_t size, void *buffer);
     
     /////////////////////////////
     /// \brief Write data to filesystem node
     ///
     /// Write data to filesystem node
     ///
-    /// \param off Offset where data should be written
+    /// \param node Pointer to node to write to
+    /// \param off Offset of write
     /// \param size Amount of data (in bytes) to write
+    /// \param buffer Buffer to read from
     /// 
     /// \return Bytes written or if negative an error code
     /////////////////////////////
-    ssize_t Write(FsNode* node, size_t offset, size_t size, uint8_t *buffer);
+    ssize_t Write(FsNode* node, size_t offset, size_t size, void *buffer);
     fs_fd_t* Open(FsNode* node, uint32_t flags = 0);
     void Close(FsNode* node);
     void Close(fs_fd_t* handle);

@@ -20,8 +20,8 @@ static inline void wait(uint64_t ms){
     while((Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * ticksPerMs)) - timeMs <= ms);
 }
 
-extern void* _binary_smptrampoline_bin_start;
-extern void* _binary_smptrampoline_bin_size;
+extern void* _binary_SMPTrampoline_bin_start;
+extern void* _binary_SMPTrampoline_bin_size;
 
 volatile uint16_t* smpMagic = (uint16_t*)SMP_TRAMPOLINE_DATA_MAGIC;
 volatile uint16_t* smpID = (uint16_t*)SMP_TRAMPOLINE_CPU_ID;
@@ -68,7 +68,7 @@ namespace SMP{
     }
 
     void PrepareTrampoline(){
-        memcpy((void*)SMP_TRAMPOLINE_ENTRY, &_binary_smptrampoline_bin_start, ((uint64_t)&_binary_smptrampoline_bin_size));
+        memcpy((void*)SMP_TRAMPOLINE_ENTRY, &_binary_SMPTrampoline_bin_start, ((uint64_t)&_binary_SMPTrampoline_bin_size));
     }
 
     void InitializeCPU(uint16_t id){
