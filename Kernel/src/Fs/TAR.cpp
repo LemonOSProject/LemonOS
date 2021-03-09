@@ -175,10 +175,10 @@ namespace fs::tar{
             return -EISDIR;
         }
 
-		if(offset > node->size) return -1;
-		else if(offset + size > node->size || size > node->size) size = node->size - offset;
+		if(offset > node->size) return 0;
+		else if(offset + size > node->size) size = node->size - offset;
 
-		if(!size) return -EINVAL;
+		if(!size) return 0;
 
 		memcpy(buffer, (void*)(((uintptr_t)tarNode->header) + 512 + offset), size);
 		return size;

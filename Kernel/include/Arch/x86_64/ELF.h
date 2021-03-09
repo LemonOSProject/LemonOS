@@ -38,6 +38,28 @@ typedef struct ELF64DynamicEntry {
 	};
 } __attribute__((packed)) elf64_dynamic_t;
 
+typedef struct ELF64Symbol {
+	uint32_t name; // Symbol name offset
+	uint8_t info; // Type and Binding attributes
+	uint8_t other; // Reserved
+	uint16_t shIndex; // Section table index
+	uint64_t value; // Symbol value
+	uint64_t size; // Size of object
+} __attribute__((packed)) elf64_symbol_t;
+
+typedef struct ELF64Section {
+	uint32_t name;
+	uint32_t type; // Section type
+	uint64_t flags; // Section attributes
+	uint64_t addr; // Virtual address of section
+	uint64_t off; // Offset in file of the section
+	uint64_t size; // Section size
+	uint32_t link; // Index of linked section
+	uint32_t info; // Info
+	uint64_t align; // Required alignment of section
+	uint64_t entSize; // Size of entries if the section is a table
+} __attribute__((packed)) elf64_section_t;
+
 typedef struct {
 	uint64_t entry;
 	uint64_t pHdrSegment;
@@ -86,9 +108,31 @@ typedef struct {
 #define PT_SHLIB 5
 #define PT_PHDR 6
 
+// Section Types
+#define SHT_NULL 0 // Unused
+#define SHT_PROGBITS 1 // Information defined by the program
+#define SHT_SYMTAB 2 // Symbol table
+#define SHT_STRTAB 3 // String table
+#define SHT_RELA 4 // 'Rela' relocation entires
+#define SHT_HASH 5 // Hash table
+#define SHT_DYNAMIC 6 // Dyanmic linking tables
+#define SHT_NOTE 7 // Note
+#define SHT_NOBITS 8 // Uninitialized 
+#define SHT_DYNSYM 11 // Dynamic loader symbol table
+
+// Section Attributes
+#define SHF_WRITE 0x1
+#define SHF_ALLOC 0x2
+#define SHF_EXECINSTR 0x4
+
+// .bss: SHT_NOBITS
+// .data, .interp, .rodata, .text: SHT_PROGBITS
+
 using ELFHeader = ELF64Header;
 using ELFProgramHeader = ELF64ProgramHeader;
 using ELFDynamicEntry = ELF64DynamicEntry;
+using ELFSymbol = ELF64Symbol;
+using ELFSection = ELF64Section;
 
 typedef struct process process_t;
 

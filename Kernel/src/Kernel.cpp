@@ -25,6 +25,7 @@
 #include <Lemon.h>
 #include <Objects/Service.h>
 #include <Audio/HDAudio.h>
+#include <Modules.h>
 
 #include <Debug.h>
 
@@ -42,6 +43,8 @@ void IdleProcess(){
 void KernelProcess(){
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 + 24*1, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+
+	ModuleManager::LoadModule("/initrd/modules/testmodule.sys");
 
 	NVMe::Initialize();
 	USB::XHCIController::Initialize();

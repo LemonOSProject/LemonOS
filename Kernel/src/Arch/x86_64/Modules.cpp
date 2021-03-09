@@ -12,34 +12,87 @@ Module::Module(const char* _name) : name(strdup(_name)) {
 }
 
 Module::~Module() {
-
+    if(name){
+        kfree(name);
+    }
 }
 
 namespace ModuleManager {
     HashMap<const char*, Module*> modules;
 
-    int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t header, uintptr_t base) {
-        uint16_t phEntrySize = header.phEntrySize;
-        uint16_t phNum = header.phNum;
-        unsigned phOff = header.phOff;
+    int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
+        unsigned shOff = header.shOff; // Section header table offset
+        uint16_t shEntSize = header.shEntrySize; // Section header table
+        uint16_t shNum = header.shNum;
+        uint16_t shStrIndex = header.shStrIndex;
 
-        elf64_program_header_t programHeader;
-        for(uint16_t i = 0; i < phNum; i++){
-            if(ssize_t e = fs::Read(file, phOff + i * phEntrySize, sizeof(elf64_header_t), &programHeader); e < sizeof(elf64_header_t)){
-                if(e < 0){
-                    return e; // Filesystem Error
-                } else {
-                    return -1; // End of file? Length should be sizeof(elf64_header_t)
+        //void* regionStart = nullptr;
+        //size_t regionSize = 0;
+
+        ELF64Section* sections = new ELF64Section[shNum];
+        ELF64Section* shStrTab = nullptr; // Section String Table
+        ELF64Section* symStrTab = nullptr; // Symbol String Table
+        ELF64Section* symTab = nullptr; // Symbol table
+
+        for(unsigned i = 0; i < shNum; i++){
+            fs::Read(file, shOff + i * shEntSize, sizeof(ELF64Section), &sections[i]);
+
+            if(sections[i].type == SHT_STRTAB){
+                if(i == shStrIndex){
+                    shStrTab = &sections[i];
+                }
+            } else if(sections[i].type == SHT_SYMTAB){
+                symTab = &sections[i];
+            }
+        }
+
+        if(!shStrIndex){
+            Log::Error("Error loading module: Could not find section string table");
+            return -1;
+        } else if(!symTab){
+            Log::Error("Error loading module: Could not find symbol table");
+            return -1;
+        }
+
+        char* sectionStringTable = new char[shStrTab->size + 1];
+        {
+            long len = fs::Read(file, shStrTab->off, shStrTab->size, sectionStringTable);
+            sectionStringTable[len] = 0;
+        }
+
+        for(unsigned i = 0; i < shNum; i++){
+            if(sections[i].type == SHT_STRTAB && strncmp(sectionStringTable + sections[i].name, ".strtab", shStrTab->size - sections[i].name) == 0){ // Don't trust that it is NULL terminated
+                symStrTab = &sections[i];
+            }
+            
+            Log::Debug(debugLevelModules, DebugLevelVerbose, "Found section %s (%d): %d %x (off %x)", sectionStringTable + sections[i].name, sections[i].type, sections[i].size, sections[i].addr, sections[i].off);
+        }
+
+        if(!symStrTab){
+            Log::Error("Error loading module: Could not find symbol string table");
+            return -1;
+        }
+
+        char* symStringTable = new char[symStrTab->size + 1];
+        {
+            long len = fs::Read(file, symStrTab->off, symStrTab->size, symStringTable);
+            symStringTable[len] = 0;
+        }
+        
+        Vector<ELF64Symbol> symbols;
+        {
+            ELF64Symbol symbol;
+            unsigned off = 0;
+            while(off < symTab->size){
+                fs::Read(file, symTab->off + off, sizeof(ELF64Symbol), &symbol);
+
+                off += sizeof(ELF64Symbol);
+
+                if(symbol.name > symStrTab->size){
+                    continue;
                 }
 
-                if(programHeader.type == PT_LOAD){
-                    for(unsigned j = 0; j < ((programHeader.memSize + (programHeader.vaddr & 0xFFF) + 0xFFF) >> 12); j++){
-                        uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
-                        Memory::KernelMapVirtualMemory4K(phys, base + (programHeader.vaddr & ~0xFFFUL) + j * PAGE_SIZE_4K, 1);
-                    }
-                } else if(programHeader.type == PT_DYNAMIC){
-                    
-                }
+                Log::Debug(debugLevelModules, DebugLevelVerbose, "Found symbol (%x): %s : %x", symbol.info, symStringTable + symbol.name, symbol.value);
             }
         }
 
@@ -67,6 +120,8 @@ namespace ModuleManager {
         }
 
         Module* module = new Module(fs::BaseName(path));
+
+        LoadModuleSegments(module, node, header);
 
         modules.insert(module->Name(), module);
         fs::Close(handle);

@@ -34,7 +34,7 @@ private:
         };
     };
 
-    const char* name = nullptr;
+    char* name = nullptr;
 };
 
 namespace ModuleManager {
