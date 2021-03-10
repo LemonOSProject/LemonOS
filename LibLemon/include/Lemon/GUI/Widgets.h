@@ -333,6 +333,29 @@ namespace Lemon::GUI {
     };
 
     class GridView : public Widget{
+    public:
+        GridView(rect_t bounds) : Widget(bounds){}
+        ~GridView() = default;
+
+        void Paint(surface_t* surface);
+
+        void OnMouseDown(vector2i_t mousePos);
+        void OnMouseUp(vector2i_t mousePos);
+        void OnMouseMove(vector2i_t mousePos);
+        void OnDoubleClick(vector2i_t mousePos);
+        void OnKeyPress(int key);
+
+        int AddItem(GridItem& item);
+
+        void ClearItems(){
+            items.clear(); ResetScrollBar();
+        }
+
+        void UpdateFixedBounds();
+
+        void(*OnSubmit)(GridItem&, GridView*) = nullptr;
+        void(*OnSelect)(GridItem&, GridView*) = nullptr;
+    protected:
         std::vector<GridItem> items;
 
         const vector2i_t itemSize = {96, 80};
@@ -366,28 +389,6 @@ namespace Lemon::GUI {
 
             return row * itemsPerRow + column;
         }
-    public:
-        GridView(rect_t bounds) : Widget(bounds){}
-        ~GridView() = default;
-
-        void Paint(surface_t* surface);
-
-        void OnMouseDown(vector2i_t mousePos);
-        void OnMouseUp(vector2i_t mousePos);
-        void OnMouseMove(vector2i_t mousePos);
-        void OnDoubleClick(vector2i_t mousePos);
-        void OnKeyPress(int key);
-
-        int AddItem(GridItem& item);
-
-        void ClearItems(){
-            items.clear(); ResetScrollBar();
-        }
-
-        void UpdateFixedBounds();
-
-        void(*OnSubmit)(GridItem&, GridView*) = nullptr;
-        void(*OnSelect)(GridItem&, GridView*) = nullptr;
     };
     
     class FileView : public Container{

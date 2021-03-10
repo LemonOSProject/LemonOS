@@ -42,17 +42,18 @@ void WMWindow::DrawDecoration(surface_t* surface, rect_t clip) const{
 	Lemon::Graphics::DrawString(title.c_str(), pos.x + 6, pos.y + 6, 255, 255, 255, surface, clip);
 
 	const surface_t* buttons = &wm->compositor.windowButtons;
+	vector2i_t buttonSize = { buttons->width / 2, buttons->height / 2 };
 
 	if(Lemon::Graphics::PointInRect({{closeRect.x + pos.x, closeRect.y + pos.y}, closeRect.size}, wm->input.mouse.pos)){
-		Lemon::Graphics::surfacecpy(surface, buttons, pos + closeRect.pos, {{0, 19}, {19, 19}}); // Close button
+	Lemon::Graphics::surfacecpy(surface, buttons, pos + closeRect.pos, {{0, buttonSize.y}, buttonSize}); // Close button
 	} else {
-		Lemon::Graphics::surfacecpyTransparent(surface, buttons, pos + closeRect.pos, {{0, 0}, {19, 19}}); // Close button
+		Lemon::Graphics::surfacecpyTransparent(surface, buttons, pos + closeRect.pos, {{0, 0}, buttonSize}); // Close button
 	}
 
 	if(Lemon::Graphics::PointInRect({{pos.x + minimizeRect.x, pos.y + minimizeRect.y}, minimizeRect.size}, wm->input.mouse.pos)){
-		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {{19, 19}, {19, 19}}); // Minimize button
+		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {buttonSize, buttonSize}); // Minimize button
 	} else {
-		Lemon::Graphics::surfacecpyTransparent(surface, buttons, pos + minimizeRect.pos, {{19, 0}, {19, 19}}); // Minimize button
+		Lemon::Graphics::surfacecpyTransparent(surface, buttons, pos + minimizeRect.pos, {{buttonSize.x, 0}, buttonSize}); // Minimize button
 	}
 }
 
@@ -133,8 +134,8 @@ rect_t WMWindow::GetMinimizeRect() const {
 
 void WMWindow::RecalculateButtonRects(){
 	surface_t* buttons = &wm->compositor.windowButtons;
-	closeRect = {{size.x - (buttons->width / 3) - 2, (12 - ((buttons->height / 3) / 2))}, {buttons->width / 3, buttons->height / 3}};
-	minimizeRect = {{size.x - (buttons->width / 3) * 2 - 4, (12 - ((buttons->height / 3) / 2))}, {buttons->width / 3, buttons->height / 3}};
+	closeRect = {{size.x - (buttons->width / 2) - 2, (12 - ((buttons->height / 2) / 2))}, {buttons->width / 2, buttons->height / 2}};
+	minimizeRect = {{size.x - (buttons->width / 2) * 2 - 4, (12 - ((buttons->height / 2) / 2))}, {buttons->width / 2, buttons->height / 2}};
 }
 
 rect_t WMWindow::GetBottomBorderRect() const { // Windows with no titlebar also have no borders so don't worry about checking for the no decoration flag
