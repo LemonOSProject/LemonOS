@@ -98,7 +98,7 @@ namespace Lemon::GUI{
 		cancelBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignRight, WAlignBottom);
 		cancelBtn->OnPress = FileDialogOnCancelPress;
 
-		TextBox* fileBox = new TextBox({120, 34, 110, 24}, false);
+		TextBox* fileBox = new TextBox({fv->SidepanelWidth(), 34, 110, 24}, false);
 		win->AddWidget(fileBox);
 		fileBox->SetLayout(LayoutSize::Stretch, LayoutSize::Fixed, WAlignLeft, WAlignBottom);
 		fileBox->OnSubmit = FileDialogOnFileBoxSubmit;

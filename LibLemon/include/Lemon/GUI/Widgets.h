@@ -277,31 +277,6 @@ namespace Lemon::GUI {
     };
 
     class ListView : public Widget{
-        DataModel* model = nullptr;
-        std::vector<int> columnDisplayWidths;
-
-        int selectedCol = 0;
-        int selected = 0;
-        short itemHeight = 20;
-        int columnDisplayHeight = 20;
-
-        bool showScrollBar = false;
-
-        ScrollBar sBar;
-
-        Graphics::Font* font;
-
-        void ResetScrollBar();
-
-        class ListEditTextbox : public TextBox{
-        public:
-            ListEditTextbox(ListView* lv, rect_t bounds) : TextBox(bounds, false){
-                SetParent(lv);
-            }
-        };
-
-        ListEditTextbox editbox = ListEditTextbox(this, {0,0,0,0});
-        bool editing = false;
     public:
         ListView(rect_t bounds);
         ~ListView();
@@ -324,6 +299,34 @@ namespace Lemon::GUI {
         void(*OnEdit)(int, ListView*) = nullptr;
         void(*OnSubmit)(int, ListView*) = nullptr;
         void(*OnSelect)(int, ListView*) = nullptr;
+
+        int selected = 0;
+
+    protected:
+        DataModel* model = nullptr;
+        std::vector<int> columnDisplayWidths;
+
+        int selectedCol = 0;
+        short itemHeight = 20;
+        int columnDisplayHeight = 20;
+
+        bool showScrollBar = false;
+
+        ScrollBar sBar;
+
+        Graphics::Font* font;
+
+        void ResetScrollBar();
+
+        class ListEditTextbox : public TextBox{
+        public:
+            ListEditTextbox(ListView* lv, rect_t bounds) : TextBox(bounds, false){
+                SetParent(lv);
+            }
+        };
+
+        ListEditTextbox editbox = ListEditTextbox(this, {0,0,0,0});
+        bool editing = false;
     };
 
     class GridItem{
@@ -355,12 +358,12 @@ namespace Lemon::GUI {
 
         void(*OnSubmit)(GridItem&, GridView*) = nullptr;
         void(*OnSelect)(GridItem&, GridView*) = nullptr;
+
+        int selected = -1;
     protected:
         std::vector<GridItem> items;
 
         const vector2i_t itemSize = {96, 80};
-
-        int selected = -1;
         int itemsPerRow = 1;
         bool showScrollBar = false;
 
@@ -393,8 +396,9 @@ namespace Lemon::GUI {
     
     class FileView : public Container{
     protected:
-        int pathBoxHeight = 20;
-        int sidepanelWidth = 120;
+        vector2i_t pathBoxPadding = {6, 6};
+        int pathBoxHeight = 24;
+        int sidepanelWidth = 132;
         char** filePointer;
 
         void(*OnFileOpened)(const char*, FileView*) = nullptr;
@@ -424,6 +428,8 @@ namespace Lemon::GUI {
         void OnSubmit(std::string& path);
         static void OnListSubmit(GridItem& item, GridView* list);
         static void OnTextBoxSubmit(TextBox* textBox);
+
+        inline int SidepanelWidth() { return sidepanelWidth; }
 
         void (*OnFileSelected)(std::string& file, FileView* fv) = nullptr;
     };

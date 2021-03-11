@@ -1074,29 +1074,30 @@ namespace Lemon::GUI {
 
         for(; idx < items.size() && yPos < fixedBounds.height; idx++){
             GridItem& item = items[idx];
+            
+            vector2i_t iconPos = fixedBounds.pos + (vector2i_t){xPos + itemSize.x / 2 - 32, yPos + 2};
             if(item.icon){
-                vector2i_t pos = fixedBounds.pos + (vector2i_t){xPos + itemSize.x / 2 - 32, yPos + 2};
                 rect_t srcRegion = {0, 0, 64, 64};
 
                 int containerBottom = fixedBounds.pos.y + fixedBounds.size.y;
-                if(pos.y < fixedBounds.pos.y){
-                    srcRegion.height += (pos.y - fixedBounds.pos.y);
-                    srcRegion.y -= (pos.y - fixedBounds.pos.y);
-                    pos.y = fixedBounds.pos.y;
-                } else if(pos.y > containerBottom){
+                if(iconPos.y < fixedBounds.pos.y){
+                    srcRegion.height += (iconPos.y - fixedBounds.pos.y);
+                    srcRegion.y -= (iconPos.y - fixedBounds.pos.y);
+                    iconPos.y = fixedBounds.pos.y;
+                } else if(iconPos.y > containerBottom){
                     continue;
                 }
 
-                if(pos.y + srcRegion.height > containerBottom){
-                    srcRegion.height = containerBottom - pos.y;
+                if(iconPos.y + srcRegion.height > containerBottom){
+                    srcRegion.height = containerBottom - iconPos.y;
                 }
 
-                Graphics::surfacecpyTransparent(surface, item.icon, pos, srcRegion);
+                Graphics::surfacecpyTransparent(surface, item.icon, iconPos, srcRegion);
             }
 
             std::string str = item.name;
             int len = Graphics::GetTextLength(str.c_str());
-            if(len > itemSize.x - 2) {
+            if(static_cast<int>(idx) != selected && len > itemSize.x - 2) {
                 int l = str.length() - 1;
                 while(l){
                     str = str.substr(0, l);
@@ -1114,11 +1115,19 @@ namespace Lemon::GUI {
                 }
             }
 
+            int fontHeight = Graphics::DefaultFont()->height;
+            int textY = fixedBounds.y + yPos + itemSize.y - fontHeight - 4;
+            int textX = fixedBounds.x + xPos + (itemSize.x / 2) - (len / 2);
+
             if(static_cast<int>(idx) == selected){
-                Graphics::DrawRect(fixedBounds.x + xPos + (itemSize.x / 2) - (len / 2) - 4, fixedBounds.y + yPos + itemSize.y - Graphics::DefaultFont()->height - 4, len + 7, Graphics::DefaultFont()->height + 7, colours[Colour::Foreground], surface, fixedBounds); // Highlight the label if selected
+                Graphics::DrawRect(textX - 4, textY, len + 7, Graphics::DefaultFont()->height + 7, colours[Colour::Foreground], surface, fixedBounds); // Highlight the label if selected
+            } else if(Graphics::PointInRect({{textX, textY}, {len, fontHeight}}, window->lastMousePos)){
+                Graphics::DrawRect(textX - 4, textY, len + 7, Graphics::DefaultFont()->height + 7, colours[Colour::ForegroundDim], surface, fixedBounds); // Highlight the label if moused over
+            } else if(item.icon && Graphics::PointInRect({iconPos, {item.icon->width, item.icon->height}}, window->lastMousePos)){
+                Graphics::DrawRect(textX - 4, textY, len + 7, Graphics::DefaultFont()->height + 7, colours[Colour::ForegroundDim], surface, fixedBounds); // Highlight the label if moused over
             }
 
-            Graphics::DrawString(str.c_str(), fixedBounds.x + xPos + (itemSize.x / 2) - (len / 2), fixedBounds.y + yPos + itemSize.y - Graphics::DefaultFont()->height - 4, colours[Colour::Text], surface, fixedBounds);
+            Graphics::DrawString(str.c_str(), textX, textY, colours[Colour::Text], surface, fixedBounds);
             
             xPos += itemSize.x;
 

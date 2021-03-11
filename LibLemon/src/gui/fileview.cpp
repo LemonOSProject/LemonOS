@@ -5,6 +5,7 @@
 #include <math.h>
 #include <Lemon/GUI/Colours.h>
 #include <Lemon/GUI/Messagebox.h>
+#include <Lemon/GUI/Window.h>
 #include <assert.h>
 
 #include <unistd.h>
@@ -124,6 +125,10 @@ namespace Lemon::GUI {
                     break;
             }
 
+            if(Graphics::PointInRect(fixedBounds, window->lastMousePos)){
+                Graphics::DrawRect(fixedBounds, colours[Colour::Foreground], surface);
+            }
+
             if(iconS && iconS->buffer)
                 Graphics::surfacecpyTransparent(surface, iconS, bounds.pos + (vector2i_t){2, 2});
 
@@ -143,14 +148,14 @@ namespace Lemon::GUI {
         OnFileOpened = _OnFileOpened;
         currentPath = path;
 
-        fileList = new GridView({sidepanelWidth, 30, 0, 0});
+        fileList = new GridView({sidepanelWidth, pathBoxHeight + pathBoxPadding.y * 2, 0, 0});
         AddWidget(fileList);
         fileList->SetLayout(LayoutSize::Stretch, LayoutSize::Stretch, WidgetAlignment::WAlignLeft);
 
         fileList->OnSubmit = OnListSubmit;
         fileList->OnSelect = FileViewOnListSelect;
 
-        pathBox = new TextBox({2, 3, 2, 24}, false);
+        pathBox = new TextBox({pathBoxPadding.x, pathBoxPadding.y, pathBoxPadding.x, pathBoxHeight}, false);
         AddWidget(pathBox);
         pathBox->SetLayout(LayoutSize::Stretch, LayoutSize::Fixed, WidgetAlignment::WAlignLeft);
         pathBox->OnSubmit =  OnTextBoxSubmit;
@@ -198,6 +203,8 @@ namespace Lemon::GUI {
     void FileView::Refresh(){
         char* rPath = realpath(currentPath.c_str(), nullptr);
         assert(rPath);
+
+        fileList->selected = -1;
 
         currentPath = rPath;
         free(rPath);

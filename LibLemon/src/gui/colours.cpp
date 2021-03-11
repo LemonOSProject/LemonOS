@@ -11,11 +11,12 @@ namespace Lemon{
     };*/
 
     RGBAColour colours[] = {
-        RGBAColour::FromRGB(0x2c2b29),
         RGBAColour::FromRGB(0x242322),
+        RGBAColour::FromRGB(0x2c2b29),
         {239, 241, 243, 255},
         {0, 0, 0, 255},
         {184, 96, 22,  255},
-        {0x55, 0x4B, 0x44, 255},
+        RGBAColour::Interpolate({184, 96, 22,  255}, RGBAColour::FromRGB(0x2c2b29)),
+        RGBAColour::FromRGB(0x2e2d2a),
     };
 }

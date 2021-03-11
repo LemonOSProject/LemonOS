@@ -9,6 +9,7 @@ namespace Lemon{
         Text, // Labels, TextBox, Some Button Styles
         TextAlternate, // Other Button Styles
         Foreground,
+        ForegroundDim,
         ContentShadow,
     };
 
