@@ -134,7 +134,7 @@ rect_t WMWindow::GetMinimizeRect() const {
 
 void WMWindow::RecalculateButtonRects(){
 	surface_t* buttons = &wm->compositor.windowButtons;
-	closeRect = {{size.x - (buttons->width / 2) - 2, (12 - ((buttons->height / 2) / 2))}, {buttons->width / 2, buttons->height / 2}};
+	closeRect = {{size.x - (buttons->width / 2), (12 - ((buttons->height / 2) / 2))}, {buttons->width / 2, buttons->height / 2}};
 	minimizeRect = {{size.x - (buttons->width / 2) * 2 - 4, (12 - ((buttons->height / 2) / 2))}, {buttons->width / 2, buttons->height / 2}};
 }
 

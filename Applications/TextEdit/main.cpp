@@ -157,7 +157,7 @@ int main(int argc, char** argv){
 	window->AddWidget(textBox);
 	textBox->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft);
 
-	textBox->font = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "monospace", 12);
+	textBox->font = Lemon::Graphics::LoadFont("/system/lemon/fonts/sourcecodepro.ttf", "monospace", 12);
 	textBox->multiline = true;
 	textBox->editable = true;
 

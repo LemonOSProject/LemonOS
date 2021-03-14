@@ -72,12 +72,11 @@ void CompositorInstance::Paint(){
         lastRender = cTime;
     }
 
-    RecalculateClipping();
-
     surface_t* renderSurface = &wm->surface;
         
     bool hasRedrawnBackground = wm->redrawBackground;
     if(wm->redrawBackground){
+        RecalculateClipping();
         surfacecpy(renderSurface, &backgroundImage);
     }
 

@@ -509,7 +509,12 @@ void WMInstance::MouseUp(){
 }
 
 void WMInstance::MouseMove(){
-    if(resize && active){
+    if(drag && active){
+        active->pos = input.mouse.pos - dragOffset; // Move window
+        if(active->pos.y < 0) active->pos.y = 0;
+
+        redrawBackground = true;
+    } else if(resize && active){
         Lemon::LemonEvent ev;
         ev.event = Lemon::EventWindowResize;
 
@@ -605,13 +610,6 @@ void WMInstance::Update(){
     input.Poll(); // Poll input devices
 
     Poll(); // Poll for commands
-
-    if(drag && active){
-        active->pos = input.mouse.pos - dragOffset; // Move window
-        if(active->pos.y < 0) active->pos.y = 0;
-
-        redrawBackground = true;
-    }
 
     compositor.Paint(); // Render the frame
 

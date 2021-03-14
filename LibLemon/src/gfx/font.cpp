@@ -37,19 +37,21 @@ namespace Lemon::Graphics{
 
         mainFont = new Font;
         
-        if(int err = FT_New_Face(library, "/initrd/montserrat.ttf", 0, &mainFont->face)){
-            printf("Freetype Error (%d) loading font from memory /initrd/montserrat.ttf\n",err);
+        if(int err = FT_New_Face(library, "/system/lemon/fonts/notosans.ttf", 0, &mainFont->face)){
+            printf("Freetype Error (%d) loading font /system/lemon/fonts/notosans.ttf\n", err);
             return;
         }
 
-        mainFont->height = 12;
+        mainFont->height = 10;
 
-        if(int err = FT_Set_Pixel_Sizes(mainFont->face, 0, mainFont->height)){
+        if(int err = FT_Set_Pixel_Sizes(mainFont->face, 0, mainFont->height / 72.f * 96)){
             printf("Freetype Error (%d) Setting Font Size\n", err);
             return;
         }
 
-        mainFont->lineHeight = 16;
+        mainFont->pixelHeight = mainFont->height / 72.f * 96; // pt to px
+        mainFont->height = mainFont->pixelHeight;
+        mainFont->lineHeight = mainFont->face->size->metrics.height / 64;
         mainFont->id = new char[strlen("default") + 1];
         mainFont->width = 8;
         mainFont->tabWidth = 4;
@@ -69,7 +71,7 @@ namespace Lemon::Graphics{
             return nullptr;
         }
 
-        if(int err = FT_Set_Pixel_Sizes(font->face, 0, sz)){
+        if(int err = FT_Set_Pixel_Sizes(font->face, 0, sz / 72.f * 96)){
             // Freetype Error Setting Font Size
             throw FontException(FontException::FontSizeError, err);
             return nullptr;
@@ -85,8 +87,9 @@ namespace Lemon::Graphics{
             strcpy(font->id, id);
         }
 
-        font->height = sz;
-        font->lineHeight = sz + sz / 3;
+        font->pixelHeight = sz / 72.f * 96; // pt to px
+        font->height = font->pixelHeight;
+        font->lineHeight = font->face->size->metrics.height / 64;
         font->monospace = FT_IS_FIXED_WIDTH(font->face);
         font->width = 8;
         font->tabWidth = 4;

@@ -10,6 +10,7 @@ namespace Lemon::Graphics{
         bool monospace = false;
         FT_Face face;
         int height;
+        int pixelHeight;
         int lineHeight;
         int width;
         int tabWidth = 4;
@@ -47,7 +48,7 @@ namespace Lemon::Graphics{
     
     void InitializeFonts();
     void RefreshFonts();
-    Font* LoadFont(const char* path, const char* id = nullptr, int sz = 12);
+    Font* LoadFont(const char* path, const char* id = nullptr, int sz = 10);
     Font* GetFont(const char* id);
 
     Font* DefaultFont();

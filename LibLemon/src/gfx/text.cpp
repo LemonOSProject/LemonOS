@@ -19,7 +19,6 @@ namespace Lemon::Graphics{
 
         if(y >= surface->height || x >= surface->width || y >= limits.height || x >= limits.width) return 0;
         
-        if((fontState != 1 && fontState != -1) || !font->face) InitializeFonts();
         if(fontState == -1){ //
             character &= 0x7F;
 
@@ -33,7 +32,7 @@ namespace Lemon::Graphics{
                 }
             }
             return 8;
-        }
+        } else if(fontState != 1 || !font->face) InitializeFonts();
 
         uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
         uint32_t* buffer = (uint32_t*)surface->buffer; 
@@ -99,7 +98,6 @@ namespace Lemon::Graphics{
     int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits, Font* font) {
         if(y >= surface->height || x >= surface->width || y >= limits.y + limits.height || x >= limits.x + limits.width) return 0;
 
-        if((fontState != 1 && fontState != -1) || !font->face) InitializeFonts();
         if(fontState == -1){
             int xOffset = 0;
             while (*str != 0) {
@@ -108,7 +106,7 @@ namespace Lemon::Graphics{
                 str++;
             }
             return xOffset;
-        }
+        } else if(fontState != 1 || !font->face) InitializeFonts();
 
         uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
         uint32_t* buffer = (uint32_t*)surface->buffer; 
@@ -127,6 +125,7 @@ namespace Lemon::Graphics{
             maxHeight = surface->height - y;
         }
 
+        unsigned int lastGlyph = 0;
         int xOffset = x; 
         while (*str != 0) {
             if(*str == '\n'){
@@ -136,7 +135,16 @@ namespace Lemon::Graphics{
                 continue;
             }
 
-            if(int err = FT_Load_Char(font->face, *str, FT_LOAD_RENDER)) {
+            unsigned int glyph = FT_Get_Char_Index(font->face, *str);
+            if(FT_HAS_KERNING(font->face) && lastGlyph){
+                FT_Vector delta;
+
+                FT_Get_Kerning(font->face, lastGlyph, glyph, FT_KERNING_DEFAULT, &delta);
+                xOffset += delta.x >> 6;
+            }
+            lastGlyph = glyph;
+
+            if(int err = FT_Load_Glyph(font->face, glyph, FT_LOAD_RENDER)) {
                 printf("Freetype Error (%d)\n", err);
                 throw new FontException(FontException::FontRenderError, err);
                 fontState = 0;
@@ -200,10 +208,9 @@ namespace Lemon::Graphics{
     }
     
     int GetCharWidth(char c, Font* font){
-        if((fontState != 1 && fontState != -1) || !font->face) InitializeFonts();
         if(fontState == -1){
             return 8;
-        }
+        } else if(fontState != 1 || !font->face) InitializeFonts();
         
         if(c == '\n'){
             return 0;

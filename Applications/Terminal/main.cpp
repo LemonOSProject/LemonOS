@@ -540,7 +540,7 @@ void PrintChar(char ch){
 }
 
 int main(int argc, char** argv){
-	terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
+	terminalFont = Lemon::Graphics::LoadFont("/system/lemon/fonts/sourcecodepro.ttf", "termmonospace");
 	if(!terminalFont){
 		terminalFont = Lemon::Graphics::GetFont("default");
 	}
