@@ -99,7 +99,7 @@ void ShellInstance::PollCommands(){
 
             if(win->state == Lemon::Shell::ShellWindowStateActive){
                 if(active && active != win){
-                    active->state = Lemon::Shell::ShellWindowStateNormal;
+                    active->state = active->lastState = Lemon::Shell::ShellWindowStateNormal;
                 }
 
                 active = win;

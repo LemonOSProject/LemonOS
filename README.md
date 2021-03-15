@@ -18,7 +18,7 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 [Nightly Images](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml?query=is%3Asuccess+branch%3Amaster) - Go to latest job, disk images located under Artifacts\
 [Latest Release](https://github.com/LemonOSProject/LemonOS/releases/latest)
 
-![Lemon OS Screenshot](Screenshots/image5.png)\
+![Lemon OS Screenshot](Screenshots/image6.png)\
 [More screenshots](Screenshots)
 ## Features
 - Symmetric Multiprocessing (SMP)

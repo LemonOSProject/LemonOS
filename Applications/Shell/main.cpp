@@ -57,7 +57,7 @@ public:
 
 	void Paint(surface_t* surface){
 		if(win->state == Lemon::Shell::ShellWindowStateActive || pressed){
-			Lemon::Graphics::DrawRect(fixedBounds, {42, 50, 64, 255}, surface);
+			Lemon::Graphics::DrawRect(fixedBounds, Lemon::colours[Lemon::Colour::ForegroundDim], surface);
 		}
 
 		DrawButtonLabel(surface, false);

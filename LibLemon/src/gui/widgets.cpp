@@ -862,12 +862,14 @@ namespace Lemon::GUI {
                     assert(!"GUI::ListView: Unsupported type!");
                 }
 
-                if(Graphics::GetTextLength(str.c_str()) > columnDisplayWidths[i] - 2) {
+                int textLen = Graphics::GetTextLength(str.c_str());
+                if(textLen > columnDisplayWidths[i] - 2) {
                     int l = str.length() - 1;
                     while(l){
                         str = str.substr(0, l);
 
-                        if(Graphics::GetTextLength(str.c_str()) < columnDisplayWidths[i] + 2) {
+                        textLen = Graphics::GetTextLength(str.c_str());
+                        if(textLen < columnDisplayWidths[i] + 2) {
                             if(l > 2){
                                 str.erase(str.end() - 1); // Omit last character
                                 str.append("..."); // We have a variable width font should we should only have to omit 1 character
@@ -881,9 +883,12 @@ namespace Lemon::GUI {
 
                 vector2i_t textPos = {xPos + 2, yPos + itemHeight / 2 - font->height / 2};
 
-                if(index == selected){
+                if(index == selected) {
                     Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::Foreground], surface, fixedBounds);
                     Graphics::DrawString(str.c_str(), textPos.x, textPos.y, colours[Colour::TextAlternate], surface, fixedBounds);
+                } else if (Graphics::PointInRect({xPos,  yPos, fixedBounds.width, itemHeight}, window->lastMousePos)) {
+                    Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::ForegroundDim], surface, fixedBounds);
+                    Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour, surface, fixedBounds);
                 } else {
                     Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour.r, textColour.g, textColour.b, surface, fixedBounds);
                 }
