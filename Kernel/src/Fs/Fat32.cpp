@@ -184,7 +184,7 @@ namespace fs::FAT32{
 
         fat_lfn_entry_t** lfnEntries;
 
-        for(unsigned i = 0; i < static_cast<unsigned>(clusterCount) * clusterSizeBytes; i++){
+        for(unsigned i = 0; i < static_cast<unsigned>(clusterCount) * clusterSizeBytes / sizeof(fat_entry_t); i++){
             if(dirEntries[i].filename[0] == 0) continue; // No Directory Entry at index
             else if (dirEntries[i].filename[0] == 0xE5) {
                 lfnCount = 0;
