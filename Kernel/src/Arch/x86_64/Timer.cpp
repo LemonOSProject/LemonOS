@@ -30,11 +30,6 @@ namespace Timer{
         }
         
         acquireLock(&sleepQueueLock);
-        if(!sleeping.get_length()){
-            sleeping.add_front(this); // No sleeping threads in queue, just add
-            releaseLock(&sleepQueueLock);
-            return;
-        }
 
         TimerEvent* ev = sleeping.get_front();
         while(ev){
@@ -47,7 +42,13 @@ namespace Timer{
             }
 
             ticks -= ev->ticks;
+            ev = ev->next;
+
+            if(ev == sleeping.get_front()){
+                break;
+            }
         }
+        
         sleeping.add_back(this); // Add to back
         releaseLock(&sleepQueueLock);
     }
@@ -60,7 +61,7 @@ namespace Timer{
             dispatched = true;
 
             if(next){
-                if(next && ticks >= 0 && next != sleeping.get_front()){
+                if(next && ticks >= 0 && next != sleeping.get_front()){ // Make sure not at end of list
                     next->ticks += ticks;
                 }
 

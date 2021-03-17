@@ -109,13 +109,13 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout){
 
 void Thread::Sleep(long us){
 	assert(CheckInterrupts());
-	
-	Timer::TimerCallback timerCallback = [](void* t) -> void {
-		reinterpret_cast<Thread*>(t)->Unblock();
-		reinterpret_cast<Thread*>(t)->blockTimedOut = true;
-	};
 
 	blockTimedOut = false;
+	
+	Timer::TimerCallback timerCallback = [](void* t) -> void {
+		reinterpret_cast<Thread*>(t)->blockTimedOut = true;
+		reinterpret_cast<Thread*>(t)->Unblock(); 
+	};
 
 	{
 		Timer::TimerEvent ev(us, timerCallback, this);

@@ -193,8 +193,8 @@ namespace Memory{
 			}
 
 			addressSpace->pdpt[i] = 0;
-			Memory::FreePhysicalMemoryBlock(addressSpace->pageDirsPhys[i]);
 			KernelFree4KPages(addressSpace->pageDirs[i], 1);
+			Memory::FreePhysicalMemoryBlock(addressSpace->pageDirsPhys[i]);
 		}
 	}
 
@@ -580,6 +580,7 @@ namespace Memory{
 			const char* panic[1] = {"Process address space cannot be >512GB"};
 			if(pdptIndex > MAX_PDPT_INDEX || pml4Index) KernelPanic(panic,1);
 
+			assert(addressSpace->pageDirs[pdptIndex]);
 			if(!(addressSpace->pageDirs[pdptIndex][pageDirIndex] & 0x1)) CreatePageTable(pdptIndex,pageDirIndex,addressSpace); // If we don't have a page table at this address, create one.
 			
 			addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] = PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;

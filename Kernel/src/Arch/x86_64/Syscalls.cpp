@@ -779,7 +779,7 @@ long SysUptime(RegisterContext* r){
 		*seconds = Timer::GetSystemUptime();
 	}
 	if(milliseconds){
-		*milliseconds = Timer::GetTicks() * 1000 /Timer::GetFrequency();
+		*milliseconds = Timer::GetTicks() * 1000 / Timer::GetFrequency();
 	}
 	return 0;
 }
