@@ -24,8 +24,8 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 - Symmetric Multiprocessing (SMP)
 - UNIX/BSD Sockets (local/UNIX domain and internet)
 - Network Stack (UDP, TCP, DHCP)
-- A small HTTP client/downloader called [steal](Applications/steal)
-- Window Manager/Server [LemonWM](Applications/LemonWM)
+- A small HTTP client/downloader called [steal](Applications/Steal)
+- Window Manager/Server [LemonWM](System/LemonWM)
 - [Terminal Emulator](Applications/Terminal)
 - Writable Ext2 Filesystem
 - IDE, AHCI and NVMe Driver
