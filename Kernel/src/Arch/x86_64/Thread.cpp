@@ -116,10 +116,10 @@ void Thread::Sleep(long us){
 		reinterpret_cast<Thread*>(t)->blockTimedOut = true;
 		reinterpret_cast<Thread*>(t)->Unblock(); 
 	};
-
+	
 	{
 		Timer::TimerEvent ev(us, timerCallback, this);
-		
+				
 		asm("cli");
 		state = ThreadStateBlocked;
 
@@ -137,6 +137,8 @@ void Thread::Sleep(long us){
 }
 
 void Thread::Unblock(){
+	timeSlice = timeSliceDefault;
+
 	if(state != ThreadStateZombie)
 		state = ThreadStateRunning;
 }

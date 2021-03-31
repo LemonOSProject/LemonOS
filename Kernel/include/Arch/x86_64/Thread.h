@@ -4,6 +4,7 @@
 #include <List.h>
 #include <MiscHdr.h>
 #include <System.h>
+#include <Timer.h>
 
 #include <abi-bits/pid_t.h>
 

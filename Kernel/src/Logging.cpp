@@ -92,13 +92,13 @@ namespace Log{
 				n -= (n - logBufferMaxSize);
 			}
 
-			if(n + logBufferPos > logBufferSize){
+			if(n + logBufferPos >= logBufferSize){
 				if(n > logBufferMaxSize){
 					n = logBufferMaxSize;
 				}
 
 				if(n + logBufferPos > logBufferMaxSize || !CheckInterrupts()){
-					size_t discard = (n + logBufferPos) - logBufferMaxSize; // Amount of bytes to discard
+					size_t discard = (n + logBufferPos) - logBufferSize; // Amount of bytes to discard
 
 					logBufferPos -= discard;
 					memcpy(logBuffer, logBuffer + discard, logBufferPos); 
@@ -133,7 +133,6 @@ namespace Log{
 	}
 
 	void WriteF(const char* __restrict format, va_list args){
-	
 		while (*format != '\0') {
 			if (format[0] != '%' || format[1] == '%') {
 				if (format[0] == '%')

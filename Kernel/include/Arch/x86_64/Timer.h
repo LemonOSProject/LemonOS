@@ -23,7 +23,7 @@ namespace Timer{
     uint32_t GetFrequency();
 
     timeval GetSystemUptimeStruct();
-    int TimeDifference(timeval newTime, timeval oldTime);
+    long TimeDifference(const timeval& newTime, const timeval& oldTime);
 
     void Wait(long ms);
 
@@ -31,4 +31,8 @@ namespace Timer{
 
     // Initialize
     void Initialize(uint32_t freq);
+}
+
+inline long operator-(const timeval& l, const timeval& r){
+    return Timer::TimeDifference(l, r);
 }

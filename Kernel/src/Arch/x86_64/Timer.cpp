@@ -14,6 +14,7 @@
 namespace Timer{
     int frequency; // Timer frequency
     long ticks = 0; // Timer tick counter
+    long pendingTicks = 0; // If the sleep queue is locked add ticks here
     long long uptime = 0; // System uptime in seconds since the timer was initialized
 
     lock_t sleepQueueLock = 0;
@@ -48,7 +49,7 @@ namespace Timer{
                 break;
             }
         }
-        
+
         sleeping.add_back(this); // Add to back
         releaseLock(&sleepQueueLock);
     }
@@ -107,7 +108,7 @@ namespace Timer{
         return tval;
     }
 
-    int TimeDifference(timeval newTime, timeval oldTime){
+    long TimeDifference(const timeval& newTime, const timeval& oldTime){
         long seconds = newTime.tv_sec - oldTime.tv_sec;
         int microseconds = newTime.tv_usec - oldTime.tv_usec;
 
@@ -133,8 +134,9 @@ namespace Timer{
             ticks -= frequency;
         }
 
+        pendingTicks++;
         if(!(acquireTestLock(&sleepQueueLock))){
-            if(sleeping.get_length()){ // Make sure the queue has not changed inbetween checking the length and acquiring the lock
+            while(sleeping.get_length() && pendingTicks-- > 0){ // Make sure the queue has not changed inbetween checking the length and acquiring the lock
                 TimerEvent* cnt = sleeping.get_front();
 
                 assert(cnt);
@@ -149,6 +151,7 @@ namespace Timer{
                 }
                 
             }
+            pendingTicks = 0;
 
             releaseLock(&sleepQueueLock);
         }

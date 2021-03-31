@@ -139,11 +139,6 @@ public:
 			return;
 		}
 
-		if(it == back){
-			add_back(obj);
-			return;
-		}
-
 		assert(it);
 
 		obj->prev = it->prev;
