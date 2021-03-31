@@ -11,7 +11,7 @@ As well as the following (Arch) packages:\
 Or Debian, etc.:\
 `build-essential`, `autoconf`, `libtool`, `python3`, `python3-pip`, `ninja-build`, `qemu-utils`, `nasm`\
 For building the disk image:\
-`grub-pc`, `grub-efi-amd64-bin`, `e2fsprogs`, `dosfstools`
+`e2fsprogs`, `dosfstools`
 
 ## Cloning
 Make sure you use `--recurse-submodules` to get the submodules
@@ -24,7 +24,7 @@ Open a terminal in the `Toolchain/` directory and run `./buildtoolchain.sh build
 Go to `Scripts/` and run `./configure.sh` this will configure meson for the Kernel, LibLemon and the Applications. It will then download and build zlib, libpng, freetype and nyancat.
 
 ## Creating/Obtaining disk image
-Install the GRUB package for your distro and run `Scripts/createdisk.sh`. This will create a disk image with limine as BIOS bootloader and GRUB for EFI
+Run `Scripts/createdisk.sh`. This will create a disk image with limine bootloader
 
 ## Finally build and run
 In the main directory run `make all` to build everything. Finally `make run` to run Lemon OS with QEMU/KVM, or run Disks/Lemon.img in your favourite VM.

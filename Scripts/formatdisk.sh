@@ -14,9 +14,19 @@ mkdir -p /mnt/LemonEFI
 mount "${LOOPBACK_DEVICE}"p2 /mnt/Lemon
 mount "${LOOPBACK_DEVICE}"p3 /mnt/LemonEFI
 
-mkdir -p /mnt/Lemon/lemon/boot
+mkdir -p /mnt/LemonEFI/EFI/BOOT
+if [ -f "$HOME/.local/share/lemon/share/limine/BOOTX64.EFI" ]; then
+    cp "$HOME/.local/share/lemon/share/limine/BOOTX64.EFI" /mnt/LemonEFI/EFI/BOOT/
+    cp "$HOME/.local/share/lemon/share/limine/limine.sys" /mnt/Lemon/
+elif [ -f "Toolchain/limine-2.0/BOOTX64.EFI" ]; then
+    cp Toolchain/limine-2.0/BOOTX64.EFI /mnt/LemonEFI/EFI/BOOT
+    cp Toolchain/limine-2.0/limine.sys /mnt/Lemon/
+else
+    echo "Failed to find limine BOOTX64.EFI"
+    exit 1
+fi
 
-grub-install --target=x86_64-efi --boot-directory=/mnt/Lemon/lemon/boot --efi-directory=/mnt/LemonEFI "${LOOPBACK_DEVICE}" --removable
+mkdir -p /mnt/Lemon/lemon/boot
 
 umount /mnt/Lemon
 umount /mnt/LemonEFI
@@ -29,7 +39,7 @@ else
     if [ -x "$(command -v limine-install)" ]; then
         limine-install "${LOOPBACK_DEVICE}"
     elif [ -e "Toolchain/limine-1.0/limine-install" ]; then
-        Toolchain/limine-1.0/limine-install "${LOOPBACK_DEVICE}"
+        Toolchain/limine-2.0/limine-install "${LOOPBACK_DEVICE}"
     else
         echo "Failed to find limine-install!"
         exit 1

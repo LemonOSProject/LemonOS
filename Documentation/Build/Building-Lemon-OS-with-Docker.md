@@ -4,11 +4,11 @@
 * qemu-img
 
 Install the following (Arch) packages:\
-`git`, `docker`, `qemu`\
+`git`, `docker`\
 Or Debian, Ubuntu, etc.:\
-`git`, `docker.io`, `qemu-utils`
+`git`, `docker.io`\
 For building the disk image:\
-`grub-pc`, `grub-efi-amd64-bin`, `e2fsprogs`, `dosfstools`
+`e2fsprogs`, `dosfstools`
 
 ## Cloning
 Make sure you use `--recurse-submodules` to get the submodules

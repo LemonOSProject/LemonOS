@@ -6,7 +6,7 @@ cd $SPATH
 
 export BINUTILS_SRC_DIR=binutils-2.32
 export LLVM_SRC_DIR=llvm-project
-export LIMINE_SRC_DIR=limine-1.0
+export LIMINE_SRC_DIR=limine-2.0
 
 if [ -z "$JOBCOUNT" ]; then
     export JOBCOUNT=$(nproc)
@@ -17,14 +17,14 @@ _unpack_binutils(){
     tar -xzf binutils-2.32.tar.gz
  	rm binutils-2.32.tar.gz
 
-    pushd $BINUTILS_SRC_DIR
+    cd $BINUTILS_SRC_DIR
     patch -p1 < ../lemon-binutils-2.32.patch
     cd ld
     aclocal
     automake
     autoreconf
     cd ..
-    popd
+    cd ..
 }
 
 _unpack_llvm(){
@@ -32,7 +32,7 @@ _unpack_llvm(){
 }
 
 _unpack_limine(){
-    git clone "https://github.com/limine-bootloader/limine.git" --branch=v1.0-branch $LIMINE_SRC_DIR --depth 1
+    git clone "https://github.com/limine-bootloader/limine.git" --branch=v2.0-branch-binary $LIMINE_SRC_DIR --depth 1
 }
 
 
@@ -78,9 +78,10 @@ _prepare(){
 	mkdir -p $LEMON_SYSROOT/system/lib
 	mkdir -p $LEMON_SYSROOT/system/bin
 	
-    pushd $LEMON_SYSROOT/..
+    CWD="$(pwd)"
+    cd $LEMON_SYSROOT/..
 	curl https://api.lemonos.org/sysroot.tar.gz | tar -zxf - sysroot/system
-    popd
+    cd $CWD
 }
 
 _binutils(){
