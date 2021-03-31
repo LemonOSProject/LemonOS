@@ -1,190 +1,150 @@
-#include <lemon/syscall.h>
-#include <Lemon/Graphics/Surface.h>
-#include <Lemon/Graphics/Graphics.h>
 #include <Lemon/GUI/Window.h>
+#include <Lemon/Graphics/Graphics.h>
 #include <Lemon/Core/Keyboard.h>
-#include <stdlib.h>
-#include <list>
+
 #include <unistd.h>
 
-#define SNAKE_CELL_EMPTY 0
-#define SNAKE_CELL_SNAKE 1
-#define SNAKE_CELL_APPLE 2
-#define SNAKE_CELL_LEMON 3
+#define SNAKE_CELL_SIZE 16
+#define SNAKE_MAP_WIDTH 24
+#define SNAKE_MAP_HEIGHT 16
 
-rgba_colour_t snakeCellColours[]{
-	{96,128,96,255},
-	{64,64,64,255},
-	{64,64,64,255},
-	{64,64,0,255},
-};
+Lemon::GUI::Window* win;
 
-rgba_colour_t bgColourDefault = {96,128,96,255};
+std::list<vector2i_t> snake = {{10, 10}, {11, 11}};
+vector2i_t apple = {0, 0};
 
-time_t frameWaitTime = 90000; // For ~10 FPS (in us)
-
-int powerUp = 0;
-
-timespec timer;
-
-bool gameOver = true;
-
-unsigned long int rand_next = 1;
-
-int snakeRand()
-{
-	rand_next = rand_next * 1103515245 + 12345;
-	return ((int)(rand_next / 65536) % 32768);
-}
-
-void Wait(){
-	timespec nTimer;
-	clock_gettime(CLOCK_BOOTTIME, &nTimer);
-
-	time_t elapsed = (nTimer.tv_sec - timer.tv_sec) * 1000000 + (nTimer.tv_nsec - timer.tv_nsec) / 1000;
-
-	if(elapsed < frameWaitTime)
-		usleep(frameWaitTime - elapsed);
-
-	clock_gettime(CLOCK_BOOTTIME, &timer);
-}
-
-std::list<vector2i_t> snake;
-
-int direction;
-uint8_t snakeMapCells[16][16];
+enum {
+	DirectionUp,
+	DirectionLeft,
+	DirectionDown,
+	DirectionRight,
+} direction;
 
 void Reset(){
-	snake.clear();
-	
-	snake.push_back({8,8});
-	snake.push_back({9,8});
-
-	gameOver = false;
-
-	powerUp = 0;
-	snakeCellColours[0] = bgColourDefault;
-
-	direction = 0;
-
-	for(int i = 0; i < 16; i++){
-		for(int j = 0; j < 16; j++){
-			snakeMapCells[i][j] = SNAKE_CELL_EMPTY;
-		}
-	}
-
-	clock_gettime(CLOCK_BOOTTIME, &timer);
+	snake = {{10, 10}, {11, 11}};
 }
 
-vector2i_t applePos = {1,1};
+bool gameOver = false;
+void GameOverLoop(){
+	gameOver = true;
 
-int main(){
-	Lemon::GUI::Window* window = new Lemon::GUI::Window("Snake", {256, 256});
-
-	Reset();
-
-	for(;;){
-
-		Wait();
-
-		Lemon::LemonEvent msg;
-		while(window->PollEvent(msg)){
-			if(msg.event == Lemon::EventKeyPressed){
-				if(gameOver) {
-					gameOver = false;
-					Reset();
-					continue;
-				}
-				switch(msg.key){
-					case 'w':
-					case KEY_ARROW_UP:
-						if(direction != 3)
-							direction = 0;
-						break;
-					case 'a':
-					case KEY_ARROW_LEFT:
-						if(direction != 2)
-							direction = 1;
-						break;
-					case 'd':
-					case KEY_ARROW_RIGHT:
-						if(direction != 1)
-							direction = 2;
-						break;
-					case 's':
-					case KEY_ARROW_DOWN:
-						if(direction != 0)
-							direction = 3;
-						break;
-				}
-			} else if (msg.event == Lemon::EventKeyReleased && gameOver) {
+	while(!win->closed && gameOver){
+		Lemon::LemonEvent ev;
+		while(win->PollEvent(ev)){
+			if(ev.event == Lemon::EventKeyReleased){
 				gameOver = false;
-				Reset();
-				continue;
-			} else if (msg.event == Lemon::EventWindowClosed){
-				delete window;
+				break;
+			} else if(ev.event == Lemon::EventWindowClosed){
+				delete win;
+
 				exit(0);
 			}
 		}
-		
-		if(gameOver) {
-			window->WaitEvent();
-			continue;
-		}
+	}
+}
 
-		switch(direction){
-			case 0:
-				snake.pop_back();
-				snake.push_front({snake.front().x, snake.front().y - 1});
-				break;
-			case 1:
-				snake.pop_back();
-				snake.push_front({snake.front().x - 1, snake.front().y});
-				break;
-			case 2:
-				snake.pop_back();
-				snake.push_front({snake.front().x + 1, snake.front().y});
-				break;
-			case 3:
-				snake.pop_back();
-				snake.push_front({snake.front().x, snake.front().y + 1});
-				break;
-			}
+void OnPaint(surface_t* surface){
+	Lemon::Graphics::DrawRect(0, 0, surface->width, surface->height, RGBAColour::FromRGB(0x22211f), surface);
 
-		if(snakeMapCells[snake.front().x][snake.front().y] == SNAKE_CELL_SNAKE || snake.front().y < 0 || snake.front().x < 0 || snake.front().y >= 16 || snake.front().x >= 16){
-			gameOver = true;
-			Lemon::Graphics::DrawString("Game Over, Press any key to Reset", 0, 0, 255, 255, 255, &window->surface);
-			window->SwapBuffers();
-			window->WaitEvent();
-			continue;
-		} else if(snakeMapCells[snake.front().x][snake.front().y] == SNAKE_CELL_APPLE){
-			snakeMapCells[snake.front().x][snake.front().y] = SNAKE_CELL_EMPTY;
-			
-			applePos = { snakeRand() % 16, snakeRand() % 16 };
-
-			snake.push_back({0,0});
-		}
-
-		for(int i = 0; i < 16; i++){
-			for(int j = 0; j < 16; j++){
-				snakeMapCells[i][j] = SNAKE_CELL_EMPTY;
-			}
-		}
-
-		for(vector2i_t& pos : snake){
-			snakeMapCells[pos.x][pos.y] = SNAKE_CELL_SNAKE; 
-		}
-
-		snakeMapCells[applePos.x][applePos.y] = SNAKE_CELL_APPLE;
-
-		for(int i = 0; i < 16; i++){
-			for(int j = 0; j < 16; j++){
-				Lemon::Graphics::DrawRect(i*16, j*16, 16, 16, snakeCellColours[snakeMapCells[i][j]].r, snakeCellColours[snakeMapCells[i][j]].g, snakeCellColours[snakeMapCells[i][j]].b, &window->surface);
-			}
-		}
-		
-		window->SwapBuffers();
+	for(const auto& segment : snake){
+		Lemon::Graphics::DrawRect(segment.x * SNAKE_CELL_SIZE, segment.y * SNAKE_CELL_SIZE, SNAKE_CELL_SIZE, SNAKE_CELL_SIZE, { 250, 250, 250, 255 }, surface);
 	}
 
-	for(;;);
+	Lemon::Graphics::DrawRect({ {apple.x * SNAKE_CELL_SIZE, apple.y * SNAKE_CELL_SIZE}, { SNAKE_CELL_SIZE, SNAKE_CELL_SIZE } }, { 250, 250, 250, 255 }, surface);
+}
+
+int main(){
+	win = new Lemon::GUI::Window("Snake", { SNAKE_CELL_SIZE * SNAKE_MAP_WIDTH, SNAKE_CELL_SIZE * SNAKE_MAP_HEIGHT });
+	win->OnPaint = OnPaint;
+
+	srand(time(nullptr));
+
+	apple = { rand() % SNAKE_MAP_WIDTH, rand() % SNAKE_MAP_HEIGHT };
+
+	while(!win->closed){
+		Lemon::LemonEvent ev;
+		while(win->PollEvent(ev)){
+			if(ev.event == Lemon::EventKeyPressed){
+				switch(ev.key){
+				case 'w':
+				case 'W':
+				case KEY_ARROW_UP:
+					direction = DirectionUp;
+					break;
+				case 'd':
+				case 'D':
+				case KEY_ARROW_RIGHT:
+					direction = DirectionRight;
+					break;
+				case 's':
+				case 'S':
+				case KEY_ARROW_DOWN:
+					direction = DirectionDown;
+					break;
+				case 'a':
+				case 'A':
+				case KEY_ARROW_LEFT:
+					direction = DirectionLeft;
+					break;
+				}
+			} else if(ev.event == Lemon::EventWindowClosed){
+				delete win;
+
+				exit(0);
+			}
+		}
+
+		snake.pop_back();
+		switch(direction){
+		case DirectionUp:
+			if(snake.front().y <= 0){
+				gameOver = true;
+				goto gOver;
+			}
+
+			snake.push_front({ snake.front().x, snake.front().y - 1 });
+			break;
+		case DirectionLeft:
+			if(snake.front().x <= 0){
+				gameOver = true;
+				goto gOver;
+			}
+
+			snake.push_front({ snake.front().x - 1, snake.front().y });
+			break;
+		case DirectionDown:
+			if(snake.front().y >= SNAKE_MAP_HEIGHT){
+				gameOver = true;
+				goto gOver;
+			}
+
+			snake.push_front({ snake.front().x, snake.front().y + 1 });
+			break;
+		case DirectionRight:
+			if(snake.front().x >= SNAKE_MAP_WIDTH){
+				gameOver = true;
+				goto gOver;
+			}
+
+			snake.push_front({ snake.front().x + 1, snake.front().y });
+			break;
+		}
+
+		if(snake.front() == apple){
+			snake.push_back(snake.back()); // Add segment to snake
+			apple = { rand() % SNAKE_MAP_WIDTH, rand() % SNAKE_MAP_HEIGHT };
+		}
+
+		win->Paint();
+		usleep(100000);
+
+	gOver:
+		if(gameOver){
+			GameOverLoop();
+			Reset();
+		}
+	}
+
+	delete win;
+	return 0;
 }
