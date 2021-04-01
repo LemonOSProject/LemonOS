@@ -32,14 +32,14 @@ umount /mnt/Lemon
 umount /mnt/LemonEFI
 
 if [ -x "$(command -v limine-install)" ]; then
-    limine-install "${LOOPBACK_DEVICE}"
+    limine-install "${LOOPBACK_DEVICE}" 1
 else
     export PATH=$PATH:$HOME/.local/share/lemon/bin
     
     if [ -x "$(command -v limine-install)" ]; then
-        limine-install "${LOOPBACK_DEVICE}"
+        limine-install "${LOOPBACK_DEVICE}" 1
     elif [ -e "Toolchain/limine-1.0/limine-install" ]; then
-        Toolchain/limine-2.0/limine-install "${LOOPBACK_DEVICE}"
+        Toolchain/limine-2.0/limine-install "${LOOPBACK_DEVICE}" 1
     else
         echo "Failed to find limine-install!"
         exit 1
