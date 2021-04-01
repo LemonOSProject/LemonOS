@@ -37,9 +37,6 @@ namespace Lemon::Graphics{
         uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
         uint32_t* buffer = (uint32_t*)surface->buffer; 
         if(int err = FT_Load_Char(font->face, character, FT_LOAD_RENDER)) {
-            printf("Freetype Error (code: %d, font: %s)\n", err, font->id);
-            throw new FontException(FontException::FontRenderError, err);
-            fontState = 0;
             return 0;
         }
 
@@ -145,10 +142,8 @@ namespace Lemon::Graphics{
             lastGlyph = glyph;
 
             if(int err = FT_Load_Glyph(font->face, glyph, FT_LOAD_RENDER)) {
-                printf("Freetype Error (%d)\n", err);
-                throw new FontException(FontException::FontRenderError, err);
-                fontState = 0;
-                return 0;
+                str++;
+                continue;
             }
 
             if(xOffset + (font->face->glyph->advance.x >> 6) < limits.x){
@@ -223,9 +218,6 @@ namespace Lemon::Graphics{
         }
 
         if(int err = FT_Load_Char(font->face, c, FT_LOAD_ADVANCE_ONLY)) {
-            printf("Freetype Error (%d)\n", err);
-            throw new FontException(FontException::FontRenderError, err);
-            fontState = 0;
             return 0;
         }
 
@@ -261,10 +253,8 @@ namespace Lemon::Graphics{
             }
 
             if(int err = FT_Load_Char(font->face, *str, FT_LOAD_ADVANCE_ONLY)) {
-                printf("Freetype Error (%d)\n", err);
-                throw new FontException(FontException::FontRenderError, err);
-                fontState = 0;
-                return 0;
+                str++;
+                continue;
             }
 
             len += font->face->glyph->advance.x >> 6;
