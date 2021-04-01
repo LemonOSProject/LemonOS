@@ -2,7 +2,6 @@
 
 #include <Logging.h>
 #include <Paging.h>
-#include <Scheduler.h>
 
 inline static void PrintStackTrace(uint64_t _rbp){
 	uint64_t* rbp = (uint64_t*)_rbp;

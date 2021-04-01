@@ -63,8 +63,8 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout){
 	assert(CheckInterrupts());
 	
 	Timer::TimerCallback timerCallback = [](void* t) -> void {
-		reinterpret_cast<Thread*>(t)->Unblock();
 		reinterpret_cast<Thread*>(t)->blockTimedOut = true;
+		reinterpret_cast<Thread*>(t)->Unblock();
 	};
 
 	acquireLock(&newBlocker->lock);
@@ -101,6 +101,7 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout){
 	}
 
 	if(blockTimedOut){
+		blocker->Interrupt();
 		usTimeout = 0;
 	}
 

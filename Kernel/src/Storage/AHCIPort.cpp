@@ -299,7 +299,7 @@ namespace AHCI{
 
     int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write){
         if(portLock.Wait()){
-            return -EINTR;
+            return EINTR;
         }
 
         registers->ie = 0xffffffff; 
@@ -307,11 +307,11 @@ namespace AHCI{
         int spin = 0;
 
         int slot = FindCmdSlot();
-        if(slot == -1){
+        if(slot == 1){
             Log::Warning("[SATA] Could not find command slot!");
             
             portLock.Signal();
-            return -2;
+            return 2;
         }
 
         registers->serr = registers->tfd = 0;
@@ -372,7 +372,7 @@ namespace AHCI{
             Log::Warning("[SATA] Port Hung");
             
             portLock.Signal();
-            return -3;
+            return 3;
         }
 
         registers->ie = registers->is = 0xffffffff;
@@ -389,7 +389,7 @@ namespace AHCI{
                 
                 stopCMD(registers);
                 portLock.Signal();
-                return -1;
+                return 1;
             }
         }
 
@@ -404,7 +404,7 @@ namespace AHCI{
             Log::Warning("[SATA] Port Hung");
             
             portLock.Signal();
-            return -3;
+            return 3;
         }
         
         //Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot, registers->cmd, registers->is, registers->ci, registers->tfd);
@@ -413,7 +413,7 @@ namespace AHCI{
             Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
             
             portLock.Signal();
-            return -1;
+            return 1;
         }
 
         portLock.Signal();

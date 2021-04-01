@@ -23,7 +23,7 @@ struct CPU{
 	process* idleProcess = nullptr;
 	volatile int runQueueLock = 0;
 	FastList<Thread*>* runQueue;
-    tss_t tss __attribute__((aligned(16))); 
+    tss_t tss __attribute__((aligned(16)));
 };
 
 enum {
@@ -95,6 +95,13 @@ typedef struct {
 } __attribute__((packed)) cpuid_info_t;
 
 cpuid_info_t CPUID();
+
+inline uintptr_t GetRBP(){
+	volatile uintptr_t val;
+	
+	asm volatile("mov %%rbp, %0" : "=r"(val));
+	return val;
+}
 
 static inline void SetCPULocal(CPU* val){
 	val->self = val;
