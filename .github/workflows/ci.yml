@@ -45,6 +45,8 @@ jobs:
         with:
           path: |
             **/Toolchain/
+            !**/Toolchain/*.sh
+            !**/Toolchain/*.patch
           key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('~/llvm-hash.txt') }}-${{ hashFiles('**/Toolchain/buildtoolchain.sh') }}-${{ hashFiles('**/Toolchain/lemon-binutils-2.32.patch') }}
           restore-keys: |
             ${{ runner.os }}-lemon-toolchain-
