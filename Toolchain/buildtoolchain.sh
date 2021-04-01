@@ -6,7 +6,7 @@ cd $SPATH
 
 export BINUTILS_SRC_DIR=binutils-2.32
 export LLVM_SRC_DIR=llvm-project
-export LIMINE_SRC_DIR=limine-2.0
+export LIMINE_SRC_DIR=limine-2.0-bin
 
 if [ -z "$JOBCOUNT" ]; then
     export JOBCOUNT=$(nproc)
