@@ -86,7 +86,7 @@ int main(){
                     wm.frameDelayThreshold = -1;
                 } else {
                     wm.targetFrameDelay = 1000000 / targetFramerate; // in microseconds
-                    wm.frameDelayThreshold = wm.targetFrameDelay - (wm.targetFrameDelay / 4);
+                    wm.frameDelayThreshold = wm.targetFrameDelay - (wm.targetFrameDelay / 2);
                 }
             } else {} // TODO: Do something when invalid valaue
         }

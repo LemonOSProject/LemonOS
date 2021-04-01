@@ -3,5 +3,5 @@
     "backgroundImage" : "/system/lemon/backgrounds/bg5.png",
     "theme" : "/system/lemon/themes/default.json",
     "displayFramerate" : false,
-    "targetFramerate" : 75
+    "targetFramerate" : 120
 }
