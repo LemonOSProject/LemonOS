@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <List.h>
 
-inline static unsigned hash(unsigned value){
+static inline unsigned HashU(unsigned value){
 	unsigned hash = value;
 	
 	hash = ((hash >> 5) ^ hash) * 47499631;
@@ -13,15 +13,8 @@ inline static unsigned hash(unsigned value){
 	return hash;
 }
 
-inline static unsigned hash(const char* str){
-	unsigned val = str[0] << 2;
-	
-	while(char c = *str++){
-		val ^= hash(c);
-	}
-
-	return val;
-}
+template<typename T>
+unsigned Hash(const T& value);
 
 template<typename K, typename T> // Key, Value
 class HashMap{
@@ -116,7 +109,7 @@ public:
 	}
 
 	void insert(K key, const T& value){
-		auto& bucket = buckets[hash(key) % bucketCount];
+		auto& bucket = buckets[Hash(key) % bucketCount];
 
 		acquireLock(&lock);
 		for(KeyValuePair& v : bucket){
@@ -135,7 +128,7 @@ public:
 	}
 
 	T remove(K key){
-		auto& bucket = buckets[hash(key) % bucketCount];
+		auto& bucket = buckets[Hash(key) % bucketCount];
 
 		acquireLock(&lock);
 		for(unsigned i = 0; i < bucket.get_length(); i++){
@@ -175,7 +168,7 @@ public:
 	}
 
 	int get(const K& key, T& value){
-		auto& bucket = buckets[hash(key) % bucketCount];
+		auto& bucket = buckets[Hash(key) % bucketCount];
 
 		acquireLock(&lock);
 		for(KeyValuePair& val : bucket){
@@ -192,7 +185,7 @@ public:
 	}
 
 	int find(K key){
-		auto& bucket = buckets[hash(key) % bucketCount];
+		auto& bucket = buckets[Hash(key) % bucketCount];
 
 		for(KeyValuePair& val : bucket){
 			if(val.key == key){

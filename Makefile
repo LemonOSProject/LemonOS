@@ -10,21 +10,21 @@ libc:
 liblemon:
 	ninja -j$(JOBS) -C LibLemon/build install
 	
-applications: liblemon
+applications:
 	ninja -j$(JOBS) -C Applications/build install
 
-system: liblemon
+system:
 	ninja -j$(JOBS) -C System/build install
 
 kernel:
 	ninja -j$(JOBS) -C Kernel/build
 	
-userspace: liblemon applications
+userspace: liblemon applications system
 	
-initrd: libc
+base: userspace libc
+	
+initrd:
 	Scripts/buildinitrd.sh
-	
-base: applications system
 
 disk:
 	Scripts/build-nix/copytodisk.sh

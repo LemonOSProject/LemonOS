@@ -2,6 +2,7 @@
 
 #include <Hash.h>
 #include <String.h>
+#include <StringView.h>
 #include <Memory.h>
 
 #include <Fs/Filesystem.h>
@@ -18,7 +19,7 @@ Module::~Module() {
 }
 
 namespace ModuleManager {
-    HashMap<const char*, Module*> modules;
+    HashMap<StringView, Module*> modules;
 
     int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
         unsigned shOff = header.shOff; // Section header table offset

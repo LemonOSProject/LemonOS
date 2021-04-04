@@ -4,30 +4,43 @@
 #include <Liballoc.h>
 #include <Paging.h>
 
-void reverse(char *str, int length)
-{
-   int c;
-   char *begin, *end, temp;
+int HexStringToPointer(const char* buffer, size_t bufferSize, uintptr_t& pointerValue){
+	size_t n = 0;
 
-   begin  = str;
-   end    = str;
+	pointerValue = 0;
+	while(*buffer && n++ < bufferSize){
+		char c = *buffer++;
 
-   for (c = 0; c < length - 1; c++)
-      end++;
+		pointerValue <<= 4; // Shift 4-bits for next character
+		if(c >= '0' && c <= '9'){
+			pointerValue |= (c - '0') & 0xf;
+		} else if(c >= 'a' && c <= 'f'){
+			pointerValue |= (c - 'a' + 0xa) & 0xf;
+		} else if(c >= 'A' && c <= 'F'){
+			pointerValue |= (c - 'A' + 0xa) & 0xf;
+		} else {
+			return 1; // Invalid character
+		}
+	}
 
-   for (c = 0; c < length/2; c++)
-   {
-      temp   = *end;
-      *end   = *begin;
-      *begin = temp;
-
-      begin++;
-      end--;
-   }
+	return 0;
 }
 
-char* itoa(unsigned long long num, char* str, int base)
-{
+void reverse(char* str, size_t length) {
+	char* end = str + length - 1;
+
+	for (size_t i = 0; i < length / 2; i++)
+	{
+		char c = *end;
+		*end   = *str;
+		*str = c;
+
+		str++;
+		end--;
+	}
+}
+
+char* itoa(unsigned long long num, char* str, int base) {
 	int i = 0;
 
 	if (num == 0)
@@ -71,16 +84,19 @@ void *memcpy(void* dest, const void* src, size_t count) {
 		dp = dp + sizeof(uint64_t);
 		count -= sizeof(uint64_t);
 	}
+
 	for(size_t i = count; i >= 4; i = count){
 		*((uint32_t*)dp) = *((uint32_t*)sp);
 		sp = sp + 4;
 		dp = dp + 4;
 		count -= 4;
 	}
+
 	for (size_t i = count; i > 0; i = count){
 		*(dp++) = *(sp++);
 		count--;
 	} 
+
 	return dest;
 }
 
@@ -159,6 +175,20 @@ char* strchr(const char *s, int c)
 	while (*s != (char)c)
 		if (!*s++)
 			return 0;
+	return (char*)s;
+}
+
+// strnchr - Get pointer to first occurance of c in string s, searching at most n characters
+char* strnchr(const char *s, int c, size_t n)
+{
+	while (n-- && *s != (char)c)
+		if (!*s++)
+			return 0;
+
+	if(n <= 0){
+		return 0;
+	}
+	
 	return (char*)s;
 }
 

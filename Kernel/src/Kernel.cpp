@@ -26,6 +26,7 @@
 #include <Objects/Service.h>
 #include <Audio/HDAudio.h>
 #include <Modules.h>
+#include <Symbols.h>
 
 #include <Debug.h>
 
@@ -171,6 +172,7 @@ extern "C"
 
 	FsNode* initrd = fs::FindDir(fs::GetRoot(), "initrd");
 	FsNode* splashFile = nullptr;
+	FsNode* symbolFile = nullptr;
 
 	if(initrd){
 		if((splashFile = fs::FindDir(initrd,"splash.bmp"))){
@@ -188,8 +190,14 @@ extern "C"
 				Video::DrawBitmapImage(videoMode.width/2 - 24*3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 			}
 		} else Log::Warning("Could not load progress bar image");
+
+		if((symbolFile = fs::FindDir(initrd, "kernel.map"))){
+			LoadSymbolsFromFile(symbolFile);
+		} else {
+			KernelPanic((const char*[]){"Failed to locate kernel.map!"}, 1);
+		}
 	} else {
-		Log::Warning("Failed to find initrd!");
+		KernelPanic((const char*[]){"initrd not mounted!"}, 1);
 	}
 
 	Video::DrawString("Copyright 2018-2021 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);

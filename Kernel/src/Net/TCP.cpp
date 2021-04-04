@@ -26,8 +26,9 @@ struct TCPConnectionIdentifier{
     }
 };
 
-inline static unsigned hash(const TCPConnectionIdentifier& id){
-    return ::hash(id.remoteIP.value) ^ ::hash(id.localIP.value) ^ ::hash(id.remotePort) ^ ::hash(id.localPort);
+template<>
+inline unsigned Hash<TCPConnectionIdentifier>(const TCPConnectionIdentifier& id){
+    return ::Hash(id.remoteIP.value) ^ ::Hash(id.localIP.value) ^ ::Hash(id.remotePort) ^ ::Hash(id.localPort);
 }
 
 namespace Network {

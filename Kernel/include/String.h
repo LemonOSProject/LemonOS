@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <Paging.h>
 
-
 /////////////////////////////
 /// \brief safe strlen
 ///
@@ -14,6 +13,8 @@
 long strlenSafe(const char* str, size_t& size, address_space_t* aSpace);
 
 char* itoa(unsigned long long num, char* str, int base);
+
+int HexStringToPointer(const char* buffer, size_t bufferSize, uintptr_t& pointerValue);
 
 extern "C"
 void* memset(void* src, int c, size_t count);
@@ -40,6 +41,7 @@ char* strupr(char* s);
 char* strnupr(char* s, size_t n);
 
 char* strchr(const char *s, int c);
+char* strnchr(const char *s, int c, size_t n);
 char* strrchr(const char *s, int c);
 
 char* strdup(const char* s);

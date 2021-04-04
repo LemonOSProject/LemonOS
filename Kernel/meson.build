@@ -50,6 +50,7 @@ cpp_files = [
     'src/CharacterBuffer.cpp',
     'src/Device.cpp',
     'src/Debug.cpp',
+    'src/Hash.cpp',
     'src/Kernel.cpp',
     'src/Lemon.cpp',
     'src/Lock.cpp',
@@ -124,6 +125,7 @@ cpp_files_x86_64 = [
     'src/Arch/x86_64/SMP.cpp',
     'src/Arch/x86_64/SSP.cpp',
     'src/Arch/x86_64/StringSafe.cpp',
+    'src/Arch/x86_64/Symbols.cpp',
     'src/Arch/x86_64/Syscalls.cpp',
     'src/Arch/x86_64/System.cpp',
     'src/Arch/x86_64/Thread.cpp',
@@ -146,7 +148,7 @@ asm_bin_files_x86_64 = [
 kernel_link_args = [
     '-m64',
     '-T', meson.current_source_dir() + '/linkscript-x86_64.ld',
-    '-z', 'max-page-size=0x1000',
+    '-z', 'max-page-size=0x1000'
 ]
 
 kernel_link_args += kernel_c_args

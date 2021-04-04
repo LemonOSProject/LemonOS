@@ -18,6 +18,7 @@ extern const int debugLevelHAL;
 extern const int debugLevelScheduler;
 extern const int debugLevelMisc;
 extern const int debugLevelModules;
+extern const int debugLevelSymbols;
 
 extern const int debugLevelACPI;
 
