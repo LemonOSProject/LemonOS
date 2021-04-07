@@ -2,7 +2,7 @@ add_languages('c', 'cpp')
 
 module_c_args = [
     '-ffreestanding', '-nostdlib',
-    '-mcmodel=large', '-mno-red-zone', '-fPIC',
+    '-mcmodel=large', '-mno-red-zone',
     '-mno-mmx', '-mno-sse', '-mno-sse2'
 ]
 
