@@ -50,6 +50,8 @@
 
 #define MAX_PDPT_INDEX 511
 
+#define PAGE_COUNT_4K(size) (((size) + (PAGE_SIZE_4K - 1)) >> 12)
+
 typedef uint64_t page_t;
 typedef uint64_t pd_entry_t;
 typedef uint64_t pdpt_entry_t;

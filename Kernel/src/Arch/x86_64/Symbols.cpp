@@ -7,7 +7,7 @@
 #include <String.h>
 #include <StringView.h>
 
-Vector<KernelSymbol> symbols;
+Vector<KernelSymbol*> symbols;
 HashMap<StringView, KernelSymbol*> symbolHashMap;
 
 void LoadSymbolsFromFile(FsNode* node){
@@ -43,18 +43,18 @@ void LoadSymbolsFromFile(FsNode* node){
                 continue;
             }
             
-            KernelSymbol sym;
-            if(HexStringToPointer(line, sizeof(uintptr_t) * 2, sym.address)){ // The size of an address as a hex string should be sizeof(uintptr_t) * 2
+            KernelSymbol* sym = new KernelSymbol;
+            if(HexStringToPointer(line, sizeof(uintptr_t) * 2, sym->address)){ // The size of an address as a hex string should be sizeof(uintptr_t) * 2
                 bufferPos += (lineEnd - line); // Invalid address string
                 continue;
             }
 
-            sym.mangledName = strdup(addressEnd + 3);
+            sym->mangledName = strdup(addressEnd + 3);
 
-            Log::Debug(debugLevelSymbols, DebugLevelVerbose, "Found kernel symbol: %x, name: '%s'", sym.address, sym.mangledName);
+            Log::Debug(debugLevelSymbols, DebugLevelVerbose, "Found kernel symbol: %x, name: '%s'", sym->address, sym->mangledName);
             
-            KernelSymbol& symRef = symbols.add_back(sym);
-            symbolHashMap.insert(symRef.mangledName, &sym);
+            symbols.add_back(sym);
+            symbolHashMap.insert(sym->mangledName, sym);
 
             bufferPos += (lineEnd - line) + 1;
         }
@@ -69,6 +69,6 @@ void LoadSymbolsFromFile(FsNode* node){
     assert(read >= 0); // Ensure that there was no read errors
 }
 
-int ResolveSymbol(const char* mangledName, KernelSymbol*& symbolPtr){
+int ResolveKernelSymbol(const char* mangledName, KernelSymbol*& symbolPtr){
     return symbolHashMap.get(mangledName, symbolPtr);
 }

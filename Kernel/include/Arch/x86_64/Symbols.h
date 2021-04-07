@@ -10,5 +10,5 @@ struct KernelSymbol {
 
 void LoadSymbolsFromFile(FsNode* node);
 
-int ResolveSymbol(char* const mangledName, KernelSymbol*& symbolPtr);
-int ResolveSymbol(uintptr_t address, KernelSymbol*& symbolPtr);
+int ResolveKernelSymbol(const char* mangledName, KernelSymbol*& symbolPtr);
+int ResolveKernelSymbol(uintptr_t address, KernelSymbol*& symbolPtr);
