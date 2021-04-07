@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Vector.h>
+#include <Symbols.h>
 
 #include <ELF.h>
 
@@ -14,30 +15,47 @@ struct ModuleLoadStatus {
     int code;
 };
 
+enum ModuleFailureCode {
+    ErrorUnknown,
+    ErrorInvalidELFSection,
+    ErrorUnresolvedSymbol,
+};
+
+struct ModuleSegment {
+    uintptr_t base;
+    size_t size;
+    union {
+        uint32_t attributes;
+        struct {
+            uint32_t write : 1;
+            uint32_t execute : 1;
+        };
+    };
+};
+
+class FsNode;
+class Module;
+
+namespace ModuleManager {
+    ModuleLoadStatus LoadModule(const char* path);
+    void UnloadModule(const char* name);
+
+    int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header);
+}
+
 class Module {
+    friend int ModuleManager::LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header);
+
 public:
     Module(const char* name);
     ~Module();
 
     const char* Name() { return name; }
-private:
-    struct ModuleSegment {
-        ELFProgramHeader elfProgramHeader;
-        union {
-            struct {
-                uintptr_t base;
-                size_t len;
-            } load;
-            struct {
-                ELFDynamicEntry* dynamicTable;
-            } dynamic;
-        };
-    };
+protected:
+    Vector<ModuleSegment> segments;
+
+    Vector<KernelSymbol*> globalSymbols;
+    Vector<KernelSymbol*> localSymbols;
 
     char* name = nullptr;
 };
-
-namespace ModuleManager {
-    ModuleLoadStatus LoadModule(const char* path);
-    void UnloadModule(const char* name);
-}
