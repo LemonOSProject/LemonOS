@@ -7,7 +7,6 @@
 #include <String.h>
 #include <StringView.h>
 
-Vector<KernelSymbol*> symbols;
 HashMap<StringView, KernelSymbol*> symbolHashMap;
 
 void LoadSymbolsFromFile(FsNode* node){
@@ -53,7 +52,6 @@ void LoadSymbolsFromFile(FsNode* node){
 
             Log::Debug(debugLevelSymbols, DebugLevelVerbose, "Found kernel symbol: %x, name: '%s'", sym->address, sym->mangledName);
             
-            symbols.add_back(sym);
             symbolHashMap.insert(sym->mangledName, sym);
 
             bufferPos += (lineEnd - line) + 1;
@@ -71,4 +69,14 @@ void LoadSymbolsFromFile(FsNode* node){
 
 int ResolveKernelSymbol(const char* mangledName, KernelSymbol*& symbolPtr){
     return symbolHashMap.get(mangledName, symbolPtr);
+}
+
+void AddKernelSymbol(KernelSymbol* sym){
+    assert(!symbolHashMap.find(sym->mangledName));
+
+    symbolHashMap.insert(sym->mangledName, sym);
+}
+
+void RemoveKernelSymbol(const char* mangledName){
+    symbolHashMap.remove(mangledName);
 }

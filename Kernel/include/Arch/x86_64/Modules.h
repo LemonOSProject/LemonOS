@@ -19,6 +19,7 @@ enum ModuleFailureCode {
     ErrorUnknown,
     ErrorInvalidELFSection,
     ErrorUnresolvedSymbol,
+    ErrorNoModuleInfo,
 };
 
 struct ModuleSegment {
@@ -38,19 +39,24 @@ class Module;
 
 namespace ModuleManager {
     ModuleLoadStatus LoadModule(const char* path);
-    void UnloadModule(const char* name);
+    int UnloadModule(const char* name);
+    void UnloadModule(Module* module);
 
     int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header);
 }
 
 class Module {
     friend int ModuleManager::LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header);
+    friend void ModuleManager::UnloadModule(Module* module);
 
 public:
-    Module(const char* name);
+    Module();
     ~Module();
 
     const char* Name() { return name; }
+
+    int(*init)(void); // Module initialization function
+    int(*exit)(void); // Module exit function
 protected:
     Vector<ModuleSegment> segments;
 
@@ -58,4 +64,5 @@ protected:
     Vector<KernelSymbol*> localSymbols;
 
     char* name = nullptr;
+    char* description = nullptr;
 };

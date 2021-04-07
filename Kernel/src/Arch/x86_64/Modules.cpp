@@ -1,4 +1,5 @@
 #include <Modules.h>
+#include <Module.h>
 
 #include <Hash.h>
 #include <String.h>
@@ -8,8 +9,11 @@
 #include <Fs/Filesystem.h>
 #include <ELF.h>
 #include <Symbols.h>
+#include <Panic.h>
 
-Module::Module(const char* _name) : name(strdup(_name)) {
+#include <Errno.h>
+
+Module::Module() {
 
 }
 
@@ -74,6 +78,7 @@ namespace ModuleManager {
         if(!symStrTab){
             Log::Error("Error loading module: Could not find symbol string table");
 
+            delete[] sectionStringTable;
             delete[] sections;
             return ModuleFailureCode::ErrorInvalidELFSection;
         }
@@ -85,6 +90,8 @@ namespace ModuleManager {
         }
         
         unsigned symCount = symTab->size / sizeof(ELF64Symbol);
+
+        long moduleInfoIndex = -1;
         ELF64Symbol* symbols = new ELF64Symbol[symCount + 1];
         assert(fs::Read(file, symTab->off, symTab->size, symbols) == symTab->size);
         {
@@ -101,9 +108,15 @@ namespace ModuleManager {
                 } else if(symbolType != STT_OBJECT && symbolType != STT_FUNC && symbolType != STT_NOTYPE){
                     Log::Error("[Module] Unknown symbol type: %d. Failed to resolve %s.", symbolType, symStringTable + symbol.name);
                         
+                    delete[] sectionStringTable;
+                    delete[] symStringTable;
                     delete[] sections;
                     delete[] symbols;
                     return ModuleFailureCode::ErrorUnresolvedSymbol; // Fail as we failed to resolve the symbol
+                }
+
+                if(!strcmp(symStringTable + symbol.name, "_moduleInfo")){
+                    moduleInfoIndex = i;
                 }
 
                 if(symbolBinding == STB_GLOBAL){
@@ -112,6 +125,8 @@ namespace ModuleManager {
                         if(!ResolveKernelSymbol(symStringTable + symbol.name, sym)){
                             Log::Error("[Module] Failed to resolve '%s'!", symStringTable + symbol.name);
 
+                            delete[] sectionStringTable;
+                            delete[] symStringTable;
                             delete[] sections;
                             delete[] symbols;
                             return ModuleFailureCode::ErrorUnresolvedSymbol; // Fail as we failed to resolve the symbol
@@ -127,6 +142,8 @@ namespace ModuleManager {
                         if(!ResolveKernelSymbol(symStringTable + symbol.name, sym)){
                             Log::Error("[Module] Failed to resolve '%s'!", symStringTable + symbol.name);
 
+                            delete[] sectionStringTable;
+                            delete[] symStringTable;
                             delete[] sections;
                             delete[] symbols;
                             return ModuleFailureCode::ErrorUnresolvedSymbol; // Fail as we failed to resolve the symbol
@@ -137,15 +154,30 @@ namespace ModuleManager {
                         Log::Debug(debugLevelModules, DebugLevelVerbose, "Found symbol (%x): %s : %x (shidx %hd)", symbol.info, symStringTable + symbol.name, symbol.value, symbol.shIndex);
                     }
                 } else if(symbolBinding == STB_LOCAL){
+                    Log::Debug(debugLevelModules, DebugLevelVerbose, "Found symbol (%x): %s : %x (shidx %hd)", symbol.info, symStringTable + symbol.name, symbol.value, symbol.shIndex);
                 } else {
                     Log::Error("[Module] Unknown symbol binding: %d", symbolBinding);
-                        
+                       
+                    delete[] sectionStringTable;
+                    delete[] symStringTable; 
                     delete[] sections;
                     delete[] symbols;
                     return ModuleFailureCode::ErrorUnresolvedSymbol; // Fail as we failed to resolve the symbol
                 }
             }
         }
+
+        if(moduleInfoIndex < 0){ // Module info structure not found
+            Log::Error("[Module] No module information.");
+
+            delete[] sectionStringTable;
+            delete[] symStringTable;
+            delete[] sections;
+            delete[] symbols;
+            return ModuleFailureCode::ErrorNoModuleInfo;
+        }
+
+        assert(moduleInfoIndex < symCount && symbols[moduleInfoIndex].size == sizeof(LemonModuleInfo));
 
         for(int i = 0; i < shNum; i++){
             ELF64Section& section = sections[i];
@@ -172,10 +204,7 @@ namespace ModuleManager {
 
                 if(section.type == SHT_PROGBITS){
                     ssize_t read = fs::Read(file, section.off, section.size, reinterpret_cast<void*>(segmentBase));
-                    if(read < section.size){
-                        delete[] sections;
-                        return ModuleFailureCode::ErrorInvalidELFSection; // Fail as we failed to read the whole section
-                    }
+                    assert(read == section.size);
 
                     Log::Debug(debugLevelModules, DebugLevelVerbose, "[Module] ELF section '%s' loaded! Index: %d Write? %Y", sectionStringTable + section.name, i, moduleSegment.write);
                 } else {
@@ -214,17 +243,24 @@ namespace ModuleManager {
 
                     ELF64Symbol& symbol = symbols[symIndex];
 
-                    assert(symbol.shIndex < shNum);
-                    ELF64Section& symSection = sections[symbol.shIndex];
-
                     Log::Debug(debugLevelModules, DebugLevelVerbose, "[Module] Found 'rela' relocation. Offset: %x, Addend: %x, Info: %x, Symbol: '%s'", relocation.offset, relocation.addend, relocation.info, symStringTable + symbol.name);
 
                     uintptr_t* relocationPointer = reinterpret_cast<uintptr_t*>(relSection.addr + relocation.offset);
                     
                     switch(ELF64_R_TYPE(relocation.info)){
                     case ELF64_R_X86_64_64:
-                        *relocationPointer = symSection.addr + symbol.value + relocation.addend; // Symbol value is offset into its section, get the symbol section
-                        // Relocation is then address of symbol section + symbol value
+                        if(symbol.shIndex == 0){
+                            KernelSymbol* ksym;
+                            int r = ResolveKernelSymbol(symStringTable + symbol.name, ksym);
+                            assert(r); // Make sure the symbol is resolved
+
+                            *relocationPointer = ksym->address;
+                        } else {
+                            assert(symbol.shIndex < shNum);
+                            ELF64Section& symSection = sections[symbol.shIndex];
+                            *relocationPointer = symSection.addr + symbol.value + relocation.addend; // Symbol value is offset into its section, get the symbol section
+                            // Relocation is then address of symbol section + symbol value
+                        }
                         break;
                     default:
                         Log::Error("[Module] Unknown ELF64 relocation: %d", ELF64_R_TYPE(relocation.info));
@@ -237,6 +273,52 @@ namespace ModuleManager {
             }
         }
 
+        for(unsigned i = 0; i < symCount; i++){
+            ELF64Symbol& symbol = symbols[i];
+            if(symbol.name > symStrTab->size || !symbol.name){
+                continue; // Symbol is without a name
+            }
+
+            uint8_t symbolType = ELF64_SYM_TYPE(symbol.info);
+            uint8_t symbolBinding = ELF64_SYM_BIND(symbol.info);
+            if(symbolType == STT_FILE || symbolType == STT_SECTION){
+                continue; // We don't care about FILE or SECTION symbols
+            }
+
+            assert(symbol.shIndex < shNum);
+            ELF64Section& section = sections[symbol.shIndex]; // Get symbol section
+
+            char* symbolName = symStringTable + symbol.name;
+            if(symbol.shIndex != 0){
+                if((symbolBinding == STB_GLOBAL || symbolBinding == STB_WEAK)){
+                    KernelSymbol* sym;
+                    assert(!ResolveKernelSymbol(symbolName, sym)); // Ensure it does not exist
+
+                    sym = new KernelSymbol({ .address = symbol.value + section.addr, .mangledName = strdup(symbolName) }); // Add symbol to table
+
+                    module->globalSymbols.add_back(sym);
+                    AddKernelSymbol(sym);
+                } else {
+                    assert(symbolBinding == STB_LOCAL && symbol.shIndex);
+                }
+            }
+        }
+        
+        ELF64Symbol moduleInfoSymbol = symbols[moduleInfoIndex];
+        ELF64Section moduleInfoSection = sections[moduleInfoSymbol.shIndex];
+        LemonModuleInfo* moduleInfo = reinterpret_cast<LemonModuleInfo*>(moduleInfoSection.addr + moduleInfoSymbol.value);
+        
+        module->name = strdup(moduleInfo->name);
+        module->description = strdup(moduleInfo->description);
+        module->init = moduleInfo->init;
+        module->exit = moduleInfo->exit;
+        
+        Log::Info("[Module] Module '%s' loaded! Initializtion function at %x, Exit function at %x.", module->Name(), module->init, module->exit);
+
+        delete[] sectionStringTable;
+        delete[] symStringTable;
+        delete[] sections;
+        delete[] symbols;
         return 0;
     }
 
@@ -260,7 +342,7 @@ namespace ModuleManager {
             return { .status = ModuleLoadStatus::ModuleInvalid, .code = 0 };
         }
 
-        Module* module = new Module(fs::BaseName(path));
+        Module* module = new Module();
 
         if(int err = LoadModuleSegments(module, node, header); err){
             return { .status = ModuleLoadStatus::ModuleFailure, .code = err };
@@ -269,10 +351,55 @@ namespace ModuleManager {
         modules.insert(module->Name(), module);
         fs::Close(handle);
 
+        int status = module->init();
+        if(status){
+            Log::Warning("[Module] Module '%s' returned a status code of %d. Unloading module.", module->Name(), status);
+            UnloadModule(module);
+        }
+
         return { .status = ModuleLoadStatus::ModuleOK, .code = 0 };
     }
 
-    void UnloadModule() {
+    int UnloadModule(const char* name){
+        Module* module;
+        int found = modules.get(name, module);
 
+        if(!found){
+            return -ENOENT;
+        }
+
+        UnloadModule(module);
+
+        return 0;
+    }
+
+    void UnloadModule(Module* module){
+        modules.remove(module->name);
+        
+        int status = module->exit();
+        if(status){
+            // Do not trust kernel state if a module fails to exit cleanly
+            KernelPanic((const char*[]){"Failed to unload kernel module:", module->Name()}, 2);
+        }
+
+        for(auto& sym : module->globalSymbols){
+            RemoveKernelSymbol(sym->mangledName);
+            delete sym;
+        }
+        module->globalSymbols.clear();
+
+        for(auto& seg : module->segments){
+            for(size_t i = 0; i < PAGE_COUNT_4K(seg.size); i++){
+                uint64_t phys = Memory::VirtualToPhysicalAddress(seg.base + i * PAGE_SIZE_4K);
+                Memory::FreePhysicalMemoryBlock(phys);
+            }
+
+            Memory::KernelFree4KPages((void*)seg.base, PAGE_COUNT_4K(seg.size));
+        }
+
+        delete module->name;
+        delete module->description;
+
+        delete module;
     }
 }

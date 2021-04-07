@@ -12,3 +12,6 @@ void LoadSymbolsFromFile(FsNode* node);
 
 int ResolveKernelSymbol(const char* mangledName, KernelSymbol*& symbolPtr);
 int ResolveKernelSymbol(uintptr_t address, KernelSymbol*& symbolPtr);
+
+void AddKernelSymbol(KernelSymbol* sym);
+void RemoveKernelSymbol(const char* mangledName);
