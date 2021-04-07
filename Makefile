@@ -1,6 +1,6 @@
 JOBS := $(shell nproc)
 
-.PHONY: all disk kernel base initrd libc liblemon system clean run vbox debug
+.PHONY: all disk kernel base initrd libc liblemon applications system clean run vbox debug
 
 all: kernel libc base initrd disk
 

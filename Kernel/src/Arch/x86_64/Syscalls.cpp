@@ -24,6 +24,7 @@
 #include <StackTrace.h>
 #include <Math.h>
 #include <Device.h>
+#include <Modules.h>
 
 #include <ABI/Process.h>
 #include <ABI/Syscall.h>
@@ -35,7 +36,7 @@
 #define SC_ARG4(r) (r)->r9
 #define SC_ARG5(r) (r)->r8
 
-#define NUM_SYSCALLS 91
+#define NUM_SYSCALLS 93
 
 #define EXEC_CHILD 1
 
@@ -2965,6 +2966,51 @@ long SysInterruptThread(RegisterContext* r){
 	return 0;
 }
 
+long SysLoadKernelModule(RegisterContext* r){
+	process_t* process = Scheduler::GetCurrentProcess();
+
+	if(process->euid != 0){
+		return -EPERM; // Must be root
+	}
+
+	size_t filePathLength;
+	long filePathInvalid = strlenSafe(reinterpret_cast<char*>(SC_ARG0(r)), filePathLength, process->addressSpace);
+	if(filePathInvalid){
+		Log::Warning("SysExec: Reached unallocated memory reading file path");
+		return -EFAULT;
+	}
+
+	char filepath[filePathLength + 1];
+	strncpy(filepath, (char*)SC_ARG0(r), filePathLength);
+
+	ModuleLoadStatus status = ModuleManager::LoadModule(filepath);
+	if(status.status != ModuleLoadStatus::ModuleOK){
+		return -EINVAL;
+	} else {
+		return 0;
+	}
+}
+
+long SysUnloadKernelModule(RegisterContext* r){
+	process_t* process = Scheduler::GetCurrentProcess();
+
+	if(process->euid != 0){
+		return -EPERM; // Must be root
+	}
+
+	size_t nameLength;
+	long nameInvalid = strlenSafe(reinterpret_cast<char*>(SC_ARG0(r)), nameLength, process->addressSpace);
+	if(nameInvalid){
+		Log::Warning("SysExec: Reached unallocated memory reading file path");
+		return -EFAULT;
+	}
+
+	char name[nameLength + 1];
+	strncpy(name, (char*)SC_ARG0(r), nameLength);
+
+	return ModuleManager::UnloadModule(name);
+}
+
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -3057,6 +3103,8 @@ syscall_t syscalls[]{
 	SysGetSocketOptions,
 	SysDeviceManagement,
 	SysInterruptThread,
+	SysLoadKernelModule,
+	SysUnloadKernelModule,
 };
 
 RegisterContext lastSyscall;

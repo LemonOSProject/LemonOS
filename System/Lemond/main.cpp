@@ -37,7 +37,7 @@ void StartService(const Service& srv){
 
 int main(int argc, char** argv){
 	setenv("HOME", "/system", 1); // Default home
-	setenv("PATH", "/initrd:/system/bin", 1); // Default path
+	setenv("PATH", "/initrd:/system/bin:/system/lemon", 1); // Default path
 
 	Lemon::JSONParser confParser = Lemon::JSONParser("/system/lemon/lemond.json");
 	auto json = confParser.Parse();

@@ -21,6 +21,10 @@ Module::~Module() {
     if(name){
         kfree(name);
     }
+
+    if(description){
+        kfree(description);
+    }
 }
 
 namespace ModuleManager {
@@ -396,9 +400,6 @@ namespace ModuleManager {
 
             Memory::KernelFree4KPages((void*)seg.base, PAGE_COUNT_4K(seg.size));
         }
-
-        delete module->name;
-        delete module->description;
 
         delete module;
     }
