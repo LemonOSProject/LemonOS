@@ -224,9 +224,23 @@ size_t strcspn(const char *s1, const char *s2)
 }
 
 // strtok - breaks str into tokens using specified delimiters
-char *strtok(char * str, const char * delim)
-{
+char *strtok(char * str, const char * delim) {
 	static char* p = 0;
+	if (str)
+		p = str;
+	else if (!p)
+		return 0;
+	str = p + strspn(p, delim);
+	p = str + strcspn(str, delim);
+	if (p == str)
+		return p = 0;
+	p = *p ? *p = 0, p + 1 : 0;
+	return str;
+}
+
+// strtok - reentrant strtok
+char *strtok_r(char * str, const char* delim, char** saveptr) {
+	char*& p = *saveptr;
 	if (str)
 		p = str;
 	else if (!p)
