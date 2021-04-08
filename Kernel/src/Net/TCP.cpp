@@ -659,12 +659,12 @@ namespace Network {
                 FilesystemBlocker bl(this);
 
                 long timeout = retryPeriod;
-                if(Scheduler::GetCurrentThread()->Block(&bl, retryPeriod)){
+                if(Scheduler::GetCurrentThread()->Block(&bl, timeout)){
                     return -EINTR;
                 }
 
                 if(timeout <= 0){
-                    retryPeriod *= retryPeriod;
+                    retryPeriod *= 4;
                 }
             }
 

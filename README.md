@@ -3,7 +3,7 @@
 Lemon OS is a UNIX-like 64-bit operating system written in C++.
 
 ## About Lemon OS
-Lemon OS includes its own [kernel](Kernel) with SMP and networking, [window server/compositor](System/LemonWM) and [userspace applications](Applications) as well as [a collection of software ports](Ports).
+Lemon OS includes its own [modular kernel](Kernel) with SMP and networking, [window server/compositor](System/LemonWM) and [userspace applications](Applications) as well as [a collection of software ports](Ports).
 
 If you have any questions or concerns feel free to open a GitHub issue, join our [Discord server](https://discord.gg/NAYp6AUYWM) or email me at computerfido@gmail.com.
 
@@ -21,6 +21,7 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 ![Lemon OS Screenshot](Screenshots/image6.png)\
 [More screenshots](Screenshots)
 ## Features
+- Modular Kernel
 - Symmetric Multiprocessing (SMP)
 - UNIX/BSD Sockets (local/UNIX domain and internet)
 - Network Stack (UDP, TCP, DHCP)
