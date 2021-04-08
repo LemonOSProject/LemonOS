@@ -2,6 +2,9 @@
 #include <Lemon/Graphics/Graphics.h>
 #include <Lemon/Core/Keyboard.h>
 
+#include <map>
+#include <list>
+
 #include <unistd.h>
 
 #define SNAKE_CELL_SIZE 16
@@ -13,6 +16,8 @@ Lemon::GUI::Window* win;
 std::list<vector2i_t> snake = {{10, 10}, {11, 11}};
 vector2i_t apple = {0, 0};
 
+bool map[SNAKE_MAP_WIDTH * SNAKE_MAP_HEIGHT];
+
 enum {
 	DirectionUp,
 	DirectionLeft,
@@ -22,16 +27,21 @@ enum {
 
 void Reset(){
 	snake = {{10, 10}, {11, 11}};
+	apple = { rand() % SNAKE_MAP_WIDTH, rand() % SNAKE_MAP_HEIGHT };
 }
 
 bool gameOver = false;
 void GameOverLoop(){
 	gameOver = true;
 
+	int textLength = Lemon::Graphics::GetTextLength("Game Over!");
+	Lemon::Graphics::DrawString("Game Over!", win->GetSize().x / 2 - textLength / 2, win->GetSize().y / 2 - Lemon::Graphics::DefaultFont()->pixelHeight / 2, 255, 255, 255, &win->surface);
+	win->SwapBuffers();
+
 	while(!win->closed && gameOver){
 		Lemon::LemonEvent ev;
 		while(win->PollEvent(ev)){
-			if(ev.event == Lemon::EventKeyReleased){
+			if(ev.event == Lemon::EventKeyPressed){
 				gameOver = false;
 				break;
 			} else if(ev.event == Lemon::EventWindowClosed){
@@ -40,6 +50,20 @@ void GameOverLoop(){
 				exit(0);
 			}
 		}
+	}
+}
+
+void RefreshSnake(){
+	memset(map, 0, SNAKE_MAP_WIDTH * SNAKE_MAP_HEIGHT);
+
+	for(vector2i_t& v : snake){ // Make sure the snake is not in itself
+		bool& occupied = map[v.y * SNAKE_MAP_WIDTH + v.x];
+		if(occupied == true){
+			gameOver = true;
+			return;
+		}
+		
+		map[v.y * SNAKE_MAP_WIDTH + v.x] = true;
 	}
 }
 
@@ -59,7 +83,7 @@ int main(){
 
 	srand(time(nullptr));
 
-	apple = { rand() % SNAKE_MAP_WIDTH, rand() % SNAKE_MAP_HEIGHT };
+	Reset();
 
 	while(!win->closed){
 		Lemon::LemonEvent ev;
@@ -69,22 +93,30 @@ int main(){
 				case 'w':
 				case 'W':
 				case KEY_ARROW_UP:
-					direction = DirectionUp;
+					if(direction != DirectionDown){
+						direction = DirectionUp;
+					}
 					break;
 				case 'd':
 				case 'D':
 				case KEY_ARROW_RIGHT:
-					direction = DirectionRight;
+					if(direction != DirectionLeft){
+						direction = DirectionRight;
+					}
 					break;
 				case 's':
 				case 'S':
 				case KEY_ARROW_DOWN:
-					direction = DirectionDown;
+					if(direction != DirectionUp){
+						direction = DirectionDown;
+					}
 					break;
 				case 'a':
 				case 'A':
 				case KEY_ARROW_LEFT:
-					direction = DirectionLeft;
+					if(direction != DirectionRight){
+						direction = DirectionLeft;
+					}
 					break;
 				}
 			} else if(ev.event == Lemon::EventWindowClosed){
@@ -129,6 +161,8 @@ int main(){
 			snake.push_front({ snake.front().x + 1, snake.front().y });
 			break;
 		}
+
+		RefreshSnake();
 
 		if(snake.front() == apple){
 			snake.push_back(snake.back()); // Add segment to snake
