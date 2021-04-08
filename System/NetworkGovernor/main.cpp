@@ -19,6 +19,8 @@
 #include <string>
 #include <string_view>
 
+#include <Lemon/System/Module.h>
+
 #include "dhcp.h"
 
 sockaddr_in dhcpClientAddress;
@@ -260,6 +262,8 @@ DNS Server: %d.%d.%d.%d\n",
 
 std::vector<NetworkInterface*> interfaces;
 int main(){
+	Lemon::LoadKernelModule("/initrd/modules/e1k.sys");
+
 	DIR* netFS = opendir("/dev/net");
 	if(!netFS){
 		perror("Error opening /dev/net");
