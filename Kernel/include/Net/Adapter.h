@@ -9,36 +9,16 @@ enum {
     LinkUp,
 };
 
+class IPSocket;
 namespace Network{
     class NetworkAdapter : public Device {
         friend class NetFS;
-
     public:
         enum AdapterType {
             NetworkAdapterLoopback,
             NetworkAdapterEthernet,
         };
 
-    protected:
-
-        static int nextDeviceNumber;
-        unsigned maxCache = 256; // Maximum amount of cached packets, NIC drivers are free to change this
-    
-        int linkState = LinkDown;
-
-        FastList<NetworkPacket*> cache;
-        FastList<NetworkPacket*> queue;
-
-        Semaphore packetSemaphore = Semaphore(0);
-
-        lock_t cacheLock = 0;
-        lock_t queueLock = 0;
-
-        lock_t threadLock = 0;
-
-        AdapterType type;
-
-    public:
         enum DriverState{
             OK,
             Uninitialized,
@@ -60,45 +40,40 @@ namespace Network{
         
         virtual void SendPacket(void* data, size_t len);
 
-        virtual int GetLink() { return linkState; }
-        virtual int QueueSize() { return queue.get_length(); }
-        virtual NetworkPacket* Dequeue() { 
+        virtual int GetLink() const;
+        virtual int QueueSize() const;
 
-            if(queue.get_length()) {
-                packetSemaphore.SetValue(queue.get_length() - 1);
-                return queue.remove_at(0); 
-            } else {
-                return nullptr;
-            }
-        }
-        virtual NetworkPacket* DequeueBlocking() {
-            if(packetSemaphore.Wait()){
-                return nullptr; // We were interrupted
-            }
+        virtual NetworkPacket* Dequeue();
+        virtual NetworkPacket* DequeueBlocking();
+        virtual void CachePacket(NetworkPacket* pkt);
 
-            if(queue.get_length()){
-                return queue.remove_at(0); 
-            } else {
-                return nullptr;
-            }
-        }
-        virtual void CachePacket(NetworkPacket* pkt){
-            if(cache.get_length() < maxCache){
-                acquireLock(&cacheLock);
-
-                cache.add_back(pkt);
-
-                releaseLock(&cacheLock);
-            } else {
-                delete pkt;
-            }
-        };
+        void BindToSocket(IPSocket* sock);
+        void UnbindSocket(IPSocket* sock);
+        void UnbindAllSockets();
 
         virtual ~NetworkAdapter() = default;
+
+    protected:
+        static int nextDeviceNumber;
+        unsigned maxCache = 256; // Maximum amount of cached packets, NIC drivers are free to change this
+    
+        int linkState = LinkDown;
+
+        FastList<NetworkPacket*> cache;
+        FastList<NetworkPacket*> queue;
+
+        Semaphore packetSemaphore = Semaphore(0);
+
+        lock_t cacheLock = 0;
+        lock_t queueLock = 0;
+
+        lock_t threadLock = 0;
+
+        AdapterType type;
+
+        lock_t boundSocketsLock = 0;
+        List<class ::IPSocket*> boundSockets; // If an adapter is destroyed, we need to know what sockets are bound to it
     };
 
-    extern NetworkAdapter* mainAdapter;
-
     void AddAdapter(NetworkAdapter* a);
-    void FindMainAdapter();
 }

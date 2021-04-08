@@ -13,7 +13,10 @@
 #define NET_INTERFACE_STACKSIZE 32768
 
 namespace Network{
-	extern HashMap<uint32_t, MACAddress> addressCache;;
+	extern HashMap<uint32_t, MACAddress> addressCache;
+	extern Vector<NetworkAdapter*> adapters;
+
+	Semaphore packetQueueSemaphore(0);
 
 	void OnReceiveARP(void* data, size_t length){
 		if(length < sizeof(ARPHeader)){
@@ -115,41 +118,45 @@ namespace Network{
 	[[noreturn]] void InterfaceThread(){
 		Log::Info("[Network] Initializing network interface layer...");
 
-		assert(mainAdapter);
-
 		for(;;){
 			NetworkPacket* p;
-			while((p = mainAdapter->DequeueBlocking())){
-				if(p->length < sizeof(EthernetFrame)){
-					Log::Warning("[Network] Discarding packet (too short)");
+			if(packetQueueSemaphore.Wait()){
+				continue; // We got interrupted
+			}
+			
+			for(NetworkAdapter* adapter : adapters){
+				if((p = adapter->Dequeue())){
+					if(p->length < sizeof(EthernetFrame)){
+						Log::Warning("[Network] Discarding packet (too short)");
 
-					mainAdapter->CachePacket(p);
-					continue;
-				}
+						adapter->CachePacket(p);
+						break;
+					}
 
-				size_t len = p->length;
-				uint8_t buffer[ETHERNET_MAX_PACKET_SIZE];
-				memcpy(buffer, p->data, p->length);
+					size_t len = p->length;
+					uint8_t buffer[ETHERNET_MAX_PACKET_SIZE];
+					memcpy(buffer, p->data, p->length);
 
-				mainAdapter->CachePacket(p); // Get the packet back to the NIC driver's cache as soon as possible
+					adapter->CachePacket(p); // Get the packet back to the NIC driver's cache as soon as possible
 
-				EthernetFrame* etherFrame = reinterpret_cast<EthernetFrame*>(buffer);
+					EthernetFrame* etherFrame = reinterpret_cast<EthernetFrame*>(buffer);
 
-				if(etherFrame->dest != mainAdapter->mac){
-					//Log::Warning("[Network] Discarding packet (invalid MAC address %x:%x:%x:%x:%x:%x)", etherFrame->dest[0], etherFrame->dest[1], etherFrame->dest[2], etherFrame->dest[3], etherFrame->dest[4], etherFrame->dest[5]);
-				}
-				
-				switch ((uint16_t)etherFrame->etherType)
-				{
-				case EtherTypeIPv4:
-					OnReceiveIPv4(etherFrame->data, len - sizeof(EthernetFrame));
-					break;
-				case EtherTypeARP:
-					OnReceiveARP(etherFrame->data, len - sizeof(EthernetFrame));
-					break;
-				default:
-					Log::Warning("[Network] Discarding packet (invalid EtherType %x)", etherFrame->etherType);
-					break;
+					if(etherFrame->dest != adapter->mac){
+						//Log::Warning("[Network] Discarding packet (invalid MAC address %x:%x:%x:%x:%x:%x)", etherFrame->dest[0], etherFrame->dest[1], etherFrame->dest[2], etherFrame->dest[3], etherFrame->dest[4], etherFrame->dest[5]);
+					}
+					
+					switch ((uint16_t)etherFrame->etherType)
+					{
+					case EtherTypeIPv4:
+						OnReceiveIPv4(etherFrame->data, len - sizeof(EthernetFrame));
+						break;
+					case EtherTypeARP:
+						OnReceiveARP(etherFrame->data, len - sizeof(EthernetFrame));
+						break;
+					default:
+						Log::Warning("[Network] Discarding packet (invalid EtherType %x)", etherFrame->etherType);
+						break;
+					}
 				}
 			}
 		}
@@ -161,10 +168,12 @@ namespace Network{
 	}
 
 	void Send(void* data, size_t length, NetworkAdapter* adapter){
-		if(adapter)
+		if(adapter){
 			adapter->SendPacket(data, length);
-		else if(mainAdapter)
-			mainAdapter->SendPacket(data, length);
+		} else for(auto& adapter : adapters){
+			adapter->SendPacket(data, length);
+			break;
+		}
 	}
 
     int SendIPv4(void* data, size_t length, IPv4Address& source, IPv4Address& destination, uint8_t protocol, NetworkAdapter* adapter){
@@ -176,7 +185,7 @@ namespace Network{
 
 		EthernetFrame* ethFrame = (EthernetFrame*)buffer;
 		ethFrame->etherType = EtherTypeIPv4;
-		ethFrame->src = mainAdapter->mac;
+		ethFrame->src = adapter->mac;
 		
 		if(destination.value == INADDR_BROADCAST){
 			ethFrame->dest = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff}; // Broadcast MAC Address

@@ -77,63 +77,59 @@
 #define RX_DESC_COUNT 256
 #define TX_DESC_COUNT 256
 
-namespace Network{
-    class Intel8254x final : public NetworkAdapter, private PCIDevice {
-    public:
-        Intel8254x(const PCIInfo& device);
+class Intel8254x final : public Network::NetworkAdapter, private PCIDevice {
+public:
+    Intel8254x(const PCIInfo& device);
 
-        static void DetectAndInitialize();
+    void SendPacket(void* data, size_t len);
 
-        void SendPacket(void* data, size_t len);
+private:
+    typedef struct {
+        uint64_t addr; // Buffer Address
+        uint16_t length; // Length
+        uint16_t checksum; // Packet Checksum
+        uint8_t status; // Status
+        uint8_t errors; // Errors
+        uint16_t special; // Special
+    } __attribute__((packed)) r_desc_t;
 
-    private:
-        typedef struct {
-            uint64_t addr; // Buffer Address
-            uint16_t length; // Length
-            uint16_t checksum; // Packet Checksum
-            uint8_t status; // Status
-            uint8_t errors; // Errors
-            uint16_t special; // Special
-        } __attribute__((packed)) r_desc_t;
+    typedef struct {
+        uint64_t addr; // Buffer Address
+        uint16_t length;
+        uint8_t cso; // Checksum Offset
+        uint8_t cmd; // Command
+        uint8_t reserved : 4; // Reserved
+        uint8_t status : 4; // Status
+        uint8_t css; // Checksum start field
+        uint16_t special; // Special
+    } __attribute__((packed)) t_desc_t;
 
-        typedef struct {
-            uint64_t addr; // Buffer Address
-            uint16_t length;
-            uint8_t cso; // Checksum Offset
-            uint8_t cmd; // Command
-            uint8_t reserved : 4; // Reserved
-            uint8_t status : 4; // Status
-            uint8_t css; // Checksum start field
-            uint16_t special; // Special
-        } __attribute__((packed)) t_desc_t;
+    r_desc_t* rxDescriptors;
+    t_desc_t* txDescriptors;
+    void** txDescriptorsVirt;
+    void** rxDescriptorsVirt;
 
-        r_desc_t* rxDescriptors;
-        t_desc_t* txDescriptors;
-        void** txDescriptorsVirt;
-        void** rxDescriptorsVirt;
+    unsigned txTail = 0;
+    unsigned rxTail = 0;
 
-        unsigned txTail = 0;
-        unsigned rxTail = 0;
+    uint64_t memBase;
+    void* memBaseVirt;
+    uint64_t ioBase;
 
-        uint64_t memBase;
-        void* memBaseVirt;
-        uint64_t ioBase;
+    bool useIO = false;
+    bool hasEEPROM = false;
 
-        bool useIO = false;
-        bool hasEEPROM = false;
+    void WriteMem32(uintptr_t address, uint32_t data);
+    uint32_t ReadMem32(uintptr_t address);
+    uint16_t ReadEEPROM(uint8_t addr);
+    bool CheckForEEPROM();
 
-        void WriteMem32(uintptr_t address, uint32_t data);
-        uint32_t ReadMem32(uintptr_t address);
-        uint16_t ReadEEPROM(uint8_t addr);
-        bool CheckForEEPROM();
+    int GetSpeed();
 
-        int GetSpeed();
+    void InitializeRx();
+    void InitializeTx();
 
-        void InitializeRx();
-        void InitializeTx();
-
-        void UpdateLink();
-        void OnInterrupt();
-        static void InterruptHandler(Intel8254x* card, RegisterContext* r);
-    };
-}
+    void UpdateLink();
+    void OnInterrupt();
+    static void InterruptHandler(Intel8254x* card, RegisterContext* r);
+};

@@ -88,6 +88,17 @@ public:
 		return count;
 	}
 
+	void erase(unsigned pos){
+		acquireLock(&lock);
+		assert(pos < count);
+
+		for(unsigned i = pos; i < count - 1; i++){
+			data[i] = data[i + 1];
+		}
+
+		releaseLock(&lock);
+	}
+
 	void reserve(size_t count){
 		acquireLock(&lock);
 		if(count > capacity){

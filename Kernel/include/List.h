@@ -166,7 +166,7 @@ public:
 		return current;
 	}
 
-	__attribute__((always_inline)) inline unsigned get_length() {
+	__attribute__((always_inline)) inline unsigned get_length() const {
 		return num;
 	}
 
@@ -488,7 +488,7 @@ public:
 		releaseLock(&lock);
 	}
 
-	__attribute__((always_inline)) inline unsigned get_length() {
+	__attribute__((always_inline)) inline unsigned get_length() const {
 		return num;
 	}
 

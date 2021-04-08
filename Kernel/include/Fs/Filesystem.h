@@ -290,19 +290,23 @@ protected:
     size_t requestedLength = 1; // How much data was requested?
 public:
 	FilesystemBlocker(FsNode* _node) : node(_node) {
-        lock = 0;
+        lock = 1;
 
         acquireLock(&node->blockedLock);
         node->blocked.add_back(this);
         releaseLock(&node->blockedLock);
+
+        releaseLock(&lock);
     }
 
 	FilesystemBlocker(FsNode* _node, size_t len) : node(_node), requestedLength(len) {
-        lock = 0;
+        lock = 1;
 
         acquireLock(&node->blockedLock);
         node->blocked.add_back(this);
         releaseLock(&node->blockedLock);
+
+        releaseLock(&lock);
     }
     
     void Interrupt();

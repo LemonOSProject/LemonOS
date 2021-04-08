@@ -44,10 +44,14 @@ int IPSocket::Bind(const sockaddr* addr, socklen_t addrlen){
 	}
 
 	if(inetAddr->sin_addr.s_addr == INADDR_ANY){
+		if(adapter){
+			adapter->UnbindSocket(this);
+		}
+
 		adapter = nullptr;
 		address.value = INADDR_ANY;
 	} else if(Network::NetworkAdapter* a = Network::NetFS::GetInstance()->FindAdapter(inetAddr->sin_addr.s_addr); a){
-		adapter = a;
+		a->BindToSocket(this);
 	} else {
 		return -EADDRNOTAVAIL; // Address does not exist
 	}
@@ -111,7 +115,7 @@ int IPSocket::SetSocketOptions(int level, int opt, const void* optValue, socklen
 		Network::NetworkAdapter* a = Network::NetFS::GetInstance()->FindAdapter(req, optLength);
 
 		if(a){
-			adapter = a;
+			a->BindToSocket(this);
 		} else {
 			return -EINVAL; // No such interface found
 		}
@@ -137,6 +141,10 @@ int IPSocket::GetSocketOptions(int level, int opt, void* optValue, socklen_t* op
 void IPSocket::Close(){
 	if(port){
 		ReleasePort();
+	}
+
+	if(adapter){
+		adapter->UnbindSocket(this);
 	}
 
 	Socket::Close();

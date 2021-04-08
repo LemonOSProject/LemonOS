@@ -7,17 +7,7 @@
 #include <Net/Socket.h>
 
 namespace Network {
-    NetworkAdapter* mainAdapter;
     extern Vector<NetworkAdapter*> adapters;
-
-    void FindMainAdapter(){
-        for(unsigned i = 0; i < adapters.get_length(); i++){
-            if(adapters[i]->GetLink() == LinkUp){
-                mainAdapter = adapters[i];
-                return;
-            }
-        }
-    }
 
     NetworkAdapter::NetworkAdapter(AdapterType aType) : Device(DeviceTypeNetworkAdapter, NetFS::GetInstance()), type(aType) {
         flags = FS_NODE_CHARDEVICE;
@@ -26,6 +16,47 @@ namespace Network {
     void NetworkAdapter::SendPacket(void* data, size_t len){
         assert(!"NetworkAdapter: Base class SendPacket has been called");
     }
+
+    int NetworkAdapter::GetLink() const {
+        return linkState;
+    }
+
+    int NetworkAdapter::QueueSize() const {
+        return queue.get_length();
+    }
+
+    NetworkPacket* NetworkAdapter::Dequeue() { 
+        if(queue.get_length()) {
+            packetSemaphore.SetValue(queue.get_length() - 1);
+            return queue.remove_at(0); 
+        } else {
+            return nullptr;
+        }
+    }
+
+    NetworkPacket* NetworkAdapter::DequeueBlocking() {
+        if(packetSemaphore.Wait()){
+            return nullptr; // We were interrupted
+        }
+
+        if(queue.get_length()){
+            return queue.remove_at(0); 
+        } else {
+            return nullptr;
+        }
+    }
+    
+    void NetworkAdapter::CachePacket(NetworkPacket* pkt){
+        if(cache.get_length() < maxCache){
+            acquireLock(&cacheLock);
+
+            cache.add_back(pkt);
+
+            releaseLock(&cacheLock);
+        } else {
+            delete pkt;
+        }
+    };
 
     int NetworkAdapter::Ioctl(uint64_t cmd, uint64_t arg){
         process_t* currentProcess = Scheduler::GetCurrentProcess();
@@ -145,5 +176,34 @@ namespace Network {
         } else {
             return -EINVAL;
         }
+    }
+
+    void NetworkAdapter::BindToSocket(IPSocket* sock){
+        acquireLock(&boundSocketsLock);
+
+        boundSockets.add_back(sock);
+        sock->adapter = this;
+
+        releaseLock(&boundSocketsLock);
+    }
+
+    void NetworkAdapter::UnbindSocket(IPSocket* sock){
+        acquireLock(&boundSocketsLock);
+
+        sock->adapter = nullptr;
+        boundSockets.remove(sock);
+
+        releaseLock(&boundSocketsLock);
+    }
+
+    void NetworkAdapter::UnbindAllSockets(){
+        acquireLock(&boundSocketsLock);
+
+        while(boundSockets.get_length()){
+            IPSocket* sock = boundSockets.remove_at(0);
+            sock->adapter = nullptr;
+        }
+
+        releaseLock(&boundSocketsLock);
     }
 }

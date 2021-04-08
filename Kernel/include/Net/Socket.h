@@ -179,22 +179,6 @@ public:
 };
 
 class IPSocket : public Socket {
-protected:
-    IPv4Address address = 0;
-    IPv4Address peerAddress = 0;
-    BigEndian<uint16_t> port = 0;
-    BigEndian<uint16_t> destinationPort = 0;
-
-    bool pktInfo = false; // Check for packet info field?
-
-    List<NetworkPacket> pQueue;
-
-    Network::NetworkAdapter* adapter = nullptr; // Bound adapter
-
-    virtual unsigned short AllocatePort() = 0;
-    virtual int AcquirePort(uint16_t port) = 0;
-    virtual int ReleasePort() = 0;
-    int64_t OnReceive(void* buffer, size_t len);
 public:
     IPSocket(int type, int protocol);
     virtual ~IPSocket();
@@ -218,6 +202,22 @@ public:
     
     virtual int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
     virtual int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
+
+    Network::NetworkAdapter* adapter = nullptr; // Bound adapter
+protected:
+    IPv4Address address = 0;
+    IPv4Address peerAddress = 0;
+    BigEndian<uint16_t> port = 0;
+    BigEndian<uint16_t> destinationPort = 0;
+
+    bool pktInfo = false; // Check for packet info field?
+
+    List<NetworkPacket> pQueue;
+
+    virtual unsigned short AllocatePort() = 0;
+    virtual int AcquirePort(uint16_t port) = 0;
+    virtual int ReleasePort() = 0;
+    int64_t OnReceive(void* buffer, size_t len);
 };
 
 namespace Network::UDP{

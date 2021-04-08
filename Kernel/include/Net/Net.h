@@ -208,6 +208,8 @@ struct ICMPHeader{
 } __attribute__((packed));
 
 namespace Network {
+    extern Semaphore packetQueueSemaphore;
+    
     enum {
         EtherTypeIPv4 = 0x800,
         EtherTypeARP = 0x806,
@@ -230,6 +232,8 @@ namespace Network {
         FsNode* FindDir(char* name);
 
         void RegisterAdapter(NetworkAdapter* adapter);
+        void RemoveAdapter(NetworkAdapter* adapter);
+
         NetworkAdapter* FindAdapter(const char* name, size_t nameLen);
         NetworkAdapter* FindAdapter(uint32_t ip);
 
@@ -256,7 +260,6 @@ namespace Network {
         return ret;
     }
 
-    void InitializeDrivers();
     void InitializeConnections();
     
     int IPLookup(NetworkAdapter* adapter, const IPv4Address& ip, MACAddress& mac);

@@ -79,7 +79,6 @@ cpp_files = [
     'src/Liballoc/liballoc.c',
     
     'src/Net/NetworkAdapter.cpp',
-    'src/Net/8254x.cpp',
     'src/Net/Socket.cpp',
     'src/Net/Net.cpp',
     'src/Net/Interface.cpp',

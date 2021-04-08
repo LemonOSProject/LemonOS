@@ -1,7 +1,6 @@
 #include <Net/Net.h>
 
 #include <Net/Adapter.h>
-#include <Net/8254x.h>
 #include <Net/Socket.h>
 
 #include <Endian.h>
@@ -17,18 +16,7 @@ namespace Network {
 
     HashMap<uint32_t, MACAddress> addressCache;
 
-    void InitializeDrivers(){
-	    Intel8254x::DetectAndInitialize();
-    }
-
     void InitializeConnections(){
-        FindMainAdapter();
-
-        if(!mainAdapter) {
-            Log::Info("No network adapter found!");
-            return;
-        }
-
         InitializeNetworkThread();
     }
 
@@ -186,6 +174,24 @@ namespace Network {
 
         adapter->adapterIndex = adapters.get_length();
         adapters.add_back(adapter);
+
+        releaseLock(&adaptersLock);
+    }
+
+    void NetFS::RemoveAdapter(NetworkAdapter* adapter){
+        acquireLock(&adaptersLock);
+
+        for(unsigned i = 0; i < adapters.get_length(); i++){
+            if(adapters[i] == adapter){
+                for(IPSocket* sock : adapter->boundSockets){
+                    sock->adapter = nullptr;
+                }
+                adapter->boundSockets.clear();
+
+                adapters.erase(i);
+                break;
+            }
+        }
 
         releaseLock(&adaptersLock);
     }

@@ -294,14 +294,22 @@ namespace ModuleManager {
 
             char* symbolName = symStringTable + symbol.name;
             if(symbol.shIndex != 0){
-                if((symbolBinding == STB_GLOBAL || symbolBinding == STB_WEAK)){
+                if(symbolBinding == STB_GLOBAL){
                     KernelSymbol* sym;
-                    assert(!ResolveKernelSymbol(symbolName, sym)); // Ensure it does not exist
+                    if(ResolveKernelSymbol(symbolName, sym)){
+                        Log::Error("Symbol '%s' already exists!", symbolName);
+                        KernelPanic((const char*[]){"Symbol", symbolName, "Already exists!"}, 3);
+                    }
 
                     sym = new KernelSymbol({ .address = symbol.value + section.addr, .mangledName = strdup(symbolName) }); // Add symbol to table
 
                     module->globalSymbols.add_back(sym);
                     AddKernelSymbol(sym);
+                } else if(symbolBinding == STB_WEAK){
+                    KernelSymbol* sym;
+                    if(ResolveKernelSymbol(symbolName, sym)){
+                        Log::Debug(debugLevelModules, DebugLevelNormal, "[Module] Weak symbol '%s' already exists! Will not add to global symbol table.", symbolName);
+                    }
                 } else {
                     assert(symbolBinding == STB_LOCAL && symbol.shIndex);
                 }

@@ -6,6 +6,8 @@
 #include <Logging.h>
 
 bool Semaphore::Wait(){
+    assert(CheckInterrupts());
+
     acquireLock(&lock);
     __sync_fetch_and_sub(&value, 1);
 

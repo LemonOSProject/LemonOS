@@ -12,7 +12,6 @@
 #include <Panic.h>
 #include <Scheduler.h>
 #include <Syscalls.h>
-#include <Net/8254x.h>
 #include <Storage/NVMe.h>
 #include <Storage/AHCI.h>
 #include <Storage/ATA.h>
@@ -57,7 +56,6 @@ void KernelProcess(){
 
 	ServiceFS::Initialize();
 
-	Network::InitializeDrivers();
 	Network::InitializeConnections();
 
 	if(progressBuffer)
