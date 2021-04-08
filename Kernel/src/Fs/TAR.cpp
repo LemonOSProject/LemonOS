@@ -20,8 +20,7 @@ inline static long GetSize(char* size){ // Get size of file in blocks
 
 inline static long GetBlockCount(char* size){ // Get size of file in blocks
     long sz = OctToDec(size, 12);
-    long round = (sz % 512) ? (512 - (sz % 512)) : 0; // Round up to 512 byte multiple
-    return (sz + round) / 512;
+    return (sz + 511) / 512;
 }
 
 inline static uint32_t TarTypeToFilesystemFlags(char type){
@@ -93,7 +92,10 @@ namespace fs::tar{
         while(i < blockCount){
             if(strncmp(blocks[i].ustar.name, dirHeader->ustar.name, strlen(dirHeader->ustar.name)) || !strlen(blocks[i].ustar.name)){
                 break; // End of directory - header is not in directory
+            } else if(blocks[i].ustar.name[strlen(dirHeader->ustar.name)] != '/'){ // Check for the path separator
+                break; // Wwe encountered a file with a name starting with the name of the directory
             }
+
             dirNode->entryCount++;
             i += GetBlockCount(blocks[i].ustar.size) + 1;
         }
