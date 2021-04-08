@@ -1,4 +1,4 @@
-# LIC (Lemon Interface Compiler)
+# LIC (Lemon Interface Compiler, Work In Progress)
 
 See [Inter-process Communication in Lemon OS](../System/IPC/README.md)
 

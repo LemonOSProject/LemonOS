@@ -11,4 +11,4 @@ LemonWM is the window manager for Lemon OS.
 ```backgroundImage``` *(string)*  &emsp; Path to background image\
 ```theme``` *(string)*  &emsp; (Currently unused) System theme\
 ```displayFramerate``` *(boolean)*  &emsp; Whether or not to display framerate counter.\
-```targetFramerate``` *(number)*  &emsp; LemonWM will try to stay above this framerate. This is used so that only a necessary frames are rendered and too much CPU time is not used.
+```targetFramerate``` *(number)*  &emsp; LemonWM will try to keep around this framerate. This is used so that only a necessary amount of frames are rendered to preserve CPU time. 
