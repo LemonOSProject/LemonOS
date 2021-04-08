@@ -22,3 +22,4 @@ add_project_arguments(module_cpp_args, language : 'cpp')
 
 executable('testmodule.sys', ['TestModule/Main.cpp'], include_directories : module_include_dirs, link_args : [ '-r', module_c_args ])
 executable('e1k.sys', ['Intel8254x/Main.cpp'], include_directories : module_include_dirs, link_args : [ '-r', module_c_args ])
+executable('hdaudio.sys', ['HDAudio/Main.cpp'], include_directories : module_include_dirs, link_args : [ '-r', module_c_args ])

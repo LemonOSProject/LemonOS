@@ -8,8 +8,6 @@
 namespace Audio {
 	class IntelHDAudioController : public Device, private PCIDevice {
 	public:
-		static void Initialize();
-
 		IntelHDAudioController(const PCIInfo& info);
 	private:
 		struct ControllerRegs {

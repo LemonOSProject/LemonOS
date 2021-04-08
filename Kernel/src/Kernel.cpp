@@ -23,7 +23,6 @@
 #include <CPU.h>
 #include <Lemon.h>
 #include <Objects/Service.h>
-#include <Audio/HDAudio.h>
 #include <Modules.h>
 #include <Symbols.h>
 
@@ -49,8 +48,6 @@ void KernelProcess(){
 	ATA::Init();
 	AHCI::Init();
 
-	Audio::IntelHDAudioController::Initialize();
-
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 + 24 * 2, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
@@ -63,6 +60,27 @@ void KernelProcess(){
 
 	if(FsNode* node = fs::ResolvePath("/system/lemon")){
 		fs::volumes->add_back(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
+	}
+
+	if(FsNode* node = fs::ResolvePath("/initrd/modules.cfg")){
+		char* buffer = new char[node->size + 1];
+
+		ssize_t read = fs::Read(node, 0, node->size, buffer);
+		if(read > 0){
+			buffer[read] = 0; // Null-terminate the buffer
+
+			char* save;
+			char* path = strtok_r(buffer, "\n", &save);
+			while(path){
+				if(strlen(path) > 0){
+					ModuleManager::LoadModule(path); // modules.cfg should contain a list of paths to modules
+				}
+
+				path = strtok_r(nullptr, "\n", &save);
+			}
+		}
+
+		delete[] buffer;
 	}
 
 	Log::Info("Loading Init Process...");

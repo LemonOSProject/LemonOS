@@ -60,7 +60,6 @@ int ModuleInit(){
     }
 
     if(adapters->get_length() == 0){
-        delete adapters;
         return 1; // We haven't found or successfully initialized any cards so let the kernel unload us
     }
 
@@ -72,6 +71,8 @@ int ModuleExit(){
         Network::NetFS::GetInstance()->RemoveAdapter(card);
         delete card;
     }
+
+    delete adapters;
 
     return 0;
 }

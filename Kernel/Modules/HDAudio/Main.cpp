@@ -1,4 +1,6 @@
-#include <Audio/HDAudio.h>
+#include "HDAudio.h"
+
+#include <Module.h>
 
 #include <Pair.h>
 #include <PCI.h>
@@ -64,14 +66,7 @@ namespace Audio {
 		{ PCI::VendorIntel, 0x3a6e },
 	};
 
-	void IntelHDAudioController::Initialize(){
-		for(auto& p : controllerPCIIDs){
-			PCI::EnumeratePCIDevices(p.item2, p.item1, [](const PCIInfo& info) -> void {
-				DeviceManager::RegisterDevice(new IntelHDAudioController(info));
-			});
-		}
-	}
-
+	static Vector<IntelHDAudioController*>* audioControllers;
 	IntelHDAudioController::IntelHDAudioController(const PCIInfo& info) : Device(DeviceTypeAudioController), PCIDevice(info) {
 		SetDeviceName("Intel HD Audio Controller");
 
@@ -85,4 +80,35 @@ namespace Audio {
 
 		Log::Info("[HDAudio] Initializing Intel HD Audio Controller (Base: %x, Virtual Base: %x, Global Control: %x)", bar, cRegs, cRegs->globalControl);
 	}
+
+	int ModuleInit(){
+		audioControllers = new Vector<IntelHDAudioController*>();
+
+		for(auto& p : controllerPCIIDs){
+			PCI::EnumeratePCIDevices(p.item2, p.item1, [](const PCIInfo& info) -> void {
+				IntelHDAudioController* cnt = new IntelHDAudioController(info);
+
+				DeviceManager::RegisterDevice(cnt);
+				audioControllers->add_back(cnt);
+			});
+		}
+
+		if(audioControllers->get_length() <= 0){
+			return 1; // No controllers present, module can be unloaded
+		}
+
+		return 0;
+	}
+
+	int ModuleExit(){
+		for(auto& cnt : *audioControllers){
+			delete cnt;
+		}
+		audioControllers->clear();
+
+		delete audioControllers;
+		return 0;
+	}
+
+	DECLARE_MODULE("hdaudio", "Intel HD Audio Controller Driver", ModuleInit, ModuleExit);
 }

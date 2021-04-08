@@ -65,8 +65,6 @@ cpp_files = [
     'src/Video/Video.cpp',
     'src/Video/VideoConsole.cpp',
 
-    'src/Audio/HDAudio.cpp',
-
     'src/Fs/Ext2.cpp',
     'src/Fs/Fat32.cpp',
     'src/Fs/Filesystem.cpp',

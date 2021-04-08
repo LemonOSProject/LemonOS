@@ -5,6 +5,7 @@ cp Applications/build/subprojects/LemonUtils/*.lef Initrd/ # Create a backup of 
 
 mkdir -p Initrd/modules
 cp -r Kernel/build/Modules/*.sys Initrd/modules # Add kernel modules
+cp Kernel/modules.cfg Initrd/
 
 nm Kernel/build/kernel.sys > Initrd/kernel.map
 
