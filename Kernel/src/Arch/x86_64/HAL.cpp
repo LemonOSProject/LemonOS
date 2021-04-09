@@ -235,8 +235,7 @@ namespace HAL{
             case Stivale2TagCmdLine: {
                 stivale2_tag_cmdline_t* cmdLineTag = reinterpret_cast<stivale2_tag_cmdline_t*>(tagPhys);
 
-                cmdLine = reinterpret_cast<char*>(Memory::KernelAllocate4KPages(1));
-                Memory::KernelMapVirtualMemory4K(cmdLineTag->cmdLine, (uintptr_t)cmdLine, 1);
+                cmdLine = reinterpret_cast<char*>(cmdLineTag->cmdLine);
                 break;
             } case Stivale2TagMemoryMap: {
                 stivale2_tag_memory_map_t* mmTag = reinterpret_cast<stivale2_tag_memory_map_t*>(tagPhys);

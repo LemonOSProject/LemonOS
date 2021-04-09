@@ -82,6 +82,7 @@ class ReadWriteLock {
     unsigned activeReaders = 0;
     lock_t fileLock = 0;
     lock_t lock = 0;
+    lock_t activeReadersLock = 0;
 
     bool writerAcquiredLock = false; // Whether or not the writer has acquired lock (but not fileLock) 
 
@@ -94,10 +95,14 @@ public:
     inline void AcquireRead(){
         acquireLock(&lock);
 
-        activeReaders++;
+        acquireLock(&activeReadersLock);
+        __sync_fetch_and_add(&activeReaders, 1);
 
         if(activeReaders == 1){
+            releaseLock(&activeReadersLock);
             acquireLock(&fileLock);
+        } else {
+            releaseLock(&activeReadersLock)
         }
 
         releaseLock(&lock);
@@ -123,11 +128,13 @@ public:
     }
 
     inline void ReleaseRead(){
+        acquireLock(&activeReadersLock);
         if(activeReaders == 1){
             releaseLock(&fileLock);
         }
 
-        activeReaders--;
+        __sync_fetch_and_sub(&activeReaders, 1);
+        releaseLock(&activeReadersLock);
     }
 
     inline void ReleaseWrite(){
