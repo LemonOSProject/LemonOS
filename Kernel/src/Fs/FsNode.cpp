@@ -8,10 +8,12 @@ FsNode::~FsNode(){
 }
 
 ssize_t FsNode::Read(size_t, size_t, uint8_t *){
+    Log::Warning("Base FsNode::Read called!");
     return -ENOSYS;
 }
 
 ssize_t FsNode::Write(size_t, size_t, uint8_t *){
+    Log::Warning("Base FsNode::Write called!");
     return -ENOSYS;
 }
 
@@ -32,6 +34,7 @@ void FsNode::Close(){
 }
 
 int FsNode::ReadDir(DirectoryEntry*, uint32_t){
+    Log::Warning("Base FsNode::ReadDir called!");
     return -ENOSYS;
 }
 
@@ -40,10 +43,12 @@ FsNode* FsNode::FindDir(char* name){
 }
 
 int FsNode::Create(DirectoryEntry*, uint32_t){
+    Log::Warning("Base FsNode::Create called!");
     return -ENOSYS;
 }
 
 int FsNode::CreateDirectory(DirectoryEntry*, uint32_t){
+    Log::Warning("Base FsNode::CreateDirectory called!");
     return -ENOSYS;
 }
 
@@ -52,22 +57,27 @@ ssize_t FsNode::ReadLink(char* pathBuffer, size_t bufSize){
         return -EINVAL; // Not a symlink
     }
 
+    Log::Warning("Base FsNode::ReadLink called!");
     return -ENOSYS;
 }
 
 int FsNode::Link(FsNode*, DirectoryEntry*){
+    Log::Warning("Base FsNode::Link called!");
     return -ENOSYS;
 }
 
 int FsNode::Unlink(DirectoryEntry*, bool unlinkDirs){
+    Log::Warning("Base FsNode::Unlink called!");
     return -ENOSYS;
 }
 
 int FsNode::Truncate(off_t length){
+    Log::Warning("Base FsNode::Truncate called!");
     return -ENOSYS;
 }
 
 int FsNode::Ioctl(uint64_t cmd, uint64_t arg){
+    Log::Debug(debugLevelFilesystem, DebugLevelNormal, "Base FsNode::Ioctl called! (cmd: %x)", cmd);
     return -ENOSYS;
 }
 

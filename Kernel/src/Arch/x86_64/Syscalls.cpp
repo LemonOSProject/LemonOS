@@ -29,6 +29,8 @@
 #include <ABI/Process.h>
 #include <ABI/Syscall.h>
 
+#include <sys/ioctl.h>
+
 #define SC_ARG0(r) (r)->rdi
 #define SC_ARG1(r) (r)->rsi
 #define SC_ARG2(r) (r)->rdx
@@ -779,11 +781,13 @@ long SysRenameAt(RegisterContext* r){
 
 // SendMessage(message_t* msg) - Sends an IPC message to a process
 long SysSendMessage(RegisterContext* r){
+	Log::Warning("SysSendMessage is a stub!");
 	return -ENOSYS;
 }
 
 // RecieveMessage(message_t* msg) - Grabs next message on queue and copies it to msg
 long SysReceiveMessage(RegisterContext* r){
+	Log::Warning("SysReceiveMessage is a stub!");
 	return -ENOSYS;
 }
 
@@ -1020,6 +1024,11 @@ long SysIoctl(RegisterContext* r){
 		return -EINVAL;
 	}
 
+	if(request == FIOCLEX){
+		handle->mode |= O_CLOEXEC;
+		return 0;
+	}
+
 	int ret = fs::Ioctl(handle, request, arg);
 
 	if(result && ret > 0){
@@ -1069,7 +1078,6 @@ long SysMunmap(RegisterContext* r){
 		for(unsigned i = 0; i < count; i++){
 			if(uintptr_t mem = Memory::VirtualToPhysicalAddress(address + i * PAGE_SIZE_4K, process->addressSpace); mem){
 				Memory::FreePhysicalMemoryBlock(mem);
-				Log::Info("freeing mem %d", mem);
 			}
 		}
 

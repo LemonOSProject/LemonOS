@@ -24,7 +24,7 @@ namespace Log{
 	
 	void WriteN(const char* str, size_t n);
 
-	class LogDevice : public Device{
+	class LogDevice : public Device {
 	public:
 		LogDevice(char* name) : Device(name, DeviceTypeKernelLog){
 			flags = FS_NODE_FILE;

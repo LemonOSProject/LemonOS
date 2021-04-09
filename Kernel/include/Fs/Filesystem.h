@@ -9,6 +9,7 @@
 #include <Types.h>
 
 #include <abi-bits/abi.h>
+#include <abi-bits/fcntl.h>
 
 #define FD_SETSIZE 1024
 
