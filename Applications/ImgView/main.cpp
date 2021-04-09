@@ -9,10 +9,8 @@
 #define IMGVIEW_OPEN 1
 
 Lemon::GUI::Window* window;
-Lemon::GUI::ScrollView* sv;
-Lemon::GUI::Bitmap* imgWidget;
+Lemon::GUI::Image* imgWidget;
 Lemon::GUI::WindowMenu fileMenu;
-surface_t image;
 
 int LoadImage(char* path){
     if(!path){
@@ -20,7 +18,7 @@ int LoadImage(char* path){
         return 1;
     }
 
-    int ret = Lemon::Graphics::LoadImage(path, &image);
+    int ret = imgWidget->Load(path);
 
     if(ret){
         char msg[128];
@@ -34,18 +32,29 @@ int LoadImage(char* path){
 
 void OnWindowCmd(unsigned short cmd, Lemon::GUI::Window* win){
     if(cmd == IMGVIEW_OPEN){
-        free(image.buffer);
         if(LoadImage(Lemon::GUI::FileDialog("/"))){
+            delete win;
+
             exit(-1);
         }
-        sv->RemoveWidget(imgWidget);
-        delete imgWidget;
-        imgWidget = new Lemon::GUI::Bitmap({{0, 0}, {0, 0}}, &image);
-        sv->AddWidget(imgWidget);
     }
 }
 
 int main(int argc, char** argv){
+    window = new Lemon::GUI::Window("Image Viewer", {800, 500}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
+    window->CreateMenuBar();
+
+    fileMenu.first = "File";
+	fileMenu.second.push_back({.id = IMGVIEW_OPEN, .name = std::string("Open...")});
+
+    window->menuBar->items.push_back(fileMenu);
+	window->OnMenuCmd = OnWindowCmd;
+
+    imgWidget = new Lemon::GUI::Image({{0, 0}, {0, 0}});
+    imgWidget->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
+
+    window->AddWidget(imgWidget);
+
     if(argc > 1){
         if(LoadImage(argv[1])){
             return -1;
@@ -53,23 +62,6 @@ int main(int argc, char** argv){
     } else if(LoadImage(Lemon::GUI::FileDialog("."))){
         return -1;
     }
-
-    fileMenu.first = "File";
-	fileMenu.second.push_back({.id = IMGVIEW_OPEN, .name = std::string("Open...")});
-
-    window = new Lemon::GUI::Window("Image Viewer", {800, 500}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
-    window->CreateMenuBar();
-    window->menuBar->items.push_back(fileMenu);
-	window->OnMenuCmd = OnWindowCmd;
-
-    sv = new Lemon::GUI::ScrollView({{0, 0}, {0, 0}});
-    sv->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
-
-    imgWidget = new Lemon::GUI::Bitmap({{0, 0}, {0, 0}}, &image);
-
-    sv->AddWidget(imgWidget);
-
-    window->AddWidget(sv);
     
 	while(!window->closed){
         Lemon::LemonEvent ev;

@@ -213,6 +213,21 @@ namespace Lemon::GUI {
         void Paint(surface_t* surface);
     };
 
+    class Image : public Widget {
+    public:
+        Image(rect_t _bounds);
+        Image(rect_t _bounds, const char* path);
+
+        void Load(surface_t* image);
+        int Load(const char* imagePath);
+
+        void Paint(surface_t* surface);
+
+        void UpdateFixedBounds();
+    protected:
+        Graphics::Texture texture;
+    };
+
     class Label : public Widget{
     public:
         rgba_colour_t textColour = colours[Colour::Text];

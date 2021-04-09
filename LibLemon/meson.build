@@ -27,6 +27,7 @@ cpp_files = [
     'src/gfx/image.cpp',
     'src/gfx/surface.cpp',
     'src/gfx/text.cpp',
+    'src/gfx/texture.cpp',
 
     'src/ipc/message.cpp',
 	'src/ipc/interface.cpp',
@@ -36,6 +37,7 @@ cpp_files = [
     'src/gui/colours.cpp',
     'src/gui/fileview.cpp',
     'src/gui/filedialog.cpp',
+    'src/gui/image.cpp',
     'src/gui/messagebox.cpp',
 
     'src/shell/shell.cpp',

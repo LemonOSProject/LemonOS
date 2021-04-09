@@ -386,7 +386,6 @@ namespace Lemon::GUI {
     //////////////////////////
     // Bitmap
     //////////////////////////
-
     Bitmap::Bitmap(rect_t _bounds) : Widget(_bounds) {
         surface.buffer = (uint8_t*)malloc(fixedBounds.size.x*fixedBounds.size.y*4);
         surface.width = fixedBounds.size.x;

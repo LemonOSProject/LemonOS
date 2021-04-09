@@ -67,6 +67,68 @@ namespace Lemon::Graphics{
         Image_PNG,
     };
 
+    class Texture final {
+    public:
+        enum {
+            ScaleNone,
+            ScaleFit,
+            ScaleFill,
+        } scaling = ScaleFill;
+
+        Texture(vector2i_t size);
+        ~Texture();
+
+        /////////////////////////////
+        /// \brief Set Texture size
+        ///
+        /// Set the size of the texture and updates surface
+        ///
+        /// \param newSize New size of texture
+        /////////////////////////////
+        void SetSize(vector2i_t newSize);
+
+        /////////////////////////////
+        /// \brief Set whether or not alpha channel is used
+        /////////////////////////////
+        inline void SetAlpha(bool v) { alpha = v; } // Set whether the alpha channel is enabled
+
+        /////////////////////////////
+        /// \brief Render TextObject on surface
+        ///
+        /// \param surface Surface to render to
+        /////////////////////////////
+        void Blit(vector2i_t pos, surface_t* surface);
+
+        /////////////////////////////
+        /// \brief Loads new texture source data
+        ///
+        /// Loads new source data and updates the render surface
+        ///
+        /// \param sourcePixels Source pixel data
+        /////////////////////////////
+        void LoadSourcePixels(surface_t* sourcePixels);
+
+        /////////////////////////////
+        /// \brief Loads new texture source data, assuming ownership of the buffer
+        ///
+        /// Loads new source data assuming ownership of the buffer and updates the render surface
+        ///
+        /// \param sourcePixels Source pixel data
+        /////////////////////////////
+        void AdoptSourcePixels(surface_t* sourcePixels);
+
+        void UpdateSurface();
+
+        inline Vector2i Size() const { return size; }
+
+    protected:
+        surface_t source = { .width = 0, .height = 0, .depth = 32, .buffer = nullptr }; // Source pixels
+        surface_t surface; // Result pixels
+        
+        Vector2i size;
+        bool alpha = false;
+    };
+
     // Check for BMP signature
     static inline bool IsBMP(const void* data){
         return (strncmp(((bitmap_file_header_t*)data)->magic,"BM", 2) == 0);
