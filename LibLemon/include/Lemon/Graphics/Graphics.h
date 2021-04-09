@@ -69,11 +69,11 @@ namespace Lemon::Graphics{
 
     class Texture final {
     public:
-        enum {
+        enum TextureScaling {
             ScaleNone,
             ScaleFit,
             ScaleFill,
-        } scaling = ScaleFill;
+        };
 
         Texture(vector2i_t size);
         ~Texture();
@@ -91,6 +91,11 @@ namespace Lemon::Graphics{
         /// \brief Set whether or not alpha channel is used
         /////////////////////////////
         inline void SetAlpha(bool v) { alpha = v; } // Set whether the alpha channel is enabled
+
+        /////////////////////////////
+        /// \brief Set texture scaling mode
+        /////////////////////////////
+        inline void SetScaling(TextureScaling s) { scaling = s; UpdateSurface(); } // Set whether the alpha channel is enabled
 
         /////////////////////////////
         /// \brief Render TextObject on surface
@@ -122,6 +127,8 @@ namespace Lemon::Graphics{
         inline Vector2i Size() const { return size; }
 
     protected:
+        TextureScaling scaling = ScaleFit;
+
         surface_t source = { .width = 0, .height = 0, .depth = 32, .buffer = nullptr }; // Source pixels
         surface_t surface; // Result pixels
         

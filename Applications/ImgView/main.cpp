@@ -6,11 +6,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define IMGVIEW_OPEN 1
+#define IMGVIEW_OPEN 0x1
+#define IMGVIEW_SCALING_NONE 0x11
+#define IMGVIEW_SCALING_FIT 0x12
+#define IMGVIEW_SCALING_FILL 0x13
 
 Lemon::GUI::Window* window;
 Lemon::GUI::Image* imgWidget;
-Lemon::GUI::WindowMenu fileMenu;
+Lemon::GUI::WindowMenu fileMenu = { "File", {{.id = IMGVIEW_OPEN, .name = std::string("Open...")}} };
+Lemon::GUI::WindowMenu viewMenu = { "View", {
+    { .id = IMGVIEW_SCALING_NONE, .name = std::string("No Scaling") },
+    { .id = IMGVIEW_SCALING_FIT, .name = std::string("Fit Image") },
+    { .id = IMGVIEW_SCALING_FILL, .name = std::string("Fill Image") }
+} };
 
 int LoadImage(char* path){
     if(!path){
@@ -37,6 +45,12 @@ void OnWindowCmd(unsigned short cmd, Lemon::GUI::Window* win){
 
             exit(-1);
         }
+    } else if(cmd == IMGVIEW_SCALING_NONE){
+        imgWidget->SetScaling(Lemon::Graphics::Texture::TextureScaling::ScaleNone);
+    } else if(cmd == IMGVIEW_SCALING_FIT){
+        imgWidget->SetScaling(Lemon::Graphics::Texture::TextureScaling::ScaleFit);
+    } else if(cmd == IMGVIEW_SCALING_FILL){
+        imgWidget->SetScaling(Lemon::Graphics::Texture::TextureScaling::ScaleFill);
     }
 }
 
@@ -44,14 +58,13 @@ int main(int argc, char** argv){
     window = new Lemon::GUI::Window("Image Viewer", {800, 500}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
     window->CreateMenuBar();
 
-    fileMenu.first = "File";
-	fileMenu.second.push_back({.id = IMGVIEW_OPEN, .name = std::string("Open...")});
-
     window->menuBar->items.push_back(fileMenu);
+    window->menuBar->items.push_back(viewMenu);
 	window->OnMenuCmd = OnWindowCmd;
 
     imgWidget = new Lemon::GUI::Image({{0, 0}, {0, 0}});
     imgWidget->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
+    imgWidget->SetScaling(Lemon::Graphics::Texture::TextureScaling::ScaleFit);
 
     window->AddWidget(imgWidget);
 

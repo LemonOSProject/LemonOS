@@ -220,6 +220,7 @@ namespace Lemon::GUI {
 
         void Load(surface_t* image);
         int Load(const char* imagePath);
+        inline void SetScaling(Graphics::Texture::TextureScaling scaling) { texture.SetScaling(scaling); }
 
         void Paint(surface_t* surface);
 
