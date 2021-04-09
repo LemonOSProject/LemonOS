@@ -31,7 +31,7 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 - Writable Ext2 Filesystem
 - IDE, AHCI and NVMe Driver
 - Dynamic Linking
-- Ports including Freetype, Binutils and Python 3.8
+- Ports including LLVM/Clang, Ninja, Freetype, Binutils and Python 3.8
 - [mlibc](https://github.com/managarm/mlibc) C Library Port
 - [GnuBoy Port](https://github.com/LemonOSProject/lemon-gnuboy)
 - [DOOM Port](https://github.com/LemonOSProject/LemonDOOM)
@@ -39,7 +39,6 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 ## Work In Progress
 - XHCI Driver
 - Intel HD Audio Driver
-- Clang/LLVM Port
 
 ## System requirements
 - 256 MB RAM (512 is more optimal)
