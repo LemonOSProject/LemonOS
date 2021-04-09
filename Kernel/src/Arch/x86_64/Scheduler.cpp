@@ -603,7 +603,8 @@ namespace Scheduler{
             //char* linkPath = elfInfo.linkerPath;
             uintptr_t linkerBaseAddress = 0x7FC0000000; // Linker base address
 
-            FsNode* node = fs::ResolvePath("/initrd/ld.so");
+            FsNode* node = fs::ResolvePath("/lib/ld.so");
+            assert(node);
 
             void* linkerElf = kmalloc(node->size);
 

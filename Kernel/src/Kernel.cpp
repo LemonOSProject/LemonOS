@@ -58,10 +58,6 @@ void KernelProcess(){
 	if(progressBuffer)
 		Video::DrawBitmapImage(videoMode.width/2 + 24 * 3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 
-	if(FsNode* node = fs::ResolvePath("/system/lemon")){
-		fs::volumes->add_back(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
-	}
-
 	if(FsNode* node = fs::ResolvePath("/initrd/modules.cfg")){
 		char* buffer = new char[node->size + 1];
 
@@ -81,6 +77,19 @@ void KernelProcess(){
 		}
 
 		delete[] buffer;
+	}
+
+	if(FsNode* node = fs::ResolvePath("/system/lemon")){
+		fs::volumes->add_back(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
+	}
+
+	if(FsNode* node = fs::ResolvePath("/system/lib")){
+		fs::volumes->add_back(new fs::LinkVolume(node, "lib"));
+	} else {
+		FsNode* initrd = fs::ResolvePath("/initrd");
+		assert(initrd);
+
+		fs::volumes->add_back(new fs::LinkVolume(initrd, "lib")); // If /system/lib is not present is /initrd
 	}
 
 	Log::Info("Loading Init Process...");
@@ -178,7 +187,6 @@ extern "C"
 	
 	fs::tar::TarVolume* tar = new fs::tar::TarVolume(HAL::bootModules[0].base, HAL::bootModules[0].size, "initrd");
 	fs::RegisterVolume(tar);
-	fs::volumes->add_back(new fs::LinkVolume(tar, "lib"));
 
 	Log::Write("OK");
 
