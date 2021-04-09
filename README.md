@@ -18,7 +18,7 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 [Nightly Images](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml?query=is%3Asuccess+branch%3Amaster) - Go to latest job, disk images located under Artifacts\
 [Latest Release](https://github.com/LemonOSProject/LemonOS/releases/latest)
 
-![Lemon OS Screenshot](Screenshots/image6.png)\
+![Lemon OS Screenshot](Screenshots/image7.png)\
 [More screenshots](Screenshots)
 ## Features
 - Modular Kernel
@@ -31,7 +31,6 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 - Writable Ext2 Filesystem
 - IDE, AHCI and NVMe Driver
 - Dynamic Linking
-- Intel 8254x Ethernet Driver
 - Ports including Freetype, Binutils and Python 3.8
 - [mlibc](https://github.com/managarm/mlibc) C Library Port
 - [GnuBoy Port](https://github.com/LemonOSProject/lemon-gnuboy)
@@ -39,12 +38,13 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 
 ## Work In Progress
 - XHCI Driver
+- Intel HD Audio Driver
 - Clang/LLVM Port
 
 ## System requirements
 - 256 MB RAM (512 is more optimal)
 - x86_64 Processor
-- 2 cores/CPUs recommended
+- 2 or more CPU cores recommended
 - I/O APIC
 - ATA, NVMe or AHCI disk (AHCI *strongly* recommended)
 
