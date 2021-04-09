@@ -170,6 +170,8 @@ long SysExec(RegisterContext* r){
 
 	kfree(name);
 
+	Scheduler::StartProcess(proc);
+
 	return proc->pid;
 }
 

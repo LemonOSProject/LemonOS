@@ -720,9 +720,10 @@ namespace Scheduler{
         assert(!(thread->registers.rsp & 0xF));
         
         processes->add_back(proc);
-
-        InsertNewThreadIntoQueue(proc->threads[0]);
-
         return proc;
+    }
+
+    void StartProcess(process_t* proc){
+        InsertNewThreadIntoQueue(proc->threads[0]);
     }
 }

@@ -119,6 +119,8 @@ void KernelProcess(){
 	strcpy(initProc->workingDir, "/");
 	strcpy(initProc->name, "Init");
 
+	Scheduler::StartProcess(initProc);
+
 	for(;;) {
 		acquireLock(&Scheduler::destroyedProcessesLock);
 		for(auto it = Scheduler::destroyedProcesses->begin(); it != Scheduler::destroyedProcesses->end(); it++){

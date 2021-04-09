@@ -111,6 +111,7 @@ namespace Scheduler{
 
     process_t* CreateProcess(void* entry);
 	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr, int envc = 0, char** envp = nullptr, const char* execPath = nullptr);
+	void StartProcess(process_t* proc);
 
 	inline static process_t* GetCurrentProcess(){
         CPU* cpu = GetCPULocal();
