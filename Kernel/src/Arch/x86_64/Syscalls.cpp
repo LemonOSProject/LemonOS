@@ -107,13 +107,25 @@ long SysExec(RegisterContext* r){
 		}
 	}
 
+	Log::Info("Loading: %s", (char*)SC_ARG0(r));
+
 	char* kernelArgv[argc];
 	for(int i = 0; i < argc; i++){
-		kernelArgv[i] = (char*)kmalloc(strlen(argv[i]) + 1);
-		strcpy(kernelArgv[i], argv[i]);
+		if(!argv[i]){ // Some programs may attempt to terminate argv with a null pointer
+			argc = i;
+			break;
+		}
+
+		size_t len;
+		if(strlenSafe(argv[i], len, currentProcess->addressSpace)){
+			Log::Warning("SysExec: Reached unallocated memory reading argv");
+			return -EFAULT;
+		}
+
+		kernelArgv[i] = (char*)kmalloc(len + 1);
+		strncpy(kernelArgv[i], argv[i], len);
 	}
 
-	Log::Info("Loading: %s", (char*)SC_ARG0(r));
 	timeval tv = Timer::GetSystemUptimeStruct();
 	uint8_t* buffer = (uint8_t*)kmalloc(node->size);
 	size_t read = fs::Read(node, 0, node->size, buffer);

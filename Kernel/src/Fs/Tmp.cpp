@@ -276,12 +276,17 @@ namespace fs::Temp{
     }
         
     int TempNode::Link(FsNode* file, DirectoryEntry* ent){
+
         if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
             return -ENOTDIR;
         }
 
         if(file->volumeID != vol->volumeID){
             return -EXDEV; // Different filesystem
+        }
+        
+        if(Find(ent->name)){
+            return -EEXIST;
         }
 
         if(file->IsDirectory()){
@@ -296,6 +301,8 @@ namespace fs::Temp{
         file->nlink++;
 
         children.add_back(dirent);
+
+        *ent = dirent;
 
         return 0;
     }
@@ -326,7 +333,7 @@ namespace fs::Temp{
         node->nlink--;
 
         for(auto it = children.begin(); it != children.end(); it++){
-            if(it->node == node){
+            if(!strcmp(ent->name, it->name)){
                 children.remove(it);
                 break;
             }

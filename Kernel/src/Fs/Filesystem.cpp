@@ -47,8 +47,7 @@ retry:
 	releaseLock(&lock);
 }
 
-DirectoryEntry::DirectoryEntry(FsNode* node, const char* name) { 
-	this->node = node;
+DirectoryEntry::DirectoryEntry(FsNode* node, const char* name) : node(node) { 
 	strncpy(this->name, name, NAME_MAX);
 
 	switch(node->flags & FS_NODE_TYPE){
