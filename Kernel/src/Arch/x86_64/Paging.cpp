@@ -17,8 +17,6 @@
 #define KERNEL_HEAP_PDPT_INDEX 511
 #define KERNEL_HEAP_PML4_INDEX 511
 
-address_space_t* currentAddressSpace;
-
 uint64_t kernelPML4Phys;
 extern int lastSyscall;
 
@@ -49,7 +47,7 @@ namespace Memory{
 		return address;
 	}
 
-	uint64_t VirtualToPhysicalAddress(uint64_t addr, address_space_t* addressSpace) {
+	uint64_t VirtualToPhysicalAddress(uint64_t addr, page_map_t* addressSpace) {
 		uint64_t address = 0;
 
 		uint32_t pml4Index = PML4_GET_INDEX(addr);
@@ -107,8 +105,8 @@ namespace Memory{
 		asm("mov %%rax, %%cr3" :: "a"((uint64_t)kernelPML4 - KERNEL_VIRTUAL_BASE));
 	}
 
-	address_space_t* CreateAddressSpace(){
-		address_space_t* addressSpace = (address_space_t*)kmalloc(sizeof(address_space_t));
+	page_map_t* CreateAddressSpace(){
+		page_map_t* addressSpace = (page_map_t*)kmalloc(sizeof(page_map_t));
 		
 		pdpt_entry_t* pdpt = (pdpt_entry_t*)Memory::KernelAllocate4KPages(1); // PDPT;
 		uintptr_t pdptPhys = Memory::AllocatePhysicalMemoryBlock();
@@ -155,7 +153,7 @@ namespace Memory{
 		return addressSpace;
 	}
 
-	void DestroyAddressSpace(address_space_t* addressSpace){
+	void DestroyAddressSpace(page_map_t* addressSpace){
 		for(int i = 0; i < DIRS_PER_PDPT; i++){
 			if(!addressSpace->pageDirs[i]){
 				continue;
@@ -198,7 +196,7 @@ namespace Memory{
 		}
 	}
 
-	bool CheckRegion(uintptr_t addr, uint64_t len, address_space_t* addressSpace){
+	bool CheckRegion(uintptr_t addr, uint64_t len, page_map_t* addressSpace){
 		return addr < PDPT_SIZE && (addr + len) < PDPT_SIZE && (addressSpace->pdpt[PDPT_GET_INDEX(addr)] & PDPT_USER) && (addressSpace->pdpt[PDPT_GET_INDEX(addr + len)] & PDPT_USER);
 	}
 
@@ -232,7 +230,7 @@ namespace Memory{
 		return 1;
 	}
 
-	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, address_space_t* addressSpace){
+	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, page_map_t* addressSpace){
 		if(addr >> 48) return 0; // Non-canonical or higher-half address
 
 		if(!(addressSpace->pageDirs[PDPT_GET_INDEX(addr)])){
@@ -275,14 +273,14 @@ namespace Memory{
 		return pTable;
 	}
 
-	void CreatePageTable(uint16_t pdptIndex, uint16_t pageDirIndex, address_space_t* addressSpace){
+	void CreatePageTable(uint16_t pdptIndex, uint16_t pageDirIndex, page_map_t* addressSpace){
 		page_table_t pTable = AllocatePageTable();
 		SetPageFrame(&(addressSpace->pageDirs[pdptIndex][pageDirIndex]),pTable.phys);
 		addressSpace->pageDirs[pdptIndex][pageDirIndex] |= PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
 		addressSpace->pageTables[pdptIndex][pageDirIndex] = pTable.virt;
 	}
 
-	void* Allocate4KPages(uint64_t amount, address_space_t* addressSpace){
+	void* Allocate4KPages(uint64_t amount, page_map_t* addressSpace){
 		uint64_t offset = 0;
 		uint64_t pageDirOffset = 0;
 		uint64_t counter = 0;
@@ -511,7 +509,7 @@ namespace Memory{
 		}
 	}
 
-	void Free4KPages(void* addr, uint64_t amount, address_space_t* addressSpace){
+	void Free4KPages(void* addr, uint64_t amount, page_map_t* addressSpace){
 		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
 
 		uint64_t virt = (uint64_t)addr;
@@ -565,7 +563,7 @@ namespace Memory{
 		KernelMapVirtualMemory4K(phys, virt, amount, PAGE_WRITABLE | PAGE_PRESENT);
 	}
 
-	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, address_space_t* addressSpace){
+	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, page_map_t* addressSpace){
 		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
 
 		//phys &= ~(PAGE_SIZE_4K-1);
@@ -600,10 +598,6 @@ namespace Memory{
 		}
 
 		return addr + IO_VIRTUAL_BASE;
-	}
-
-	void ChangeAddressSpace(address_space_t* addressSpace){
-		currentAddressSpace = addressSpace;
 	}
 
 	void PageFaultHandler(void*, RegisterContext* regs)

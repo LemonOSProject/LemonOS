@@ -2988,6 +2988,15 @@ long SysInterruptThread(RegisterContext* r){
 	return 0;
 }
 
+/////////////////////////////
+/// \brief SysLoadKernelModule(path)
+///
+/// Load a kernel module
+///
+/// \param path Filepath of module to load
+
+/// \return 0 on success negative error code on failure
+/////////////////////////////
 long SysLoadKernelModule(RegisterContext* r){
 	process_t* process = Scheduler::GetCurrentProcess();
 
@@ -3013,6 +3022,15 @@ long SysLoadKernelModule(RegisterContext* r){
 	}
 }
 
+/////////////////////////////
+/// \brief SysUnloadKernelModule(name)
+///
+/// Unload a kernel module
+///
+/// \param name Name of kernel module to unload
+
+/// \return 0 on success negative error code on failure
+/////////////////////////////
 long SysUnloadKernelModule(RegisterContext* r){
 	process_t* process = Scheduler::GetCurrentProcess();
 

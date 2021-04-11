@@ -66,7 +66,7 @@ using page_dir_t = pd_entry_t[TABLES_PER_DIR];
 using pdpt_t = pdpt_entry_t[DIRS_PER_PDPT];
 using pml4_t = pml4_entry_t[PDPTS_PER_PML4];
 
-typedef struct{ // Each process will have a maximum of 96GB of virtual memory.
+typedef struct PageMap { // Each process will have a maximum of 96GB of virtual memory.
     pdpt_entry_t* pdpt; // 512GB is more than ample
     pd_entry_t** pageDirs;//[64]; // 64 GB is enough
     uint64_t* pageDirsPhys;
@@ -74,12 +74,12 @@ typedef struct{ // Each process will have a maximum of 96GB of virtual memory.
     pml4_entry_t* pml4;
     uint64_t pdptPhys;
     uint64_t pml4Phys;
-} __attribute__((packed)) address_space_t;
+} __attribute__((packed)) page_map_t;
 
 namespace Memory{
     extern pml4_t kernelPML4;
     
-    void DestroyAddressSpace(address_space_t* addressSpace);
+    void DestroyAddressSpace(page_map_t* addressSpace);
 
     void InitializeVirtualMemory();
 
@@ -90,9 +90,9 @@ namespace Memory{
     void KernelFree2MPages(void* addr, uint64_t amount);
 	void KernelFree4KPages(void* addr, uint64_t amount);
 
-    void* Allocate4KPages(uint64_t amount, address_space_t* addressSpace);
+    void* Allocate4KPages(uint64_t amount, page_map_t* addressSpace);
 
-    void Free4KPages(void* addr, uint64_t amount, address_space_t* addressSpace);
+    void Free4KPages(void* addr, uint64_t amount, page_map_t* addressSpace);
 
     void* KernelAllocate4KPages(uint64_t amount);
     void* KernelAllocate2MPages(uint64_t amount);
@@ -101,17 +101,16 @@ namespace Memory{
     void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount);
     void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount);
     void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags);
-    void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, address_space_t* addressSpace);
+    void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, page_map_t* addressSpace);
 
     uintptr_t GetIOMapping(uintptr_t addr);
 
-    address_space_t* CreateAddressSpace();
-    void ChangeAddressSpace(address_space_t*);
-    bool CheckRegion(uintptr_t addr, uint64_t len, address_space_t* addressSpace);
+    page_map_t* CreateAddressSpace();
+    bool CheckRegion(uintptr_t addr, uint64_t len, page_map_t* addressSpace);
 	bool CheckKernelPointer(uintptr_t addr, uint64_t len);
-	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, address_space_t* addressSpace);
+	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, page_map_t* addressSpace);
     uint64_t VirtualToPhysicalAddress(uint64_t addr);
-    uint64_t VirtualToPhysicalAddress(uint64_t addr, address_space_t* addressSpace);
+    uint64_t VirtualToPhysicalAddress(uint64_t addr, page_map_t* addressSpace);
 
     void SwitchPageDirectory(uint64_t phys);
     

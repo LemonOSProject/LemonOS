@@ -35,7 +35,7 @@ namespace Scheduler{
 
 typedef struct process {
 	pid_t pid = -1; // PID
-	address_space_t* addressSpace; // Pointer to page directory and tables
+	page_map_t* addressSpace; // Pointer to page directory and tables
 	List<mem_region_t> sharedMemory; // Used to ensure these memory regions don't get freed when a process is terminated
 	uint8_t state = ThreadStateRunning; // Process state
 	Vector<Thread*> threads;
