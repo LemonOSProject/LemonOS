@@ -298,7 +298,7 @@ public:
 		releaseLock(&lock);
 	}
 
-	void add_back(const T& obj) {
+	T& add_back(const T& obj) {
 		acquireLock(&lock);
 
 		ListNode<T>* node;
@@ -324,6 +324,8 @@ public:
 		num++;
 		
 		releaseLock(&lock);
+
+		return node->obj;
 	}
 
 	void add_back_unlocked(const T& obj) {

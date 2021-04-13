@@ -3,6 +3,9 @@
 #include <Memory.h>
 #include <Spinlock.h>
 
+#include <Move.h>
+#include <TTraits.h>
+
 template<typename T>
 class Vector{
 	class VectorIterator {
@@ -34,19 +37,19 @@ class Vector{
 			return *this;
 		}
 
-		T& operator*() const{
+		ALWAYS_INLINE T& operator*() const{
 			return vector.data[pos];
 		}
 
-		T* operator->() const{
+		ALWAYS_INLINE T* operator->() const{
 			return &vector.data[pos];
 		}
 
-		friend bool operator==(const VectorIterator& l, const VectorIterator& r){
+		ALWAYS_INLINE friend bool operator==(const VectorIterator& l, const VectorIterator& r){
 			return l.pos == r.pos;
 		}
 
-		friend bool operator!=(const VectorIterator& l, const VectorIterator& r){
+		ALWAYS_INLINE friend bool operator!=(const VectorIterator& l, const VectorIterator& r){
 			return l.pos != r.pos;
 		}
 	};
@@ -66,58 +69,80 @@ public:
 		}
 	}
 
-	T& at(size_t pos) const{
+	ALWAYS_INLINE T& at(size_t pos) const{
 		assert(pos < count);
 
 		return data[pos];
 	}
 
-	T& get_at(size_t pos) const{
+	ALWAYS_INLINE T& get_at(size_t pos) const{
 		return at(pos);
 	}
 
-	T& operator[](size_t pos) const{
+	ALWAYS_INLINE T& operator[](size_t pos) const{
 		return at(pos);
 	}
 
-	size_t size() const{
+	ALWAYS_INLINE size_t size() const{
 		return count;
 	}
 
-	size_t get_length() const {
+	ALWAYS_INLINE size_t get_length() const {
 		return count;
 	}
 
 	void erase(unsigned pos){
 		acquireLock(&lock);
-		assert(pos < count);
-
-		for(unsigned i = pos; i < count - 1; i++){
-			data[i] = data[i + 1];
-		}
+		
+		EraseUnlocked(pos);
 
 		releaseLock(&lock);
 	}
 
-	void reserve(size_t count){
+	void reserve(size_t allocatedSize){
 		acquireLock(&lock);
-		if(count > capacity){
-			capacity = count + 1;
-		}
 
+		assert(allocatedSize >= capacity);
 		if(data){
 			T* oldData = data;
 
-			data = new T[capacity];
-
-			for(unsigned i = 0; i < count; i++){
-				data[i] = oldData[i];
+			data = new T[allocatedSize];
+			
+			if constexpr(TTraits<T>::is_trivial()){
+				memcpy(data, oldData, count * sizeof(T));
+			} else {
+				for(unsigned i = 0; i < count; i++){
+					data[i] = std::move(oldData[i]);
+				}
 			}
 			
 			delete[] oldData;
 		} else {
-			data = new T[capacity];
+			data = new T[allocatedSize];
 		}
+
+		capacity = allocatedSize;
+		releaseLock(&lock);
+	}
+
+	void resize(size_t newSize){
+		acquireLock(&lock);
+
+		size_t oldCount = count;
+		count = newSize;
+
+		if(count > oldCount){
+			EnsureCapacity();
+
+			for(unsigned i = oldCount; i < count; i++){
+				data[i]();
+			}
+		} else if(count < oldCount){
+			for(unsigned i = count; i < oldCount; i++){
+				~data[i]();
+			}
+		}
+
 		releaseLock(&lock);
 	}
 
@@ -125,23 +150,7 @@ public:
 		acquireLock(&lock);
 		count++;
 
-		if(count >= capacity){
-			capacity += (count << 1) + 1;
-
-			if(data){
-				T* oldData = data;
-
-				data = new T[capacity];
-
-				for(unsigned i = 0; i < count; i++){
-					data[i] = oldData[i];
-				}
-				
-				delete[] oldData;
-			} else {
-				data = new T[capacity];
-			}
-		}
+		EnsureCapacity();
 
 		T& ref = data[count - 1];
 
@@ -158,14 +167,16 @@ public:
 	}
 
 	void remove(const T& val){
+		acquireLock(&lock);
+
 		for(unsigned i = 0; i < count; i++){
 			if(data[i] == val){
-				memcpy(&data[i], &data[i + 1], count - i - 1);
-
-				count--;
+				EraseUnlocked(i);
 				return;
 			}
 		}
+
+		releaseLock(&lock);
 	}
 
 	~Vector(){
@@ -200,5 +211,45 @@ public:
 		count = capacity = 0;
 		data = nullptr;
 		releaseLock(&lock);
+	}
+
+private:
+	ALWAYS_INLINE void EnsureCapacity(){
+		if(count >= capacity){
+			size_t newCapacity = capacity + (count << 1) + 1;
+
+			if(data){
+				T* oldData = data;
+				data = new T[newCapacity];
+
+				if constexpr(TTraits<T>::is_trivial()){
+					memcpy(data, oldData, capacity * sizeof(T));
+				} else {
+					for(unsigned i = 0; i < capacity; i++){
+						data[i] = std::move(oldData[i]);
+					}
+				}
+				
+				delete[] oldData;
+			} else {
+				data = new T[newCapacity];
+			}
+
+			capacity = newCapacity;
+		}
+	}
+
+	ALWAYS_INLINE void EraseUnlocked(unsigned pos){
+		assert(pos < count);
+
+		if constexpr(TTraits<T>::is_trivial()){
+			memcpy(&data[pos], &data[pos + 1], (count - pos - 1) * sizeof(T));
+		} else {
+			for(unsigned i = pos; i < count - 1; i++){
+				data[i] = std::move(data[i + 1]);
+			}
+		}
+
+		count--;
 	}
 };
