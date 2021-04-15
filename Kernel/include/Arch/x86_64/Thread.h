@@ -17,7 +17,7 @@ enum {
 	ThreadStateDying, // Thread is actively being killed
 };
 
-struct process;
+struct Process;
 struct Thread;
 
 class ThreadBlocker{
@@ -50,7 +50,7 @@ struct Thread {
 	lock_t lock = 0; // Thread lock
 	lock_t stateLock = 0; // Thread state lock
 
-	process* parent; // Parent Process
+	Process* parent; // Parent Process
 	void* stack; // Pointer to the initial stack
 	void* stackLimit; // The limit of the stack
 	void* kernelStack; // Kernel Stack

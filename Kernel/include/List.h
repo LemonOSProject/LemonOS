@@ -3,6 +3,9 @@
 #include <Liballoc.h>
 #include <Spinlock.h>
 #include <Assert.h>
+#include <Move.h>
+#include <Compiler.h>
+#include <String.h>
 
 template<typename T>
 struct ListNode
@@ -77,7 +80,7 @@ public:
 
 // Type is required to be a pointer with the members next and prev
 template<typename T>
-class FastList {
+class FastList final {
 public:
 	FastList()
 	{
@@ -85,6 +88,28 @@ public:
 		back = NULL;
 		num = 0;
 	}
+
+	FastList(T&& other){
+		front = other.front;
+		back = other.back;
+		num = other.num;
+
+		memset(&other, 0, sizeof(FastList<T>));
+	}
+
+	ALWAYS_INLINE FastList<T>& operator=(FastList<T>&& other){
+		front = other.front;
+		back = other.back;
+		num = other.num;
+
+		memset(&other, 0, sizeof(FastList<T>));
+
+		return *this;
+	}
+
+	// Copying a FastList is asking for trouble
+	FastList(FastList& other) = delete;
+	ALWAYS_INLINE FastList<T>& operator=(const FastList<T>& other) = delete;
 
 	~FastList() {
 	}
@@ -236,6 +261,7 @@ public:
 	{
 		return back;
 	}
+
 public:
 	T front;
 	T back;
@@ -244,14 +270,6 @@ public:
 
 template<typename T>
 class List {
-private:
-	ListNode<T>* front;
-	ListNode<T>* back;
-	unsigned num;
-	volatile int lock = 0;
-
-	const unsigned maxCache = 6;
-	FastList<ListNode<T>*> cache; // Prevent allocations by caching ListNodes
 public:
 	
 	List()
@@ -282,13 +300,31 @@ public:
 		return *this;
 	}
 
+	List& operator=(List&& l){
+		acquireLock(&l.lock);
+
+		front = l.front;
+		back = l.back;
+		num = l.num;
+		cache = std::move(l.cache);
+		
+		l.front = nullptr;
+		l.back = nullptr;
+		l.num = 0;
+
+		releaseLock(&l.lock);
+
+		return *this;
+	}
+
 	void clear() {
 		acquireLock(&lock);
 
 		ListNode<T>* node = front;
 		while (node && node->next) {
 			ListNode<T>* n = node->next;
-			kfree(node);
+			
+			DestroyNode(node);
 			node = n;
 		}
 		front = NULL;
@@ -298,19 +334,37 @@ public:
 		releaseLock(&lock);
 	}
 
+	T& add_back(T&& obj) {
+		acquireLock(&lock);
+
+		ListNode<T>* node = AllocateNode();
+		assert(node);
+
+		new (&node->obj) T(std::move(obj));
+		node->next = node->prev = nullptr;
+
+		if (!front) {
+			front = node;
+		}
+		else if (back){
+			back->next = node;
+			node->prev = back;
+		}
+		back = node;
+		num++;
+		
+		releaseLock(&lock);
+
+		return node->obj;
+	}
+
 	T& add_back(const T& obj) {
 		acquireLock(&lock);
 
-		ListNode<T>* node;
-		if(cache.get_length() <= 0){
-			node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
-		} else {
-			node = cache.remove_at(0);
-		}
-		
+		ListNode<T>* node = AllocateNode();
 		assert(node);
 
-		node->obj = obj;
+		new (&node->obj) T(obj);
 		node->next = node->prev = nullptr;
 
 		if (!front) {
@@ -331,16 +385,11 @@ public:
 	void add_back_unlocked(const T& obj) {
 		acquireLock(&lock);
 
-		ListNode<T>* node;
-		if(cache.get_length() <= 0){
-			node = (ListNode<T>*)kmalloc_unlocked(sizeof(ListNode<T>));
-		} else {
-			node = cache.remove_at(0);
-		}
+		ListNode<T>* node = AllocateNode();
 		
 		assert(node);
 
-		node->obj = obj;
+		new (&node->obj) T(obj);
 		node->next = node->prev = nullptr;
 
 		if (!front) {
@@ -356,17 +405,12 @@ public:
 		releaseLock(&lock);
 	}
 
-	void add_front(const T& obj) {
+	T& add_front(const T& obj) {
 		acquireLock(&lock);
 
-		ListNode<T>* node;
-		if(!cache.get_length()){
-			node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
-		} else {
-			node = cache.remove_at(0);
-		}
+		ListNode<T>* node = AllocateNode();
 
-		node->obj = obj;
+		new (&node->obj) T(obj);
 		node->next = node->prev = nullptr;
 
 		if (!back) {
@@ -380,6 +424,8 @@ public:
 		num++;
 
 		releaseLock(&lock);
+
+		return node->obj;
 	}
 
 	void insert(const T& obj, size_t pos){
@@ -398,36 +444,19 @@ public:
 
 		for (unsigned int i = 0; i < pos && i < num && current->next; i++) current = current->next;
 
-		ListNode<T>* node;
-		if(!cache.get_length()){
-			node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
-		} else {
-			node = cache.remove_at(0);
-		}
+		ListNode<T>* node = AllocateNode();
 
 		assert(node);
 
-		node->obj = obj;
-		node->prev = current;
-		node->next = current->next;
-		
-		current->next->prev = node;
-		current->next = node;
-
-		num++;
+		new (&node->obj) T(obj);
+		InsertNodeAfter(current);
 
 		releaseLock(&lock);
 	}
 
-	void insert(const T& obj, ListIterator<T>& it){
-		if(it.node == front){
-			add_front(obj);
-			return;
-		}
-
-		if(it == end()){
-			add_back(obj);
-			return;
+	T& insert(const T& obj, ListIterator<T>& it){
+		if(it.node == back){
+			return add_back(obj);
 		}
 		
 		assert(it.node);
@@ -435,28 +464,39 @@ public:
 
 		acquireLock(&lock);
 
-		ListNode<T>* node;
-		if(!cache.get_length()){
-			node = (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
-		} else {
-			node = cache.remove_at(0);
-		}
-
+		ListNode<T>* node = AllocateNode();
 		assert(node);
 
-		node->obj = obj;
-		node->prev = current->prev;
-		node->next = current;
-
-		current->prev->next = node;
-		current->prev = node;
-
-		num++;
+		new (&node->obj) T(obj);
+		InsertNodeBefore(node, current);
 
 		releaseLock(&lock);
+
+		return node->obj;
 	}
 
-	T& operator[](unsigned pos) {
+	T& insert(T&& obj, ListIterator<T>& it){
+		if(it.node == back){
+			return add_back(obj);
+		}
+		
+		assert(it.node);
+		ListNode<T>* current = it.node;
+
+		acquireLock(&lock);
+
+		ListNode<T>* node = AllocateNode();
+		assert(node);
+
+		new (&node->obj) T(std::move(obj));
+		InsertNodeBefore(node, current);
+
+		releaseLock(&lock);
+
+		return node->obj;
+	}
+
+	ALWAYS_INLINE T& operator[](unsigned pos) {
 		return get_at(pos);
 	}
 
@@ -465,18 +505,13 @@ public:
 
 		ListNode<T>* current = front;
 
-		//acquireLock(&lock);
-
 		for (unsigned int i = 0; i < pos && i < num && current->next; i++) current = current->next;
-
-		//releaseLock(&lock);
 
 		return current->obj;
 	}
 
-	void replace_at(unsigned pos, T obj) {
+	void replace_at(unsigned pos, const T& obj) {
 		assert(num > 0 && pos < num);
-		//if (num < 0 || pos >= num) return;
 		
 		acquireLock(&lock);
 
@@ -484,13 +519,30 @@ public:
 
 		for (unsigned int i = 0; i < pos; i++) current = current->next;
 
-		if(current)
+		if(current){
 			current->obj = obj;
+		}
 		
 		releaseLock(&lock);
 	}
 
-	__attribute__((always_inline)) inline unsigned get_length() const {
+	void replace_at(unsigned pos, T&& obj) {
+		assert(num > 0 && pos < num);
+		
+		acquireLock(&lock);
+
+		ListNode<T>* current = front;
+
+		for (unsigned int i = 0; i < pos; i++) current = current->next;
+
+		if(current){
+			current->obj = obj;
+		}
+		
+		releaseLock(&lock);
+	}
+
+	ALWAYS_INLINE unsigned get_length() const {
 		return num;
 	}
 
@@ -507,7 +559,7 @@ public:
 
 		assert(current);
 
-		T& obj = current->obj;
+		T obj = std::move(current->obj);
 
 		num--;
 
@@ -516,6 +568,7 @@ public:
 		if (current->next) current->next->prev = current->prev;
 		if (current->prev) current->prev->next = current->next;
 
+		current->obj.~T();
 		if(cache.get_length() >= maxCache){
 			kfree(current);
 		} else {
@@ -543,7 +596,7 @@ public:
 
 		assert(current);
 
-		T& obj = current->obj;
+		T obj = std::move(current->obj);
 
 		num--;
 
@@ -552,6 +605,7 @@ public:
 		if (current->next) current->next->prev = current->prev;
 		if (current->prev) current->prev->next = current->next;
 
+		current->obj.~T();
 		cache.add_back(current);
 
 		if(!num) front = back = nullptr;
@@ -580,16 +634,11 @@ public:
 
 			num--;
 
-			if(cache.get_length() >= maxCache){
-				kfree(current);
-			} else {
-				cache.add_back(current);
-			}
+			DestroyNode(current);
 		}
 
 		releaseLock(&lock);
 	}
-
 
 	void remove(ListIterator<T>& it){
 		assert(it.node);
@@ -607,11 +656,7 @@ public:
 
 			num--;
 
-			if(cache.get_length() >= maxCache){
-				kfree(current);
-			} else {
-				cache.add_back(current);
-			}
+			DestroyNode(current);
 
 			releaseLock(&lock);
 		}
@@ -654,4 +699,66 @@ public:
 		it.node = nullptr;
 		return it;
 	}
+
+private:
+	ALWAYS_INLINE void InsertNodeBefore(ListNode<T>* node, ListNode<T>* existingNode){
+		assert(node && existingNode);
+
+		node->prev = existingNode->prev;
+		node->next = existingNode;
+
+		if(existingNode->prev){
+			existingNode->prev->next = node;
+		}
+		existingNode->prev = node;
+
+		if(existingNode == front){
+			front = node;
+		}
+
+		num++;
+	}
+
+	ALWAYS_INLINE void InsertNodeAfter(ListNode<T>* node, ListNode<T>* existingNode){
+		assert(node && existingNode);
+
+		node->prev = existingNode;
+		node->next = existingNode->next;
+
+		if(existingNode->next){
+			existingNode->next->prev = node;
+		}
+		existingNode->next = node;
+
+		if(existingNode == back){
+			back = node;
+		}
+
+		num++;
+	}
+
+	ALWAYS_INLINE ListNode<T>* AllocateNode(){
+		if(!cache.get_length()){
+			return (ListNode<T>*)kmalloc(sizeof(ListNode<T>));
+		} else {
+			return cache.remove_at(0);
+		}
+	}
+
+	ALWAYS_INLINE void DestroyNode(ListNode<T>* node){
+		node->obj.~T();
+		if(cache.get_length() >= maxCache){
+			kfree(node);
+		} else {
+			cache.add_back(node);
+		}
+	}
+
+	ListNode<T>* front;
+	ListNode<T>* back;
+	unsigned num;
+	volatile int lock = 0;
+
+	const unsigned maxCache = 6;
+	FastList<ListNode<T>*> cache; // Prevent allocations by caching ListNodes
 };

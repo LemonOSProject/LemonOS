@@ -13,7 +13,6 @@
 #define SYS_CHDIR 12
 #define SYS_TIME 13
 #define SYS_MAP_FB 14
-#define SYS_ALLOC 15
 #define SYS_CHMOD 16
 #define SYS_FSTAT 17
 #define SYS_STAT 18

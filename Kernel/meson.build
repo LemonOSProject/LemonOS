@@ -75,6 +75,9 @@ cpp_files = [
 
     'src/Liballoc/_liballoc.cpp',
     'src/Liballoc/liballoc.c',
+
+    'src/MM/AddressSpace.cpp',
+    'src/MM/VMObject.cpp',
     
     'src/Net/NetworkAdapter.cpp',
     'src/Net/Socket.cpp',

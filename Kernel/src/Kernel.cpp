@@ -125,6 +125,7 @@ void KernelProcess(){
 		acquireLock(&Scheduler::destroyedProcessesLock);
 		for(auto it = Scheduler::destroyedProcesses->begin(); it != Scheduler::destroyedProcesses->end(); it++){
 			if(!((*it)->processLock.TryAcquireWrite())){
+				delete (*it)->addressSpace;
 				delete *it;
 				Scheduler::destroyedProcesses->remove(it);
 			}
@@ -167,8 +168,6 @@ extern "C"
     Log::EnableBuffer();
 
 	videoMode = Video::GetVideoMode();
-
-	Memory::InitializeSharedMemory();
 
 	if(debugLevelMisc >= DebugLevelVerbose){
 		Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);

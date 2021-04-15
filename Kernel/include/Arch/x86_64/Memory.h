@@ -3,6 +3,7 @@
 #include <PhysicalAllocator.h>
 #include <Paging.h>
 #include <Liballoc.h>
+#include <Compiler.h>
 
 typedef struct {
     uint64_t base;

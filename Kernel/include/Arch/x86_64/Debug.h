@@ -37,6 +37,7 @@ extern const int debugLevelInterrupts;
 extern const int debugLevelMessageEndpoint;
 
 extern const int debugLevelSyscalls;
+extern const int debugLevelUsermodeMM;
 
 extern const int debugLevelNetwork;
 

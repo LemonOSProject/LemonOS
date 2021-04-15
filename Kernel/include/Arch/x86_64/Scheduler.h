@@ -4,6 +4,7 @@
 #include <Paging.h>
 #include <System.h>
 #include <Memory.h>
+#include <MM/AddressSpace.h>
 #include <List.h>
 #include <Vector.h>
 #include <Fs/Filesystem.h>
@@ -23,20 +24,13 @@
 
 typedef void* handle_t;
 
-typedef struct HandleIndex {
-	uint32_t owner_pid;
-	process* owner;
-	handle_t handle;
-} handle_index_t;
-
 namespace Scheduler{
 	class ProcessStateThreadBlocker;
 }
 
-typedef struct process {
+typedef struct Process {
 	pid_t pid = -1; // PID
-	page_map_t* addressSpace; // Pointer to page directory and tables
-	List<mem_region_t> sharedMemory; // Used to ensure these memory regions don't get freed when a process is terminated
+	AddressSpace* addressSpace; // Pointer to page directory and tables
 	uint8_t state = ThreadStateRunning; // Process state
 	Vector<Thread*> threads;
 	uint32_t threadCount = 0; // Amount of threads
@@ -44,8 +38,8 @@ typedef struct process {
 	int32_t uid = 0;
 	int32_t gid = 0;
 
-	process* parent = nullptr;
-	List<process*> children;
+	Process* parent = nullptr;
+	List<Process*> children;
 
 	char workingDir[PATH_MAX];
 	char name[NAME_MAX];
@@ -62,6 +56,8 @@ typedef struct process {
 	HashMap<uintptr_t, List<FutexThreadBlocker*>*> futexWaitQueue = HashMap<uintptr_t, List<FutexThreadBlocker*>*>(8);
 
 	uintptr_t usedMemoryBlocks;
+
+	ALWAYS_INLINE PageMap* GetPageMap() { return addressSpace->GetPageMap(); }
 } process_t;
 
 namespace Scheduler{

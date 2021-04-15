@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include <cstring>
+#include <cassert>
 
 namespace Lemon::Graphics{
     const char* FontException::errorStrings[] = {
@@ -19,7 +20,7 @@ namespace Lemon::Graphics{
     Font* mainFont = nullptr;
     
     static FT_Library library;
-    static std::map<std::string, Font*> fonts = {{"default", mainFont}}; // Clang appears to call InitializeFonts before the constructor for the map
+    static std::map<std::string, Font*>* fonts = nullptr; // Clang appears to call InitializeFonts before the constructor for the map
 
     void RefreshFonts(){
         if(library) FT_Done_FreeType(library);
@@ -28,6 +29,7 @@ namespace Lemon::Graphics{
 
     __attribute__((constructor))
     void InitializeFonts(){
+
         fontState = -1;
 
         if(FT_Init_FreeType(&library)){
@@ -57,7 +59,7 @@ namespace Lemon::Graphics{
         mainFont->tabWidth = 4;
         strcpy(mainFont->id, "default");
 
-        fonts["default"] = mainFont;
+        fonts = new std::map<std::string, Font*>{{"default", mainFont}};
 
         fontState = 1;
     }
@@ -94,7 +96,8 @@ namespace Lemon::Graphics{
         font->width = 8;
         font->tabWidth = 4;
 
-        fonts[font->id] = font;
+        assert(fonts);
+        fonts->insert({font->id, font});
 
         fontState = 1;
 
@@ -104,7 +107,7 @@ namespace Lemon::Graphics{
     Font* GetFont(const char* id){
         Font* font;
         try{
-            font = fonts.at(id);
+            font = fonts->at(id);
         } catch (const std::out_of_range& e){
             fprintf(stderr, "Warning: font %s could not be found!", id);
             font = mainFont;

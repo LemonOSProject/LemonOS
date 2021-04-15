@@ -12,6 +12,8 @@
 #endif
 
 namespace fs::Ext2{
+    unsigned totalBlockCacheMemoryUsage = 0;
+
     int Identify(PartitionDevice* part){
         ext2_superblock_t* superblock = (ext2_superblock_t*)kmalloc(sizeof(ext2_superblock_t));
 
@@ -402,6 +404,7 @@ namespace fs::Ext2{
             }
             blockCache.insert(block, cachedBlock);
             blockCacheMemoryUsage += blocksize;
+            totalBlockCacheMemoryUsage += blocksize;
             
             memcpy(buffer, cachedBlock, blocksize);
         }

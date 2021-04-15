@@ -40,7 +40,7 @@ FancyRefPtr<Service> ServiceFS::CreateService(const char* name){
     auto svc = FancyRefPtr<Service>(new Service(name));
 
     services.add_back(svc);
-    (*svc.getRefCount())--; // Really hacky but means that the service list entry does not count as a reference
+    (*svc.GetRefCount())--; // Really hacky but means that the service list entry does not count as a reference
 
     return svc;
 }

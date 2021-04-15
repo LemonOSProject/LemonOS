@@ -320,5 +320,7 @@ namespace fs::Ext2{
         int Error() { return error; }
     };
     
+    extern unsigned totalBlockCacheMemoryUsage;
+
     int Identify(PartitionDevice* part);
 }

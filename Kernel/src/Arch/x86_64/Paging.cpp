@@ -69,6 +69,33 @@ namespace Memory{
 		return address;
 	}
 
+	page_table_t AllocatePageTable(){
+		void* virt = KernelAllocate4KPages(1);
+		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
+
+		KernelMapVirtualMemory4K(phys,(uintptr_t)virt, 1);
+
+		page_table_t pTable;
+		pTable.phys = phys;
+		pTable.virt = (page_t*)virt;
+
+		for(int i = 0; i < PAGES_PER_TABLE; i++){
+			((page_t*)virt)[i] = 0;
+		}
+
+		return pTable;
+	}
+
+	page_table_t CreatePageTable(uint16_t pdptIndex, uint16_t pageDirIndex, PageMap* pageMap){
+		page_table_t pTable = AllocatePageTable();
+
+		SetPageFrame(&(pageMap->pageDirs[pdptIndex][pageDirIndex]),pTable.phys);
+		pageMap->pageDirs[pdptIndex][pageDirIndex] |= PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
+		pageMap->pageTables[pdptIndex][pageDirIndex] = pTable.virt;
+
+		return pTable;
+	}
+
 	void InitializeVirtualMemory()
 	{
 		IDT::RegisterInterruptHandler(14,PageFaultHandler);
@@ -105,8 +132,8 @@ namespace Memory{
 		asm("mov %%rax, %%cr3" :: "a"((uint64_t)kernelPML4 - KERNEL_VIRTUAL_BASE));
 	}
 
-	page_map_t* CreateAddressSpace(){
-		page_map_t* addressSpace = (page_map_t*)kmalloc(sizeof(page_map_t));
+	PageMap* CreatePageMap(){
+		PageMap* addressSpace = (PageMap*)kmalloc(sizeof(PageMap));
 		
 		pdpt_entry_t* pdpt = (pdpt_entry_t*)Memory::KernelAllocate4KPages(1); // PDPT;
 		uintptr_t pdptPhys = Memory::AllocatePhysicalMemoryBlock();
@@ -130,8 +157,7 @@ namespace Memory{
 			pageDirsPhys[i] = Memory::AllocatePhysicalMemoryBlock();
 			KernelMapVirtualMemory4K(pageDirsPhys[i],(uintptr_t)pageDirs[i],1);
 
-			pageTables[i] = (page_t**)Memory::KernelAllocate4KPages(1);
-			KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)pageTables[i],1);
+			pageTables[i] = (page_t**)kmalloc(4096);
 
 			SetPageFrame(&(pdpt[i]),pageDirsPhys[i]);
 			pdpt[i] |= PDPT_WRITABLE | PDPT_PRESENT | PDPT_USER;
@@ -153,47 +179,97 @@ namespace Memory{
 		return addressSpace;
 	}
 
-	void DestroyAddressSpace(page_map_t* addressSpace){
+	PageMap* ClonePageMap(PageMap* pageMap){
+		PageMap* clone = new PageMap();
+
+		pdpt_entry_t* pdpt = (pdpt_entry_t*)Memory::KernelAllocate4KPages(1); // PDPT;
+		uintptr_t pdptPhys = Memory::AllocatePhysicalMemoryBlock();
+		Memory::KernelMapVirtualMemory4K(pdptPhys, (uintptr_t)pdpt,1);
+		memset((pdpt_entry_t*)pdpt,0,4096);
+
+		pd_entry_t** pageDirs = (pd_entry_t**)KernelAllocate4KPages(1); // Page Dirs
+		Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)pageDirs,1);
+		uint64_t* pageDirsPhys = (uint64_t*)KernelAllocate4KPages(1); // Page Dirs
+		Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)pageDirsPhys,1);
+		page_t*** pageTables = (page_t***)KernelAllocate4KPages(1); // Page Tables
+		Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)pageTables,1);
+
+		pml4_entry_t* pml4 = (pml4_entry_t*)KernelAllocate4KPages(1); // Page Tables
+		uintptr_t pml4Phys = Memory::AllocatePhysicalMemoryBlock();
+		Memory::KernelMapVirtualMemory4K(pml4Phys, (uintptr_t)pml4,1);
+		memcpy(pml4, kernelPML4, 4096);
+
+		pml4[0] = pdptPhys | PML4_PRESENT | PML4_WRITABLE | PAGE_USER;
+
+		clone->pageDirs = pageDirs;
+		clone->pageDirsPhys = pageDirsPhys;
+		clone->pageTables = pageTables;
+		clone->pml4 = pml4;
+		clone->pdptPhys = pdptPhys;
+		clone->pml4Phys = pml4Phys;
+		clone->pdpt = pdpt;
+	
+		for(unsigned int i = 0; i < DIRS_PER_PDPT; i++){
+			pageDirs[i] = (pd_entry_t*)KernelAllocate4KPages(1);
+			pageDirsPhys[i] = Memory::AllocatePhysicalMemoryBlock();
+			KernelMapVirtualMemory4K(pageDirsPhys[i],(uintptr_t)pageDirs[i],1);
+
+			pageTables[i] = (page_t**)Memory::KernelAllocate4KPages(1);
+			KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)pageTables[i],1);
+
+			SetPageFrame(&(pdpt[i]),pageDirsPhys[i]);
+			pdpt[i] |= PDPT_WRITABLE | PDPT_PRESENT | PDPT_USER;
+
+			for(unsigned int j = 0; j < TABLES_PER_DIR; j++){
+				page_t* originalPageTable = pageMap->pageTables[i][j];
+
+				if(originalPageTable){
+					page_table_t pgTable = CreatePageTable(i, j, pageMap);
+
+					memcpy(pgTable.virt, originalPageTable, sizeof(uintptr_t) * PAGES_PER_TABLE); // Copy the pages in the page table
+				} else {
+					pageDirs[i][j] = 0;
+					pageTables[i][j] = nullptr;
+				}
+			}
+		}
+
+		return clone;
+	}
+
+	void DestroyPageMap(PageMap* pageMap){
 		for(int i = 0; i < DIRS_PER_PDPT; i++){
-			if(!addressSpace->pageDirs[i]){
+			if(!pageMap->pageDirs[i]){
 				continue;
 			}
 
-			if(addressSpace->pageDirsPhys[i] < PHYSALLOC_BLOCK_SIZE){
+			if(pageMap->pageDirsPhys[i] < PHYSALLOC_BLOCK_SIZE){
 				continue;
 			}
 
 			for(int j = 0; j < TABLES_PER_DIR; j++){
-				pd_entry_t dirEnt = addressSpace->pageDirs[i][j];
+				pd_entry_t dirEnt = pageMap->pageDirs[i][j];
 				if(dirEnt & PAGE_PRESENT){
 					uint64_t phys = GetPageFrame(dirEnt);
 					if(phys < PHYSALLOC_BLOCK_SIZE){
 						continue;
 					}
 
-					for(int k = 0; k < PAGES_PER_TABLE; k++){
-						if(addressSpace->pageTables[i][j][k] & 0x1){
-							uint64_t pagePhys = GetPageFrame(addressSpace->pageTables[i][j][k]);
-
-							if(pagePhys < PHYSALLOC_BLOCK_SIZE){
-								continue;
-							}
-
-							FreePhysicalMemoryBlock(pagePhys);
-						}
-					}
-
 					FreePhysicalMemoryBlock(phys);
-					addressSpace->pageDirs[i][j] = 0;
-					KernelFree4KPages(addressSpace->pageTables[i][j], 1);
+					pageMap->pageDirs[i][j] = 0;
+					KernelFree4KPages(pageMap->pageTables[i][j], 1);
 				}
-				addressSpace->pageDirs[i][j] = 0;
+				pageMap->pageDirs[i][j] = 0;
 			}
 
-			addressSpace->pdpt[i] = 0;
-			KernelFree4KPages(addressSpace->pageDirs[i], 1);
-			Memory::FreePhysicalMemoryBlock(addressSpace->pageDirsPhys[i]);
+			kfree(pageMap->pageTables[i]);
+
+			pageMap->pdpt[i] = 0;
+			KernelFree4KPages(pageMap->pageDirs[i], 1);
+			Memory::FreePhysicalMemoryBlock(pageMap->pageDirsPhys[i]);
 		}
+
+		Memory::FreePhysicalMemoryBlock(pageMap->pdptPhys);
 	}
 
 	bool CheckRegion(uintptr_t addr, uint64_t len, page_map_t* addressSpace){
@@ -230,57 +306,11 @@ namespace Memory{
 		return 1;
 	}
 
-	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, page_map_t* addressSpace){
-		if(addr >> 48) return 0; // Non-canonical or higher-half address
-
-		if(!(addressSpace->pageDirs[PDPT_GET_INDEX(addr)])){
-			return 0;
-		}
-
-		if(!(addressSpace->pageDirs[PDPT_GET_INDEX(addr)][PAGE_DIR_GET_INDEX(addr)] & (PAGE_PRESENT))){
-			return 0;
-		}
-		
-		if(!(addressSpace->pageDirs[PDPT_GET_INDEX(addr + len)][PAGE_DIR_GET_INDEX(addr + len)] & (PAGE_PRESENT))){
-			return 0;
-		}
-
-		if(!((addressSpace->pageTables[PDPT_GET_INDEX(addr)][PAGE_DIR_GET_INDEX(addr)][PAGE_TABLE_GET_INDEX(addr)] & (PAGE_PRESENT)) && addressSpace->pageTables[PDPT_GET_INDEX(addr)][PAGE_DIR_GET_INDEX(addr)][PAGE_TABLE_GET_INDEX(addr)] & (PAGE_USER))){
-			return 0;
-		}
-		
-		if(!((addressSpace->pageTables[PDPT_GET_INDEX(addr + len)][PAGE_DIR_GET_INDEX(addr + len)][PAGE_TABLE_GET_INDEX(addr + len)] & (PAGE_PRESENT)) && addressSpace->pageTables[PDPT_GET_INDEX(addr + len)][PAGE_DIR_GET_INDEX(addr + len)][PAGE_TABLE_GET_INDEX(addr + len)] & (PAGE_USER))){
-			return 0;
-		}
-
-		return 1;
+	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, AddressSpace* addressSpace){
+		return addressSpace->RangeInRegion(addr, len);
 	}
 
-	page_table_t AllocatePageTable(){
-		void* virt = KernelAllocate4KPages(1);
-		uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
-
-		KernelMapVirtualMemory4K(phys,(uintptr_t)virt, 1);
-
-		page_table_t pTable;
-		pTable.phys = phys;
-		pTable.virt = (page_t*)virt;
-
-		for(int i = 0; i < PAGES_PER_TABLE; i++){
-			((page_t*)virt)[i] = 0;
-		}
-
-		return pTable;
-	}
-
-	void CreatePageTable(uint16_t pdptIndex, uint16_t pageDirIndex, page_map_t* addressSpace){
-		page_table_t pTable = AllocatePageTable();
-		SetPageFrame(&(addressSpace->pageDirs[pdptIndex][pageDirIndex]),pTable.phys);
-		addressSpace->pageDirs[pdptIndex][pageDirIndex] |= PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
-		addressSpace->pageTables[pdptIndex][pageDirIndex] = pTable.virt;
-	}
-
-	void* Allocate4KPages(uint64_t amount, page_map_t* addressSpace){
+	void* Allocate4KPages(uint64_t amount, PageMap* pageMap){
 		uint64_t offset = 0;
 		uint64_t pageDirOffset = 0;
 		uint64_t counter = 0;
@@ -289,7 +319,7 @@ namespace Memory{
 		uint64_t pml4Index = 0;
 		for(int d = 0; d < 512; d++){
 			uint64_t pdptIndex = d;
-			if(!(addressSpace->pdpt[d] & 0x1)) {
+			if(!(pageMap->pdpt[d] & 0x1)) {
 				continue;
 			}
 			/* Attempt 1: Already Allocated Page Tables*/
@@ -299,9 +329,9 @@ namespace Memory{
 				pageDirOffset = 1;
 			}
 			for(; i < TABLES_PER_DIR; i++){
-				if(addressSpace->pageDirs[d][i] & 0x1 && !(addressSpace->pageDirs[d][i] & 0x80)){
+				if(pageMap->pageDirs[d][i] & 0x1 && !(pageMap->pageDirs[d][i] & 0x80)){
 					for(int j = 0; j < PAGES_PER_TABLE; j++){
-						if(addressSpace->pageTables[d][i][j] & 0x1){
+						if(pageMap->pageTables[d][i][j] & 0x1){
 							pageDirOffset = i;
 							offset = j+1;
 							counter = 0;
@@ -317,7 +347,7 @@ namespace Memory{
 									pageDirOffset++;
 									offset = 0;
 								}
-								addressSpace->pageTables[d][pageDirOffset][offset] = 0x3;
+								pageMap->pageTables[d][pageDirOffset][offset] = 0x3;
 								offset++;
 							}
 
@@ -342,9 +372,8 @@ namespace Memory{
 				pageDirOffset = 1;
 			}
 			for(; i < TABLES_PER_DIR; i++){
-				if(!(addressSpace->pageDirs[d][i] & 0x1)){
-					
-					CreatePageTable(d,i,addressSpace);
+				if(!(pageMap->pageDirs[d][i] & 0x1)){
+					CreatePageTable(d, i, pageMap);
 					for(int j = 0; j < PAGES_PER_TABLE; j++){
 
 						address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + (pageDirOffset * PAGE_SIZE_2M) + (offset*PAGE_SIZE_4K);
@@ -357,7 +386,7 @@ namespace Memory{
 									pageDirOffset ++;
 									offset = 0;
 								}
-								addressSpace->pageTables[d][pageDirOffset][offset] = 0x3;
+								pageMap->pageTables[d][pageDirOffset][offset] = 0x3;
 								offset++;
 							}
 							return (void*)address;
@@ -563,7 +592,7 @@ namespace Memory{
 		KernelMapVirtualMemory4K(phys, virt, amount, PAGE_WRITABLE | PAGE_PRESENT);
 	}
 
-	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, page_map_t* addressSpace){
+	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, PageMap* pageMap){
 		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
 
 		//phys &= ~(PAGE_SIZE_4K-1);
@@ -578,11 +607,36 @@ namespace Memory{
 			const char* panic[1] = {"Process address space cannot be >512GB"};
 			if(pdptIndex > MAX_PDPT_INDEX || pml4Index) KernelPanic(panic,1);
 
-			assert(addressSpace->pageDirs[pdptIndex]);
-			if(!(addressSpace->pageDirs[pdptIndex][pageDirIndex] & 0x1)) CreatePageTable(pdptIndex,pageDirIndex,addressSpace); // If we don't have a page table at this address, create one.
+			assert(pageMap->pageDirs[pdptIndex]);
+			if(!(pageMap->pageDirs[pdptIndex][pageDirIndex] & 0x1)) CreatePageTable(pdptIndex, pageDirIndex, pageMap); // If we don't have a page table at this address, create one.
 			
-			addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex] = PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
-			SetPageFrame(&(addressSpace->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
+			pageMap->pageTables[pdptIndex][pageDirIndex][pageIndex] = PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
+			SetPageFrame(&(pageMap->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
+
+			invlpg(virt);
+
+			phys += PAGE_SIZE_4K;
+			virt += PAGE_SIZE_4K; /* Go to next page */
+		}
+	}
+
+	void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags, PageMap* pageMap){
+		uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
+
+		while(amount--){
+			pml4Index = PML4_GET_INDEX(virt);
+			pdptIndex = PDPT_GET_INDEX(virt);
+			pageDirIndex = PAGE_DIR_GET_INDEX(virt);
+			pageIndex = PAGE_TABLE_GET_INDEX(virt);
+
+			const char* panic[1] = {"Process address space cannot be >512GB"};
+			if(pdptIndex > MAX_PDPT_INDEX || pml4Index) KernelPanic(panic,1);
+
+			assert(pageMap->pageDirs[pdptIndex]);
+			if(!(pageMap->pageDirs[pdptIndex][pageDirIndex] & 0x1)) CreatePageTable(pdptIndex, pageDirIndex, pageMap); // If we don't have a page table at this address, create one.
+			
+			pageMap->pageTables[pdptIndex][pageDirIndex][pageIndex] = flags;
+			SetPageFrame(&(pageMap->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
 
 			invlpg(virt);
 
@@ -602,85 +656,122 @@ namespace Memory{
 
 	void PageFaultHandler(void*, RegisterContext* regs)
 	{
-		asm("cli");
-		write_serial_n("Page Fault\r\n", 12);
-		Log::SetVideoConsole(nullptr);
-
-		int err_code = IDT::GetErrCode();
-
 		uint64_t faultAddress;
 		asm volatile("movq %%cr2, %0" : "=r" (faultAddress));
 
-		int present = !(err_code & 0x1); // Page not present
-		int rw = err_code & 0x2;           // Attempted write to read only page
-		int us = err_code & 0x4;           // Processor was in user-mode and tried to access kernel page
-		int reserved = err_code & 0x8;     // Overwritten CPU-reserved bits of page entry
-		int id = err_code & 0x10;          // Caused by an instruction fetch
+		int errorCode = IDT::GetErrCode();
+		int present = !(errorCode & 0x1); // Page not present
+		int rw = errorCode & 0x2;           // Attempted write to read only page
+		int us = errorCode & 0x4;           // Processor was in user-mode and tried to access kernel page
+		int reserved = errorCode & 0x8;     // Overwritten CPU-reserved bits of page entry
+		int id = errorCode & 0x10;          // Caused by an instruction fetch
 
-		if (present)
-			Log::Info("Page not present"); // Print fault to serial
-		if (rw)
-			Log::Info("Read Only");
-		if (us)
-			Log::Info("User mode process tried to access kernel memory");
-		if (reserved)
-			Log::Info("Reserved");
-		if (id)
-			Log::Info("instruction fetch");
+		process_t* process = Scheduler::GetCurrentProcess();
 
-		Log::Info("RIP:");
+		// We only want to dump fault information when it is fatal
+		auto dumpFaultInformation = [&]() -> void {
+			Log::DisableBuffer();
+			Log::SetVideoConsole(nullptr);
 
-		Log::Info(regs->rip);
+			Log::Info("Page Fault");
 
-		if(process_t* proc = Scheduler::GetCurrentProcess(); proc){
-			Log::Info("Process: %s (%d)", proc->name, proc->pid);
+			Log::Info("Register Dump:\nrip:%x, rax: %x, rbx: %x, rcx: %x, rdx: %x, rsi: %x, rdi: %x, rsp: %x, rbp: %x",
+				regs->rip, regs->rax, regs->rbx, regs->rcx, regs->rdx, regs->rsi, regs->rdi, regs->rsp, regs->rbp);
+
+			Log::Info("Fault address: %x", faultAddress);
+
+			if (present)
+				Log::Info("Page not present"); // Print fault to serial
+			if (rw)
+				Log::Info("Read Only");
+			if (us)
+				Log::Info("User mode process tried to access kernel memory");
+			if (reserved)
+				Log::Info("Reserved");
+			if (id)
+				Log::Info("instruction fetch");
+
+			IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
+				DumpLastSyscall();
+			});
+
+			if(process){
+				Log::Info("Process Mapped Memory:");
+				process->addressSpace->DumpRegions();
+			}
+		};
+
+		if(process){
+			AddressSpace* addressSpace = process->addressSpace;
+			MappedRegion* faultRegion = addressSpace->AddressToRegion(faultAddress); // Remember that this acquires a lock
+			if(faultRegion && faultRegion->vmObject.get()){ // If there is a corresponding VMO for the fault then this is not an error
+				FancyRefPtr<VMObject> vmo = faultRegion->vmObject;
+				if(vmo->IsCopyOnWrite() && rw /* Attempted to write to read-only page */){
+					if(vmo->refCount <= 1){ // Last reference, no need to clone
+						vmo->copyOnWrite = false;
+						vmo->MapAllocatedBlocks(faultRegion->Base(), addressSpace->GetPageMap()); // This should remap all allocated blocks as writable
+						vmo->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(), addressSpace->GetPageMap()); // In case the block was never allocated in the first place
+						
+						faultRegion->lock.ReleaseRead();
+						return;
+					} else {
+						VMObject* clone = vmo->Clone();
+						vmo->refCount--;
+
+						faultRegion->vmObject = clone;
+
+						clone->MapAllocatedBlocks(faultRegion->Base(), addressSpace->GetPageMap());
+						clone->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(), addressSpace->GetPageMap()); // In case the block was never allocated in the first place
+						
+						faultRegion->vmObject = clone;
+						faultRegion->lock.ReleaseRead();
+						return;
+					}
+				}
+				
+				int status = faultRegion->vmObject->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(), addressSpace->GetPageMap());
+				faultRegion->lock.ReleaseRead();
+
+				if(!status){
+					return; // Success!
+				}
+			}
 		}
 
-		IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
-			DumpLastSyscall();
-		});
-
-		Log::Info("\r\nFault address: ");
-		Log::Info(faultAddress);
-
-		Log::Info("Register Dump: a: ");
-		Log::Write(regs->rax);
-		Log::Write(", b:");
-		Log::Write(regs->rbx);
-		Log::Write(", c:");
-		Log::Write(regs->rcx);
-		Log::Write(", d:");
-		Log::Write(regs->rdx);
-		Log::Write(", S:");
-		Log::Write(regs->rsi);
-		Log::Write(", D:");
-		Log::Write(regs->rdi);
-		Log::Write(", sp:");
-		Log::Write(regs->rsp);
-		Log::Write(", bp:");
-		Log::Write(regs->rbp);
-
 		if((regs->ss & 0x3)){
-			Log::Warning("Process %s crashed, PID: ", Scheduler::GetCurrentProcess()->name);
-			Log::Write(Scheduler::GetCurrentProcess()->pid);
-			Log::Write(", RIP: ");
-			Log::Write(regs->rip);
+			assert(process);
+
+			Log::Info("Process %s (PID: %x) page fault.", process->name, process->pid);
+			dumpFaultInformation();
+
 			Log::Info("Stack trace:");
 			UserPrintStackTrace(regs->rbp, Scheduler::GetCurrentProcess()->addressSpace);
+			Log::Info("End stack trace.");
+
 			Scheduler::EndProcess(Scheduler::GetCurrentProcess());
 			return;
-		};
+		}
+
+		asm("cli");
+		dumpFaultInformation();
 
 		// Kernel Panic so tell other processors to stop executing
 		APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
 			
+		Log::Info("Stack trace:");
 		PrintStackTrace(regs->rbp);
+		Log::Info("End stack trace.");
 
 		char temp[19];
-		char temp2[19];
+		itoa(regs->rip, temp, 16);
+		temp[18] = 0;
 
-		const char* reasons[]{"Page Fault","RIP: ", itoa(regs->rip, temp, 16),"Address: ",itoa(faultAddress, temp2, 16)};;
-		KernelPanic(reasons,7);
+		char temp2[19];
+		itoa(faultAddress, temp2, 16);
+		temp2[18] = 0;
+
+		const char* reasons[]{"Page Fault", "RIP: ", temp, "Address: ", temp2};
+		KernelPanic(reasons, 5);
 		for (;;);
 	}
 }

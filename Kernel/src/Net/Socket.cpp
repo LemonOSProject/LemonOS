@@ -207,7 +207,7 @@ Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen, int mode){
 
     LocalSocket* client = (LocalSocket*) next;
 
-    LocalSocket* sock = new LocalSocket(*client);
+    LocalSocket* sock = new LocalSocket(client->type, 0);
     sock->outbound = client->inbound; // Outbound to client
     sock->inbound = client->outbound; // Inbound to server
     sock->role = ServerRole;

@@ -10,7 +10,7 @@
 ///
 /// \return 0 on success, 1 when invalid pointer / not null terminated
 /////////////////////////////
-long strlenSafe(const char* str, size_t& size, page_map_t* aSpace);
+long strlenSafe(const char* str, size_t& size, AddressSpace* aSpace);
 
 char* itoa(unsigned long long num, char* str, int base);
 

@@ -4,140 +4,97 @@
 #include <SharedMemory.h>
 #include <Scheduler.h>
 #include <Logging.h>
+#include <RefPtr.h>
 
-#define DEFAULT_TABLE_SIZE 65535
+SharedVMObject::SharedVMObject(size_t size, int64_t key, pid_t owner, pid_t recipient, bool isPrivate)
+    : PhysicalVMObject(size, false, true), key(key), owner(owner), recipient(recipient), isPrivate(isPrivate) {
+        
+}
 
 namespace Memory {
     int lock = 0;
 
-    shared_mem_t** table = nullptr;
-    unsigned tableSize = 0;
-
-    void InitializeSharedMemory(){
-        table = (shared_mem_t**)kmalloc(DEFAULT_TABLE_SIZE * sizeof(shared_mem_t*));
-        tableSize = DEFAULT_TABLE_SIZE;
-    }
+    Vector<FancyRefPtr<SharedVMObject>> table;
 
     int64_t NextKey(){
-        int64_t key = 0;
-        while(table[++key]);
+        int64_t key = 1;
+        while((key - 1) < table.size() && table[key - 1].get()) key++;
 
-        if(key >= tableSize){ // Increase table size
-            shared_mem_t** newTable = (shared_mem_t**)kmalloc((tableSize + DEFAULT_TABLE_SIZE) * sizeof(shared_mem_t*));
-            memcpy(newTable, table, tableSize * sizeof(shared_mem_t*));
-
-            kfree(table);
-            table = newTable;
+        if(key - 1 >= table.size()){
+            table.resize(key);
         }
 
         return key;
     }
 
-    shared_mem_t* GetSharedMemory(int64_t key){
-        if(key < tableSize){
-            return table[key];
+    FancyRefPtr<SharedVMObject> GetSharedMemory(int64_t key){
+        int64_t index = key - 1;
+
+        if(index >= 0 && index < table.size()){
+            return table[key - 1];
         } else return nullptr;
     }
 
     int CanModifySharedMemory(pid_t pid, int64_t key){
-        shared_mem_t* sMem = nullptr;
-        if((sMem = GetSharedMemory(key))){
-            if((sMem->owner = pid)) return 1;
+        FancyRefPtr<SharedVMObject> sMem = nullptr;
+        if((sMem = GetSharedMemory(key)).get()){
+            if((sMem->Owner() == pid)) return 1;
         }
 
         return 0;
     }
 
     int64_t CreateSharedMemory(uint64_t size, uint64_t flags, pid_t owner, pid_t recipient){
-        acquireLock(&lock);
+        ScopedSpinLock acquired(lock);
 
         int64_t key = NextKey();
+        if(key <= 0) return 0;
 
-        if(!key) return 0;
+        uint64_t vmoSize = (size + PAGE_SIZE_4K - 1) & ~static_cast<size_t>(PAGE_SIZE_4K - 1);
 
-        uint64_t pgCount = (size + 0xFFF) >> 12;
-
-        shared_mem_t* sMem = (shared_mem_t*)kmalloc(sizeof(shared_mem_t));
-        table[key] = sMem;
-        sMem->pgCount = pgCount;
-        sMem->pages = (uint64_t*)kmalloc(sMem->pgCount * sizeof(uint64_t*));
-        sMem->mapCount = 0;
-
-        for(unsigned i = 0; i < sMem->pgCount; i++){
-            sMem->pages[i] = Memory::AllocatePhysicalMemoryBlock();
-        }
-
-        sMem->flags = flags;
-        sMem->owner = owner;
-        sMem->recipient = recipient;
-        
-        releaseLock(&lock);
+        SharedVMObject* sMem = new SharedVMObject(vmoSize, key, owner, recipient, flags & SMEM_FLAGS_PRIVATE);
+        table[key - 1] = sMem;
 
         return key;
     }
 
     void* MapSharedMemory(int64_t key, process_t* proc, uint64_t hint){
-        acquireLock(&lock);
+        ScopedSpinLock acquired(lock);
 
-        shared_mem_t* sMem = GetSharedMemory(key);
+        FancyRefPtr<SharedVMObject> sMem = GetSharedMemory(key);
 
-        if(!sMem) {
-            releaseLock(&lock);
+        if(!sMem.get()) {
+            Log::Warning("Invalid shared memory key %d!", key);
             return nullptr; // Check for invalid key
         }
 
-        if(sMem->flags & SMEM_FLAGS_PRIVATE){ // Private Mapping
-            if(proc->pid != sMem->owner && proc->pid != sMem->recipient){
-                releaseLock(&lock);
+        if(sMem->IsPrivate()){ // Private Mapping
+            if(proc->pid != sMem->Owner() && proc->pid != sMem->Recipient()){
+                Log::Warning("Cannot access private mapping!");
                 return nullptr; // Does not have access rights
             }
         }
-        sMem->mapCount++;
 
-        void* mapping;
-        
-        /*if(hint && Memory::CheckRegion(hint, sMem->pgCount * PAGE_SIZE_4K, proc->addressSpace)){
-            mapping = (void*)hint;
-        } else*/ mapping = Memory::Allocate4KPages(sMem->pgCount, proc->addressSpace);
+        MappedRegion* region = proc->addressSpace->MapVMO(static_pointer_cast<VMObject>(sMem), hint, false);
+        assert(region && region->Base());
 
-        for(unsigned i = 0; i < sMem->pgCount; i++){
-            Memory::MapVirtualMemory4K(sMem->pages[i], (uintptr_t)mapping + i * PAGE_SIZE_4K, 1, proc->addressSpace);
-        }
-
-        mem_region_t mReg;
-        mReg.base = (uintptr_t)mapping;
-        mReg.pageCount = sMem->pgCount;
-        proc->sharedMemory.add_back(mReg);
-        
-        releaseLock(&lock);
-
-        return mapping;
+        return reinterpret_cast<void*>(region->Base());
     }
 
     void DestroySharedMemory(int64_t key){
-        //acquireLock(&lock);
+        ScopedSpinLock acquired(lock);
         
-        shared_mem_t* sMem = GetSharedMemory(key);
+        FancyRefPtr<SharedVMObject> sMem = GetSharedMemory(key);
         
-        if(!sMem) {
-            releaseLock(&lock);
+        if(!sMem.get()) {
             return; // Check for invalid key
         }
 
-        if(sMem->mapCount > 0){
+        if(*sMem.GetRefCount() > 0){
             //Log::Error("Will not destroy active shared memory");
             return;
         }
 
-        for(unsigned i = 0; i < sMem->pgCount; i++){
-            Memory::FreePhysicalMemoryBlock(sMem->pages[i]);
-        }
-
         table[key] = nullptr;
-
-        kfree(sMem->pages); // Free physical page array
-        kfree(sMem); // Free structure
-
-        //releaseLock(&lock);
     }
 }

@@ -8,6 +8,14 @@ struct thread;
 #include <Thread.h>
 #include <Logging.h>
 
+class ScopedSpinLock final {
+public:
+    inline ScopedSpinLock(lock_t& _lock) : lock(_lock) { acquireLock(&lock); }
+    inline ~ScopedSpinLock() { releaseLock(&lock); }
+private:
+    lock_t& lock;
+};
+
 class Semaphore {
 protected:
     lock_t value = 0;
@@ -82,7 +90,6 @@ class ReadWriteLock {
     unsigned activeReaders = 0;
     lock_t fileLock = 0;
     lock_t lock = 0;
-    lock_t activeReadersLock = 0;
 
     bool writerAcquiredLock = false; // Whether or not the writer has acquired lock (but not fileLock) 
 
@@ -95,14 +102,8 @@ public:
     inline void AcquireRead(){
         acquireLock(&lock);
 
-        acquireLock(&activeReadersLock);
-        __sync_fetch_and_add(&activeReaders, 1);
-
-        if(activeReaders == 1){
-            releaseLock(&activeReadersLock);
+        if(__atomic_add_fetch(&activeReaders, 1, __ATOMIC_ACQUIRE) == 1){ // We are the first reader
             acquireLock(&fileLock);
-        } else {
-            releaseLock(&activeReadersLock)
         }
 
         releaseLock(&lock);
@@ -128,13 +129,9 @@ public:
     }
 
     inline void ReleaseRead(){
-        acquireLock(&activeReadersLock);
-        if(activeReaders == 1){
+        if(__atomic_sub_fetch(&activeReaders, 1, __ATOMIC_RELEASE) == 0){
             releaseLock(&fileLock);
         }
-
-        __sync_fetch_and_sub(&activeReaders, 1);
-        releaseLock(&activeReadersLock);
     }
 
     inline void ReleaseWrite(){

@@ -245,7 +245,7 @@ namespace Network::UDP{
             }
         }
 
-        if(int e = SendUDP(buffer, len, address, sendIPAddress, port, destPort)){
+        if(int e = SendUDP(buffer, len, address, sendIPAddress, port, destPort, adapter)){
             return e;
         }
 

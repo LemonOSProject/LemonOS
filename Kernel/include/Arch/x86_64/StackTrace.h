@@ -13,7 +13,7 @@ inline static void PrintStackTrace(uint64_t _rbp){
 	}
 }
 
-inline static void UserPrintStackTrace(uint64_t _rbp, page_map_t* addressSpace){
+inline static void UserPrintStackTrace(uint64_t _rbp, AddressSpace* addressSpace){
 	uint64_t* rbp = (uint64_t*)_rbp;
 	uint64_t rip = 0;
 	while(rbp && Memory::CheckUsermodePointer((uintptr_t)rbp, 16, addressSpace)){

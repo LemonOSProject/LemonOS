@@ -154,6 +154,7 @@ public:
     Stream* outbound = nullptr;
 
     LocalSocket(int type, int protocol);
+
     ~LocalSocket();
 
     int ConnectTo(Socket* client);

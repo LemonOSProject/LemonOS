@@ -62,7 +62,7 @@ public:
 	Vector() = default;
 
 	Vector(const Vector<T>& x){
-		data = new T[x.get_length()];
+		EnsureCapacity(x.get_length());
 
 		for(unsigned i = 0; i < x.get_length(); i++){
 			data[i] = x.data[i];
@@ -102,59 +102,54 @@ public:
 	void reserve(size_t allocatedSize){
 		acquireLock(&lock);
 
-		assert(allocatedSize >= capacity);
-		if(data){
-			T* oldData = data;
+		EnsureCapacity(allocatedSize);
 
-			data = new T[allocatedSize];
-			
-			if constexpr(TTraits<T>::is_trivial()){
-				memcpy(data, oldData, count * sizeof(T));
-			} else {
-				for(unsigned i = 0; i < count; i++){
-					data[i] = std::move(oldData[i]);
-				}
-			}
-			
-			delete[] oldData;
-		} else {
-			data = new T[allocatedSize];
-		}
-
-		capacity = allocatedSize;
 		releaseLock(&lock);
 	}
 
 	void resize(size_t newSize){
 		acquireLock(&lock);
+		EnsureCapacity(newSize);
 
 		size_t oldCount = count;
 		count = newSize;
 
 		if(count > oldCount){
-			EnsureCapacity();
-
 			for(unsigned i = oldCount; i < count; i++){
-				data[i]();
+				new (&data[i]) T();
 			}
 		} else if(count < oldCount){
 			for(unsigned i = count; i < oldCount; i++){
-				~data[i]();
+				data[i].~T();
 			}
 		}
 
 		releaseLock(&lock);
 	}
 
-	T& add_back(T val){
+	T& add_back(const T& val){
 		acquireLock(&lock);
+
+		EnsureCapacity(count + 1);
+
+		T& ref = data[count];
 		count++;
 
-		EnsureCapacity();
+		new (&ref) T(val);
+		releaseLock(&lock);
 
-		T& ref = data[count - 1];
+		return ref;
+	}
 
-		ref = val;
+	T& add_back(T&& val){
+		acquireLock(&lock);
+
+		EnsureCapacity(count + 1);
+
+		T& ref = data[count ];
+		count++;
+
+		new (&ref) T(static_cast<T&&>(val));
 		releaseLock(&lock);
 
 		return ref;
@@ -181,7 +176,7 @@ public:
 
 	~Vector(){
 		if(data){
-			delete[] data;
+			kfree(data);
 		}
 		data = nullptr;
 	}
@@ -205,7 +200,7 @@ public:
 	void clear(){
 		acquireLock(&lock);
 		if(data){
-			delete[] data;
+			kfree(data);
 		}
 
 		count = capacity = 0;
@@ -214,25 +209,31 @@ public:
 	}
 
 private:
-	ALWAYS_INLINE void EnsureCapacity(){
-		if(count >= capacity){
-			size_t newCapacity = capacity + (count << 1) + 1;
+	ALWAYS_INLINE void EnsureCapacity(unsigned size){
+		if(size >= capacity){
+			size_t newCapacity = capacity + (size << 1) + 1;
 
 			if(data){
 				T* oldData = data;
-				data = new T[newCapacity];
+				data = reinterpret_cast<T*>(kmalloc(newCapacity * sizeof(T)));
 
 				if constexpr(TTraits<T>::is_trivial()){
 					memcpy(data, oldData, capacity * sizeof(T));
+					memset(data + capacity, 0, sizeof(T) * (size - capacity));
 				} else {
-					for(unsigned i = 0; i < capacity; i++){
-						data[i] = std::move(oldData[i]);
+					for(unsigned i = 0; i < count && i < capacity; i++){
+						new (&data[i]) T(std::move(oldData[i]));
+						oldData[i].~T();
+					}
+
+					for(unsigned i = capacity; i < size; i++){
+						new (&data[i]) T();
 					}
 				}
 				
-				delete[] oldData;
+				kfree(oldData);
 			} else {
-				data = new T[newCapacity];
+				data = reinterpret_cast<T*>(kmalloc(newCapacity * sizeof(T)));
 			}
 
 			capacity = newCapacity;

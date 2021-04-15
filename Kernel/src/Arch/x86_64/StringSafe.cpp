@@ -2,7 +2,7 @@
 
 #include <Paging.h>
 
-long strlenSafe(const char* str, size_t& size, page_map_t* aSpace)
+long strlenSafe(const char* str, size_t& size, AddressSpace* aSpace)
 {
 	size_t pageBoundary = PAGE_SIZE_4K - (reinterpret_cast<uintptr_t>(str) & (PAGE_SIZE_4K - 1)); // Get amount of bytes to page boundary
 	if(!Memory::CheckUsermodePointer(reinterpret_cast<uintptr_t>(str), pageBoundary, aSpace)){
