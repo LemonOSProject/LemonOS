@@ -4,10 +4,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
-volatile uint8_t* LemonMapFramebuffer(FBInfo& fbInfo){
-    volatile uint8_t* ptr = 0;
-    syscall(SYS_MAP_FB, ((uintptr_t)&ptr), (uintptr_t)&fbInfo);
-    return ptr;
+long LemonMapFramebuffer(void** ptr, FBInfo& fbInfo){
+    return syscall(SYS_MAP_FB, ptr, &fbInfo);
 }
 
 surface_t* CreateFramebufferSurface(){
@@ -20,8 +18,9 @@ surface_t* CreateFramebufferSurface(){
 
 void CreateFramebufferSurface(surface_t& surface){
     FBInfo fbInfo;
-    surface.buffer = (uint8_t*)LemonMapFramebuffer(fbInfo);
-    assert(surface.buffer);
+    
+    long error = LemonMapFramebuffer(reinterpret_cast<void**>(&surface.buffer), fbInfo);
+    assert(!error && surface.buffer);
 
     surface.width = fbInfo.width;
     surface.height = fbInfo.height;

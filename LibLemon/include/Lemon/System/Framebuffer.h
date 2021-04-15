@@ -7,4 +7,4 @@
     #error "Lemon OS Only"
 #endif
 
-volatile uint8_t* LemonMapFramebuffer(FBInfo& fbInfo);
+long LemonMapFramebuffer(void** ptr, FBInfo& fbInfo);
