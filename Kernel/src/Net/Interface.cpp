@@ -181,6 +181,8 @@ namespace Network{
 			return -EMSGSIZE;
 		}
 
+		assert(adapter);
+
 		uint8_t buffer[1600]; // The maxmium Ethernet frame size is 1518 so this will do
 
 		EthernetFrame* ethFrame = (EthernetFrame*)buffer;
