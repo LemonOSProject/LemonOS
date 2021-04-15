@@ -27,6 +27,12 @@ WMWindow::WMWindow(WMInstance* wm, handle_t endp, handle_t id, int64_t key, Wind
 }
 
 WMWindow::~WMWindow(){
+	if(wm->active == this){
+		wm->SetActive(this);
+	} else if(wm->lastMousedOver == this){
+		wm->lastMousedOver = nullptr;
+	}
+
 	Lemon::UnmapSharedMemory(windowBufferInfo, bufferKey);
 }
 

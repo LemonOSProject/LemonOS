@@ -170,6 +170,7 @@ public:
 class WMInstance{
 protected:
     friend void* _InitializeShellConnection(void*);
+    friend class WMWindow;
     
     Lemon::Interface server;
     Lemon::Endpoint shellClient;

@@ -372,9 +372,10 @@ void WMInstance::MouseDown(){
         }
     }
 
-    auto it = windows.end();
-    do {
-        WMWindow* win = *it;
+    auto it = windows.cbegin();
+    while(it != windows.cend()) {
+        WMWindow* win = *it++;
+        assert(win);
 
         if(PointInWindow(win, input.mouse.pos)){
             if(win->minimized) continue;
@@ -444,12 +445,11 @@ void WMInstance::MouseDown(){
 
             break;
         }
-    } while (it-- != windows.begin());
+    };
 }
 
 void WMInstance::MouseRight(bool pressed){
-    auto it = windows.end();
-    do {
+    for(auto it = windows.cbegin(); it != windows.cend(); it++){
         WMWindow* win = *it;
             
         if(PointInWindowProper(win, input.mouse.pos)){
@@ -466,7 +466,7 @@ void WMInstance::MouseRight(bool pressed){
 
             PostEvent(ev, win);
         }
-    } while (it-- != windows.begin());
+    }
 }
 
 void WMInstance::MouseUp(){
@@ -540,6 +540,7 @@ void WMInstance::MouseMove(){
         bool windowFound = false;
         for(auto it = windows.rbegin(); it != windows.rend(); it++){ 
             WMWindow* win = *it;
+            assert(win);
 
             if(win->minimized){
                 continue;
@@ -564,8 +565,7 @@ void WMInstance::MouseMove(){
 
                 ev.mousePos = input.mouse.pos - win->pos;
 
-                if(!(active->flags & WINDOW_FLAGS_NODECORATION)) ev.mousePos = ev.mousePos - (vector2i_t){WINDOW_BORDER_THICKNESS, WINDOW_TITLEBAR_HEIGHT};
-
+                if(!(win->flags & WINDOW_FLAGS_NODECORATION)) ev.mousePos = ev.mousePos - (vector2i_t){WINDOW_BORDER_THICKNESS, WINDOW_TITLEBAR_HEIGHT};
                 PostEvent(ev, win);
 
                 lastMousedOver = win; // This window is now the last moused over
