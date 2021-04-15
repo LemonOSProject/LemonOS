@@ -4,7 +4,7 @@
 
 namespace std {
     template<typename T>
-    ALWAYS_INLINE constexpr T&& move(T&& t) noexcept {
+    ALWAYS_INLINE constexpr T&& move(T& t) {
         return static_cast<T&&>(t);
     }
 }
