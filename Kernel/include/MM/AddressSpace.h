@@ -39,7 +39,7 @@ public:
     AddressSpace* Fork();
 
     long UnmapMemory(uintptr_t base, size_t size);
-    ALWAYS_INLINE void UnmapAll() { regions.clear(); }
+    void UnmapAll();
 
     size_t UsedPhysicalMemory() const;
     void DumpRegions();

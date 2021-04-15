@@ -161,6 +161,10 @@ public:
 		return data[--count];
 	}
 
+	ALWAYS_INLINE T* Data(){
+		return data;
+	}
+
 	void remove(const T& val){
 		acquireLock(&lock);
 

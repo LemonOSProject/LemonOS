@@ -173,8 +173,19 @@ long AddressSpace::UnmapMemory(uintptr_t base, size_t size){
             }
         }
     }
+    Memory::MapVirtualMemory4K(0, base, PAGE_COUNT_4K(size), 0, pageMap);
 
     return 0;
+}
+
+void AddressSpace::UnmapAll() {
+    ScopedSpinLock acq(lock);
+
+    for(MappedRegion& r : regions){
+        Memory::MapVirtualMemory4K(0, r.Base(), PAGE_COUNT_4K(r.Size()), 0, pageMap);
+    }
+
+    regions.clear();
 }
 
 size_t AddressSpace::UsedPhysicalMemory() const {

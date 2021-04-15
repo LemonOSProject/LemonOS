@@ -580,10 +580,58 @@ namespace Scheduler{
         thread->timeSlice = thread->timeSliceDefault;
         thread->priority = 4;
 
-        elf_info_t elfInfo = LoadELFSegments(proc, elf, 0);
+        MappedRegion* stackRegion = proc->addressSpace->AllocateAnonymousVMObject(0x200000, 0, false); // 2MB max stacksize
+
+        thread->stack = reinterpret_cast<void*>(stackRegion->base); // 256KB stack size
+        thread->registers.rsp = (uintptr_t)thread->stack + 0x200000;
+        thread->registers.rbp = (uintptr_t)thread->stack + 0x200000;
+
+        // Force the first 8KB to be allocated
+        stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, proc->GetPageMap());
+        stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, proc->GetPageMap());
+
+        thread->registers.rip = LoadELF(proc, &thread->registers.rsp, elf, argc, argv, envc, envp, execPath);
+        if(!thread->registers.rip){
+            delete proc->addressSpace;
+            delete proc;
+
+            return nullptr;
+        }
+
+        thread->registers.rbp = thread->registers.rsp;
         
-        thread->registers.rip = elfInfo.entry;
+        assert(!(thread->registers.rsp & 0xF));
+
+        // Reserve 3 file descriptors for stdin, out and err
+        FsNode* nullDev = fs::ResolvePath("/dev/null");
+        FsNode* logDev = fs::ResolvePath("/dev/kernellog");
+
+        if(nullDev){
+            proc->fileDescriptors.add_back(fs::Open(nullDev));
+        } else {
+            proc->fileDescriptors.add_back(nullptr);
+            
+            Log::Warning("Failed to find /dev/null");
+        }
         
+        if(logDev){
+            proc->fileDescriptors.add_back(fs::Open(logDev));
+            proc->fileDescriptors.add_back(fs::Open(logDev));
+        } else {
+            proc->fileDescriptors.add_back(nullptr);
+            proc->fileDescriptors.add_back(nullptr);
+
+            Log::Warning("Failed to find /dev/kernellog");
+        }
+        
+        processes->add_back(proc);
+        return proc;
+    }
+
+    uintptr_t LoadELF(Process* process, uintptr_t* stackPointer, void* elf, int argc, char** argv, int envc, char** envp, const char* execPath){
+        elf_info_t elfInfo = LoadELFSegments(process, elf, 0);
+        
+        uintptr_t rip = elfInfo.entry;
         if(elfInfo.linkerPath){
             //char* linkPath = elfInfo.linkerPath;
             uintptr_t linkerBaseAddress = 0x7FC0000000; // Linker base address
@@ -599,12 +647,12 @@ namespace Scheduler{
                 Log::Warning("Invalid Dynamic Linker ELF");
                 asm volatile("mov %%rax, %%cr3" :: "a"(GetCurrentProcess()->GetPageMap()->pml4Phys));
                 asm("sti");
-                return nullptr;
+                return 0;
             }
 
-            elf_info_t linkerELFInfo = LoadELFSegments(proc, linkerElf, linkerBaseAddress);
+            elf_info_t linkerELFInfo = LoadELFSegments(process, linkerElf, linkerBaseAddress);
 
-            thread->registers.rip = linkerELFInfo.entry;
+            rip = linkerELFInfo.entry;
 
             kfree(linkerElf);
         }
@@ -613,19 +661,10 @@ namespace Scheduler{
         char* tempEnvp[envc];
 
         asm("cli");
-        asm volatile("mov %%rax, %%cr3" :: "a"(proc->GetPageMap()->pml4Phys));
-        MappedRegion* stackRegion = proc->addressSpace->AllocateAnonymousVMObject(0x200000, 0, false); // 2MB max stacksize
-
-        thread->stack = reinterpret_cast<void*>(stackRegion->base); // 256KB stack size
-        thread->registers.rsp = (uintptr_t)thread->stack + 0x200000;
-        thread->registers.rbp = (uintptr_t)thread->stack + 0x200000;
-
-        // Force the first 8KB to be allocated
-        stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, proc->GetPageMap());
-        stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, proc->GetPageMap());
-
+        asm volatile("mov %%rax, %%cr3" :: "a"(process->GetPageMap()->pml4Phys));
+        
         // ABI Stuff
-        uint64_t* stack = (uint64_t*)thread->registers.rsp;
+        uint64_t* stack = (uint64_t*)(*stackPointer);
 
         char* stackStr = (char*)stack;
         for(int i = 0; i < argc; i++){
@@ -698,35 +737,8 @@ namespace Scheduler{
         asm volatile("mov %%rax, %%cr3" :: "a"(GetCurrentProcess()->GetPageMap()->pml4Phys));
         asm("sti");
 
-        thread->registers.rsp = (uintptr_t) stack;
-        thread->registers.rbp = (uintptr_t) stack;
-        
-        assert(!(thread->registers.rsp & 0xF));
-
-        // Reserve 3 file descriptors for stdin, out and err
-        FsNode* nullDev = fs::ResolvePath("/dev/null");
-        FsNode* logDev = fs::ResolvePath("/dev/kernellog");
-
-        if(nullDev){
-            proc->fileDescriptors.add_back(fs::Open(nullDev));
-        } else {
-            proc->fileDescriptors.add_back(nullptr);
-            
-            Log::Warning("Failed to find /dev/null");
-        }
-        
-        if(logDev){
-            proc->fileDescriptors.add_back(fs::Open(logDev));
-            proc->fileDescriptors.add_back(fs::Open(logDev));
-        } else {
-            proc->fileDescriptors.add_back(nullptr);
-            proc->fileDescriptors.add_back(nullptr);
-
-            Log::Warning("Failed to find /dev/kernellog");
-        }
-        
-        processes->add_back(proc);
-        return proc;
+        *stackPointer = (uintptr_t)stack;
+        return rip;
     }
 
     void StartProcess(process_t* proc){

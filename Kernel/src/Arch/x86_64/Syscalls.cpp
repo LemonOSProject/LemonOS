@@ -421,11 +421,135 @@ long SysUnlink(RegisterContext* r){
 }
 
 long SysExecve(RegisterContext* r){
-	//const char* path = (const char*)SC_ARG0(r);
-	//char* argv = (char*)SC_ARG1(r);
-	//char* envp = (char*)SC_ARG2(r);
+	Process* proc = Scheduler::GetCurrentProcess();
 
-	return -ENOSYS;
+	const char* path = (const char*)SC_ARG0(r);
+	char** argv = (char**)SC_ARG1(r);
+	char** envp = (char**)SC_ARG2(r);
+
+	size_t pathLength = 0;
+	if(strlenSafe(path, pathLength, proc->addressSpace)){
+		return -EFAULT;
+	}
+
+	char* kernelPath = new char[pathLength + 1];
+	strncpy(kernelPath, path, pathLength);
+	kernelPath[pathLength] = 0;
+
+	FsNode* node = fs::ResolvePath(kernelPath, proc->workingDir, true /* Follow Symlinks */);
+	if(!node){
+		return -ENOENT;
+	}
+
+	int argc = 0;
+	Vector<char*> kernelArgv;
+
+	for(;;){
+		if(!Memory::CheckUsermodePointer(reinterpret_cast<uintptr_t>(argv + argc), sizeof(char*), proc->addressSpace)){
+			return -EFAULT;
+		}
+
+		if(!argv[argc]){
+			break; // End of args
+		}
+
+		size_t argLength = 0;
+		if(strlenSafe(argv[argc], argLength, proc->addressSpace)){
+			for(char* arg : kernelArgv){
+				delete[] arg;
+			}
+
+			return -EFAULT;
+		}
+
+		char* buf = new char[argLength + 1];
+		strncpy(buf, argv[argc], argLength);
+		buf[argLength] = 0;
+
+		argc++;
+	}
+
+	int envc = 0;
+	Vector<char*> kernelEnv;
+
+	for(;;){
+		if(!Memory::CheckUsermodePointer(reinterpret_cast<uintptr_t>(envp + envc), sizeof(char*), proc->addressSpace)){
+			return -EFAULT;
+		}
+
+		if(!envp[envc]){
+			break; // End of args
+		}
+
+		size_t envLength = 0;
+		if(strlenSafe(envp[envc], envLength, proc->addressSpace)){
+			for(char* arg : kernelArgv){
+				delete[] arg;
+			}
+
+			for(char* env : kernelEnv){
+				delete[] env;
+			}
+
+			return -EFAULT;
+		}
+
+		char* buf = new char[envLength + 1];
+		strncpy(buf, envp[envc], envLength);
+		buf[envLength] = 0;
+
+		envc++;
+	}
+
+	timeval tv = Timer::GetSystemUptimeStruct();
+	uint8_t* buffer = (uint8_t*)kmalloc(node->size);
+	size_t read = fs::Read(node, 0, node->size, buffer);
+	if(!read){
+		Log::Warning("Could not read file: %s", kernelPath);
+		return -1;
+	}
+	timeval tvnew = Timer::GetSystemUptimeStruct();
+	Log::Info("Done (took %d us)", Timer::TimeDifference(tvnew, tv));
+
+	Thread* currentThread = Scheduler::GetCurrentThread();
+
+	proc->addressSpace->UnmapAll();
+
+    MappedRegion* stackRegion = proc->addressSpace->AllocateAnonymousVMObject(0x200000, 0, false); // 2MB max stacksize
+	currentThread->stack = reinterpret_cast<void*>(stackRegion->base); // 256KB stack size
+	r->rsp = (uintptr_t)currentThread->stack + 0x200000;
+
+	// Force the first 8KB to be allocated
+	stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, proc->GetPageMap());
+	stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, proc->GetPageMap());
+
+	r->rip = Scheduler::LoadELF(proc, &r->rsp, buffer, kernelArgv.size(), kernelArgv.Data(), kernelEnv.size(), kernelEnv.Data(), path);
+	kfree(buffer);
+
+	if(!r->rip){
+		Scheduler::EndProcess(Scheduler::GetCurrentProcess());
+		for(;;);
+	}
+    assert(!(r->rsp & 0xF));
+
+	r->rbp = r->rsp;
+    r->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
+	memset(currentThread->fxState, 0, 4096);
+
+	((fx_state_t*)currentThread->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
+	((fx_state_t*)currentThread->fxState)->mxcsrMask = 0xffbf;
+	((fx_state_t*)currentThread->fxState)->fcw = 0x33f; // Default FPU Control Word State
+
+	for(fs_fd_t*& fd : proc->fileDescriptors){
+		if(fd){
+			if(fd->mode & O_CLOEXEC){
+				fs::Close(fd);
+				fd = nullptr;
+			}
+		}
+	}
+
+	return 0;
 }
 
 long SysChdir(RegisterContext* r){
@@ -3016,7 +3140,7 @@ long SysLoadKernelModule(RegisterContext* r){
 	size_t filePathLength;
 	long filePathInvalid = strlenSafe(reinterpret_cast<char*>(SC_ARG0(r)), filePathLength, process->addressSpace);
 	if(filePathInvalid){
-		Log::Warning("SysExec: Reached unallocated memory reading file path");
+		Log::Warning("SysLoadKernelModule: Reached unallocated memory reading file path");
 		return -EFAULT;
 	}
 
@@ -3050,7 +3174,7 @@ long SysUnloadKernelModule(RegisterContext* r){
 	size_t nameLength;
 	long nameInvalid = strlenSafe(reinterpret_cast<char*>(SC_ARG0(r)), nameLength, process->addressSpace);
 	if(nameInvalid){
-		Log::Warning("SysExec: Reached unallocated memory reading file path");
+		Log::Warning("SysUnloadKernelModule: Reached unallocated memory reading file path");
 		return -EFAULT;
 	}
 
