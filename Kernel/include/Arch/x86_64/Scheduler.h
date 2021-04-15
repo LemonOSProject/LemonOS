@@ -36,6 +36,7 @@ typedef struct Process {
 	uint32_t threadCount = 0; // Amount of threads
 	int32_t euid = 0; // Effective UID
 	int32_t uid = 0;
+	int32_t egid = 0; // Effective GID
 	int32_t gid = 0;
 
 	Process* parent = nullptr;

@@ -420,6 +420,14 @@ long SysUnlink(RegisterContext* r){
 	return parentDirectory->Unlink(&entry);
 }
 
+long SysExecve(RegisterContext* r){
+	//const char* path = (const char*)SC_ARG0(r);
+	//char* argv = (char*)SC_ARG1(r);
+	//char* envp = (char*)SC_ARG2(r);
+
+	return -ENOSYS;
+}
+
 long SysChdir(RegisterContext* r){
 	if(SC_ARG0(r)){
 		char* path =  fs::CanonicalizePath((char*)SC_ARG0(r), Scheduler::GetCurrentProcess()->workingDir);
@@ -3098,6 +3106,23 @@ long SysFork(RegisterContext* r){
 	return newProcess->pid; // Return PID to parent process
 }
 
+long SysGetGID(RegisterContext* r){
+	return Scheduler::GetCurrentProcess()->gid;
+}
+
+long SysGetEGID(RegisterContext* r){
+	return Scheduler::GetCurrentProcess()->egid;
+}
+
+long SysGetPPID(RegisterContext* r){
+	Process* process = Scheduler::GetCurrentProcess();
+	if(process->parent){
+		return process->parent->pid;
+	} else {
+		return -1;
+	}
+}
+
 syscall_t syscalls[]{
 	SysDebug,
 	SysExit,					// 1
@@ -3110,7 +3135,7 @@ syscall_t syscalls[]{
 	SysCreate,
 	SysLink,
 	SysUnlink,					// 10
-	SysExec,
+	SysExecve,
 	SysChdir,
 	SysTime,
 	SysMapFB,
@@ -3193,6 +3218,9 @@ syscall_t syscalls[]{
 	SysLoadKernelModule,
 	SysUnloadKernelModule,
 	SysFork,
+	SysGetGID,
+	SysGetEGID,					// 95
+	SysGetPPID,
 };
 
 RegisterContext lastSyscall;
