@@ -3,7 +3,6 @@
 #include <Debug.h>
 #include <TTraits.h>
 
-#define REFPTR_DEBUG
 #ifdef REFPTR_DEBUG
     #include <Logging.h>
 #endif
@@ -37,6 +36,8 @@ public:
     FancyRefPtr(T* p) : obj(p) {
         if(obj){
             refCount = new unsigned(1);
+        } else {
+            refCount = nullptr;
         }
 
         #ifdef REFPTR_DEBUG
@@ -93,7 +94,7 @@ public:
         return *this;
     }
 
-    inline FancyRefPtr& operator=(nullptr_t){
+    ALWAYS_INLINE FancyRefPtr& operator=(nullptr_t){
         Dereference();
 
         obj = nullptr;
@@ -135,7 +136,7 @@ public:
 
 protected:
     ALWAYS_INLINE void Dereference(){
-        if(refCount){
+        if(refCount && obj){
             __sync_fetch_and_sub(refCount, 1);
 
             if(*refCount <= 0 && obj){
@@ -144,9 +145,8 @@ protected:
             }
 
             refCount = nullptr;
+            obj = nullptr;
         }
-
-        obj = nullptr;
     }
 
     unsigned* refCount = nullptr; // Reference Count

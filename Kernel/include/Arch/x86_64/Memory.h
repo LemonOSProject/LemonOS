@@ -9,7 +9,3 @@ typedef struct {
     uint64_t base;
     uint64_t pageCount;
 } mem_region_t;
-
-ALWAYS_INLINE void* operator new(size_t, void* p){
-	return p;
-}
