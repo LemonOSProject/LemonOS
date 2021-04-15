@@ -3184,11 +3184,15 @@ long SysUnloadKernelModule(RegisterContext* r){
 	return ModuleManager::UnloadModule(name);
 }
 
+/////////////////////////////
+/// \brief SysFork()
+///
+///	Clone's a process's address space (with copy-on-write), file descriptors and register state
+///
+/// \return Child PID to the calling process
+/// \return 0 to the newly forked child
+/////////////////////////////
 long SysFork(RegisterContext* r){
-	Log::Info("fork!!!");
-	Log::Info("fork!!!");
-	Log::Info("fork!!!");
-
 	Process* process = Scheduler::GetCurrentProcess();
 	Thread* currentThread = Scheduler::GetCurrentThread();
 
@@ -3230,14 +3234,29 @@ long SysFork(RegisterContext* r){
 	return newProcess->pid; // Return PID to parent process
 }
 
+/////////////////////////////
+/// \brief SysGetGID()
+///
+/// \return Current process's Group ID
+/////////////////////////////
 long SysGetGID(RegisterContext* r){
 	return Scheduler::GetCurrentProcess()->gid;
 }
 
+/////////////////////////////
+/// \brief SysGetEGID()
+///
+/// \return Current process's effective Group ID
+/////////////////////////////
 long SysGetEGID(RegisterContext* r){
 	return Scheduler::GetCurrentProcess()->egid;
 }
 
+/////////////////////////////
+/// \brief SysGetEGID()
+///
+/// \return PID of parent process, if there is no parent then -1
+/////////////////////////////
 long SysGetPPID(RegisterContext* r){
 	Process* process = Scheduler::GetCurrentProcess();
 	if(process->parent){
