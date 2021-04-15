@@ -54,8 +54,8 @@ struct Thread {
 	void* stack; // Pointer to the initial stack
 	void* stackLimit; // The limit of the stack
 	void* kernelStack; // Kernel Stack
-	uint32_t timeSlice;
-	uint32_t timeSliceDefault;
+	uint32_t timeSlice = 1;
+	uint32_t timeSliceDefault = 1;
 	RegisterContext registers;  // Registers
 	void* fxState; // State of the extended registers
 

@@ -189,32 +189,8 @@ namespace Scheduler{
 
         proc->creationTime = Timer::GetSystemUptimeStruct();
 
-        // Reserve 3 file descriptors for stdin, out and err
-        FsNode* nullDev = fs::ResolvePath("/dev/null");
-        FsNode* logDev = fs::ResolvePath("/dev/kernellog");
-
-        if(nullDev){
-            proc->fileDescriptors.add_back(fs::Open(nullDev));
-        } else {
-            proc->fileDescriptors.add_back(nullptr);
-            
-            Log::Warning("Failed to find /dev/null");
-        }
-        
-        if(logDev){
-            proc->fileDescriptors.add_back(fs::Open(logDev));
-            proc->fileDescriptors.add_back(fs::Open(logDev));
-        } else {
-            proc->fileDescriptors.add_back(nullptr);
-            proc->fileDescriptors.add_back(nullptr);
-
-            Log::Warning("Failed to find /dev/kernellog");
-        }
-
         proc->parent = nullptr;
         proc->uid = 0;
-
-        proc->addressSpace = new AddressSpace(Memory::CreatePageMap());
         proc->pid = nextPID++; // Set Process ID to the next availiable
 
         // Create structure for the main thread
@@ -269,6 +245,8 @@ namespace Scheduler{
 
     process_t* CreateProcess(void* entry) {
         process_t* proc = InitializeProcessStructure();
+        proc->addressSpace = new AddressSpace(Memory::CreatePageMap());
+
         Thread* thread = proc->threads[0];
 
         void* stack = (void*)Memory::KernelAllocate4KPages(32);
@@ -287,6 +265,24 @@ namespace Scheduler{
         processes->add_back(proc);
 
         return proc;
+    }
+
+    process_t* CloneProcess(process_t* process){
+        Process* newProcess = InitializeProcessStructure();
+        
+        newProcess->addressSpace = process->addressSpace->Fork();
+        newProcess->parent = process;
+
+        strncpy(newProcess->name, process->name, NAME_MAX);
+        strncpy(newProcess->workingDir, process->workingDir, PATH_MAX);
+
+        newProcess->euid = process->euid;
+        newProcess->uid = process->uid;
+        newProcess->gid = process->gid;
+
+        processes->add_back(newProcess);
+
+        return newProcess;
     }
 
     pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss){
@@ -575,6 +571,7 @@ namespace Scheduler{
 
         // Create process structure
         process_t* proc = InitializeProcessStructure();
+        proc->addressSpace = new AddressSpace(Memory::CreatePageMap());
 
         Thread* thread = proc->threads[0];
         thread->registers.cs = USER_CS; // We want user mode so use user mode segments, make sure RPL is 3
@@ -705,6 +702,28 @@ namespace Scheduler{
         thread->registers.rbp = (uintptr_t) stack;
         
         assert(!(thread->registers.rsp & 0xF));
+
+        // Reserve 3 file descriptors for stdin, out and err
+        FsNode* nullDev = fs::ResolvePath("/dev/null");
+        FsNode* logDev = fs::ResolvePath("/dev/kernellog");
+
+        if(nullDev){
+            proc->fileDescriptors.add_back(fs::Open(nullDev));
+        } else {
+            proc->fileDescriptors.add_back(nullptr);
+            
+            Log::Warning("Failed to find /dev/null");
+        }
+        
+        if(logDev){
+            proc->fileDescriptors.add_back(fs::Open(logDev));
+            proc->fileDescriptors.add_back(fs::Open(logDev));
+        } else {
+            proc->fileDescriptors.add_back(nullptr);
+            proc->fileDescriptors.add_back(nullptr);
+
+            Log::Warning("Failed to find /dev/kernellog");
+        }
         
         processes->add_back(proc);
         return proc;

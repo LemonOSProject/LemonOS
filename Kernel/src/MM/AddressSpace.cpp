@@ -128,7 +128,6 @@ AddressSpace* AddressSpace::Fork(){
     AddressSpace* fork = new AddressSpace(Memory::ClonePageMap(pageMap));
     for(auto it = regions.begin(); it != regions.end(); it++){
         MappedRegion& r = *it;
-        assert(r.vmObject->IsAnonymous());
 
         r.vmObject->refCount++;
         if(!r.vmObject->IsShared()){ // Shared VM Objects are shared, we do not want COW
@@ -138,7 +137,7 @@ AddressSpace* AddressSpace::Fork(){
             r.vmObject->MapAllocatedBlocks(r.Base(), pageMap);
         }
 
-        fork->regions.add_back(r);
+        fork->regions.add_back(const_cast<const MappedRegion&>(r));
         
         r.vmObject->MapAllocatedBlocks(r.Base(), fork->pageMap);
     }

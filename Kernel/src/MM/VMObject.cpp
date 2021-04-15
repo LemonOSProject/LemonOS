@@ -160,14 +160,13 @@ ProcessImageVMObject::ProcessImageVMObject(uintptr_t base, size_t size, bool wri
 
 void ProcessImageVMObject::MapAllocatedBlocks(uintptr_t requestedBase, PageMap* pMap){
     assert(requestedBase == base);
-    assert(!copyOnWrite);
 
     uintptr_t virt = base;
     for(unsigned i = 0; i < (size >> PAGE_SHIFT_4K); i++){
         uint64_t block = physicalBlocks[i];
         assert(block);
 
-        Memory::MapVirtualMemory4K(block << PAGE_SHIFT_4K, virt, 1, PAGE_USER | (PAGE_WRITABLE * write) | PAGE_PRESENT, pMap);
+        Memory::MapVirtualMemory4K(block << PAGE_SHIFT_4K, virt, 1, PAGE_USER | (PAGE_WRITABLE * (write && !copyOnWrite)) | PAGE_PRESENT, pMap);
         virt += PAGE_SIZE_4K;
     }
 }

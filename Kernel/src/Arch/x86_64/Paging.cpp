@@ -214,8 +214,7 @@ namespace Memory{
 			pageDirsPhys[i] = Memory::AllocatePhysicalMemoryBlock();
 			KernelMapVirtualMemory4K(pageDirsPhys[i],(uintptr_t)pageDirs[i],1);
 
-			pageTables[i] = (page_t**)Memory::KernelAllocate4KPages(1);
-			KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)pageTables[i],1);
+			pageTables[i] = (page_t**)kmalloc(4096);
 
 			SetPageFrame(&(pdpt[i]),pageDirsPhys[i]);
 			pdpt[i] |= PDPT_WRITABLE | PDPT_PRESENT | PDPT_USER;
@@ -715,15 +714,16 @@ namespace Memory{
 						faultRegion->lock.ReleaseRead();
 						return;
 					} else {
+						asm("sti");
 						VMObject* clone = vmo->Clone();
-						vmo->refCount--;
 
+						vmo->refCount--;
 						faultRegion->vmObject = clone;
+						asm("cli");
 
 						clone->MapAllocatedBlocks(faultRegion->Base(), addressSpace->GetPageMap());
 						clone->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(), addressSpace->GetPageMap()); // In case the block was never allocated in the first place
 						
-						faultRegion->vmObject = clone;
 						faultRegion->lock.ReleaseRead();
 						return;
 					}

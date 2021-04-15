@@ -106,6 +106,7 @@ namespace Scheduler{
     pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss);
 
     process_t* CreateProcess(void* entry);
+	process_t* CloneProcess(process_t* process);
 	process_t* CreateELFProcess(void* elf, int argc = 0, char** argv = nullptr, int envc = 0, char** envp = nullptr, const char* execPath = nullptr);
 	void StartProcess(process_t* proc);
 

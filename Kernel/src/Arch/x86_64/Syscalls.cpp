@@ -39,7 +39,7 @@
 #define SC_ARG4(r) (r)->r9
 #define SC_ARG5(r) (r)->r8
 
-#define NUM_SYSCALLS 93
+#define NUM_SYSCALLS 94
 
 #define EXEC_CHILD 1
 
@@ -67,7 +67,7 @@ long SysExit(RegisterContext* r){
 }
 
 long SysExec(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	size_t filePathLength;
 	long filePathInvalid = strlenSafe(reinterpret_cast<char*>(SC_ARG0(r)), filePathLength, currentProcess->addressSpace);
@@ -139,7 +139,7 @@ long SysExec(RegisterContext* r){
 	timeval tvnew = Timer::GetSystemUptimeStruct();
 	Log::Info("Done (took %d us)", Timer::TimeDifference(tvnew, tv));
 
-	process_t* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp, filepath);
+	Process* proc = Scheduler::CreateELFProcess((void*)buffer, argc, kernelArgv, envCount, kernelEnvp, filepath);
 	kfree(buffer);
 	
 	for(int i = 0; i < envCount; i++){
@@ -191,7 +191,7 @@ long SysExec(RegisterContext* r){
 }
 
 long SysRead(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
 		Log::Warning("Invalid File Descriptor: %d", SC_ARG0(r));
 		return -EBADF;
@@ -215,7 +215,7 @@ long SysRead(RegisterContext* r){
 }
 
 long SysWrite(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 
 	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
 		Log::Warning("Invalid File Descriptor: %d", SC_ARG0(r));
@@ -254,7 +254,7 @@ long SysOpen(RegisterContext* r){
 
 	uint64_t flags = SC_ARG1(r);
 
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 
 	IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
 		Log::Info("Opening: %s (flags: %u)", filepath, flags);
@@ -330,7 +330,7 @@ open:
 long SysClose(RegisterContext* r){
 	int fd = SC_ARG0(r);
 	
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 	if(fd >= static_cast<int>(currentProcess->fileDescriptors.get_length())){
 		Log::Warning("SysClose: Invalid File Descriptor, %d", fd);
 		return -EBADF;
@@ -359,7 +359,7 @@ long SysLink(RegisterContext* r){
 	const char* oldpath = (const char*)SC_ARG0(r);
 	const char* newpath = (const char*)SC_ARG1(r);
 
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 
 	if(!(Memory::CheckUsermodePointer(SC_ARG0(r), 1, proc->addressSpace) && Memory::CheckUsermodePointer(SC_ARG1(r), 1, proc->addressSpace))){
 		Log::Warning("sys_link: Invalid path pointer");
@@ -395,7 +395,7 @@ long SysLink(RegisterContext* r){
 long SysUnlink(RegisterContext* r){
 	const char* path = (const char*)SC_ARG0(r);
 	
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 1, proc->addressSpace)){
 		Log::Warning("sys_unlink: Invalid path pointer");
@@ -469,7 +469,7 @@ long SysMapFB(RegisterContext *r){
 }
 
 long SysChmod(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 
 	const char* path = reinterpret_cast<const char*>(SC_ARG0(r));
 	mode_t mode = SC_ARG1(r);
@@ -538,7 +538,7 @@ long SysStat(RegisterContext* r){
 	stat_t* stat = (stat_t*)SC_ARG0(r);
 	char* filepath = (char*)SC_ARG1(r);
 	uint64_t flags = SC_ARG2(r);
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(stat_t), proc->addressSpace)){
 		Log::Warning("sys_stat: stat structure points to invalid address %x", SC_ARG0(r));
@@ -625,7 +625,7 @@ long SysMkdir(RegisterContext* r){
 	char* path = (char*)SC_ARG0(r);
 	mode_t mode = SC_ARG1(r);
 
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 0, proc->addressSpace)){
 		Log::Warning("sys_mkdir: Invalid path pointer %x", SC_ARG0(r));
@@ -655,7 +655,7 @@ long SysMkdir(RegisterContext* r){
 }
 
 long SysRmdir(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 1, proc->addressSpace)){
 		return -EFAULT;
 	}
@@ -687,7 +687,7 @@ long SysRename(RegisterContext* r){
 	char* oldpath = (char*)SC_ARG0(r);
 	char* newpath = (char*)SC_ARG1(r);
 
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 0, proc->addressSpace)){
 		Log::Warning("sys_rename: Invalid oldpath pointer %x", SC_ARG0(r));
@@ -727,7 +727,7 @@ long SysYield(RegisterContext* r){
  * 
  */
 long SysReadDirNext(RegisterContext* r){
-	process_t* process = Scheduler::GetCurrentProcess();
+	Process* process = Scheduler::GetCurrentProcess();
 
 	unsigned int fd = SC_ARG0(r);
 	if(fd > Scheduler::GetCurrentProcess()->fileDescriptors.get_length()){
@@ -859,7 +859,7 @@ long SysMmap(RegisterContext* r){
 		return -EINVAL; // We do not accept 0-length mappings
 	}
 
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	
 	bool fixed = flags & MAP_FIXED;
 	bool anon = flags & MAP_ANON;
@@ -886,7 +886,7 @@ long SysGrantPTY(RegisterContext* r){
 
 	PTY* pty = GrantPTY(Scheduler::GetCurrentProcess()->pid);
 
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	*((int*)SC_ARG0(r)) = currentProcess->fileDescriptors.get_length();
 	
@@ -918,7 +918,7 @@ long SysWaitPID(RegisterContext* r){
 	int64_t pid = SC_ARG0(r);
 	int64_t flags = SC_ARG2(r);
 
-	process_t* proc = nullptr;
+	Process* proc = nullptr;
 	if((proc = Scheduler::FindProcessByPID(pid))){
 		if(flags & WNOHANG){
 			return 0;
@@ -950,7 +950,7 @@ long SysNanoSleep(RegisterContext* r){
 }
 
 long SysPRead(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 	if(SC_ARG0(r) >= currentProcess->fileDescriptors.get_length()){
 		return -EBADF;
 	}
@@ -1054,7 +1054,7 @@ long SysInfo(RegisterContext* r){
  * On failure - return -1
  */
 long SysMunmap(RegisterContext* r){
-	process_t* process = Scheduler::GetCurrentProcess();
+	Process* process = Scheduler::GetCurrentProcess();
 
 	uint64_t address = SC_ARG0(r);
 	size_t size = SC_ARG1(r);
@@ -1196,7 +1196,7 @@ long SysSocket(RegisterContext* r){
  * On Failure - return -1
  */
 long SysBind(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	long fd = SC_ARG0(r);
 
 	if(fd >= proc->fileDescriptors.get_length()){
@@ -1235,7 +1235,7 @@ long SysBind(RegisterContext* r){
  * On Failure - return -1
  */
 long SysListen(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
 		Log::Warning("sys_listen: Invalid file descriptor: ", SC_ARG0(r));
@@ -1260,7 +1260,7 @@ long SysListen(RegisterContext* r){
 /// \return File descriptor of accepted socket or negative error code
 /////////////////////////////
 long SysAccept(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
 		Log::Warning("sys_accept: Invalid file descriptor: ", SC_ARG0(r));
@@ -1310,7 +1310,7 @@ long SysAccept(RegisterContext* r){
 /// \return 0 on success or negative error code on failure
 /////////////////////////////
 long SysConnect(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 	if(!handle){ 
 		Log::Warning("sys_connect: Invalid file descriptor: ", SC_ARG0(r));
@@ -1345,7 +1345,7 @@ long SysConnect(RegisterContext* r){
  * On Failure - return -1
  */
 long SysSend(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
 	uint8_t* buffer = (uint8_t*)(SC_ARG1(r));
@@ -1383,7 +1383,7 @@ long SysSend(RegisterContext* r){
  * On Failure - return -1
  */
 long SysSendTo(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
 	uint8_t* buffer = (uint8_t*)(SC_ARG1(r));
@@ -1424,7 +1424,7 @@ long SysSendTo(RegisterContext* r){
  * On Failure - return -1
  */
 long SysReceive(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
 	uint8_t* buffer = (uint8_t*)(SC_ARG1(r));
@@ -1462,7 +1462,7 @@ long SysReceive(RegisterContext* r){
  * On Failure - return -1
  */
 long SysReceiveFrom(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	fs_fd_t* handle = proc->fileDescriptors.get_at(SC_ARG0(r));
 
 	uint8_t* buffer = (uint8_t*)(SC_ARG1(r));
@@ -1509,7 +1509,7 @@ long SysGetUID(RegisterContext* r){
  * On Failure - Return negative value
  */
 long SysSetUID(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	uid_t requestedUID = SC_ARG0(r);
 
 	if(proc->uid == requestedUID){
@@ -1541,7 +1541,7 @@ long SysPoll(RegisterContext* r){
 	long timeout = SC_ARG2(r);
 
 	Thread* thread = GetCPULocal()->currentThread;
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), nfds * sizeof(pollfd), proc->addressSpace)){
 		Log::Warning("sys_poll: Invalid pointer to file descriptor array");
 		return -EFAULT;
@@ -1673,7 +1673,7 @@ long SysPoll(RegisterContext* r){
  * On Failure - return -1
  */
 long SysSendMsg(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 
 	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
 		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
@@ -1762,7 +1762,7 @@ long SysSendMsg(RegisterContext* r){
  * On Failure - return -1
  */
 long SysRecvMsg(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 
 	if(SC_ARG0(r) >= proc->fileDescriptors.get_length()){
 		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
@@ -1860,7 +1860,7 @@ long SysGetEUID(RegisterContext* r){
 /// \return On success return 0, otherwise return negative error code
 /////////////////////////////
 long SysSetEUID(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 	uid_t requestedEUID = SC_ARG0(r);
 
 	// Unprivileged processes may only set the effective user ID to the real user ID or the effective user ID
@@ -1890,12 +1890,12 @@ long SysGetProcessInfo(RegisterContext* r){
 	uint64_t pid = SC_ARG0(r);
 	lemon_process_info_t* pInfo = reinterpret_cast<lemon_process_info_t*>(SC_ARG1(r));
 
-	process_t* cProcess = Scheduler::GetCurrentProcess();
+	Process* cProcess = Scheduler::GetCurrentProcess();
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(lemon_process_info_t), cProcess->addressSpace)){
 		return -EFAULT;
 	}
 
-	process_t* reqProcess;
+	Process* reqProcess;
 	if(!(reqProcess = Scheduler::FindProcessByPID(pid))){
 		return -EINVAL;
 	}
@@ -1933,7 +1933,7 @@ long SysGetNextProcessInfo(RegisterContext* r){
 	pid_t* pidP = reinterpret_cast<pid_t*>(SC_ARG0(r));
 	lemon_process_info_t* pInfo = reinterpret_cast<lemon_process_info_t*>(SC_ARG1(r));
 
-	process_t* cProcess = Scheduler::GetCurrentProcess();
+	Process* cProcess = Scheduler::GetCurrentProcess();
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(lemon_process_info_t), cProcess->addressSpace)){
 		return -EFAULT;
 	}
@@ -1948,7 +1948,7 @@ long SysGetNextProcessInfo(RegisterContext* r){
 		return 1; // No more processes
 	}
 
-	process_t* reqProcess;
+	Process* reqProcess;
 	if(!(reqProcess = Scheduler::FindProcessByPID(*pidP))){
 		return -EINVAL;
 	}
@@ -1982,7 +1982,7 @@ long SysGetNextProcessInfo(RegisterContext* r){
 /// \return Negative value on failure
 /////////////////////////////
 long SysReadLink(RegisterContext* r){
-	process_t* proc = Scheduler::GetCurrentProcess();
+	Process* proc = Scheduler::GetCurrentProcess();
 
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), 0, proc->addressSpace)){
 		return -EFAULT; // Invalid path pointer
@@ -2054,7 +2054,7 @@ long SysFutexWake(RegisterContext* r){
 		return EFAULT;
 	}
 
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	List<FutexThreadBlocker*>* blocked = nullptr;
 	if(!currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex), blocked) || !blocked->get_length()){
@@ -2093,7 +2093,7 @@ long SysFutexWait(RegisterContext* r){
 		return 0;
 	}
 
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 	Thread* currentThread = Scheduler::GetCurrentThread();
 
 	List<FutexThreadBlocker*>* blocked;
@@ -2129,7 +2129,7 @@ long SysDup(RegisterContext* r){
 
 	fs_fd_t* handle;
 
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 	if(static_cast<unsigned>(fd) >= currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
 		return -EBADF;
 	}
@@ -2172,7 +2172,7 @@ long SysGetFileStatusFlags(RegisterContext* r){
 	int fd = static_cast<int>(SC_ARG0(r));
 	fs_fd_t* handle;
 
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 	if(static_cast<unsigned>(fd) > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
 		return -EBADF;
 	}
@@ -2193,7 +2193,7 @@ long SysSetFileStatusFlags(RegisterContext* r){
 	int nFlags = static_cast<int>(SC_ARG1(r));
 	fs_fd_t* handle;
 
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 	if(static_cast<unsigned>(fd) > currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
 		return -EBADF;
 	}
@@ -2217,7 +2217,7 @@ long SysSetFileStatusFlags(RegisterContext* r){
 /// \return number of events on success, negative error code on failure
 /////////////////////////////
 long SysSelect(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	int nfds = static_cast<int>(SC_ARG0(r));
 	fd_set_t* readFdsMask = reinterpret_cast<fd_set_t*>(SC_ARG1(r));
@@ -2354,7 +2354,7 @@ long SysSelect(RegisterContext* r){
 /// \return Handle ID on success, error code on failure
 /////////////////////////////
 long SysCreateService(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	size_t nameLength;
 	if(strlenSafe(reinterpret_cast<const char*>(SC_ARG0(r)), nameLength, currentProcess->addressSpace)){
@@ -2388,7 +2388,7 @@ long SysCreateService(RegisterContext* r){
 /// \return Handle ID of service on success, negative error code on failure
 /////////////////////////////
 long SysCreateInterface(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* svcHandle;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &svcHandle)){
@@ -2434,7 +2434,7 @@ long SysCreateInterface(RegisterContext* r){
 /// \return Handle ID of endpoint on success, 0 when no pending connections, negative error code on failure
 /////////////////////////////
 long SysInterfaceAccept(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* ifHandle;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &ifHandle)){
@@ -2468,7 +2468,7 @@ long SysInterfaceAccept(RegisterContext* r){
 /// \return Handle ID of endpoint on success, negative error code on failure
 /////////////////////////////
 long SysInterfaceConnect(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	size_t sz = 0;
 	if(strlenSafe(reinterpret_cast<const char*>(SC_ARG0(r)), sz, currentProcess->addressSpace)){
@@ -2519,7 +2519,7 @@ long SysInterfaceConnect(RegisterContext* r){
 /// \return 0 on success, negative error code on failure
 /////////////////////////////
 long SysEndpointQueue(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* endpHandle;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
@@ -2564,7 +2564,7 @@ long SysEndpointQueue(RegisterContext* r){
 /// \return 0 on empty, 1 on success, negative error code on failure
 /////////////////////////////
 long SysEndpointDequeue(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* endpHandle;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
@@ -2625,7 +2625,7 @@ long SysEndpointDequeue(RegisterContext* r){
 /// \return 0 on success, negative error code on failure
 /////////////////////////////
 long SysEndpointCall(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* endpHandle;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &endpHandle)){
@@ -2659,7 +2659,7 @@ long SysEndpointCall(RegisterContext* r){
 /// \return 0 on success, negative error code on failure
 /////////////////////////////
 long SysEndpointInfo(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	MessageEndpointInfo* info = reinterpret_cast<MessageEndpointInfo*>(SC_ARG1(r));
 
@@ -2695,7 +2695,7 @@ long SysEndpointInfo(RegisterContext* r){
 /// \return negative error code on failure
 /////////////////////////////
 long SysKernelObjectWaitOne(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* handle;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &handle)){
@@ -2734,7 +2734,7 @@ long SysKernelObjectWaitOne(RegisterContext* r){
 /// \return negative error code on failure
 /////////////////////////////
 long SysKernelObjectWait(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 	unsigned count = SC_ARG1(r);
 	long timeout = SC_ARG2(r);
 
@@ -2779,7 +2779,7 @@ long SysKernelObjectWait(RegisterContext* r){
 /// \return negative error code on failure
 /////////////////////////////
 long SysKernelObjectDestroy(RegisterContext* r){
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 
 	Handle* h;
 	if(Scheduler::FindHandle(currentProcess, SC_ARG0(r), &h)){
@@ -2820,7 +2820,7 @@ long SysSetSocketOptions(RegisterContext* r){
 	socklen_t optLen = SC_ARG4(r);
 
 	fs_fd_t* handle;
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 	if(static_cast<unsigned>(fd) >= currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
 		return -EBADF;
 	}
@@ -2858,7 +2858,7 @@ long SysGetSocketOptions(RegisterContext* r){
 	socklen_t* optLen = reinterpret_cast<socklen_t*>(SC_ARG4(r));
 
 	fs_fd_t* handle;
-	process_t* currentProcess = Scheduler::GetCurrentProcess();
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 	if(static_cast<unsigned>(fd) >= currentProcess->fileDescriptors.get_length() || !(handle = currentProcess->fileDescriptors[fd])){
 		return -EBADF;
 	}
@@ -2876,7 +2876,7 @@ long SysGetSocketOptions(RegisterContext* r){
 }
 
 long SysDeviceManagement(RegisterContext* r){
-	process_t* process = Scheduler::GetCurrentProcess();
+	Process* process = Scheduler::GetCurrentProcess();
 
 	int64_t request = SC_ARG0(r);
 
@@ -2968,7 +2968,7 @@ long SysDeviceManagement(RegisterContext* r){
 }
 
 long SysInterruptThread(RegisterContext* r){
-	process_t* process = Scheduler::GetCurrentProcess();
+	Process* process = Scheduler::GetCurrentProcess();
 
 	long tid = SC_ARG0(r);
 
@@ -2999,7 +2999,7 @@ long SysInterruptThread(RegisterContext* r){
 /// \return 0 on success negative error code on failure
 /////////////////////////////
 long SysLoadKernelModule(RegisterContext* r){
-	process_t* process = Scheduler::GetCurrentProcess();
+	Process* process = Scheduler::GetCurrentProcess();
 
 	if(process->euid != 0){
 		return -EPERM; // Must be root
@@ -3033,7 +3033,7 @@ long SysLoadKernelModule(RegisterContext* r){
 /// \return 0 on success negative error code on failure
 /////////////////////////////
 long SysUnloadKernelModule(RegisterContext* r){
-	process_t* process = Scheduler::GetCurrentProcess();
+	Process* process = Scheduler::GetCurrentProcess();
 
 	if(process->euid != 0){
 		return -EPERM; // Must be root
@@ -3050,6 +3050,52 @@ long SysUnloadKernelModule(RegisterContext* r){
 	strncpy(name, (char*)SC_ARG0(r), nameLength);
 
 	return ModuleManager::UnloadModule(name);
+}
+
+long SysFork(RegisterContext* r){
+	Log::Info("fork!!!");
+	Log::Info("fork!!!");
+	Log::Info("fork!!!");
+
+	Process* process = Scheduler::GetCurrentProcess();
+	Thread* currentThread = Scheduler::GetCurrentThread();
+
+	Process* newProcess = Scheduler::CloneProcess(process);
+	Thread* thread = newProcess->threads[0];
+	void* threadKStack = thread->kernelStack; // Save the allocated kernel stack
+
+	*thread = *currentThread;
+	thread->kernelStack = threadKStack;
+	thread->state = ThreadStateRunning;
+	thread->parent = newProcess;
+	thread->registers = *r;
+
+	thread->lock = 0;
+	thread->stateLock = 0;
+
+	thread->tid = 0;
+
+	thread->blocker = nullptr;
+	thread->blockTimedOut = false;
+
+	thread->registers.rax = 0; // To the child we return 0
+
+	newProcess->fileDescriptors.resize(process->fileDescriptors.get_length());
+	for(unsigned i = 0; i < process->fileDescriptors.get_length(); i++){
+		fs_fd_t* fd = process->fileDescriptors[i];
+		if(fd){
+			fs_fd_t* newFd = fs::Open(fd->node);
+			newFd->pos = fd->pos;
+			newFd->mode = fd->mode;
+
+			newProcess->fileDescriptors[i] = newFd;
+		} else {
+			newProcess->fileDescriptors[i] = nullptr;
+		}
+	}
+
+	Scheduler::StartProcess(newProcess);
+	return newProcess->pid; // Return PID to parent process
 }
 
 syscall_t syscalls[]{
@@ -3143,9 +3189,10 @@ syscall_t syscalls[]{
 	SysSetSocketOptions,
 	SysGetSocketOptions,
 	SysDeviceManagement,
-	SysInterruptThread,
+	SysInterruptThread,			// 90
 	SysLoadKernelModule,
 	SysUnloadKernelModule,
+	SysFork,
 };
 
 RegisterContext lastSyscall;
