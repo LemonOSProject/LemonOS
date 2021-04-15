@@ -50,6 +50,7 @@
 
 #define MAX_PDPT_INDEX 511
 
+#define PAGE_SHIFT_4K 12
 #define PAGE_COUNT_4K(size) (((size) + (PAGE_SIZE_4K - 1)) >> 12)
 
 typedef uint64_t page_t;
@@ -68,47 +69,77 @@ using pml4_t = pml4_entry_t[PDPTS_PER_PML4];
 
 typedef struct PageMap { // Each process will have a maximum of 96GB of virtual memory.
     pdpt_entry_t* pdpt; // 512GB is more than ample
-    pd_entry_t** pageDirs;//[64]; // 64 GB is enough
+    pd_entry_t** pageDirs;
     uint64_t* pageDirsPhys;
-    page_t*** pageTables;//[64][TABLES_PER_DIR];
+    page_t*** pageTables;
     pml4_entry_t* pml4;
     uint64_t pdptPhys;
     uint64_t pml4Phys;
 } __attribute__((packed)) page_map_t;
 
+class AddressSpace;
 namespace Memory{
     extern pml4_t kernelPML4;
     
-    void DestroyAddressSpace(page_map_t* addressSpace);
+    // Creates a new pagemap object
+    PageMap* CreatePageMap();
+    // Clones an existing pagemap object
+    PageMap* ClonePageMap(PageMap* pageMap);
+    // Destroy pagemap
+    void DestroyPageMap(PageMap* pageMap);
 
     void InitializeVirtualMemory();
 
-    void* AllocateVirtualMemory(uint64_t size);
-    void* KernelAllocateVirtualMemory(uint64_t size);
-
-    void FreeVirtualMemory(void* pointer, uint64_t size);
-    void KernelFree2MPages(void* addr, uint64_t amount);
-	void KernelFree4KPages(void* addr, uint64_t amount);
-
-    void* Allocate4KPages(uint64_t amount, page_map_t* addressSpace);
+    void* KernelAllocate4KPages(uint64_t amount);
 
     void Free4KPages(void* addr, uint64_t amount, page_map_t* addressSpace);
-
-    void* KernelAllocate4KPages(uint64_t amount);
-    void* KernelAllocate2MPages(uint64_t amount);
-    void* KernelAllocate1GPages(uint64_t amount);
+	void KernelFree4KPages(void* addr, uint64_t amount);
+    void FreeVirtualMemory(void* pointer, uint64_t size);
     
-    void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount);
+    /////////////////////////////
+    /// \brief Map 4KB Pages
+    ///
+    /// \param phys Physical address to map to
+    /// \param virt Virtual address of the mapping
+    /// \param amount Amount of pages to map
+    /////////////////////////////
     void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount);
+
+    /////////////////////////////
+    /// \brief Map 4KB Pages
+    ///
+    /// \param phys Physical address to map to
+    /// \param virt Virtual address of the mapping
+    /// \param amount Amount of pages to map
+    /// \param flags Page Flags
+    /////////////////////////////
     void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags);
-    void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, page_map_t* addressSpace);
+
+    /////////////////////////////
+    /// \brief Map 4KB Pages
+    ///
+    /// \param phys Physical address to map to
+    /// \param virt Virtual address of the mapping
+    /// \param amount Amount of pages to map
+    /// \param pageMap PageMap to map pages
+    /////////////////////////////
+    void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, PageMap* pageMap);
+
+    /////////////////////////////
+    /// \brief Map 4KB Pages
+    ///
+    /// \param phys Physical address to map to
+    /// \param virt Virtual address of the mapping
+    /// \param amount Amount of pages to map
+    /// \param flags Page Flags
+    /// \param pageMap PageMap to map pages
+    /////////////////////////////
+    void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags, PageMap* pageMap);
 
     uintptr_t GetIOMapping(uintptr_t addr);
 
-    page_map_t* CreateAddressSpace();
-    bool CheckRegion(uintptr_t addr, uint64_t len, page_map_t* addressSpace);
 	bool CheckKernelPointer(uintptr_t addr, uint64_t len);
-	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, page_map_t* addressSpace);
+	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, AddressSpace* addressSpace);
     uint64_t VirtualToPhysicalAddress(uint64_t addr);
     uint64_t VirtualToPhysicalAddress(uint64_t addr, page_map_t* addressSpace);
 

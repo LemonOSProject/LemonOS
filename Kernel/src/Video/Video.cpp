@@ -1,6 +1,8 @@
 #include <Video/Video.h>
 
 #include <Math.h>
+#include <MM/VMObject.h>
+#include <Assert.h>
 
 uint8_t defaultFont[128][8] = {
 	{ 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },   // U+0000 (nul)
@@ -143,13 +145,30 @@ typedef struct {
 namespace Video{
     video_mode_t videoMode;
 
-    uint8_t* videoMemory;
+    uint8_t* videoMemory = nullptr;
     
     uint32_t screenWidth;
     uint32_t screenHeight;
     uint16_t screenDepth;
 
     uint32_t screenPitch;
+
+    class FramebufferVMO : public VMObject {
+    public:
+        FramebufferVMO() : VMObject(PAGE_COUNT_4K(screenPitch * screenHeight * (screenDepth / 8)) << PAGE_SHIFT_4K, false, true){
+            
+        }
+
+        void MapAllocatedBlocks(uintptr_t base, PageMap* pMap){
+            Memory::MapVirtualMemory4K(videoMode.physicalAddress, base, size >> PAGE_SHIFT_4K, pMap);
+        }
+
+        [[noreturn]] VMObject* Clone() {
+            assert(!"Framebuffer VMO cannot be cloned!");
+        }
+    };
+    FramebufferVMO* framebufferVMO = nullptr;
+    FancyRefPtr<VMObject>* framebufferVMOPtr = nullptr;
 
     void Initialize(video_mode_t videoMode){
         videoMemory = (uint8_t*)videoMode.address;
@@ -161,10 +180,17 @@ namespace Video{
         screenPitch = videoMode.pitch;
 
         Video::videoMode = videoMode;
+
+        framebufferVMO = new FramebufferVMO();
+        framebufferVMOPtr = new FancyRefPtr<VMObject>(framebufferVMO); // We cannot guarantee that constructors have been called, so make a pointer to a FancyRefPtr
     }
 
     video_mode_t GetVideoMode(){
         return videoMode;
+    }
+
+    FancyRefPtr<VMObject> GetFramebufferVMO(){
+        return *framebufferVMOPtr;
     }
 
     void DrawPixel(unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b){

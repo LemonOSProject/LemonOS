@@ -30,6 +30,7 @@
 #include <ABI/Syscall.h>
 
 #include <sys/ioctl.h>
+#include <abi-bits/vm-flags.h>
 
 #define SC_ARG0(r) (r)->rdi
 #define SC_ARG1(r) (r)->rsi
@@ -440,15 +441,16 @@ long SysTime(RegisterContext* r){
 
 long SysMapFB(RegisterContext *r){
 	video_mode_t vMode = Video::GetVideoMode();
+	Process* process = Scheduler::GetCurrentProcess();
 
-	uint64_t pageCount = (vMode.height * vMode.pitch + 0xFFF) >> 12;
-	uintptr_t fbVirt = (uintptr_t)Memory::Allocate4KPages(pageCount, Scheduler::GetCurrentProcess()->addressSpace);
-	Memory::MapVirtualMemory4K((uintptr_t)HAL::videoMode.physicalAddress,fbVirt,pageCount,Scheduler::GetCurrentProcess()->addressSpace);
+	MappedRegion* region = nullptr;
+	region = process->addressSpace->MapVMO(Video::GetFramebufferVMO(), 0, false);
 
-	mem_region_t memR;
-	memR.base = fbVirt;
-	memR.pageCount = pageCount;
-	Scheduler::GetCurrentProcess()->sharedMemory.add_back(memR);
+	if(!region || !region->Base()){
+		return -1;
+	}
+
+	uintptr_t fbVirt = region->Base();
 
 	fb_info_t fbInfo;
 	fbInfo.width = vMode.width;
@@ -460,27 +462,9 @@ long SysMapFB(RegisterContext *r){
 
 	*((uintptr_t*)SC_ARG0(r)) = fbVirt;
 	*((fb_info_t*)SC_ARG1(r)) = fbInfo;
+
+	Log::Info("fb mapped at %x", region->Base());
 	
-	return 0;
-}
-
-long SysAlloc(RegisterContext* r){
-	uint64_t pageCount = SC_ARG0(r);
-	uintptr_t* addressPointer = (uintptr_t*)SC_ARG1(r);
-
-	process_t* proc = Scheduler::GetCurrentProcess();
-	uintptr_t address = (uintptr_t)Memory::Allocate4KPages(pageCount, proc->addressSpace);
-
-	assert(address);
-
-	for(unsigned i = 0; i < pageCount; i++){
-		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), address + i * PAGE_SIZE_4K, 1, proc->addressSpace);
-		memset((void*)(address + i * PAGE_SIZE_4K), 0, PAGE_SIZE_4K);
-	}
-
-	*addressPointer = address;
-
-	proc->usedMemoryBlocks += pageCount;
 	return 0;
 }
 
@@ -867,29 +851,33 @@ long SysSetFsBase(RegisterContext* r){
 
 long SysMmap(RegisterContext* r){
 	uint64_t* address = (uint64_t*)SC_ARG0(r);
-	size_t count = SC_ARG1(r);
+	size_t size = SC_ARG1(r);
 	uintptr_t hint = SC_ARG2(r);
+	uint64_t flags = SC_ARG3(r);
 
-	process_t* proc = Scheduler::GetCurrentProcess();
-	uintptr_t _address;
-	if(hint){
-		if(Memory::CheckRegion(hint, count * PAGE_SIZE_4K, proc->addressSpace) /*Check availibilty of the requested map*/){
-			_address = hint;
-		} else {
-			Log::Warning("sys_mmap: Could not map to address %x", hint);
-			*address = 0;
-			return 1;
-		}
-	} else _address = (uintptr_t)Memory::Allocate4KPages(count, proc->addressSpace);
-
-	for(size_t i = 0; i < count; i++){
-		Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), _address + i * PAGE_SIZE_4K, 1, proc->addressSpace);
-		memset((void*)(_address + i * PAGE_SIZE_4K), 0, PAGE_SIZE_4K);
+	if(!size){
+		return -EINVAL; // We do not accept 0-length mappings
 	}
 
-	*address = _address;
+	process_t* proc = Scheduler::GetCurrentProcess();
+	
+	bool fixed = flags & MAP_FIXED;
+	bool anon = flags & MAP_ANON;
+	//bool privateMapping = flags & MAP_PRIVATE;
+	
+	uint64_t unknownFlags = flags & ~static_cast<uint64_t>(MAP_ANON | MAP_FIXED | MAP_PRIVATE);
+	if(unknownFlags || !anon){
+		Log::Warning("SysMmap: Unsupported mmap flags %x", flags);
+		return -EINVAL;
+	}
 
-	proc->usedMemoryBlocks += count;
+	MappedRegion* region = proc->addressSpace->AllocateAnonymousVMObject(size, hint, fixed);
+	if(!region || !region->base){
+		Log::Error("SysMmap: Failed to map region (hint %x)!", hint);
+		return -1;
+	}
+
+	*address = region->base;
 	return 0;
 }
 
@@ -976,7 +964,7 @@ long SysPRead(RegisterContext* r){
 		return -EBADF; 
 	}
 	
-	if(!Memory::CheckUsermodePointer(SC_ARG1(r), SC_ARG2(r), Scheduler::GetCurrentProcess()->addressSpace)) {
+	if(!Memory::CheckUsermodePointer(SC_ARG1(r), SC_ARG2(r), currentProcess->addressSpace)) {
 		return -EFAULT;
 	}
 
@@ -1011,14 +999,21 @@ long SysIoctl(RegisterContext* r){
 	uint64_t arg = SC_ARG2(r);
 	int* result = (int*)SC_ARG3(r);
 
-	if(result && !Memory::CheckUsermodePointer((uintptr_t)result, sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)){
+	Process* process = Scheduler::GetCurrentProcess();
+
+	if(result && !Memory::CheckUsermodePointer((uintptr_t)result, sizeof(int), process->addressSpace)){
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("(%s): SysIoctl: Invalid result value %x", process->name, SC_ARG0(r));
+			Log::Info("%x", r->rip);
+			UserPrintStackTrace(r->rbp, process->addressSpace);
+		});
 		return -EFAULT;
 	}
 
-	if(fd >= static_cast<int>(Scheduler::GetCurrentProcess()->fileDescriptors.get_length())){
+	if(fd >= static_cast<int>(process->fileDescriptors.get_length())){
 		return -EINVAL;
 	}
-	fs_fd_t* handle = Scheduler::GetCurrentProcess()->fileDescriptors[SC_ARG0(r)];
+	fs_fd_t* handle = process->fileDescriptors[SC_ARG0(r)];
 	if(!handle){
 		Log::Warning("sys_ioctl: Invalid File Descriptor: %d", SC_ARG0(r));
 		return -EINVAL;
@@ -1053,7 +1048,7 @@ long SysInfo(RegisterContext* r){
 }
 
 /*
- * SysMunmap - Unmap memory (addr, count)
+ * SysMunmap - Unmap memory (addr, size)
  * 
  * On success - return 0
  * On failure - return -1
@@ -1062,31 +1057,13 @@ long SysMunmap(RegisterContext* r){
 	process_t* process = Scheduler::GetCurrentProcess();
 
 	uint64_t address = SC_ARG0(r);
-	size_t count = SC_ARG1(r);
+	size_t size = SC_ARG1(r);
 
-	uint64_t endAddress = address + count * PAGE_SIZE_4K;
-
-	if(Memory::CheckRegion(address, endAddress, Scheduler::GetCurrentProcess()->addressSpace) /*Check availibilty of the requested map*/){
-		for(mem_region_t& shRegion : process->sharedMemory){
-			if((address >= shRegion.base && address <= shRegion.base + shRegion.pageCount * PAGE_SIZE_4K) || (endAddress >= shRegion.base && address <= shRegion.base + shRegion.pageCount * PAGE_SIZE_4K)){
-				return -EINVAL;
-			} else if((shRegion.base >= address && shRegion.base <= endAddress) || (shRegion.base + shRegion.pageCount * PAGE_SIZE_4K >= address && shRegion.base + shRegion.pageCount * PAGE_SIZE_4K <= endAddress)){
-				return -EINVAL; // Check for overlap with shared memory
-			} // TODO: Unmap around shared memory, maybe keep track of all memory regions, not just shared
-		}
-
-		for(unsigned i = 0; i < count; i++){
-			if(uintptr_t mem = Memory::VirtualToPhysicalAddress(address + i * PAGE_SIZE_4K, process->addressSpace); mem){
-				Memory::FreePhysicalMemoryBlock(mem);
-			}
-		}
-
-		Memory::Free4KPages((void*)address, count, Scheduler::GetCurrentProcess()->addressSpace);
-	} else {
-		return -EFAULT;
+	if(address & (PAGE_SIZE_4K - 1) || size & (PAGE_SIZE_4K - 1)){
+		return -EINVAL; // Must be aligned
 	}
 
-	return 0;
+	return process->addressSpace->UnmapMemory(address, size);
 }
 
 /* 
@@ -1126,7 +1103,7 @@ long SysMapSharedMemory(RegisterContext* r){
 	int64_t key = SC_ARG1(r);
 	uint64_t hint = SC_ARG2(r);
 
-	*ptr = Memory::MapSharedMemory(key,Scheduler::GetCurrentProcess(), hint);
+	*ptr = Memory::MapSharedMemory(key, Scheduler::GetCurrentProcess(), hint);
 
 	return 0;
 }
@@ -1140,22 +1117,25 @@ long SysMapSharedMemory(RegisterContext* r){
  * On Failure - return -1
  */
 long SysUnmapSharedMemory(RegisterContext* r){
+	Process* proc = Scheduler::GetCurrentProcess();
+
 	uint64_t address = SC_ARG0(r);
 	int64_t key = SC_ARG1(r);
 
-	shared_mem_t* sMem = Memory::GetSharedMemory(key);
-	if(!sMem) return -EINVAL;
+	FancyRefPtr<SharedVMObject> sMem = Memory::GetSharedMemory(key);
+	if(!sMem.get()) return -EINVAL;
 
-	if(!Memory::CheckRegion(address, sMem->pgCount * PAGE_SIZE_4K, Scheduler::GetCurrentProcess()->addressSpace)) // Make sure the process is not screwing with kernel memory
-		return -1;
+	MappedRegion* region = proc->addressSpace->AddressToRegion(address);
+	if(!region || region->vmObject != sMem){
+		return -EINVAL; // Invalid memory region
+	}
 
-	Memory::Free4KPages((void*)address, sMem->pgCount, Scheduler::GetCurrentProcess()->addressSpace);
-
-	sMem->mapCount--;
+	region->vmObject = nullptr; // Invalidate the region
+	proc->addressSpace->UnmapMemory(address, sMem->Size());
 
 	Memory::DestroySharedMemory(key); // Active shared memory will not be destroyed and this will return
 
-	return 0;
+	return -ENOSYS;
 }
 
 /* 
@@ -1934,7 +1914,8 @@ long SysGetProcessInfo(RegisterContext* r){
 	pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.tv_sec;
 	pInfo->activeUs = reqProcess->activeTicks * 1000000 / Timer::GetFrequency();
 
-	pInfo->usedMem = reqProcess->usedMemoryBlocks / 4;
+	pInfo->usedMem = reqProcess->addressSpace->UsedPhysicalMemory();
+
 	return 0;
 }
 
@@ -2556,7 +2537,12 @@ long SysEndpointQueue(RegisterContext* r){
 	}
 
 	size_t size = SC_ARG2(r);
-	if(!Memory::CheckUsermodePointer(SC_ARG3(r), size, currentProcess->addressSpace)){
+	if(size && !Memory::CheckUsermodePointer(SC_ARG3(r), size, currentProcess->addressSpace)){
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("(%s): SysEndpointQueue: Invalid data buffer %x", currentProcess->name, SC_ARG3(r));
+			Log::Info("%x", r->rip);
+			UserPrintStackTrace(r->rbp, Scheduler::GetCurrentProcess()->addressSpace);
+		});
 		return -EFAULT; // Data greater than 8 and invalid pointer
 	}
 
@@ -2592,16 +2578,31 @@ long SysEndpointDequeue(RegisterContext* r){
 	}
 
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(uint64_t), currentProcess->addressSpace)){
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("(%s): SysEndpointDequeue: Invalid ID pointer %x", currentProcess->name, SC_ARG3(r));
+			Log::Info("%x", r->rip);
+			UserPrintStackTrace(r->rbp, Scheduler::GetCurrentProcess()->addressSpace);
+		});
 		return -EFAULT;
 	}
 
 	if(!Memory::CheckUsermodePointer(SC_ARG2(r), sizeof(uint16_t), currentProcess->addressSpace)){
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("(%s): SysEndpointDequeue: Invalid size pointer %x", currentProcess->name, SC_ARG3(r));
+			Log::Info("%x", r->rip);
+			UserPrintStackTrace(r->rbp, Scheduler::GetCurrentProcess()->addressSpace);
+		});
 		return -EFAULT;
 	}
 
 	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle->ko.get());
 
 	if(!Memory::CheckUsermodePointer(SC_ARG3(r), endpoint->GetMaxMessageSize(), currentProcess->addressSpace)){
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
+			Log::Warning("(%s): SysEndpointDequeue: Invalid data buffer %x", currentProcess->name, SC_ARG3(r));
+			Log::Info("%x", r->rip);
+			UserPrintStackTrace(r->rbp, Scheduler::GetCurrentProcess()->addressSpace);
+		});
 		return -EFAULT;
 	}
 
@@ -2638,8 +2639,8 @@ long SysEndpointCall(RegisterContext* r){
 	}
 
 	uint16_t* size = reinterpret_cast<uint16_t*>(SC_ARG5(r));
-	if(!Memory::CheckUsermodePointer(SC_ARG3(r), *size, currentProcess->addressSpace)){
-		return -EFAULT; // Size greater than 8 and invalid data pointer
+	if(*size && !Memory::CheckUsermodePointer(SC_ARG2(r), *size, currentProcess->addressSpace)){
+		return -EFAULT; // Invalid data pointer
 	}
 
 	MessageEndpoint* endpoint = reinterpret_cast<MessageEndpoint*>(endpHandle->ko.get());
@@ -3067,7 +3068,7 @@ syscall_t syscalls[]{
 	SysChdir,
 	SysTime,
 	SysMapFB,
-	SysAlloc,					// 15
+	nullptr,					// 15
 	SysChmod,
 	SysFStat,
 	SysStat,

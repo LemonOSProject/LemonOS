@@ -5,7 +5,7 @@
 #include <Thread.h>
 #include <System.h>
 
-struct process;
+struct Process;
 template<typename T>
 class FastList;
 
@@ -20,7 +20,7 @@ struct CPU{
     void* gdt; // GDT
 	gdt_ptr_t gdtPtr;
 	Thread* currentThread = nullptr;
-	process* idleProcess = nullptr;
+	Process* idleProcess = nullptr;
 	volatile int runQueueLock = 0;
 	FastList<Thread*>* runQueue;
     tss_t tss __attribute__((aligned(16)));
@@ -100,6 +100,13 @@ inline uintptr_t GetRBP(){
 	volatile uintptr_t val;
 	
 	asm volatile("mov %%rbp, %0" : "=r"(val));
+	return val;
+}
+
+inline uintptr_t GetCR3(){
+	volatile uintptr_t val;
+	
+	asm volatile("mov %%cr3, %0" : "=r"(val));
 	return val;
 }
 

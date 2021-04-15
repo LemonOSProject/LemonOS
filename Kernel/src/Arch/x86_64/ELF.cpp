@@ -37,17 +37,14 @@ elf_info_t LoadELFSegments(process_t* proc, void* _elf, uintptr_t base){
     for(uint16_t i = 0; i < elfHdr.phNum; i++){
         elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
 
-        if(elfPHdr.memSize == 0) continue;
-        for(unsigned j = 0; j < ((elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) >> 12); j++){
-            uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
-            Memory::MapVirtualMemory4K(phys, base + (elfPHdr.vaddr & ~0xFFFUL) + j * PAGE_SIZE_4K, 1, proc->addressSpace);
-            
-            proc->usedMemoryBlocks++;
-        }
+        if(elfPHdr.memSize == 0 || elfPHdr.type != PT_LOAD) continue;
+
+        proc->usedMemoryBlocks += (elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) >> 12;
+        proc->addressSpace->MapVMO(new ProcessImageVMObject((base + elfPHdr.vaddr) & ~0xFFFUL, ((elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) & ~static_cast<uintptr_t>(PAGE_SIZE_4K - 1)), true), (elfPHdr.vaddr + base) & ~0xFFFUL, true);
     }
 
     char* linkPath = nullptr;
-    uintptr_t pml4Phys = Scheduler::GetCurrentProcess()->addressSpace->pml4Phys;
+    uintptr_t pml4Phys = Scheduler::GetCurrentProcess()->GetPageMap()->pml4Phys;
 
     for(int i = 0; i < elfHdr.phNum; i++){
         elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
@@ -55,7 +52,7 @@ elf_info_t LoadELFSegments(process_t* proc, void* _elf, uintptr_t base){
         if(elfPHdr.type == PT_LOAD && elfPHdr.memSize > 0){
             acquireLock(&cpuLocal->runQueueLock);
             asm("cli");
-            asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
+            asm volatile("mov %%rax, %%cr3" :: "a"(proc->GetPageMap()->pml4Phys));
             memset((void*)(base + elfPHdr.vaddr),0,elfPHdr.memSize);
             memcpy((void*)(base + elfPHdr.vaddr),(void*)(elf + elfPHdr.offset), elfPHdr.fileSize);
             asm volatile("mov %%rax, %%cr3" :: "a"(pml4Phys));

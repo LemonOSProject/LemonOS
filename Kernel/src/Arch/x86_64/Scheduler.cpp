@@ -178,7 +178,6 @@ namespace Scheduler{
         process_t* proc = new process_t;
 
         proc->fileDescriptors.clear();
-        proc->sharedMemory.clear();
         proc->children.clear();
         proc->blocking.clear();
         proc->threads.clear();
@@ -215,7 +214,7 @@ namespace Scheduler{
         proc->parent = nullptr;
         proc->uid = 0;
 
-        proc->addressSpace = Memory::CreateAddressSpace();
+        proc->addressSpace = new AddressSpace(Memory::CreatePageMap());
         proc->pid = nextPID++; // Set Process ID to the next availiable
 
         // Create structure for the main thread
@@ -439,11 +438,14 @@ namespace Scheduler{
         });
 
         for(fs_fd_t* fd : process->fileDescriptors){
-            if(fd && fd->node)
+            if(fd && fd->node){
                 fd->node->Close();
-            
-            fd->node = nullptr;
-            delete fd;
+                fd->node = nullptr;
+
+                delete fd;
+            } else if(fd){
+                delete fd;
+            }
         }
         process->fileDescriptors.clear();
         
@@ -458,12 +460,6 @@ namespace Scheduler{
         }
 
         process->handles.clear();
-
-        for(unsigned i = 0; i < process->sharedMemory.get_length(); i++){
-            Memory::Free4KPages((void*)process->sharedMemory[i].base, process->sharedMemory[i].pageCount, process->addressSpace); // Make sure the physical memory does not get freed
-        }
-
-        //address_space_t* addressSpace = process->addressSpace;
         
         IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
             Log::Info("removing process...");
@@ -475,8 +471,8 @@ namespace Scheduler{
             process->parent->children.remove(process);
         }
 
-        acquireLock(&destroyedProcessesLock);
         process->processLock.AcquireWrite();
+        acquireLock(&destroyedProcessesLock);
 
         destroyedProcesses->add_back(process);
 
@@ -487,16 +483,10 @@ namespace Scheduler{
             process->processLock.ReleaseWrite();
         }
         
-        IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
-            Log::Info("destroying address space...");
-        });
-
         if(isProcessToKill){
             asm("cli");
 
             asm volatile("mov %%rax, %%cr3" :: "a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE));
-
-            Memory::DestroyAddressSpace(process->addressSpace);
 
             process->processLock.ReleaseWrite();
 
@@ -575,7 +565,7 @@ namespace Scheduler{
 
         TSS::SetKernelStack(&cpu->tss, (uintptr_t)cpu->currentThread->kernelStack);
 	
-        TaskSwitch(&cpu->currentThread->registers, cpu->currentThread->parent->addressSpace->pml4Phys);
+        TaskSwitch(&cpu->currentThread->registers, cpu->currentThread->parent->GetPageMap()->pml4Phys);
     }
 
     process_t* CreateELFProcess(void* elf, int argc, char** argv, int envc, char** envp, const char* execPath) {
@@ -592,8 +582,6 @@ namespace Scheduler{
         thread->timeSliceDefault = THREAD_TIMESLICE_DEFAULT;
         thread->timeSlice = thread->timeSliceDefault;
         thread->priority = 4;
-
-        Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),0,1,proc->addressSpace);
 
         elf_info_t elfInfo = LoadELFSegments(proc, elf, 0);
         
@@ -612,7 +600,7 @@ namespace Scheduler{
             
             if(!VerifyELF(linkerElf)){
                 Log::Warning("Invalid Dynamic Linker ELF");
-                asm volatile("mov %%rax, %%cr3" :: "a"(GetCurrentProcess()->addressSpace->pml4Phys));
+                asm volatile("mov %%rax, %%cr3" :: "a"(GetCurrentProcess()->GetPageMap()->pml4Phys));
                 asm("sti");
                 return nullptr;
             }
@@ -628,17 +616,16 @@ namespace Scheduler{
         char* tempEnvp[envc];
 
         asm("cli");
-        asm volatile("mov %%rax, %%cr3" :: "a"(proc->addressSpace->pml4Phys));
-        void* _stack = (void*)Memory::Allocate4KPages(64, proc->addressSpace);
-        for(int i = 0; i < 64; i++){
-            Memory::MapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),(uintptr_t)_stack + PAGE_SIZE_4K * i, 1, proc->addressSpace);
-            proc->usedMemoryBlocks++;
-        }
-        memset(_stack, 0, PAGE_SIZE_4K * 64);
+        asm volatile("mov %%rax, %%cr3" :: "a"(proc->GetPageMap()->pml4Phys));
+        MappedRegion* stackRegion = proc->addressSpace->AllocateAnonymousVMObject(0x200000, 0, false); // 2MB max stacksize
 
-        thread->stack = _stack; // 256KB stack size
-        thread->registers.rsp = (uintptr_t)thread->stack + PAGE_SIZE_4K * 64;
-        thread->registers.rbp = (uintptr_t)thread->stack + PAGE_SIZE_4K * 64;
+        thread->stack = reinterpret_cast<void*>(stackRegion->base); // 256KB stack size
+        thread->registers.rsp = (uintptr_t)thread->stack + 0x200000;
+        thread->registers.rbp = (uintptr_t)thread->stack + 0x200000;
+
+        // Force the first 8KB to be allocated
+        stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, proc->GetPageMap());
+        stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, proc->GetPageMap());
 
         // ABI Stuff
         uint64_t* stack = (uint64_t*)thread->registers.rsp;
@@ -711,7 +698,7 @@ namespace Scheduler{
         stack--;
         *stack = argc; // argc
         
-        asm volatile("mov %%rax, %%cr3" :: "a"(GetCurrentProcess()->addressSpace->pml4Phys));
+        asm volatile("mov %%rax, %%cr3" :: "a"(GetCurrentProcess()->GetPageMap()->pml4Phys));
         asm("sti");
 
         thread->registers.rsp = (uintptr_t) stack;
