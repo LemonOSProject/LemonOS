@@ -70,6 +70,7 @@ cpp_files = [
     'src/Fs/Filesystem.cpp',
     'src/Fs/FsNode.cpp',
     'src/Fs/FsVolume.cpp',
+    'src/Fs/Pipe.cpp',
     'src/Fs/TAR.cpp',
     'src/Fs/Tmp.cpp',
 

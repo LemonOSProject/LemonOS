@@ -4,7 +4,7 @@
 #include <Errno.h>
 
 UNIXPipe::UNIXPipe(int _end, FancyRefPtr<DataStream> stream)
-    : end((typeof(end))_end), stream(std::move(stream)){
+    : end(static_cast<decltype(end)>(_end)), stream(std::move(stream)){
 }
 
 ssize_t UNIXPipe::Read(size_t off, size_t size, uint8_t* buffer){
@@ -34,7 +34,7 @@ ssize_t UNIXPipe::Write(size_t off, size_t size, uint8_t* buffer){
         return -EPIPE;
     }
 
-    stream->Write(buffer, size);
+    ssize_t ret = stream->Write(buffer, size);
 
     {
         ScopedSpinLock acq(otherEnd->watchingLock);
@@ -45,6 +45,8 @@ ssize_t UNIXPipe::Write(size_t off, size_t size, uint8_t* buffer){
 
         otherEnd->watching.clear();
     }
+
+    return ret;
 }
 
 void UNIXPipe::Watch(FilesystemWatcher& watcher, int events){
