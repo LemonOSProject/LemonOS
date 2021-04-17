@@ -212,14 +212,14 @@ namespace Network::UDP{
         return finalLength;
     }
 
-    int64_t UDPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
+    int64_t UDPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* dest, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
         IPv4Address sendIPAddress;
         BigEndian<uint16_t> destPort;
 
-        if(src && addrlen){
-            const sockaddr_in* inetAddr = (const sockaddr_in*)src;
+        if(dest && addrlen){
+            const sockaddr_in* inetAddr = (const sockaddr_in*)dest;
 
-            if(src->family != InternetProtocol){
+            if(dest->family != InternetProtocol){
                 Log::Warning("[UDPSocket] Invalid address family (not IPv4)");
                 return -EINVAL;
             }
@@ -245,8 +245,20 @@ namespace Network::UDP{
             }
         }
 
-        if(int e = SendUDP(buffer, len, address, sendIPAddress, port, destPort, adapter)){
-            return e;
+        if(!adapter){
+            MACAddress mac;
+            NetworkAdapter* adapter = nullptr;
+            if(int e = Route(INADDR_ANY, sendIPAddress, mac, adapter)){
+                return e;
+            }
+        
+            if(int e = SendUDP(buffer, len, address, sendIPAddress, port, destPort, adapter)){
+                return e;
+            }
+        } else {
+            if(int e = SendUDP(buffer, len, address, sendIPAddress, port, destPort, adapter)){
+                return e;
+            }
         }
 
         return len;
