@@ -10,15 +10,12 @@
 HashMap<StringView, KernelSymbol*> symbolHashMap;
 
 void LoadSymbolsFromFile(FsNode* node){
-    const unsigned bufferSize = 4096;
+    unsigned bufferSize = node->size;
+    char* buffer = new char[node->size];
 
-    char buffer[bufferSize];
-    unsigned bufferPos = 0; // Position in buffer
-
-    ssize_t off = 0;
     ssize_t read = 0;
-    while((read = fs::Read(node, off, bufferSize, buffer)) > 0){
-        bufferPos = 0;
+    if((read = fs::Read(node, 0, bufferSize, buffer)) > 0){
+        size_t bufferPos = 0;
         while(bufferPos < read){
             char* line = buffer + bufferPos;
 
@@ -56,14 +53,9 @@ void LoadSymbolsFromFile(FsNode* node){
 
             bufferPos += (lineEnd - line) + 1;
         }
-
-        if(bufferPos == 0){
-            break; // Nothing was parsed
-        }
-
-        off += bufferPos;
     }
     
+    delete[] buffer;
     assert(read >= 0); // Ensure that there was no read errors
 }
 
