@@ -507,22 +507,16 @@ namespace fs{
 
         fd->node->Close();
 		fd->node = nullptr;
-
-		delete fd;
     }
 
     int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index){
 		assert(node);
-
-		//if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return ReadDir(node->link, dirent, index);
 
         return node->ReadDir(dirent, index);
     }
 
     FsNode* FindDir(FsNode* node, char* name){
 		assert(node);
-
-		//if((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK) return FindDir(node->link, name);
             
 		return node->FindDir(name);
     }

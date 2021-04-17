@@ -69,7 +69,7 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout){
 
 	acquireLock(&newBlocker->lock);
 	if(!newBlocker->ShouldBlock()){
-		releaseLock(&newBlocker->lock); // We were unblocked before the thread was actually blocks
+		releaseLock(&newBlocker->lock); // We were unblocked before the thread was actually blocked
 
 		return false;
 	}

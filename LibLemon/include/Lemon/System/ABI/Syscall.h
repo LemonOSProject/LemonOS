@@ -94,3 +94,4 @@
 #define SYS_GETGID 94
 #define SYS_GETEGID 95
 #define SYS_GETPPID 96
+#define SYS_PIPE 97

@@ -10,8 +10,8 @@ struct thread;
 
 class ScopedSpinLock final {
 public:
-    inline ScopedSpinLock(lock_t& _lock) : lock(_lock) { acquireLock(&lock); }
-    inline ~ScopedSpinLock() { releaseLock(&lock); }
+    ALWAYS_INLINE ScopedSpinLock(lock_t& _lock) : lock(_lock) { acquireLock(&lock); }
+    ALWAYS_INLINE ~ScopedSpinLock() { releaseLock(&lock); }
 private:
     lock_t& lock;
 };

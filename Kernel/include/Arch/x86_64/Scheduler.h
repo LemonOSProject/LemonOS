@@ -52,13 +52,78 @@ typedef struct Process {
 
 	lock_t handleLock = 0;
 	Vector<Handle> handles;
-	Vector<fs_fd_t*> fileDescriptors;
 	List<Scheduler::ProcessStateThreadBlocker*> blocking; // Threads blocking awaiting a state change
 	HashMap<uintptr_t, List<FutexThreadBlocker*>*> futexWaitQueue = HashMap<uintptr_t, List<FutexThreadBlocker*>*>(8);
 
 	uintptr_t usedMemoryBlocks;
 
+	ALWAYS_INLINE int AllocateFileDescriptor(fs_fd_t* ptr){
+		ScopedSpinLock lockFds(fileDescriptorsLock);
+		
+		unsigned i = 0;
+		for(; i < fileDescriptors.get_length(); i++){
+			if(!fileDescriptors[i]){
+				fileDescriptors[i] = ptr;
+				return i;
+			}
+		}
+
+		fileDescriptors.add_back(ptr);
+		return i;
+	}
+
+	ALWAYS_INLINE int ReplaceFileDescriptor(int fd, fs_fd_t* ptr){
+		ScopedSpinLock lockFds(fileDescriptorsLock);
+		if(fd > fileDescriptors.get_length()){
+			return 1;
+		} else if(fd == fileDescriptors.get_length()){
+			fileDescriptors.add_back(ptr);
+			return 0;
+		} else {
+			fs_fd_t*& f = fileDescriptors[fd];
+			if(f){
+				fs::Close(f);
+				delete f;
+			}
+
+			f = ptr;
+			return 0;
+		}
+	}
+
+	ALWAYS_INLINE int DestroyFileDescriptor(int fd){
+		ScopedSpinLock lockFds(fileDescriptorsLock);
+		if(fd >= fileDescriptors.get_length()){
+			return 1;
+		}
+		
+		if(fs_fd_t*& f = fileDescriptors[fd]; f){
+			fs::Close(f);
+			delete f;
+
+			f = nullptr;
+
+			return 0;
+		}
+
+		return 1;
+	}
+
+	ALWAYS_INLINE fs_fd_t* GetFileDescriptor(int fd) {
+		ScopedSpinLock lockFds(fileDescriptorsLock);
+		if(fd < fileDescriptors.get_length()) {
+			return fileDescriptors[fd];
+		}
+		
+		return nullptr;
+	}
+
+	ALWAYS_INLINE unsigned FileDescriptorCount() const { return fileDescriptors.get_length(); }
+
 	ALWAYS_INLINE PageMap* GetPageMap() { return addressSpace->GetPageMap(); }
+
+	lock_t fileDescriptorsLock = 0;
+	Vector<fs_fd_t*> fileDescriptors;
 } process_t;
 
 namespace Scheduler{

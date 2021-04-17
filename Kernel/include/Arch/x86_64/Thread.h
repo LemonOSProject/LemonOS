@@ -57,6 +57,7 @@ struct Thread {
 	uint32_t timeSlice = 1;
 	uint32_t timeSliceDefault = 1;
 	RegisterContext registers;  // Registers
+	RegisterContext lastSyscall; // Last system call
 	void* fxState; // State of the extended registers
 
 	Thread* next = nullptr; // Next thread in queue

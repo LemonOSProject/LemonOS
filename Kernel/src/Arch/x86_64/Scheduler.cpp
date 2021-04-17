@@ -177,6 +177,7 @@ namespace Scheduler{
         // Create process structure
         process_t* proc = new process_t;
 
+        proc->fileDescriptorsLock = 0;
         proc->fileDescriptors.clear();
         proc->children.clear();
         proc->blocking.clear();

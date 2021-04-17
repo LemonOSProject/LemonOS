@@ -1,3 +1,3 @@
 #pragma once
 
-void DumpLastSyscall();
+void DumpLastSyscall(struct Thread*);

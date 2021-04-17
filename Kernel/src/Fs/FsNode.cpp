@@ -34,20 +34,33 @@ void FsNode::Close(){
 }
 
 int FsNode::ReadDir(DirectoryEntry*, uint32_t){
+    if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+        return -ENOTDIR;
+    }
+    
     Log::Warning("Base FsNode::ReadDir called!");
     return -ENOSYS;
 }
 
 FsNode* FsNode::FindDir(char* name){
+    Log::Warning("Base FsNode::FindDir called!");
     return nullptr;
 }
 
 int FsNode::Create(DirectoryEntry*, uint32_t){
+    if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+        return -ENOTDIR;
+    }
+
     Log::Warning("Base FsNode::Create called!");
     return -ENOSYS;
 }
 
 int FsNode::CreateDirectory(DirectoryEntry*, uint32_t){
+    if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+        return -ENOTDIR;
+    }
+
     Log::Warning("Base FsNode::CreateDirectory called!");
     return -ENOSYS;
 }

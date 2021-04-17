@@ -266,16 +266,14 @@ namespace IDT{
 extern "C"
 	void isr_handler(int int_num, RegisterContext* regs, int err_code) {
 		errCode = err_code;
-		if (interrupt_handlers[int_num].handler != 0) {
+		if (__builtin_expect(interrupt_handlers[int_num].handler != 0, 1)) {
 			interrupt_handlers[int_num].handler(interrupt_handlers[int_num].data, regs);
-		} else if(int_num == 0x69){
-			Log::Warning("\r\nEarly syscall");
 		} else if(!(regs->ss & 0x3)){ // Check the CPL of the segment, caused by kernel?
 			// Kernel Panic so tell other processors to stop executing
 			APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
 
 			IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
-				DumpLastSyscall();
+				DumpLastSyscall(GetCPULocal()->currentThread);
 			});
 			Log::Error("Fatal Kernel Exception: ");
 			Log::Info(int_num);

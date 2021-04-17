@@ -690,13 +690,13 @@ namespace Memory{
 			if (id)
 				Log::Info("instruction fetch");
 
-			IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
-				DumpLastSyscall();
-			});
-
 			if(process){
 				Log::Info("Process Mapped Memory:");
 				process->addressSpace->DumpRegions();
+
+				IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
+					DumpLastSyscall(GetCPULocal()->currentThread);
+				});
 			}
 		};
 
