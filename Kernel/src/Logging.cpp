@@ -54,10 +54,6 @@ namespace Log{
 
 	LogDevice* logDevice = nullptr;
 
-    void Initialize(){
-		initialize_serial();
-    }
-
 	void LateInitialize(){
 		logDevice = new LogDevice("kernellog");
 	}
@@ -81,7 +77,7 @@ namespace Log{
 	}
 
 	void WriteN(const char* str, size_t n){
-		write_serial_n(str, n);
+		Serial::Write(str, n);
 		
 		if(console){
 			console->PrintN(str, n, 255, 255, 255);
@@ -237,7 +233,6 @@ namespace Log{
     }
 
     void Error(const char* __restrict fmt, ...){
-		unlockSerial();
 		Write("\r\n[ERROR]   ", 255, 0, 0);
 		va_list args;
 		va_start(args, fmt);

@@ -702,7 +702,9 @@ namespace Memory{
 
 		if(process){
 			AddressSpace* addressSpace = process->addressSpace;
+			asm("sti");
 			MappedRegion* faultRegion = addressSpace->AddressToRegion(faultAddress); // Remember that this acquires a lock
+			asm("cli");
 			if(faultRegion && faultRegion->vmObject.get()){ // If there is a corresponding VMO for the fault then this is not an error
 				FancyRefPtr<VMObject> vmo = faultRegion->vmObject;
 				if(vmo->IsCopyOnWrite() && rw /* Attempted to write to read-only page */){

@@ -58,9 +58,9 @@ ssize_t PTYDevice::Read(size_t offset, size_t size, uint8_t *buffer){
 	assert(device == PTYSlaveDevice || device == PTYMasterDevice);
 
 	if(pty && device == PTYSlaveDevice)
-		return pty->Slave_Read((char*)buffer,size);
+		return pty->SlaveRead((char*)buffer,size);
 	else if(pty && device == PTYMasterDevice){
-		return pty->Master_Read((char*)buffer,size);
+		return pty->MasterRead((char*)buffer,size);
 	} else {
 		assert(!"PTYDevice::Read: PTYDevice is designated neither slave nor master");
 	}
@@ -73,7 +73,7 @@ ssize_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
 	assert(device == PTYSlaveDevice || device == PTYMasterDevice);
 
 	if(pty && device == PTYSlaveDevice){
-		ssize_t written = pty->Slave_Write((char*)buffer,size);
+		ssize_t written = pty->SlaveWrite((char*)buffer,size);
 
 		if(written > 0 || written == size){
 			return written; // Check either for an error or if all bytes were written
@@ -82,7 +82,7 @@ ssize_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
 		// Buffer must be full so just keep trying
 		buffer += written;
 		while(written < size){
-			ssize_t ret = pty->Slave_Write((char*)buffer, size - written);
+			ssize_t ret = pty->SlaveWrite((char*)buffer, size - written);
 
 			if(ret < 0){
 				return ret; // Error 
@@ -93,7 +93,7 @@ ssize_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
 
 		return written;
 	} else if(pty && device == PTYMasterDevice){
-		ssize_t written = pty->Master_Write((char*)buffer,size);
+		ssize_t written = pty->MasterWrite((char*)buffer,size);
 
 		if(written > 0 || written == size){
 			return written; // Check either for an error or if all bytes were written
@@ -102,7 +102,7 @@ ssize_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
 		// Buffer must be full so just keep trying
 		buffer += written;
 		while(written < size){
-			ssize_t ret = pty->Master_Write((char*)buffer, size - written);
+			ssize_t ret = pty->MasterWrite((char*)buffer, size - written);
 
 			if(ret < 0){
 				return ret; // Error 
@@ -204,11 +204,11 @@ PTY::PTY(const char* name) : masterFile(name), slaveFile(name){
 	ptys->add_back(this);
 }
 
-ssize_t PTY::Master_Read(char* buffer, size_t count){
+ssize_t PTY::MasterRead(char* buffer, size_t count){
 	return master.Read(buffer, count);
 }
 
-ssize_t PTY::Slave_Read(char* buffer, size_t count){
+ssize_t PTY::SlaveRead(char* buffer, size_t count){
 	Thread* thread = GetCPULocal()->currentThread;
 
 	while(IsCanonical() && !slave.lines){
@@ -230,7 +230,7 @@ ssize_t PTY::Slave_Read(char* buffer, size_t count){
 	return slave.Read(buffer, count);
 }
 
-ssize_t PTY::Master_Write(char* buffer, size_t count){
+ssize_t PTY::MasterWrite(char* buffer, size_t count){
 	ssize_t ret = slave.Write(buffer, count);
 
 	if(slaveFile.blocked.get_length()){
@@ -276,7 +276,7 @@ ssize_t PTY::Master_Write(char* buffer, size_t count){
 	return ret;
 }
 
-ssize_t PTY::Slave_Write(char* buffer, size_t count){
+ssize_t PTY::SlaveWrite(char* buffer, size_t count){
 	ssize_t written = master.Write(buffer, count);
 
 	acquireLock(&masterFile.blockedLock);

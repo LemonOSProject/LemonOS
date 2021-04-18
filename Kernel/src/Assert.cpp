@@ -14,7 +14,6 @@ extern "C"{
 
     APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
 
-    unlockSerial();
     Log::Error("Kernel Assertion Failed (%s) - file: %s, line: %d", msg, file, line);
 
     uint64_t rbp = 0;

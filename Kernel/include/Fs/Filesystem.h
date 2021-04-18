@@ -240,8 +240,33 @@ public:
     mode_t flags = 0;
 
     DirectoryEntry(FsNode* node, const char* name);
-
     DirectoryEntry() {}
+
+    static mode_t FileToDirentFlags(mode_t flags) {
+        switch(flags & FS_NODE_TYPE){
+            case FS_NODE_FILE:
+                flags = DT_REG;
+                break;
+            case FS_NODE_DIRECTORY:
+                flags = DT_DIR;
+                break;
+            case FS_NODE_CHARDEVICE:
+                flags = DT_CHR;
+                break;
+            case FS_NODE_BLKDEVICE:
+                flags = DT_BLK;
+                break;
+            case FS_NODE_SOCKET:
+                flags = DT_SOCK;
+                break;
+            case FS_NODE_SYMLINK:
+                flags = DT_LNK;
+                break;
+            default:
+                assert(!"Invalid file flags!");
+        }
+        return flags;
+    }
 };
 
 // FilesystemWatcher is a semaphore initialized to 0.

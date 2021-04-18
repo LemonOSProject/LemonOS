@@ -34,7 +34,7 @@ namespace HAL{
     VideoConsole* con;
 
     void InitCore(){ // ALWAYS call this first
-        initialize_serial();
+        Serial::Initialize();
         Log::Info("Initializing Lemon...\r\n");
 
         asm("cli");
@@ -47,8 +47,6 @@ namespace HAL{
 
         // Initialize Physical Memory Allocator
         Memory::InitializePhysicalAllocator(&mem_info);
-
-        Log::Initialize();
 
         Log::Info("Initializing System Timer...");
         Timer::Initialize(1600);
