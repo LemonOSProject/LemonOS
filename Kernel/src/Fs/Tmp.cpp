@@ -5,8 +5,8 @@
 
 namespace fs::Temp{
     TempVolume::TempVolume(const char* name){
-
         mountPoint = new TempNode(this, FS_NODE_DIRECTORY);
+        mountPoint->parent = fs::GetRoot();
 
         mountPointDirent = DirectoryEntry(mountPoint, name);
     }
@@ -178,17 +178,21 @@ namespace fs::Temp{
 
         if(index == 0){
             strcpy(dirent->name, ".");
-            dirent->flags = flags;
+            dirent->flags = DirectoryEntry::FileToDirentFlags(flags);
             
             return 1;
         } else if(index == 1){
             strcpy(dirent->name, "..");
-            dirent->flags = parent->flags;
+            if(!parent){
+                dirent->flags = DirectoryEntry::FileToDirentFlags(fs::GetRoot()->flags);
+            } else {
+                dirent->flags = DirectoryEntry::FileToDirentFlags(parent->flags);
+            }
 
             return 1;
         } else {
             *dirent = children[index - 2];
-            dirent->flags = dirent->node->flags;
+            dirent->flags = DirectoryEntry::FileToDirentFlags(dirent->node->flags);
             dirent->node = nullptr; // Do not expose node
 
             return 1;
