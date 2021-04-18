@@ -11,6 +11,12 @@ AddressSpace::~AddressSpace(){
     IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal), {
         Log::Info("Destroying address space with %u regions.", regions.get_length());
     });
+
+    for(auto& region : regions){
+        if(region.vmObject){
+            region.vmObject->refCount--;
+        }
+    }
     regions.clear(); // Let FancyRefPTr handle cleanup for us
 
     Memory::DestroyPageMap(pageMap);
@@ -168,6 +174,10 @@ long AddressSpace::UnmapMemory(uintptr_t base, size_t size){
             region.lock.AcquireWrite();
 
             if(region.End() <= end){ // Whole region within our range
+                if(region.vmObject){
+                    it->vmObject->refCount--;
+                }
+
                 regions.remove(it);
                 goto retry;
             }
@@ -183,6 +193,10 @@ void AddressSpace::UnmapAll() {
 
     for(MappedRegion& r : regions){
         Memory::MapVirtualMemory4K(0, r.Base(), PAGE_COUNT_4K(r.Size()), 0, pageMap);
+
+        if(r.vmObject.get()){
+            r.vmObject->refCount--;
+        }
     }
 
     regions.clear();
