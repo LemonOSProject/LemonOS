@@ -372,8 +372,8 @@ void WMInstance::MouseDown(){
         }
     }
 
-    auto it = windows.cbegin();
-    while(it != windows.cend()) {
+    auto it = windows.rbegin();
+    while(it != windows.rend()) {
         WMWindow* win = *it++;
         assert(win);
 
@@ -449,7 +449,7 @@ void WMInstance::MouseDown(){
 }
 
 void WMInstance::MouseRight(bool pressed){
-    for(auto it = windows.cbegin(); it != windows.cend(); it++){
+    for(auto it = windows.rbegin(); it != windows.rend(); it++){
         WMWindow* win = *it;
             
         if(PointInWindowProper(win, input.mouse.pos)){
