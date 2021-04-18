@@ -145,7 +145,7 @@ int PTYDevice::Ioctl(uint64_t cmd, uint64_t arg){
 			}
 			break;
 		default:
-			return -1;
+			return -EINVAL;
 	}
 
 	return 0;

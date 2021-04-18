@@ -705,7 +705,7 @@ namespace fs::Ext2{
         if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
             Log::Warning("[Ext2] ListDir: Not a directory (inode %d)", node->inode);
             error = MiscError;
-            return -1;
+            return -ENOTDIR;
         }
 
         if(node->inode < 1){
@@ -886,7 +886,7 @@ namespace fs::Ext2{
 
         if(node->inode < 1){
             Log::Warning("[Ext2] ReadDir: Invalid inode: %d", node->inode);
-            return -1;
+            return -EIO;
         }
 
         ext2_inode_t& ino = node->e2inode;
@@ -901,7 +901,7 @@ namespace fs::Ext2{
         if(ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
             Log::Warning("[Ext2] Failed to read block %d", GetInodeBlock(currentBlockIndex, ino));
             error = DiskReadError;
-            return -1;
+            return -EIO;
         }
 
         for(unsigned i = 0; i < index; i++){
@@ -932,7 +932,7 @@ namespace fs::Ext2{
                 blockOffset = 0;
                 if(ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)){
                     Log::Warning("[Ext2] Failed to read block");
-                    return -1;
+                    return -EIO;
                 }
             }
 
@@ -1315,7 +1315,7 @@ namespace fs::Ext2{
         Ext2Node* file = CreateNode();
         
         if(!file){
-            return -1;
+            return -EIO;
         }
 
         file->e2inode.mode = EXT2_S_IFREG;
@@ -1350,7 +1350,7 @@ namespace fs::Ext2{
         
         if(!dir){
             Log::Error("[Ext2] Could not create inode!");
-            return -1;
+            return -EIO;
         }
 
         dir->e2inode.mode = EXT2_S_IFDIR;

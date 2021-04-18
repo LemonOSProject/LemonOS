@@ -462,23 +462,6 @@ namespace fs{
     }
 
     fs_fd_t* Open(FsNode* node, uint32_t flags){
-		/*if((node->flags & S_IFMT) == S_IFLNK){
-			char pathBuffer[PATH_MAX];
-
-			ssize_t bytesRead = node->ReadLink(pathBuffer, PATH_MAX);
-			if(bytesRead < 0){
-				Log::Warning("fs::Open: Readlink error");
-				return nullptr;
-			}
-			pathBuffer[bytesRead] = 0; // Null terminate
-
-			FsNode* link = fs::ResolvePath(pathBuffer);
-			if(!link){
-				Log::Warning("fs::Open: Invalid symbolic link");
-			}
-			return link->Open(flags);
-		}*/
-
         return node->Open(flags);
     }
 	
@@ -522,45 +505,43 @@ namespace fs{
     }
 	
     ssize_t Read(fs_fd_t* handle, size_t size, uint8_t *buffer){
-        if(handle->node){
-            ssize_t ret = Read(handle->node,handle->pos,size,buffer);
+		assert(handle);
+		ssize_t ret = Read(handle->node,handle->pos,size,buffer);
 
-			if(ret >= 0){
-				handle->pos += ret;
-			}
-			
-			return ret;
+		if(ret > 0){
+			handle->pos += ret;
 		}
-        else return 0;
+		
+		return ret;
     }
 
     ssize_t Write(fs_fd_t* handle, size_t size, uint8_t *buffer){
-        if(handle->node){
-            off_t ret = Write(handle->node,handle->pos,size,buffer);
+		assert(handle->node);
+		off_t ret = Write(handle->node,handle->pos,size,buffer);
 
-			if(ret >= 0){
-				handle->pos += ret;
-			}
-			
-			return ret;
-		} else return -1;
+		if(ret >= 0){
+			handle->pos += ret;
+		}
+		
+		return ret;
     }
 
     int ReadDir(fs_fd_t* handle, DirectoryEntry* dirent, uint32_t index){
-        if(handle->node)
-            return ReadDir(handle->node, dirent, index);
-        else return 0;
+		assert(handle->node);
+        
+		return ReadDir(handle->node, dirent, index);
     }
 
     FsNode* FindDir(fs_fd_t* handle, char* name){
-        if(handle->node)
-            return FindDir(handle->node,name);
-        else return 0;
+		assert(handle->node);
+
+        return FindDir(handle->node,name);
     }
 
 	int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg){
-		if(handle->node) return handle->node->Ioctl(cmd, arg);
-		else return -1;
+		assert(handle->node);
+
+		return handle->node->Ioctl(cmd, arg);
 	}
 
 	int Rename(FsNode* olddir, char* oldpath, FsNode* newdir, char* newpath){

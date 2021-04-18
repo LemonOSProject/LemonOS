@@ -147,20 +147,13 @@ long SysExec(RegisterContext* r){
 		kfree(kernelEnvp[i]);
 	}
 
-	if(!proc) {
-		for(int i = 0; i < argc; i++){
-			kfree(kernelArgv[i]);
-		}
-
-		return -1;
-	}
-
 	for(int i = 0; i < argc; i++){
 		kfree(kernelArgv[i]);
 	}
 
 	if(!proc){
-		return -1; // Failed to create process
+		Log::Warning("SysExec: Proc is null!");
+		return -EIO; // Failed to create process
 	}
 
 	// TODO: Do not run process until we have finished
@@ -408,6 +401,7 @@ long SysExecve(RegisterContext* r){
 
 	size_t pathLength = 0;
 	if(strlenSafe(path, pathLength, proc->addressSpace)){
+		Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid path pointer");
 		return -EFAULT;
 	}
 
@@ -417,23 +411,32 @@ long SysExecve(RegisterContext* r){
 
 	FsNode* node = fs::ResolvePath(kernelPath, proc->workingDir, true /* Follow Symlinks */);
 	if(!node){
+		Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid path '%s'!", kernelPath);
 		return -ENOENT;
+	}
+	
+	if(!node->IsFile()){
+		Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: '%s' is not a regular file!", kernelPath);
+		return -EACCES;
 	}
 
 	int argc = 0;
 	Vector<char*> kernelArgv;
 
 	for(;;){
-		if(!Memory::CheckUsermodePointer(reinterpret_cast<uintptr_t>(argv + argc), sizeof(char*), proc->addressSpace)){
-			return -EFAULT;
-		}
-
 		if(!argv[argc]){
 			break; // End of args
 		}
 
+		if(!Memory::CheckUsermodePointer(reinterpret_cast<uintptr_t>(argv + argc), sizeof(char*), proc->addressSpace)){
+			Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid argument pointer");
+			return -EFAULT;
+		}
+
 		size_t argLength = 0;
 		if(strlenSafe(argv[argc], argLength, proc->addressSpace)){
+			Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid argument pointer");
+
 			for(char* arg : kernelArgv){
 				delete[] arg;
 			}
@@ -452,16 +455,19 @@ long SysExecve(RegisterContext* r){
 	Vector<char*> kernelEnv;
 
 	for(;;){
-		if(!Memory::CheckUsermodePointer(reinterpret_cast<uintptr_t>(envp + envc), sizeof(char*), proc->addressSpace)){
-			return -EFAULT;
-		}
-
 		if(!envp[envc]){
 			break; // End of args
 		}
 
+		if(!Memory::CheckUsermodePointer(reinterpret_cast<uintptr_t>(envp + envc), sizeof(char*), proc->addressSpace)){
+			Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid environment pointer");
+			return -EFAULT;
+		}
+
 		size_t envLength = 0;
 		if(strlenSafe(envp[envc], envLength, proc->addressSpace)){
+			Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid environment pointer");
+
 			for(char* arg : kernelArgv){
 				delete[] arg;
 			}
@@ -482,10 +488,10 @@ long SysExecve(RegisterContext* r){
 
 	timeval tv = Timer::GetSystemUptimeStruct();
 	uint8_t* buffer = (uint8_t*)kmalloc(node->size);
-	size_t read = fs::Read(node, 0, node->size, buffer);
-	if(!read){
+	ssize_t read = fs::Read(node, 0, node->size, buffer);
+	if(read < 0){
 		Log::Warning("Could not read file: %s", kernelPath);
-		return -1;
+		return read;
 	}
 	timeval tvnew = Timer::GetSystemUptimeStruct();
 	Log::Info("Done (took %d us)", Timer::TimeDifference(tvnew, tv));
@@ -502,7 +508,7 @@ long SysExecve(RegisterContext* r){
 	stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, proc->GetPageMap());
 	stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, proc->GetPageMap());
 
-	r->rip = Scheduler::LoadELF(proc, &r->rsp, buffer, kernelArgv.size(), kernelArgv.Data(), kernelEnv.size(), kernelEnv.Data(), path);
+	r->rip = Scheduler::LoadELF(proc, &r->rsp, buffer, kernelArgv.size(), kernelArgv.Data(), kernelEnv.size(), kernelEnv.Data(), kernelPath);
 	kfree(buffer);
 
 	if(!r->rip){
@@ -537,7 +543,7 @@ long SysChdir(RegisterContext* r){
 		FsNode* n = fs::ResolvePath(path);
 		if(!n) {
 			Log::Warning("chdir: Could not find %s", path);
-			return -1;
+			return -ENOENT;
 		} else if (n->flags != FS_NODE_DIRECTORY){
 			return -ENOTDIR;
 		}
@@ -1012,8 +1018,25 @@ long SysWaitPID(RegisterContext* r){
 	int64_t pid = SC_ARG0(r);
 	int64_t flags = SC_ARG2(r);
 
+	Process* currentProcess = Scheduler::GetCurrentProcess();
 	Process* proc = nullptr;
-	if((proc = Scheduler::FindProcessByPID(pid))){
+
+	if(pid == -1) {
+		if(flags & WNOHANG && currentProcess->children.get_length()){
+			return 0;
+		}
+
+		int pid = 0;
+		Scheduler::ProcessStateThreadBlocker bl = Scheduler::ProcessStateThreadBlocker(pid);
+
+		for(Process* child : proc->children){
+			bl.WaitOn(child);
+		}
+
+		if(Scheduler::GetCurrentThread()->Block(&bl)){
+			return -EINTR;
+		}
+	} else if((proc = Scheduler::FindProcessByPID(pid))){
 		if(flags & WNOHANG){
 			return 0;
 		}
@@ -1026,10 +1049,8 @@ long SysWaitPID(RegisterContext* r){
 		if(Scheduler::GetCurrentThread()->Block(&bl)){
 			return -EINTR;
 		}
-	}
-
-	if((proc = Scheduler::FindProcessByPID(pid))) {
-		return -1;
+	} else {
+		return -ECHILD;
 	}
 
 	return pid;
@@ -1167,8 +1188,7 @@ long SysCreateSharedMemory(RegisterContext* r){
 	uint64_t recipient = SC_ARG3(r);
 
 	*key = Memory::CreateSharedMemory(size, flags, Scheduler::GetCurrentProcess()->pid, recipient);
-
-	if(!*key) return -1; // Failed
+	assert(*key);
 
 	return 0;
 }
@@ -1234,7 +1254,7 @@ long SysDestroySharedMemory(RegisterContext* r){
 
 	if(Memory::CanModifySharedMemory(Scheduler::GetCurrentProcess()->pid, key)){
 		Memory::DestroySharedMemory(key);
-	} else return -1;
+	} else return -EPERM;
 
 	return 0;
 }
@@ -1363,7 +1383,7 @@ long SysAccept(RegisterContext* r){
 	
 	Socket* newSock = sock->Accept(addr, len, handle->mode);
 	if(!newSock){
-		return -1;
+		return -EAGAIN;
 	}
 
 	fs_fd_t* newHandle = fs::Open(newSock);

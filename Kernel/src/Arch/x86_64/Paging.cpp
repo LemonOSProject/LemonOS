@@ -712,6 +712,7 @@ namespace Memory{
 						vmo->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(), addressSpace->GetPageMap()); // In case the block was never allocated in the first place
 						
 						faultRegion->lock.ReleaseRead();
+						asm("sti");
 						return;
 					} else {
 						asm("sti");
@@ -725,6 +726,7 @@ namespace Memory{
 						clone->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(), addressSpace->GetPageMap()); // In case the block was never allocated in the first place
 						
 						faultRegion->lock.ReleaseRead();
+						asm("sti");
 						return;
 					}
 				}
@@ -733,6 +735,7 @@ namespace Memory{
 				faultRegion->lock.ReleaseRead();
 
 				if(!status){
+					asm("sti");
 					return; // Success!
 				}
 			}
