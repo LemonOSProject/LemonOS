@@ -1,6 +1,4 @@
-#include <iostream>
 #include <vector>
-#include <fstream>
 #include <map>
 
 #include <Lemon/Core/URL.h>
@@ -9,7 +7,10 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include <stdio.h>
+#include <string.h>
 #include <getopt.h>
+#include <assert.h>
 
 int help = false;
 int verbose = false;
@@ -67,136 +68,249 @@ public:
 void UpdateProgress(size_t recievedData, size_t dataLeft){
     if(outFile){
         size_t total = recievedData + dataLeft;
-        std::cout << "\033[1K " << recievedData / 1024 << " / " << total / 1024 << " KB [";
+        printf("\033[1K %lu / %lu KB [", recievedData / 1024, total / 1024);
 
         if(total){
             size_t pBarCount = ((recievedData * 40) / total);
             size_t fillCount = 40 - pBarCount;
 
             for(unsigned i = 0; i < pBarCount; i++){
-                std::cout << "#";
+                putc('#', stdout);
             }
 
             for(unsigned i = 0; i < fillCount; i++){
-                std::cout << " ";
+                putc(' ', stdout);
             }
         }
 
-        std::cout << "]";
-
-        std::cout.flush();
+        putc(']', stdout);
+        fflush(stdout);
     }
 }
 
-int HTTPGet(int sock, const std::string& host, const std::string& resource, HTTPResponse& response, std::ostream* stream){
-    char request[4096];
-    int reqLength = snprintf(request, 4096, "GET /%s HTTP/1.1\r\n\
+int RecieveResponse(int sock, HTTPResponse& response){
+    std::string line = "";
+
+    response.fields.clear();
+    response.status.clear();
+
+    char c;
+    ssize_t ret;
+    while((ret = recv(sock, &c, sizeof(char), 0)) == 1){
+        if(verbose){
+            fputc(c, stdout);
+        }
+
+        if(c == '\r'){
+            continue; // We don't care about CR
+        } else if(c == '\n'){
+            if(!line.length()){
+                break;
+            }
+
+            if(!response.status.length()){
+                response.status = std::move(line); // We do not need the data in line anymore
+
+                size_t pos = response.status.find(' ');
+                if(pos == std::string::npos){
+                    return 20; // Bad response
+                }
+
+                response.statusCode = (HTTPStatusCode)std::stoi(response.status.substr(pos + 1, 3)); // Get response code
+            } else if(size_t pos = line.find(':'); pos != std::string::npos){
+                std::transform(line.begin(), line.begin() + pos, line.begin(), tolower); // Convert field name to lowercase
+                auto& value = response.fields[line.substr(0, pos)];
+                value = line.substr(pos + 2); // Insert field into map
+
+                if(value.front() == ' '){ // Remove any leading whitespace
+                    value.erase(0, 1);
+                }
+            } else {
+                return 20; // Invalid field
+            }
+
+            line.clear();
+        } else {
+            line += c;
+        }
+    }
+
+    if(ret == 0){
+        return 12; // Unexpected
+    } else if(ret < 0) {
+        printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
+        return 12;
+    }
+
+    return 0;
+}
+
+int HTTPGet(int sock, const std::string& host, const std::string& resource, HTTPResponse& response, FILE* stream){
+    {
+        char request[4096];
+        int reqLength = snprintf(request, 4096, "GET /%s HTTP/1.1\r\n\
 Host: %s\r\n\
 User-Agent: steal/0.1\r\n\
 Accept: */*\r\n\
+Accept-Encoding: identity\r\n\
 \r\n", resource.c_str(), host.c_str());
 
-    if(verbose){
-        printf("\n%s---\n\n", request);
-    }
-
-    if(ssize_t len = send(sock, request, reqLength, 0); len != reqLength){
-        if(reqLength < 0){
-            perror("steal: Failed to send data");
-        } else {
-            std::cout << "steal: Failed to send all " << reqLength << " bytes (only sent " << len << ").\n";
+        if(verbose){
+            printf("\n%s---\n\n", request);
         }
 
-        return 11;
-    }
+        if(ssize_t len = send(sock, request, reqLength, 0); len != reqLength){
+            if(reqLength < 0){
+                perror("steal: Failed to send data");
+            } else {
+                printf("steal: Failed to send all %i bytes (only sent %li).\n", reqLength, len);
+            }
 
-    bool receivedHeader = false;
-    char receiveBuffer[4096];
+            return 11;
+        }
+    }
 
     std::string line;
 
     response.status.clear();
     response.fields.clear();
 
-    ssize_t expectedData = 0;
-    ssize_t receivedData = 0;
-    ssize_t readSize = 4096;
-    while(1){
-        ssize_t len = recv(sock, receiveBuffer, readSize, 0);
-        if(len < 0){
-            std::cout << "steal: Error (" << errno << ") recieving data: " << strerror(errno) << "\n";
-            return 12;
+    if(int e = RecieveResponse(sock, response); e){
+        return e;
+    }
+
+    ssize_t contentLength = -1;
+    enum {
+        TransferNormal,
+        TransferChunked,
+        TransferUnknown
+    } transferEncoding = TransferNormal;
+
+    auto fieldsEnd = response.fields.end();
+    if(auto it = response.fields.find("transfer-encoding"); it != fieldsEnd){
+        if(!it->second.compare("chunked")){
+            transferEncoding = TransferChunked;
+        } else if(!it->second.compare("identity")){
+            transferEncoding = TransferNormal;
+        } else {
+            transferEncoding = TransferUnknown;
+            printf("steal: Unknown transfer encoding '%s'.\n", it->second.c_str());
+            return 21;
+        }
+    }
+
+    if(auto it = response.fields.find("content-length"); it != fieldsEnd){
+        contentLength = std::stol(it->second);
+    }
+
+    if(transferEncoding == TransferNormal){
+        if(contentLength <= 0){
+            printf("steal: Content length not specified and transfer encoding is not 'chunked'.\n");
+            return 22;
         }
 
-        if(!receivedHeader){
-            int i = 0;
-            for(; i < len; i++){
-                char c = receiveBuffer[i];
-
-                if(c == '\n'){
-                    if(!line.length()){
-                        receivedHeader = true; // Empty line so end of header
-
-                        if(verbose){
-                            std::cout.write(receiveBuffer, i);
-                        }
-
-                        if(auto it = response.fields.find("Content-Length"); it != response.fields.end()){ // Check for Content-Length field
-                            expectedData = std::stoull(it->second);
-                        }
-
-                        if(response.statusCode != HTTPStatusCode::OK){
-                            return 0;
-                        }
-                        
-                        i++;
-                        break;
-                    } else if(!response.status.length()){
-                        response.status = line;
-
-                        size_t pos = line.find(' ');
-                        if(pos == std::string::npos){
-                            return 20; // Bad response
-                        }
-
-                        response.statusCode = (HTTPStatusCode)std::stoi(line.substr(pos + 1, 3)); // Get response code
-                    } else if(size_t pos = line.find(':'); pos != std::string::npos){
-                        response.fields[line.substr(0, pos)] = line.substr(pos + 1); // Insert field into map
-                    } // Invalid field
-
-                    line.clear();
-                } else if(c == '\r') {
-                    // Ignore carriage return
-                } else {
-                    line += c;
-                }
+        ssize_t readSize = 4096;
+        ssize_t expectedData = contentLength;
+        char receiveBuffer[4096];
+        while(1){
+            if(readSize > expectedData){
+                readSize = expectedData;
             }
 
-            if(receivedHeader){
-                receivedData = len - i;
-                stream->write(receiveBuffer + i, len - i);
-                expectedData -= (len - i);
-            } else if(verbose){
-                std::cout << receiveBuffer;
+            ssize_t len = recv(sock, receiveBuffer, readSize, 0);
+            if(len < 0){
+                printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
+                return 12;
             }
-        } else {
+
             if(len > expectedData){
                 len = expectedData;
             }
 
-            stream->write(receiveBuffer, len);
-            receivedData += len;
+            fwrite(receiveBuffer, 1, len, stream);
             expectedData -= len;
-        }
 
-        UpdateProgress(receivedData, expectedData);
+            UpdateProgress(expectedData, contentLength - expectedData);
 
-        if(receivedHeader && expectedData <= 0){
-            stream->flush();
-            break; // If expectedData is zero and we have received the header then assume that all the data has been received
+            if(expectedData <= 0){
+                break; // If expectedData is zero and we have received the header then assume that all the data has been received
+            }
         }
+    } else if(transferEncoding == TransferChunked) {
+        auto getSocketChar = [sock]() -> int {
+            char c;
+            if(ssize_t ret = recv(sock, &c, 1, 0); ret <= 0){
+                return -1;
+            }
+            return c;
+        };
+
+        auto getChunkSize = [getSocketChar]() -> ssize_t {
+            char buf[33];
+            int bufIndex = 0;
+
+            while(1){
+                int c = getSocketChar();
+                if(c <= 0){ // Read error
+                    printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
+                    return 12;
+                } else if(c == '\r'){ // Ignore carriage return
+                    continue;
+                } else if(c == '\n'){
+                    if(bufIndex == 0){
+                        continue; // Leading CRLF?
+                    }
+                    break;
+                } else if(c == ';'){ // Marks start of extra information
+                    fprintf(stderr, "steal: Warning: Ignoring extra chunk information.\n"); // We don't care about the extra chunk information 
+                    while((c = getSocketChar()) != '\n'){ // Discard everything until newline
+                        if(c <= 0){
+                            printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
+                            return 12;
+                        }
+                    }
+                    break;
+                } else if(bufIndex >= 32){
+                    printf("steal: Error: chunk size field >= 32 characters\n");
+                    return 23;
+                } else {
+                    buf[bufIndex++] = c;
+                }
+            }
+            buf[bufIndex] = 0;
+
+            return std::stoll(buf, nullptr, 16);
+        };
+
+        while(1){
+            ssize_t chunkSize = getChunkSize();
+            if(chunkSize < 0){
+                return chunkSize;
+            } else if(chunkSize == 0){
+                return 0;
+            }
+
+            char recieveBuffer[chunkSize];
+            ssize_t received = 0;
+            while(received < chunkSize){
+                ssize_t ret = recv(sock, recieveBuffer + received, chunkSize - received, 0);
+                if(ret <= 0){
+                    printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
+                    return 12;
+                }
+
+
+                received += ret;
+            }
+
+            fwrite(recieveBuffer, 1, received, stream);
+        }
+        
+    } else {
+        assert(!"Invalid transfer encoding!");
     }
 
+    fflush(stream);
     return 0;
 }
 
@@ -220,21 +334,21 @@ int main(int argc, char** argv){
                 break;
             case '?':
             default:
-                std::cout << "Usage: " << argv[0] << "[options] <url>\nSee " << argv[0] << "--help\n";
+                printf("Usage: %s [options] <url>\nSee --help\n", argv[0]);
                 return 1;
         }
     }
 
     if(argc - optind < 1){
-        std::cout << "Usage: " << argv[0] << " [options] <url>\nSee " << argv[0] << " --help\n";
+        printf("Usage: %s [options] <url>\nSee --help\n", argv[0]);
         return 1;
     }
 
     if(help){
-        std::cout << "steal [options] <url>\n"
-            << "Steal data from <url> (Default HTTP)\n\n"
-            << "--help              Show Help\n"
-            << "-v, --verbose       Show extra information\n";
+        printf("steal [options] <url>\n");
+        printf("Steal data from <url> (Default HTTP)\n\n");
+        printf("--help              Show Help\n");
+        printf("-v, --verbose       Show extra information\n");
 
         return 0;
     }
@@ -242,29 +356,27 @@ int main(int argc, char** argv){
     Lemon::URL url(argv[optind]);
 
     if(!url.IsValid() || !url.Host().length()){
-        std::cout << "steal: Invalid/malformed URL";
+        printf("steal: Invalid/malformed URL.\n");
         return 2;
     }
 
     if(url.Protocol().length() && url.Protocol().compare("http")){
-        std::cout << "steal: Unsupported protocol: '" << url.Protocol() << "'\n";
+        printf("steal: Unsupported protocol: '%s'.\n", url.Protocol().c_str());
         return 2;
     }
 
-    std::ostream* out = nullptr;
+    FILE* out = nullptr;
     if(outFile){
-        auto file = new std::ofstream(outFile, std::ofstream::out | std::ofstream::binary | std::ofstream::trunc);
-
-        if(!file->is_open()){
+        FILE* file = fopen(outFile, "w");
+        if(!file){
             perror("steal: Error creating file for output");
             return 3;
         }
 
-        file->seekp(0);
-
-        out = reinterpret_cast<std::ostream*>(file);
+        fseek(file, 0, SEEK_SET);
+        out = file;
     } else {
-        out = &std::cout;
+        out = stdout;
     }
 
 redirect:
@@ -278,7 +390,7 @@ redirect:
 
         addrinfo* result;
         if(getaddrinfo(url.Host().c_str(), nullptr, &hint, &result)){
-            std::cout << "steal: Failed to resolve host '" << url.Host() << "': " << strerror(errno) << "\n";
+            printf("steal: Failed to resolve host '%s': %s.\n", url.Host().c_str(), strerror(errno));
             return 4;
         }
 
@@ -297,8 +409,6 @@ redirect:
         return 10;
     }
 
-    out->seekp(std::ios::beg);
-
     HTTPResponse response;
     if(int e = HTTPGet(sock, url.Host(), url.Resource(), response, out); e){
         return e;
@@ -307,7 +417,7 @@ redirect:
     if(response.statusCode == HTTPStatusCode::MovedPermanently){
         auto it = response.fields.find("Location");
         if(it == response.fields.end()){
-            std::cout << "steal: Invalid redirect: No location field";
+            printf("steal: Invalid redirect: No location field");
             return 13;
         }
 
@@ -316,18 +426,18 @@ redirect:
         url = Lemon::URL(redirectURL.substr(pos).c_str());
 
         if(!url.IsValid()){
-            std::cout << "steal: Invalid redirect: Invalid URL '" << redirectURL.c_str() << "'\n";
+            printf("steal: Invalid redirect: Invalid URL '%s'.\n", redirectURL.c_str());
             return 14;
         }
 
         if(url.Protocol().compare("http")){
-            std::cout << "steal: Invalid redirect: Unknown URL protocol '" << url.Protocol().c_str() << "'\n";
+            printf("steal: Invalid redirect: Unknown URL protocol '%s'.\n", url.Protocol().c_str());
             return 15;
         }
 
         goto redirect;
     } else if(response.statusCode != HTTPStatusCode::OK){
-        std::cout << "steal: HTTP " << response.statusCode << "\n";
+        printf("steal: HTTP %d.\n", response.statusCode);
         return 20;
     }
 
