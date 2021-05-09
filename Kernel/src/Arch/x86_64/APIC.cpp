@@ -29,7 +29,7 @@ namespace APIC{
         void WriteBase(uint64_t val){
             uint64_t low = val & 0xFFFFFFFF;
             uint64_t high = val >> 32;
-            asm("rdmsr" :: "a"(low), "d"(high), "c"(0x1B));
+            asm("wrmsr" :: "a"(low), "d"(high), "c"(0x1B));
         }
 
         void Enable(){
