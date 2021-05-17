@@ -115,12 +115,32 @@ jobs:
       - name: Configure dependencies
         run: Scripts/configure.sh
 
+      - name: Cache the LLVM port
+        uses: actions/cache@v2
+        with:
+          path: |
+            **/Ports/llvm-project
+          key: ${{ runner.os }}-lemon-llvm-${{ hashFiles('~/llvm-hash.txt') }}-${{ hashFiles('**/Ports/llvm.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-lemon-llvm-
+            ${{ runner.os }}-lemon-llvm-${{ hashFiles('~/llvm-hash.txt') }}-
+            ${{ runner.os }}-lemon-llvm-${{ hashFiles('~/llvm-hash.txt') }}-${{ hashFiles('**/Ports/llvm.sh') }}
+
+      - name: Cache the Python port
+        uses: actions/cache@v2
+        with:
+          path: |
+            **/Ports/Python*
+          key: ${{ runner.os }}-lemon-python-${{ hashFiles('**/Ports/lemon-Python*.patch') }}-${{ hashFiles('**/Ports/python.sh') }}
+          restore-keys: |
+            ${{ runner.os }}-lemon-python-${{ hashFiles('**/Ports/lemon-Python*.patch') }}-${{ hashFiles('**/Ports/python.sh') }}
+
       - name: Build extra ports
         run: |
           Ports/buildport.sh doom
           Ports/buildport.sh nyancat
-          Ports/buildport.sh python
           Ports/buildport.sh nasm
+          Ports/buildport.sh python
           Ports/buildport.sh lemon-binutils
           Ports/buildport.sh llvm
 
