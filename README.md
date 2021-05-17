@@ -15,7 +15,7 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 - [Building Lemon OS](Documentation/Build/Building-Lemon-OS.md)
 
 ## Prebuilt Image
-[Nightly Images](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml?query=is%3Asuccess+branch%3Amaster) - Go to latest job, disk images located under Artifacts\
+[Nightly Images](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml?query=is%3Asuccess+branch%3Amaster) - Go to latest job, `Lemon.img` located under Artifacts\
 [Latest Release](https://github.com/LemonOSProject/LemonOS/releases/latest)
 
 ![Lemon OS Screenshot](Screenshots/image7.png)\
