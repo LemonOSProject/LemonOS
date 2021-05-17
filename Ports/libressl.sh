@@ -15,4 +15,7 @@ buildp(){
 
  	ninja
 	DESTDIR=$LEMON_SYSROOT ninja install
+
+	mkdir -p $LEMON_SYSROOT/system/lib/crypto
+	ln -sf ../libcrypto.so $LEMON_SYSROOT/system/lib/crypto/libcrypto.so
 }

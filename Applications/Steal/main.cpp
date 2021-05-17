@@ -3,9 +3,14 @@
 
 #include <Lemon/Core/URL.h>
 
+#include <unistd.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+
+#include <openssl/ssl.h>
+#include <openssl/bio.h>
+#include <openssl/err.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -57,6 +62,43 @@ enum HTTPStatusCode {
     VariantAlsoNegotiates = 506,
 };
 
+struct IOObject {
+    virtual ~IOObject() = default;
+
+    virtual ssize_t Read(void* buffer, size_t len) = 0;
+    virtual ssize_t Write(void* buffer, size_t len) = 0;
+};
+
+struct RawSocket final : IOObject {
+    RawSocket(int fd)
+        : sock(fd) {}
+
+    ssize_t Read(void* buffer, size_t len){
+        return recv(sock, buffer, len, 0);
+    }
+
+    ssize_t Write(void* buffer, size_t len){
+        return send(sock, buffer, len, 0);
+    }
+
+    int sock;
+};
+
+struct TLSSocket : IOObject {
+    BIO* tlsIO;
+
+    TLSSocket(BIO* io)
+        : tlsIO(io) {}
+
+    ssize_t Read(void* buffer, size_t len){
+        return BIO_read(tlsIO, buffer, len);
+    }
+
+    ssize_t Write(void* buffer, size_t len){
+        return BIO_write(tlsIO, buffer, len);
+    }
+};
+
 class HTTPResponse {
 public:
     std::string status;
@@ -88,7 +130,7 @@ void UpdateProgress(size_t recievedData, size_t dataLeft){
     }
 }
 
-int RecieveResponse(int sock, HTTPResponse& response){
+int RecieveResponse(IOObject* sock, HTTPResponse& response){
     std::string line = "";
 
     response.fields.clear();
@@ -96,7 +138,7 @@ int RecieveResponse(int sock, HTTPResponse& response){
 
     char c;
     ssize_t ret;
-    while((ret = recv(sock, &c, sizeof(char), 0)) == 1){
+    while((ret = sock->Read(&c, sizeof(char))) == 1){
         if(verbose){
             fputc(c, stdout);
         }
@@ -145,7 +187,7 @@ int RecieveResponse(int sock, HTTPResponse& response){
     return 0;
 }
 
-int HTTPGet(int sock, const std::string& host, const std::string& resource, HTTPResponse& response, FILE* stream){
+int HTTPGet(IOObject* sock, const std::string& host, const std::string& resource, HTTPResponse& response, FILE* stream){
     {
         char request[4096];
         int reqLength = snprintf(request, 4096, "GET /%s HTTP/1.1\r\n\
@@ -159,7 +201,7 @@ Accept-Encoding: identity\r\n\
             printf("\n%s---\n\n", request);
         }
 
-        if(ssize_t len = send(sock, request, reqLength, 0); len != reqLength){
+        if(ssize_t len = sock->Write(request, reqLength); len != reqLength){
             if(reqLength < 0){
                 perror("steal: Failed to send data");
             } else {
@@ -217,7 +259,7 @@ Accept-Encoding: identity\r\n\
                 readSize = expectedData;
             }
 
-            ssize_t len = recv(sock, receiveBuffer, readSize, 0);
+            ssize_t len = sock->Read(receiveBuffer, readSize);
             if(len < 0){
                 printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
                 return 12;
@@ -239,7 +281,7 @@ Accept-Encoding: identity\r\n\
     } else if(transferEncoding == TransferChunked) {
         auto getSocketChar = [sock]() -> int {
             char c;
-            if(ssize_t ret = recv(sock, &c, 1, 0); ret <= 0){
+            if(ssize_t ret = sock->Read(&c, 1); ret <= 0){
                 return -1;
             }
             return c;
@@ -293,7 +335,7 @@ Accept-Encoding: identity\r\n\
             char recieveBuffer[chunkSize];
             ssize_t received = 0;
             while(received < chunkSize){
-                ssize_t ret = recv(sock, recieveBuffer + received, chunkSize - received, 0);
+                ssize_t ret = sock->Read(recieveBuffer + received, chunkSize - received);
                 if(ret <= 0){
                     printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
                     return 12;
@@ -311,6 +353,26 @@ Accept-Encoding: identity\r\n\
     }
 
     fflush(stream);
+    return 0;
+}
+
+int ResolveHostname(const std::string& host, uint32_t& ip){
+    if(inet_pton(AF_INET, host.c_str(), &ip) > 0){ // Check if it is an IP address
+
+    } else {
+        addrinfo hint;
+        memset(&hint, 0, sizeof(addrinfo));
+        hint = { .ai_family = AF_INET, .ai_socktype = SOCK_STREAM };
+
+        addrinfo* result;
+        if(getaddrinfo(host.c_str(), nullptr, &hint, &result)){
+            printf("steal: Failed to resolve host '%s': %s.\n", host.c_str(), strerror(errno));
+            return 4;
+        }
+
+        ip = reinterpret_cast<sockaddr_in*>(result->ai_addr)->sin_addr.s_addr;
+    }
+
     return 0;
 }
 
@@ -360,9 +422,20 @@ int main(int argc, char** argv){
         return 2;
     }
 
-    if(url.Protocol().length() && url.Protocol().compare("http")){
-        printf("steal: Unsupported protocol: '%s'.\n", url.Protocol().c_str());
-        return 2;
+    enum {
+        ProtocolHTTP,
+        ProtocolHTTPS,
+    } protocol = ProtocolHTTP;
+
+    if(url.Protocol().length()){
+        if(!url.Protocol().compare("http")){
+            protocol = ProtocolHTTP;
+        } else if(!url.Protocol().compare("https")){
+            protocol = ProtocolHTTPS;
+        } else {
+            printf("steal: Unsupported protocol: '%s'.\n", url.Protocol().c_str());
+            return 2;
+        }
     }
 
     FILE* out = nullptr;
@@ -379,39 +452,93 @@ int main(int argc, char** argv){
         out = stdout;
     }
 
+    bool sslLoaded = false;
+    SSL_CTX* sslContext;
+    const SSL_METHOD* method;
+
 redirect:
-    uint32_t ip;
-    if(inet_pton(AF_INET, url.Host().c_str(), &ip) > 0){
+    HTTPResponse response;
 
-    } else {
-        addrinfo hint;
-        memset(&hint, 0, sizeof(addrinfo));
-        hint = { .ai_family = AF_INET, .ai_socktype = SOCK_STREAM };
+    if(protocol == ProtocolHTTP){
+        int sock = socket(AF_INET, SOCK_STREAM, 0);
 
-        addrinfo* result;
-        if(getaddrinfo(url.Host().c_str(), nullptr, &hint, &result)){
-            printf("steal: Failed to resolve host '%s': %s.\n", url.Host().c_str(), strerror(errno));
-            return 4;
+        uint32_t ip;
+        if(int e = ResolveHostname(url.Host(), ip)){
+            return e;
         }
 
-        ip = reinterpret_cast<sockaddr_in*>(result->ai_addr)->sin_addr.s_addr;
-    }
+        sockaddr_in address;
+        address.sin_addr.s_addr = ip;
+        address.sin_family = AF_INET;
+        address.sin_port = htons(80);
 
-    int sock = socket(AF_INET, SOCK_STREAM, 0);
+        if(int e = connect(sock, reinterpret_cast<sockaddr*>(&address), sizeof(sockaddr_in)); e){
+            perror("steal: Failed to connect");
+            return 10;
+        }
 
-    sockaddr_in address;
-    address.sin_addr.s_addr = ip;
-    address.sin_family = AF_INET;
-    address.sin_port = htons(80);
+        RawSocket io(sock);
+        if(int e = HTTPGet(&io, url.Host(), url.Resource(), response, out); e){
+            return e;
+        }
 
-    if(int e = connect(sock, reinterpret_cast<sockaddr*>(&address), sizeof(sockaddr_in)); e){
-        perror("steal: Failed to connect");
-        return 10;
-    }
+        close(sock);
+    } else if(protocol == ProtocolHTTPS){
+        if(!sslLoaded){
+            SSL_load_error_strings();
+            SSL_library_init();
+            ERR_load_BIO_strings();
+            OpenSSL_add_all_algorithms();
 
-    HTTPResponse response;
-    if(int e = HTTPGet(sock, url.Host(), url.Resource(), response, out); e){
-        return e;
+            method = TLSv1_2_client_method();
+            sslContext = SSL_CTX_new(method);
+        }
+
+        if(!method){
+            perror("steal: TLS Error obtaining SSL method");
+            printf("steal: Error setting TLS connection hostname:");
+            ERR_print_errors_fp(stderr);
+            return 50;
+        }
+
+        BIO* basicIO = BIO_new_ssl_connect(sslContext);
+        assert(basicIO);
+
+        if(!BIO_set_conn_hostname(basicIO, url.Host().c_str())){
+            BIO_free_all(basicIO);
+
+            printf("steal: Error setting TLS connection hostname:");
+            ERR_print_errors_fp(stderr);
+            return 40;
+        }
+        if(url.Port().length()){
+            BIO_set_conn_port(basicIO, url.Port().c_str());
+        }
+
+        SSL* ssl;
+        if(BIO_get_ssl(basicIO, &ssl) <= 0){
+            BIO_free_all(basicIO);
+
+            printf("steal: Failed to establish TLS connection to '%s'.", url.Host().c_str());
+            return 41;
+        }
+        SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
+
+        if(BIO_do_connect(basicIO) <= 0){
+            BIO_free_all(basicIO);
+
+            printf("steal: Failed to establish TLS connection to '%s'.", url.Host().c_str());
+            return 42;
+        }
+
+        TLSSocket io(basicIO);
+        if(int e = HTTPGet(&io, url.Host(), url.Resource(), response, out); e){
+            BIO_free_all(basicIO);
+
+            return e;
+        }
+
+        BIO_free_all(basicIO);
     }
 
     if(response.statusCode == HTTPStatusCode::MovedPermanently){
@@ -430,11 +557,14 @@ redirect:
             return 14;
         }
 
-        if(url.Protocol().compare("http")){
+        if(!url.Protocol().compare("http")){
+            protocol = ProtocolHTTP;
+        } else if(!url.Protocol().compare("https")){
+            protocol = ProtocolHTTPS;
+        } else {
             printf("steal: Invalid redirect: Unknown URL protocol '%s'.\n", url.Protocol().c_str());
             return 15;
         }
-
         goto redirect;
     } else if(response.statusCode != HTTPStatusCode::OK){
         printf("steal: HTTP %d.\n", response.statusCode);

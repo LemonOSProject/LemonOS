@@ -14,6 +14,9 @@ export CXX=lemon-clang++
 export CFLAGS=-Wno-error
 export LEMON_PREFIX=/system
 
+WORKING_DIR=$(pwd)
+cd $LEMON_BUILDROOT/Ports
+
 . ./$1.sh
 
 if [ "$2" != build ]; then
@@ -23,3 +26,5 @@ fi
 if [ "$2" != unpack ]; then
     buildp
 fi
+
+cd $WORKING_DIR

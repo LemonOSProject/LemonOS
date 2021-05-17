@@ -1,18 +1,79 @@
 diff --color -ruN libressl-3.3.1/crypto/compat/arc4random.h lemon-libressl/crypto/compat/arc4random.h
 --- libressl-3.3.1/crypto/compat/arc4random.h	2020-05-08 09:12:43.000000000 +1000
-+++ lemon-libressl/crypto/compat/arc4random.h	2021-02-14 15:11:47.075497250 +1100
-@@ -12,7 +12,7 @@
++++ lemon-libressl/crypto/compat/arc4random.h	2021-05-17 11:22:19.953264216 +1000
+@@ -12,6 +12,9 @@
  #elif defined(__hpux)
  #include "arc4random_hpux.h"
  
--#elif defined(__linux__)
-+#elif defined(__linux__) || defined(__lemon__)
++#elif defined(__lemon__)
++#include "arc4random_lemon.h"
++
+ #elif defined(__linux__)
  #include "arc4random_linux.h"
  
- #elif defined(__midipix__)
+diff --color -ruN libressl-3.3.1/crypto/compat/arc4random_lemon.h lemon-libressl/crypto/compat/arc4random_lemon.h
+--- libressl-3.3.1/crypto/compat/arc4random_lemon.h	1970-01-01 10:00:00.000000000 +1000
++++ lemon-libressl/crypto/compat/arc4random_lemon.h	2021-05-17 11:23:44.211873625 +1000
+@@ -0,0 +1,56 @@
++#include <sys/mman.h>
++
++#include <pthread.h>
++
++static pthread_mutex_t arc4random_mtx = PTHREAD_MUTEX_INITIALIZER;
++#define _ARC4_LOCK()   pthread_mutex_lock(&arc4random_mtx)
++#define _ARC4_UNLOCK() pthread_mutex_unlock(&arc4random_mtx)
++
++#define _ARC4_ATFORK(f) // pthread_atfork not implemented yet
++
++static inline void
++_getentropy_fail(void)
++{
++	raise(SIGKILL);
++}
++
++static volatile sig_atomic_t _rs_forked;
++
++static inline void
++_rs_forkhandler(void)
++{
++	_rs_forked = 1;
++}
++
++static inline void
++_rs_forkdetect(void)
++{
++	static pid_t _rs_pid = 0;
++	pid_t pid = getpid();
++
++        /* XXX unusual calls to clone() can bypass checks */
++	if (_rs_pid == 0 || _rs_pid == 1 || _rs_pid != pid || _rs_forked) {
++		_rs_pid = pid;
++		_rs_forked = 0;
++		if (rs)
++			memset(rs, 0, sizeof(*rs));
++	}
++}
++
++static inline int
++_rs_allocate(struct _rs **rsp, struct _rsx **rsxp)
++{
++	if ((*rsp = mmap(NULL, sizeof(**rsp), PROT_READ|PROT_WRITE,
++	    MAP_ANON|MAP_PRIVATE, -1, 0)) == MAP_FAILED)
++		return (-1);
++
++	if ((*rsxp = mmap(NULL, sizeof(**rsxp), PROT_READ|PROT_WRITE,
++	    MAP_ANON|MAP_PRIVATE, -1, 0)) == MAP_FAILED) {
++		munmap(*rsp, sizeof(**rsp));
++		*rsp = NULL;
++		return (-1);
++	}
++
++	_ARC4_ATFORK(_rs_forkhandler);
++	return (0);
++}
 diff --color -ruN libressl-3.3.1/include/compat/machine/endian.h lemon-libressl/include/compat/machine/endian.h
 --- libressl-3.3.1/include/compat/machine/endian.h	2020-12-09 04:32:48.000000000 +1100
-+++ lemon-libressl/include/compat/machine/endian.h	2021-02-14 15:06:25.848420194 +1100
++++ lemon-libressl/include/compat/machine/endian.h	2021-05-17 10:54:36.542120270 +1000
 @@ -21,7 +21,7 @@
  #define BYTE_ORDER BIG_ENDIAN
  #endif
