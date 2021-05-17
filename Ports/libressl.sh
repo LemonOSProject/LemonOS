@@ -11,7 +11,7 @@ buildp(){
 	mkdir build
 	cd build
 
-	cmake -G Ninja .. -DCMAKE_TOOLCHAIN_FILE=../../../Scripts/lemon-cmake-options.txt -DCMAKE_INSTALL_PREFIX=/system -DBUILD_SHARED_LIBS=ON -DLIBRESSL_APPS=OFF
+	cmake -G Ninja .. -DCMAKE_TOOLCHAIN_FILE=../../../Scripts/CMake/lemon-cmake-options.txt -DCMAKE_INSTALL_PREFIX=/system -DBUILD_SHARED_LIBS=ON -DLIBRESSL_APPS=OFF
 
  	ninja
 	DESTDIR=$LEMON_SYSROOT ninja install

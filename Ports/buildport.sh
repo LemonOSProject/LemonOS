@@ -1,5 +1,7 @@
 export JOBCOUNT=$(nproc)
 
+export LEMON_BUILDROOT=$(readlink -f -- $(dirname $(readlink -f -- "$0"))/..)
+
 if [ -z "$LEMON_SYSROOT" ]; then
     export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
 

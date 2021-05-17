@@ -8,7 +8,7 @@ buildp(){
 
  	mkdir -p build
     cd build
-    cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../../../Scripts/lemon-cmake-options.txt -DCMAKE_INSTALL_PREFIX=/system
+    cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../../../Scripts/CMake/lemon-cmake-options.txt -DCMAKE_INSTALL_PREFIX=/system
     ninja -j$JOBCOUNT
     DESTDIR=$LEMON_SYSROOT ninja install
 }
