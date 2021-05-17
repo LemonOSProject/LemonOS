@@ -80,11 +80,12 @@ void CompositorInstance::Paint(){
         surfacecpy(renderSurface, &backgroundImage);
     }
 
+    bool mouseMoved = lastMousePos == wm->input.mouse.pos;
     for(auto it = clips.begin(); it != clips.end();){
         WMWindowRect& rect = *it;
         WMWindow* win = rect.win;
         
-        if(win->Dirty() || wm->redrawBackground){
+        if(win->Dirty() || wm->redrawBackground || (mouseMoved && Lemon::Graphics::PointInRect(rect, wm->input.mouse.pos))){
             win->SetDirty(0);
 
             while(it != clips.end() && it->win == win){

@@ -88,5 +88,5 @@ executable('lemonmonitor.lef', lemonmonitor_src, cpp_args : application_cpp_args
 executable('ipctest.lef', ipctest_src, cpp_args : application_cpp_args, install : true)
 executable('jsondump.lef', jsondump_src, cpp_args : application_cpp_args, install : true, link_args : ['-llemon'])
 executable('minesweeper.lef', minesweeper_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
-executable('steal.lef', steal_src, cpp_args : application_cpp_args, link_args : ['-llemon'], install : true)
+executable('steal.lef', steal_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lssl', '-lcrypto'], install : true)
 executable('devmgr.lef', devicemanager_src, cpp_args : application_cpp_args, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install : true)
