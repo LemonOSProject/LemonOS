@@ -51,13 +51,13 @@ void WMWindow::DrawDecoration(surface_t* surface, rect_t clip) const{
 	vector2i_t buttonSize = { buttons->width / 2, buttons->height / 2 };
 
 	if(Lemon::Graphics::PointInRect({{closeRect.x + pos.x, closeRect.y + pos.y}, closeRect.size}, wm->input.mouse.pos)){
-	Lemon::Graphics::surfacecpy(surface, buttons, pos + closeRect.pos, {{0, buttonSize.y}, buttonSize}); // Close button
+		Lemon::Graphics::surfacecpyTransparent(surface, buttons, pos + closeRect.pos, {{0, buttonSize.y}, buttonSize}); // Close button
 	} else {
 		Lemon::Graphics::surfacecpyTransparent(surface, buttons, pos + closeRect.pos, {{0, 0}, buttonSize}); // Close button
 	}
 
 	if(Lemon::Graphics::PointInRect({{pos.x + minimizeRect.x, pos.y + minimizeRect.y}, minimizeRect.size}, wm->input.mouse.pos)){
-		Lemon::Graphics::surfacecpy(surface, buttons, pos + minimizeRect.pos, {buttonSize, buttonSize}); // Minimize button
+		Lemon::Graphics::surfacecpyTransparent(surface, buttons, pos + minimizeRect.pos, {buttonSize, buttonSize}); // Minimize button
 	} else {
 		Lemon::Graphics::surfacecpyTransparent(surface, buttons, pos + minimizeRect.pos, {{buttonSize.x, 0}, buttonSize}); // Minimize button
 	}

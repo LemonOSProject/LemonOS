@@ -91,11 +91,31 @@ struct TLSSocket : IOObject {
         : tlsIO(io) {}
 
     ssize_t Read(void* buffer, size_t len){
-        return BIO_read(tlsIO, buffer, len);
+        ssize_t rlen = BIO_read(tlsIO, buffer, len);
+        while(rlen <= 0){
+            if(!BIO_should_retry(tlsIO)){
+                ERR_print_errors_fp(stderr);
+                return -1;
+            }
+
+            rlen = BIO_read(tlsIO, buffer, len);
+        }
+
+        return rlen;
     }
 
     ssize_t Write(void* buffer, size_t len){
-        return BIO_write(tlsIO, buffer, len);
+        ssize_t rlen = BIO_write(tlsIO, buffer, len);
+        while(rlen <= 0){
+            if(!BIO_should_retry(tlsIO)){
+                ERR_print_errors_fp(stderr);
+                return -1;
+            }
+
+            rlen = BIO_write(tlsIO, buffer, len);
+        }
+
+        return rlen;
     }
 };
 
@@ -202,7 +222,7 @@ Accept-Encoding: identity\r\n\
         }
 
         if(ssize_t len = sock->Write(request, reqLength); len != reqLength){
-            if(reqLength < 0){
+            if(len < 0){
                 perror("steal: Failed to send data");
             } else {
                 printf("steal: Failed to send all %i bytes (only sent %li).\n", reqLength, len);
@@ -219,6 +239,10 @@ Accept-Encoding: identity\r\n\
 
     if(int e = RecieveResponse(sock, response); e){
         return e;
+    }
+
+    if(response.statusCode != HTTPStatusCode::OK){
+        return 0;
     }
 
     ssize_t contentLength = -1;
@@ -501,48 +525,51 @@ redirect:
             return 50;
         }
 
-        BIO* basicIO = BIO_new_ssl_connect(sslContext);
-        assert(basicIO);
+        SSL *ssl = SSL_new(sslContext);
+        assert(ssl);
 
-        if(!BIO_set_conn_hostname(basicIO, url.Host().c_str())){
-            BIO_free_all(basicIO);
-
-            printf("steal: Error setting TLS connection hostname:");
-            ERR_print_errors_fp(stderr);
-            return 40;
-        }
-        if(url.Port().length()){
-            BIO_set_conn_port(basicIO, url.Port().c_str());
-        }
-
-        SSL* ssl;
-        if(BIO_get_ssl(basicIO, &ssl) <= 0){
-            BIO_free_all(basicIO);
-
-            printf("steal: Failed to establish TLS connection to '%s'.", url.Host().c_str());
-            return 41;
-        }
+	    SSL_set_connect_state(ssl);
         SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
 
+        BIO* sslBasicIO = BIO_new(BIO_f_ssl());
+        assert(sslBasicIO);
+
+        BIO_set_ssl(sslBasicIO, ssl, BIO_CLOSE);
+
+        BIO* basicIO;
+        if(url.Port().length()){
+            basicIO = BIO_new_connect((url.Host() + url.Port()).c_str());
+        } else {
+            basicIO = BIO_new_connect((url.Host() + ":443").c_str());
+        }
+        assert(basicIO);
+
         if(BIO_do_connect(basicIO) <= 0){
+            BIO_free_all(sslBasicIO);
             BIO_free_all(basicIO);
 
-            printf("steal: Failed to establish TLS connection to '%s'.", url.Host().c_str());
+            printf("steal: (BIO_do_connect) Failed to establish TLS connection to '%s'.", url.Host().c_str());
+            ERR_print_errors_fp(stdout);
+            
             return 42;
         }
 
-        TLSSocket io(basicIO);
+        BIO_push (sslBasicIO, basicIO);
+
+        TLSSocket io(sslBasicIO);
         if(int e = HTTPGet(&io, url.Host(), url.Resource(), response, out); e){
+            BIO_free_all(sslBasicIO);
             BIO_free_all(basicIO);
 
             return e;
         }
 
+        BIO_free_all(sslBasicIO);
         BIO_free_all(basicIO);
     }
 
     if(response.statusCode == HTTPStatusCode::MovedPermanently){
-        auto it = response.fields.find("Location");
+        auto it = response.fields.find("location");
         if(it == response.fields.end()){
             printf("steal: Invalid redirect: No location field");
             return 13;
@@ -564,6 +591,10 @@ redirect:
         } else {
             printf("steal: Invalid redirect: Unknown URL protocol '%s'.\n", url.Protocol().c_str());
             return 15;
+        }
+
+        if(verbose){
+            printf("steal: Redirecting to '%s' (%s).\n", url.Host().c_str(), url.Protocol().c_str());
         }
         goto redirect;
     } else if(response.statusCode != HTTPStatusCode::OK){
