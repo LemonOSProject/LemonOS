@@ -40,7 +40,7 @@
 #define SC_ARG4(r) (r)->r9
 #define SC_ARG5(r) (r)->r8
 
-#define NUM_SYSCALLS 98
+#define NUM_SYSCALLS 99
 
 #define EXEC_CHILD 1
 
@@ -3232,6 +3232,43 @@ long SysPipe(RegisterContext* r){
 	return 0;
 }
 
+/////////////////////////////
+/// \brief SysGetEntropy(buf, length)
+///
+/// \param buf Buffer to be filled
+/// \param length Size of buf, cannot be greater than 256
+///
+/// \return Negative error code on error, otherwise 0
+///
+/// \note Length cannot be greater than 256, if so -EIO is reutrned
+/////////////////////////////
+long SysGetEntropy(RegisterContext* r){
+	size_t length = SC_ARG1(r);
+	if(length > 256){
+		return -EIO;
+	}
+
+	uint8_t* buffer = reinterpret_cast<uint8_t*>(SC_ARG0(r));
+	if(!Memory::CheckUsermodePointer(SC_ARG0(r), length, Scheduler::GetCurrentProcess()->addressSpace)){
+		return -EFAULT; // buffer is invalid
+	}
+
+	while(length >= 8){
+		uint64_t value = Hash<uint64_t>(rand() % 65535 * Timer::GetTicks());
+		
+		*(reinterpret_cast<uint64_t*>(buffer)) = value;
+		buffer += 8;
+		length -= 8;
+	}
+
+	if(length > 0){
+		uint64_t value = Hash<uint64_t>(rand() % 65535 * Timer::GetTicks());
+		memcpy(buffer, &value, length);
+	}
+
+	return 0;
+}
+
 syscall_t syscalls[NUM_SYSCALLS]{
 	SysDebug,
 	SysExit,					// 1
@@ -3331,6 +3368,7 @@ syscall_t syscalls[NUM_SYSCALLS]{
 	SysGetEGID,					// 95
 	SysGetPPID,
 	SysPipe,
+	SysGetEntropy,
 };
 
 void DumpLastSyscall(Thread* t){
