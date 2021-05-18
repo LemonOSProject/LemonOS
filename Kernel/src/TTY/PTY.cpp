@@ -75,40 +75,42 @@ ssize_t PTYDevice::Write(size_t offset, size_t size, uint8_t *buffer){
 	if(pty && device == PTYSlaveDevice){
 		ssize_t written = pty->SlaveWrite((char*)buffer,size);
 
-		if(written > 0 || written == size){
+		if(written < 0 || written == size){
 			return written; // Check either for an error or if all bytes were written
 		}
 
 		// Buffer must be full so just keep trying
 		buffer += written;
 		while(written < size){
-			ssize_t ret = pty->SlaveWrite((char*)buffer, size - written);
+			size_t ret = pty->SlaveWrite((char*)buffer, size - written);
 
 			if(ret < 0){
-				return ret; // Error 
+				return ret; // Error
 			}
 			
-			buffer += written;
+			written += ret;
+			buffer += ret;
 		}
 
 		return written;
 	} else if(pty && device == PTYMasterDevice){
 		ssize_t written = pty->MasterWrite((char*)buffer,size);
 
-		if(written > 0 || written == size){
+		if(written < 0 || written == size){
 			return written; // Check either for an error or if all bytes were written
 		}
 
 		// Buffer must be full so just keep trying
 		buffer += written;
 		while(written < size){
-			ssize_t ret = pty->MasterWrite((char*)buffer, size - written);
+			size_t ret = pty->SlaveWrite((char*)buffer, size - written);
 
 			if(ret < 0){
-				return ret; // Error 
+				return ret; // Error
 			}
-
-			buffer += written;
+			
+			written += ret;
+			buffer += ret;
 		}
 
 		return written;
