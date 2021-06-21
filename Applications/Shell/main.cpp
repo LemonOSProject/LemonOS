@@ -121,7 +121,7 @@ int main(){
 	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
 	syscall(SYS_UNAME, (uintptr_t)versionString,0,0,0,0);
 
-	Lemon::Graphics::LoadImage("/initrd/menubuttons.png", &menuButton);
+	Lemon::Graphics::LoadImage("/system/lemon/resources/menubuttons.png", &menuButton);
 
 	handle_t tempEndpoint = 0;
 	while(tempEndpoint <= 0){

@@ -104,11 +104,11 @@ int main(){
 
     Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 255, 0, 128, &fbSurface);
 
-    if(int e = Lemon::Graphics::LoadImage("/initrd/winbuttons.png", &wm.compositor.windowButtons)){
+    if(int e = Lemon::Graphics::LoadImage("/system/lemon/resources/winbuttons.png", &wm.compositor.windowButtons)){
         printf("LemonWM: Warning: Error %d loading buttons.\n", e);
     }
 
-    if(int e = Lemon::Graphics::LoadImage("/initrd/mouse.png", &wm.compositor.mouseCursor)){
+    if(int e = Lemon::Graphics::LoadImage("/system/lemon/resources/mouse.png", &wm.compositor.mouseCursor)){
         printf("LemonWM: Warning: Error %d loading mouse cursor.\n", e);
         wm.compositor.mouseCursor.buffer = new uint8_t[4 * 4 * 4];
         wm.compositor.mouseCursor.width = wm.compositor.mouseCursor.height = 4;

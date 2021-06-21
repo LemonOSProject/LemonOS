@@ -55,9 +55,6 @@ void KernelProcess(){
 
 	Network::InitializeConnections();
 
-	if(progressBuffer)
-		Video::DrawBitmapImage(videoMode.width/2 + 24 * 3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
-
 	if(FsNode* node = fs::ResolvePath("/initrd/modules.cfg")){
 		char* buffer = new char[node->size + 1];
 
@@ -92,6 +89,9 @@ void KernelProcess(){
 		fs::volumes->add_back(new fs::LinkVolume(initrd, "lib")); // If /system/lib is not present is /initrd
 	}
 
+	if(progressBuffer)
+		Video::DrawBitmapImage(videoMode.width/2 + 24 * 3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
+
 	Log::Info("Loading Init Process...");
 	FsNode* initFsNode = nullptr;
 	char* argv[] = {"init.lef"};
@@ -120,6 +120,10 @@ void KernelProcess(){
 	strcpy(initProc->name, "Init");
 
 	Scheduler::StartProcess(initProc);
+
+	if(progressBuffer){
+		delete[] progressBuffer;
+	}
 
 	for(;;) {
 		acquireLock(&Scheduler::destroyedProcessesLock);
@@ -200,15 +204,19 @@ extern "C"
 	if(initrd){
 		if((splashFile = fs::FindDir(initrd,"splash.bmp"))){
 			uint32_t size = splashFile->size;
-			uint8_t* buffer = (uint8_t*)kmalloc(size);
-			if(fs::Read(splashFile, 0, size, buffer))
+			uint8_t* buffer = new uint8_t[size];
+
+			if(fs::Read(splashFile, 0, size, buffer) > 0)
 				Video::DrawBitmapImage(videoMode.width/2 - 620/2, videoMode.height/2 - 150/2, 621, 150, buffer);
+
+			delete[] buffer;
 		} else Log::Warning("Could not load splash image");
 
 		if((splashFile = fs::FindDir(initrd,"pbar.bmp"))){
 			uint32_t size = splashFile->size;
-			progressBuffer = (uint8_t*)kmalloc(size);
-			if(fs::Read(splashFile, 0, size, progressBuffer)){
+			progressBuffer = new uint8_t[size];
+
+			if(fs::Read(splashFile, 0, size, progressBuffer) > 0){
 				Video::DrawBitmapImage(videoMode.width/2 - 24*4, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 				Video::DrawBitmapImage(videoMode.width/2 - 24*3, videoMode.height/2 + 292/2 + 48, 24, 24, progressBuffer);
 			}

@@ -52,9 +52,9 @@ int main(){
     gridView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft);
 
     surface_t folderIcon;
-    Lemon::Graphics::LoadImage("/initrd/folder.png", &folderIcon);
+    Lemon::Graphics::LoadImage("/system/lemon/resources/icons/folder.png", &folderIcon);
     surface_t fileIcon;
-    Lemon::Graphics::LoadImage("/initrd/file.png", &fileIcon);
+    Lemon::Graphics::LoadImage("/system/lemon/resources/icons/file.png", &fileIcon);
 
     Lemon::GUI::GridItem item1;
     item1.name = "Item";

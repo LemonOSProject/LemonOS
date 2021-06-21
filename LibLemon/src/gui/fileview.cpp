@@ -32,7 +32,7 @@ namespace Lemon::GUI {
 
     __attribute__((constructor))
     void InitializeFVIcons(){
-        if(FILE* f = fopen("/initrd/disk.png", "rb")){
+        if(FILE* f = fopen("/system/lemon/resources/icons/disk.png", "rb")){
             Graphics::LoadImage(f, &FileView::diskIcon);
             fclose(f);
         } else {
@@ -41,7 +41,7 @@ namespace Lemon::GUI {
             FileView::diskIcon.width = 0;
         }
 
-        if(FILE* f = fopen("/initrd/folder.png", "rb")){
+        if(FILE* f = fopen("/system/lemon/resources/icons/folder.png", "rb")){
             Graphics::LoadImage(f, &FileView::folderIcon);
             fclose(f);
         } else {
@@ -50,7 +50,7 @@ namespace Lemon::GUI {
             FileView::folderIcon.width = 0;
         }
 
-        if(FILE* f = fopen("/initrd/file.png", "rb")){
+        if(FILE* f = fopen("/system/lemon/resources/icons/file.png", "rb")){
             Graphics::LoadImage(f, &FileView::fileIcon);
             fclose(f);
         } else {
@@ -59,7 +59,7 @@ namespace Lemon::GUI {
             FileView::fileIcon.width = 0;
         }
 
-        if(FILE* f = fopen("/initrd/textfile.png", "rb")){
+        if(FILE* f = fopen("/system/lemon/resources/icons/filetext.png", "rb")){
             Graphics::LoadImage(f, &FileView::textFileIcon);
             fclose(f);
         } else {
@@ -68,7 +68,7 @@ namespace Lemon::GUI {
             FileView::textFileIcon.width = 0;
         }
 
-        if(FILE* f = fopen("/initrd/jsonfile.png", "rb")){
+        if(FILE* f = fopen("/system/lemon/resources/icons/filejson.png", "rb")){
             Graphics::LoadImage(f, &FileView::jsonFileIcon);
             fclose(f);
         } else {
@@ -77,7 +77,7 @@ namespace Lemon::GUI {
             FileView::jsonFileIcon.width = 0;
         }
 
-        if(FILE* f = fopen("/initrd/disksml.png", "rb")){
+        if(FILE* f = fopen("/system/lemon/resources/icons/disksml.png", "rb")){
             Graphics::LoadImage(f, &FileView::diskIconSml);
             fclose(f);
         } else {
@@ -86,7 +86,7 @@ namespace Lemon::GUI {
             FileView::diskIconSml.width = 0;
         }
 
-        if(FILE* f = fopen("/initrd/foldersml.png", "rb")){
+        if(FILE* f = fopen("/system/lemon/resources/icons/foldersml.png", "rb")){
             Graphics::LoadImage(f, &FileView::folderIconSml);
             fclose(f);
         } else {

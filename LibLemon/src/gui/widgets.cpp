@@ -1249,6 +1249,8 @@ namespace Lemon::GUI {
     void GridView::UpdateFixedBounds(){
         Widget::UpdateFixedBounds();
 
+        assert(itemSize.x);
+
         itemsPerRow = fixedBounds.width / itemSize.x;
 
         ResetScrollBar();

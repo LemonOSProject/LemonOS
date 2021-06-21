@@ -193,17 +193,17 @@ void InitializeMenu(){
     menuWindow->OnPaint = OnPaint;
     menuWindow->rootContainer.background = {0, 0, 0, 0};
 
-    Lemon::Graphics::LoadImage("/initrd/applicationicon.png", &defaultIcon);
+    Lemon::Graphics::LoadImage("/system/lemon/resources/icons/application.png", &defaultIcon);
 
     categories["Games"] = MenuCategory("Games");
-    Lemon::Graphics::LoadImage("/initrd/gamesicon.png", &categories["Games"].icon);
+    Lemon::Graphics::LoadImage("/system/lemon/resources/icons/games.png", &categories["Games"].icon);
 
     categories["Utilities"] = MenuCategory("Utilities");
     categories["Other"] = MenuCategory("Other");
 
     {
         MenuItem item("Terminal...", "Open a Terminal", "terminal.lef", GetItemID());
-        Lemon::Graphics::LoadImage("/initrd/terminalicon.png", &item.icon);
+        Lemon::Graphics::LoadImage("/system/lemon/resources/icons/terminal.png", &item.icon);
         items[item.id] = item;
         rootItems.push_back(item);
     }

@@ -273,7 +273,7 @@ int main(int argc, char** argv){
     window->CreateMenuBar();
     window->menuBar->items.push_back(gameMenu);
 
-    Lemon::Graphics::LoadImage("/initrd/minesweeper.png", &resources);
+    Lemon::Graphics::LoadImage("/system/lemon/resources/minesweeper.png", &resources);
 
     window->AddWidget(&game);
 

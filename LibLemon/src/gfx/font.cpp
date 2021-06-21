@@ -39,8 +39,8 @@ namespace Lemon::Graphics{
 
         mainFont = new Font;
         
-        if(int err = FT_New_Face(library, "/system/lemon/fonts/notosans.ttf", 0, &mainFont->face)){
-            printf("Freetype Error (%d) loading font /system/lemon/fonts/notosans.ttf\n", err);
+        if(int err = FT_New_Face(library, "/system/lemon/resources/fonts/notosans.ttf", 0, &mainFont->face)){
+            printf("Freetype Error (%d) loading font /system/lemon/resources/fonts/notosans.ttf\n", err);
             return;
         }
 

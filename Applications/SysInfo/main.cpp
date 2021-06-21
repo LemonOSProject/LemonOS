@@ -20,7 +20,7 @@ char versionString[80];
 lemon_sysinfo_t sysInfo;
 
 int main(int argc, char** argv){
-    Lemon::Graphics::LoadImage("/initrd/banner.png", &banner);
+    Lemon::Graphics::LoadImage("/system/lemon/resources/banner.png", &banner);
     
     bannerW = new Lemon::GUI::Bitmap({{0, 0}, {300, banner.height}}, &banner);
 
