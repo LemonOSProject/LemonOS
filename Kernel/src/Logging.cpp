@@ -11,7 +11,6 @@
 #include <Device.h>
 
 namespace Log{
-
 	VideoConsole* console = nullptr;
 
 	bool logBufferEnabled = false;

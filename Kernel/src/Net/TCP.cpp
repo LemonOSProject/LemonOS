@@ -617,6 +617,11 @@ namespace Network {
                 return -EAFNOSUPPORT; // Not AF_INET
             }
 
+            if(connected){
+                Log::Debug(debugLevelNetwork, DebugLevelNormal, "[TCP] Socket already connected!");
+                return -EISCONN;
+            }
+
             const sockaddr_in* inAddr = reinterpret_cast<const sockaddr_in*>(addr);
             peerAddress.value = inAddr->sin_addr.s_addr;
             destinationPort.value = inAddr->sin_port;
