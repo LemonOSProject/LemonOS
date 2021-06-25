@@ -11,25 +11,25 @@ _NOTE: Building on WSL2 is doable, however I strongly recommend an actual UNIX s
 
 ### Arch Linux
 ```sh
-sudo pacman -S base-devel autoconf python3 ninja wget python-pip nasm
+sudo pacman -S base-devel git cmake autoconf python3 ninja wget python-pip nasm
 ```
 
 ### Debian, Ubuntu, etc.
 ```sh
-sudo apt install build-essential autoconf libtool python3 python3-pip ninja-build nasm e2fsprogs dosfstools
+sudo apt install build-essential git cmake curl autoconf libtool python3 python3-pip ninja-build nasm e2fsprogs dosfstools
 ```
 
 ## Cloning
 Make sure you use `--recurse-submodules` to get the submodules
 ```sh
-git clone https://github.com/fido2020/Lemon-OS.git --recurse-submodules
+git clone https://github.com/LemonOSProject/LemonOS.git --recurse-submodules
 ```
 
 ## Toolchain
 The first step is to build the toolchain.
 Open a terminal in the `Toolchain/` directory and run `./buildtoolchain.sh build`. This will build binutils, LLVM and limine for Lemon OS. This will take quite a long time (Can take from 20 minutes to and hour) so you may want to go and do something else.
 
-You may run out of RAM whilst building LLVM (especially during the linking stage), so I recommend no more than **12 compile jobs (default) and no more than 4 link jobs (default) on 16GB of RAM** this can be changed by setting `JOBCOUNT` and `LINKCOUNT` environment variables
+You may run out of RAM whilst building LLVM (especially during the linking stage), so I recommend no more than **12 compile jobs (default determined by ninja) and no more than 4 link jobs (default determined by ninja) on 16GB of RAM** this can be changed by setting `JOBCOUNT` and `LINKCOUNT` environment variables
 
 ```sh
 cd Toolchain

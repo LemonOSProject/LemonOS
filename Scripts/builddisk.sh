@@ -39,10 +39,8 @@ cp -ru $HOME/.local/share/lemon/sysroot/system/* /mnt/Lemon
 cp -ru "$LEMOND/Base/"* /mnt/Lemon/
 
 echo "Unmounting /mnt/Lemon..."
-sudo umount /mnt/Lemon
+sudo sh -c "umount /mnt/Lemon;rmdir /mnt/Lemon"
 
 if [ -z $1 ]; then
 	sudo losetup -d ${LOOPBACK_DEVICE}
 fi
-
-rmdir /mnt/Lemon
