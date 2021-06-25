@@ -36,7 +36,7 @@ namespace Lemon{
         }
 
         template<typename O>
-        long Decode(uint16_t& pos, O& o){
+        long Decode(uint16_t& pos, O& o) const {
             uint8_t* currentData = mdata + pos;
 
             if(pos + sizeof(O) > msize){
@@ -50,7 +50,7 @@ namespace Lemon{
         }
 
         template<typename O, typename ...T>
-        long Decode(uint16_t& pos, O& object, T&... objects){
+        long Decode(uint16_t& pos, O& object, T&... objects) const {
             if(long ret = Decode(pos, object); ret){
                 return ret;
             }
@@ -65,6 +65,11 @@ namespace Lemon{
         template<typename T>
         static uint16_t GetSize(const T& obj) {
             return sizeof(obj);
+        }
+
+        template<typename ...T>
+        inline static uint16_t GetSize(const T&... objects){
+            return (GetSize(objects) + ...);
         }
 
         enum {
@@ -133,7 +138,7 @@ namespace Lemon{
         }
         
         template<typename ...T>
-        long Decode(T&... objects){
+        long Decode(T&... objects) const  {
             if(!mdata){
                 return ErrorBufferNotInitialized;
             }
@@ -169,8 +174,8 @@ namespace Lemon{
     void Message::Insert<std::string>(uint16_t& pos, const std::string& obj);
 
     template<>
-    long Message::Decode<MessageRawDataObject>(uint16_t& pos, MessageRawDataObject& obj);
+    long Message::Decode<MessageRawDataObject>(uint16_t& pos, MessageRawDataObject& obj) const;
 
     template<>
-    long Message::Decode<std::string>(uint16_t& pos, std::string& obj);
+    long Message::Decode<std::string>(uint16_t& pos, std::string& obj) const;
 }

@@ -1,25 +1,13 @@
-project('LibLemon', default_options : ['cpp_std=c++17', 'optimization=0', 'warning_level=2', 'werror=true'])
-
 liblemon_include_dirs = [
     include_directories('include')
 ]
 
 add_languages('c', 'cpp')
 
-nasm = find_program('nasm')
-asmg = generator(nasm,
-    output : '@BASENAME@.asm.o',
-    arguments : [
-        '-f', 'elf64',
-        '-g', '-F', 'dwarf', '-w+gnu-elf-extensions',
-        '@INPUT@',
-        '-o', '@OUTPUT@'])
-
 liblemon_cpp_args = ['-Wno-write-strings', '-Wno-missing-braces',
     '-fPIC',
     '-m64' ]
 
-add_project_arguments(liblemon_cpp_args, language : ['c', 'cpp'])
 cpp_files = [
     'src/gfx/font.cpp',
     'src/gfx/bitmapfont.cpp',
@@ -60,5 +48,6 @@ install_subdir('include', install_dir: prefix)
 
 static_library('lemon', [asmg.process(asm_files), cpp_files],
     include_directories : liblemon_include_dirs,
+    cpp_args: liblemon_cpp_args,
     link_args: ['-lfreetype', '-lstdc++', '-lz', '-lpng'],
     install: true)

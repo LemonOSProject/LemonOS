@@ -1,6 +1,3 @@
-project('Lemon System',
-    default_options : ['warning_level=2', 'cpp_std=c++2a', 'optimization=3', 'werror=true'])
-
 add_languages('c', 'cpp')
 
 lemond_src = [
@@ -32,11 +29,23 @@ kmod_src = [
     'KMod/Main.cpp',
 ]
 
-add_project_arguments(['-Wno-write-strings', '-Wno-unused-parameter', '-Wno-missing-braces', '-Wno-missing-field-initializers'], language : 'cpp')
+system_args = ['-Wno-write-strings', '-Wno-unused-parameter', '-Wno-missing-braces', '-Wno-missing-field-initializers']
 
-executable('init.lef', lemond_src, link_args : ['-llemon'], install_dir : 'lemon/', install : true)
-executable('lemonwm.lef', lemonwm_src, link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install_dir : 'lemon/', install : true)
-executable('netgov.lef', netgov_src, install_dir : 'lemon/', install : true)
-executable('login.lef', login_src, link_args : ['-llemon', '-lfreetype'], install_dir : 'lemon/', install : true)
-executable('fterm.lef', fterm_src, link_args : ['-llemon', '-lfreetype'], install_dir : meson.current_source_dir() + '/../Initrd', install : true)
-executable('kmod.lef', kmod_src, link_args : ['-llemon'], install_dir : 'lemon/', install : true)
+executable('init.lef', lemond_src,
+    cpp_args: system_args,
+    link_args : ['-llemon'], install_dir : 'lemon/', install : true)
+executable('lemonwm.lef', lemonwm_src,
+    cpp_args: system_args,
+    link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install_dir : 'lemon/', install : true)
+executable('netgov.lef', netgov_src,
+    cpp_args: system_args,
+    install_dir : 'lemon/', install : true)
+executable('login.lef', login_src,
+    cpp_args: system_args,
+    link_args : ['-llemon', '-lfreetype'], install_dir : 'lemon/', install : true)
+executable('fterm.lef', fterm_src,
+    cpp_args: system_args,
+    link_args : ['-llemon', '-lfreetype'], install_dir : meson.current_source_dir() + '/../Initrd', install : true)
+executable('kmod.lef', kmod_src,
+    cpp_args: system_args,
+    link_args : ['-llemon'], install_dir : 'lemon/', install : true)

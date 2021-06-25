@@ -8,14 +8,11 @@
 *.so
 *.so.*
 *.a
+build
 serial.log
-Kernel/build
-Kernel/subprojects/*
-!Kernel/subprojects/lai.wrap
-Applications/build
-LibLemon/build
+subprojects/*
+!subprojects/*.wrap
 LibLemon/subprojects/*
-System/build
 Scripts/build-win/mount.cfg
 Initrd/*
 Disks/*

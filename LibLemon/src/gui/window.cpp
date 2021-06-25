@@ -428,7 +428,7 @@ namespace Lemon::GUI{
         
     }
 
-    int64_t WMClient::CreateWindow(int x, int y, int width, int height, unsigned int flags, const std::string& title) const {
+    int64_t WMClient::CreateWindow(int x, int y, int width, int height, unsigned int flags, const std::string& title) {
         Message ret;
         
         Call(Message(WMCreateWindow, x, y, width, height, flags, title), ret, WindowBufferReturn);
@@ -441,23 +441,23 @@ namespace Lemon::GUI{
         return key;
     }
 
-    void WMClient::DestroyWindow() const {
+    void WMClient::DestroyWindow() {
         Queue(Message(WMDestroyWindow));
     }
 
-    void WMClient::SetTitle(const std::string& title) const {
+    void WMClient::SetTitle(const std::string& title) {
         Queue(Message(WMSetWindowTitle, title));
     }
 
-    void WMClient::UpdateFlags(uint32_t flags) const {
+    void WMClient::UpdateFlags(uint32_t flags) {
         Queue(Message(WMUpdateWindowFlags, flags));
     }
 
-    void WMClient::Relocate(int x, int y) const {
+    void WMClient::Relocate(int x, int y) {
         Queue(Message(WMRelocateWindow, x, y));
     }
 
-    int64_t WMClient::Resize(int width, int height) const {
+    int64_t WMClient::Resize(int width, int height) {
         Message ret;
 
         Call(Message(WMResizeWindow, width, height), ret, WindowBufferReturn);
@@ -470,7 +470,7 @@ namespace Lemon::GUI{
         return key;
     }
 
-    vector2i_t WMClient::GetPosition() const {
+    vector2i_t WMClient::GetPosition() {
         Message ret;
         
         Call(Message(WMGetWindowPosition), ret, WindowPositionReturn);
@@ -483,19 +483,19 @@ namespace Lemon::GUI{
         return sz;
     }
 
-    void WMClient::Minimize(bool minimized) const {
+    void WMClient::Minimize(bool minimized) {
         Queue(Message(WMMinimizeWindow, minimized));
     }
 
-    void WMClient::Minimize(long windowID, bool minimized) const {
+    void WMClient::Minimize(long windowID, bool minimized) {
         Queue(Message(WMMinimizeOtherWindow, windowID, minimized));
     }
 
-    void WMClient::DisplayContextMenu(int x, int y, const std::string& serializedEntries) const {
+    void WMClient::DisplayContextMenu(int x, int y, const std::string& serializedEntries) {
         Queue(Message(WMDisplayContextMenu, x, y, serializedEntries));
     }
 
-    void WMClient::InitializeShellConnection() const {
+    void WMClient::InitializeShellConnection() {
         Queue(WMInitializeShellConnection, nullptr, 0);
     }
 }

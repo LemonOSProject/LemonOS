@@ -11,8 +11,8 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 [Discord Server](https://discord.gg/NAYp6AUYWM)
 
 ## Building
-- [Building Lemon OS with Docker (Recommended)](Documentation/Build/Building-Lemon-OS-with-Docker.md)
 - [Building Lemon OS](Documentation/Build/Building-Lemon-OS.md)
+- [Building Lemon OS with Docker (Outdated)](Documentation/Build/Building-Lemon-OS-with-Docker.md)
 
 ## Prebuilt Image
 [Nightly Images](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml?query=is%3Asuccess+branch%3Amaster) - Go to latest job, `Lemon.img` located under Artifacts\

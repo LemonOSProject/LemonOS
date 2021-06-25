@@ -131,7 +131,7 @@ namespace APIC{
 				    Log::Info("[APIC] Interrupt Source Override, IRQ: %d, GSI: %d", iso->irqSource, iso->gSI);
                 }
 
-                Redirect(iso->gSI, iso->irqSource + 0x20, ICR_MESSAGE_TYPE_LOW_PRIORITY);
+                Redirect(iso->gSI, iso->irqSource + 0x20, /*ICR_MESSAGE_TYPE_LOW_PRIORITY*/0);
             }
 
             return 0;

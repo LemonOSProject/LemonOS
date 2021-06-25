@@ -9,7 +9,6 @@
 #include <System.h>
 #include <IDT.h>
 #include <Timer.h>
-#include <ACPI.h>
 #include <APIC.h>
 #include <Net/Net.h>
 #include <Vector.h>

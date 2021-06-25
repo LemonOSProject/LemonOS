@@ -143,19 +143,19 @@ namespace Lemon{
             return msgSize;
         }
 
-        inline long Queue(uint64_t id, uint8_t* data, uint16_t size) const {
+        inline long Queue(uint64_t id, const uint8_t* data, uint16_t size) {
             return EndpointQueue(handle, id, size, reinterpret_cast<uintptr_t>(data));
         }
 
-        inline long Queue(uint64_t id, uint64_t data, uint16_t size) const {
+        inline long Queue(uint64_t id, uint64_t data, uint16_t size) {
             return EndpointQueue(handle, id, size, data);
         }
 
-        inline long Queue(const Message& m) const {
+        inline long Queue(const Message& m) {
             return EndpointQueue(handle, m.id(), m.length(), reinterpret_cast<uintptr_t>(m.data()));
         }
 
-        inline long Poll(Message& m) const {
+        inline long Poll(Message& m) {
             uint64_t id;
             uint16_t size;
             uint8_t* data = new uint8_t[msgSize];
@@ -169,7 +169,7 @@ namespace Lemon{
             return ret;
         }
 
-        inline long Call(const Message& call, Message& rmsg, uint64_t id) const{
+        inline long Call(const Message& call, Message& rmsg, uint64_t id) {
             uint16_t size = call.length();
             uint8_t* data = new uint8_t[msgSize];
 
@@ -183,7 +183,7 @@ namespace Lemon{
             return ret;
         }
 
-        inline long Call(Message& call, uint64_t id) const { // Use the same buffer for return
+        inline long Call(Message& call, uint64_t id) { // Use the same buffer for return
             uint16_t size = call.length();
             uint8_t* data = const_cast<uint8_t*>(call.data());
 

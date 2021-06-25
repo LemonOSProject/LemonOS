@@ -26,7 +26,7 @@ namespace Lemon{
     }
 
     template<>
-    long Message::Decode<MessageRawDataObject>(uint16_t& pos, MessageRawDataObject& obj){
+    long Message::Decode<MessageRawDataObject>(uint16_t& pos, MessageRawDataObject& obj) const {
         if(pos + sizeof(uint16_t) > msize){ // First check if the 2 bytes of length fits
             return ErrorDecodeOutOfBounds;
         }
@@ -48,7 +48,7 @@ namespace Lemon{
     }
 
     template<>
-    long Message::Decode<std::string>(uint16_t& pos, std::string& obj){
+    long Message::Decode<std::string>(uint16_t& pos, std::string& obj) const {
         if(pos + sizeof(uint16_t) > msize){ // First check if the 2 bytes of length fits
             return ErrorDecodeOutOfBounds;
         }

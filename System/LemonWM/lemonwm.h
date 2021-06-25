@@ -87,7 +87,7 @@ public:
     inline int Dirty() const { return windowBufferInfo->dirty; }
     inline void SetDirty(int v) { windowBufferInfo->dirty = v; }
 
-    inline void SendPosition() const { Queue(Lemon::Message(Lemon::GUI::WindowPositionReturn, pos.x, pos.y)); }
+    inline void SendPosition() { Queue(Lemon::Message(Lemon::GUI::WindowPositionReturn, pos.x, pos.y)); }
 
     rect_t GetWindowRect() const; // Return window bounds as a rectangle
 

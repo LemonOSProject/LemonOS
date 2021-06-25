@@ -30,19 +30,19 @@ namespace Lemon::GUI{
 
         }
         
-        int64_t CreateWindow(int x, int y, int width, int height, unsigned int flags, const std::string& title) const;
-        void DestroyWindow() const;
+        int64_t CreateWindow(int x, int y, int width, int height, unsigned int flags, const std::string& title);
+        void DestroyWindow();
 
-        void SetTitle(const std::string& title) const;
-        void UpdateFlags(uint32_t flags) const;
+        void SetTitle(const std::string& title);
+        void UpdateFlags(uint32_t flags);
 
-        void Relocate(int x, int y) const;
-        int64_t Resize(int width, int height) const;
-        vector2i_t GetPosition() const;
+        void Relocate(int x, int y);
+        int64_t Resize(int width, int height);
+        vector2i_t GetPosition();
 
-        void Minimize(bool minimized) const;
-        void Minimize(long windowID, bool minimized) const;
-        void DisplayContextMenu(int x, int y, const std::string& serializedEntries) const;
-        void InitializeShellConnection() const;
+        void Minimize(bool minimized);
+        void Minimize(long windowID, bool minimized);
+        void DisplayContextMenu(int x, int y, const std::string& serializedEntries);
+        void InitializeShellConnection();
     };
 }

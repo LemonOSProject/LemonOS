@@ -1,5 +1,3 @@
-project('Lemon Applications', default_options : ['cpp_std=c++17', 'optimization=g', 'warning_level=2', 'werror=true'])
-
 add_languages('c', 'cpp')
 subproject('LemonUtils')
 

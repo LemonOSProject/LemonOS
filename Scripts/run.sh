@@ -1,3 +1,5 @@
+#!/bin/sh
+
 if [ -z $LEMOND ]; then
 	export LEMOND=$(dirname $(readlink -f "$0"))/..
 fi
@@ -19,7 +21,7 @@ qemunetdump(){
 }
 
 vbox(){
-	VBoxManage startvm "Lemon"
+	VBoxManage startvm "LemonOS"
 }
 
 debug_qemu(){

@@ -54,14 +54,14 @@ namespace Lemon::GUI {
         Window(const char* title, vector2i_t size, uint32_t flags = 0, int type = WindowType::Basic, vector2i_t pos = {20, 20});
         ~Window();
 
-        inline void InitializeShellConnection() const { WMClient::InitializeShellConnection(); }
+        inline void InitializeShellConnection() { WMClient::InitializeShellConnection(); }
 
         /////////////////////////////
         /// \brief Set title of window
         ///
         /// \param name Service name to be used, must be unique
         /////////////////////////////
-        inline void SetTitle(const std::string& title) const { WMClient::SetTitle(title); }
+        inline void SetTitle(const std::string& title) { WMClient::SetTitle(title); }
         
         /////////////////////////////
         /// \brief Relocate window
@@ -70,7 +70,7 @@ namespace Lemon::GUI {
         ///
         /// \param pos New position of window
         /////////////////////////////
-        inline void Relocate(vector2i_t pos) const { WMClient::Relocate(pos.x, pos.y); }
+        inline void Relocate(vector2i_t pos) { WMClient::Relocate(pos.x, pos.y); }
 
         /////////////////////////////
         /// \brief Resize window
@@ -88,7 +88,7 @@ namespace Lemon::GUI {
         ///
         /// \param minimized Whether to show/hide the window
         /////////////////////////////
-        inline void Minimize(bool minimized = true) const { WMClient::Minimize(minimized); }
+        inline void Minimize(bool minimized = true) { WMClient::Minimize(minimized); }
 
         /////////////////////////////
         /// \brief Minimize a window
@@ -98,7 +98,7 @@ namespace Lemon::GUI {
         /// \param windowID Window to show/hide
         /// \param minimized Whether to show/hide the window
         /////////////////////////////
-        inline void Minimize(int windowID, bool minimized) const { WMClient::Minimize(windowID, minimized); }
+        inline void Minimize(int windowID, bool minimized) { WMClient::Minimize(windowID, minimized); }
 
         /////////////////////////////
         /// \brief Update window flags
@@ -207,7 +207,7 @@ namespace Lemon::GUI {
         /////////////////////////////
         /// \brief Hide toolip
         /////////////////////////////
-        inline void HideTooltip() const { if(tooltipWindow.get()) tooltipWindow->Minimize(true); }
+        inline void HideTooltip() { if(tooltipWindow.get()) tooltipWindow->Minimize(true); }
         
         /////////////////////////////
         /// \brief Get Window Flags
@@ -228,7 +228,7 @@ namespace Lemon::GUI {
         ///
         /// \return window position
         /////////////////////////////
-        inline vector2i_t GetPosition() const { return WMClient::GetPosition(); };
+        inline vector2i_t GetPosition() { return WMClient::GetPosition(); };
 
         /////////////////////////////
         /// \brief OnPaint callback
@@ -257,11 +257,11 @@ namespace Lemon::GUI {
             TooltipWindow(const char* text, vector2i_t pos, const RGBAColour& bgColour);
 
             void SetText(const char* text);
-            inline void Relocate(vector2i_t pos) const { WMClient::Relocate(pos.x, pos.y); }
+            inline void Relocate(vector2i_t pos) { WMClient::Relocate(pos.x, pos.y); }
 
             void Paint();
 
-            inline void Minimize(bool minimized) const { WMClient::Minimize(minimized); }
+            inline void Minimize(bool minimized) { WMClient::Minimize(minimized); }
         
         private:
             Graphics::TextObject textObject;

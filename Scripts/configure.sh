@@ -22,17 +22,9 @@ if ! [ -x "$(command -v lemon-clang)" ]; then
     exit 1
 fi
 
-cd LibLemon
-meson build --cross $SPATH/lemon-crossfile.txt
-
-cd ../Applications
-meson build --cross $SPATH/lemon-crossfile.txt
-
-cd ../System
-meson build --cross $SPATH/lemon-crossfile.txt
-
-cd ../Kernel
-meson build --cross $SPATH/lemon-crossfile.txt
+cd ..
+mkdir Build
+meson Build --cross $SPATH/lemon-crossfile.txt
 
 cd ../Ports
 ./buildport.sh zlib

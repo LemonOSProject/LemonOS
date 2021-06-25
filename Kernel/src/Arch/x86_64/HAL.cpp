@@ -9,6 +9,7 @@
 #include <PhysicalAllocator.h>
 #include <PCI.h>
 #include <ACPI.h>
+#include <BootProtocols.h>
 #include <Timer.h>
 #include <TSS.h>
 #include <APIC.h>
@@ -32,6 +33,9 @@ namespace HAL{
     bool disableSMP = false;
     bool useKCon = false;
     VideoConsole* con;
+
+    void InitMultiboot2(multiboot2_info_header_t* mbInfo);
+    void InitStivale2(stivale2_info_header_t* st2Info);
 
     void InitCore(){ // ALWAYS call this first
         Serial::Initialize();
