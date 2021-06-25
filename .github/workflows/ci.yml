@@ -58,12 +58,12 @@ jobs:
 
       - name: Configure dependencies
         run: Scripts/configure.sh
-
-      - name: Creating disk image
-        run: Scripts/createdisk.sh
         
       - name: Building system
-        run: make all
+        run: ninja -C Build install
+
+      - name: Building disk image
+        run: ninja -C Build disk
       
       - name: Uploading image as artefact
         uses: actions/upload-artifact@v2
@@ -147,11 +147,11 @@ jobs:
           Ports/buildport.sh lemon-binutils
           Ports/buildport.sh llvm
 
-      - name: Creating disk image
-        run: Scripts/createdisk.sh
-        
       - name: Building system
-        run: make all
+        run: ninja -C Build install
+
+      - name: Building disk image
+        run: ninja -C Build disk
       
       - name: Uploading image as artefact
         uses: actions/upload-artifact@v2

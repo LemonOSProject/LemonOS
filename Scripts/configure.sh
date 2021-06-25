@@ -1,4 +1,5 @@
 SPATH=$(dirname $(readlink -f "$0"))
+export LEMOND="$SPATH/.."
 
 if [ -z "$LEMON_SYSROOT" ]; then
     export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
@@ -15,18 +16,15 @@ cd $SPATH
 $SPATH/libc.sh
 
 cd $SPATH/..
-export LEMONDIR=$(pwd)
 
 if ! [ -x "$(command -v lemon-clang)" ]; then
     echo "Lemon cross toolchain not found (Did you forget to build toolchain?)"
     exit 1
 fi
 
-cd ..
-mkdir Build
 meson Build --cross $SPATH/lemon-crossfile.txt
 
-cd ../Ports
+cd "$LEMOND/Ports"
 ./buildport.sh zlib
 ./buildport.sh libpng
 ./buildport.sh freetype
