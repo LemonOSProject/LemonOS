@@ -15,9 +15,10 @@ asmg = generator(nasm,
         '@INPUT@',
         '-o', '@OUTPUT@'])
 
-#lic = find_program('lic')
-#interface_gen = generator(lic,
-#    output: '@BASENAME@.h')
+lic = find_program('lic', meson.source_root() + '/InterfaceCompiler/lic')
+interfaceg = generator(lic,
+    output: '@BASENAME@.h',
+    arguments : [ '@INPUT@', '@OUTPUT@' ])
 
 subdir('Kernel/')
 subdir('LibLemon/')

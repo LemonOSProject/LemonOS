@@ -79,6 +79,10 @@ _prepare(){
 	mkdir -p $LEMON_SYSROOT/system/bin
 	
     CWD="$(pwd)"
+
+    cd $LEMONDIR/InterfaceCompiler
+    ./build.sh # Build the interface compiler
+
     cd $LEMON_SYSROOT/..
 	curl https://api.lemonos.org/sysroot.tar.gz | tar -zxf - sysroot/system
     cd $CWD

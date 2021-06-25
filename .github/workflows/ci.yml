@@ -134,9 +134,6 @@ jobs:
           key: ${{ runner.os }}-lemon-python-${{ hashFiles('**/Ports/lemon-Python*.patch') }}-${{ hashFiles('**/Ports/python.sh') }}
           restore-keys: |
             ${{ runner.os }}-lemon-python-${{ hashFiles('**/Ports/lemon-Python*.patch') }}-${{ hashFiles('**/Ports/python.sh') }}
-        
-      - name: Building Libraries
-        run: make liblemon libc
 
       - name: Build extra ports
         run: |
