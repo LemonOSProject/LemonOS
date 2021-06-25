@@ -44,10 +44,16 @@ asm_files = [
 subdir('src/lemon')
 
 prefix = get_option('prefix')
-install_subdir('include', install_dir: prefix)
+install_subdir('include',
+    install_dir: 'include')
 
-static_library('lemon', [asmg.process(asm_files), cpp_files],
+liblemon = static_library('lemon', [asmg.process(asm_files), cpp_files],
     include_directories : liblemon_include_dirs,
     cpp_args: liblemon_cpp_args,
     link_args: ['-lfreetype', '-lstdc++', '-lz', '-lpng'],
     install: true)
+
+liblemon_dep = declare_dependency(
+    link_with: liblemon,
+    include_directories: liblemon_include_dirs,
+)

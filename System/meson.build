@@ -1,5 +1,9 @@
 add_languages('c', 'cpp')
 
+system_dependencies = [
+    liblemon_dep
+]
+
 lemond_src = [
     'Lemond/main.cpp',
 ]
@@ -33,19 +37,27 @@ system_args = ['-Wno-write-strings', '-Wno-unused-parameter', '-Wno-missing-brac
 
 executable('init.lef', lemond_src,
     cpp_args: system_args,
-    link_args : ['-llemon'], install_dir : 'lemon/', install : true)
+    dependencies: system_dependencies,
+    install_dir : 'lemon/', install : true)
 executable('lemonwm.lef', lemonwm_src,
     cpp_args: system_args,
-    link_args : ['-llemon', '-lfreetype', '-lz', '-lpng'], install_dir : 'lemon/', install : true)
+    dependencies: system_dependencies,
+    link_args : ['-lfreetype', '-lz', '-lpng'],
+    install_dir : 'lemon/', install : true)
 executable('netgov.lef', netgov_src,
     cpp_args: system_args,
     install_dir : 'lemon/', install : true)
 executable('login.lef', login_src,
     cpp_args: system_args,
-    link_args : ['-llemon', '-lfreetype'], install_dir : 'lemon/', install : true)
+    dependencies: system_dependencies,
+    link_args : ['-lfreetype'],
+    install_dir : 'lemon/', install : true)
 executable('fterm.lef', fterm_src,
     cpp_args: system_args,
-    link_args : ['-llemon', '-lfreetype'], install_dir : meson.current_source_dir() + '/../Initrd', install : true)
+    dependencies: system_dependencies,
+    link_args : ['-lfreetype'],
+    install_dir : meson.current_source_dir() + '/../Initrd', install : true)
 executable('kmod.lef', kmod_src,
     cpp_args: system_args,
-    link_args : ['-llemon'], install_dir : 'lemon/', install : true)
+    dependencies: system_dependencies,
+    install_dir : 'lemon/', install : true)

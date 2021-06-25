@@ -11,5 +11,5 @@ cpu_family = 'x86_64'
 cpu = 'x86_64'
 endian = 'little'
 
-[paths]
+[built-in options]
 prefix = '~/.local/share/lemon/sysroot/system'

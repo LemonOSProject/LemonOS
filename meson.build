@@ -23,6 +23,7 @@ subdir('Kernel/')
 subdir('LibLemon/')
 subdir('System/')
 subdir('Applications/')
+subdir('Utilities/')
 
 run_target('disk', 
     command: ['Scripts/builddisk.sh'])

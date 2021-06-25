@@ -34,7 +34,7 @@ echo "Mounting ${DEVICE} on /mnt/Lemon..."
 sudo sh -c "mount $DEVICE /mnt/Lemon; chown -R $USER /mnt/Lemon"
 
 cp "$LEMOND/initrd.tar" /mnt/Lemon/lemon/initrd.tar
-cp "$LEMOND/build/Kernel/kernel.sys" /mnt/Lemon/lemon/kernel.sys
+cp "$LEMOND/Build/Kernel/kernel.sys" /mnt/Lemon/lemon/kernel.sys
 cp -ru $HOME/.local/share/lemon/sysroot/system/* /mnt/Lemon
 cp -ru "$LEMOND/Base/"* /mnt/Lemon/
 

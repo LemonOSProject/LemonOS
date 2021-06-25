@@ -1,6 +1,3 @@
-[submodule "Applications/subprojects/LemonUtils"]
-	path = Applications/subprojects/LemonUtils
-	url = https://github.com/fido2020/LemonUtils.git
 [submodule "LibC"]
 	path = LibC
 	url = https://github.com/fido2020/mlibc.git
