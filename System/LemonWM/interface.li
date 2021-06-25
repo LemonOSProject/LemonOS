@@ -1,0 +1,16 @@
+interface LemonWM {
+    CreateWindow(s32 x, s32 y, s32 width, s32 height, u32 flags, string title) -> (s64 bufferKey)
+    DestroyWindow()
+
+    SetTitle(string title)
+    UpdateFlags(u32 flags)
+
+    Relocate(s32 x, s32 y)
+    GetPosition() -> (s32 x, s32 y)
+
+    Resize(s32 width, s32 height) -> (s64 bufferKey)
+
+    Minimize(s64 windowID, bool minimized)
+
+    DisplayContextMenu(s32 x, s32 y, string entries)
+}

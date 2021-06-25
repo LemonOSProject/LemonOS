@@ -2,6 +2,7 @@
 #include <cassert> 
 #include <stack>
 #include <iostream>
+#include <fstream>
 #include <sstream>
 
 #include "interfacec.h"
@@ -288,8 +289,10 @@ std::map<Type, CppType> cppTypes = {
 
 
 void Generate(std::ostream& out){
-    out << "#include <lemon/ipc/message.h>\n"
-        << "#include <lemon/ipc/interface.h>\n\n";
+    out << "#pragma once\n\n"
+        << "#include <Lemon/IPC/Message.h>\n"
+        << "#include <Lemon/IPC/Interface.h>\n"
+        << "#include <Lemon/IPC/Endpoint.h>\n\n";
 
     for(auto& st : statements){
         assert(st.get());
@@ -304,36 +307,43 @@ void Generate(std::ostream& out){
             client << "class " << interfaceStatement->interfaceName << "Client : public Lemon::Endpoint {\n"
                 << "public:\n";
 
-            server << "class " << interfaceStatement->interfaceName << " {\n"
-                << "protected:\n";
-
 			std::stringstream requestIDs; // Request IDs
             std::stringstream responseIDs; // Response IDs
 
 			std::stringstream clientRequests; // Client code for sending requests
             std::stringstream serverRequestHandlers; // Server handlers for requests
             std::stringstream serverRequestCondition; // Swtich statement condition for request
+            serverRequestCondition << "        ";
 
 			std::stringstream responses;
 
 			uint64_t nextID = 100;
 
-			requestIDs << "    enum RequestID {\n";
-			responseIDs << "    enum ResponseID {\n";
+			requestIDs << "    enum RequestID : uint64_t {\n";
+			responseIDs << "    enum ResponseID : uint64_t {\n";
 
             for(auto& st : interfaceStatement->children){
                 switch (st->type)
                 {
                 case StatementAsynchronousMethod: {
                     auto async = std::dynamic_pointer_cast<ASynchronousMethod, Statement>(st);
+
                     clientRequests << "    void " << async->methodName << "("; // void NAME (
-                    serverRequestHandlers << "    virtual void On" << async->methodName << "(";
+                    serverRequestHandlers << "    virtual void On" << async->methodName << "(handle_t client";
 
-                    serverRequestCondition << "   case " << interfaceStatement->interfaceName << async->methodName << ":\n"
-                        << "        On" << async->methodName << "(m);\n"
-                        << "        break;\n";
+                    /// For each request, the following code is generated for the server
+                    ///
+                    /// type1 parameter1
+                    /// type... parameter...
+                    /// if(m.Decode(parameter1, parameter...)){
+                    ///     // Error out   
+                    /// }
+                    ///
+                    /// OnRequest(parameter1, parameter...)
 
-					requestIDs << "        " << async->methodName << " = " << nextID++ << ",\n"; // $(interfaceName)$(methodName)% = $(nextID);
+                    serverRequestCondition << "case " << "Request" << async->methodName << ": {\n";
+
+					requestIDs << "        Request" << async->methodName << " = " << nextID++ << ",\n"; // $(interfaceName)$(methodName)% = $(nextID);
 
                     if(async->parameters.parameters.size()){
                         std::stringstream parameters;
@@ -351,6 +361,8 @@ void Generate(std::ostream& out){
                                     parameterDeclarations << type.typeName << " " << param.second; // TYPE IDENTIFIER
                                 }
 
+                                serverRequestCondition << "            " << type.typeName << " " << param.second << ";\n"; // Declare local variables for message decoding
+
                                 parameters << param.second;
                             } catch(const std::out_of_range& e){
                                 fprintf(stderr, "No mapping for type %d!\n", param.first);
@@ -367,20 +379,31 @@ void Generate(std::ostream& out){
                         std::string parameterDeclarationString = parameterDeclarations.str();
                         std::string parameterString = parameters.str();
 
-                        clientRequests << parameterDeclarationString << ") const {\n"
-                            << "        uint16_t size = Message::GetSize(" << parameterString << ");\n" // Get size of message
-                            << "        uint8_t buffer[size] // Stack allocation to prevent heap overhead\n\n" // Allocate on stack to avoid heap allocations
-                            << "        Message m = Message(buffer, size, RequestID::" << async->methodName << ", " << parameterString << ");\n" // Create message object using our calculated size and stack buffer
+                        serverRequestCondition
+                            << "            if(m.Decode(" << parameterString << ")) { // Check for error decoding request\n"
+                            << "                return 1;\n"
+                            << "            }\n\n"
+                            << "            On" << async->methodName << "(client, " << parameterString << ");\n"
+                            << "            return 0;\n        } ";
+
+                        clientRequests << parameterDeclarationString << ") {\n"
+                            << "        uint16_t size = Lemon::Message::GetSize(" << parameterString << ");\n" // Get size of message
+                            << "        uint8_t buffer[size]; // Stack allocation to prevent heap overhead\n\n" // Allocate on stack to avoid heap allocations
+                            << "        Lemon::Message m = Lemon::Message(buffer, size, " << interfaceStatement->interfaceName << "::Request" << async->methodName << ", " << parameterString << ");\n" // Create message object using our calculated size and stack buffer
                             << "        Queue(m.id(), m.data(), m.length());\n" // Queue message
                             << "    }\n\n";
 
-                        serverRequestHandlers << parameterDeclarationString << ") = 0;\n"; // virtual void On$(methodName)($(parameters)) = 0; // Pure virtual function call to the handler
+                        serverRequestHandlers << ", " << parameterDeclarationString << ") = 0;\n"; // virtual void On$(methodName)(handle_t client, $(parameters)) = 0; // Pure virtual function call to the handler
                     } else { // No parameters so avoid all the extra stuff
-                        clientRequests << ") const {\n"
-                            << "        Queue(RequestID::" << async->methodName << ", nullptr, 0);\n"
+                        clientRequests << ") {\n"
+                            << "        Queue(" << interfaceStatement->interfaceName << "::Request" << async->methodName << ", nullptr, 0);\n"
                             << "    }\n\n";
 
                         serverRequestHandlers << ") = 0;\n";
+
+                        serverRequestCondition
+                            << "            On" << async->methodName << "(client);\n"
+                            << "            return 0;\n        } ";
                     }
                     break;
                 } case StatementSynchronousMethod: {
@@ -388,11 +411,24 @@ void Generate(std::ostream& out){
 
                     std::stringstream parameters;
                     std::stringstream parameterDeclarations;
-                    clientRequests << "    " << sync->methodName << "Response " << sync->methodName << "("; // $(methodName)Response  $(methodName)(
-                    serverRequestHandlers << "    virtual " << sync->methodName << "Response On" << sync->methodName << "("; // $(methodName)Response  $(methodName)(
 
-					requestIDs << "        " << sync->methodName << " = " << nextID++ << ",\n"; // $(interfaceName)$(methodName)% = $(nextID);
-					responseIDs << "        " << sync->methodName << "Response = " << nextID++ << ",\n"; // $(interfaceName)$(methodName)% = $(nextID);
+                    clientRequests << "    " << interfaceStatement->interfaceName << "::" << sync->methodName << "Response " << sync->methodName << "("; // $(interfaceName)::$(methodName)Response  $(methodName)(
+                    serverRequestHandlers << "    virtual void On" << sync->methodName << "(handle_t client"; // $(methodName)Response  $(methodName)(
+                    
+                    /// For each request, the following code is generated for the server
+                    ///
+                    /// type1 parameter1
+                    /// type... parameter...
+                    /// if(m.Decode(parameter1, parameter...)){
+                    ///     // Error out   
+                    /// }
+                    ///
+                    /// client.Queue(Lemon::Message(responseID, OnRequest(parameter1, parameter...));
+
+                    serverRequestCondition << "case " << "Request" << sync->methodName << ": {\n";
+
+					requestIDs << "        Request" << sync->methodName << " = " << nextID++ << ",\n"; // $(interfaceName)$(methodName)% = $(nextID);
+					responseIDs << "        Response" << sync->methodName << " = " << nextID++ << ",\n"; // $(interfaceName)$(methodName)% = $(nextID);
                     
                     if(sync->parameters.parameters.size()){
                         std::stringstream parameters;
@@ -410,6 +446,8 @@ void Generate(std::ostream& out){
                                     parameterDeclarations << type.typeName << " " << param.second; // TYPE IDENTIFIER
                                 }
 
+                                serverRequestCondition << "            " << type.typeName << " " << param.second << ";\n"; // Declare local variables for message decoding
+
                                 parameters << param.second;
                             } catch(const std::out_of_range& e){
                                 fprintf(stderr, "No mapping for type %d!\n", param.first);
@@ -426,22 +464,30 @@ void Generate(std::ostream& out){
                         std::string parameterDeclarationString = parameterDeclarations.str();
                         std::string parameterString = parameters.str();
 
-                        clientRequests << parameterDeclarationString << ") const {\n"
-                            << "        uint16_t size = Message::GetSize(" << parameterString << ");\n"
-                            << "        uint8_t buffer[msgSize] // Stack allocation to prevent heap overhead\n\n" // Allocate on stack to avoid heap allocations
-                            << "        Message m = Message(buffer, size, RequestID::" << sync->methodName << ", " << parameterString << ");\n"
-                            << "        Call(m, ResponseID::" << sync->methodName << ");\n\n"
-                            << "        " << sync->methodName << "Response response = Response();\n" // $(methodName)Response response;
+                        serverRequestCondition
+                            << "            if(m.Decode(" << parameterString << ")) { // Check for error decoding request\n"
+                            << "                return 1;\n"
+                            << "            }\n\n"
+                            << "            On" << sync->methodName << "(client, " << parameterString << "); // It is expected that the handler sends the response\n"
+                            << "            break;\n        } ";
+
+                        clientRequests << parameterDeclarationString << ") {\n"
+                            << "        uint16_t size = Lemon::Message::GetSize(" << parameterString << ");\n"
+                            << "        uint8_t buffer[msgSize]; // Stack allocation to prevent heap overhead\n\n" // Allocate on stack to avoid heap allocations
+                            << "        Lemon::Message m = Lemon::Message(buffer, size, " << interfaceStatement->interfaceName << "::Request" << sync->methodName << ", " << parameterString << ");\n"
+                            << "        Call(m, " << interfaceStatement->interfaceName << "::Response" << sync->methodName << ");\n\n"
+                            << "        " << interfaceStatement->interfaceName << "::" << sync->methodName << "Response response;\n" // $(methodName)Response response;
                             << "        if(m.Decode(response)){\n"
+                            << "            throw std::runtime_error(\"Invalid response to request " << sync->methodName << "!\");\n"
                             << "            return response; // Error decoding response\n"
                             << "        }\n\n"
-                            << "        return response"
+                            << "        return response;\n"
                             << "    }\n\n";
 
-                        serverRequestHandlers << parameterDeclarationString << ") = 0;\n";
+                        serverRequestHandlers << ", " << parameterDeclarationString << ") = 0;\n";
                     } else {
-                        clientRequests << ") const {\n"
-                            << "        Queue(RequestID::" << sync->methodName << ", nullptr, 0);\n"
+                        clientRequests << ") {\n"
+                            << "        Queue(" << interfaceStatement->interfaceName << "::Request" << sync->methodName << ", nullptr, 0);\n"
                             << "    }\n\n";
 
                         serverRequestHandlers << ") = 0;\n";
@@ -471,14 +517,19 @@ void Generate(std::ostream& out){
 			client << clientRequests.rdbuf();
             client << "};\n";
 
-            server << serverRequestHandlers.rdbuf()
+
+            server << "class " << interfaceStatement->interfaceName << " {\n"
                 << "\n" << "public:\n"
 			    << requestIDs.rdbuf()
                 << responseIDs.rdbuf()
-			    << responses.rdbuf();
+			    << responses.rdbuf()
+                << "protected:\n"
+                << serverRequestHandlers.rdbuf()
+                << "\n";
 
-            server << "    void HandleMessage(const Lemon::Message& m){\n"
-                << "        switch(m.id) {\n"
+            server
+                << "    int HandleMessage(handle_t client, const Lemon::Message& m){\n"
+                << "        switch(m.id()) {\n"
                 << serverRequestCondition.rdbuf()
                 << "        }\n"
                 << "    }\n"
@@ -492,7 +543,7 @@ void Generate(std::ostream& out){
 
 int main(int argc, char** argv){
     if(argc < 2){
-        printf("Usage: %s <file>\n", argv[0]);
+        printf("Usage: %s <file> [outFile]\n", argv[0]);
         exit(1);
     }
 
@@ -500,6 +551,16 @@ int main(int argc, char** argv){
     if(!(inputFile = fopen(argv[1], "r"))){
         perror("Error opening file for reading: ");
         exit(1);
+    }
+
+    std::ofstream outFile;
+    if(argc >= 3){
+        outFile.open(argv[2]);
+
+        if(!outFile.is_open()){
+            perror("Error opening file for writing!");
+            exit(1);
+        }
     }
 
     std::string input;
@@ -516,7 +577,11 @@ int main(int argc, char** argv){
 
     Parse();
 
-    Generate(std::cout);
+    if(outFile.is_open()){
+        Generate(outFile);
+    } else {
+        Generate(std::cout);
+    }
 
     return 0;
 }
