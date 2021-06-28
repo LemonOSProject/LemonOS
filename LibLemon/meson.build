@@ -36,8 +36,7 @@ liblemon_asm_files = [
 subdir('src/lemon')
 
 prefix = get_option('prefix')
-install_subdir('include',
-    install_dir: 'include')
+install_subdir('include', install_dir: prefix)
 
 liblemon = static_library('lemon', [asmg.process(liblemon_asm_files), liblemon_cpp_files],
     include_directories : liblemon_include_dirs,

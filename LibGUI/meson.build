@@ -19,8 +19,7 @@ libgui_cpp_files = [
 ]
 
 prefix = get_option('prefix')
-install_subdir('include',
-    install_dir: 'include')
+install_subdir('include', install_dir: prefix)
 
 libgui = static_library('lemongui', [libgui_cpp_files],
     include_directories : libgui_include_dirs,
