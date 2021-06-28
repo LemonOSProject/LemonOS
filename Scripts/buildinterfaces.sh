@@ -11,7 +11,18 @@ if [ -z "$LEMON_SYSROOT" ]; then
 fi
 
 INCLUDEDIR="$LEMON_SYSROOT/system/include/Lemon/Services/"
+
 LIC="$LEMOND/InterfaceCompiler/lic"
+LIC_SRC="$LEMOND/InterfaceCompiler/main.cpp"
+
+WD="$(pwd)"
+
+if ! [ -f "$LIC" ] || [ "$LIC_SRC" -nt "$LIC" ]; then # If the lic executable doesent exist or is older than source, build it
+    cd "$LEMOND/InterfaceCompiler"
+    ./build.sh
+    cd "$WD"
+fi
+
 
 mkdir -p "$INCLUDEDIR" 
 cd "$LEMOND/Services"

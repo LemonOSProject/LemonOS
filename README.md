@@ -49,17 +49,20 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 
 ## Repo Structure
 
-| Directory     | Description                        |
-| ------------- | ---------------------------------- |
-| Applications/ | Userspace Applications             |
-| Base/         | Config, etc. Files copied to disk  |
-| Documentation/| Lemon OS Documentation             |
-| Extra/        | (Currently) vector icons           |
-| Kernel/       | Lemon Kernel                       |
-| LibLemon/     | LibLemon (Lemon API)               |
-| Toolchain/    | Toolchain build scripts and patches|
-| Ports/        | Build scripts and patches for ports|
-| Resources/    | Images, fonts, etc.                |
-| Scripts/      | Build Scripts                      |
-| Screenshots/  | Screenshots                        |
-| System/       | Core system programs and services  |
+| Directory          | Description                              |
+| ------------------ | ---------------------------------------- |
+| Applications/      | Userspace Applications                   |
+| Base/              | Config, etc. Files copied to disk        |
+| Documentation/     | Lemon OS Documentation                   |
+| Extra/             | (Currently) vector icons                 |
+| InterfaceCompiler/ |  Compiler for interface definition files |
+| Kernel/            | Lemon Kernel                             |
+| LibGUI/            | LibGUI (Windowing and widgets)           |
+| LibLemon/          | LibLemon (Lemon API)                     |
+| Toolchain/         | Toolchain build scripts and patches      |
+| Ports/             | Build scripts and patches for ports      |
+| Resources/         | Images, fonts, etc.                      |
+| Screenshots/       | Screenshots                              |
+| Scripts/           | Build Scripts                            |
+| Services/          | Interface definition files               |
+| System/            | Core system programs and services        |
