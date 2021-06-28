@@ -304,16 +304,25 @@ void Generate(std::ostream& out){
 
             std::stringstream server;
 
-            client << "class " << interfaceStatement->interfaceName << "Client : public Lemon::Endpoint {\n"
-                << "public:\n";
+            client << "class " << interfaceStatement->interfaceName << "Endpoint : public Lemon::Endpoint {\n"
+                << "public:\n"
+                << "    " << interfaceStatement->interfaceName << "Endpoint(handle_t handle) : Endpoint(handle) {}\n"
+                << "    " << interfaceStatement->interfaceName << "Endpoint(const std::string& interface) : Endpoint(interface) {}\n\n"
+                << "    virtual ~" << interfaceStatement->interfaceName << "Endpoint() = default;\n\n";
 
 			std::stringstream requestIDs; // Request IDs
             std::stringstream responseIDs; // Response IDs
 
 			std::stringstream clientRequests; // Client code for sending requests
             std::stringstream serverRequestHandlers; // Server handlers for requests
+            serverRequestHandlers << "    virtual void OnPeerDisconnect(handle_t client) = 0;\n";
+
             std::stringstream serverRequestCondition; // Swtich statement condition for request
-            serverRequestCondition << "        ";
+            serverRequestCondition
+                << "        case Lemon::MessagePeerDisconnect: {\n"
+                << "            OnPeerDisconnect(client);\n"
+                << "            return 0;\n"
+                << "        } ";
 
 			std::stringstream responses;
 
@@ -388,7 +397,7 @@ void Generate(std::ostream& out){
 
                         clientRequests << parameterDeclarationString << ") {\n"
                             << "        uint16_t size = Lemon::Message::GetSize(" << parameterString << ");\n" // Get size of message
-                            << "        uint8_t buffer[size]; // Stack allocation to prevent heap overhead\n\n" // Allocate on stack to avoid heap allocations
+                            << "        uint8_t* buffer = new uint8_t[size];\n\n"
                             << "        Lemon::Message m = Lemon::Message(buffer, size, " << interfaceStatement->interfaceName << "::Request" << async->methodName << ", " << parameterString << ");\n" // Create message object using our calculated size and stack buffer
                             << "        Queue(m.id(), m.data(), m.length());\n" // Queue message
                             << "    }\n\n";
@@ -469,13 +478,13 @@ void Generate(std::ostream& out){
                             << "                return 1;\n"
                             << "            }\n\n"
                             << "            On" << sync->methodName << "(client, " << parameterString << "); // It is expected that the handler sends the response\n"
-                            << "            break;\n        } ";
+                            << "            return 0;\n        } ";
 
                         clientRequests << parameterDeclarationString << ") {\n"
                             << "        uint16_t size = Lemon::Message::GetSize(" << parameterString << ");\n"
-                            << "        uint8_t buffer[msgSize]; // Stack allocation to prevent heap overhead\n\n" // Allocate on stack to avoid heap allocations
+                            << "        uint8_t* buffer = new uint8_t[msgSize];\n\n"
                             << "        Lemon::Message m = Lemon::Message(buffer, size, " << interfaceStatement->interfaceName << "::Request" << sync->methodName << ", " << parameterString << ");\n"
-                            << "        Call(m, " << interfaceStatement->interfaceName << "::Response" << sync->methodName << ");\n\n"
+                            << "        if(Call(m, " << interfaceStatement->interfaceName << "::Response" << sync->methodName << ")) throw std::runtime_error(\"Failed calling " << sync->methodName << "\");\n\n"
                             << "        " << interfaceStatement->interfaceName << "::" << sync->methodName << "Response response;\n" // $(methodName)Response response;
                             << "        if(m.Decode(response)){\n"
                             << "            throw std::runtime_error(\"Invalid response to request " << sync->methodName << "!\");\n"
@@ -487,10 +496,22 @@ void Generate(std::ostream& out){
                         serverRequestHandlers << ", " << parameterDeclarationString << ") = 0;\n";
                     } else {
                         clientRequests << ") {\n"
-                            << "        Queue(" << interfaceStatement->interfaceName << "::Request" << sync->methodName << ", nullptr, 0);\n"
+                            << "        uint8_t* buffer = new uint8_t[msgSize];\n\n"
+                            << "        Lemon::Message m = Lemon::Message(buffer, 0, " << interfaceStatement->interfaceName << "::Request" << sync->methodName << ");\n"
+                            << "        if(Call(m, " << interfaceStatement->interfaceName << "::Response" << sync->methodName << ")) throw std::runtime_error(\"Failed calling " << sync->methodName << "\");\n\n"
+                            << "        " << interfaceStatement->interfaceName << "::" << sync->methodName << "Response response;\n" // $(methodName)Response response;
+                            << "        if(m.Decode(response)){\n"
+                            << "            throw std::runtime_error(\"Invalid response to request " << sync->methodName << "!\");\n"
+                            << "            return response; // Error decoding response\n"
+                            << "        }\n\n"
+                            << "        return response;\n"
                             << "    }\n\n";
-
+                        
                         serverRequestHandlers << ") = 0;\n";
+
+                        serverRequestCondition
+                            << "            On" << sync->methodName << "(client);\n"
+                            << "            return 0;\n        } ";
                     }
 
 					responses << "    struct " << sync->methodName << "Response {\n    "; // struct $(methodName)Response { $(parameterType) $(parameterName) ... };
@@ -519,10 +540,17 @@ void Generate(std::ostream& out){
 
 
             server << "class " << interfaceStatement->interfaceName << " {\n"
-                << "\n" << "public:\n"
-			    << requestIDs.rdbuf()
-                << responseIDs.rdbuf()
-			    << responses.rdbuf()
+                << "public:\n"
+                << "    virtual ~" << interfaceStatement->interfaceName << "() = default;\n\n"
+			    << requestIDs.rdbuf();
+
+            if(responses.tellp() > 0){ // Check that there are actually responses
+                server
+                    << responseIDs.rdbuf()
+                    << responses.rdbuf();
+            }
+
+            server
                 << "protected:\n"
                 << serverRequestHandlers.rdbuf()
                 << "\n";
@@ -531,9 +559,9 @@ void Generate(std::ostream& out){
                 << "    int HandleMessage(handle_t client, const Lemon::Message& m){\n"
                 << "        switch(m.id()) {\n"
                 << serverRequestCondition.rdbuf()
-                << "        }\n"
+                << "\n        }\n"
                 << "    }\n"
-                << "};\n\n";
+                << "};\n";
 
             out << server.rdbuf() << std::endl;
             out << client.rdbuf() << std::endl;
@@ -556,7 +584,7 @@ int main(int argc, char** argv){
     std::ofstream outFile;
     if(argc >= 3){
         outFile.open(argv[2]);
-
+        
         if(!outFile.is_open()){
             perror("Error opening file for writing!");
             exit(1);

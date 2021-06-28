@@ -22,6 +22,7 @@ if ! [ -x "$(command -v lemon-clang)" ]; then
     exit 1
 fi
 
+$SPATH/buildinterfaces.sh
 meson Build --cross $SPATH/lemon-crossfile.txt
 
 cd "$LEMOND/Ports"

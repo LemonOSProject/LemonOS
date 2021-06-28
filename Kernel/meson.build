@@ -29,7 +29,7 @@ kernel_include_dirs = [
     lai.get_variable('includes')
 ]
 
-cpp_files = [
+kernel_cpp_files = [
     'src/Assert.cpp',
     'src/CharacterBuffer.cpp',
     'src/Device.cpp',
@@ -92,7 +92,7 @@ cpp_files = [
     'src/USB/XHCI.cpp',
 ]
 
-cpp_files_x86_64 = [
+kernel_cpp_files_x86_64 = [
     'src/Arch/x86_64/ACPI.cpp',
     'src/Arch/x86_64/APIC.cpp',
     'src/Arch/x86_64/CPUID.cpp',
@@ -118,7 +118,7 @@ cpp_files_x86_64 = [
     'src/Arch/x86_64/TSS.cpp',
 ]
 
-asm_files_x86_64 = [
+kernel_asm_files_x86_64 = [
     'src/Arch/x86_64/Entry.asm',
     'src/Arch/x86_64/IDT.asm',
     'src/Arch/x86_64/Scheduler.asm',
@@ -126,7 +126,7 @@ asm_files_x86_64 = [
     'src/Arch/x86_64/Lock.asm',
 ]
 
-asm_bin_files_x86_64 = [
+kernel_asm_bin_files_x86_64 = [
     'src/Arch/x86_64/SMPTrampoline.asm',
 ]
 
@@ -139,6 +139,6 @@ kernel_link_args = [
 kernel_link_args += kernel_c_args
 
 executable('kernel.sys',
-    [asmg.process(asm_files_x86_64), bing.process(asm_bin_files_x86_64), cpp_files, cpp_files_x86_64, lai.get_variable('sources')],
+    [asmg.process(kernel_asm_files_x86_64), bing.process(kernel_asm_bin_files_x86_64), kernel_cpp_files, kernel_cpp_files_x86_64, lai.get_variable('sources')],
     include_directories : [kernel_include_dirs], 
     c_args : kernel_c_args, cpp_args : [kernel_c_args, kernel_cpp_args], link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')

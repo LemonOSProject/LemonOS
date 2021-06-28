@@ -1,5 +1,5 @@
-interface LemonWM {
-    CreateWindow(s32 x, s32 y, s32 width, s32 height, u32 flags, string title) -> (s64 bufferKey)
+interface LemonWMServer {
+    CreateWindow(s32 x, s32 y, s32 width, s32 height, u32 flags, string title) -> (s64 windowID, s64 bufferKey)
     DestroyWindow()
 
     SetTitle(string title)
@@ -13,4 +13,11 @@ interface LemonWM {
     Minimize(s64 windowID, bool minimized)
 
     DisplayContextMenu(s32 x, s32 y, string entries)
+
+    Pong()
+}
+
+interface LemonWMClient {
+    SendEvent(s32 id, u64 data)
+    Ping()
 }

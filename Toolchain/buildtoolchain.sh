@@ -1,7 +1,7 @@
 SPATH=$(dirname $(readlink -f "$0"))
 
 cd $SPATH/..
-export LEMONDIR=$(pwd)
+export LEMONDIR="$(pwd)"
 cd $SPATH
 
 export BINUTILS_SRC_DIR=binutils-2.32
