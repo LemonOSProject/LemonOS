@@ -136,7 +136,7 @@ public:
 
 protected:
     ALWAYS_INLINE void Dereference(){
-        if(refCount && obj){
+        if(refCount){
             __sync_fetch_and_sub(refCount, 1);
 
             if(*refCount <= 0 && obj){

@@ -30,7 +30,7 @@ public:
     ALWAYS_INLINE bool IsShared() const { return shared; }
     ALWAYS_INLINE bool IsCopyOnWrite() const { return copyOnWrite; }
 
-    ALWAYS_INLINE bool CanMunmap() const { return false; }
+    ALWAYS_INLINE virtual bool CanMunmap() const { return false; }
     ALWAYS_INLINE size_t ReferenceCount() const { return refCount; }
 protected:
     size_t size;
@@ -73,9 +73,9 @@ protected:
 class AnonymousVMObject : public PhysicalVMObject{
     AnonymousVMObject(size_t size);
 
-    VMObject* Split(uintptr_t offset);
+    VMObject* Split(uintptr_t offset) override;
 
-    ALWAYS_INLINE bool CanMunmap() const { return true; }
+    ALWAYS_INLINE bool CanMunmap() const override { return true; }
 };
 
 struct MappedRegion {

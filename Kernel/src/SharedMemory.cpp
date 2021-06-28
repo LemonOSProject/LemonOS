@@ -12,7 +12,7 @@ SharedVMObject::SharedVMObject(size_t size, int64_t key, pid_t owner, pid_t reci
 }
 
 namespace Memory {
-    int lock = 0;
+    lock_t sMemLock = 0;
 
     Vector<FancyRefPtr<SharedVMObject>> table;
 
@@ -45,7 +45,7 @@ namespace Memory {
     }
 
     int64_t CreateSharedMemory(uint64_t size, uint64_t flags, pid_t owner, pid_t recipient){
-        ScopedSpinLock acquired(lock);
+        ScopedSpinLock acquired(sMemLock);
 
         int64_t key = NextKey();
         if(key <= 0) return 0;
@@ -59,7 +59,7 @@ namespace Memory {
     }
 
     void* MapSharedMemory(int64_t key, process_t* proc, uint64_t hint){
-        ScopedSpinLock acquired(lock);
+        ScopedSpinLock acquired(sMemLock);
 
         FancyRefPtr<SharedVMObject> sMem = GetSharedMemory(key);
 
@@ -82,7 +82,7 @@ namespace Memory {
     }
 
     void DestroySharedMemory(int64_t key){
-        ScopedSpinLock acquired(lock);
+        ScopedSpinLock acquired(sMemLock);
         
         FancyRefPtr<SharedVMObject> sMem = GetSharedMemory(key);
         
@@ -90,11 +90,11 @@ namespace Memory {
             return; // Check for invalid key
         }
 
-        if(*sMem.GetRefCount() > 0){
-            //Log::Error("Will not destroy active shared memory");
+        if(sMem->ReferenceCount() > 0){
+            //Log::Error("Will not destroy active shared memory (%u references)", sMem->ReferenceCount());
             return;
         }
-
-        table[key] = nullptr;
+        
+        table[key - 1] = nullptr; // Keys start at 1
     }
 }

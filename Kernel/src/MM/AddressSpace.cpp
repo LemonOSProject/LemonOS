@@ -22,7 +22,7 @@ AddressSpace::~AddressSpace(){
     Memory::DestroyPageMap(pageMap);
 }
 
-MappedRegion* AddressSpace::AddressToRegion(uintptr_t address){
+MappedRegion* AddressSpace::AddressToRegionReadLock(uintptr_t address){
     ScopedSpinLock acquired(lock);
 
     for(MappedRegion& region : regions){
@@ -32,6 +32,23 @@ MappedRegion* AddressSpace::AddressToRegion(uintptr_t address){
 
         if(address >= region.Base() && address < region.End()){
             region.lock.AcquireRead();
+            return &region;
+        }
+    }
+
+    return nullptr;
+}
+
+MappedRegion* AddressSpace::AddressToRegionWriteLock(uintptr_t address){
+    ScopedSpinLock acquired(lock);
+
+    for(MappedRegion& region : regions){
+        if(!region.vmObject.get()){
+            continue;
+        }
+
+        if(address >= region.Base() && address < region.End()){
+            region.lock.AcquireWrite();
             return &region;
         }
     }
@@ -64,6 +81,28 @@ bool AddressSpace::RangeInRegion(uintptr_t base, size_t size){
     }
 
     return false;
+}
+
+long AddressSpace::UnmapRegion(MappedRegion* region){
+    ScopedSpinLock acquired(lock);
+
+    assert(region->lock.IsWriteLocked());
+
+    for(auto it = regions.begin(); it != regions.end(); it++){
+        if(it->Base() == region->Base()){
+            Memory::MapVirtualMemory4K(0, region->Base(), PAGE_COUNT_4K(region->Size()), 0, pageMap);
+            
+            if(it->vmObject){
+                it->vmObject->refCount--;
+            }
+
+            regions.remove(it);
+            return 0;
+        }
+    }
+
+    Log::Warning("Failed to unmap region object!");
+    return 1;
 }
 
 MappedRegion* AddressSpace::MapVMO(FancyRefPtr<VMObject> obj, uintptr_t base, bool fixed){
@@ -160,30 +199,36 @@ long AddressSpace::UnmapMemory(uintptr_t base, size_t size){
     retry:
     for(auto it = regions.begin(); it != regions.end(); it++){
         MappedRegion& region = *it;
+        region.lock.AcquireWrite();
+
         if(!region.vmObject){
+            Memory::MapVirtualMemory4K(0, base, PAGE_COUNT_4K(size), 0, pageMap);
+
             // Assume vmobject has been removed
             regions.remove(it);
             goto retry;
         }
 
         if(!region.vmObject->CanMunmap()){
+            Log::Error("Region not unmappable!");
+
+            region.lock.ReleaseWrite();
             continue;
         }
 
         if(region.Base() >= base && region.Base() <= end){
-            region.lock.AcquireWrite();
-
             if(region.End() <= end){ // Whole region within our range
                 if(region.vmObject){
                     it->vmObject->refCount--;
                 }
+
+                Memory::MapVirtualMemory4K(0, base, PAGE_COUNT_4K(size), 0, pageMap);
 
                 regions.remove(it);
                 goto retry;
             }
         }
     }
-    Memory::MapVirtualMemory4K(0, base, PAGE_COUNT_4K(size), 0, pageMap);
 
     return 0;
 }

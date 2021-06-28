@@ -16,6 +16,7 @@ public:
     ALWAYS_INLINE pid_t Recipient() const { return recipient; }
 
     ALWAYS_INLINE bool IsPrivate() const { return isPrivate; }
+    ALWAYS_INLINE bool CanMunmap() const override { return true; }
 private:
     int64_t key; // Key
 

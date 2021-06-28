@@ -22,7 +22,18 @@ public:
     ///
     /// \return Locked region on success, nullptr on failure
     /////////////////////////////
-    MappedRegion* AddressToRegion(uintptr_t address);
+    MappedRegion* AddressToRegionReadLock(uintptr_t address);
+
+    /////////////////////////////
+    /// \brief Find and write lock a region from an address
+    ///
+    /// Due to the lock, the region cannot be deallocated or modified until this thread releases the write lock.
+    ///
+    /// \param address Address of region
+    ///
+    /// \return Locked region on success, nullptr on failure
+    /////////////////////////////
+    MappedRegion* AddressToRegionWriteLock(uintptr_t address);
 
     /////////////////////////////
     /// \brief Check if the range is in a valid region
@@ -33,6 +44,15 @@ public:
     /// \return True if range is valid, false if it lies outside of memory regions
     /////////////////////////////
     bool RangeInRegion(uintptr_t base, size_t size);
+
+    /////////////////////////////
+    /// \brief Unmap a region object
+    ///
+    /// Unmaps a region object. It is expected that the caller has acquired a write lock
+    ///
+    /// \return 0 if sucessful
+    /////////////////////////////
+    long UnmapRegion(MappedRegion* region);
 
     MappedRegion* MapVMO(FancyRefPtr<VMObject> obj, uintptr_t base, bool fixed);
     MappedRegion* AllocateAnonymousVMObject(size_t size, uintptr_t base, bool fixed);

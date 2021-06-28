@@ -1226,20 +1226,22 @@ long SysUnmapSharedMemory(RegisterContext* r){
 	uint64_t address = SC_ARG0(r);
 	int64_t key = SC_ARG1(r);
 
-	FancyRefPtr<SharedVMObject> sMem = Memory::GetSharedMemory(key);
-	if(!sMem.get()) return -EINVAL;
+	{
+		FancyRefPtr<SharedVMObject> sMem = Memory::GetSharedMemory(key);
+		if(!sMem.get()) return -EINVAL;
 
-	MappedRegion* region = proc->addressSpace->AddressToRegion(address);
-	if(!region || region->vmObject != sMem){
-		return -EINVAL; // Invalid memory region
+		MappedRegion* region = proc->addressSpace->AddressToRegionWriteLock(address);
+		if(!region || region->vmObject != sMem){
+			region->lock.ReleaseWrite();
+			return -EINVAL; // Invalid memory region
+		}
+
+		long r = proc->addressSpace->UnmapRegion(region);
+		assert(!r);
 	}
 
-	region->vmObject = nullptr; // Invalidate the region
-	proc->addressSpace->UnmapMemory(address, sMem->Size());
-
 	Memory::DestroySharedMemory(key); // Active shared memory will not be destroyed and this will return
-
-	return -ENOSYS;
+	return 0;
 }
 
 /* 

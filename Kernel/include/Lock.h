@@ -97,9 +97,9 @@ class ReadWriteLock {
     FastList<thread*> writers;
 public:
 
-    ReadWriteLock() {}
+    ALWAYS_INLINE ReadWriteLock() {}
 
-    inline void AcquireRead(){
+    ALWAYS_INLINE void AcquireRead(){
         acquireLock(&lock);
 
         if(__atomic_add_fetch(&activeReaders, 1, __ATOMIC_ACQUIRE) == 1){ // We are the first reader
@@ -109,12 +109,12 @@ public:
         releaseLock(&lock);
     }
 
-    inline void AcquireWrite(){
+    ALWAYS_INLINE void AcquireWrite(){
         acquireLock(&lock); // Stop more threads from reading
         acquireLock(&fileLock);
     }
 
-    inline bool TryAcquireWrite(){
+    ALWAYS_INLINE bool TryAcquireWrite(){
         if(!writerAcquiredLock && acquireTestLock(&lock)){ // Stop more threads from reading
             return true;
         }
@@ -128,16 +128,18 @@ public:
         return false;
     }
 
-    inline void ReleaseRead(){
+    ALWAYS_INLINE void ReleaseRead(){
         if(__atomic_sub_fetch(&activeReaders, 1, __ATOMIC_RELEASE) == 0){
             releaseLock(&fileLock);
         }
     }
 
-    inline void ReleaseWrite(){
+    ALWAYS_INLINE void ReleaseWrite(){
         releaseLock(&fileLock);
         releaseLock(&lock);
     }
+
+    ALWAYS_INLINE bool IsWriteLocked() const { return lock && activeReaders == 0; }
 };
 
 using FilesystemLock = ReadWriteLock;
