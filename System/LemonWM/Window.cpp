@@ -1,11 +1,12 @@
-#include "lemonwm.h"
+#include "WM.h"
 
 #include <Lemon/Graphics/Graphics.h>
 #include <Lemon/GUI/Window.h>
 #include <Lemon/Core/SharedMemory.h>
 #include <stdlib.h>
 
-WMWindow::WMWindow(WMInstance* wm, handle_t endp, handle_t id, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title) : Endpoint(endp){
+WMWindow::WMWindow(WMInstance* wm, handle_t endp, handle_t id, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title)
+	: LemonWMClientEndpoint(endp){
 	this->wm = wm;
 
 	clientID = id;
@@ -22,8 +23,6 @@ WMWindow::WMWindow(WMInstance* wm, handle_t endp, handle_t id, int64_t key, Wind
 	this->title = title;
 
 	windowSurface = { .width = size.x, .height = size.y, .depth = 32, .buffer = buffer1 };
-	
-	Queue(Lemon::Message(Lemon::GUI::WindowBufferReturn, bufferKey));
 }
 
 WMWindow::~WMWindow(){
@@ -112,8 +111,6 @@ void WMWindow::Resize(vector2i_t size, int64_t key, WindowBuffer* bufferInfo){
 	windowSurface = { .width = size.x, .height = size.y, .depth = 32, .buffer = buffer1 };
 
 	RecalculateButtonRects();
-
-	Queue(Lemon::Message(Lemon::GUI::WindowBufferReturn, bufferKey));
 }
 
 rect_t WMWindow::GetWindowRect() const {

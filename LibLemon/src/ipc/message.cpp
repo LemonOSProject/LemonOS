@@ -5,8 +5,8 @@
 namespace Lemon{
     template<>
     void Message::Insert<MessageRawDataObject>(uint16_t& pos, const MessageRawDataObject& obj){
-        *reinterpret_cast<uint16_t*>(mdata + pos) = obj.second;
-        memcpy(&mdata[pos + sizeof(uint16_t)], obj.first, obj.second);
+        *reinterpret_cast<uint16_t*>(m_data + pos) = obj.second;
+        memcpy(&m_data[pos + sizeof(uint16_t)], obj.first, obj.second);
         pos += obj.second + sizeof(uint16_t);
     }
     
@@ -27,21 +27,21 @@ namespace Lemon{
 
     template<>
     long Message::Decode<MessageRawDataObject>(uint16_t& pos, MessageRawDataObject& obj) const {
-        if(pos + sizeof(uint16_t) > msize){ // First check if the 2 bytes of length fits
+        if(pos + sizeof(uint16_t) > m_size){ // First check if the 2 bytes of length fits
             return ErrorDecodeOutOfBounds;
         }
 
-        uint16_t size = *reinterpret_cast<uint16_t*>(mdata + pos);
+        uint16_t size = *reinterpret_cast<uint16_t*>(m_data + pos);
         pos += sizeof(uint16_t);
 
-        if(pos + size > msize){ // Now check if the length is within the bounds of the message
+        if(pos + size > m_size){ // Now check if the length is within the bounds of the message
             return ErrorDecodeOutOfBounds;
         }
 
         obj.first = new uint8_t[size];
         obj.second = size;
 
-        memcpy(obj.first, mdata + pos, size);
+        memcpy(obj.first, m_data + pos, size);
         pos += size;
 
         return 0;
@@ -49,18 +49,18 @@ namespace Lemon{
 
     template<>
     long Message::Decode<std::string>(uint16_t& pos, std::string& obj) const {
-        if(pos + sizeof(uint16_t) > msize){ // First check if the 2 bytes of length fits
+        if(pos + sizeof(uint16_t) > m_size){ // First check if the 2 bytes of length fits
             return ErrorDecodeOutOfBounds;
         }
 
-        uint16_t size = *reinterpret_cast<uint16_t*>(mdata + pos);
+        uint16_t size = *reinterpret_cast<uint16_t*>(m_data + pos);
         pos += sizeof(uint16_t);
 
-        if(pos + size > msize){ // Now check if the length is within the bounds of the message
+        if(pos + size > m_size){ // Now check if the length is within the bounds of the message
             return ErrorDecodeOutOfBounds;
         }
 
-        obj = std::string(reinterpret_cast<const char*>(mdata + pos), size);
+        obj = std::string(reinterpret_cast<const char*>(m_data + pos), size);
         pos += size;
 
         return 0;

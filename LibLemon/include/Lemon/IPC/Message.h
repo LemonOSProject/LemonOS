@@ -19,48 +19,8 @@ namespace Lemon{
     using MessageRawDataObject = std::pair<uint8_t*, uint16_t>; // length, data
 
     class Message final {
-    protected:
         friend class Interface;
         friend class Endpoint;
-        uint8_t* mdata;
-    private:
-        uint16_t msize;
-        uint64_t mid;
-
-        Message& operator=(const Message& m);
-
-        template<typename T>
-        void Insert(uint16_t& pos, const T& obj){
-            memcpy(&mdata[pos], &obj, sizeof(T));
-            pos += sizeof(T);
-        }
-
-        template<typename O>
-        long Decode(uint16_t& pos, O& o) const {
-            uint8_t* currentData = mdata + pos;
-
-            if(pos + sizeof(O) > msize){
-                return ErrorDecodeOutOfBounds;
-            }
-
-            o = *(O*)currentData;
-            pos += sizeof(O);
-
-            return 0;
-        }
-
-        template<typename O, typename ...T>
-        long Decode(uint16_t& pos, O& object, T&... objects) const {
-            if(long ret = Decode(pos, object); ret){
-                return ret;
-            }
-
-            if(long ret = Decode(pos, objects...); ret){
-                return ret;
-            }
-
-            return 0;
-        }
     public:
         template<typename T>
         static uint16_t GetSize(const T& obj) {
@@ -83,24 +43,23 @@ namespace Lemon{
             return MessageRawDataObject((uint8_t*)data, sizeof(T) * length);
         }
 
-        Message(){
-            msize = 0;
-            mdata = nullptr;
-            mid = 0;
+        Message()
+            : m_size(0), m_data(nullptr) {
+            
         }
 
-        Message(uint64_t id){
-            mid = id;
-            msize = 0;
-            mdata = nullptr;
+        Message(uint64_t id)
+            : m_id(id), m_size(0), m_data(nullptr) {
+            
         }
 
         template<typename ...T>
-        Message(uint64_t id, const T&... objects) : mid(id){
-            msize = (GetSize(objects) + ...); // Get total length of objects
+        Message(uint64_t id, const T&... objects)
+         : m_id(id) {
+            m_size = (GetSize(objects) + ...); // Get total length of objects
 
-            if(msize > 0){
-                mdata = new uint8_t[msize];
+            if(m_size > 0){
+                m_data = new uint8_t[m_size];
             }
 
             uint16_t pos = 0;
@@ -108,38 +67,39 @@ namespace Lemon{
         }
 
         template<typename ...T>
-        Message(uint8_t* data, uint16_t size, uint64_t id, const T&... objects) : mdata(data), msize(size), mid(id){ // Don't calculate the size as the caller should know the size beforehand as they have created a buffer
+        Message(uint8_t* data, uint16_t size, uint64_t id, const T&... objects)
+         : m_id(id), m_size(size), m_data(data) { // Don't calculate the size as the caller should know the size beforehand as they have created a buffer
             uint16_t pos = 0;
             (void)std::initializer_list<int>{ ((void)Insert(pos, objects), 0)... }; // HACK: Call insert for each object
         }
 
-        //Message(uint8_t* data, uint16_t size, uint64_t id) : mdata(data), msize(size), mid(id) {}
+        Message(uint8_t* data, uint16_t size, uint64_t id) : m_id(id), m_size(size), m_data(data) {}
 
-        explicit Message(const Message& m) {
-            msize = m.msize;
-            mid = m.mid;
-
-            mdata = new uint8_t[msize];
-            memcpy(mdata, m.mdata, msize);
+        explicit Message(const Message& m)
+            : m_id(m.m_id), m_size(m.m_size), m_data(new uint8_t[m.m_size]) {
+            memcpy(m_data, m.m_data, m_size);
         }
         
         Message& operator=(Message&& m) noexcept {
-            mdata = m.mdata;
-            mid = m.mid;
-            msize = m.msize;
+            m_id = m.m_id;
+            m_size = m.m_size;
+            m_data = m.m_data;
+
+            m.m_size = 0;
+            m.m_data = nullptr;
 
             return *this;
         }
 
-        void Set(uint8_t* data, uint16_t size, uint64_t id) {
-            mdata = data;
-            msize = size;
-            mid = id;
+        void Set(uint8_t* data, uint16_t size, uint64_t id){
+            m_id = id;
+            m_size = size;
+            m_data = data;
         }
         
         template<typename ...T>
-        long Decode(T&... objects) const  {
-            if(!mdata){
+        long Decode(T&... objects) const {
+            if(!m_data){
                 return ErrorBufferNotInitialized;
             }
 
@@ -151,13 +111,53 @@ namespace Lemon{
             return 0;
         }
 
-        inline const uint8_t* data() const { return mdata; }
-        inline uint16_t length() const { return msize; }
-        inline uint64_t id() const {return mid; }
+        inline const uint8_t* data() const { return m_data; }
+        inline uint16_t length() const { return m_size; }
+        inline uint64_t id() const { return m_id; }
 
         ~Message(){
-            if(msize && mdata)
-                delete mdata;
+            if(m_data){
+                delete[] m_data;
+            }
+        }
+    private:
+        uint64_t m_id;
+        uint16_t m_size;
+        uint8_t* m_data;
+
+        Message& operator=(const Message& m);
+
+        template<typename T>
+        void Insert(uint16_t& pos, const T& obj){
+            memcpy(&m_data[pos], &obj, sizeof(T));
+            pos += sizeof(T);
+        }
+
+        template<typename O>
+        long Decode(uint16_t& pos, O& o) const {
+            uint8_t* currentData = m_data + pos;
+
+            if(pos + sizeof(O) > m_size){
+                return ErrorDecodeOutOfBounds;
+            }
+
+            o = *(O*)currentData;
+            pos += sizeof(O);
+
+            return 0;
+        }
+
+        template<typename O, typename ...T>
+        long Decode(uint16_t& pos, O& object, T&... objects) const {
+            if(long ret = Decode(pos, object); ret){
+                return ret;
+            }
+
+            if(long ret = Decode(pos, objects...); ret){
+                return ret;
+            }
+
+            return 0;
         }
     };
 

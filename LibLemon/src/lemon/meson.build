@@ -1,4 +1,4 @@
-cpp_files += files(
+liblemon_cpp_files += files(
     'device.cpp',
     'fb.cpp',
     'filesystem.cpp',

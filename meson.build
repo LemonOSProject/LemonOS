@@ -20,6 +20,7 @@ run_target('build-interfaces',
 
 subdir('Kernel/')
 subdir('LibLemon/')
+subdir('LibGUI/')
 subdir('System/')
 subdir('Applications/')
 subdir('Utilities/')

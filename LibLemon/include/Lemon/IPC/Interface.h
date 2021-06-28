@@ -81,8 +81,8 @@ namespace Lemon{
         long Poll(handle_t& client, Message& m);
         void Wait();
         
-        inline const handle_t& GetHandle() const { return interfaceHandle; }
-        void GetAllHandles(std::vector<handle_t>& v) const {
+        inline handle_t GetHandle() { return interfaceHandle; }
+        void GetAllHandles(std::vector<handle_t>& v) {
             v.insert(v.end(), endpoints.begin(), endpoints.end());
             v.push_back(interfaceHandle);
         }

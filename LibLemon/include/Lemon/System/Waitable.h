@@ -11,8 +11,8 @@ namespace Lemon{
     protected:
         std::list<class Waiter*> waiters;
     public:
-        virtual inline const handle_t& GetHandle() const = 0;
-        virtual inline void GetAllHandles(std::vector<handle_t>& v) const { v.push_back(GetHandle()); };
+        virtual inline handle_t GetHandle() = 0;
+        virtual inline void GetAllHandles(std::vector<handle_t>& v) { v.push_back(GetHandle()); };
         void Wait(long timeout = -1);
 
         virtual ~Waitable();

@@ -8,6 +8,7 @@
 #include <Lemon/IPC/Message.h>
 
 #include <stdint.h>
+#include <assert.h>
 
 namespace Lemon{
     class EndpointException : public std::exception{
@@ -35,20 +36,24 @@ namespace Lemon{
     public:
         Endpoint() = default;
 
-        Endpoint(const Lemon::Endpoint& other) : handle(other.handle), msgSize(other.msgSize){
-            
-        }
-
+        Endpoint(const Lemon::Endpoint& other) = delete;
+        
         Endpoint(Lemon::Endpoint&& other) : handle(other.handle), msgSize(other.msgSize){
+            assert(handle > 0);
+
             other.handle = 0;
         }
 
         Endpoint(handle_t h, uint16_t msgSize){
+            assert(h > 0);
+
             handle = h;
             this->msgSize = msgSize;
         }
 
         Endpoint(handle_t h){
+            assert(h > 0);
+
             handle = h;
 
             LemonEndpointInfo endpInfo;
@@ -64,8 +69,8 @@ namespace Lemon{
             this->msgSize = endpInfo.msgSize;
         }
 
-        Endpoint(const std::string& path){
-            Endpoint(path.c_str());
+        Endpoint(const std::string& path)
+            : Endpoint(path.c_str()) {
         }
 
         Endpoint(const char* path){
@@ -87,16 +92,11 @@ namespace Lemon{
             this->msgSize = endpInfo.msgSize;
         }
 
-        Lemon::Endpoint& operator=(const Lemon::Endpoint& other){
-            handle = other.handle;
-            msgSize = other.msgSize;
-
-            return *this;
-        }
-
         Lemon::Endpoint& operator=(Lemon::Endpoint&& other){
             handle = other.handle;
             msgSize = other.msgSize;
+
+            assert(handle);
 
             other.handle = 0;
 
@@ -130,7 +130,7 @@ namespace Lemon{
         ///
         /// \return Handle ID of endpoint
         /////////////////////////////
-        inline const handle_t& GetHandle() const {
+        inline handle_t GetHandle() {
             return handle;
         }
 
@@ -191,8 +191,6 @@ namespace Lemon{
 
             if(!ret){
                 call.Set(data, size, id);
-            } else {
-                delete[] data;
             }
             return ret;
         }

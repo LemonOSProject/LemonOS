@@ -5,12 +5,15 @@
 
 #include <Lemon/IPC/Endpoint.h>
 #include <Lemon/IPC/Interface.h>
-#include <Lemon/Core/Event.h>
+
+#include <Lemon/Services/lemon.lemonwm.h>
+
 #include <Lemon/GUI/Window.h>
+#include <Lemon/GUI/Event.h>
 
 #include <list>
 
-#include "winrect.h"
+#include "WindowRect.h"
 
 #define WINDOW_BORDER_COLOUR {32,32,32}
 #define WINDOW_TITLEBAR_HEIGHT 24
@@ -45,21 +48,9 @@ enum ResizePoint {
     TopRight,
 };
 
-class WMWindow : Lemon::Endpoint {
+class WMWindow
+    : public LemonWMClientEndpoint {
     friend class CompositorInstance;
-protected:
-    int64_t sharedBufferKey;
-
-    WindowBuffer* windowBufferInfo;
-    uint8_t* buffer1;
-    uint8_t* buffer2;
-    int64_t bufferKey;
-
-    WMInstance* wm;
-
-    rect_t closeRect, minimizeRect;
-
-    surface_t windowSurface;
 public:
     WMWindow(WMInstance* wm, handle_t endp, handle_t id, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title);
     ~WMWindow();
@@ -79,15 +70,16 @@ public:
     void DrawClip(surface_t* surface, rect_t clip);
     //void Draw(surface_t* surface);
 
-    void PostEvent(const Lemon::LemonEvent& ev) { Queue(Lemon::GUI::WindowEvent, reinterpret_cast<uintptr_t>(&ev), (uint16_t)sizeof(Lemon::LemonEvent)); }
+    inline void SendEvent(const Lemon::LemonEvent& ev) {
+        if(!(flags & WINDOW_FLAGS_TOOLTIP))
+            LemonWMClientEndpoint::SendEvent(ev.event, ev.data);
+    }
 
     void Minimize(bool state);
     void Resize(vector2i_t size, int64_t bufferKey, WindowBuffer* bufferInfo);
 
     inline int Dirty() const { return windowBufferInfo->dirty; }
     inline void SetDirty(int v) { windowBufferInfo->dirty = v; }
-
-    inline void SendPosition() { Queue(Lemon::Message(Lemon::GUI::WindowPositionReturn, pos.x, pos.y)); }
 
     rect_t GetWindowRect() const; // Return window bounds as a rectangle
 
@@ -100,6 +92,20 @@ public:
     rect_t GetRightBorderRect() const;
 
     void RecalculateButtonRects(); // Recalculate rectangles for close/minimize buttons
+    
+protected:
+    int64_t sharedBufferKey;
+
+    WindowBuffer* windowBufferInfo;
+    uint8_t* buffer1;
+    uint8_t* buffer2;
+    int64_t bufferKey;
+
+    WMInstance* wm;
+
+    rect_t closeRect, minimizeRect;
+
+    surface_t windowSurface;
 };
 
 class ContextMenuItem{
@@ -167,7 +173,8 @@ public:
     surface_t backgroundImage;
 };
 
-class WMInstance{
+class WMInstance
+    : LemonWMServer {
 protected:
     friend void* _InitializeShellConnection(void*);
     friend class WMWindow;
@@ -197,6 +204,18 @@ protected:
     void SetActive(WMWindow* win);
 
     int64_t CreateWindowBuffer(int width, int height, WindowBuffer** buffer);
+
+    void OnPeerDisconnect(handle_t client);
+    void OnCreateWindow(handle_t client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title);
+    void OnDestroyWindow(handle_t client);
+    void OnSetTitle(handle_t client, const std::string& title);
+    void OnUpdateFlags(handle_t client, uint32_t flags);
+    void OnRelocate(handle_t client, int32_t x, int32_t y);
+    void OnGetPosition(handle_t client);
+    void OnResize(handle_t client, int32_t width, int32_t height);
+    void OnMinimize(handle_t client, int64_t windowID, bool minimized);
+    void OnDisplayContextMenu(handle_t client, int32_t x, int32_t y, const std::string& entries);
+    virtual void OnPong(handle_t client);
 
 public:
     timespec startTime;

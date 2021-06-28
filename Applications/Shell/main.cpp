@@ -141,7 +141,7 @@ int main(){
 
 	InitializeMenu();
 
-	taskbar->InitializeShellConnection();
+	//taskbar->InitializeShellConnection();
 
 	Lemon::Waiter waiter;
 	waiter.WaitOnAll(&shell->GetInterface());

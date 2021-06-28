@@ -23,7 +23,7 @@ namespace Lemon {
         EventMouseExit,
     };
 
-    typedef struct LemonEvent {
+    struct LemonEvent {
         int32_t event;
         union {
             int key;
@@ -31,6 +31,7 @@ namespace Lemon {
             vector2i_t resizeBounds;
             unsigned short windowCmd;
             uint64_t bufferKey;
+            uint64_t data;
         };
-    } __attribute__((packed)) lemon_event_t;
+    };
 }

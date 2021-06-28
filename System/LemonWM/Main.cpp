@@ -1,3 +1,5 @@
+#include <Lemon/Services/lemon.lemonwm.h>
+
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -12,7 +14,7 @@
 #include <pthread.h>
 #include <time.h>
 
-#include "lemonwm.h"
+#include "WM.h"
 
 surface_t fbSurface;
 surface_t renderSurface;
@@ -128,4 +130,6 @@ int main(){
     for(;;){
         wm.Update();
     }
+
+    return 0;
 }

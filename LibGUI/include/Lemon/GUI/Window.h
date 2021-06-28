@@ -1,17 +1,22 @@
 #pragma once
 
-#include <Lemon/Core/Event.h>
 #include <Lemon/Graphics/Surface.h>
 #include <Lemon/Graphics/Graphics.h>
+
+#include <Lemon/GUI/Event.h>
 #include <Lemon/GUI/Widgets.h>
 #include <Lemon/GUI/CtxEntry.h>
-#include <Lemon/GUI/WMClient.h>
-#include <utility>
 
-#define WINDOW_FLAGS_NODECORATION 0x1
-#define WINDOW_FLAGS_RESIZABLE 0x2
-#define WINDOW_FLAGS_NOSHELL 0x4
-#define WINDOW_FLAGS_TOOLTIP 0x8
+//#include <Lemon/GUI/WMClient.h>
+#include <Lemon/Services/lemon.lemonwm.h>
+
+#include <utility>
+#include <queue>
+
+#define WINDOW_FLAGS_NODECORATION 0x1 // Do not draw window borders
+#define WINDOW_FLAGS_RESIZABLE 0x2 // Allow window resizing
+#define WINDOW_FLAGS_NOSHELL 0x4 // Do not show up in shell events
+#define WINDOW_FLAGS_TOOLTIP 0x8 // Don't receive events
 
 #define WINDOW_MENUBAR_HEIGHT 20
 
@@ -49,19 +54,20 @@ namespace Lemon::GUI {
         void OnMouseMove(vector2i_t mousePos);
     };
 
-    class Window : public WMClient{
+    class Window :
+        LemonWMClient, public LemonWMServerEndpoint {
     public:
         Window(const char* title, vector2i_t size, uint32_t flags = 0, int type = WindowType::Basic, vector2i_t pos = {20, 20});
         ~Window();
 
-        inline void InitializeShellConnection() { WMClient::InitializeShellConnection(); }
+        //inline void InitializeShellConnection() { LemonWMServerEndpoint::InitializeShellConnection(); }
 
         /////////////////////////////
         /// \brief Set title of window
         ///
         /// \param name Service name to be used, must be unique
         /////////////////////////////
-        inline void SetTitle(const std::string& title) { WMClient::SetTitle(title); }
+        inline void SetTitle(const std::string& title) { LemonWMServerEndpoint::SetTitle(title); }
         
         /////////////////////////////
         /// \brief Relocate window
@@ -70,7 +76,7 @@ namespace Lemon::GUI {
         ///
         /// \param pos New position of window
         /////////////////////////////
-        inline void Relocate(vector2i_t pos) { WMClient::Relocate(pos.x, pos.y); }
+        inline void Relocate(vector2i_t pos) { LemonWMServerEndpoint::Relocate(pos.x, pos.y); }
 
         /////////////////////////////
         /// \brief Resize window
@@ -88,7 +94,7 @@ namespace Lemon::GUI {
         ///
         /// \param minimized Whether to show/hide the window
         /////////////////////////////
-        inline void Minimize(bool minimized = true) { WMClient::Minimize(minimized); }
+        inline void Minimize(bool minimized = true) { LemonWMServerEndpoint::Minimize(windowID, minimized); }
 
         /////////////////////////////
         /// \brief Minimize a window
@@ -98,14 +104,14 @@ namespace Lemon::GUI {
         /// \param windowID Window to show/hide
         /// \param minimized Whether to show/hide the window
         /////////////////////////////
-        inline void Minimize(int windowID, bool minimized) { WMClient::Minimize(windowID, minimized); }
+        inline void Minimize(int windowID, bool minimized) { LemonWMServerEndpoint::Minimize(windowID, minimized); }
 
         /////////////////////////////
         /// \brief Update window flags
         ///
         /// \param flags New Flags
         /////////////////////////////
-        inline void UpdateFlags(uint32_t flags) { this->flags = flags; WMClient::UpdateFlags(flags); }
+        inline void UpdateFlags(uint32_t flags) { this->flags = flags; LemonWMServerEndpoint::UpdateFlags(flags); }
 
         /////////////////////////////
         /// \brief Paint window
@@ -228,7 +234,11 @@ namespace Lemon::GUI {
         ///
         /// \return window position
         /////////////////////////////
-        inline vector2i_t GetPosition() { return WMClient::GetPosition(); };
+        inline vector2i_t GetPosition() {
+            auto pos = LemonWMServerEndpoint::GetPosition();
+
+            return { pos.x, pos.y };
+        };
 
         /////////////////////////////
         /// \brief OnPaint callback
@@ -252,18 +262,25 @@ namespace Lemon::GUI {
         bool closed = false; // Set to true when close button pressed
 
     private:
-        class TooltipWindow : protected WMClient {
+        void OnPeerDisconnect(handle_t client);
+        void OnSendEvent(handle_t client, int32_t id, uint64_t data);
+        void OnPing(handle_t client);
+
+        class TooltipWindow 
+            : protected LemonWMServerEndpoint {
         public:
             TooltipWindow(const char* text, vector2i_t pos, const RGBAColour& bgColour);
 
             void SetText(const char* text);
-            inline void Relocate(vector2i_t pos) { WMClient::Relocate(pos.x, pos.y); }
+            inline void Relocate(vector2i_t pos) { LemonWMServerEndpoint::Relocate(pos.x, pos.y); }
 
             void Paint();
 
-            inline void Minimize(bool minimized) { WMClient::Minimize(minimized); }
+            inline void Minimize(bool minimized) { LemonWMServerEndpoint::Minimize(windowID, minimized); }
         
         private:
+            int64_t windowID = 0;
+
             Graphics::TextObject textObject;
             RGBAColour backgroundColour;
 
@@ -274,6 +291,8 @@ namespace Lemon::GUI {
 
             surface_t surface = {0, 0, 32, nullptr};
         };
+
+        int64_t windowID = 0;
         
         WindowBuffer* windowBufferInfo = nullptr;
         uint8_t* buffer1;
@@ -287,6 +306,7 @@ namespace Lemon::GUI {
         timespec lastClick = {0, 0};
 
         std::unique_ptr<TooltipWindow> tooltipWindow = nullptr;
+        std::queue<Lemon::LemonEvent> eventQueue;
 
         void UpdateGUITheme(const std::string& path);
     };

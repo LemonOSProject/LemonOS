@@ -8,13 +8,18 @@
 #include <sstream>
 
 namespace Lemon::GUI{
-    Window::Window(const char* title, vector2i_t size, uint32_t flags, int type, vector2i_t pos) : rootContainer({{0, 0}, size}) {
+    Window::Window(const char* title, vector2i_t size, uint32_t flags, int type, vector2i_t pos)
+        : LemonWMServerEndpoint("lemon.lemonwm/Instance"), rootContainer({{0, 0}, size}) {
         windowType = type;
         this->flags = flags;
 
         rootContainer.SetWindow(this);
 
-        windowBufferKey = CreateWindow(pos.x, pos.y, size.x, size.y, flags, title);
+        auto response = CreateWindow(pos.x, pos.y, size.x, size.y, flags, title);
+
+        windowBufferKey = response.bufferKey;
+        windowID = response.windowID;
+
         if(windowBufferKey <= 0){
             printf("[LibLemon] Warning: Window::Window: Failed to obtain window buffer!\n");
             return;
@@ -110,7 +115,7 @@ namespace Lemon::GUI{
 
         rootContainer.UpdateFixedBounds();
 
-        windowBufferKey = WMClient::Resize(size.x, size.y);
+        windowBufferKey = LemonWMServerEndpoint::Resize(size.x, size.y).bufferKey;
         if(windowBufferKey <= 0){
             printf("[LibLemon] Warning: Window::Resize: Failed to obtain window buffer!\n");
 
@@ -163,14 +168,17 @@ namespace Lemon::GUI{
     
     bool Window::PollEvent(LemonEvent& ev){
         Message m;
-        if(long ret = Poll(m); ret > 0 && m.id() == WindowEvent){
-            if(m.id() == WindowEvent){
-                if(!m.Decode(ev)) {
-                    return true;
-                }
-            }
+        long ret;
+        while((ret = Poll(m)) > 0){
+            HandleMessage(handle, m);
         }
 
+        if(!eventQueue.empty()){
+            ev = eventQueue.front();
+            eventQueue.pop();
+
+            return true;
+        }
         return false;
     }
     
@@ -306,7 +314,19 @@ namespace Lemon::GUI{
 
         std::string str = serializedEntries.str();
         
-        WMClient::DisplayContextMenu(pos.x, pos.y, str);
+        LemonWMServerEndpoint::DisplayContextMenu(pos.x, pos.y, str);
+    }
+
+    void Window::OnPeerDisconnect(handle_t){
+        throw std::runtime_error("Lost connected to window server!");
+    }
+
+    void Window::OnSendEvent(handle_t, int32_t id, uint64_t data){
+        eventQueue.push(LemonEvent{ .event = id, .data = data });
+    }
+
+    void Window::OnPing(handle_t){
+        Pong();
     }
 
     void Window::CreateMenuBar(){
@@ -327,8 +347,13 @@ namespace Lemon::GUI{
         }
     }
 
-    Window::TooltipWindow::TooltipWindow(const char* text, vector2i_t pos, const RGBAColour& bgColour) : textObject({4, 4}, text), backgroundColour(bgColour) {
-        windowBufferKey = CreateWindow(pos.x, pos.y, textObject.Size().x + 8, textObject.Size().y + 8, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, "");
+    Window::TooltipWindow::TooltipWindow(const char* text, vector2i_t pos, const RGBAColour& bgColour)
+         : LemonWMServerEndpoint("lemon.lemonwm/Instance"), textObject({4, 4}, text), backgroundColour(bgColour) {
+        auto response = CreateWindow(pos.x, pos.y, textObject.Size().x + 8, textObject.Size().y + 8, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL | WINDOW_FLAGS_TOOLTIP, "");
+        
+        windowID = response.windowID;
+        windowBufferKey = response.bufferKey;
+        
         if(windowBufferKey <= 0){
             printf("[LibLemon] Warning: Window::TooltipWindow::TooltipWindow: Failed to obtain window buffer!\n");
             return;
@@ -352,10 +377,13 @@ namespace Lemon::GUI{
     void Window::TooltipWindow::SetText(const char* text){
         textObject.SetText(text);
 
-        Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey);
+        if(Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey)){
+            throw std::runtime_error("Failed to unmap shared memory!");
+            return;
+        }
         surface.buffer = nullptr; // Invalidate surface buffer
 
-        windowBufferKey = Resize(textObject.Size().x + 8, textObject.Size().y + 8);
+        windowBufferKey = Resize(textObject.Size().x + 8, textObject.Size().y + 8).bufferKey;
         if(windowBufferKey <= 0){
             printf("[LibLemon] Warning: Window::TooltipWindow::Resize: Failed to obtain window buffer!\n");
             return;
@@ -426,76 +454,5 @@ namespace Lemon::GUI{
 
     void WindowMenuBar::OnMouseMove(__attribute__((unused)) vector2i_t mousePos){
         
-    }
-
-    int64_t WMClient::CreateWindow(int x, int y, int width, int height, unsigned int flags, const std::string& title) {
-        Message ret;
-        
-        Call(Message(WMCreateWindow, x, y, width, height, flags, title), ret, WindowBufferReturn);
-
-        int64_t key = 0;
-        if(ret.Decode(key)){
-            return 0;
-        }
-
-        return key;
-    }
-
-    void WMClient::DestroyWindow() {
-        Queue(Message(WMDestroyWindow));
-    }
-
-    void WMClient::SetTitle(const std::string& title) {
-        Queue(Message(WMSetWindowTitle, title));
-    }
-
-    void WMClient::UpdateFlags(uint32_t flags) {
-        Queue(Message(WMUpdateWindowFlags, flags));
-    }
-
-    void WMClient::Relocate(int x, int y) {
-        Queue(Message(WMRelocateWindow, x, y));
-    }
-
-    int64_t WMClient::Resize(int width, int height) {
-        Message ret;
-
-        Call(Message(WMResizeWindow, width, height), ret, WindowBufferReturn);
-
-        int64_t key = 0;
-        if(ret.Decode(key)){
-            return 0;
-        }
-
-        return key;
-    }
-
-    vector2i_t WMClient::GetPosition() {
-        Message ret;
-        
-        Call(Message(WMGetWindowPosition), ret, WindowPositionReturn);
-
-        vector2i_t sz;
-        if(ret.Decode(sz.x, sz.y)){
-            return {0, 0};
-        }
-
-        return sz;
-    }
-
-    void WMClient::Minimize(bool minimized) {
-        Queue(Message(WMMinimizeWindow, minimized));
-    }
-
-    void WMClient::Minimize(long windowID, bool minimized) {
-        Queue(Message(WMMinimizeOtherWindow, windowID, minimized));
-    }
-
-    void WMClient::DisplayContextMenu(int x, int y, const std::string& serializedEntries) {
-        Queue(Message(WMDisplayContextMenu, x, y, serializedEntries));
-    }
-
-    void WMClient::InitializeShellConnection() {
-        Queue(WMInitializeShellConnection, nullptr, 0);
     }
 }

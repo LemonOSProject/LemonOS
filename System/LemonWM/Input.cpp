@@ -1,4 +1,4 @@
-#include "lemonwm.h"
+#include "WM.h"
 
 #include <Lemon/Core/Keyboard.h>
 #include <Lemon/Core/Input.h>

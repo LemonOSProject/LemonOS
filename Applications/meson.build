@@ -1,7 +1,8 @@
 add_languages('c', 'cpp')
 
 application_dependencies = [
-    liblemon_dep
+    liblemon_dep,
+    libgui_dep
 ]
 
 fileman_src = [
