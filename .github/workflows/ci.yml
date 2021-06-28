@@ -135,6 +135,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-lemon-python-${{ hashFiles('**/Ports/lemon-Python*.patch') }}-${{ hashFiles('**/Ports/python.sh') }}
 
+      - name: Building system
+        run: ninja -C Build install
+
       - name: Build extra ports
         run: |
           Ports/buildport.sh doom
@@ -143,9 +146,6 @@ jobs:
           Ports/buildport.sh python
           Ports/buildport.sh lemon-binutils
           Ports/buildport.sh llvm
-
-      - name: Building system
-        run: ninja -C Build install
 
       - name: Building disk image
         run: ninja -C Build disk
