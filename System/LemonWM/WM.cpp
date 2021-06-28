@@ -354,6 +354,8 @@ void WMInstance::MouseDown(){
         }
     }
 
+    WMWindow* pressed = nullptr;
+
     auto it = windows.rbegin();
     while(it != windows.rend()) {
         WMWindow* win = *it++;
@@ -361,6 +363,8 @@ void WMInstance::MouseDown(){
 
         if(PointInWindow(win, input.mouse.pos)){
             if(win->minimized) continue;
+
+            pressed = win;
 
             SetActive(win);
 
@@ -428,6 +432,10 @@ void WMInstance::MouseDown(){
             break;
         }
     };
+
+    if(!pressed){
+        SetActive(nullptr); // We must have clicked out of the active window
+    }
 }
 
 void WMInstance::MouseRight(bool pressed){
