@@ -1,11 +1,12 @@
-#include <Lemon/System/Framebuffer.h>
-#include <Lemon/System/Spawn.h>
+#include "shell.h"
 
-#include <lemon/syscall.h>
-
-#include <Lemon/Graphics/Graphics.h>
-#include <Lemon/GUI/Window.h>
 #include <Lemon/Core/CFGParser.h>
+#include <Lemon/Core/IconManager.h>
+#include <Lemon/Core/Keyboard.h>
+#include <Lemon/Graphics/Graphics.h>
+#include <Lemon/GUI/Model.h>
+#include <Lemon/GUI/Window.h>
+#include <Lemon/System/Spawn.h>
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -14,206 +15,202 @@
 #include <sys/stat.h>
 
 #include <stdexcept>
+#include <algorithm>
 
-Lemon::GUI::Window* menuWindow;
-extern fb_info_t videoInfo;
+#define MENU_WIDTH 500
+#define MENU_HEIGHT 264
 
-extern bool showMenu;
-const char* itemsPath = "/system/lemon/menu/";
-
-std::vector<std::string> path = {"/system/bin/"};
 surface_t defaultIcon = {.width = 0, .height = 0, .depth = 32, .buffer = nullptr};
 
-class MenuObject{
+Lemon::GUI::Window* menuWindow;
+Lemon::GUI::ListView* listView;
+Lemon::GUI::TextBox* filterBox;
+
+std::list<class MenuItem> menuItems;
+std::list<std::string> path;
+
+inline bool StringContainsCaseInsenstive(const std::string& s1, const std::string& s2){
+    return std::search(s1.begin(), s1.end(), s2.begin(), s2.end(), [](char a, char b){ return tolower(a) == tolower(b); }) != s1.end();
+}
+
+class MenuItem final {
 public:
     std::string name;
-    surface_t icon = defaultIcon;
+    std::string category = "";
 
-    virtual void Open(vector2i_t pos) = 0;
+    const Surface* icon = &defaultIcon;
 
-    virtual ~MenuObject() = default;
-};
+    ~MenuItem() = default;
 
-class MenuCategory : public MenuObject{
-public:
-    std::vector<Lemon::GUI::ContextMenuEntry> items;
-
-    MenuCategory(){
-
-    }
-
-    MenuCategory(std::string name){
-        this->name = name;
-    }
-
-    void Open(vector2i_t pos) final {
-        menuWindow->DisplayContextMenu(items, pos);
-    }
-};
-
-class MenuItem : public MenuObject{
-    std::string exec;
-public:
-    uint16_t id;
-    std::string comment;
-    std::vector<char*> args;
-
-    MenuItem(){
-        icon = defaultIcon;
-    }
-
-    MenuItem(const std::string& name, const std::string& comment, const std::string& exec, int id){
-        this->name = name;
-        this->comment = comment;
-        this->exec = exec;
-        this->id = id;
-        icon = defaultIcon;
-
-        std::string temp;
-        for(char c : exec){
-            if(c == ' '){
-                args.push_back(strdup(temp.c_str()));
-
-                temp.clear();
-            } else {
-                temp += c;
-            }
+    void Open() {
+        //MinimizeMenu(true);
+        if(!m_args.size()){
+            return;
         }
 
-        if(temp.length()){
-            args.push_back(strdup(temp.c_str())); // Any args left over?
-        }
-    }
-
-    void SetExec(const std::string& e){
-        exec = e;
-
-        args.clear();
-
-        std::string temp;
-        for(char c : exec){
-            if(c == ' '){
-                args.push_back(strdup(temp.c_str()));
-
-                temp.clear();
-            } else {
-                temp += c;
-            }
-        }
-
-        if(temp.length()){
-            args.push_back(strdup(temp.c_str())); // Any args left over?
-        }
-    }
-
-    std::string& GetExec(){
-        return exec;
-    }
-
-    void Open(vector2i_t pos) final {
         for(auto& p : path){
-            char* execPath = new char[p.length() + strlen(args[0])];
-            strcpy(execPath, p.c_str());
-            strcat(execPath, args[0]);
+            std::string execPath = p + "/" + m_args[0];
 
             struct stat st;
-            int ret = stat(execPath, &st);
+            int ret = stat(execPath.c_str(), &st);
             if(!ret){
-                lemon_spawn(execPath, args.size(), args.data());
-
-                showMenu = false;
-                menuWindow->Minimize();
+                lemon_spawn(execPath.c_str(), m_args.size(), m_args.data());
             }
+        }
+    };
 
-            delete[] execPath;
+    void SetExec(const std::string& e){
+        m_exec = e;
+
+        m_args.clear();
+
+        std::string temp;
+        for(char c : m_exec){
+            if(c == ' '){
+                m_args.push_back(strdup(temp.c_str()));
+
+                temp.clear();
+            } else {
+                temp += c;
+            }
+        }
+
+        if(temp.length()){
+            m_args.push_back(strdup(temp.c_str())); // Any args left over?
         }
     }
+private:
+    std::string m_exec = "";
+    std::vector<char*> m_args;
 };
 
-std::map<uint16_t, MenuItem> items;
-
-std::map<std::string, MenuCategory> categories;
-std::vector<MenuItem> rootItems;
-
-Lemon::GUI::LayoutContainer* menuContainer;
-
-class MenuWidget : public Lemon::GUI::Widget{
-    MenuObject* obj;
-    Lemon::Graphics::TextObject label = Lemon::Graphics::TextObject();
-
+class MenuFilter {
 public:
-    MenuWidget(MenuObject& obj, rect_t bounds) : Widget(bounds){
-        this->obj = &obj;
+    unsigned itemCount;
+
+    MenuFilter()
+        : m_filter(" ") {}
+
+    int ItemCount() const {
+        return m_filteredItems.size();
     }
 
-    void Paint(surface_t* surface){
-        if(Lemon::Graphics::PointInRect(fixedBounds, menuWindow->lastMousePos)){
-            Lemon::Graphics::DrawRect(fixedBounds, Lemon::colours[Lemon::Colour::Foreground], surface);
+    MenuItem& GetItem(int index){
+        return *m_filteredItems.at(index);
+    }
+
+    void SetFilter(const std::string& f){
+        if(!m_filter.compare(f)){
+            return; // Filter has not changed
         }
 
-        if(obj->icon.width){
-            Lemon::Graphics::surfacecpyTransparent(surface, &obj->icon, fixedBounds.pos + (vector2i_t){fixedBounds.size.x / 2 - obj->icon.width / 2, fixedBounds.size.y / 2 - obj->icon.height / 2});
+        m_filteredItems.clear();
+        m_filter = f;
+
+        if(!m_filter.length()){
+            for(auto& item : menuItems){
+                m_filteredItems.push_back(&item);
+            }
+            return;
+        }
+
+        for(auto& item : menuItems){
+            if(StringContainsCaseInsenstive(item.name, m_filter)){
+                m_filteredItems.push_back(&item);
+            } else if(StringContainsCaseInsenstive(item.category, m_filter)){
+                m_filteredItems.push_back(&item);
+            }
         }
     }
 
-    void OnMouseEnter(vector2i_t pos){
-        window->tooltipOwner = this;
-        window->SetTooltip(obj->name.c_str(), window->GetPosition() + (vector2i_t){ window->GetSize().x + 8, fixedBounds.y + (fixedBounds.height / 2 - 8)});
-    }
-
-    void OnMouseExit(vector2i_t pos){
-        if(window->tooltipOwner == this){
-            window->HideTooltip();
+    void OnSubmit(int selected){
+        if(selected < static_cast<int>(m_filteredItems.size())){
+            m_filteredItems.at(selected)->Open();
         }
     }
 
-    void OnMouseUp(vector2i_t pos){
-        obj->Open(fixedBounds.pos + (vector2i_t){fixedBounds.size.x, 0});
-    }
-
-    void UpdateFixedBounds(){
-        Widget::UpdateFixedBounds();
-
-        label.SetPos(fixedBounds.pos + (vector2i_t){2, fixedBounds.size.y / 2});
-    }
+private:
+    std::vector<MenuItem*> m_filteredItems; 
+    std::string m_filter;
 };
 
-void OnPaint(surface_t* surface){
+class MenuModel
+    : public Lemon::GUI::DataModel {
+public:
+    enum {
+        ColumnIcon = 0,
+        ColumnItemName = 1,
+        ColumnCategory = 2,
+    };
 
-}
+    MenuFilter filter;
 
-int nextID = 10000;
-int GetItemID(){
-    return nextID++;
-}
+    int ColumnCount() const override { return 3; }
+    int RowCount() const override { return filter.ItemCount(); }
+    const std::string& ColumnName(int) const override { return m_colName; } // We dont display columns
 
-void InitializeMenu(){
-	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
-    menuWindow = new Lemon::GUI::Window("", {36, static_cast<int>(videoInfo.height) - 36}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, 0});
-    menuWindow->OnPaint = OnPaint;
-    menuWindow->rootContainer.background = {0, 0, 0, 0};
-
-    Lemon::Graphics::LoadImage("/system/lemon/resources/icons/application.png", &defaultIcon);
-
-    categories["Games"] = MenuCategory("Games");
-    Lemon::Graphics::LoadImage("/system/lemon/resources/icons/games.png", &categories["Games"].icon);
-
-    categories["Utilities"] = MenuCategory("Utilities");
-    categories["Other"] = MenuCategory("Other");
-
-    {
-        MenuItem item("Terminal...", "Open a Terminal", "terminal.lef", GetItemID());
-        Lemon::Graphics::LoadImage("/system/lemon/resources/icons/terminal.png", &item.icon);
-        items[item.id] = item;
-        rootItems.push_back(item);
+    Lemon::GUI::Variant GetData(int row, int column) override {
+        switch(column){
+        case ColumnIcon:
+            return filter.GetItem(row).icon;
+        case ColumnItemName:
+            return filter.GetItem(row).name;
+        case ColumnCategory:
+            return filter.GetItem(row).category;
+        default:
+            return 0;
+        }
     }
 
-    {
-        MenuItem item("Run...", "Run", "run.lef", GetItemID());
-        items[item.id] = item;
-        rootItems.push_back(item);
+    int SizeHint(int column) override {
+        switch(column){
+        case ColumnIcon:
+            return 20;
+        case ColumnItemName:
+            return MENU_WIDTH - 20 - 80;
+        case ColumnCategory:
+            return 80;
+        default:
+            return 0;
+        }
     }
 
+private:
+    std::string m_colName = "";
+} menuModel;
+
+Lemon::GUI::Window* InitializeMenu(){
+    std::string pathEnv = getenv("PATH");
+	std::string temp;
+	for(char c : pathEnv){
+		if(c == ':' && temp.length()){
+			path.push_back(temp);
+			temp.clear();
+		} else {
+			temp += c;
+		}
+	}
+	if(temp.length()){
+		path.push_back(temp);
+		temp.clear();
+	}
+
+    menuWindow = new Lemon::GUI::Window("", {MENU_WIDTH, MENU_HEIGHT}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL | WINDOW_FLAGS_ALWAYS_ACTIVE, Lemon::GUI::GUI);
+    
+    vector2i_t screenBounds = menuWindow->GetScreenBounds();
+    menuWindow->Relocate({ screenBounds.x / 2 - 200, screenBounds.y / 2 - 150 });
+
+    listView = new Lemon::GUI::ListView({0, 0, 0, 24});
+    menuWindow->AddWidget(listView);
+    listView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft, Lemon::GUI::WidgetAlignment::WAlignBottom);
+    listView->SetModel(&menuModel);
+    listView->displayColumnNames = false;
+
+    filterBox = new Lemon::GUI::TextBox({0, 0, 0, 24}, false);
+    menuWindow->AddWidget(filterBox);
+    filterBox->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Fixed, Lemon::GUI::WidgetAlignment::WAlignLeft, Lemon::GUI::WidgetAlignment::WAlignTop);
+
+    const char* itemsPath = "/system/lemon/menu/";
     int itemsDir = open(itemsPath, O_DIRECTORY);
     if(itemsDir >= 0){
         struct dirent** entries = nullptr;
@@ -229,37 +226,24 @@ void InitializeMenu(){
             for(auto& heading : itemCParser.GetItems()){
                 if(!heading.first.compare("Item")){
                     MenuItem item;
-                    std::string categoryName;
-                    MenuCategory* cat;
 
                     for(auto& cItem : heading.second){
                         if(!cItem.name.compare("name")){
                             item.name = cItem.value;
-                        } else if(!cItem.name.compare("comment")){
-                            item.comment = cItem.value;
+                        } else if(!cItem.name.compare("categories")){
+                            item.category = cItem.value;
+                        } else if(!cItem.name.compare("icon")){
+                            item.icon = Lemon::IconManager::Instance()->GetIcon(cItem.value, Lemon::IconManager::IconSize16x16);
                         } else if(!cItem.name.compare("exec")){
                             item.SetExec(cItem.value);
-                        } else if(!cItem.name.compare("categories")){
-                            categoryName = cItem.value;
                         }
                     }
 
-                    if(!item.name.length() || !item.GetExec().length()){
-                        continue; // Zero length name or path
-                    }
-                    item.id = GetItemID();
-
-                    if(!categoryName.length()){
-                        categoryName = "Other";
-                    }
-                    try{
-                        cat = &categories.at(categoryName);
-                    } catch(const std::out_of_range& e){
-                        cat = &categories.at("Other");
+                    if(!item.name.length()){
+                        continue; // Zero length name
                     }
 
-                    items[item.id] = item;
-                    cat->items.push_back({.id = item.id, .name = item.name});
+                    menuItems.push_back(item);
                 }
             }
         }
@@ -270,48 +254,44 @@ void InitializeMenu(){
     }
     close(itemsDir);
 
-    menuContainer = new Lemon::GUI::LayoutContainer({0, 0, 0, 0}, {36, 36});
-    menuContainer->background = {0x1d, 0x1c, 0x1b, 255};
-    menuContainer->xPadding = 0;
-    menuContainer->yPadding = 0;
+    menuModel.filter.SetFilter("");
 
-    menuContainer->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
-    menuWindow->AddWidget(menuContainer);
+    menuWindow->Paint();
+    return menuWindow;
+}
 
-    for(auto& cat : categories){
-        menuContainer->AddWidget(new MenuWidget(cat.second, {0, 0, 0, 0}));
-    }
-
-    for(auto& item : rootItems){
-        menuContainer->AddWidget(new MenuWidget(item, {0, 0, 0, 0})); // LayoutContainer will handle bounds
+void PollMenu(){
+    Lemon::LemonEvent ev;
+    while(menuWindow->PollEvent(ev)){
+        switch(ev.event){
+        case Lemon::EventKeyPressed:
+            if(ev.key == KEY_ARROW_DOWN || ev.key == KEY_ARROW_UP){ // Send straight to listview
+                listView->OnKeyPress(ev.key);
+            } else if(ev.key == KEY_ENTER) {
+                menuModel.filter.OnSubmit(listView->selected);
+            } else {
+                filterBox->OnKeyPress(ev.key); // Send straight to textbox
+                menuModel.filter.SetFilter(filterBox->contents.front());
+            }
+            break;
+        case Lemon::EventMouseReleased:
+            if(Lemon::Graphics::PointInRect(listView->GetFixedBounds(), ev.mousePos)){
+                menuModel.filter.OnSubmit(listView->selected);
+            }
+            break;
+        case Lemon::EventWindowMinimized:
+            showMenu = false;
+            break;
+        default:
+            menuWindow->GUIHandleEvent(ev);
+        }
     }
 
     menuWindow->Paint();
 }
 
-static bool paint = false;
-void PollMenu(){
-    Lemon::LemonEvent ev;
-    while(menuWindow->PollEvent(ev)){
-        if(ev.event == Lemon::EventWindowCommand){
-            try{
-                auto& item = items.at(ev.windowCmd);
-                item.Open({0, 0});
-            } catch(const std::out_of_range& e){
+void MinimizeMenu(bool minimized){
+    menuWindow->Minimize(minimized);
 
-            }
-        } else {
-            menuWindow->GUIHandleEvent(ev);
-        }
-        paint = true;
-    }
-
-    if(paint){
-        menuWindow->Paint();
-        paint = false;
-    }
-}
-
-void MinimizeMenu(bool s){
-    menuWindow->Minimize(s);
+    showMenu = !minimized;
 }

@@ -76,7 +76,6 @@ void ShellInstance::PollCommands(){
             windows.erase(id);
             break;
         } case Lemon::Shell::LemonShellToggleMenu:
-            showMenu = !showMenu;
             menu->Minimize(!showMenu);
             break;
         case Lemon::Shell::LemonShellSetWindowState: {

@@ -17,6 +17,7 @@
 #define WINDOW_FLAGS_RESIZABLE 0x2 // Allow window resizing
 #define WINDOW_FLAGS_NOSHELL 0x4 // Do not show up in shell events
 #define WINDOW_FLAGS_TOOLTIP 0x8 // Don't receive events
+#define WINDOW_FLAGS_ALWAYS_ACTIVE 0x10 // Hide window when inactive
 
 #define WINDOW_MENUBAR_HEIGHT 20
 
@@ -230,7 +231,7 @@ namespace Lemon::GUI {
         inline vector2i_t GetSize() const { return {surface.width, surface.height}; };
 
         /////////////////////////////
-        /// \brief Get Window Size
+        /// \brief Get Window Position
         ///
         /// \return window position
         /////////////////////////////
@@ -238,6 +239,17 @@ namespace Lemon::GUI {
             auto pos = LemonWMServerEndpoint::GetPosition();
 
             return { pos.x, pos.y };
+        };
+
+        /////////////////////////////
+        /// \brief Get Screen Bounds
+        ///
+        /// \return screen width and height
+        /////////////////////////////
+        inline vector2i_t GetScreenBounds() {
+            auto b = LemonWMServerEndpoint::GetScreenBounds();
+
+            return { b.width, b.height };
         };
 
         /////////////////////////////

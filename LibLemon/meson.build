@@ -23,6 +23,7 @@ liblemon_cpp_files = [
     'src/shell/shell.cpp',
 
     'src/cfgparser.cpp',
+    'src/IconManager.cpp',
     'src/lexer.cpp',
     'src/json.cpp',
     'src/sha.cpp',

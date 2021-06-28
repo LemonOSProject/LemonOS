@@ -316,7 +316,16 @@ namespace Lemon::GUI {
         void(*OnSubmit)(int, ListView*) = nullptr;
         void(*OnSelect)(int, ListView*) = nullptr;
 
+        ///////////////////////////////////////////
+        /// \brief Custom paint function
+        ///
+        /// \param row Row to paint
+        /// \param model Data model reference
+        /// \param mask Mask to paint (position of mask is screen position for paint)
+        void(*CustomPaint)(int, DataModel&, rect_t) = nullptr;
+
         int selected = 0;
+        bool displayColumnNames = true;
 
     protected:
         DataModel* model = nullptr;
@@ -347,7 +356,7 @@ namespace Lemon::GUI {
 
     class GridItem{
     public:
-        surface_t* icon = nullptr;
+        const Surface* icon = nullptr;
         std::string name;
     };
 
@@ -427,14 +436,14 @@ namespace Lemon::GUI {
         ListColumn nameCol, sizeCol;
         
     public:
-        static surface_t diskIcon;
-        static surface_t folderIcon;
-        static surface_t fileIcon;
-        static surface_t textFileIcon;
-        static surface_t jsonFileIcon;
-        static surface_t ramIcon;
-        static surface_t diskIconSml;
-        static surface_t folderIconSml;
+        static const Surface* diskIcon;
+        static const Surface* folderIcon;
+        static const Surface* fileIcon;
+        static const Surface* textFileIcon;
+        static const Surface* jsonFileIcon;
+        static const Surface* ramIcon;
+        static const Surface* diskIconSml;
+        static const Surface* folderIconSml;
 
         std::string currentPath;
         FileView(rect_t bounds, const char* path, void(*_OnFileOpened)(const char*, FileView*) = nullptr);

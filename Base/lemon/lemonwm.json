@@ -1,6 +1,6 @@
 {
     "useBackgroundImage" : true,
-    "backgroundImage" : "/system/lemon/backgrounds/bg5.png",
+    "backgroundImage" : "/system/lemon/resources/backgrounds/bg5.png",
     "theme" : "/system/lemon/themes/default.json",
     "displayFramerate" : false,
     "targetFramerate" : 120

@@ -209,13 +209,6 @@ long AddressSpace::UnmapMemory(uintptr_t base, size_t size){
             goto retry;
         }
 
-        if(!region.vmObject->CanMunmap()){
-            Log::Error("Region not unmappable!");
-
-            region.lock.ReleaseWrite();
-            continue;
-        }
-
         if(region.Base() >= base && region.Base() <= end){
             if(region.End() <= end){ // Whole region within our range
                 if(region.vmObject){
@@ -228,6 +221,8 @@ long AddressSpace::UnmapMemory(uintptr_t base, size_t size){
                 goto retry;
             }
         }
+
+        region.lock.ReleaseWrite();
     }
 
     return 0;

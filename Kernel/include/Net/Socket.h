@@ -76,8 +76,6 @@ enum {
     DatagramSocket = SOCK_DGRAM,
     SequencedSocket = SOCK_SEQPACKET,
     RawSocket = SOCK_RAW,
-    ReliableDatagramSocket = SOCK_RDM,
-    // Packet is considered obsolete
 };
 
 enum SocketProtocol {
@@ -85,11 +83,6 @@ enum SocketProtocol {
     LocalDomain = PF_LOCAL,
     InternetProtocol = PF_INET,
     InternetProtocol6 = PF_INET6,
-};
-
-enum {
-    ClientRole,
-    ServerRole,
 };
 
 class Socket : public FsNode {
@@ -104,7 +97,6 @@ protected:
     bool blocking = true;
 public: 
     bool connected = false; // Connected?
-    int role; // Server/Client
     
     static int CreateSocket(int domain, int type, int protocol, Socket** sock);
 

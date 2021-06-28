@@ -2,6 +2,7 @@
 
 #include <Lemon/Graphics/Graphics.h>
 #include <Lemon/Graphics/Surface.h>
+#include <Lemon/Graphics/Types.h>
 
 #include <Lemon/IPC/Endpoint.h>
 #include <Lemon/IPC/Interface.h>
@@ -15,7 +16,7 @@
 
 #include "WindowRect.h"
 
-#define WINDOW_BORDER_COLOUR {32,32,32}
+#define WINDOW_BORDER_COLOUR (RGBAColour{32,32,32})
 #define WINDOW_TITLEBAR_HEIGHT 24
 #define WINDOW_BORDER_THICKNESS 2
 #define CONTEXT_ITEM_HEIGHT 20
@@ -212,6 +213,7 @@ protected:
     void OnUpdateFlags(handle_t client, uint32_t flags);
     void OnRelocate(handle_t client, int32_t x, int32_t y);
     void OnGetPosition(handle_t client);
+    void OnGetScreenBounds(handle_t client);
     void OnResize(handle_t client, int32_t width, int32_t height);
     void OnMinimize(handle_t client, int64_t windowID, bool minimized);
     void OnDisplayContextMenu(handle_t client, int32_t x, int32_t y, const std::string& entries);

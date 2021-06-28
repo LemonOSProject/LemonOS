@@ -210,7 +210,6 @@ Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen, int mode){
     LocalSocket* sock = new LocalSocket(client->type, 0);
     sock->outbound = client->inbound; // Outbound to client
     sock->inbound = client->outbound; // Inbound to server
-    sock->role = ServerRole;
     sock->peer = client;
     client->peer = sock;
 
@@ -272,9 +271,7 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen){
     } else {
         inbound = new DataStream(1024);
         outbound = new DataStream(1024);
-    } 
-
-    role = ClientRole;
+    }
 
     Socket* sock = SocketManager::ResolveSocketAddress(addr, addrlen);
     if(!(sock && sock->IsListening())){ // Make sure the socket is both present and listening

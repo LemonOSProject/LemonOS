@@ -40,7 +40,7 @@ void WMWindow::DrawDecoration(surface_t* surface, rect_t clip) const{
 		return;
 	}
 
-	Lemon::Graphics::DrawRectOutline(pos.x, pos.y, size.x + WINDOW_BORDER_THICKNESS * 2, size.y + WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS * 2, WINDOW_BORDER_COLOUR, surface, clip);
+	Lemon::Graphics::DrawRectOutline(pos.x, pos.y, size.x + WINDOW_BORDER_THICKNESS * 2, size.y + WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS * 2, RGBAColour{64, 64, 64}, surface, clip);
 	Lemon::Graphics::DrawRectOutline(pos.x + (WINDOW_BORDER_THICKNESS / 2), pos.y + WINDOW_TITLEBAR_HEIGHT + (WINDOW_BORDER_THICKNESS / 2), size.x + WINDOW_BORDER_THICKNESS, size.y + WINDOW_BORDER_THICKNESS, {42, 50, 64}, surface, clip);
 	Lemon::Graphics::DrawGradientVertical({pos + (vector2i_t){1,1}, {size.x + WINDOW_BORDER_THICKNESS, WINDOW_TITLEBAR_HEIGHT}}, {0x1d, 0x1c, 0x1b, 255}, {0x1b, 0x1b, 0x1b, 255}, surface, clip);
 
@@ -93,6 +93,8 @@ void WMWindow::Minimize(bool state){
 
 	if(!minimized){
 		windowBufferInfo->dirty = true;
+	} else {
+		LemonWMClientEndpoint::SendEvent(Lemon::EventWindowMinimized, 0);
 	}
 }
 

@@ -28,7 +28,6 @@
 
 fb_info_t videoInfo;
 Lemon::GUI::Window* taskbar;
-extern Lemon::GUI::Window* menuWindow;
 ShellInstance* shell;
 surface_t menuButton;
 
@@ -36,13 +35,6 @@ bool showMenu = true;
 
 char versionString[80];
 
-struct MenuItem{
-	char name[64];
-	char path[64];
-};
-
-MenuItem menuItems[32];
-int menuItemCount = 0;
 lemon_sysinfo_t sysInfo;
 char memString[128];
 
@@ -110,10 +102,6 @@ void OnTaskbarPaint(surface_t* surface){
 	Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255, 255, surface);
 }
 
-void InitializeMenu();
-void PollMenu();
-void MinimizeMenu(bool s);
-
 int main(){
 	handle_t svc = Lemon::CreateService("lemon.shell");
 	shell = new ShellInstance(svc, "Instance");
@@ -139,7 +127,8 @@ int main(){
 	shell->AddWindow = AddWindow;
 	shell->RemoveWindow = RemoveWindow;
 
-	InitializeMenu();
+	Lemon::GUI::Window* menuWindow = InitializeMenu();
+	shell->SetMenu(menuWindow);
 
 	//taskbar->InitializeShellConnection();
 
@@ -154,10 +143,8 @@ int main(){
 		Lemon::LemonEvent ev;
 		while(taskbar->PollEvent(ev)){
 			if(ev.event == Lemon::EventMouseReleased){
-				if(ev.mousePos.x < 100){
-					showMenu = !showMenu;
-
-					MinimizeMenu(!showMenu);
+				if(ev.mousePos.x < 50){
+					MinimizeMenu(showMenu); // Toggle whether window is minimized or not
 				} else {
 					taskbar->GUIHandleEvent(ev);
 				}

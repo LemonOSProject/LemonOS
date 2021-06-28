@@ -232,6 +232,8 @@ namespace Scheduler{
         strcpy(proc->workingDir, "/"); // set root as default working dir
         strcpy(proc->name, "unknown");
 
+        proc->usedMemoryBlocks = 0;
+
         return proc;
     }
 

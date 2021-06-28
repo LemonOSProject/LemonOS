@@ -76,67 +76,86 @@ devicemanager_src = [
     'DeviceManager/main.cpp'
 ]
 
-executable('fileman.lef', fileman_src, 
+app_fileman = executable('fileman.lef', fileman_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-executable('lsh.lef', lsh_src, 
+app_lsh = executable('lsh.lef', lsh_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     install : true)
-executable('shell.lef', shell_src, 
+app_shell = executable('shell.lef', shell_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-executable('snake.lef', snake_src, 
+app_snake = executable('snake.lef', snake_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype'], install : true)
-executable('terminal.lef', terminal_src, 
+app_terminal = executable('terminal.lef', terminal_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype'], install : true)
-executable('textedit.lef', textedit_src, 
+app_textedit = executable('textedit.lef', textedit_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-executable('imgview.lef', imgview_src, 
+app_imgview = executable('imgview.lef', imgview_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-executable('sysinfo.lef', sysinfo_src, 
+app_sysinfo = executable('sysinfo.lef', sysinfo_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-executable('guitest.lef', guitest_src, 
+app_guitest = executable('guitest.lef', guitest_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-executable('run.lef', run_src, 
+app_run = executable('run.lef', run_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-executable('lemonmonitor.lef', lemonmonitor_src, 
+app_lemonmonitor = executable('lemonmonitor.lef', lemonmonitor_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-executable('ipctest.lef', ipctest_src, 
+app_ipctest = executable('ipctest.lef', ipctest_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     install : true)
-executable('jsondump.lef', jsondump_src, 
+app_jsondump = executable('jsondump.lef', jsondump_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     install : true)
-executable('minesweeper.lef', minesweeper_src, 
+app_minesweeper = executable('minesweeper.lef', minesweeper_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-executable('steal.lef', steal_src, 
+app_steal = executable('steal.lef', steal_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lssl', '-lcrypto'], install : true)
-executable('devmgr.lef', devicemanager_src, 
+app_devmgr = executable('devmgr.lef', devicemanager_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+
+application_targets = [
+    app_fileman,
+    app_lsh,
+    app_shell,
+    app_snake,
+    app_terminal,
+    app_textedit,
+    app_imgview,
+    app_sysinfo,
+    app_guitest,
+    app_run,
+    app_lemonmonitor,
+    app_ipctest,
+    app_jsondump,
+    app_minesweeper,
+    app_steal,
+    app_devmgr
+]

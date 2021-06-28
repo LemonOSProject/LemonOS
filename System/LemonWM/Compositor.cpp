@@ -103,9 +103,9 @@ void CompositorInstance::Paint(){
         }
     }
 
-    if(wm->redrawBackground){
+    //if(wm->redrawBackground){
         surfacecpy(&wm->screenSurface, renderSurface);
-    }
+    //}
 
     if(wm->contextMenuActive){
         rect_t bounds = wm->contextMenuBounds;

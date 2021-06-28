@@ -129,6 +129,6 @@ typedef struct RGBAColour{
     }
 
     inline static constexpr RGBAColour Interpolate(const RGBAColour& l, const RGBAColour& r){
-        return (RGBAColour){ .r = static_cast<uint8_t>((l.r + r.r) / 2), .g = static_cast<uint8_t>((l.g + r.g) / 2), .b = static_cast<uint8_t>((l.b + r.b) / 2), .a = static_cast<uint8_t>((l.a + r.a) / 2) };
+        return RGBAColour{ .r = static_cast<uint8_t>((l.r + r.r) / 2), .g = static_cast<uint8_t>((l.g + r.g) / 2), .b = static_cast<uint8_t>((l.b + r.b) / 2), .a = static_cast<uint8_t>((l.a + r.a) / 2) };
     }
 } __attribute__ ((packed)) rgba_colour_t;

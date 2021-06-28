@@ -36,12 +36,12 @@ WMWindow* WMInstance::FindWindow(int id){
 }
 
 void WMInstance::MinimizeWindow(WMWindow* win, bool state){
-    redrawBackground = true;
-
     win->Minimize(state);
 
     if(state == false) { // Showing the window and adding to top
         SetActive(win);
+
+        redrawBackground = true;
     } else { // Hiding the window, so if active set not active
         if(active == win){
             SetActive(nullptr);
@@ -56,6 +56,8 @@ void WMInstance::MinimizeWindow(WMWindow* win, bool state){
             lastMousedOver = nullptr;
         }
 
+        redrawBackground = true;
+
         if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL))
             Lemon::Shell::SetWindowState(win->clientID, Lemon::Shell::ShellWindowStateMinimized, shellClient);
     }
@@ -69,19 +71,18 @@ void WMInstance::MinimizeWindow(int id, bool state){
     }
 
     MinimizeWindow(win, state);
-
-    if(lastMousedOver == win){
-        Lemon::LemonEvent ev;
-        ev.event = Lemon::EventMouseExit;
-
-        PostEvent(ev, win);
-    }
 }
 
 void WMInstance::SetActive(WMWindow* win){
     if(active == win) return;
 
-    if(active){
+    if(active && active->flags & WINDOW_FLAGS_ALWAYS_ACTIVE){
+        WMWindow* oldActive = active;
+
+        active = win;
+
+        MinimizeWindow(oldActive, true);
+    } else if(active){
         if(shellConnected && !(active->flags & WINDOW_FLAGS_NOSHELL) && !active->minimized){
             Lemon::Shell::SetWindowState(active->clientID, Lemon::Shell::ShellWindowStateNormal, shellClient);
         }
@@ -251,6 +252,16 @@ void WMInstance::OnGetPosition(handle_t client){
     win->Queue(Lemon::Message(LemonWMServer::ResponseGetPosition, LemonWMServer::GetPositionResponse{win->pos.x, win->pos.y}));
 }
 
+void WMInstance::OnGetScreenBounds(handle_t client){
+    WMWindow* win = FindWindow(client);
+    if(!win){
+        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+        return;
+    }
+
+    win->Queue(Lemon::Message(LemonWMServer::ResponseGetScreenBounds, LemonWMServer::GetScreenBoundsResponse{surface.width, surface.height}));
+}
+
 void WMInstance::OnResize(handle_t client, int32_t width, int32_t height){
     WMWindow* win = FindWindow(client);
     if(!win){
@@ -286,6 +297,8 @@ void WMInstance::OnDisplayContextMenu(handle_t client, int32_t x, int32_t y, con
     if(!(win->flags & WINDOW_FLAGS_NODECORATION)){
         contextMenuBounds.y += WINDOW_TITLEBAR_HEIGHT + WINDOW_BORDER_THICKNESS;
     }
+
+    menu.items.clear();
     
     int i = 0;
     size_t oldPos = 0;

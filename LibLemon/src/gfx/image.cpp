@@ -100,6 +100,13 @@ namespace Lemon::Graphics{
         }
 
         uint8_t* srcBuffer = surf.buffer;
+
+        if(!surface->buffer){ // Allocate new surface if needed
+            *surface = {
+                .width = w + x, .height = h + y, .depth = 32, .buffer = new uint8_t[ (w + x) * (h + y) * 4 ]
+            };
+        }
+
         uint32_t* destBuffer = (uint32_t*)surface->buffer;
 
         for (int i = 0; i < h && i + y < surface->height; i++) {
@@ -122,7 +129,7 @@ namespace Lemon::Graphics{
         free(srcBuffer);
         fclose(imageFile);
 
-        return r;
+        return 0;
     }
 
     int LoadPNGImage(FILE* f, surface_t* surface) {

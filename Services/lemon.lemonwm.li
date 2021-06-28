@@ -8,6 +8,8 @@ interface LemonWMServer {
     Relocate(s32 x, s32 y)
     GetPosition() -> (s32 x, s32 y)
 
+    GetScreenBounds() -> (s32 width, s32 height)
+
     Resize(s32 width, s32 height) -> (s64 bufferKey)
 
     Minimize(s64 windowID, bool minimized)

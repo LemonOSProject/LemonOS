@@ -277,6 +277,11 @@ namespace Lemon::GUI{
                     Resize(ev.resizeBounds);
                 }
                 break;
+            case EventWindowMinimized:
+                if(tooltipWindow.get()){
+                    tooltipWindow->Minimize(true); // Make sure the tooltip is also minimized
+                }
+                break;
             case EventWindowClosed:
                 closed = true;
                 break;

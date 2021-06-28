@@ -809,6 +809,8 @@ namespace Lemon::GUI {
 
         model->Refresh();
 
+        columnDisplayWidths.clear();
+
         for(int i = 0; i < model->ColumnCount(); i++){
             columnDisplayWidths.push_back(model->SizeHint(i));
         }
@@ -827,19 +829,22 @@ namespace Lemon::GUI {
         int totalColumnWidth;
         int xPos = fixedBounds.x;
         for(int i = 0; i < model->ColumnCount(); i++){
-            Graphics::DrawString(model->ColumnName(i).c_str(), xPos + 4, fixedBounds.y + 4, textColour.r, textColour.g, textColour.b, surface);
-
             xPos += columnDisplayWidths.at(i);
 
-            Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, textColour, surface); // Divider
-            xPos++;
-            Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, colours[Colour::TextAlternate], surface); // Divider
-            xPos++;
+            if(displayColumnNames){
+                Graphics::DrawString(model->ColumnName(i).c_str(), xPos + 4, fixedBounds.y + 4, textColour.r, textColour.g, textColour.b, surface);
+
+                Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, textColour, surface); // Divider
+                xPos++;
+                Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, colours[Colour::TextAlternate], surface); // Divider
+                xPos++;
+            }
         }
 
         totalColumnWidth = xPos;
 
-        int yPos = fixedBounds.y + columnDisplayHeight;
+        xPos = 0;
+        int yPos = fixedBounds.y + (columnDisplayHeight * displayColumnNames); // Offset by column display height only if we display the columns
 
         int index = 0;
 
@@ -849,6 +854,12 @@ namespace Lemon::GUI {
         for(; index < model->RowCount() && index < maxItem; index++){
             xPos = fixedBounds.x;
 
+            if(index == selected) {
+                Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::Foreground], surface, fixedBounds);
+            } else if (Graphics::PointInRect({xPos,  yPos, fixedBounds.width, itemHeight}, window->lastMousePos)) {
+                Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::ForegroundDim], surface, fixedBounds);
+            }
+
             for(int i = 0; i < model->ColumnCount(); i++){
                 std::string str = "";
 
@@ -857,6 +868,9 @@ namespace Lemon::GUI {
                     str = std::get<std::string>(value);
                 } else if(std::holds_alternative<int>(value)){
                     str = std::to_string(std::get<int>(value));
+                } else if(std::holds_alternative<const Surface*>(value)) {
+                    const Surface* src = std::get<const Surface*>(value);
+                    Graphics::surfacecpyTransparent(surface, src, { xPos + 2, yPos + itemHeight / 2 - src->height / 2});
                 } else {
                     assert(!"GUI::ListView: Unsupported type!");
                 }
@@ -881,20 +895,14 @@ namespace Lemon::GUI {
                 }
 
                 vector2i_t textPos = {xPos + 2, yPos + itemHeight / 2 - font->height / 2};
-
                 if(index == selected) {
-                    Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::Foreground], surface, fixedBounds);
                     Graphics::DrawString(str.c_str(), textPos.x, textPos.y, colours[Colour::TextAlternate], surface, fixedBounds);
-                } else if (Graphics::PointInRect({xPos,  yPos, fixedBounds.width, itemHeight}, window->lastMousePos)) {
-                    Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::ForegroundDim], surface, fixedBounds);
-                    Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour, surface, fixedBounds);
                 } else {
-                    Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour.r, textColour.g, textColour.b, surface, fixedBounds);
+                    Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour, surface, fixedBounds);
                 }
 
                 xPos += columnDisplayWidths[i] + 2;
             }
-
             yPos += itemHeight;
         }
 

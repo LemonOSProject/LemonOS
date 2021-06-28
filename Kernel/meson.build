@@ -138,7 +138,7 @@ kernel_link_args = [
 
 kernel_link_args += kernel_c_args
 
-executable('kernel.sys',
+kernel = executable('kernel.sys',
     [asmg.process(kernel_asm_files_x86_64), bing.process(kernel_asm_bin_files_x86_64), kernel_cpp_files, kernel_cpp_files_x86_64, lai.get_variable('sources')],
     include_directories : [kernel_include_dirs], 
     c_args : kernel_c_args, cpp_args : [kernel_c_args, kernel_cpp_args], link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')

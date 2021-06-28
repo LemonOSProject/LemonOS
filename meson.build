@@ -26,7 +26,8 @@ subdir('Applications/')
 subdir('Utilities/')
 
 run_target('disk', 
-    command: ['Scripts/builddisk.sh'])
+    command: ['Scripts/builddisk.sh'],
+    depends: [ kernel, system_targets, application_targets ])
 
 run_target('run', 
     command: ['Scripts/run.sh'])

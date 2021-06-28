@@ -57,7 +57,7 @@ namespace Lemon::GUI{
 		virtual const std::string& ColumnName(int column) const = 0;
 
 		/////////////////////////////
-		/// \brief Sort by specified column
+		/// \brief Sort by specified column (optional)
 		///
 		/// \param column Index of column to sort by
 		/////////////////////////////
@@ -81,7 +81,7 @@ namespace Lemon::GUI{
 		/////////////////////////////
 		virtual int SizeHint(int column) = 0;
 
-		virtual void Refresh() = 0;
+		virtual void Refresh() {};
 	private:
 
 	};

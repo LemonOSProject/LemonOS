@@ -40,3 +40,9 @@ public:
 
     inline Lemon::Interface& GetInterface() { return shellSrv; }
 };
+
+extern bool showMenu;
+
+Lemon::GUI::Window* InitializeMenu();
+void PollMenu();
+void MinimizeMenu(bool s);

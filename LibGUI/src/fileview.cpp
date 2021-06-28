@@ -1,13 +1,14 @@
 #include <Lemon/GUI/Widgets.h>
 
+#include <Lemon/Core/IconManager.h>
 #include <Lemon/Core/Keyboard.h>
-#include <string>
-#include <math.h>
 #include <Lemon/GUI/Colours.h>
 #include <Lemon/GUI/Messagebox.h>
 #include <Lemon/GUI/Window.h>
-#include <assert.h>
 
+#include <string>
+#include <math.h>
+#include <assert.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -20,81 +21,15 @@
 #endif
 
 namespace Lemon::GUI {
-    surface_t FileView::diskIcon;
-    surface_t FileView::folderIcon;
-    surface_t FileView::fileIcon;
-    surface_t FileView::textFileIcon;
-    surface_t FileView::jsonFileIcon;
-    surface_t FileView::ramIcon;
+    const Surface* FileView::diskIcon = nullptr;
+    const Surface* FileView::folderIcon = nullptr;
+    const Surface* FileView::fileIcon = nullptr;
+    const Surface* FileView::textFileIcon = nullptr;
+    const Surface* FileView::jsonFileIcon = nullptr;
+    const Surface* FileView::ramIcon = nullptr;
 
-    surface_t FileView::diskIconSml;
-    surface_t FileView::folderIconSml;
-
-    __attribute__((constructor))
-    void InitializeFVIcons(){
-        if(FILE* f = fopen("/system/lemon/resources/icons/disk.png", "rb")){
-            Graphics::LoadImage(f, &FileView::diskIcon);
-            fclose(f);
-        } else {
-            printf("GUI: Warning: Could not load FileView icons!");
-            FileView::diskIcon.buffer = nullptr;
-            FileView::diskIcon.width = 0;
-        }
-
-        if(FILE* f = fopen("/system/lemon/resources/icons/folder.png", "rb")){
-            Graphics::LoadImage(f, &FileView::folderIcon);
-            fclose(f);
-        } else {
-            printf("GUI: Warning: Could not load FileView icons!");
-            FileView::folderIcon.buffer = nullptr;
-            FileView::folderIcon.width = 0;
-        }
-
-        if(FILE* f = fopen("/system/lemon/resources/icons/file.png", "rb")){
-            Graphics::LoadImage(f, &FileView::fileIcon);
-            fclose(f);
-        } else {
-            printf("GUI: Warning: Could not load FileView icons!");
-            FileView::fileIcon.buffer = nullptr;
-            FileView::fileIcon.width = 0;
-        }
-
-        if(FILE* f = fopen("/system/lemon/resources/icons/filetext.png", "rb")){
-            Graphics::LoadImage(f, &FileView::textFileIcon);
-            fclose(f);
-        } else {
-            printf("GUI: Warning: Could not load FileView icons!");
-            FileView::textFileIcon.buffer = nullptr;
-            FileView::textFileIcon.width = 0;
-        }
-
-        if(FILE* f = fopen("/system/lemon/resources/icons/filejson.png", "rb")){
-            Graphics::LoadImage(f, &FileView::jsonFileIcon);
-            fclose(f);
-        } else {
-            printf("GUI: Warning: Could not load FileView icons!");
-            FileView::jsonFileIcon.buffer = nullptr;
-            FileView::jsonFileIcon.width = 0;
-        }
-
-        if(FILE* f = fopen("/system/lemon/resources/icons/disksml.png", "rb")){
-            Graphics::LoadImage(f, &FileView::diskIconSml);
-            fclose(f);
-        } else {
-            printf("GUI: Warning: Could not load FileView icons!");
-            FileView::diskIconSml.buffer = nullptr;
-            FileView::diskIconSml.width = 0;
-        }
-
-        if(FILE* f = fopen("/system/lemon/resources/icons/foldersml.png", "rb")){
-            Graphics::LoadImage(f, &FileView::folderIconSml);
-            fclose(f);
-        } else {
-            printf("GUI: Warning: Could not load FileView icons!");
-            FileView::folderIconSml.buffer = nullptr;
-            FileView::folderIconSml.width = 0;
-        }
-    }
+    const Surface* FileView::diskIconSml = nullptr;
+    const Surface* FileView::folderIconSml = nullptr;
 
     void FileViewOnListSelect(GridItem& item, GridView* lv){
         FileView* fv = (FileView*)lv->GetParent();
@@ -112,16 +47,16 @@ namespace Lemon::GUI {
         }
 
 		void Paint(surface_t* surface){
-            surface_t* iconS = nullptr;
+            const Surface* iconS = nullptr;
             switch(icon){
                 case 1:
-                    iconS = &FileView::diskIconSml;
+                    iconS = FileView::diskIconSml;
                     break;
                 case 2:
-                    iconS = &FileView::diskIconSml;//ramIcon;
+                    iconS = FileView::diskIconSml;//ramIcon;
                     break;
                 default:
-                    iconS = &FileView::folderIconSml;
+                    iconS = FileView::folderIconSml;
                     break;
             }
 
@@ -145,6 +80,17 @@ namespace Lemon::GUI {
     }
     
     FileView::FileView(rect_t bounds, const char* path, void(*_OnFileOpened)(const char*, FileView*)) : Container(bounds) {
+        if(!diskIcon){
+            diskIcon = IconManager::Instance()->GetIcon("disk", IconManager::IconSize64x64);
+            folderIcon = IconManager::Instance()->GetIcon("folder", IconManager::IconSize64x64);
+            fileIcon = IconManager::Instance()->GetIcon("file", IconManager::IconSize64x64);
+            textFileIcon = IconManager::Instance()->GetIcon("filetext", IconManager::IconSize64x64);
+            jsonFileIcon = IconManager::Instance()->GetIcon("filejson", IconManager::IconSize64x64);
+            ramIcon = IconManager::Instance()->GetIcon("ram", IconManager::IconSize64x64);
+            diskIconSml = IconManager::Instance()->GetIcon("disk", IconManager::IconSize16x16);
+            folderIconSml = IconManager::Instance()->GetIcon("folder", IconManager::IconSize16x16);
+        }
+
         OnFileOpened = _OnFileOpened;
         currentPath = path;
 
@@ -249,17 +195,17 @@ namespace Lemon::GUI {
             }
 
             if(S_ISDIR(statResult.st_mode)){
-                item.icon = &folderIcon;
+                item.icon = folderIcon;
             } else if(char* ext = strchr(dirent.d_name, '.'); ext){
                 if(!strcmp(ext, ".txt") || !strcmp(ext, ".cfg") || !strcmp(ext, ".py") || !strcmp(ext, ".asm")){
-                    item.icon = &textFileIcon;
+                    item.icon = textFileIcon;
                 } else if(!strcmp(ext, ".json")) {
-                    item.icon = &jsonFileIcon;  
+                    item.icon = jsonFileIcon;  
                 } else {
-                    item.icon = &fileIcon;
+                    item.icon = fileIcon;
                 }
             } else {
-                item.icon = &fileIcon;
+                item.icon = fileIcon;
             }
 
             fileList->AddItem(item);
