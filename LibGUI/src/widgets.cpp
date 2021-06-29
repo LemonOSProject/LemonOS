@@ -934,7 +934,7 @@ namespace Lemon::GUI {
         }
 
         int lastSelected = selected;
-        selected = floor(((double)mousePos.y + sBar.scrollPos - fixedBounds.pos.y - columnDisplayHeight) / itemHeight);
+        selected = floor(((double)mousePos.y + sBar.scrollPos - fixedBounds.pos.y - (displayColumnNames * columnDisplayHeight)) / itemHeight);
 
         if(lastSelected == selected){
             int index = 0;

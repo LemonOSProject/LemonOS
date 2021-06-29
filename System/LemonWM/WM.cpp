@@ -58,8 +58,8 @@ void WMInstance::MinimizeWindow(WMWindow* win, bool state){
 
         redrawBackground = true;
 
-        if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL))
-            Lemon::Shell::SetWindowState(win->clientID, Lemon::Shell::ShellWindowStateMinimized, shellClient);
+        //if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL));
+            //Lemon::Shell::SetWindowState(win->clientID, Lemon::Shell::ShellWindowStateMinimized, shellClient);
     }
 }
 
@@ -83,9 +83,9 @@ void WMInstance::SetActive(WMWindow* win){
 
         MinimizeWindow(oldActive, true);
     } else if(active){
-        if(shellConnected && !(active->flags & WINDOW_FLAGS_NOSHELL) && !active->minimized){
-            Lemon::Shell::SetWindowState(active->clientID, Lemon::Shell::ShellWindowStateNormal, shellClient);
-        }
+        //if(shellConnected && !(active->flags & WINDOW_FLAGS_NOSHELL) && !active->minimized){
+            //Lemon::Shell::SetWindowState(active->clientID, Lemon::Shell::ShellWindowStateNormal, shellClient);
+        //}
 
         if(active == lastMousedOver){
             Lemon::LemonEvent ev;
@@ -99,9 +99,9 @@ void WMInstance::SetActive(WMWindow* win){
     active = win;
 
     if(win){
-        if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-            Lemon::Shell::SetWindowState(win->clientID, Lemon::Shell::ShellWindowStateActive, shellClient);
-        }
+        //if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
+            //Lemon::Shell::SetWindowState(win->clientID, Lemon::Shell::ShellWindowStateActive, shellClient);
+        //}
         
         windows.remove(win);
         windows.push_back(win); // Add to top
@@ -147,9 +147,9 @@ void WMInstance::OnPeerDisconnect(handle_t client){
         contextMenuActive = false;
     }
 
-    if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-        Lemon::Shell::RemoveWindow(client, shellClient);
-    }
+    //if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
+        //Lemon::Shell::RemoveWindow(client, shellClient);
+    //}
     
     windows.remove(win);
     redrawBackground = true;
@@ -173,9 +173,9 @@ void WMInstance::OnCreateWindow(handle_t client, int32_t x, int32_t y, int32_t w
     win->RecalculateButtonRects();
     win->Queue(Lemon::Message(LemonWMServer::ResponseCreateWindow, LemonWMServer::CreateWindowResponse{ .windowID = client, .bufferKey = wBufferKey }));
 
-    if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-        Lemon::Shell::AddWindow(client, Lemon::Shell::ShellWindowState::ShellWindowStateNormal, title, shellClient);
-    }
+    //if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
+        //Lemon::Shell::AddWindow(client, Lemon::Shell::ShellWindowState::ShellWindowStateNormal, title, shellClient);
+    //}
     SetActive(win);
 
     redrawBackground = true;
@@ -201,9 +201,9 @@ void WMInstance::OnDestroyWindow(handle_t client){
         contextMenuActive = false;
     }
 
-    if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-        Lemon::Shell::RemoveWindow(client, shellClient);
-    }
+    //if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
+        //Lemon::Shell::RemoveWindow(client, shellClient);
+    //}
 
     windows.remove(win);
     redrawBackground = true;
@@ -577,8 +577,12 @@ void WMInstance::MouseMove(){
 }
 
 void WMInstance::KeyUpdate(int key, bool pressed){
-    if(shellConnected && key == KEY_GUI && pressed){
-        Lemon::Shell::ToggleMenu(shellClient);
+    if((key == KEY_GUI || (key == ' ' && input.keyboard.alt)) && pressed){
+        try {
+            Lemon::Shell::ToggleMenu();
+        } catch(const Lemon::EndpointException& e){
+            // Do nothing, shell probably hasnt started yet
+        }
     } else if(active && input.keyboard.alt && key == KEY_F4 && pressed) { // Check for Alt + F4
         Lemon::LemonEvent ev;
         ev.event = Lemon::EventWindowClosed;

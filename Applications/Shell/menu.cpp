@@ -274,16 +274,17 @@ void PollMenu(){
                 menuModel.filter.SetFilter(filterBox->contents.front());
             }
             break;
-        case Lemon::EventMouseReleased:
-            if(Lemon::Graphics::PointInRect(listView->GetFixedBounds(), ev.mousePos)){
-                menuModel.filter.OnSubmit(listView->selected);
-            }
-            break;
         case Lemon::EventWindowMinimized:
             showMenu = false;
             break;
+        case Lemon::EventMouseReleased:
+            if(ev.mousePos.y > 24){
+                menuModel.filter.OnSubmit(listView->selected);
+                break;
+            }
         default:
             menuWindow->GUIHandleEvent(ev);
+            break;
         }
     }
 

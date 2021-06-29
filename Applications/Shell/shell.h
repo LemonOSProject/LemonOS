@@ -1,6 +1,7 @@
 #include <Lemon/Core/Shell.h>
 #include <Lemon/GUI/Window.h>
 #include <Lemon/IPC/Interface.h>
+#include <Lemon/Services/lemon.shell.h>
 
 #include <map>
 
@@ -12,25 +13,26 @@ public:
 	short lastState;
 };
 
-class ShellInstance {
+class ShellInstance
+    : Shell {
     Lemon::Interface shellSrv;
 
     Lemon::GUI::Window* taskbar;
     Lemon::GUI::Window* menu;
-
-    void PollCommands();
 public:
     std::map<long, ShellWindow*> windows;
     ShellWindow* active = nullptr;
-    bool showMenu = true;
 
     ShellInstance(handle_t svc, const char* ifName);
+
+    void OnPeerDisconnect(handle_t client) override;
+    void OnOpen(handle_t client, const std::string& url) override;
+    void OnToggleMenu(handle_t client) override;
 
     void SetMenu(Lemon::GUI::Window* menu);
     void SetTaskbar(Lemon::GUI::Window* taskbar);
 
-    void Update();
-    void Open(char* path);
+    void Poll();
 
     void SetWindowState(ShellWindow* win);
 

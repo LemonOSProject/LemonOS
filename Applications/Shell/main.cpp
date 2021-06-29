@@ -48,9 +48,9 @@ public:
 	}
 
 	void Paint(surface_t* surface){
-		if(win->state == Lemon::Shell::ShellWindowStateActive || pressed){
+		/*if(win->state == Lemon::Shell::ShellWindowStateActive || pressed){
 			Lemon::Graphics::DrawRect(fixedBounds, Lemon::colours[Lemon::Colour::ForegroundDim], surface);
-		}
+		}*/
 
 		DrawButtonLabel(surface, false);
 	}
@@ -58,11 +58,11 @@ public:
 	void OnMouseUp(vector2i_t mousePos){
 		pressed = false;
 
-		if(win->lastState == Lemon::Shell::ShellWindowStateActive){
+		/*if(win->lastState == Lemon::Shell::ShellWindowStateActive){
 			window->Minimize(win->id, true);
 		} else {
 			window->Minimize(win->id, false);
-		}
+		}*/
 	}
 };
 
@@ -138,7 +138,7 @@ int main(){
 	waiter.WaitOn(menuWindow);
 
 	for(;;){
-		shell->Update();
+		shell->Poll();
 
 		Lemon::LemonEvent ev;
 		while(taskbar->PollEvent(ev)){
