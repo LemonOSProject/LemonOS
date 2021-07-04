@@ -32,7 +32,7 @@ namespace Lemon{
     ///
     /// \return Handle ID of service on success, negative error code on failure
     /////////////////////////////
-    inline handle_t CreateInterface(const handle_t svc, const char* name, const uint16_t msgSize){
+    inline handle_t CreateInterface(handle_t svc, const char* name, uint16_t msgSize){
         return syscall(SYS_CREATE_INTERFACE, svc, name, msgSize);
     }
 
@@ -45,7 +45,7 @@ namespace Lemon{
     ///
     /// \return Handle ID of endpoint on success, 0 when no pending connections, negative error code on failure
     /////////////////////////////
-    inline handle_t InterfaceAccept(const handle_t interface){
+    inline handle_t InterfaceAccept(handle_t interface){
         return syscall(SYS_INTERFACE_ACCEPT, interface);
     }
 
@@ -74,8 +74,24 @@ namespace Lemon{
     ///
     /// \return 0 on success, negative error code on failure
     /////////////////////////////
-    __attribute__((always_inline)) inline long EndpointQueue(const handle_t endpoint, const uint64_t id, const uint16_t size, const uintptr_t data){
+    __attribute__((always_inline)) inline long EndpointQueue(handle_t endpoint, uint64_t id, uint16_t size, uintptr_t data){
         return syscall(SYS_ENDPOINT_QUEUE, endpoint, id, size, data);
+    }
+
+    /////////////////////////////
+    /// \brief EndpointQueue (endpoint, id, size, data) - Queue a message on an endpoint
+    ///
+    /// Queues a new message on the specified endpoint.
+    ///
+    /// \param endpoint (handle_t) Handle ID of specified endpoint
+    /// \param id (uint64_t) Message ID
+    /// \param data (T) Message data
+    ///
+    /// \return 0 on success, negative error code on failure
+    /////////////////////////////
+    template<typename T>
+    __attribute__((always_inline)) inline long EndpointQueue(handle_t endpoint, uint64_t id, const T& data){
+        return syscall(SYS_ENDPOINT_QUEUE, endpoint, id, sizeof(T), &data);
     }
 
     /////////////////////////////
@@ -90,7 +106,7 @@ namespace Lemon{
     ///
     /// \return 0 on empty, 1 on success, negative error code on failure
     /////////////////////////////
-    __attribute__((always_inline)) inline long EndpointDequeue(const handle_t endpoint, uint64_t* id, uint16_t* size, uint8_t* data){
+    __attribute__((always_inline)) inline long EndpointDequeue(handle_t endpoint, uint64_t* id, uint16_t* size, uint8_t* data){
         return syscall(SYS_ENDPOINT_DEQUEUE, endpoint, id, size, data);
     }
 
@@ -109,7 +125,7 @@ namespace Lemon{
     ///
     /// \return 0 on success, negative error code on failure
     /////////////////////////////
-    __attribute__((always_inline)) inline long EndpointCall(const handle_t endpoint, const uint64_t id, const uintptr_t data, const uint64_t rID, uintptr_t rData, uint16_t* size){
+    __attribute__((always_inline)) inline long EndpointCall(handle_t endpoint, uint64_t id, uintptr_t data, uint64_t rID, uintptr_t rData, uint16_t* size){
         return syscall(SYS_ENDPOINT_CALL, endpoint, id, data, rID, rData, size);
     }
 
@@ -123,7 +139,7 @@ namespace Lemon{
     ///
     /// \return 0 on success, negative error code on failure
     /////////////////////////////
-    __attribute__((always_inline)) inline long EndpointInfo(const handle_t endp, LemonEndpointInfo& info){
+    __attribute__((always_inline)) inline long EndpointInfo(handle_t endp, LemonEndpointInfo& info){
         return syscall(SYS_ENDPOINT_INFO, endp, &info);
     }
 }

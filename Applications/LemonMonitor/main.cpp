@@ -136,8 +136,8 @@ int main(int argc, char** argv){
             paint = true; // Refresh processes every 800ms
         }
 
+	    Lemon::WindowServer::Instance()->Poll();
         Lemon::LemonEvent ev;
-
         while(window->PollEvent(ev)){
             window->GUIHandleEvent(ev);
             
@@ -147,8 +147,8 @@ int main(int argc, char** argv){
         if(paint){
             window->Paint();
         }
-
-        window->WaitEvent(800000); // Wait up to 800ms
+        
+        Lemon::WindowServer::Instance()->Wait(800000);
     }
     
     return 0;

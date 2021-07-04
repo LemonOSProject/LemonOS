@@ -103,6 +103,10 @@ void OnTaskbarPaint(surface_t* surface){
 }
 
 int main(){
+	if(chdir("/system")){
+		return 1;
+	}
+
 	handle_t svc = Lemon::CreateService("lemon.shell");
 	shell = new ShellInstance(svc, "Instance");
 
@@ -134,10 +138,10 @@ int main(){
 
 	Lemon::Waiter waiter;
 	waiter.WaitOnAll(&shell->GetInterface());
-	waiter.WaitOn(taskbar);
-	waiter.WaitOn(menuWindow);
+	waiter.WaitOn(Lemon::WindowServer::Instance());
 
 	for(;;){
+		Lemon::WindowServer::Instance()->Poll();
 		shell->Poll();
 
 		Lemon::LemonEvent ev;

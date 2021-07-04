@@ -817,8 +817,10 @@ namespace Lemon::GUI {
     }
 
     void ListView::Paint(surface_t* surface){
-        Graphics::DrawRect(fixedBounds.x, fixedBounds.y, fixedBounds.width, columnDisplayHeight, colours[Colour::Background], surface);
-        Graphics::DrawRect(fixedBounds.x, fixedBounds.y + columnDisplayHeight, fixedBounds.width, fixedBounds.height - 20, colours[Colour::ContentBackground], surface);
+        if(drawBackground){
+            Graphics::DrawRect(fixedBounds.x, fixedBounds.y, fixedBounds.width, columnDisplayHeight, colours[Colour::Background], surface);
+            Graphics::DrawRect(fixedBounds.x, fixedBounds.y + columnDisplayHeight, fixedBounds.width, fixedBounds.height - 20, colours[Colour::ContentBackground], surface);
+        }
 
         if(!model){
             return; // If there is no model there is no data to display

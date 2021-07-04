@@ -36,14 +36,15 @@ int main(int argc, char** argv){
 	fv->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft);
 
 	while(!window->closed){
+		Lemon::WindowServer::Instance()->Poll();
+
 		Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){
 			window->GUIHandleEvent(ev);
 		}
 
 		window->Paint();
-
-		window->WaitEvent();
+        Lemon::WindowServer::Instance()->Wait();
 	}
 
 	delete window;

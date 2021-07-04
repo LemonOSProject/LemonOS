@@ -39,6 +39,8 @@ void GameOverLoop(){
 	win->SwapBuffers();
 
 	while(!win->closed && gameOver){
+		Lemon::WindowServer::Instance()->Poll();
+
 		Lemon::LemonEvent ev;
 		while(win->PollEvent(ev)){
 			if(ev.event == Lemon::EventKeyPressed){
@@ -50,6 +52,8 @@ void GameOverLoop(){
 				exit(0);
 			}
 		}
+
+		Lemon::WindowServer::Instance()->Wait();
 	}
 }
 
@@ -86,6 +90,8 @@ int main(){
 	Reset();
 
 	while(!win->closed){
+		Lemon::WindowServer::Instance()->Poll();
+
 		Lemon::LemonEvent ev;
 		while(win->PollEvent(ev)){
 			if(ev.event == Lemon::EventKeyPressed){

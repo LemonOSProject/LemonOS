@@ -326,6 +326,7 @@ namespace Lemon::GUI {
 
         int selected = 0;
         bool displayColumnNames = true;
+        bool drawBackground = true;
 
     protected:
         DataModel* model = nullptr;

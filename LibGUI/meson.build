@@ -9,13 +9,14 @@ libgui_cpp_args = ['-Wno-missing-braces',
     '-m64' ]
 
 libgui_cpp_files = [
-    'src/window.cpp',
-    'src/widgets.cpp',
-    'src/colours.cpp',
-    'src/fileview.cpp',
-    'src/filedialog.cpp',
-    'src/image.cpp',
-    'src/messagebox.cpp',
+    'src/Colours.cpp',
+    'src/FileView.cpp',
+    'src/FileDialog.cpp',
+    'src/Image.cpp',
+    'src/MessageBox.cpp',
+    'src/Widgets.cpp',
+    'src/Window.cpp',
+    'src/WindowServer.cpp',
 ]
 
 prefix = get_option('prefix')

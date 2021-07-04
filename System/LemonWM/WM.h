@@ -52,8 +52,10 @@ enum ResizePoint {
 class WMWindow
     : public LemonWMClientEndpoint {
     friend class CompositorInstance;
+
+    WMInstance* wm;
 public:
-    WMWindow(WMInstance* wm, handle_t endp, handle_t id, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title);
+    WMWindow(WMInstance* wm, handle_t client, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title);
     ~WMWindow();
 
     vector2i_t pos = {0, 0};
@@ -65,7 +67,10 @@ public:
     short closeBState = ButtonStateUp; 
     short minimizeBState = ButtonStateUp;
 
-    handle_t clientID = 0;
+    int64_t windowID = 0;
+
+    inline handle_t GetClient() { return LemonWMClientEndpoint::handle; }
+    inline int64_t ID() const { return windowID; }
 
     void DrawDecoration(surface_t* surface, rect_t) const;
     void DrawClip(surface_t* surface, rect_t clip);
@@ -73,7 +78,7 @@ public:
 
     inline void SendEvent(const Lemon::LemonEvent& ev) {
         if(!(flags & WINDOW_FLAGS_TOOLTIP))
-            LemonWMClientEndpoint::SendEvent(ev.event, ev.data);
+            LemonWMClientEndpoint::SendEvent(windowID, ev.event, ev.data);
     }
 
     void Minimize(bool state);
@@ -101,8 +106,6 @@ protected:
     uint8_t* buffer1;
     uint8_t* buffer2;
     int64_t bufferKey;
-
-    WMInstance* wm;
 
     rect_t closeRect, minimizeRect;
 
@@ -174,11 +177,13 @@ public:
     surface_t backgroundImage;
 };
 
-class WMInstance
+class WMInstance final
     : LemonWMServer {
 protected:
     friend void* _InitializeShellConnection(void*);
     friend class WMWindow;
+
+    int64_t nextWindowID = 1;
     
     Lemon::Interface server;
     Lemon::Endpoint shellClient;
@@ -197,27 +202,33 @@ protected:
     void* InitializeShellConnection();
     void Poll();
     void PostEvent(const Lemon::LemonEvent& ev, WMWindow* win);
-    WMWindow* FindWindow(int id);
+
+    WMWindow* FindWindow(int64_t id);
+    WMWindow* FindWindowByClient(handle_t clientID);
+    int64_t NextWindowID();
 
     void MinimizeWindow(WMWindow* win, bool state);
     void MinimizeWindow(int id, bool state);
 
     void SetActive(WMWindow* win);
+    void DestroyWindow(WMWindow* win);
 
     int64_t CreateWindowBuffer(int width, int height, WindowBuffer** buffer);
 
-    void OnPeerDisconnect(handle_t client);
-    void OnCreateWindow(handle_t client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title);
-    void OnDestroyWindow(handle_t client);
-    void OnSetTitle(handle_t client, const std::string& title);
-    void OnUpdateFlags(handle_t client, uint32_t flags);
-    void OnRelocate(handle_t client, int32_t x, int32_t y);
-    void OnGetPosition(handle_t client);
-    void OnGetScreenBounds(handle_t client);
-    void OnResize(handle_t client, int32_t width, int32_t height);
-    void OnMinimize(handle_t client, int64_t windowID, bool minimized);
-    void OnDisplayContextMenu(handle_t client, int32_t x, int32_t y, const std::string& entries);
-    virtual void OnPong(handle_t client);
+    void OnCreateWindow(handle_t client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title) override;
+    void OnDestroyWindow(handle_t client, int64_t windowID) override;
+    void OnSetTitle(handle_t client, int64_t windowID, const std::string& title) override;
+    void OnUpdateFlags(handle_t client, int64_t windowID, uint32_t flags) override;
+    void OnRelocate(handle_t client, int64_t windowID, int32_t x, int32_t y) override;
+    void OnGetPosition(handle_t client, int64_t windowID) override;
+    void OnResize(handle_t client, int64_t windowID, int32_t width, int32_t height) override;
+    void OnMinimize(handle_t client, int64_t windowID, bool minimized) override;
+    void OnDisplayContextMenu(handle_t client, int64_t windowID, int32_t x, int32_t y, const std::string& entries) override;
+    void OnPong(handle_t client, int64_t windowID) override;
+
+    void OnPeerDisconnect(handle_t client) override;
+    void OnGetScreenBounds(handle_t client) override;
+    void OnReloadConfig(handle_t client) override;
 
 public:
     timespec startTime;

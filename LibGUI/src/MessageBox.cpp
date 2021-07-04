@@ -46,6 +46,8 @@ namespace Lemon::GUI
 		bool paint = true;
 
 		while(!win->closed){
+			Lemon::WindowServer::Instance()->Poll();
+
 			LemonEvent ev;
 			while(win->PollEvent(ev)){
 				win->GUIHandleEvent(ev);
@@ -56,6 +58,8 @@ namespace Lemon::GUI
 				win->Paint();
 				paint = false;
 			}
+			
+			Lemon::WindowServer::Instance()->Wait();
 		}
 
 		delete win;

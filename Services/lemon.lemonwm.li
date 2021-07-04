@@ -1,25 +1,29 @@
 interface LemonWMServer {
     CreateWindow(s32 x, s32 y, s32 width, s32 height, u32 flags, string title) -> (s64 windowID, s64 bufferKey)
-    DestroyWindow()
+    DestroyWindow(s64 windowID)
 
-    SetTitle(string title)
-    UpdateFlags(u32 flags)
+    SetTitle(s64 windowID, string title)
+    UpdateFlags(s64 windowID, u32 flags)
 
-    Relocate(s32 x, s32 y)
-    GetPosition() -> (s32 x, s32 y)
+    Relocate(s64 windowID, s32 x, s32 y)
+    GetPosition(s64 windowID) -> (s32 x, s32 y)
 
     GetScreenBounds() -> (s32 width, s32 height)
 
-    Resize(s32 width, s32 height) -> (s64 bufferKey)
+    Resize(s64 windowID, s32 width, s32 height) -> (s64 bufferKey)
 
     Minimize(s64 windowID, bool minimized)
 
-    DisplayContextMenu(s32 x, s32 y, string entries)
+    DisplayContextMenu(s64 windowID, s32 x, s32 y, string entries)
 
-    Pong()
+    ReloadConfig()
+
+    Pong(s64 windowID)
 }
 
 interface LemonWMClient {
-    SendEvent(s32 id, u64 data)
-    Ping()
+    SendEvent(s64 windowID, s32 id, u64 data)
+    ThemeUpdate(string name)
+
+    Ping(s64 windowID)
 }

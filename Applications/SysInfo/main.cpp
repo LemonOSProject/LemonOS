@@ -50,6 +50,8 @@ int main(int argc, char** argv){
     ypos += 16;
 
 	while(!window->closed){
+		Lemon::WindowServer::Instance()->Poll();
+        
 		Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){
 			window->GUIHandleEvent(ev);
@@ -64,6 +66,6 @@ int main(int argc, char** argv){
             usedMem->label = buf;
         } sysInfo = _sysInfo;
 
-        window->WaitEvent();
+        Lemon::WindowServer::Instance()->Wait();
 	}
 }

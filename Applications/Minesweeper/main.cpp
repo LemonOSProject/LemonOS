@@ -283,6 +283,8 @@ int main(int argc, char** argv){
     window->Paint();
 
     while(!window->closed){
+	    Lemon::WindowServer::Instance()->Poll();
+
         Lemon::LemonEvent ev;
         while (window->PollEvent(ev))
         {
@@ -308,8 +310,7 @@ int main(int argc, char** argv){
         }
         
         window->Paint();
-
-        window->WaitEvent();
+        Lemon::WindowServer::Instance()->Wait();
     }
 
     delete window;

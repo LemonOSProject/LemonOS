@@ -97,13 +97,15 @@ int main(int argc, char** argv){
     window->AddWidget(okButton);
 
     while(!window->closed){
+	    Lemon::WindowServer::Instance()->Poll();
+
         Lemon::LemonEvent ev;
         while(window->PollEvent(ev)){
             window->GUIHandleEvent(ev);
         }
 
         window->Paint();
-        window->WaitEvent();
+        Lemon::WindowServer::Instance()->Wait();
     }
 
     return 0;

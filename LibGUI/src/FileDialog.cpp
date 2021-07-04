@@ -107,14 +107,15 @@ namespace Lemon::GUI{
 		win->Paint();
 
 		while(!win->closed && !selectedPth){
+			Lemon::WindowServer::Instance()->Poll();
+
 			LemonEvent ev;
 			while(win->PollEvent(ev)){
 				win->GUIHandleEvent(ev);
 			}
 
 			win->Paint();
-
-			win->WaitEvent();
+        	Lemon::WindowServer::Instance()->Wait();
 		}
 
 		delete win;

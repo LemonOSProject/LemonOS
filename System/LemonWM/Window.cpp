@@ -5,22 +5,15 @@
 #include <Lemon/Core/SharedMemory.h>
 #include <stdlib.h>
 
-WMWindow::WMWindow(WMInstance* wm, handle_t endp, handle_t id, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title)
-	: LemonWMClientEndpoint(endp){
-	this->wm = wm;
+WMWindow::WMWindow(WMInstance* wm, handle_t client, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title)
+	: LemonWMClientEndpoint(client),
+	wm(wm), pos(pos), size(size), title(title), flags(flags), windowID(wm->NextWindowID()) {
 
-	clientID = id;
-	
 	bufferKey = key;
     windowBufferInfo = bufferInfo;
 
     buffer1 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer1Offset;
     buffer2 = ((uint8_t*)windowBufferInfo) + windowBufferInfo->buffer2Offset;
-
-	this->pos = pos;
-	this->size = size;
-	this->flags = flags;
-	this->title = title;
 
 	windowSurface = { .width = size.x, .height = size.y, .depth = 32, .buffer = buffer1 };
 }
@@ -94,7 +87,7 @@ void WMWindow::Minimize(bool state){
 	if(!minimized){
 		windowBufferInfo->dirty = true;
 	} else {
-		LemonWMClientEndpoint::SendEvent(Lemon::EventWindowMinimized, 0);
+		LemonWMClientEndpoint::SendEvent(windowID, Lemon::EventWindowMinimized, 0);
 	}
 }
 

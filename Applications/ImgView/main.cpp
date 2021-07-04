@@ -55,18 +55,10 @@ void OnWindowCmd(unsigned short cmd, Lemon::GUI::Window* win){
 }
 
 int main(int argc, char** argv){
-    window = new Lemon::GUI::Window("Image Viewer", {800, 500}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
-    window->CreateMenuBar();
-
-    window->menuBar->items.push_back(fileMenu);
-    window->menuBar->items.push_back(viewMenu);
-	window->OnMenuCmd = OnWindowCmd;
 
     imgWidget = new Lemon::GUI::Image({{0, 0}, {0, 0}});
     imgWidget->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
     imgWidget->SetScaling(Lemon::Graphics::Texture::TextureScaling::ScaleFit);
-
-    window->AddWidget(imgWidget);
 
     if(argc > 1){
         if(LoadImage(argv[1])){
@@ -76,13 +68,24 @@ int main(int argc, char** argv){
         return -1;
     }
     
+    window = new Lemon::GUI::Window("Image Viewer", {800, 500}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
+    window->CreateMenuBar();
+
+    window->menuBar->items.push_back(fileMenu);
+    window->menuBar->items.push_back(viewMenu);
+	window->OnMenuCmd = OnWindowCmd;
+
+    window->AddWidget(imgWidget);
+    
 	while(!window->closed){
+		Lemon::WindowServer::Instance()->Poll();
+
         Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){
             window->GUIHandleEvent(ev);
         }
 
         window->Paint();
-        window->WaitEvent();
+        Lemon::WindowServer::Instance()->Wait();
 	}
 }

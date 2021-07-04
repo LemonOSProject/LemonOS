@@ -93,14 +93,15 @@ int main(){
     cxt.push_back(ent);
 
     while(!win->closed){
+		Lemon::WindowServer::Instance()->Poll();
+
         Lemon::LemonEvent ev;
         while(win->PollEvent(ev)){
             win->GUIHandleEvent(ev);
         }
 
         win->Paint();
-
-        win->WaitEvent();
+        Lemon::WindowServer::Instance()->Wait();
     }
 
     delete win;

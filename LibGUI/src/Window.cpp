@@ -2,6 +2,8 @@
 #include <Lemon/Core/SharedMemory.h>
 #include <Lemon/Core/JSON.h>
 
+#include <Lemon/GUI/WindowServer.h>
+
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -9,16 +11,17 @@
 
 namespace Lemon::GUI{
     Window::Window(const char* title, vector2i_t size, uint32_t flags, int type, vector2i_t pos)
-        : LemonWMServerEndpoint("lemon.lemonwm/Instance"), rootContainer({{0, 0}, size}) {
-        windowType = type;
-        this->flags = flags;
-
+        : rootContainer({{0, 0}, size}), flags(flags), windowType(type) {
         rootContainer.SetWindow(this);
 
-        auto response = CreateWindow(pos.x, pos.y, size.x, size.y, flags, title);
+        WindowServer* server = WindowServer::Instance();
+
+        auto response = server->CreateWindow(pos.x, pos.y, size.x, size.y, flags, title);
 
         windowBufferKey = response.bufferKey;
         windowID = response.windowID;
+
+        server->RegisterWindow(this);
 
         if(windowBufferKey <= 0){
             printf("[LibLemon] Warning: Window::Window: Failed to obtain window buffer!\n");
@@ -37,71 +40,20 @@ namespace Lemon::GUI{
     }
 
     Window::~Window(){
-        DestroyWindow();
+        WindowServer* server = WindowServer::Instance();
+
+        server->DestroyWindow(windowID);
+        server->UnregisterWindow(windowID);
 
         Lemon::UnmapSharedMemory(windowBufferInfo, windowBufferKey);
     }
 
-    void Window::UpdateGUITheme(const std::string& path){
-        JSONParser jP = JSONParser(path.c_str());
-        auto json = jP.Parse();
+    void Window::SetTitle(const std::string& title){
+        WindowServer::Instance()->SetTitle(windowID, title);
+    }
 
-        if(json.IsObject()){
-            JSONValue obj;
-            if(json.object->find("gui") != json.object->end() && (obj = json.object->at("gui")).IsObject()) {
-                std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *obj.object;
-
-                if(auto it = values.find("background"); it != values.end()){
-                    auto& v = it->second;
-
-                    if(v.IsArray() && v.array->size() >= 3){
-                        Lemon::colours[Lemon::Colour::Background] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
-                    } else {} // TODO: Do something when invalid valaue
-                }
-
-                if(auto it = values.find("content"); it != values.end()){
-                    auto& v = it->second;
-
-                    if(v.IsArray() && v.array->size() >= 3){
-                        Lemon::colours[Lemon::Colour::ContentBackground] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
-                    } else {} // TODO: Do something when invalid valaue
-                }
-
-                if(auto it = values.find("text"); it != values.end()){
-                    auto& v = it->second;
-
-                    if(v.IsArray() && v.array->size() >= 3){
-                        Lemon::colours[Lemon::Colour::Text] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
-                    } else {} // TODO: Do something when invalid valaue
-                }
-
-                if(auto it = values.find("textAlternate"); it != values.end()){
-                    auto& v = it->second;
-
-                    if(v.IsArray() && v.array->size() >= 3){
-                        Lemon::colours[Lemon::Colour::TextAlternate] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
-                    } else {} // TODO: Do something when invalid valaue
-                }
-
-                if(auto it = values.find("highlight"); it != values.end()){
-                    auto& v = it->second;
-
-                    if(v.IsArray() && v.array->size() >= 3){
-                        Lemon::colours[Lemon::Colour::Foreground] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
-                    } else {} // TODO: Do something when invalid valaue
-                }
-
-                if(auto it = values.find("contentShadow"); it != values.end()){
-                    auto& v = it->second;
-
-                    if(v.IsArray() && v.array->size() >= 3){
-                        Lemon::colours[Lemon::Colour::ContentShadow] = (RGBAColour){v.array->at(0).AsUnsignedNumber<uint8_t>(), v.array->at(1).AsUnsignedNumber<uint8_t>(), v.array->at(2).AsUnsignedNumber<uint8_t>(), 255};
-                    } else {} // TODO: Do something when invalid valaue
-                }
-            }
-        } else {
-            printf("[LibLemon] Warning: Failed to parse system theme!\n");
-        }
+    void Window::Relocate(vector2i_t pos){
+        WindowServer::Instance()->Relocate(windowID, pos.x, pos.y);
     }
 
     void Window::Resize(vector2i_t size){
@@ -115,7 +67,7 @@ namespace Lemon::GUI{
 
         rootContainer.UpdateFixedBounds();
 
-        windowBufferKey = LemonWMServerEndpoint::Resize(size.x, size.y).bufferKey;
+        windowBufferKey = WindowServer::Instance()->Resize(windowID, size.x, size.y).bufferKey;
         if(windowBufferKey <= 0){
             printf("[LibLemon] Warning: Window::Resize: Failed to obtain window buffer!\n");
 
@@ -134,6 +86,15 @@ namespace Lemon::GUI{
         surface.height = size.y;
 
         Paint();
+    }
+
+    void Window::Minimize(int windowID, bool minimized){
+        WindowServer::Instance()->Minimize(windowID, minimized);
+    }
+
+    void Window::UpdateFlags(uint32_t flags){
+        this->flags = flags;
+        WindowServer::Instance()->UpdateFlags(windowID, flags);
     }
 
     void Window::SwapBuffers(){
@@ -167,12 +128,6 @@ namespace Lemon::GUI{
     }
     
     bool Window::PollEvent(LemonEvent& ev){
-        Message m;
-        long ret;
-        while((ret = Poll(m)) > 0){
-            HandleMessage(handle, m);
-        }
-
         if(!eventQueue.empty()){
             ev = eventQueue.front();
             eventQueue.pop();
@@ -180,10 +135,6 @@ namespace Lemon::GUI{
             return true;
         }
         return false;
-    }
-    
-    void Window::WaitEvent(long tm){
-        Wait(tm);
     }
 
     void Window::GUIHandleEvent(LemonEvent& ev){
@@ -319,19 +270,7 @@ namespace Lemon::GUI{
 
         std::string str = serializedEntries.str();
         
-        LemonWMServerEndpoint::DisplayContextMenu(pos.x, pos.y, str);
-    }
-
-    void Window::OnPeerDisconnect(handle_t){
-        throw std::runtime_error("Lost connected to window server!");
-    }
-
-    void Window::OnSendEvent(handle_t, int32_t id, uint64_t data){
-        eventQueue.push(LemonEvent{ .event = id, .data = data });
-    }
-
-    void Window::OnPing(handle_t){
-        Pong();
+        WindowServer::Instance()->DisplayContextMenu(windowID, pos.x, pos.y, str);
     }
 
     void Window::CreateMenuBar(){
@@ -388,7 +327,7 @@ namespace Lemon::GUI{
         }
         surface.buffer = nullptr; // Invalidate surface buffer
 
-        windowBufferKey = Resize(textObject.Size().x + 8, textObject.Size().y + 8).bufferKey;
+        windowBufferKey = Resize(windowID, textObject.Size().x + 8, textObject.Size().y + 8).bufferKey;
         if(windowBufferKey <= 0){
             printf("[LibLemon] Warning: Window::TooltipWindow::Resize: Failed to obtain window buffer!\n");
             return;

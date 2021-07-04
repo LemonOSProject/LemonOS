@@ -585,6 +585,8 @@ int main(int argc, char** argv){
 	}
 
 	for(;;){
+		Lemon::WindowServer::Instance()->Poll();
+
 		Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){
 			if(ev.event == Lemon::EventKeyPressed){
@@ -640,7 +642,7 @@ int main(int argc, char** argv){
 			paintAll = false;
 		}
 
-		window->WaitEvent();
+        Lemon::WindowServer::Instance()->Wait();
 	}
 
 	return 0;

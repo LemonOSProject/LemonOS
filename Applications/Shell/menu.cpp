@@ -197,17 +197,21 @@ Lemon::GUI::Window* InitializeMenu(){
 
     menuWindow = new Lemon::GUI::Window("", {MENU_WIDTH, MENU_HEIGHT}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL | WINDOW_FLAGS_ALWAYS_ACTIVE, Lemon::GUI::GUI);
     
-    vector2i_t screenBounds = menuWindow->GetScreenBounds();
+    vector2i_t screenBounds = Lemon::WindowServer::Instance()->GetScreenBounds();
     menuWindow->Relocate({ screenBounds.x / 2 - 200, screenBounds.y / 2 - 150 });
 
     listView = new Lemon::GUI::ListView({0, 0, 0, 24});
-    menuWindow->AddWidget(listView);
-    listView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft, Lemon::GUI::WidgetAlignment::WAlignBottom);
     listView->SetModel(&menuModel);
     listView->displayColumnNames = false;
+    listView->drawBackground = false;
 
     filterBox = new Lemon::GUI::TextBox({0, 0, 0, 24}, false);
+
+    menuWindow->AddWidget(listView);
     menuWindow->AddWidget(filterBox);
+    menuWindow->SetActive(filterBox);
+
+    listView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft, Lemon::GUI::WidgetAlignment::WAlignBottom);
     filterBox->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Fixed, Lemon::GUI::WidgetAlignment::WAlignLeft, Lemon::GUI::WidgetAlignment::WAlignTop);
 
     const char* itemsPath = "/system/lemon/menu/";

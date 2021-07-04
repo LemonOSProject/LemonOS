@@ -25,14 +25,28 @@ void* WMInstance::InitializeShellConnection(){
     return nullptr;
 }
 
-WMWindow* WMInstance::FindWindow(int id){
+WMWindow* WMInstance::FindWindow(int64_t id){
     for(WMWindow* win : windows){
-        if(win->clientID == id){
+        if(win->windowID == id){
             return win;
         }
     }
 
     return nullptr;
+}
+
+WMWindow* WMInstance::FindWindowByClient(handle_t client){
+    for(WMWindow* win : windows){
+        if(win->GetClient() == client){
+            return win;
+        }
+    }
+
+    return nullptr;
+}
+
+int64_t WMInstance::NextWindowID(){
+    return nextWindowID++;
 }
 
 void WMInstance::MinimizeWindow(WMWindow* win, bool state){
@@ -108,6 +122,34 @@ void WMInstance::SetActive(WMWindow* win){
     }
 }
 
+void WMInstance::DestroyWindow(WMWindow* win){
+    if(!win){
+        return;
+    }
+
+    if(active == win){
+        SetActive(nullptr);
+    }
+
+    if(lastMousedOver == win){
+        lastMousedOver = nullptr;
+    }
+    
+    if(menu.owner == win){
+        menu.owner = nullptr;
+        contextMenuActive = false;
+    }
+
+    //if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
+        //Lemon::Shell::RemoveWindow(client, shellClient);
+    //}
+    
+    windows.remove(win);
+    redrawBackground = true;
+
+    delete win;
+}
+
 int64_t WMInstance::CreateWindowBuffer(int width, int height, WindowBuffer** buffer){
     size_t windowBufferSize = ((sizeof(WindowBuffer) + 0x1F) & (~0x1F)) + ((width * height * 4 + 0x1F) & (~0x1F) /* Round up to 32 bytes */) * 2;
 
@@ -127,36 +169,6 @@ int64_t WMInstance::CreateWindowBuffer(int width, int height, WindowBuffer** buf
     return windowBufferKey;
 }
 
-void WMInstance::OnPeerDisconnect(handle_t client){
-    WMWindow* win = FindWindow(client);
-
-    if(!win){
-        return;
-    }
-
-    if(active == win){
-        SetActive(nullptr);
-    }
-
-    if(lastMousedOver == win){
-        lastMousedOver = nullptr;
-    }
-    
-    if(menu.owner == win){
-        menu.owner = nullptr;
-        contextMenuActive = false;
-    }
-
-    //if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
-        //Lemon::Shell::RemoveWindow(client, shellClient);
-    //}
-    
-    windows.remove(win);
-    redrawBackground = true;
-
-    delete win;
-}
-
 void WMInstance::OnCreateWindow(handle_t client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title){
     printf("[LemonWM] Creating Window:    Pos: (%d, %d), Size: %dx%d, Title: %s\n", x,y, width, height, title.c_str());
     
@@ -167,11 +179,11 @@ void WMInstance::OnCreateWindow(handle_t client, int32_t x, int32_t y, int32_t w
         return; // Error obtaining window buffer shared memory
     }
 
-    WMWindow* win = new WMWindow(this, client, client, wBufferKey, wBufferInfo, {x,y}, {width, height}, flags, title);
+    WMWindow* win = new WMWindow(this, client, wBufferKey, wBufferInfo, {x,y}, {width, height}, flags, title);
     windows.push_back(win);
 
     win->RecalculateButtonRects();
-    win->Queue(Lemon::Message(LemonWMServer::ResponseCreateWindow, LemonWMServer::CreateWindowResponse{ .windowID = client, .bufferKey = wBufferKey }));
+    win->Queue(Lemon::Message(LemonWMServer::ResponseCreateWindow, LemonWMServer::CreateWindowResponse{ .windowID = win->ID(), .bufferKey = wBufferKey }));
 
     //if(shellConnected && !(win->flags & WINDOW_FLAGS_NOSHELL)){
         //Lemon::Shell::AddWindow(client, Lemon::Shell::ShellWindowState::ShellWindowStateNormal, title, shellClient);
@@ -181,8 +193,8 @@ void WMInstance::OnCreateWindow(handle_t client, int32_t x, int32_t y, int32_t w
     redrawBackground = true;
 }
 
-void WMInstance::OnDestroyWindow(handle_t client){
-    WMWindow* win = FindWindow(client);
+void WMInstance::OnDestroyWindow(handle_t client, int64_t windowID){
+    WMWindow* win = FindWindow(windowID);
     if(!win){
         printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
         return;
@@ -211,30 +223,30 @@ void WMInstance::OnDestroyWindow(handle_t client){
     delete win;
 }
 
-void WMInstance::OnSetTitle(handle_t client, const std::string& title){
-    WMWindow* win = FindWindow(client);
+void WMInstance::OnSetTitle(handle_t, int64_t windowID, const std::string& title){
+    WMWindow* win = FindWindow(windowID);
     if(!win){
-        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
         return;
     }
 
     win->title = title;
 }
 
-void WMInstance::OnUpdateFlags(handle_t client, uint32_t flags){
-    WMWindow* win = FindWindow(client);
+void WMInstance::OnUpdateFlags(handle_t, int64_t windowID, uint32_t flags){
+    WMWindow* win = FindWindow(windowID);
     if(!win){
-        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
         return;
     }
 
     win->flags = flags;
 }
 
-void WMInstance::OnRelocate(handle_t client, int32_t x, int32_t y){
-    WMWindow* win = FindWindow(client);
+void WMInstance::OnRelocate(handle_t, int64_t windowID, int32_t x, int32_t y){
+    WMWindow* win = FindWindow(windowID);
     if(!win){
-        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
         return;
     }
 
@@ -242,30 +254,20 @@ void WMInstance::OnRelocate(handle_t client, int32_t x, int32_t y){
     redrawBackground = true;
 }
 
-void WMInstance::OnGetPosition(handle_t client){
-    WMWindow* win = FindWindow(client);
+void WMInstance::OnGetPosition(handle_t, int64_t windowID){
+    WMWindow* win = FindWindow(windowID);
     if(!win){
-        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
         return;
     }
 
     win->Queue(Lemon::Message(LemonWMServer::ResponseGetPosition, LemonWMServer::GetPositionResponse{win->pos.x, win->pos.y}));
 }
 
-void WMInstance::OnGetScreenBounds(handle_t client){
-    WMWindow* win = FindWindow(client);
+void WMInstance::OnResize(handle_t, int64_t windowID, int32_t width, int32_t height){
+    WMWindow* win = FindWindow(windowID);
     if(!win){
-        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
-        return;
-    }
-
-    win->Queue(Lemon::Message(LemonWMServer::ResponseGetScreenBounds, LemonWMServer::GetScreenBoundsResponse{surface.width, surface.height}));
-}
-
-void WMInstance::OnResize(handle_t client, int32_t width, int32_t height){
-    WMWindow* win = FindWindow(client);
-    if(!win){
-        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
         return;
     }
 
@@ -281,14 +283,14 @@ void WMInstance::OnResize(handle_t client, int32_t width, int32_t height){
     redrawBackground = true;
 }
 
-void WMInstance::OnMinimize(handle_t client, int64_t windowID, bool minimized){
+void WMInstance::OnMinimize(handle_t, int64_t windowID, bool minimized){
     MinimizeWindow(windowID, minimized);
 }
 
-void WMInstance::OnDisplayContextMenu(handle_t client, int32_t x, int32_t y, const std::string& entries){
-    WMWindow* win = FindWindow(client);
+void WMInstance::OnDisplayContextMenu(handle_t, int64_t windowID, int32_t x, int32_t y, const std::string& entries){
+    WMWindow* win = FindWindow(windowID);
     if(!win){
-        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
         return;
     }
 
@@ -321,12 +323,26 @@ void WMInstance::OnDisplayContextMenu(handle_t client, int32_t x, int32_t y, con
     contextMenuActive = true;
 }
 
-void WMInstance::OnPong(handle_t client){
-    WMWindow* win = FindWindow(client);
+void WMInstance::OnPong(handle_t, int64_t windowID){
+    WMWindow* win = FindWindow(windowID);
     if(!win){
-        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
         return;
     }
+}
+
+void WMInstance::OnPeerDisconnect(handle_t client){
+    for(WMWindow* win = FindWindowByClient(client); win; win = FindWindowByClient(client)){
+        DestroyWindow(win);
+    }
+}
+
+void WMInstance::OnGetScreenBounds(handle_t client){
+    Lemon::EndpointQueue(client, LemonWMServer::ResponseGetScreenBounds, LemonWMServer::GetScreenBoundsResponse{surface.width, surface.height});
+}
+
+void WMInstance::OnReloadConfig(handle_t client){
+    (void)client;
 }
 
 void WMInstance::Poll(){
