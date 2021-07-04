@@ -7,6 +7,11 @@ fi
 
 export PATH="$HOME/.local/share/lemon/bin:$PATH"
 
+if ! [ -x "$(command -v lemon-clang)" ]; then
+    echo "Lemon cross toolchain not found (Did you forget to build toolchain?)"
+    exit 1
+fi
+
 set -e
 
 ln -sfT ../../../include/c++ $HOME/.local/share/lemon/sysroot/system/include/c++
@@ -17,13 +22,8 @@ $SPATH/libc.sh
 
 cd $SPATH/..
 
-if ! [ -x "$(command -v lemon-clang)" ]; then
-    echo "Lemon cross toolchain not found (Did you forget to build toolchain?)"
-    exit 1
-fi
-
-$SPATH/buildinterfaces.sh
 meson Build --cross $SPATH/lemon-crossfile.txt
+$SPATH/buildinterfaces.sh
 
 cd "$LEMOND/Ports"
 ./buildport.sh zlib

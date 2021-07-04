@@ -28,7 +28,7 @@ _unpack_binutils(){
 }
 
 _unpack_llvm(){
-    git clone "https://github.com/fido2020/llvm-project.git" $LLVM_SRC_DIR --depth 1
+    git clone "https://github.com/LemonOSProject/llvm-project.git" $LLVM_SRC_DIR --depth 1
 }
 
 _unpack_limine(){
@@ -49,7 +49,6 @@ _build_llvm(){
     if [ -z "$LINKCOUNT" ]; then
         export LINKCOUNT=4
         echo "Linking llvm will use a lot of memory, if you run out of memory try reducing the amount of link jobs by setting \$LINKCOUNT to a lower value (automatically set to $LINKCOUNT)."
-        read
     fi
 
     cd $LLVM_SRC_DIR
