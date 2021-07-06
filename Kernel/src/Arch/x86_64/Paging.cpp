@@ -711,10 +711,12 @@ namespace Memory{
 					if(vmo->refCount <= 1){ // Last reference, no need to clone
 						vmo->copyOnWrite = false;
 						vmo->MapAllocatedBlocks(faultRegion->Base(), addressSpace->GetPageMap()); // This should remap all allocated blocks as writable
-						vmo->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(), addressSpace->GetPageMap()); // In case the block was never allocated in the first place
 						
-						faultRegion->lock.ReleaseRead();
 						asm("sti");
+						vmo->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(), addressSpace->GetPageMap()); // In case the block was never allocated in the first place
+						asm("cli");
+
+						faultRegion->lock.ReleaseRead();
 						return;
 					} else {
 						asm("sti");
@@ -728,18 +730,18 @@ namespace Memory{
 						clone->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(), addressSpace->GetPageMap()); // In case the block was never allocated in the first place
 						
 						faultRegion->lock.ReleaseRead();
-						asm("sti");
 						return;
 					}
 				}
 				
+				asm("sti");
 				int status = faultRegion->vmObject->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(), addressSpace->GetPageMap());
 				faultRegion->lock.ReleaseRead();
 
 				if(!status){
-					asm("sti");
 					return; // Success!
 				}
+				asm("cli");
 			}
 		}
 
