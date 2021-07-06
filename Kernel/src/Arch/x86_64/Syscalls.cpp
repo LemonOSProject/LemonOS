@@ -1617,7 +1617,7 @@ long SysSetUID(RegisterContext* r){
  * SysPoll (fds, nfds, timeout) - Wait for file descriptors
  * fds - Array of pollfd structs
  * nfds - Number of pollfd structs
- * timeout - timeout period
+ * timeout - timeout period (in ms)
  *
  * On Success - return number of file descriptors
  * On Failure - return -1
@@ -1629,8 +1629,18 @@ long SysPoll(RegisterContext* r){
 
 	Thread* thread = GetCPULocal()->currentThread;
 	Process* proc = Scheduler::GetCurrentProcess();
+
+	if(!nfds){
+		thread->Sleep(timeout * 1000); // Caller must have been using poll to wait/sleep
+		return 0;
+	}
+
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), nfds * sizeof(pollfd), proc->addressSpace)){
-		Log::Warning("sys_poll: Invalid pointer to file descriptor array");
+		Log::Warning("SysPoll: Invalid pointer to file descriptor array");
+		IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
+			Log::Info("rip: %x", r->rip);
+			UserPrintStackTrace(r->rbp, Scheduler::GetCurrentProcess()->addressSpace);
+		});
 		return -EFAULT;
 	}
 
@@ -1640,13 +1650,16 @@ long SysPoll(RegisterContext* r){
 	for(unsigned i = 0; i < nfds; i++){
 		fds[i].revents = 0;
 		if(fds[i].fd < 0) {
+			Log::Warning("SysPoll: Invalid File Descriptor: %d", fds[i].fd);
 			files[i] = nullptr;
+			fds[i].revents |= POLLNVAL;
+			eventCount++;
 			continue;
 		}
 
 		fs_fd_t* handle = Scheduler::GetCurrentProcess()->GetFileDescriptor(fds[i].fd);
 		if(!handle || !handle->node){
-			Log::Warning("sys_poll: Invalid File Descriptor: %d", fds[i].fd);
+			Log::Warning("SysPoll: Invalid File Descriptor: %d", fds[i].fd);
 			files[i] = nullptr;
 			fds[i].revents |= POLLNVAL;
 			eventCount++;
@@ -1659,22 +1672,26 @@ long SysPoll(RegisterContext* r){
 
 		if((files[i]->node->flags & FS_NODE_TYPE) == FS_NODE_SOCKET){
 			if(!((Socket*)files[i]->node)->IsConnected() && !((Socket*)files[i]->node)->IsListening()){
+				Log::Debug(debugLevelSyscalls, DebugLevelVerbose, "%s: SysPoll: fd %d disconnected!", proc->name, fds[i].fd);
 				fds[i].revents |= POLLHUP;
 				hasEvent = true;
 			}
 			
 			if(((Socket*)files[i]->node)->PendingConnections() && (fds[i].events & POLLIN)){
+				Log::Debug(debugLevelSyscalls, DebugLevelVerbose, "%s: SysPoll: fd %d has pending connections!", proc->name, fds[i].fd);
 				fds[i].revents |= POLLIN;
 				hasEvent = true;
 			}
 		}
 
 		if(files[i]->node->CanRead() && (fds[i].events & POLLIN)) { // If readable and the caller requested POLLIN
+			Log::Debug(debugLevelSyscalls, DebugLevelVerbose, "%s: SysPoll: fd %d readable!", proc->name, fds[i].fd);
 			fds[i].revents |= POLLIN;
 			hasEvent = true;
 		}
 		
 		if(files[i]->node->CanWrite() && (fds[i].events & POLLOUT)) { // If writable and the caller requested POLLOUT
+			Log::Debug(debugLevelSyscalls, DebugLevelVerbose, "%s: SysPoll: fd %d writable!", proc->name, fds[i].fd);
 			fds[i].revents |= POLLOUT;
 			hasEvent = true;
 		}
