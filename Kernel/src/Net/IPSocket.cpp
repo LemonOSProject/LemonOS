@@ -100,14 +100,14 @@ int IPSocket::SetSocketOptions(int level, int opt, const void* optValue, socklen
 				return -ENOPROTOOPT;
 			}
 
-			if(optLength > 4){
+			if(optLength >= sizeof(int32_t)){
 				pktInfo = *(int32_t*)optValue;
 			} else {
 				return -EINVAL;
 			}
 			break;
 		default:
-			return -EINVAL;
+			return -ENOPROTOOPT;
 		}
 	} else if(level == SOL_SOCKET && opt == SO_BINDTODEVICE) {
 		const char* req = reinterpret_cast<const char*>(optValue);
@@ -123,6 +123,7 @@ int IPSocket::SetSocketOptions(int level, int opt, const void* optValue, socklen
 		return 0;
 	} else if(level == SOL_SOCKET && opt == SO_BINDTOIFINDEX) {
 		if(optLength >= sizeof(ifreq)){
+			Log::Warning("IPSocket SO_BINDTOIFINDEX unimplemented!");
 			return -ENOSYS; // TODO: Bind to interface index
 		} else {
 			return -EINVAL;
@@ -135,7 +136,12 @@ int IPSocket::SetSocketOptions(int level, int opt, const void* optValue, socklen
 }
 
 int IPSocket::GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength){
-	return -ENOSYS;
+	if(level == SOL_IP){
+		Log::Warning("IPSocket GetSocketOptions unimplemented!");
+		return -ENOSYS;
+	}
+
+	return Socket::GetSocketOptions(level, opt, optValue, optLength);
 }
 
 void IPSocket::Close(){

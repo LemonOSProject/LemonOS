@@ -76,8 +76,6 @@ ssize_t Socket::Read(size_t offset, size_t size, uint8_t* buffer){
 }
 
 int64_t Socket::Receive(void* buffer, size_t len, int flags){
-    if(!connected) {}
-
     return ReceiveFrom(buffer, len, flags, nullptr, nullptr);
 }
 
@@ -102,11 +100,31 @@ int64_t Socket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src,
 }
 
 int Socket::GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength){
-    return -ENOSYS;
+    if(level == SOL_SOCKET){
+        switch(opt){
+            case SO_ERROR:
+                if(*optLength < sizeof(int)){
+                    return -EFAULT; // Not big enough, callers job to check the memory space
+                }
+
+                *optLength = sizeof(int);
+                *reinterpret_cast<int*>(optValue) = 0;
+
+                Log::Warning("TCPSocket::GetSocketOptions: SO_ERROR is always 0");
+                return 0;
+            default:
+                Log::Warning("TCPSocket::GetSocketOptions: Unknown option: %d", opt);
+                return -ENOPROTOOPT;
+        }
+    }
+
+    Log::Warning("Socket::GetSocketOptions: Unknown socket option %d at level %d!", opt, level);
+    return -ENOPROTOOPT;
 }
 
 int Socket::SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength){
-    return -ENOSYS;
+    Log::Warning("Socket::SetSocketOptions: Unknown socket option %d at level %d!", opt, level);
+    return -ENOPROTOOPT;
 }
 
 fs_fd_t* Socket::Open(size_t flags){
@@ -138,12 +156,41 @@ LocalSocket::LocalSocket(int type, int protocol) : Socket(type, protocol){
     flags = FS_NODE_SOCKET;
 
     assert(type == StreamSocket || type == DatagramSocket);
+
+    if (type == DatagramSocket){
+        inbound = new PacketStream();
+        outbound = new PacketStream();
+    } else {
+        inbound = new DataStream(1024);
+        outbound = new DataStream(1024);
+    }
 }
 
 LocalSocket::~LocalSocket(){
     if(bound){
         SocketManager::DestroySocket(this);
     }
+}
+
+LocalSocket* LocalSocket::CreatePairedSocket(LocalSocket* client){
+    LocalSocket* sock = new LocalSocket(client->type, 0);
+    
+    if(sock->outbound){
+        delete sock->outbound;
+    }
+
+    if(sock->inbound){
+        delete sock->inbound;
+    }
+
+    sock->outbound = client->inbound; // Outbound to client
+    sock->inbound = client->outbound; // Inbound to server
+    sock->peer = client;
+    client->peer = sock;
+
+    sock->connected = client->connected = true;
+
+    return sock;
 }
 
 int LocalSocket::ConnectTo(Socket* client){
@@ -180,6 +227,7 @@ void LocalSocket::DisconnectPeer(){
 }
 
 void LocalSocket::OnDisconnect(){
+    assert(!"dl;kdfs");
     connected = false;
 
     acquireLock(&watcherLock);
@@ -192,6 +240,10 @@ void LocalSocket::OnDisconnect(){
 }
 
 Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen, int mode){
+    if(!IsListening()){
+        return nullptr;
+    }
+
     if((mode & O_NONBLOCK) && pending.get_length() <= 0){
         return nullptr;
     }
@@ -207,14 +259,7 @@ Socket* LocalSocket::Accept(sockaddr* addr, socklen_t* addrlen, int mode){
 
     LocalSocket* client = (LocalSocket*) next;
 
-    LocalSocket* sock = new LocalSocket(client->type, 0);
-    sock->outbound = client->inbound; // Outbound to client
-    sock->inbound = client->outbound; // Inbound to server
-    sock->peer = client;
-    client->peer = sock;
-
-    sock->connected = client->connected = true;
-
+    LocalSocket* sock = CreatePairedSocket(client);
     return sock;
 }
 
@@ -265,14 +310,6 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen){
         return -EOPNOTSUPP;
     }
 
-    if (type == DatagramSocket){
-        inbound = new PacketStream();
-        outbound = new PacketStream();
-    } else {
-        inbound = new DataStream(1024);
-        outbound = new DataStream(1024);
-    }
-
     Socket* sock = SocketManager::ResolveSocketAddress(addr, addrlen);
     if(!(sock && sock->IsListening())){ // Make sure the socket is both present and listening
         Log::Warning("Socket Not Found");
@@ -317,7 +354,7 @@ int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* 
     }
 
     if(!inbound){
-        Log::Warning("LocalSocket not connected");
+        Log::Warning("LocalSocket::ReceiveFrom: LocalSocket not connected");
         return -ENOTCONN;
     }
 
@@ -346,7 +383,7 @@ int64_t LocalSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr*
     }
 
     if(!connected){
-        Log::Warning("LocalSocket not connected");
+        Log::Warning("LocalSocket::SendTo: LocalSocket not connected, peer set? %Y", peer);
         return -ENOTCONN;
     }
 
@@ -382,16 +419,17 @@ fs_fd_t* LocalSocket::Open(size_t flags){
 }
 
 void LocalSocket::Close(){
-    if(peer){
-        DisconnectPeer();
-    }
+    if(handleCount == 0){
+        if(peer){
+            DisconnectPeer();
+        }
 
-    if(bound){
-        SocketManager::DestroySocket(this);
-    }
+        if(bound){
+            SocketManager::DestroySocket(this);
+        }
 
-    if(handleCount == 0)
         delete this;
+    }
 }
 
 void LocalSocket::Watch(FilesystemWatcher& watcher, int events){

@@ -40,7 +40,7 @@
 #define SC_ARG4(r) (r)->r9
 #define SC_ARG5(r) (r)->r8
 
-#define NUM_SYSCALLS 99
+#define NUM_SYSCALLS 100
 
 #define EXEC_CHILD 1
 
@@ -2893,7 +2893,7 @@ long SysSetSocketOptions(RegisterContext* r){
 		return -ENOTSOCK; //  Not a socket
 	}
 
-	if(opt && optLen && !Memory::CheckUsermodePointer(SC_ARG3(r), optLen, currentProcess->addressSpace)){
+	if(optLen && !Memory::CheckUsermodePointer(SC_ARG3(r), optLen, currentProcess->addressSpace)){
 		return -EFAULT;
 	}
 
@@ -2931,7 +2931,11 @@ long SysGetSocketOptions(RegisterContext* r){
 		return -ENOTSOCK; //  Not a socket
 	}
 
-	if(opt && *optLen && !Memory::CheckUsermodePointer(SC_ARG3(r), *optLen, currentProcess->addressSpace)){
+	if(!Memory::CheckUsermodePointer(SC_ARG4(r), sizeof(socklen_t), currentProcess->addressSpace)){
+		return -EFAULT;
+	}
+
+	if(*optLen && !Memory::CheckUsermodePointer(SC_ARG3(r), *optLen, currentProcess->addressSpace)){
 		return -EFAULT;
 	}
 
@@ -3271,6 +3275,58 @@ long SysGetEntropy(RegisterContext* r){
 	return 0;
 }
 
+/////////////////////////////
+/// \brief SysSocketPair(int domain, int type, int protocol, int sv[2]);
+///
+/// \param domain Socket domain (muct be AF_UNIX/AF_LOCAL)
+/// \param type Socket type
+/// \param protocol Socket protocol
+/// \param sv file descriptors for the created socket pair
+///
+/// \return Negative error code on failure, otherwise 0
+/////////////////////////////
+long SysSocketPair(RegisterContext* r){
+	Process* process = Scheduler::GetCurrentProcess();
+
+	int domain = SC_ARG0(r);
+	int type = SC_ARG1(r);
+	int protocol = SC_ARG2(r);
+	int* sv = reinterpret_cast<int*>(SC_ARG3(r));
+
+	if(!Memory::CheckUsermodePointer(SC_ARG3(r), sizeof(int) * 2, process->addressSpace)){
+		Log::Warning("SysSocketPair: Invalid fd array!");
+		return -EFAULT;
+	}
+
+	bool nonBlock = type & SOCK_NONBLOCK;
+	type &= ~SOCK_NONBLOCK;
+
+    if(domain != UnixDomain && domain != InternetProtocol){
+        Log::Warning("SysSocketPair: domain %d is not supported", domain);
+        return -EAFNOSUPPORT;
+    }
+    if(type != StreamSocket && type != DatagramSocket){
+        Log::Warning("SysSocketPair: type %d is not supported", type);
+        return -EPROTONOSUPPORT;
+    }
+
+	LocalSocket* s1 = new LocalSocket(type, protocol);
+	LocalSocket* s2 = LocalSocket::CreatePairedSocket(s1);
+
+	fs_fd_t* s1Handle = fs::Open(s1);
+	fs_fd_t* s2Handle = fs::Open(s2);
+
+	s1Handle->mode = nonBlock * O_NONBLOCK;
+	s2Handle->mode = s1Handle->mode;
+
+	sv[0] = process->AllocateFileDescriptor(s1Handle);
+	sv[1] = process->AllocateFileDescriptor(s2Handle);
+	
+	assert(s1->IsConnected() && s2->IsConnected());
+
+	return 0;
+}
+
 syscall_t syscalls[NUM_SYSCALLS]{
 	SysDebug,
 	SysExit,					// 1
@@ -3371,6 +3427,7 @@ syscall_t syscalls[NUM_SYSCALLS]{
 	SysGetPPID,
 	SysPipe,
 	SysGetEntropy,
+	SysSocketPair,
 };
 
 void DumpLastSyscall(Thread* t){

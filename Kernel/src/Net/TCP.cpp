@@ -242,10 +242,10 @@ namespace Network {
                 if(ack && syn){ // It is important that we recieve a SYN and ACK
                     Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] (State: SYN-SENT) Recieved SYN-ACK (Sequence number: %u) from %d.%d.%d.%d:%d", tcpHeader->sequence, source.data[0], source.data[1], source.data[2], source.data[3], (uint16_t)tcpHeader->srcPort);
 
-                    remoteSequenceNumber = tcpHeader->sequence;
-                    lastAcknowledged = tcpHeader->acknowledgementNumber;
+                    m_remoteSequenceNumber = tcpHeader->sequence;
+                    m_lastAcknowledged = tcpHeader->acknowledgementNumber;
 
-                    if(lastAcknowledged == sequenceNumber){ // The ACK number must be equal to the sequence number.
+                    if(m_lastAcknowledged == m_sequenceNumber){ // The ACK number must be equal to the sequence number.
                         state = TCPStateEstablished; // Our SYN has been acknowledged with a SYN-ACK
 
                         UnblockAll(); // Unblock waiting threads
@@ -259,7 +259,7 @@ namespace Network {
                 if(ack){
                     Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] (State: SYN-RECV) Recieved ACK from %d.%d.%d.%d:%d", source.data[0], source.data[1], source.data[2], source.data[3], (uint16_t)tcpHeader->srcPort);
 
-                    remoteSequenceNumber = tcpHeader->sequence;
+                    m_remoteSequenceNumber = tcpHeader->sequence;
 
                     state = TCPStateEstablished; // Our SYN has been acknowledged with a SYN-ACK
 
@@ -277,8 +277,8 @@ namespace Network {
                     return; // Unsupported flags
                 }
 
-                if(tcpHeader->sequence != remoteSequenceNumber){
-                    Log::Debug(debugLevelNetwork, DebugLevelNormal, "[Network] [TCP] (State: ESTABLISHED) Received packet with sequence number of %d, Expected %d", tcpHeader->sequence, remoteSequenceNumber);
+                if(tcpHeader->sequence != m_remoteSequenceNumber){
+                    Log::Debug(debugLevelNetwork, DebugLevelNormal, "[Network] [TCP] (State: ESTABLISHED) Received packet with sequence number of %d, Expected %d", tcpHeader->sequence, m_remoteSequenceNumber);
                     return; // Either a previous packet has been dropped, or it is retransmitting a previous packet
                 }
 
@@ -286,39 +286,39 @@ namespace Network {
                 uint16_t dataLength = length - dataOffset;
 
                 if(ack){
-                    if(tcpHeader->acknowledgementNumber > sequenceNumber){
+                    if(tcpHeader->acknowledgementNumber > m_sequenceNumber){
                         Log::Debug(debugLevelNetwork, DebugLevelNormal, "[Network] [TCP] (State: ESTABLIHSED) recieved ACK wth ack number > sequence number");
                         return;
                     }
 
-                    acquireLock(&unacknowledgedPacketsLock);
+                    acquireLock(&m_unacknowledgedPacketsLock);
 
-                    lastAcknowledged = tcpHeader->acknowledgementNumber;
+                    m_lastAcknowledged = tcpHeader->acknowledgementNumber;
 
-                    for(auto it = unacknowledgedPackets.begin(); it != unacknowledgedPackets.end(); it++){
-                        if(it->sequenceNumber <= lastAcknowledged){
-                            unacknowledgedPackets.remove(it);
+                    for(auto it = m_unacknowledgedPackets.begin(); it != m_unacknowledgedPackets.end(); it++){
+                        if(it->sequenceNumber <= m_lastAcknowledged){
+                            m_unacknowledgedPackets.remove(it);
                         }
 
-                        if(it == unacknowledgedPackets.end()){
+                        if(it == m_unacknowledgedPackets.end()){
                             break;
                         }
                     }
 
-                    releaseLock(&unacknowledgedPacketsLock);
+                    releaseLock(&m_unacknowledgedPacketsLock);
                 }
 
                 Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] Recieving %d bytes of data (Flags: %hx, total len: %d)", dataLength, tcpHeader->flags & TCPHeader::FlagsMask);
 
                 if(dataLength){
-                    inboundData.Write(data + dataOffset, dataLength);
+                    m_inboundData.Write(data + dataOffset, dataLength);
 
                     acquireLock(&blockedLock);
                     FilesystemBlocker* bl = blocked.get_front();
                     while(bl){
                         FilesystemBlocker* next = blocked.next(bl);
 
-                        if(bl->RequestedLength() <= inboundData.Pos()){
+                        if(bl->RequestedLength() <= m_inboundData.Pos()){
                             bl->Unblock();
                         }
 
@@ -326,9 +326,9 @@ namespace Network {
                     }
                     releaseLock(&blockedLock);
 
-                    remoteSequenceNumber = tcpHeader->sequence + dataLength;
+                    m_remoteSequenceNumber = tcpHeader->sequence + dataLength;
 
-                    Acknowledge(remoteSequenceNumber);
+                    Acknowledge(m_remoteSequenceNumber);
                 }
 
                 if(psh){
@@ -341,7 +341,7 @@ namespace Network {
                     Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] (State: ESTABLISHED) Peer closed connection with FIN, entering CLOSE-WAIT");
                     state = TCPStateCloseWait; // Connection ended, wait for process(es) to close file descriptors
 
-                    Acknowledge(remoteSequenceNumber);
+                    Acknowledge(m_remoteSequenceNumber);
                     doUnblock = true;
                 }
 
@@ -361,15 +361,15 @@ namespace Network {
                 if(fin && ack){
                     state = TCPStateTimeWait;
 
-                    Acknowledge(remoteSequenceNumber);
+                    Acknowledge(m_remoteSequenceNumber);
                 } else if(ack){
-                    remoteSequenceNumber = tcpHeader->sequence;
+                    m_remoteSequenceNumber = tcpHeader->sequence;
 
                     state = TCPStateFinWait2;
                 } else if(fin){
-                    remoteSequenceNumber = tcpHeader->sequence + 1;
+                    m_remoteSequenceNumber = tcpHeader->sequence + 1;
 
-                    FinishAcknowledge(remoteSequenceNumber);
+                    FinishAcknowledge(m_remoteSequenceNumber);
 
                     state = TCPStateLastAck;
                 }
@@ -387,11 +387,11 @@ namespace Network {
                 }
 
                 if(fin){
-                    remoteSequenceNumber = tcpHeader->sequence + 1;
+                    m_remoteSequenceNumber = tcpHeader->sequence + 1;
 
                     state = TCPStateTimeWait;
 
-                    Acknowledge(remoteSequenceNumber);
+                    Acknowledge(m_remoteSequenceNumber);
                 }
             } else if(state == TCPStateCloseWait || state == TCPStateTimeWait){
                 state = TCPStateUnknown;
@@ -410,7 +410,7 @@ namespace Network {
                 }
             }
 
-            if(fileClosed && state == TCPStateUnknown){
+            if(m_fileClosed && state == TCPStateUnknown){
                 closedSockets.remove(this);
                 if(port) {
                     ReleasePort();
@@ -453,7 +453,7 @@ namespace Network {
             
             tcpHeader.srcPort = port;
             tcpHeader.destPort = destinationPort;
-            tcpHeader.sequence = sequenceNumber;
+            tcpHeader.sequence = m_sequenceNumber;
             tcpHeader.acknowledgementNumber = ackNumber;
 
             tcpHeader.dataOffset = sizeof(TCPHeader) / 4; // Size of the TCP Header in DWORDs
@@ -504,7 +504,7 @@ namespace Network {
             
             tcpHeader.srcPort = port;
             tcpHeader.destPort = destinationPort;
-            tcpHeader.sequence = sequenceNumber;
+            tcpHeader.sequence = m_sequenceNumber;
 
             tcpHeader.dataOffset = sizeof(TCPHeader) / 4; // Size of the TCP Header in DWORDs
             tcpHeader.fin = 1; // FIN/Finish
@@ -528,7 +528,7 @@ namespace Network {
             
             tcpHeader.srcPort = port;
             tcpHeader.destPort = destinationPort;
-            tcpHeader.sequence = sequenceNumber;
+            tcpHeader.sequence = m_sequenceNumber;
             tcpHeader.acknowledgementNumber = ackNumber;
 
             tcpHeader.dataOffset = sizeof(TCPHeader) / 4; // Size of the TCP Header in DWORDs
@@ -554,7 +554,7 @@ namespace Network {
             
             tcpHeader.srcPort = port;
             tcpHeader.destPort = destinationPort;
-            tcpHeader.sequence = sequenceNumber;
+            tcpHeader.sequence = m_sequenceNumber;
 
             tcpHeader.dataOffset = sizeof(TCPHeader) / 4; // Size of the TCP Header in DWORDs
             tcpHeader.rst = 1; // RST, Abort the connections
@@ -656,8 +656,8 @@ namespace Network {
 
             Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] Connecting to %hd.%hd.%hd.%hd:%hd", peerAddress.data[0], peerAddress.data[1], peerAddress.data[2], peerAddress.data[3], (uint16_t)destinationPort);
 
-            sequenceNumber = (Timer::GetSystemUptime() % 512) * (rand() % 255) + Timer::GetTicks() + 1;
-            Synchronize(sequenceNumber - 1); // The peer should acknowledge the sent sequence number + 1, so just send (sequenceNumber - 1)
+            m_sequenceNumber = (Timer::GetSystemUptime() % 512) * (rand() % 255) + Timer::GetTicks() + 1;
+            Synchronize(m_sequenceNumber - 1); // The peer should acknowledge the sent sequence number + 1, so just send (sequenceNumber - 1)
 
             long retryPeriod = TCP_RETRY_MIN;
             while(state == TCPStateSyn){
@@ -677,8 +677,8 @@ namespace Network {
                 return -ECONNREFUSED;
             }
 
-            remoteSequenceNumber += 1;
-            Acknowledge(remoteSequenceNumber);
+            m_remoteSequenceNumber += 1;
+            Acknowledge(m_remoteSequenceNumber);
             return 0;
         }
 
@@ -701,7 +701,7 @@ namespace Network {
         }
 
         int64_t TCPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
-            if(state != TCPStateEstablished && !inboundData.Pos()){
+            if(state != TCPStateEstablished && !m_inboundData.Pos()){
                 return -ENOTCONN;
             }
 
@@ -711,7 +711,7 @@ namespace Network {
                 *addrlen = sizeof(sockaddr_in);
             }
 
-            if(state == TCPStateEstablished && inboundData.Pos() < len){ // We do not want to block when in CLOSE-WAIT
+            if(state == TCPStateEstablished && m_inboundData.Pos() < len){ // We do not want to block when in CLOSE-WAIT
                 FilesystemBlocker bl(this, len);
 
                 if(Scheduler::GetCurrentThread()->Block(&bl)){
@@ -723,23 +723,25 @@ namespace Network {
                 return -ECONNRESET; // If state is now unknown we recieved an RST
             }
 
-            if(len > inboundData.Pos()){
-                len = inboundData.Pos(); // We could have been unblocked earlier by a PSH or FIN
+            if(len > m_inboundData.Pos()){
+                len = m_inboundData.Pos(); // We could have been unblocked earlier by a PSH or FIN
 
                 if(!len){
                     return 0;
                 }
             }
 
-            return inboundData.Read(buffer, len);
+            return m_inboundData.Read(buffer, len);
         }
 
         int64_t TCPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* dest, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
             if(state != TCPStateEstablished){
+                Log::Info("TCPSocket::SendTo: Not connected!");
                 return -ENOTCONN;
             }
 
             if(dest || addrlen){
+                Log::Info("TCPSocket::SendTo: Already connected!");
                 return -EISCONN; // dest is invalid
             }
 
@@ -750,8 +752,8 @@ namespace Network {
 
             header.srcPort = port;
             header.destPort = destinationPort;
-            header.sequence = sequenceNumber;
-            header.acknowledgementNumber = remoteSequenceNumber;
+            header.sequence = m_sequenceNumber;
+            header.acknowledgementNumber = m_remoteSequenceNumber;
 
             header.dataOffset = sizeof(TCPHeader) / 4;
 
@@ -760,19 +762,75 @@ namespace Network {
             header.ack = 1;
             header.psh = 1;
 
-            TCPPacket pack = { .header = header, .sequenceNumber = sequenceNumber, .length = shortLength, .data = new uint8_t[len]};
+            TCPPacket pack = { .header = header, .sequenceNumber = m_sequenceNumber, .length = shortLength, .data = new uint8_t[len]};
             memcpy(pack.data, buffer, shortLength);
 
-            sequenceNumber += shortLength;
+            m_sequenceNumber += shortLength;
 
             int64_t ret = SendTCP(buffer, shortLength, address, peerAddress, header, adapter);
             if(ret >= 0){
-                acquireLock(&unacknowledgedPacketsLock);
-                unacknowledgedPackets.add_back(pack);
-                releaseLock(&unacknowledgedPacketsLock);
+                ScopedSpinLock acquired(m_unacknowledgedPacketsLock);
+                m_unacknowledgedPackets.add_back(pack);
             }
 
             return ret;
+        }
+
+        int TCPSocket::SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength){
+            if(level == IPPROTO_TCP){
+                switch(opt){
+                    case TCP_NODELAY:
+                        if(optLength < sizeof(int)){
+                            return -EFAULT; // need to be at least int size
+                        }
+
+                        m_noDelay = *reinterpret_cast<const int*>(optValue); // Disable 'Nagle's algorithm', we don't actualy implement this yet 
+                        // Nagle's algorithm involves buffering output until we fill a packet
+                        return 0;
+                    default:
+                        Log::Warning("TCPSocket::SetSocketOptions: Unknown option: %d", opt);
+                        return -ENOPROTOOPT;
+                }
+            } else if(level == SOL_SOCKET && opt == SO_KEEPALIVE){
+                Log::Warning("TCPSocket keepalive is ignored!");
+
+                if(optLength < sizeof(int)){
+                    return -EFAULT; // need to be at least int size
+                }
+
+                m_keepAlive = *reinterpret_cast<const int*>(optValue);
+                return 0;
+            }
+
+            return IPSocket::SetSocketOptions(level, opt, optValue, optLength);
+        }
+
+        int TCPSocket::GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength){
+            if(level == IPPROTO_TCP){
+                switch(opt){
+                    case TCP_NODELAY:
+                        if(*optLength < sizeof(int)){
+                            return -EFAULT; // Not big enough, callers job to check the memory space
+                        }
+
+                        *optLength = sizeof(int);
+                        *reinterpret_cast<int*>(optValue) = m_noDelay;
+                        return 0;
+                    default:
+                        Log::Warning("TCPSocket::GetSocketOptions: Unknown option: %d", opt);
+                        return -ENOPROTOOPT;
+                }
+            } else if(level == SOL_SOCKET && opt == SO_KEEPALIVE){
+                if(*optLength < sizeof(int)){
+                    return -EINVAL; // Not big enough, callers job to check the memory space
+                }
+
+                *optLength = sizeof(int);
+                *reinterpret_cast<int*>(optValue) = m_keepAlive;
+                return 0;
+            }
+
+            return IPSocket::GetSocketOptions(level, opt, optValue, optLength);
         }
 
         void TCPSocket::Close(){
@@ -781,7 +839,7 @@ namespace Network {
             if(handleCount <= 0){
                 Log::Debug(debugLevelNetwork, DebugLevelVerbose, "Closing TCP socket...");
 
-                fileClosed = true;
+                m_fileClosed = true;
 
                 if(state == TCPStateListen || state == TCPStateUnknown){
                     return; // No active connection
@@ -796,7 +854,7 @@ namespace Network {
                 if(state == TCPStateEstablished){
                     state = TCPStateFinWait1;
 
-                    FinishAcknowledge(remoteSequenceNumber);
+                    FinishAcknowledge(m_remoteSequenceNumber);
                 } else if(state == TCPStateCloseWait){
                     state = TCPStateLastAck;
 

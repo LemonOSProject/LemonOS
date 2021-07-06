@@ -2,6 +2,7 @@
 
 #include <Net/If.h>
 
+#include <netinet/tcp.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <Endian.h>

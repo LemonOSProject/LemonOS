@@ -146,8 +146,9 @@ public:
     Stream* outbound = nullptr;
 
     LocalSocket(int type, int protocol);
-
     ~LocalSocket();
+
+    static LocalSocket* CreatePairedSocket(LocalSocket* client);
 
     int ConnectTo(Socket* client);
     void DisconnectPeer();
@@ -171,7 +172,8 @@ public:
     bool CanRead() { if(inbound) return !inbound->Empty(); else return false; }
 };
 
-class IPSocket : public Socket {
+class IPSocket
+    : public Socket {
 public:
     IPSocket(int type, int protocol);
     virtual ~IPSocket();
@@ -214,7 +216,8 @@ protected:
 };
 
 namespace Network::UDP{
-    class UDPSocket final : public IPSocket {
+    class UDPSocket final
+        : public IPSocket {
     protected:
         friend void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length);
 
@@ -248,9 +251,29 @@ namespace Network::UDP{
 }
 
 namespace Network::TCP {
-    class TCPSocket final : public IPSocket {
+    class TCPSocket final
+        : public IPSocket {
+    public:
+        TCPSocket(int type, int protocol);
+        ~TCPSocket();
+
+        Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
+        int Bind(const sockaddr* addr, socklen_t addrlen);
+        int Connect(const sockaddr* addr, socklen_t addrlen);
+        int Listen(int backlog);
+
+        int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
+        int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
+
+        int SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength);
+        int GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength);
+        
+        void Close();
+        
     protected:
-        bool fileClosed = false;
+        bool m_fileClosed = false;
+        bool m_noDelay = false; // Disable 'Nagle's algorithm', we don't actualy implement this yet 
+        bool m_keepAlive = false; // We haven't implmented this yet
 
         friend void OnReceiveTCP(IPv4Header& ipHeader, void* data, size_t length);
 
@@ -289,27 +312,14 @@ namespace Network::TCP {
         };
 
         State state = TCPStateUnknown;
-        uint32_t sequenceNumber;
-        uint32_t lastAcknowledged; // Last acknowledged sequence number
+        uint32_t m_sequenceNumber;
+        uint32_t m_lastAcknowledged; // Last acknowledged sequence number
 
-        uint32_t remoteSequenceNumber; // Sequence number of the remote endpoint
+        uint32_t m_remoteSequenceNumber; // Sequence number of the remote endpoint
 
-        lock_t unacknowledgedPacketsLock = 0;
-        List<TCPPacket> unacknowledgedPackets; // Unacknowledged outbound packets
-        DataStream inboundData = DataStream(512);
-    public:
-        TCPSocket(int type, int protocol);
-        ~TCPSocket();
-
-        Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
-        int Bind(const sockaddr* addr, socklen_t addrlen);
-        int Connect(const sockaddr* addr, socklen_t addrlen);
-        int Listen(int backlog);
-
-        int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
-        int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
-
-        void Close();
+        lock_t m_unacknowledgedPacketsLock = 0;
+        List<TCPPacket> m_unacknowledgedPackets; // Unacknowledged outbound packets
+        DataStream m_inboundData = DataStream(512);
     };
 }
 
