@@ -193,7 +193,7 @@ LocalSocket* LocalSocket::CreatePairedSocket(LocalSocket* client){
     return sock;
 }
 
-int LocalSocket::ConnectTo(Socket* client){
+int LocalSocket::ConnectTo(LocalSocket* client){
     assert(passive);
 
     if(pendingConnections.Wait()){

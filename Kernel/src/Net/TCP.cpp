@@ -617,7 +617,7 @@ namespace Network {
                 return -EAFNOSUPPORT; // Not AF_INET
             }
 
-            if(connected){
+            if(IsConnected()){
                 Log::Debug(debugLevelNetwork, DebugLevelNormal, "[TCP] Socket already connected!");
                 return -EISCONN;
             }
@@ -687,7 +687,7 @@ namespace Network {
                 return -EDESTADDRREQ;
             }
 
-            if(connected){
+            if(IsConnected()){
                 return -EISCONN;
             }
 
@@ -702,6 +702,7 @@ namespace Network {
 
         int64_t TCPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
             if(state != TCPStateEstablished && !m_inboundData.Pos()){
+                Log::Debug(debugLevelNetwork, DebugLevelNormal, "TCPSocket::ReceiveFrom: Not connected!");
                 return -ENOTCONN;
             }
 
@@ -736,12 +737,12 @@ namespace Network {
 
         int64_t TCPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* dest, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
             if(state != TCPStateEstablished){
-                Log::Info("TCPSocket::SendTo: Not connected!");
+                Log::Debug(debugLevelNetwork, DebugLevelNormal, "TCPSocket::SendTo: Not connected!");
                 return -ENOTCONN;
             }
 
             if(dest || addrlen){
-                Log::Info("TCPSocket::SendTo: Already connected!");
+                Log::Debug(debugLevelNetwork, DebugLevelNormal, "TCPSocket::SendTo: Already connected!");
                 return -EISCONN; // dest is invalid
             }
 

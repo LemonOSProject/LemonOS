@@ -96,8 +96,6 @@ protected:
     bool passive = false; // Listening?
     bool blocking = true;
 public: 
-    bool connected = false; // Connected?
-    
     static int CreateSocket(int domain, int type, int protocol, Socket** sock);
 
     Socket(int type, int protocol);
@@ -129,16 +127,18 @@ public:
     virtual int GetDomain() { return domain; }
     virtual int IsListening() { return passive; }
     virtual int IsBlocking() { return blocking; }
-    virtual int IsConnected() { return connected; }
+    virtual int IsConnected() = 0;
 
     virtual int PendingConnections() { return pending.get_length(); }
 };
 
 class LocalSocket : public Socket {
+protected:
     lock_t slock = 0;
 
     lock_t watcherLock = 0;
     List<FilesystemWatcher*> watching;
+    bool connected = false; // Connected?
 public:
     LocalSocket* peer = nullptr;
 
@@ -150,10 +150,12 @@ public:
 
     static LocalSocket* CreatePairedSocket(LocalSocket* client);
 
-    int ConnectTo(Socket* client);
+    int ConnectTo(LocalSocket* client);
     void DisconnectPeer();
 
     void OnDisconnect();
+
+    int IsConnected() { return connected; }
     
     Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
     int Bind(const sockaddr* addr, socklen_t addrlen);
@@ -218,6 +220,19 @@ protected:
 namespace Network::UDP{
     class UDPSocket final
         : public IPSocket {
+    public:
+        UDPSocket(int type, int protocol);
+        ~UDPSocket();
+
+        int IsConnected() { return false; } // UDP sockets are connection less
+
+        Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
+        int Bind(const sockaddr* addr, socklen_t addrlen);
+        int Connect(const sockaddr* addr, socklen_t addrlen);
+        int Listen(int backlog);
+
+        int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
+        int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
     protected:
         friend void OnReceiveUDP(IPv4Header& ipHeader, void* data, size_t length);
 
@@ -236,17 +251,6 @@ namespace Network::UDP{
         int ReleasePort();
 
         int64_t OnReceive(IPv4Address& sourceIP, BigEndian<uint16_t> sourcePort, void* buffer, size_t len);
-    public:
-        UDPSocket(int type, int protocol);
-        ~UDPSocket();
-
-        Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
-        int Bind(const sockaddr* addr, socklen_t addrlen);
-        int Connect(const sockaddr* addr, socklen_t addrlen);
-        int Listen(int backlog);
-
-        int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
-        int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary = nullptr, size_t ancillaryLen = 0);
     };
 }
 
@@ -267,6 +271,9 @@ namespace Network::TCP {
 
         int SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength);
         int GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength);
+
+        int IsConnected() { return state == TCPStateEstablished; }
+        bool CanWrite() { return IsConnected(); }
         
         void Close();
         
