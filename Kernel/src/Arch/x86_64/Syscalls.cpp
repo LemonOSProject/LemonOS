@@ -40,7 +40,7 @@
 #define SC_ARG4(r) (r)->r9
 #define SC_ARG5(r) (r)->r8
 
-#define NUM_SYSCALLS 100
+#define NUM_SYSCALLS 101
 
 #define EXEC_CHILD 1
 
@@ -3344,6 +3344,24 @@ long SysSocketPair(RegisterContext* r){
 	return 0;
 }
 
+/////////////////////////////
+/// \brief SysPeername(int sockfd, struct sockaddr* addr, socklen_t* addrlen) - get name of peer socket
+///
+/// Returns the address of the peer connected to the socket \a sockfd in \a addr
+/// The \a addrlen argument should indicate the amount of space pointed to by \a addr.
+/// On return it will contian the size of the name
+/// The address will be truncated if the addr buffer is too small
+///
+/// \param sockfd File descriptor of socket
+/// \param addr Address buffer
+/// \param addrlen 
+///
+/// \return Negative error code on failure, otherwise 0
+/////////////////////////////
+long SysPeername(RegisterContext* r){
+	return -ENOSYS;
+}
+
 syscall_t syscalls[NUM_SYSCALLS]{
 	SysDebug,
 	SysExit,					// 1
@@ -3445,6 +3463,7 @@ syscall_t syscalls[NUM_SYSCALLS]{
 	SysPipe,
 	SysGetEntropy,
 	SysSocketPair,
+	SysPeername,				// 100
 };
 
 void DumpLastSyscall(Thread* t){

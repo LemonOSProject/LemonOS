@@ -2,7 +2,8 @@
 
 #include <String.h>
 
-PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk) : Device(DeviceTypeStoragePartition){
+PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk)
+    : Device(DeviceTypeStoragePartition) {
     this->startLBA = startLBA;
     this->endLBA = endLBA;
     this->parentDisk = disk;
@@ -17,14 +18,15 @@ PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice*
     SetInstanceName(buf);
 }
 
-int PartitionDevice::ReadAbsolute(uint64_t offset, uint32_t count, void* buffer){
-    if(offset + count > (endLBA - startLBA) * parentDisk->blocksize) return 2;
+int PartitionDevice::ReadAbsolute(uint64_t offset, uint32_t count, void* buffer) {
+    if (offset + count > (endLBA - startLBA) * parentDisk->blocksize)
+        return 2;
 
     uint64_t lba = offset / parentDisk->blocksize;
     uint64_t tempCount = offset + (offset % parentDisk->blocksize); // Account for that we read from start of block
     uint8_t buf[tempCount];
 
-    if(int e = ReadBlock(lba, parentDisk->blocksize, buf)){
+    if (int e = ReadBlock(lba, parentDisk->blocksize, buf)) {
         return e;
     }
 
@@ -33,21 +35,21 @@ int PartitionDevice::ReadAbsolute(uint64_t offset, uint32_t count, void* buffer)
     return 0;
 }
 
-int PartitionDevice::ReadBlock(uint64_t lba, uint32_t count, void* buffer){
-    if(lba * parentDisk->blocksize + count > (endLBA - startLBA) * parentDisk->blocksize) {
-        Log::Debug(debugLevelPartitions, DebugLevelNormal, "[PartitionDevice] ReadBlock: LBA %x out of partition range!", lba + count / parentDisk->blocksize);
+int PartitionDevice::ReadBlock(uint64_t lba, uint32_t count, void* buffer) {
+    if (lba * parentDisk->blocksize + count > (endLBA - startLBA) * parentDisk->blocksize) {
+        Log::Debug(debugLevelPartitions, DebugLevelNormal,
+                   "[PartitionDevice] ReadBlock: LBA %x out of partition range!", lba + count / parentDisk->blocksize);
         return 2;
     }
 
     return parentDisk->ReadDiskBlock(lba + startLBA, count, buffer);
 }
 
-int PartitionDevice::WriteBlock(uint64_t lba, uint32_t count, void* buffer){
-    if(lba * parentDisk->blocksize + count > (endLBA - startLBA) * parentDisk->blocksize) return 2;
+int PartitionDevice::WriteBlock(uint64_t lba, uint32_t count, void* buffer) {
+    if (lba * parentDisk->blocksize + count > (endLBA - startLBA) * parentDisk->blocksize)
+        return 2;
 
     return parentDisk->WriteDiskBlock(lba + startLBA, count, buffer);
 }
 
-PartitionDevice::~PartitionDevice(){
-    
-}
+PartitionDevice::~PartitionDevice() {}

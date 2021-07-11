@@ -1,17 +1,17 @@
 #include <Lock.h>
 
-#include <Scheduler.h>
-#include <Timer.h>
 #include <CPU.h>
 #include <Logging.h>
+#include <Scheduler.h>
+#include <Timer.h>
 
-bool Semaphore::Wait(){
+bool Semaphore::Wait() {
     assert(CheckInterrupts());
 
     acquireLock(&lock);
     __sync_fetch_and_sub(&value, 1);
 
-    if(value < 0){
+    if (value < 0) {
         SemaphoreBlocker blocker(this);
         blocked.add_back(&blocker);
 
@@ -24,11 +24,11 @@ bool Semaphore::Wait(){
     return false;
 }
 
-bool Semaphore::WaitTimeout(long& timeout){
+bool Semaphore::WaitTimeout(long& timeout) {
     acquireLock(&lock);
     __sync_fetch_and_sub(&value, 1);
 
-    if(value < 0){
+    if (value < 0) {
         SemaphoreBlocker blocker(this);
         blocked.add_back(&blocker);
 
@@ -41,11 +41,11 @@ bool Semaphore::WaitTimeout(long& timeout){
     return false;
 }
 
-void Semaphore::Signal(){
+void Semaphore::Signal() {
     acquireLock(&lock);
 
     __sync_fetch_and_add(&value, 1);
-    if(blocked.get_length() > 0){
+    if (blocked.get_length() > 0) {
         blocked.get_front()->Unblock();
     }
 
