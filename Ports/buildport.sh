@@ -8,6 +8,8 @@ if [ -z "$LEMON_SYSROOT" ]; then
     echo "warning: LEMON_SYSROOT not set. Automatically set to $LEMON_SYSROOT"
 fi
 
+export PATH="$PATH:$HOME/.local/share/lemon/bin"
+
 export CC=lemon-clang
 export CXX=lemon-clang++
 export CFLAGS=-Wno-error
