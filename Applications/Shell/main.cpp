@@ -1,32 +1,29 @@
 #include <stdint.h>
 
-#include <lemon/syscall.h>
-#include <Lemon/System/Filesystem.h>
-#include <Lemon/System/Spawn.h>
-#include <Lemon/System/Info.h>
-#include <Lemon/System/Util.h>
-#include <Lemon/System/Framebuffer.h>
-#include <Lemon/System/IPC.h>
-#include <Lemon/System/Waitable.h>
-#include <Lemon/GUI/Window.h>
+#include <Lemon/Core/Keyboard.h>
 #include <Lemon/Core/SharedMemory.h>
 #include <Lemon/Core/Shell.h>
-#include <Lemon/Core/Keyboard.h>
+#include <Lemon/GUI/Window.h>
 #include <Lemon/Graphics/Graphics.h>
-#include <stdio.h>
+#include <Lemon/System/Framebuffer.h>
+#include <Lemon/System/IPC.h>
+#include <Lemon/System/Info.h>
+#include <Lemon/System/Spawn.h>
+#include <Lemon/System/Util.h>
+#include <Lemon/System/Waitable.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <math.h>
-#include <stdlib.h>
+#include <lemon/syscall.h>
 #include <map>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "shell.h"
 
 #define MENU_ITEM_HEIGHT 24
 
-fb_info_t videoInfo;
 Lemon::GUI::Window* taskbar;
 ShellInstance* shell;
 surface_t menuButton;
@@ -39,140 +36,152 @@ lemon_sysinfo_t sysInfo;
 char memString[128];
 
 class WindowButton : public Lemon::GUI::Button {
-	ShellWindow* win;
+    ShellWindow* win;
 
-public:
-	WindowButton(ShellWindow* win, rect_t bounds) : Button(win->title.c_str(), bounds){
-		this->win = win;
-		labelAlignment = Lemon::GUI::TextAlignment::Left;
-	}
+  public:
+    WindowButton(ShellWindow* win, rect_t bounds) : Button(win->title.c_str(), bounds) {
+        this->win = win;
+        labelAlignment = Lemon::GUI::TextAlignment::Left;
+    }
 
-	void Paint(surface_t* surface){
-		/*if(win->state == Lemon::Shell::ShellWindowStateActive || pressed){
-			Lemon::Graphics::DrawRect(fixedBounds, Lemon::colours[Lemon::Colour::ForegroundDim], surface);
-		}*/
+    void Paint(surface_t* surface) {
+        /*if(win->state == Lemon::Shell::ShellWindowStateActive || pressed){
+                Lemon::Graphics::DrawRect(fixedBounds, Lemon::colours[Lemon::Colour::ForegroundDim], surface);
+        }*/
 
-		DrawButtonLabel(surface, false);
-	}
+        DrawButtonLabel(surface, false);
+    }
 
-	void OnMouseUp(vector2i_t mousePos){
-		pressed = false;
+    void OnMouseUp(vector2i_t mousePos) {
+        pressed = false;
 
-		/*if(win->lastState == Lemon::Shell::ShellWindowStateActive){
-			window->Minimize(win->id, true);
-		} else {
-			window->Minimize(win->id, false);
-		}*/
-	}
+        /*if(win->lastState == Lemon::Shell::ShellWindowStateActive){
+                window->Minimize(win->id, true);
+        } else {
+                window->Minimize(win->id, false);
+        }*/
+    }
 };
 
 std::map<ShellWindow*, WindowButton*> taskbarWindows;
 Lemon::GUI::LayoutContainer* taskbarWindowsContainer;
 
 bool paintTaskbar = true;
-void AddWindow(ShellWindow* win){
-	WindowButton* btn = new WindowButton(win, {0, 0, 0, 0} /* The LayoutContainer will handle bounds for us*/);
-	taskbarWindows.insert(std::pair<ShellWindow*, WindowButton*>(win, btn));
+void AddWindow(ShellWindow* win) {
+    WindowButton* btn = new WindowButton(win, {0, 0, 0, 0} /* The LayoutContainer will handle bounds for us*/);
+    taskbarWindows.insert(std::pair<ShellWindow*, WindowButton*>(win, btn));
 
-	taskbarWindowsContainer->AddWidget(btn);
+    taskbarWindowsContainer->AddWidget(btn);
 
-	paintTaskbar = true;
+    paintTaskbar = true;
 }
 
-void RemoveWindow(ShellWindow* win){
-	WindowButton* btn = taskbarWindows[win];
-	taskbarWindows.erase(win);
+void RemoveWindow(ShellWindow* win) {
+    WindowButton* btn = taskbarWindows[win];
+    taskbarWindows.erase(win);
 
-	taskbarWindowsContainer->RemoveWidget(btn);
-	delete btn;
+    taskbarWindowsContainer->RemoveWidget(btn);
+    delete btn;
 
-	paintTaskbar = true;
+    paintTaskbar = true;
 }
 
-void OnTaskbarPaint(surface_t* surface){
-	Lemon::Graphics::DrawGradientVertical(0,0,surface->width, surface->height, {0x1d, 0x1c, 0x1b, 255}, {0x1b, 0x1b, 0x1b, 255},surface);
+void OnTaskbarPaint(surface_t* surface) {
+    Lemon::Graphics::DrawGradientVertical(0, 0, surface->width, surface->height, {0x1d, 0x1c, 0x1b, 255},
+                                          {0x1b, 0x1b, 0x1b, 255}, surface);
 
-	if(showMenu){
-		Lemon::Graphics::surfacecpyTransparent(surface, &menuButton, {18 - menuButton.width / 2, 18 - menuButton.height / 4}, {0, menuButton.height / 2, menuButton.width, 30});
-	} else {
-		Lemon::Graphics::surfacecpyTransparent(surface, &menuButton, {18 - menuButton.width / 2, 18 - menuButton.height / 4}, {0, 0, menuButton.width, 30});
-	}
+    if (showMenu) {
+        Lemon::Graphics::surfacecpyTransparent(surface, &menuButton,
+                                               {18 - menuButton.width / 2, 18 - menuButton.height / 4},
+                                               {0, menuButton.height / 2, menuButton.width, 30});
+    } else {
+        Lemon::Graphics::surfacecpyTransparent(surface, &menuButton,
+                                               {18 - menuButton.width / 2, 18 - menuButton.height / 4},
+                                               {0, 0, menuButton.width, 30});
+    }
 
-	sprintf(memString, "Used Memory: %lu/%lu KB", sysInfo.usedMem, sysInfo.totalMem);
-	Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255, 255, surface);
+    sprintf(memString, "Used Memory: %lu/%lu KB", sysInfo.usedMem, sysInfo.totalMem);
+    Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255,
+                                255, surface);
 }
 
-int main(){
-	if(chdir("/system")){
-		return 1;
-	}
+int main() {
+    if (chdir("/system")) {
+        return 1;
+    }
 
-	handle_t svc = Lemon::CreateService("lemon.shell");
-	shell = new ShellInstance(svc, "Instance");
+    handle_t svc = Lemon::CreateService("lemon.shell");
+    shell = new ShellInstance(svc, "Instance");
 
-	syscall(SYS_GET_VIDEO_MODE, (uintptr_t)&videoInfo,0,0,0,0);
-	syscall(SYS_UNAME, (uintptr_t)versionString,0,0,0,0);
+    syscall(SYS_UNAME, (uintptr_t)versionString, 0, 0, 0, 0);
 
-	Lemon::Graphics::LoadImage("/system/lemon/resources/menubuttons.png", &menuButton);
+    Lemon::Graphics::LoadImage("/system/lemon/resources/menubuttons.png", &menuButton);
 
-	handle_t tempEndpoint = 0;
-	while(tempEndpoint <= 0){
-		tempEndpoint = Lemon::InterfaceConnect("lemon.lemonwm/Instance");
-	} // Wait for LemonWM to create the interface (if not already created)
-	Lemon::DestroyKObject(tempEndpoint);
+    handle_t tempEndpoint = 0;
+    while (tempEndpoint <= 0) {
+        tempEndpoint = Lemon::InterfaceConnect("lemon.lemonwm/Instance");
+    } // Wait for LemonWM to create the interface (if not already created)
+    Lemon::DestroyKObject(tempEndpoint);
 
-	taskbar = new Lemon::GUI::Window("", {static_cast<int>(videoInfo.width), 36}, WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI, {0, static_cast<int>(videoInfo.height) - 36});
-	taskbar->OnPaint = OnTaskbarPaint;
-	taskbar->rootContainer.background = {0, 0, 0, 0};
-	taskbarWindowsContainer = new Lemon::GUI::LayoutContainer({40, 0, static_cast<int>(videoInfo.width) - 104, static_cast<int>(videoInfo.height)}, {160, 36 - 4});
-	taskbarWindowsContainer->background = {0, 0, 0, 0};
-	taskbar->AddWidget(taskbarWindowsContainer);
-	
-	shell->AddWindow = AddWindow;
-	shell->RemoveWindow = RemoveWindow;
+	vector2i_t screenBounds = Lemon::WindowServer::Instance()->GetScreenBounds();
 
-	Lemon::GUI::Window* menuWindow = InitializeMenu();
-	shell->SetMenu(menuWindow);
+    taskbar = new Lemon::GUI::Window("", {static_cast<int>(screenBounds.x), 36},
+                                     WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI,
+                                     {0, static_cast<int>(screenBounds.y) - 36});
+    taskbar->OnPaint = OnTaskbarPaint;
+    taskbar->rootContainer.background = {0, 0, 0, 0};
+    taskbarWindowsContainer = new Lemon::GUI::LayoutContainer(
+        {40, 0, static_cast<int>(screenBounds.x) - 104, static_cast<int>(screenBounds.y)}, {160, 36 - 4});
+    taskbarWindowsContainer->background = {0, 0, 0, 0};
+    taskbar->AddWidget(taskbarWindowsContainer);
 
-	//taskbar->InitializeShellConnection();
+    shell->AddWindow = AddWindow;
+    shell->RemoveWindow = RemoveWindow;
 
-	Lemon::Waiter waiter;
-	waiter.WaitOnAll(&shell->GetInterface());
-	waiter.WaitOn(Lemon::WindowServer::Instance());
+    Lemon::GUI::Window* menuWindow = InitializeMenu();
+    shell->SetMenu(menuWindow);
 
-	for(;;){
-		Lemon::WindowServer::Instance()->Poll();
-		shell->Poll();
+    // taskbar->InitializeShellConnection();
 
-		Lemon::LemonEvent ev;
-		while(taskbar->PollEvent(ev)){
-			if(ev.event == Lemon::EventMouseReleased){
-				if(ev.mousePos.x < 50){
-					MinimizeMenu(showMenu); // Toggle whether window is minimized or not
-				} else {
-					taskbar->GUIHandleEvent(ev);
-				}
-			} else {
-				taskbar->GUIHandleEvent(ev);
-			}
-			paintTaskbar = true;
-		}
+    Lemon::Waiter waiter;
+    waiter.WaitOnAll(&shell->GetInterface());
+    waiter.WaitOn(Lemon::WindowServer::Instance());
 
-		PollMenu();
+    for (;;) {
+        Lemon::WindowServer::Instance()->Poll();
+        shell->Poll();
 
-		uint64_t usedMemLast = sysInfo.usedMem;
-		sysInfo = Lemon::SysInfo();
+        Lemon::LemonEvent ev;
+        while (taskbar->PollEvent(ev)) {
+            if (ev.event == Lemon::EventMouseReleased) {
+                if (ev.mousePos.x < 50) {
+                    MinimizeMenu(showMenu); // Toggle whether window is minimized or not
+                } else {
+                    taskbar->GUIHandleEvent(ev);
+                }
+            } else {
+                taskbar->GUIHandleEvent(ev);
+            }
+            paintTaskbar = true;
+        }
 
-		if(sysInfo.usedMem != usedMemLast) paintTaskbar = true;
+        PollMenu();
 
-		if(paintTaskbar){
-			taskbar->Paint();
+        uint64_t usedMemLast = sysInfo.usedMem;
+        sysInfo = Lemon::SysInfo();
 
-			paintTaskbar = false;
-		}
+        if (sysInfo.usedMem != usedMemLast)
+            paintTaskbar = true;
 
-		waiter.Wait();
-	}
+        if (paintTaskbar) {
+            taskbar->Paint();
 
-	for(;;);
+            paintTaskbar = false;
+        }
+
+        waiter.Wait();
+    }
+
+    for (;;)
+        ;
 }

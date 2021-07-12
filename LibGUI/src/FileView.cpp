@@ -16,10 +16,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#ifdef __lemon__
-#include <Lemon/System/Filesystem.h>
-#endif
-
 namespace Lemon::GUI {
 const Surface* FileView::diskIcon = nullptr;
 const Surface* FileView::folderIcon = nullptr;
