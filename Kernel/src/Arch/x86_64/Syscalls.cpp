@@ -40,7 +40,7 @@
 #define SC_ARG4(r) (r)->r9
 #define SC_ARG5(r) (r)->r8
 
-#define NUM_SYSCALLS 101
+#define NUM_SYSCALLS 102
 
 #define EXEC_CHILD 1
 
@@ -583,6 +583,15 @@ long SysMapFB(RegisterContext *r){
 	Log::Info("fb mapped at %x", region->Base());
 	
 	return 0;
+}
+
+/////////////////////////////
+/// \name SysGetTID - Get thread ID
+///
+/// \return Current thread's ID
+/////////////////////////////
+long SysGetTID(RegisterContext* r){
+	return Scheduler::GetCurrentThread()->tid;
 }
 
 long SysChmod(RegisterContext* r){
@@ -1976,12 +1985,12 @@ long SysGetProcessInfo(RegisterContext* r){
 
 	pInfo->pid = pid;
 
-	pInfo->threadCount = reqProcess->threadCount;
+	pInfo->threadCount = reqProcess->threads.get_length();
 
 	pInfo->uid = reqProcess->uid;
 	pInfo->gid = reqProcess->gid;
 
-	pInfo->state = reqProcess->state;
+	pInfo->state = reqProcess->threads.get_front()->state;
 
 	strcpy(pInfo->name, reqProcess->name);
 
@@ -2029,12 +2038,12 @@ long SysGetNextProcessInfo(RegisterContext* r){
 
 	pInfo->pid = *pidP;
 
-	pInfo->threadCount = reqProcess->threadCount;
+	pInfo->threadCount = reqProcess->threads.get_length();
 
 	pInfo->uid = reqProcess->uid;
 	pInfo->gid = reqProcess->gid;
 
-	pInfo->state = reqProcess->state;
+	pInfo->state = reqProcess->threads.get_front()->state;
 
 	strcpy(pInfo->name, reqProcess->name);
 
@@ -3057,11 +3066,7 @@ long SysInterruptThread(RegisterContext* r){
 
 	long tid = SC_ARG0(r);
 
-	if(tid < 0 || tid > process->threads.get_length()){
-		return -EINVAL; // Thread does not exist
-	}
-
-	Thread* th = process->threads.get_at(tid);
+	Thread* th = process->GetThreadFromID(tid);
 	if(!th){
 		return -ESRCH; // Thread has already been killed
 	}
@@ -3150,7 +3155,7 @@ long SysFork(RegisterContext* r){
 	Thread* currentThread = Scheduler::GetCurrentThread();
 
 	Process* newProcess = Scheduler::CloneProcess(process);
-	Thread* thread = newProcess->threads[0];
+	Thread* thread = newProcess->threads.get_front();
 	void* threadKStack = thread->kernelStack; // Save the allocated kernel stack
 
 	*thread = *currentThread;
@@ -3162,7 +3167,7 @@ long SysFork(RegisterContext* r){
 	thread->lock = 0;
 	thread->stateLock = 0;
 
-	thread->tid = 0;
+	thread->tid = 1;
 
 	thread->blocker = nullptr;
 	thread->blockTimedOut = false;
@@ -3349,7 +3354,7 @@ long SysSocketPair(RegisterContext* r){
 ///
 /// Returns the address of the peer connected to the socket \a sockfd in \a addr
 /// The \a addrlen argument should indicate the amount of space pointed to by \a addr.
-/// On return it will contian the size of the name
+/// On return it will contain the size of the name
 /// The address will be truncated if the addr buffer is too small
 ///
 /// \param sockfd File descriptor of socket
@@ -3359,6 +3364,24 @@ long SysSocketPair(RegisterContext* r){
 /// \return Negative error code on failure, otherwise 0
 /////////////////////////////
 long SysPeername(RegisterContext* r){
+	return -ENOSYS;
+}
+
+/////////////////////////////
+/// \brief SysPeername(int sockfd, struct sockaddr* addr, socklen_t* addrlen) - get name of peer socket
+///
+/// Returns the address that the socket is bound to
+/// The \a addrlen argument should indicate the amount of space pointed to by \a addr.
+/// On return it will contain the size of the name
+/// The address will be truncated if the addr buffer is too small
+///
+/// \param sockfd File descriptor of socket
+/// \param addr Address buffer
+/// \param addrlen 
+///
+/// \return Negative error code on failure, otherwise 0
+/////////////////////////////
+long SysSockname(RegisterContext* r){
 	return -ENOSYS;
 }
 
@@ -3378,7 +3401,7 @@ syscall_t syscalls[NUM_SYSCALLS]{
 	SysChdir,
 	SysTime,
 	SysMapFB,
-	nullptr,					// 15
+	SysGetTID,					// 15
 	SysChmod,
 	SysFStat,
 	SysStat,
@@ -3464,6 +3487,7 @@ syscall_t syscalls[NUM_SYSCALLS]{
 	SysGetEntropy,
 	SysSocketPair,
 	SysPeername,				// 100
+	SysSockname,
 };
 
 void DumpLastSyscall(Thread* t){

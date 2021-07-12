@@ -31,9 +31,10 @@ namespace Scheduler{
 typedef struct Process {
 	pid_t pid = -1; // PID
 	AddressSpace* addressSpace; // Pointer to page directory and tables
-	uint8_t state = ThreadStateRunning; // Process state
-	Vector<Thread*> threads;
-	uint32_t threadCount = 0; // Amount of threads
+
+	List<Thread*> threads;
+	int64_t nextThreadID = 1;
+
 	int32_t euid = 0; // Effective UID
 	int32_t uid = 0;
 	int32_t egid = 0; // Effective GID
@@ -56,6 +57,16 @@ typedef struct Process {
 	HashMap<uintptr_t, List<FutexThreadBlocker*>*> futexWaitQueue = HashMap<uintptr_t, List<FutexThreadBlocker*>*>(8);
 
 	uintptr_t usedMemoryBlocks;
+
+	ALWAYS_INLINE Thread* GetThreadFromID(pid_t id){
+		for(Thread* t : threads){
+			if(t->tid == id){
+				return t;
+			}
+		}
+
+		return nullptr;
+	}
 
 	ALWAYS_INLINE int AllocateFileDescriptor(fs_fd_t* ptr){
 		ScopedSpinLock lockFds(fileDescriptorsLock);
@@ -124,6 +135,7 @@ typedef struct Process {
 
 	lock_t fileDescriptorsLock = 0;
 	Vector<fs_fd_t*> fileDescriptors;
+private:
 } process_t;
 
 namespace Scheduler{

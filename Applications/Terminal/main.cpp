@@ -18,6 +18,7 @@
 #include <sys/wait.h>
 
 #include <vector>
+#include <mutex>
 
 #include "escape.h"
 #include "colours.h"
@@ -33,6 +34,8 @@ Lemon::GUI::Window* window;
 
 bool paint = true;
 bool paintAll = true;
+
+std::mutex paintLock;
 
 struct TermState{
 	bool bold : 1;
@@ -523,16 +526,20 @@ void PrintChar(char ch){
 	while(waitpid(lsh, nullptr, WNOHANG) <= 0){
 		poll(fds.data(), fds.size(), 500000); // Wake up every 500ms to check if LSh has exited
 
+		bool needsPaint = false;
 		while(int len = read(masterPTYFd, buf, 512)){
 			for(int i = 0; i < len; i++){
 				PrintChar(buf[i]);
 			}
 
-			paint = true;
+			needsPaint = true;
 		}
 
-		if(paint){
-			Lemon::InterruptThread(0);
+		if(needsPaint){
+			std::lock_guard acquired(paintLock);
+
+			paint = true;
+			Lemon::InterruptThread(1);
 		}
 	}
 
@@ -635,11 +642,14 @@ int main(int argc, char** argv){
 			}
 		}
 
-		if(paint || paintAll){
-			window->Paint();
+		{
+			std::lock_guard acquired(paintLock);
+			if(paint){
+				window->Paint();
 
-			paint = false;
-			paintAll = false;
+				paint = false;
+				paintAll = false;
+			}
 		}
 
         Lemon::WindowServer::Instance()->Wait();

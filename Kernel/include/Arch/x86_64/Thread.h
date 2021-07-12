@@ -68,7 +68,7 @@ struct Thread {
 
 	uint64_t fsBase = 0;
 	
-	pid_t tid = 0;
+	pid_t tid = 1;
 
 	bool blockTimedOut = false;
 	ThreadBlocker* blocker = nullptr;

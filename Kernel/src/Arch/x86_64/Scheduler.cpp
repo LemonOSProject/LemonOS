@@ -184,7 +184,6 @@ namespace Scheduler{
         proc->threads.clear();
 
         proc->threads.add_back(new Thread);
-        proc->threadCount = 1;
 
         memset(proc->threads[0], 0, sizeof(Thread));
 
@@ -197,6 +196,7 @@ namespace Scheduler{
         // Create structure for the main thread
         Thread* thread = proc->threads[0];
 
+        thread->tid = proc->nextThreadID++;
         thread->stack = 0;
         thread->priority = 1;
         thread->timeSliceDefault = 1;
@@ -250,7 +250,7 @@ namespace Scheduler{
         process_t* proc = InitializeProcessStructure();
         proc->addressSpace = new AddressSpace(Memory::CreatePageMap());
 
-        Thread* thread = proc->threads[0];
+        Thread* thread = proc->threads.get_front();
 
         void* stack = (void*)Memory::KernelAllocate4KPages(32);
         for(int i = 0; i < 32; i++){
@@ -263,7 +263,7 @@ namespace Scheduler{
         thread->registers.rbp = (uintptr_t)thread->stack + PAGE_SIZE_4K * 32;
         thread->registers.rip = (uintptr_t)entry;
 
-        InsertNewThreadIntoQueue(proc->threads[0]);
+        InsertNewThreadIntoQueue(proc->threads.get_front());
 
         processes->add_back(proc);
 
@@ -289,10 +289,8 @@ namespace Scheduler{
     }
 
     pid_t CreateChildThread(process_t* process, uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss){
-        pid_t threadID = process->threadCount++;
-        process->threads.add_back(new Thread);
-
-        Thread& thread = *process->threads[threadID];
+        pid_t threadID = process->nextThreadID++;
+        Thread& thread = *process->threads.add_back(new Thread);
 
         thread.tid = threadID;
 
@@ -345,8 +343,7 @@ namespace Scheduler{
         
         CPU* cpu = GetCPULocal();
         List<Thread*> runningThreads;
-        for(unsigned i = 0; i < process->threads.get_length(); i++){
-            Thread* thread = process->threads[i];
+        for(Thread* thread : process->threads){
             if(thread != cpu->currentThread && thread){
                 if(thread->blocker && thread->state == ThreadStateBlocked){
                     thread->blocker->Interrupt(); // Stop the thread from blocking
