@@ -6,31 +6,19 @@ typedef struct Vector2i {
     int x, y;
 } vector2i_t; // Two dimensional integer vector
 
-inline vector2i_t operator+ (const vector2i_t& l, const vector2i_t& r){
-    return {l.x + r.x, l.y + r.y};
-}
+inline vector2i_t operator+(const vector2i_t& l, const vector2i_t& r) { return {l.x + r.x, l.y + r.y}; }
 
-inline void operator+= (vector2i_t& l, const vector2i_t& r){
-    l = l + r;
-}
+inline void operator+=(vector2i_t& l, const vector2i_t& r) { l = l + r; }
 
-inline vector2i_t operator- (const vector2i_t& l, const vector2i_t& r){
-    return {l.x - r.x, l.y - r.y};
-}
+inline vector2i_t operator-(const vector2i_t& l, const vector2i_t& r) { return {l.x - r.x, l.y - r.y}; }
 
-inline void operator-= (vector2i_t& l, const vector2i_t& r){
-    l = l - r;
-}
+inline void operator-=(vector2i_t& l, const vector2i_t& r) { l = l - r; }
 
-inline bool operator== (const vector2i_t& l, const vector2i_t& r){
-    return l.x == r.x && l.y == r.y;
-}
+inline bool operator==(const vector2i_t& l, const vector2i_t& r) { return l.x == r.x && l.y == r.y; }
 
-inline bool operator!= (const vector2i_t& l, const vector2i_t& r){
-    return l.x != r.x && l.y != r.y;
-}
+inline bool operator!=(const vector2i_t& l, const vector2i_t& r) { return l.x != r.x && l.y != r.y; }
 
-typedef struct Rect{
+typedef struct Rect {
     union {
         vector2i_t pos;
         struct {
@@ -51,16 +39,30 @@ typedef struct Rect{
     __attribute__((always_inline)) inline int top() const { return y; }
     __attribute__((always_inline)) inline int bottom() const { return y + height; }
 
-    __attribute__((always_inline)) inline int left(int newLeft) { width += x - newLeft; x = newLeft; return x; }
-    __attribute__((always_inline)) inline int right(int newRight) { width = newRight - x; return x + width; }
-    __attribute__((always_inline)) inline int top(int newTop) { height += y - newTop; y = newTop; return y; }
-    __attribute__((always_inline)) inline int bottom(int newBottom) { height = newBottom - y; return y + height; }
+    __attribute__((always_inline)) inline int left(int newLeft) {
+        width += x - newLeft;
+        x = newLeft;
+        return x;
+    }
+    __attribute__((always_inline)) inline int right(int newRight) {
+        width = newRight - x;
+        return x + width;
+    }
+    __attribute__((always_inline)) inline int top(int newTop) {
+        height += y - newTop;
+        y = newTop;
+        return y;
+    }
+    __attribute__((always_inline)) inline int bottom(int newBottom) {
+        height = newBottom - y;
+        return y + height;
+    }
 
-    std::list<Rect> Split(Rect cut){
+    std::list<Rect> Split(Rect cut) {
         std::list<Rect> clips;
         Rect victim = *this;
 
-        if(cut.left() >= victim.left() && cut.left() <= victim.right()) { // Clip left edge
+        if (cut.left() >= victim.left() && cut.left() <= victim.right()) { // Clip left edge
             Rect clip;
             clip.top(victim.top());
             clip.left(victim.left());
@@ -72,7 +74,7 @@ typedef struct Rect{
             clips.push_back(clip);
         }
 
-        if(cut.top() >= victim.top() && cut.top() <= victim.bottom()) { // Clip top edge
+        if (cut.top() >= victim.top() && cut.top() <= victim.bottom()) { // Clip top edge
             Rect clip;
             clip.top(victim.top());
             clip.left(victim.left());
@@ -84,7 +86,7 @@ typedef struct Rect{
             clips.push_back(clip);
         }
 
-        if(cut.right() >= victim.left() && cut.right() <= victim.right()) { // Clip right edge
+        if (cut.right() >= victim.left() && cut.right() <= victim.right()) { // Clip right edge
             Rect clip;
             clip.top(victim.top());
             clip.left(cut.right());
@@ -96,7 +98,7 @@ typedef struct Rect{
             clips.push_back(clip);
         }
 
-        if(cut.bottom() >= victim.top() && cut.bottom() <= victim.bottom()) { // Clip bottom edge
+        if (cut.bottom() >= victim.top() && cut.bottom() <= victim.bottom()) { // Clip bottom edge
             Rect clip;
             clip.top(cut.bottom());
             clip.left(victim.left());
@@ -112,23 +114,26 @@ typedef struct Rect{
     }
 } rect_t; // Rectangle
 
-typedef struct RGBAColour{
-    union{
-        struct{
+typedef struct RGBAColour {
+    union {
+        struct {
             uint8_t r, g, b, a; /* Red, Green, Blue, Alpha (Transparency) Respectively*/
         };
         uint32_t val;
     };
 
-    inline static constexpr RGBAColour FromRGB(uint32_t rgb){
-        return { .val = __builtin_bswap32((rgb << 8) | 0xff)}; // Set alpha channel to 255
+    inline static constexpr RGBAColour FromRGB(uint32_t rgb) {
+        return {.val = __builtin_bswap32((rgb << 8) | 0xff)}; // Set alpha channel to 255
     }
 
-    inline static constexpr RGBAColour FromARGB(uint32_t argb){
-        return { .val = __builtin_bswap32((argb << 8) | ((argb >> 24) & 0xff))}; // Swap alpha
+    inline static constexpr RGBAColour FromARGB(uint32_t argb) {
+        return {.val = __builtin_bswap32((argb << 8) | ((argb >> 24) & 0xff))}; // Swap alpha
     }
 
-    inline static constexpr RGBAColour Interpolate(const RGBAColour& l, const RGBAColour& r){
-        return RGBAColour{ .r = static_cast<uint8_t>((l.r + r.r) / 2), .g = static_cast<uint8_t>((l.g + r.g) / 2), .b = static_cast<uint8_t>((l.b + r.b) / 2), .a = static_cast<uint8_t>((l.a + r.a) / 2) };
+    inline static constexpr RGBAColour Interpolate(const RGBAColour& l, const RGBAColour& r) {
+        return RGBAColour{.r = static_cast<uint8_t>((l.r + r.r) / 2),
+                          .g = static_cast<uint8_t>((l.g + r.g) / 2),
+                          .b = static_cast<uint8_t>((l.b + r.b) / 2),
+                          .a = static_cast<uint8_t>((l.a + r.a) / 2)};
     }
-} __attribute__ ((packed)) rgba_colour_t;
+} __attribute__((packed)) rgba_colour_t;

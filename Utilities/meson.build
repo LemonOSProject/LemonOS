@@ -32,12 +32,12 @@ utils_cpp_args = [
     '-Wno-unused-parameter',
 ]
 
-executable('cat.lef', cat_src, cpp_args : utils_cpp_args, install : true)
-executable('echo.lef', echo_src, cpp_args : utils_cpp_args, install : true)
-executable('rm.lef', rm_src, cpp_args : utils_cpp_args, install : true)
-executable('ls.lef', ls_src, cpp_args : utils_cpp_args, install : true)
-executable('uname.lef', uname_src, cpp_args : utils_cpp_args, install : true)
-executable('hexdump.lef', hexdump_src, cpp_args : utils_cpp_args, install : true)
-executable('ps.lef', ps_src, cpp_args : utils_cpp_args,
+executable('cat', cat_src, cpp_args : utils_cpp_args, install : true)
+executable('echo', echo_src, cpp_args : utils_cpp_args, install : true)
+executable('rm', rm_src, cpp_args : utils_cpp_args, install : true)
+executable('ls', ls_src, cpp_args : utils_cpp_args, install : true)
+executable('uname', uname_src, cpp_args : utils_cpp_args, install : true)
+executable('hexdump', hexdump_src, cpp_args : utils_cpp_args, install : true)
+executable('ps', ps_src, cpp_args : utils_cpp_args,
     dependencies: liblemon_dep,
     install : true)

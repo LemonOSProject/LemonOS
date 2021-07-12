@@ -4,11 +4,9 @@
 #include <assert.h>
 #include <stdlib.h>
 
-long LemonMapFramebuffer(void** ptr, FBInfo& fbInfo){
-    return syscall(SYS_MAP_FB, ptr, &fbInfo);
-}
+long LemonMapFramebuffer(void** ptr, FBInfo& fbInfo) { return syscall(SYS_MAP_FB, ptr, &fbInfo); }
 
-surface_t* CreateFramebufferSurface(){
+surface_t* CreateFramebufferSurface() {
     surface_t* surface = (surface_t*)malloc(sizeof(surface_t));
 
     CreateFramebufferSurface(*surface);
@@ -16,9 +14,9 @@ surface_t* CreateFramebufferSurface(){
     return surface;
 }
 
-void CreateFramebufferSurface(surface_t& surface){
+void CreateFramebufferSurface(surface_t& surface) {
     FBInfo fbInfo;
-    
+
     long error = LemonMapFramebuffer(reinterpret_cast<void**>(&surface.buffer), fbInfo);
     assert(!error && surface.buffer);
 

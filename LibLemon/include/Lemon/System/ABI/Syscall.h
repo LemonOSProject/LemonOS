@@ -97,3 +97,4 @@
 #define SYS_PIPE 97
 #define SYS_GETENTROPY 98
 #define SYS_SOCKETPAIR 99
+#define SYS_PEERNAME 100

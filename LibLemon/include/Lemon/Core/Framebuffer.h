@@ -4,8 +4,8 @@
 #include <Lemon/Graphics/Surface.h>
 
 #ifdef __lemon__
-    #include <Lemon/System/Framebuffer.h>
-#endif 
+#include <Lemon/System/Framebuffer.h>
+#endif
 
 surface_t* CreateFramebufferSurface();
 void CreateFramebufferSurface(surface_t& surface);

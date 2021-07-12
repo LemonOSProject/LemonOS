@@ -204,8 +204,9 @@ void ParseLine(){
 		}
 	}
 
-	int fd;
-	if(strchr(argv[0], '/') && (fd = open(currentDir, O_RDONLY | O_DIRECTORY))){
+	errno = 0;
+
+	if(strchr(argv[0], '/')){
 		pid_t pid = lemon_spawn(argv[0], argc, argv.data(), 1);
 		if(pid > 0){
 			int status = 0;
@@ -216,47 +217,31 @@ void ParseLine(){
 			perror("Error spawning process");
 		}
 
-		close(fd);
-
 		if(lnC)
 			free(lnC);
 
-		close(fd);
-
 		return;
 	} else for(std::string path : path){
-		if((fd = open(path.c_str(), O_RDONLY | O_DIRECTORY)) > 0){
-			lemon_dirent_t dirent;
+		pid_t pid = lemon_spawn((path + "/" + argv[0]).c_str(), argc, argv.data(), 1);
+		if(pid > 0){
+			int status = 0;
+			waitpid(pid, &status, 0);
 
-			int i = 0;
-			while (lemon_readdir(fd, i++, &dirent)){
-				// Check exact filenames and try omitting extension of .lef files
-				if(strcmp(argv[0], dirent.name) == 0 || (strcmp(dirent.name + strlen(dirent.name) - 4, ".lef") == 0 && strncmp(argv[0], dirent.name, strlen(dirent.name) - 4) == 0)){
-					path = path + "/" + dirent.name;
-					
-					pid_t pid = lemon_spawn(path.c_str(), argc, argv.data(), 1);
-
-					if(pid > 0){
-						int status = 0;
-						waitpid(pid, &status, 0);
-					} else if(errno == ENOENT) {
-						printf("\nUnknown Command: %s\n", argv[0]);
-					} else {
-						printf("Error executing %s\n", dirent.name);
-					}
-
-					close(fd);
-					free(lnC);
-					return;
-				}
-			}
-
-			close(fd);
+			return;
+		} else if(errno == ENOENT){
+			continue;
+		} else {
+			perror("Error spawning process");
+			break;
 		}
 	}
 
 	printf("\nUnknown Command: %s\n", argv[0]);
-	free(lnC);
+
+	if(lnC)
+		free(lnC);
+
+	return;
 }
 
 int main(){

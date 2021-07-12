@@ -2,105 +2,102 @@
 
 #include <Lemon/Core/Lexer.h>
 
-namespace Lemon{
-	URL::URL(const char* url){
-		enum ParseState{
-			Scheme,
-			Authority,
-			Port,
-			Path,
-			Query,
-		};
+namespace Lemon {
+URL::URL(const char* url) {
+    enum ParseState {
+        Scheme,
+        Authority,
+        Port,
+        Path,
+        Query,
+    };
 
-		BasicLexer lex(url);
-		ParseState pState = Scheme;
-		
-		while(!lex.End()){
-			if(pState == Scheme){
-				std::string_view scheme = lex.EatWhile(isalnum);
+    BasicLexer lex(url);
+    ParseState pState = Scheme;
 
-				if(lex.End()){
-					host = scheme;
-					break;
-				}
-				
-				char c = lex.Eat();
-				switch (c)
-				{
-				case ':':
-					if(lex.Peek() == '/'){
-						protocol = scheme;
+    while (!lex.End()) {
+        if (pState == Scheme) {
+            std::string_view scheme = lex.EatWhile(isalnum);
 
-						lex.EatOne('/');
-						lex.EatOne('/'); // Consume up to two slashes
+            if (lex.End()) {
+                host = scheme;
+                break;
+            }
 
-						break; // If the next character is a slash then this is a scheme
-						// otherwise scheme probably does not exist and it is a port
-					}
-				case '@':
-				case '.':
-				case '/':
-					pState = Authority;
+            char c = lex.Eat();
+            switch (c) {
+            case ':':
+                if (lex.Peek() == '/') {
+                    protocol = scheme;
 
-					lex.Restart();
-					continue;
-				default:
-					break;
-				}
+                    lex.EatOne('/');
+                    lex.EatOne('/'); // Consume up to two slashes
 
-				pState = Authority;
-			} else if(pState == Authority){
-				std::string_view auth = lex.EatWhile([](int c) -> int {
-					return isalnum(c) || c == '.';
-				});
+                    break; // If the next character is a slash then this is a scheme
+                           // otherwise scheme probably does not exist and it is a port
+                }
+            case '@':
+            case '.':
+            case '/':
+                pState = Authority;
 
-				if(lex.End()){
-					host = auth;
-					break;
-				}
+                lex.Restart();
+                continue;
+            default:
+                break;
+            }
 
-				char c = lex.Eat();
-				switch(c){
-				case '@':
-					userinfo = auth;
-					break;
-				case ':':
-					host = auth;
+            pState = Authority;
+        } else if (pState == Authority) {
+            std::string_view auth = lex.EatWhile([](int c) -> int { return isalnum(c) || c == '.'; });
 
-					pState = Port;
-					break;
-				case '/':
-					host = auth;
+            if (lex.End()) {
+                host = auth;
+                break;
+            }
 
-					pState = Path;
-					break;
-				default:
-					return; // Unknown character
-				}
-			} else if(pState == Port){
-				std::string_view auth = lex.EatWhile(isdigit);
+            char c = lex.Eat();
+            switch (c) {
+            case '@':
+                userinfo = auth;
+                break;
+            case ':':
+                host = auth;
 
-				if(lex.End()){
-					port = auth;
-					break;
-				}
+                pState = Port;
+                break;
+            case '/':
+                host = auth;
 
-				char c = lex.Eat();
-				switch(c){
-				case '/':
-					pState = Path;
+                pState = Path;
+                break;
+            default:
+                return; // Unknown character
+            }
+        } else if (pState == Port) {
+            std::string_view auth = lex.EatWhile(isdigit);
 
-					port = auth;
-					break;
-				default:
-					return; // Unknown character
-				}
-			} else if(pState == Path){
-				resource = lex.EatWhile([](int) -> int { return true; });
-				break;
-			}
-		}
+            if (lex.End()) {
+                port = auth;
+                break;
+            }
 
-		valid = true;
-	}
+            char c = lex.Eat();
+            switch (c) {
+            case '/':
+                pState = Path;
+
+                port = auth;
+                break;
+            default:
+                return; // Unknown character
+            }
+        } else if (pState == Path) {
+            resource = lex.EatWhile([](int) -> int { return true; });
+            break;
+        }
+    }
+
+    valid = true;
 }
+} // namespace Lemon

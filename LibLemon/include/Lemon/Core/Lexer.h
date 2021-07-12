@@ -1,56 +1,57 @@
 #pragma once
 
+#include <cctype>
 #include <string_view>
 #include <vector>
-#include <cctype>
 
-namespace Lemon{
-    // Provides a simple base for a more complex lexer
-    class BasicLexer {
-    protected:
-        int line = 1;
-        std::string_view sv;
-        const char* it;
-    public:
-        BasicLexer() = default;
-        BasicLexer(const std::string_view& v);
+namespace Lemon {
+// Provides a simple base for a more complex lexer
+class BasicLexer {
+  protected:
+    int line = 1;
+    std::string_view sv;
+    const char* it;
 
-        inline void Restart(){ it = sv.begin(); }
-        inline bool End(){ return it >= sv.end(); }
+  public:
+    BasicLexer() = default;
+    BasicLexer(const std::string_view& v);
 
-        char Eat();
+    inline void Restart() { it = sv.begin(); }
+    inline bool End() { return it >= sv.end(); }
 
-        bool EatWord(const char* word);
+    char Eat();
 
-        template<typename C>
-        std::string_view EatWhile(C cond){
-            if(End()) return nullptr;
+    bool EatWord(const char* word);
 
-            auto start = it;
-            size_t count = 0;
-            char c;
-            while(!End() && cond(c = Peek())){
-                count++;
+    template <typename C> std::string_view EatWhile(C cond) {
+        if (End())
+            return nullptr;
 
-                if(c == '\n'){
-                    line++;
-                }
-                Eat();
+        auto start = it;
+        size_t count = 0;
+        char c;
+        while (!End() && cond(c = Peek())) {
+            count++;
+
+            if (c == '\n') {
+                line++;
             }
-
-            return sv.substr(static_cast<size_t>(start - sv.begin()), count);
+            Eat();
         }
 
-        int EatOne(char c);
+        return sv.substr(static_cast<size_t>(start - sv.begin()), count);
+    }
 
-        inline void EatWhitespace(bool includeBreaks = true) { 
-            if(includeBreaks){
-                EatWhile([](char c) -> bool { return isspace(c) || isblank(c) || c == '\t' || c == '\n' || c == '\r'; });
-            } else {
-                EatWhile([](char c) -> bool { return isspace(c) || isblank(c) || c == '\t'; });
-            }
+    int EatOne(char c);
+
+    inline void EatWhitespace(bool includeBreaks = true) {
+        if (includeBreaks) {
+            EatWhile([](char c) -> bool { return isspace(c) || isblank(c) || c == '\t' || c == '\n' || c == '\r'; });
+        } else {
+            EatWhile([](char c) -> bool { return isspace(c) || isblank(c) || c == '\t'; });
         }
+    }
 
-        char Peek(long ahead = 0) const;
-    };
-}
+    char Peek(long ahead = 0) const;
+};
+} // namespace Lemon

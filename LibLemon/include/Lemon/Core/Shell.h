@@ -3,7 +3,7 @@
 #include <string>
 
 namespace Lemon::Shell {
-    int Open(const std::string& resource);
+int Open(const std::string& resource);
 
-    void ToggleMenu();
-}
+void ToggleMenu();
+} // namespace Lemon::Shell
