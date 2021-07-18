@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Lemon/System/Handle.h>
 #include <Lemon/System/IPC.h>
 #include <Lemon/System/KernelObject.h>
 #include <Lemon/System/Waitable.h>
@@ -12,7 +13,7 @@
 
 namespace Lemon {
 class EndpointException : public std::exception {
-  public:
+public:
     enum {
         EndpointUnknownError,
         EndpointInterfacePathResolutionError,
@@ -20,42 +21,42 @@ class EndpointException : public std::exception {
         EndpointNotConnected,
     };
 
-  protected:
+protected:
     int error = 0;
     static const char* const errorStrings[];
 
-  public:
+public:
     EndpointException(int error) { this->error = error; }
 
     const char* what() const noexcept { return errorStrings[error]; }
 };
 
 class Endpoint : public Waitable {
-  public:
+public:
     Endpoint() = default;
 
     Endpoint(const Lemon::Endpoint& other) = delete;
 
-    Endpoint(Lemon::Endpoint&& other) : handle(other.handle), msgSize(other.msgSize) {
-        assert(handle > 0);
+    Endpoint(Lemon::Endpoint&& other) : m_handle(std::move(other.m_handle)), m_msgSize(other.m_msgSize) {
+        assert(m_handle.get() > 0);
 
-        other.handle = 0;
+        other.m_handle = Handle();
     }
 
-    Endpoint(handle_t h, uint16_t msgSize) {
-        assert(h > 0);
+    Endpoint(Handle h, uint16_t msgSize) {
+        assert(h.get() > 0);
 
-        handle = h;
-        this->msgSize = msgSize;
+        m_handle = h;
+        this->m_msgSize = msgSize;
     }
 
-    Endpoint(handle_t h) {
-        assert(h > 0);
+    Endpoint(Handle h) {
+        assert(h.get() > 0);
 
-        handle = h;
+        m_handle = h;
 
         LemonEndpointInfo endpInfo;
-        if (long ret = EndpointInfo(h, endpInfo); ret) {
+        if (long ret = EndpointInfo(m_handle.get(), endpInfo); ret) {
             if (ret == -EINVAL) {
                 printf("[LibLemon] Invalid endpoint handle!\n");
                 throw new EndpointException(EndpointException::EndpointInvalidHandle);
@@ -64,13 +65,13 @@ class Endpoint : public Waitable {
                 throw new EndpointException(EndpointException::EndpointUnknownError);
             }
         }
-        this->msgSize = endpInfo.msgSize;
+        this->m_msgSize = endpInfo.msgSize;
     }
 
     Endpoint(const std::string& path) : Endpoint(path.c_str()) {}
 
     Endpoint(const char* path) {
-        handle = InterfaceConnect(path);
+        handle_t handle = InterfaceConnect(path);
 
         if (handle <= 0) {
             printf("[LibLemon] Error %ld connecting to interface %s!\n", handle, path);
@@ -85,21 +86,22 @@ class Endpoint : public Waitable {
                 throw new EndpointException(EndpointException::EndpointUnknownError);
             }
         }
-        this->msgSize = endpInfo.msgSize;
+        m_handle = Handle(handle);
+        m_msgSize = endpInfo.msgSize;
     }
 
     Lemon::Endpoint& operator=(Lemon::Endpoint&& other) {
-        handle = other.handle;
-        msgSize = other.msgSize;
+        m_handle = std::move(other.m_handle);
+        m_msgSize = other.m_msgSize;
 
-        assert(handle);
+        assert(m_handle.get());
 
-        other.handle = 0;
+        other.m_handle = Handle();
 
         return *this;
     }
 
-    ~Endpoint() { DestroyKObject(handle); }
+    ~Endpoint() = default;
 
     /////////////////////////////
     /// \brief Close Endpoint
@@ -108,12 +110,12 @@ class Endpoint : public Waitable {
     /// the actual endpoint will be destroyed when any peers destroy their handles
     /////////////////////////////
     inline void Close() {
-        DestroyKObject(handle);
+        DestroyKObject(m_handle.get());
 
-        handle = 0;
+        m_handle = Handle();
     }
 
-    inline operator handle_t() { return handle; }
+    inline operator handle_t() { return m_handle.get(); }
 
     /////////////////////////////
     /// \brief Get the Kernel Handle to the Endpoint
@@ -122,30 +124,32 @@ class Endpoint : public Waitable {
     ///
     /// \return Handle ID of endpoint
     /////////////////////////////
-    inline handle_t GetHandle() { return handle; }
+    inline const Handle& GetHandle() { return m_handle; }
 
     /////////////////////////////
     /// \brief Get the message size
     ///
     /// \return Maximum message size
     /////////////////////////////
-    inline uint16_t GetMessageSize() const { return msgSize; }
+    inline uint16_t GetMessageSize() const { return m_msgSize; }
 
     inline long Queue(uint64_t id, const uint8_t* data, uint16_t size) {
-        return EndpointQueue(handle, id, size, reinterpret_cast<uintptr_t>(data));
+        return EndpointQueue(m_handle.get(), id, size, reinterpret_cast<uintptr_t>(data));
     }
 
-    inline long Queue(uint64_t id, uint64_t data, uint16_t size) { return EndpointQueue(handle, id, size, data); }
+    inline long Queue(uint64_t id, uint64_t data, uint16_t size) {
+        return EndpointQueue(m_handle.get(), id, size, data);
+    }
 
     inline long Queue(const Message& m) {
-        return EndpointQueue(handle, m.id(), m.length(), reinterpret_cast<uintptr_t>(m.data()));
+        return EndpointQueue(m_handle.get(), m.id(), m.length(), reinterpret_cast<uintptr_t>(m.data()));
     }
 
     inline long Poll(Message& m) {
         uint64_t id;
         uint16_t size;
-        uint8_t* data = new uint8_t[msgSize];
-        long ret = EndpointDequeue(handle, &id, &size, data);
+        uint8_t* data = new uint8_t[m_msgSize];
+        long ret = EndpointDequeue(m_handle.get(), &id, &size, data);
 
         if (ret > 0) {
             m.Set(data, size, id);
@@ -157,9 +161,9 @@ class Endpoint : public Waitable {
 
     inline long Call(const Message& call, Message& rmsg, uint64_t id) {
         uint16_t size = call.length();
-        uint8_t* data = new uint8_t[msgSize];
+        uint8_t* data = new uint8_t[m_msgSize];
 
-        long ret = EndpointCall(handle, call.id(), reinterpret_cast<uintptr_t>(call.data()), id,
+        long ret = EndpointCall(m_handle.get(), call.id(), reinterpret_cast<uintptr_t>(call.data()), id,
                                 reinterpret_cast<uintptr_t>(data), &size);
 
         if (!ret) {
@@ -174,7 +178,7 @@ class Endpoint : public Waitable {
         uint16_t size = call.length();
         uint8_t* data = const_cast<uint8_t*>(call.data());
 
-        long ret = EndpointCall(handle, call.id(), reinterpret_cast<uintptr_t>(call.data()), id,
+        long ret = EndpointCall(m_handle.get(), call.id(), reinterpret_cast<uintptr_t>(call.data()), id,
                                 reinterpret_cast<uintptr_t>(call.data()), &size);
 
         if (!ret) {
@@ -183,8 +187,8 @@ class Endpoint : public Waitable {
         return ret;
     }
 
-  protected:
-    handle_t handle = 0;
-    uint16_t msgSize = 512;
+protected:
+    Handle m_handle;
+    uint16_t m_msgSize = 512;
 };
 }; // namespace Lemon

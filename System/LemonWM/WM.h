@@ -55,7 +55,7 @@ class WMWindow
 
     WMInstance* wm;
 public:
-    WMWindow(WMInstance* wm, handle_t client, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title);
+    WMWindow(WMInstance* wm, const Lemon::Handle& client, int64_t key, WindowBuffer* bufferInfo, vector2i_t pos, vector2i_t size, unsigned int flags, const std::string& title);
     ~WMWindow();
 
     vector2i_t pos = {0, 0};
@@ -69,7 +69,7 @@ public:
 
     int64_t windowID = 0;
 
-    inline handle_t GetClient() { return LemonWMClientEndpoint::handle; }
+    inline const Lemon::Handle& GetClient() { return LemonWMClientEndpoint::m_handle; }
     inline int64_t ID() const { return windowID; }
 
     void DrawDecoration(surface_t* surface, rect_t) const;
@@ -204,7 +204,7 @@ protected:
     void PostEvent(const Lemon::LemonEvent& ev, WMWindow* win);
 
     WMWindow* FindWindow(int64_t id);
-    WMWindow* FindWindowByClient(handle_t clientID);
+    WMWindow* FindWindowByClient(const Lemon::Handle& clientID);
     int64_t NextWindowID();
 
     void MinimizeWindow(WMWindow* win, bool state);
@@ -215,20 +215,20 @@ protected:
 
     int64_t CreateWindowBuffer(int width, int height, WindowBuffer** buffer);
 
-    void OnCreateWindow(handle_t client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title) override;
-    void OnDestroyWindow(handle_t client, int64_t windowID) override;
-    void OnSetTitle(handle_t client, int64_t windowID, const std::string& title) override;
-    void OnUpdateFlags(handle_t client, int64_t windowID, uint32_t flags) override;
-    void OnRelocate(handle_t client, int64_t windowID, int32_t x, int32_t y) override;
-    void OnGetPosition(handle_t client, int64_t windowID) override;
-    void OnResize(handle_t client, int64_t windowID, int32_t width, int32_t height) override;
-    void OnMinimize(handle_t client, int64_t windowID, bool minimized) override;
-    void OnDisplayContextMenu(handle_t client, int64_t windowID, int32_t x, int32_t y, const std::string& entries) override;
-    void OnPong(handle_t client, int64_t windowID) override;
+    void OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title) override;
+    void OnDestroyWindow(const Lemon::Handle& client, int64_t windowID) override;
+    void OnSetTitle(const Lemon::Handle& client, int64_t windowID, const std::string& title) override;
+    void OnUpdateFlags(const Lemon::Handle& client, int64_t windowID, uint32_t flags) override;
+    void OnRelocate(const Lemon::Handle& client, int64_t windowID, int32_t x, int32_t y) override;
+    void OnGetPosition(const Lemon::Handle& client, int64_t windowID) override;
+    void OnResize(const Lemon::Handle& client, int64_t windowID, int32_t width, int32_t height) override;
+    void OnMinimize(const Lemon::Handle& client, int64_t windowID, bool minimized) override;
+    void OnDisplayContextMenu(const Lemon::Handle& client, int64_t windowID, int32_t x, int32_t y, const std::string& entries) override;
+    void OnPong(const Lemon::Handle& client, int64_t windowID) override;
 
-    void OnPeerDisconnect(handle_t client) override;
-    void OnGetScreenBounds(handle_t client) override;
-    void OnReloadConfig(handle_t client) override;
+    void OnPeerDisconnect(const Lemon::Handle& client) override;
+    void OnGetScreenBounds(const Lemon::Handle& client) override;
+    void OnReloadConfig(const Lemon::Handle& client) override;
 
 public:
     timespec startTime;
@@ -251,7 +251,7 @@ public:
     CompositorInstance compositor = CompositorInstance(this);
     ContextMenu menu;
 
-    WMInstance(surface_t& surface, handle_t svc, const char* ifName);
+    WMInstance(surface_t& surface, const Lemon::Handle& svc, const char* ifName);
     
     void Update();
 

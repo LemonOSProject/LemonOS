@@ -5,21 +5,21 @@
 
 #include "shell.h"
 
-ShellInstance::ShellInstance(handle_t svc, const char* name) : shellSrv(svc, name, 512) {
+ShellInstance::ShellInstance(const Lemon::Handle& svc, const char* name) : shellSrv(svc, name, 512) {
 
 }
 
-void ShellInstance::OnPeerDisconnect(handle_t client) {
+void ShellInstance::OnPeerDisconnect(const Lemon::Handle& client) {
     // Do nothing
 }
 
-void ShellInstance::OnOpen(handle_t client, const std::string& url) {
+void ShellInstance::OnOpen(const Lemon::Handle& client, const std::string& url) {
     // TODO: stub
     Shell::OpenResponse response{ ENOSYS };
-    Lemon::EndpointQueue(client, Shell::ResponseOpen, sizeof(Shell::OpenResponse), reinterpret_cast<uintptr_t>(&response));
+    Lemon::EndpointQueue(client.get(), Shell::ResponseOpen, sizeof(Shell::OpenResponse), reinterpret_cast<uintptr_t>(&response));
 }
 
-void ShellInstance::OnToggleMenu(handle_t client) {
+void ShellInstance::OnToggleMenu(const Lemon::Handle& client) {
     MinimizeMenu(showMenu);
 }
 
@@ -33,7 +33,7 @@ void ShellInstance::SetTaskbar(Lemon::GUI::Window* taskbar){
 
 void ShellInstance::Poll(){
     Lemon::Message m;
-    handle_t client;
+    Lemon::Handle client;
     while(shellSrv.Poll(client, m)){
         HandleMessage(client, m);
     }

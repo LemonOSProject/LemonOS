@@ -7,6 +7,7 @@
 #include <map>
 #include <vector>
 
+#include <Lemon/System/Handle.h>
 #include <Lemon/System/IPC.h>
 #include <Lemon/System/Waitable.h>
 #include <Lemon/Types.h>
@@ -15,7 +16,7 @@
 
 namespace Lemon {
 class InterfaceException : public std::exception {
-  public:
+public:
     enum {
         InterfaceUnknownError,
         InterfaceCreateExists,
@@ -23,36 +24,18 @@ class InterfaceException : public std::exception {
         InterfaceCreateOther,
     };
 
-  protected:
+protected:
     int error = 0;
     static const char* const errorStrings[];
 
-  public:
+public:
     InterfaceException(int error) { this->error = error; }
 
     const char* what() const noexcept { return errorStrings[error]; }
 };
 
 class Interface : public Waitable {
-  private:
-    handle_t interfaceHandle;
-
-  protected:
-    struct InterfaceMessageInfo {
-        handle_t client = -1;
-        uint64_t id;
-        uint8_t* data = nullptr;
-        uint16_t length = 0;
-    };
-
-    std::map<std::string, int> objects;
-    std::list<handle_t> endpoints;
-    uint16_t msgSize;
-    uint8_t* dataBuffer = nullptr;
-
-    std::deque<InterfaceMessageInfo> queue;
-
-  public:
+public:
     /////////////////////////////
     /// \brief Interface::Interface(service, name, msgSize) - Create a new interface
     ///
@@ -62,29 +45,40 @@ class Interface : public Waitable {
     /// \param name (const char*) Name of the interface,
     /// \param msgSize (uint16_t) Maximum message size for all connections
     /////////////////////////////
-    Interface(handle_t service, const char* name, uint16_t msgSize);
-
-    /////////////////////////////
-    /// \brief Interface::Queue(endpoint, m) - Create a new interface
-    ///
-    /// Create a new interface. Interfaces allow clients to open connections to a service
-    ///
-    /// \param endpoint (handle_t) Handle ID of endpoint
-    /// \param m (const Message&) Message to send
-    /////////////////////////////
-    inline long Queue(handle_t h, Message& m) const {
-        return EndpointQueue(h, m.id(), m.length(), reinterpret_cast<uintptr_t>(m.data()));
-    }
+    Interface(const Handle& service, const char* name, uint16_t msgSize);
 
     void RegisterObject(const std::string& name, int id);
 
-    long Poll(handle_t& client, Message& m);
+    long Poll(Handle& client, Message& m);
     void Wait();
 
-    inline handle_t GetHandle() { return interfaceHandle; }
+    inline const Handle& GetHandle() { return m_interfaceHandle; }
     void GetAllHandles(std::vector<handle_t>& v) {
-        v.insert(v.end(), endpoints.begin(), endpoints.end());
-        v.push_back(interfaceHandle);
+        v.insert(v.end(), m_rawEndpoints.begin(), m_rawEndpoints.end());
+        v.push_back(m_interfaceHandle.get());
     }
+
+private:
+    Handle m_serviceHandle;
+    Handle m_interfaceHandle;
+
+    // Repopulate the std::vector of raw handles
+    void RepopulateRawHandles();
+
+protected:
+    struct InterfaceMessageInfo {
+        Handle client;
+        uint64_t id;
+        uint8_t* data = nullptr;
+        uint16_t length = 0;
+    };
+
+    std::map<std::string, int> m_objects;
+    std::vector<handle_t> m_rawEndpoints;
+    std::list<Handle> m_endpoints;
+    uint16_t m_msgSize;
+    uint8_t* m_dataBuffer = nullptr;
+
+    std::deque<InterfaceMessageInfo> m_queue;
 };
 } // namespace Lemon

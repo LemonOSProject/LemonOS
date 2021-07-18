@@ -35,10 +35,10 @@ class WindowServer final : public LemonWMServerEndpoint, LemonWMClient {
   private:
     WindowServer();
 
-    void OnPeerDisconnect(handle_t client) override;
-    void OnSendEvent(handle_t client, int64_t windowID, int32_t id, uint64_t data) override;
-    void OnThemeUpdate(handle_t client, const std::string& name) override;
-    void OnPing(handle_t client, int64_t windowID) override;
+    void OnPeerDisconnect(const Lemon::Handle& client) override;
+    void OnSendEvent(const Lemon::Handle& client, int64_t windowID, int32_t id, uint64_t data) override;
+    void OnThemeUpdate(const Lemon::Handle& client, const std::string& name) override;
+    void OnPing(const Lemon::Handle& client, int64_t windowID) override;
 
     std::map<long, GUI::Window*> m_windows;
 

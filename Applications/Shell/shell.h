@@ -23,11 +23,11 @@ public:
     std::map<long, ShellWindow*> windows;
     ShellWindow* active = nullptr;
 
-    ShellInstance(handle_t svc, const char* ifName);
+    ShellInstance(const Lemon::Handle& svc, const char* ifName);
 
-    void OnPeerDisconnect(handle_t client) override;
-    void OnOpen(handle_t client, const std::string& url) override;
-    void OnToggleMenu(handle_t client) override;
+    void OnPeerDisconnect(const Lemon::Handle& client) override;
+    void OnOpen(const Lemon::Handle& client, const std::string& url) override;
+    void OnToggleMenu(const Lemon::Handle& client) override;
 
     void SetMenu(Lemon::GUI::Window* menu);
     void SetTaskbar(Lemon::GUI::Window* taskbar);

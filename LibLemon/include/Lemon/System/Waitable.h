@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Lemon/System/Handle.h>
 #include <Lemon/Types.h>
 
 #include <list>
@@ -9,12 +10,12 @@ namespace Lemon {
 class Waitable {
     friend class Waiter;
 
-  protected:
+protected:
     std::list<class Waiter*> waiters;
 
-  public:
-    virtual inline handle_t GetHandle() = 0;
-    virtual inline void GetAllHandles(std::vector<handle_t>& v) { v.push_back(GetHandle()); };
+public:
+    virtual inline const Handle& GetHandle() = 0;
+    virtual inline void GetAllHandles(std::vector<handle_t>& v) { v.push_back(GetHandle().get()); };
     void Wait(long timeout = -1);
 
     virtual ~Waitable();
@@ -25,7 +26,7 @@ class Waiter {
     std::list<Waitable*> waitingOnAll;
     std::vector<handle_t> handles;
 
-  public:
+public:
     void RepopulateHandles();
 
     /////////////////////////////

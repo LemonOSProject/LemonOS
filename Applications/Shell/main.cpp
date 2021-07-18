@@ -110,7 +110,7 @@ int main() {
         return 1;
     }
 
-    handle_t svc = Lemon::CreateService("lemon.shell");
+    Lemon::Handle svc = Lemon::Handle(Lemon::CreateService("lemon.shell"));
     shell = new ShellInstance(svc, "Instance");
 
     syscall(SYS_UNAME, (uintptr_t)versionString, 0, 0, 0, 0);

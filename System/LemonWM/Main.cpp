@@ -43,7 +43,7 @@ int main(){
 
     Lemon::Graphics::DrawRect(0, 0, renderSurface.width, renderSurface.height, 128, 0, 0, &fbSurface);
 
-    handle_t svc = Lemon::CreateService("lemon.lemonwm");
+    Lemon::Handle svc = Lemon::Handle(Lemon::CreateService("lemon.lemonwm"));
     inst = new WMInstance(renderSurface, svc, "Instance");
     WMInstance& wm = *inst;
 

@@ -292,7 +292,8 @@ void Generate(std::ostream& out){
     out << "#pragma once\n\n"
         << "#include <Lemon/IPC/Message.h>\n"
         << "#include <Lemon/IPC/Interface.h>\n"
-        << "#include <Lemon/IPC/Endpoint.h>\n\n";
+        << "#include <Lemon/IPC/Endpoint.h>\n\n"
+        << "#include <Lemon/System/Handle.h>\n\n";
 
     for(auto& st : statements){
         assert(st.get());
@@ -306,7 +307,7 @@ void Generate(std::ostream& out){
 
             client << "class " << interfaceStatement->interfaceName << "Endpoint : public Lemon::Endpoint {\n"
                 << "public:\n"
-                << "    " << interfaceStatement->interfaceName << "Endpoint(handle_t handle) : Endpoint(handle) {}\n"
+                << "    " << interfaceStatement->interfaceName << "Endpoint(const Lemon::Handle& handle) : Endpoint(std::move(handle)) {}\n"
                 << "    " << interfaceStatement->interfaceName << "Endpoint(const std::string& interface) : Endpoint(interface) {}\n\n"
                 << "    virtual ~" << interfaceStatement->interfaceName << "Endpoint() = default;\n\n";
 
@@ -315,7 +316,7 @@ void Generate(std::ostream& out){
 
 			std::stringstream clientRequests; // Client code for sending requests
             std::stringstream serverRequestHandlers; // Server handlers for requests
-            serverRequestHandlers << "    virtual void OnPeerDisconnect(handle_t client) = 0;\n";
+            serverRequestHandlers << "    virtual void OnPeerDisconnect(const Lemon::Handle& client) = 0;\n";
 
             std::stringstream serverRequestCondition; // Swtich statement condition for request
             serverRequestCondition
@@ -338,7 +339,7 @@ void Generate(std::ostream& out){
                     auto async = std::dynamic_pointer_cast<ASynchronousMethod, Statement>(st);
 
                     clientRequests << "    void " << async->methodName << "("; // void NAME (
-                    serverRequestHandlers << "    virtual void On" << async->methodName << "(handle_t client";
+                    serverRequestHandlers << "    virtual void On" << async->methodName << "(const Lemon::Handle& client";
 
                     /// For each request, the following code is generated for the server
                     ///
@@ -402,7 +403,7 @@ void Generate(std::ostream& out){
                             << "        Queue(m.id(), m.data(), m.length());\n" // Queue message
                             << "    }\n\n";
 
-                        serverRequestHandlers << ", " << parameterDeclarationString << ") = 0;\n"; // virtual void On$(methodName)(handle_t client, $(parameters)) = 0; // Pure virtual function call to the handler
+                        serverRequestHandlers << ", " << parameterDeclarationString << ") = 0;\n"; // virtual void On$(methodName)(Handle client, $(parameters)) = 0; // Pure virtual function call to the handler
                     } else { // No parameters so avoid all the extra stuff
                         clientRequests << ") {\n"
                             << "        Queue(" << interfaceStatement->interfaceName << "::Request" << async->methodName << ", nullptr, 0);\n"
@@ -422,7 +423,7 @@ void Generate(std::ostream& out){
                     std::stringstream parameterDeclarations;
 
                     clientRequests << "    " << interfaceStatement->interfaceName << "::" << sync->methodName << "Response " << sync->methodName << "("; // $(interfaceName)::$(methodName)Response  $(methodName)(
-                    serverRequestHandlers << "    virtual void On" << sync->methodName << "(handle_t client"; // $(methodName)Response  $(methodName)(
+                    serverRequestHandlers << "    virtual void On" << sync->methodName << "(const Lemon::Handle& client"; // $(methodName)Response  $(methodName)(
                     
                     /// For each request, the following code is generated for the server
                     ///
@@ -482,7 +483,7 @@ void Generate(std::ostream& out){
 
                         clientRequests << parameterDeclarationString << ") {\n"
                             << "        uint16_t size = Lemon::Message::GetSize(" << parameterString << ");\n"
-                            << "        uint8_t* buffer = new uint8_t[msgSize];\n\n"
+                            << "        uint8_t* buffer = new uint8_t[m_msgSize];\n\n"
                             << "        Lemon::Message m = Lemon::Message(buffer, size, " << interfaceStatement->interfaceName << "::Request" << sync->methodName << ", " << parameterString << ");\n"
                             << "        if(Call(m, " << interfaceStatement->interfaceName << "::Response" << sync->methodName << ")) throw std::runtime_error(\"Failed calling " << sync->methodName << "\");\n\n"
                             << "        " << interfaceStatement->interfaceName << "::" << sync->methodName << "Response response;\n" // $(methodName)Response response;
@@ -496,7 +497,7 @@ void Generate(std::ostream& out){
                         serverRequestHandlers << ", " << parameterDeclarationString << ") = 0;\n";
                     } else {
                         clientRequests << ") {\n"
-                            << "        uint8_t* buffer = new uint8_t[msgSize];\n\n"
+                            << "        uint8_t* buffer = new uint8_t[m_msgSize];\n\n"
                             << "        Lemon::Message m = Lemon::Message(buffer, 0, " << interfaceStatement->interfaceName << "::Request" << sync->methodName << ");\n"
                             << "        if(Call(m, " << interfaceStatement->interfaceName << "::Response" << sync->methodName << ")) throw std::runtime_error(\"Failed calling " << sync->methodName << "\");\n\n"
                             << "        " << interfaceStatement->interfaceName << "::" << sync->methodName << "Response response;\n" // $(methodName)Response response;
@@ -556,7 +557,7 @@ void Generate(std::ostream& out){
                 << "\n";
 
             server
-                << "    int HandleMessage(handle_t client, const Lemon::Message& m){\n"
+                << "    int HandleMessage(const Lemon::Handle& client, const Lemon::Message& m){\n"
                 << "        switch(m.id()) {\n"
                 << serverRequestCondition.rdbuf()
                 << "\n        }\n"

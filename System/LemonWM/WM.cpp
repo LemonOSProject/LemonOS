@@ -8,7 +8,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
-WMInstance::WMInstance(surface_t& surface, handle_t svc, const char* ifName) : server(svc, ifName, LEMONWM_MSG_SIZE){
+WMInstance::WMInstance(surface_t& surface, const Lemon::Handle& svc, const char* ifName) : server(svc, ifName, LEMONWM_MSG_SIZE){
     this->surface = surface;
     this->screenSurface = surface;
     screenSurface.buffer = nullptr;
@@ -35,7 +35,7 @@ WMWindow* WMInstance::FindWindow(int64_t id){
     return nullptr;
 }
 
-WMWindow* WMInstance::FindWindowByClient(handle_t client){
+WMWindow* WMInstance::FindWindowByClient(const Lemon::Handle& client){
     for(WMWindow* win : windows){
         if(win->GetClient() == client){
             return win;
@@ -169,7 +169,7 @@ int64_t WMInstance::CreateWindowBuffer(int width, int height, WindowBuffer** buf
     return windowBufferKey;
 }
 
-void WMInstance::OnCreateWindow(handle_t client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title){
+void WMInstance::OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title){
     printf("[LemonWM] Creating Window:    Pos: (%d, %d), Size: %dx%d, Title: %s\n", x,y, width, height, title.c_str());
     
     WindowBuffer* wBufferInfo = nullptr;
@@ -193,10 +193,10 @@ void WMInstance::OnCreateWindow(handle_t client, int32_t x, int32_t y, int32_t w
     redrawBackground = true;
 }
 
-void WMInstance::OnDestroyWindow(handle_t client, int64_t windowID){
+void WMInstance::OnDestroyWindow(const Lemon::Handle& client, int64_t windowID){
     WMWindow* win = FindWindow(windowID);
     if(!win){
-        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", client);
+        printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
         return;
     }
 
@@ -223,7 +223,7 @@ void WMInstance::OnDestroyWindow(handle_t client, int64_t windowID){
     delete win;
 }
 
-void WMInstance::OnSetTitle(handle_t, int64_t windowID, const std::string& title){
+void WMInstance::OnSetTitle(const Lemon::Handle&, int64_t windowID, const std::string& title){
     WMWindow* win = FindWindow(windowID);
     if(!win){
         printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
@@ -233,7 +233,7 @@ void WMInstance::OnSetTitle(handle_t, int64_t windowID, const std::string& title
     win->title = title;
 }
 
-void WMInstance::OnUpdateFlags(handle_t, int64_t windowID, uint32_t flags){
+void WMInstance::OnUpdateFlags(const Lemon::Handle&, int64_t windowID, uint32_t flags){
     WMWindow* win = FindWindow(windowID);
     if(!win){
         printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
@@ -243,7 +243,7 @@ void WMInstance::OnUpdateFlags(handle_t, int64_t windowID, uint32_t flags){
     win->flags = flags;
 }
 
-void WMInstance::OnRelocate(handle_t, int64_t windowID, int32_t x, int32_t y){
+void WMInstance::OnRelocate(const Lemon::Handle&, int64_t windowID, int32_t x, int32_t y){
     WMWindow* win = FindWindow(windowID);
     if(!win){
         printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
@@ -254,7 +254,7 @@ void WMInstance::OnRelocate(handle_t, int64_t windowID, int32_t x, int32_t y){
     redrawBackground = true;
 }
 
-void WMInstance::OnGetPosition(handle_t, int64_t windowID){
+void WMInstance::OnGetPosition(const Lemon::Handle&, int64_t windowID){
     WMWindow* win = FindWindow(windowID);
     if(!win){
         printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
@@ -264,7 +264,7 @@ void WMInstance::OnGetPosition(handle_t, int64_t windowID){
     win->Queue(Lemon::Message(LemonWMServer::ResponseGetPosition, LemonWMServer::GetPositionResponse{win->pos.x, win->pos.y}));
 }
 
-void WMInstance::OnResize(handle_t, int64_t windowID, int32_t width, int32_t height){
+void WMInstance::OnResize(const Lemon::Handle&, int64_t windowID, int32_t width, int32_t height){
     WMWindow* win = FindWindow(windowID);
     if(!win){
         printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
@@ -283,11 +283,11 @@ void WMInstance::OnResize(handle_t, int64_t windowID, int32_t width, int32_t hei
     redrawBackground = true;
 }
 
-void WMInstance::OnMinimize(handle_t, int64_t windowID, bool minimized){
+void WMInstance::OnMinimize(const Lemon::Handle&, int64_t windowID, bool minimized){
     MinimizeWindow(windowID, minimized);
 }
 
-void WMInstance::OnDisplayContextMenu(handle_t, int64_t windowID, int32_t x, int32_t y, const std::string& entries){
+void WMInstance::OnDisplayContextMenu(const Lemon::Handle&, int64_t windowID, int32_t x, int32_t y, const std::string& entries){
     WMWindow* win = FindWindow(windowID);
     if(!win){
         printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
@@ -323,7 +323,7 @@ void WMInstance::OnDisplayContextMenu(handle_t, int64_t windowID, int32_t x, int
     contextMenuActive = true;
 }
 
-void WMInstance::OnPong(handle_t, int64_t windowID){
+void WMInstance::OnPong(const Lemon::Handle&, int64_t windowID){
     WMWindow* win = FindWindow(windowID);
     if(!win){
         printf("[LemonWM] Warning: Unknown Window ID: %ld\n", windowID);
@@ -331,26 +331,26 @@ void WMInstance::OnPong(handle_t, int64_t windowID){
     }
 }
 
-void WMInstance::OnPeerDisconnect(handle_t client){
+void WMInstance::OnPeerDisconnect(const Lemon::Handle& client){
     for(WMWindow* win = FindWindowByClient(client); win; win = FindWindowByClient(client)){
         DestroyWindow(win);
     }
 }
 
-void WMInstance::OnGetScreenBounds(handle_t client){
-    Lemon::EndpointQueue(client, LemonWMServer::ResponseGetScreenBounds, LemonWMServer::GetScreenBoundsResponse{surface.width, surface.height});
+void WMInstance::OnGetScreenBounds(const Lemon::Handle& client){
+    Lemon::EndpointQueue(client.get(), LemonWMServer::ResponseGetScreenBounds, LemonWMServer::GetScreenBoundsResponse{surface.width, surface.height});
 }
 
-void WMInstance::OnReloadConfig(handle_t client){
+void WMInstance::OnReloadConfig(const Lemon::Handle& client){
     (void)client;
 }
 
 void WMInstance::Poll(){
     Lemon::Message m;
-    handle_t client;
+    Lemon::Handle client;
 
     while(server.Poll(client, m)){
-        if(client > 0){
+        if(client.get() > 0){
             HandleMessage(client, m);
         }
     }

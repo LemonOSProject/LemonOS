@@ -19,31 +19,32 @@ const char* const InterfaceException::errorStrings[] = {
     "Error Creating Interface",
 };
 
-Interface::Interface(handle_t service, const char* name, uint16_t msgSize) {
-    interfaceHandle = CreateInterface(service, name, msgSize);
-    (void)(service + name);
-    this->msgSize = msgSize;
+Interface::Interface(const Handle& service, const char* name, uint16_t msgSize) : m_serviceHandle(service) {
+    handle_t handle = CreateInterface(service.get(), name, msgSize);
+    m_msgSize = msgSize;
 
-    if (interfaceHandle <= 0) {
-        if (interfaceHandle == -EEXIST) {
+    if (handle <= 0) {
+        if (handle == -EEXIST) {
             throw InterfaceException(InterfaceException::InterfaceCreateExists);
-        } else if (interfaceHandle == -EINVAL) {
+        } else if (handle == -EINVAL) {
             throw InterfaceException(InterfaceException::InterfaceCreateInvalidService);
         } else {
             throw InterfaceException(InterfaceException::InterfaceCreateOther);
         }
     }
 
-    dataBuffer = new uint8_t[msgSize];
+    m_interfaceHandle = Handle(handle);
+    m_dataBuffer = new uint8_t[msgSize];
 }
 
-void Interface::RegisterObject(const std::string& name, int id) { objects[name] = id; }
+void Interface::RegisterObject(const std::string& name, int id) { m_objects[name] = id; }
 
-long Interface::Poll(handle_t& client, Message& m) {
+long Interface::Poll(Lemon::Handle& client, Message& m) {
     handle_t newIf;
-    while ((newIf = InterfaceAccept(interfaceHandle))) { // Accept any incoming connections
+    while ((newIf = InterfaceAccept(m_interfaceHandle.get()))) { // Accept any incoming connections
         if (newIf > 0) {
-            endpoints.push_back(newIf);
+            m_rawEndpoints.push_back(newIf);
+            m_endpoints.push_back(Handle(newIf));
 
             for (Waiter* waiter : waiters) {
                 waiter->RepopulateHandles(); // Repopulate handles
@@ -51,29 +52,26 @@ long Interface::Poll(handle_t& client, Message& m) {
         }
     }
 
-    if (queue.size() > 0) { // Check for messages on the queue
-        auto& front = queue.front();
+    if (m_queue.size() > 0) { // Check for messages on the queue
+        auto& front = m_queue.front();
 
         client = front.client;
         m.Set(front.data, front.length, front.id);
 
-        queue.pop_front();
+        m_queue.pop_front();
         return 1;
     }
 
-    for (auto it = endpoints.begin(); !endpoints.empty() && it != endpoints.end(); it++) {
-        handle_t& endpoint = *it;
-        InterfaceMessageInfo msg = {endpoint, 0, nullptr, 0};
+    for (auto it = m_endpoints.begin(); !m_endpoints.empty() && it != m_endpoints.end(); it++) {
+        InterfaceMessageInfo msg{*it, 0, nullptr, 0};
 
-        while (long ret = EndpointDequeue(endpoint, &msg.id, &msg.length, dataBuffer)) {
+        while (long ret = EndpointDequeue(it->get(), &msg.id, &msg.length, m_dataBuffer)) {
             if (ret < 0) { // We have probably disconnected
-                if (ret == -ENOTCONN) {
-                    DestroyKObject(endpoint);
-                }
+                m_endpoints.erase(it);
+                RepopulateRawHandles();
 
-                endpoints.erase(it);
-
-                queue.push_back({.client = endpoint, .id = MessagePeerDisconnect, .data = nullptr, .length = 0});
+                msg.id = MessagePeerDisconnect;
+                m_queue.push_back(std::move(msg));
 
                 for (Waiter* waiter : waiters) {
                     waiter->RepopulateHandles();
@@ -81,23 +79,30 @@ long Interface::Poll(handle_t& client, Message& m) {
                 break;
             }
 
-            msg.data = dataBuffer;
-            queue.push_back(msg);
+            msg.data = m_dataBuffer;
+            m_queue.push_back(msg);
 
-            dataBuffer = new uint8_t[msgSize];
+            m_dataBuffer = new uint8_t[m_msgSize];
         }
     }
 
-    if (queue.size() > 0) {
-        auto& front = queue.front();
+    if (m_queue.size() > 0) {
+        auto& front = m_queue.front();
 
-        client = front.client;
+        client = std::move(front.client);
         m.Set(front.data, front.length, front.id);
 
-        queue.pop_front();
+        m_queue.pop_front();
         return 1;
     } else {
         return 0;
+    }
+}
+
+void Interface::RepopulateRawHandles() {
+    m_rawEndpoints.clear();
+    for (auto& handle : m_endpoints) {
+        m_rawEndpoints.push_back(handle.get());
     }
 }
 } // namespace Lemon
