@@ -27,3 +27,8 @@ void KernelPanic(const char** reasons, int reasonCount) {
 
     asm("hlt");
 }
+
+void PrintReason(const video_mode_t& v, int& pos, const char* reason){
+    Video::DrawString(reason, v.width / 2 - strlen(reason) * 8 / 2, pos, 255, 0, 0);
+    pos += 10;
+}

@@ -1,6 +1,7 @@
 #include <CPU.h>
 #include <Fs/TAR.h>
 #include <Fs/Tmp.h>
+#include <Fs/VolumeManager.h>
 #include <HAL.h>
 #include <Keyboard.h>
 #include <Lemon.h>
@@ -77,17 +78,19 @@ void KernelProcess() {
         delete[] buffer;
     }
 
+    fs::VolumeManager::MountSystemVolume();
+
     if (FsNode* node = fs::ResolvePath("/system/lemon")) {
-        fs::volumes->add_back(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
+        fs::VolumeManager::RegisterVolume(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
     }
 
     if (FsNode* node = fs::ResolvePath("/system/lib")) {
-        fs::volumes->add_back(new fs::LinkVolume(node, "lib"));
+        fs::VolumeManager::RegisterVolume(new fs::LinkVolume(node, "lib"));
     } else {
         FsNode* initrd = fs::ResolvePath("/initrd");
         assert(initrd);
 
-        fs::volumes->add_back(new fs::LinkVolume(initrd, "lib")); // If /system/lib is not present is /initrd
+        fs::VolumeManager::RegisterVolume(new fs::LinkVolume(initrd, "lib")); // If /system/lib is not present is /initrd
     }
 
     if (progressBuffer)
@@ -162,12 +165,13 @@ void InitializeConstructors() {
 }
 
 extern "C" [[noreturn]] void kmain() {
-    fs::Initialize();
+    fs::VolumeManager::Initialize();
     DeviceManager::Initialize();
     Log::LateInitialize();
 
     InitializeConstructors(); // Call global constructors
 
+    DeviceManager::RegisterFSVolume();
     Log::EnableBuffer();
 
     videoMode = Video::GetVideoMode();
@@ -190,11 +194,11 @@ extern "C" [[noreturn]] void kmain() {
     Log::Info("Initializing Ramdisk...");
 
     fs::tar::TarVolume* tar = new fs::tar::TarVolume(HAL::bootModules[0].base, HAL::bootModules[0].size, "initrd");
-    fs::RegisterVolume(tar);
+    fs::VolumeManager::RegisterVolume(tar);
 
     Log::Write("OK");
 
-    fs::RegisterVolume(new fs::Temp::TempVolume("tmp")); // Create tmpfs instance
+    fs::VolumeManager::RegisterVolume(new fs::Temp::TempVolume("tmp")); // Create tmpfs instance
 
     FsNode* initrd = fs::FindDir(fs::GetRoot(), "initrd");
     FsNode* splashFile = nullptr;

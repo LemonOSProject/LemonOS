@@ -39,7 +39,10 @@ __attribute__((constructor)) void InitializeFonts() {
 
     if (int err = FT_New_Face(library, "/system/lemon/resources/fonts/notosans.ttf", 0, &mainFont->face)) {
         printf("Freetype Error (%d) loading font /system/lemon/resources/fonts/notosans.ttf\n", err);
-        return;
+        if (int err = FT_New_Face(library, "/initrd/notosans.ttf", 0, &mainFont->face)) {
+            printf("Freetype Error (%d) loading font /system/lemon/resources/fonts/notosans.ttf\n", err);
+            return;
+        }
     }
 
     mainFont->height = 10;

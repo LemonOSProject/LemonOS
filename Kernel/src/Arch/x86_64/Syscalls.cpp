@@ -665,18 +665,18 @@ long SysStat(RegisterContext* r){
 	Process* proc = Scheduler::GetCurrentProcess();
 
 	if(!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(stat_t), proc->addressSpace)){
-		Log::Warning("sys_stat: stat structure points to invalid address %x", SC_ARG0(r));
+		Log::Warning("SysStat: stat structure points to invalid address %x", SC_ARG0(r));
 	}
 	
 	if(!Memory::CheckUsermodePointer(SC_ARG1(r), 1, proc->addressSpace)){
-		Log::Warning("sys_stat: filepath points to invalid address %x", SC_ARG0(r));
+		Log::Warning("SysStat: filepath points to invalid address %x", SC_ARG0(r));
 	}
 
 	bool followSymlinks = !(flags & AT_SYMLINK_NOFOLLOW);
 	FsNode* node = fs::ResolvePath(filepath, proc->workingDir, followSymlinks);
 
 	if(!node){
-		Log::Debug(debugLevelSyscalls, DebugLevelVerbose, "sys_stat: Invalid filepath %s", filepath);
+		Log::Debug(debugLevelSyscalls, DebugLevelVerbose, "SysStat: Invalid filepath %s", filepath);
 		return -ENOENT;
 	}
 

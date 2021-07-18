@@ -49,7 +49,6 @@ kernel_cpp_files = [
     'src/Video/Video.cpp',
     'src/Video/VideoConsole.cpp',
 
-    'src/Fs/Ext2.cpp',
     'src/Fs/Fat32.cpp',
     'src/Fs/Filesystem.cpp',
     'src/Fs/FsNode.cpp',
@@ -57,6 +56,7 @@ kernel_cpp_files = [
     'src/Fs/Pipe.cpp',
     'src/Fs/TAR.cpp',
     'src/Fs/Tmp.cpp',
+    'src/Fs/VolumeManager.cpp',
 
     'src/Liballoc/_liballoc.cpp',
     'src/Liballoc/liballoc.c',
