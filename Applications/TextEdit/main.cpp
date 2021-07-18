@@ -20,7 +20,7 @@
 ExtendedTextBox* textBox;
 Lemon::GUI::Window* window;
 Lemon::GUI::WindowMenu fileMenu;
-std::string openPath;
+std::string openPath = "";
 
 void LoadFile(const char* path){
 	textBox->contents.clear();
@@ -57,8 +57,8 @@ void LoadFile(const char* path){
 void SaveFile(const char* path){
 	struct stat sResult;
 	int ret = stat(path, &sResult);
-	if(ret && ret != ENOENT){
-		Lemon::GUI::DisplayMessageBox("Text Editor", strerror(ret), Lemon::GUI::MsgButtonsOK);
+	if(ret && errno != ENOENT){
+		Lemon::GUI::DisplayMessageBox("Text Editor", strerror(errno), Lemon::GUI::MsgButtonsOK);
 		return;
 	}
 
@@ -108,10 +108,7 @@ void SaveFileAs(){
 
 	openPath = filePath;
 
-	char title[32 + strlen(filePath)];
-	sprintf(title, "Text Editor: %s", filePath);
-
-	window->SetTitle(title);
+	window->SetTitle(std::string("Text Editor: ") + filePath);
 }
 
 void SaveOpenFile(){
