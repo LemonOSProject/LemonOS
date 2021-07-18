@@ -5,3 +5,6 @@ Language: Cpp
 ColumnLimit: 120
 
 PointerAlignment: Left
+AccessModifierOffset: -4
+AllowAllConstructorInitializersOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: true

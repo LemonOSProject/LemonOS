@@ -30,6 +30,7 @@ cpp = '$TOOLCHAIN_PATH/lemon-clang++'
 ar = '$TOOLCHAIN_PATH/x86_64-lemon-ar'
 strip = '$TOOLCHAIN_PATH/x86_64-lemon-strip'
 ld = '$TOOLCHAIN_PATH/x86_64-lemon-ld'
+pkgconfig = '$SPATH/pkg-config'
 
 [host_machine]
 system = 'lemon'
@@ -38,7 +39,7 @@ cpu = 'x86_64'
 endian = 'little'
 
 [built-in options]
-prefix = '~/.local/share/lemon/sysroot/system'" > $SPATH/lemon-crossfile.txt
+prefix = '$HOME/.local/share/lemon/sysroot/system'" > $SPATH/lemon-crossfile.txt
 
 meson Build --cross $SPATH/lemon-crossfile.txt
 $SPATH/buildinterfaces.sh
