@@ -34,10 +34,15 @@ void WindowServer::Poll() {
 
 WindowServer::WindowServer() : LemonWMServerEndpoint("lemon.lemonwm/Instance") { assert(!m_instance); }
 
-void WindowServer::OnPeerDisconnect(const Lemon::Handle&) { throw std::runtime_error("WindowServer has disconnected!"); }
+void WindowServer::OnPeerDisconnect(const Lemon::Handle&) {
+    throw std::runtime_error("WindowServer has disconnected!");
+}
 
 void WindowServer::OnSendEvent(const Lemon::Handle&, int64_t windowID, int32_t id, uint64_t data) {
-    m_windows.at(windowID)->m_eventQueue.push(Lemon::LemonEvent{.event = id, .data = data});
+    if (auto window = m_windows.find(windowID);
+        window != m_windows.end()) { // Event may have been sent before server acknowledged destroyed window
+        window->second->m_eventQueue.push(Lemon::LemonEvent{.event = id, .data = data});
+    }
 }
 
 void WindowServer::OnThemeUpdate(const Lemon::Handle&, const std::string& name) { (void)name; }
