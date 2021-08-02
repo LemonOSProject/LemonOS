@@ -609,6 +609,8 @@ void WMInstance::KeyUpdate(int key, bool pressed){
 
         ev.event = pressed ? Lemon::EventKeyPressed : Lemon::EventKeyReleased;
         ev.key = key;
+        ev.keyModifiers = (input.keyboard.control * KeyModifier_Control)
+            | (input.keyboard.shift * KeyModifier_Shift) | (input.keyboard.alt * KeyModifier_Alt);
         
         PostEvent(ev, active);
     }

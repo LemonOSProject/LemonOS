@@ -26,7 +26,10 @@ enum Event {
 struct LemonEvent {
     int32_t event;
     union {
-        int key;
+        struct {
+            int key;
+            int keyModifiers;
+        };
         vector2i_t mousePos;
         vector2i_t resizeBounds;
         unsigned short windowCmd;

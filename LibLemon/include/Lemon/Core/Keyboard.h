@@ -1,3 +1,5 @@
+#pragma once
+
 #define KEY_TAB '\t'
 #define KEY_BACKSPACE '\b'
 #define KEY_ENTER '\n'
@@ -37,3 +39,9 @@
 #define KEY_STATE_SHIFT 2
 #define KEY_STATE_ALT 4
 #define KEY_STATE_CONTROL 8
+
+enum KeyModifier {
+    KeyModifier_Control = 0x1,
+    KeyModifier_Alt = 0x2,
+    KeyModifier_Shift = 0x4,
+};
