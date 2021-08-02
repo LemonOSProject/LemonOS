@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <termios.h>
+#include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 
@@ -522,7 +523,7 @@ void PrintChar(char ch){
 
 	char buf[512];
 
-	while(waitpid(lsh, nullptr, WNOHANG) <= 0){
+	while(waitpid(lsh, nullptr, WNOHANG) == 0){
 		poll(fds.data(), fds.size(), 500000); // Wake up every 500ms to check if LSh has exited
 
 		bool needsPaint = false;
@@ -564,6 +565,7 @@ int main(int argc, char** argv){
 
 	syscall(SYS_GRANT_PTY, (uintptr_t)&masterPTYFd, 0, 0, 0, 0);
 	setenv("TERM", "xterm-256color", 1); // the Lemon OS terminal is (fairly) xterm compatible (256 colour, etc.)
+	chdir("/system");
 
 	char* const _argv[] = {const_cast<char*>("/system/bin/lsh.lef")};
 	lsh = lemon_spawn(_argv[0], 1, _argv, 1);
@@ -596,7 +598,9 @@ int main(int argc, char** argv){
 		Lemon::LemonEvent ev;
 		while(window->PollEvent(ev)){
 			if(ev.event == Lemon::EventKeyPressed){
-				if(ev.key == KEY_ARROW_UP){
+				if(ev.keyModifiers & KeyModifier_Control && tolower(ev.key) == 'c'){
+					kill(lsh, SIGINT); // Send SIGINT to child
+				} else if(ev.key == KEY_ARROW_UP){
 					const char* esc = "\e[A";
 					write(masterPTYFd, esc, strlen(esc));
 				} else if(ev.key == KEY_ARROW_DOWN){

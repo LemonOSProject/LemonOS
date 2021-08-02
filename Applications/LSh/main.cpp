@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <string>
 #include <sys/wait.h>
 #include <termios.h>
@@ -15,6 +16,7 @@ termios execAttributes; // Set before executing
 termios readAttributes; // Set on ReadLine
 
 std::string ln;
+int lnPos = 0;
 
 typedef void (*builtin_call_t)(int, char**);
 
@@ -68,13 +70,22 @@ builtin_t builtinExport = {.name = "export", .func = LShBuiltin_Export};
 builtin_t builtinClear = {.name = "clear", .func = LShBuiltin_Clear};
 builtin_t builtinExit = {.name = "exit", .func = LShBuiltin_Exit};
 
+pid_t job = -1;
+
+void InterruptSignalHandler(int sig){
+    if(job > 0){
+        // If we have a current job, send SIGINT to child.
+        kill(job, SIGINT);
+    }
+}
+
 void ReadLine() {
     tcsetattr(STDOUT_FILENO, TCSANOW, &readAttributes);
 
     bool esc = false; // Escape sequence
     bool csi = false; // Control sequence indicator
 
-    int lnPos = 0;         // Line cursor position
+    lnPos = 0;         // Line cursor position
     int historyIndex = -1; // History index
     ln.clear();
 
@@ -206,10 +217,12 @@ void ParseLine() {
     errno = 0;
 
     if (strchr(argv[0], '/')) {
-        pid_t pid = lemon_spawn(argv[0], argc, argv.data(), 1);
-        if (pid > 0) {
+        job = lemon_spawn(argv[0], argc, argv.data(), 1);
+        if (job > 0) {
             int status = 0;
-            waitpid(pid, &status, 0);
+            int ret = 0;
+            while((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == SIGINT))
+                ;
         } else if (errno == ENOENT) {
             printf("\nNo such file or directory: %s\n", argv[0]);
         } else {
@@ -222,11 +235,12 @@ void ParseLine() {
         return;
     } else
         for (std::string path : path) {
-            pid_t pid = lemon_spawn((path + "/" + argv[0]).c_str(), argc, argv.data(), 1);
-            if (pid > 0) {
+            job = lemon_spawn((path + "/" + argv[0]).c_str(), argc, argv.data(), 1);
+            if (job > 0) {
                 int status = 0;
-                waitpid(pid, &status, 0);
-
+                int ret = 0;
+                while((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == SIGINT))
+                    ;
                 return;
             } else if (errno == ENOENT) {
                 continue;
@@ -255,6 +269,17 @@ int main() {
     tcgetattr(STDOUT_FILENO, &execAttributes);
     readAttributes = execAttributes;
     readAttributes.c_lflag &= ~(ICANON | ECHO); // Disable canonical mode and echo when reading user input
+
+    struct sigaction action = {
+        .sa_handler = InterruptSignalHandler,
+        .sa_flags = 0,
+    };
+    sigemptyset(&action.sa_mask);
+
+    if(sigaction(SIGINT, &action, nullptr)){
+        perror("sigaction");
+        return 99;
+    }
 
     builtins.push_back(builtinPwd);
     builtins.push_back(builtinCd);
