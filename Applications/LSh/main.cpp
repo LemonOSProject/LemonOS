@@ -221,7 +221,7 @@ void ParseLine() {
         if (job > 0) {
             int status = 0;
             int ret = 0;
-            while((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == SIGINT))
+            while((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == EINTR))
                 ;
         } else if (errno == ENOENT) {
             printf("\nNo such file or directory: %s\n", argv[0]);
@@ -239,7 +239,7 @@ void ParseLine() {
             if (job > 0) {
                 int status = 0;
                 int ret = 0;
-                while((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == SIGINT))
+                while((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == EINTR))
                     ;
                 return;
             } else if (errno == ENOENT) {
