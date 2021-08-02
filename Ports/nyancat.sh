@@ -1,5 +1,5 @@
 unpack(){
- 	git clone "https://github.com/klange/nyancat" nyancat
+ 	git clone "https://github.com/klange/nyancat" nyancat --depth 1
  	export BUILD_DIR=nyancat
 }
  

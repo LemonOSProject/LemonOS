@@ -1,8 +1,10 @@
 unpack(){
-    wget "https://www.python.org/ftp/python/3.8.2/Python-3.8.2.tgz"
- 	tar -xzvf Python-3.8.2.tgz
+    if ! [ -f cache/Python-3.8.2.tgz ]; then # Check if tarball exists
+        curl -Lo cache/Python-3.8.2.tgz "https://www.python.org/ftp/python/3.8.2/Python-3.8.2.tgz"
+    fi
+
+ 	tar -xzvf cache/Python-3.8.2.tgz
  	export BUILD_DIR=Python-3.8.2
- 	rm Python-3.8.2.tgz
 }
 
 buildp(){

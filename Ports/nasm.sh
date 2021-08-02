@@ -1,8 +1,10 @@
 unpack(){
- 	wget "https://www.nasm.us/pub/nasm/releasebuilds/2.15.02/nasm-2.15.02.tar.gz"
- 	tar -xzvf nasm-2.15.02.tar.gz
+    if ! [ -f cache/nasm-2.15.02.tar.gz ]; then # Check if tarball exists
+        curl -Lo cache/nasm-2.15.02.tar.gz "https://www.nasm.us/pub/nasm/releasebuilds/2.15.02/nasm-2.15.02.tar.gz"
+    fi
+	
+ 	tar -xzvf cache/nasm-2.15.02.tar.gz
  	export BUILD_DIR=nasm-2.15.02
- 	rm nasm-2.15.02.tar.gz
 }
  
 buildp(){

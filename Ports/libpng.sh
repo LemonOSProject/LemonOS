@@ -1,8 +1,10 @@
 unpack(){
- 	wget "https://download.sourceforge.net/libpng/libpng-1.6.37.tar.gz"
- 	tar -xzvf libpng-1.6.37.tar.gz
+    if ! [ -f cache/libpng-1.6.37.tar.gz ]; then # Check if tarball exists
+        curl -Lo cache/libpng-1.6.37.tar.gz "https://download.sourceforge.net/libpng/libpng-1.6.37.tar.gz"
+    fi
+	
+ 	tar -xzvf cache/libpng-1.6.37.tar.gz
  	export BUILD_DIR=libpng-1.6.37
- 	rm libpng-1.6.37.tar.gz
 }
  
 buildp(){
