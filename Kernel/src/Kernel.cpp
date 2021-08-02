@@ -132,22 +132,23 @@ void KernelProcess() {
         acquireLock(&Scheduler::destroyedProcessesLock);
         for (auto it = Scheduler::destroyedProcesses->begin(); it != Scheduler::destroyedProcesses->end(); it++) {
             if (!((*it)->processLock.TryAcquireWrite())) {
-                delete (*it)->addressSpace;
-                delete *it;
+                Process* proc = *it;
+                if(proc->parent){
+                    proc->processLock.ReleaseWrite();
+                }
+
+                delete (proc)->addressSpace;
+                delete proc;
                 Scheduler::destroyedProcesses->remove(it);
             }
 
             if (it == Scheduler::destroyedProcesses->end()) {
-                it = Scheduler::destroyedProcesses->begin();
-
-                if (it == Scheduler::destroyedProcesses->end()) {
-                    break;
-                }
+                break;
             }
         }
         releaseLock(&Scheduler::destroyedProcessesLock);
 
-        Scheduler::GetCurrentThread()->Sleep(1000000);
+        Scheduler::GetCurrentThread()->Sleep(100000);
     }
 }
 

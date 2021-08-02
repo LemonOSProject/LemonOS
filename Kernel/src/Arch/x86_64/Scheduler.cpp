@@ -18,6 +18,7 @@
 #include <APIC.h>
 #include <Timer.h>
 #include <Debug.h>
+#include <Panic.h>
 
 extern "C" [[noreturn]] void TaskSwitch(RegisterContext* r, uint64_t pml4);
 
@@ -188,6 +189,16 @@ namespace Scheduler{
 
         proc->threads.add_back(new Thread);
 
+        // Initialize signal handlers
+        for(unsigned i = 0; i < SIGNAL_MAX; i++){
+            proc->signalHandlers[i] = {
+                .action = SignalHandler::ActionDefault,
+                .flags = 0,
+                .mask = 0,
+                .userHandler = nullptr,
+            };
+        }
+
         memset(proc->threads[0], 0, sizeof(Thread));
 
         proc->creationTime = Timer::GetSystemUptimeStruct();
@@ -336,18 +347,25 @@ namespace Scheduler{
         IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
             Log::Info("ending process: %s (%d)", process->name, process->pid);
         });
+        assert(!process->isDead);
 
         while(process->children.get_length()){
             IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
                 Log::Info("ending child: %s (%d)", process->children.get_front()->name, process->children.get_front()->pid);
             });
-            EndProcess(process->children.get_front()); // Processes remove themselves from the list
+            if(process->children.get_front()->isDead){
+                process->RemoveChild(process->children.get_front()); // Already dead
+            } else {
+                EndProcess(process->children.get_front());
+                process->children.remove_at(0);
+            }
         }
         
         CPU* cpu = GetCPULocal();
         List<Thread*> runningThreads;
         for(Thread* thread : process->threads){
             if(thread != cpu->currentThread && thread){
+                // TODO: Race condition?
                 if(thread->blocker && thread->state == ThreadStateBlocked){
                     thread->blocker->Interrupt(); // Stop the thread from blocking
                 }
@@ -394,7 +412,6 @@ namespace Scheduler{
         for(unsigned j = 0; j < cpu->runQueue->get_length(); j++){
             if(Thread* thread = cpu->runQueue->get_at(j); thread != cpu->currentThread && thread->parent == process) {
                 cpu->runQueue->remove_at(j);
-                Log::Error("removing thread");
             }
         }
 
@@ -464,10 +481,16 @@ namespace Scheduler{
             Log::Info("removing process...");
         });
 
+        process->isDead = true;
         processes->remove(process);
         
         if(process->parent){
-            process->parent->children.remove(process);
+            IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
+                Log::Info("sending SIGCHLD...");
+            });
+
+            // Do not remove from parent's list, waitpid may want to confirm that the process is dead
+            process->parent->GetThreadFromID(1)->Signal(SIGCHLD); // Send SIGCHLD to let the parent know we are dead
         }
 
         process->processLock.AcquireWrite();
@@ -568,8 +591,7 @@ namespace Scheduler{
         // - Pending unmasked signals
         // If true, invoke the signal handler
         if((cpu->currentThread->registers.cs & 0x3) && (cpu->currentThread->pendingSignals & ~cpu->currentThread->signalMask)){
-            // TODO: Singal handler
-            assert(0);
+            cpu->currentThread->HandlePendingSignal(&cpu->currentThread->registers);
         }
 	
         TaskSwitch(&cpu->currentThread->registers, cpu->currentThread->parent->GetPageMap()->pml4Phys);
@@ -657,7 +679,9 @@ namespace Scheduler{
             uintptr_t linkerBaseAddress = 0x7FC0000000; // Linker base address
 
             FsNode* node = fs::ResolvePath("/lib/ld.so");
-            assert(node);
+            if(!node){
+                KernelPanic("Failed to load dynamic linker!");
+            }
 
             void* linkerElf = kmalloc(node->size);
 

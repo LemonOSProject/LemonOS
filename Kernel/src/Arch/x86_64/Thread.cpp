@@ -35,15 +35,23 @@ void ThreadBlocker::Unblock() {
 void Thread::Signal(int signal){
 	SignalHandler& sigHandler = parent->signalHandlers[signal - 1];
 	if(sigHandler.action == SignalHandler::ActionIgnore){
+		Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Ignoring signal %d!", signal);
 		return;
 	}
 
 	pendingSignals |= 1 << (signal - 1); // Set corresponding bit for signal
+
+	// TODO: Race condition?
+	if(blocker && state == ThreadStateBlocked){
+		blocker->Interrupt(); // Stop the thread from blocking
+	}
 }
 
-void Thread::HandlePendingSignal(){
-	assert(CheckInterrupts());
-
+void Thread::HandlePendingSignal(RegisterContext* regs){
+	assert(Scheduler::GetCurrentThread() == this); // Make sure we are this thread
+	assert(!CheckInterrupts()); // Assume interrupts are disabled
+	
+	SignalHandler handler;
 	int signal = 0;
 	for(int i = 0; i < SIGNAL_MAX; i++) {
 		if((pendingSignals >> i) & 0x1){ // Check if signal bit is set
@@ -57,15 +65,79 @@ void Thread::HandlePendingSignal(){
 		return; // No pending signal
 	}
 
+	pendingSignals = pendingSignals & (~(1 << (signal - 1)));
+
+	// These cannot be caught, blocked or ignored
 	if(signal == SIGKILL){
 		Scheduler::EndProcess(parent);
 		return;
-	}
-
-	SignalHandler handler = parent->signalHandlers[signal - 1];
-	if(handler.action == SignalHandler::ActionUsermodeHandler){
+	} else if(signal == SIGSTOP){
+		Log::Error("Thread::HandlePendingSignal: SIGSTOP not handled!");
 		return;
 	}
+
+	uint64_t oldSignalMask = signalMask;
+
+	handler = parent->signalHandlers[signal - 1];
+	if(!(handler.flags & SignalHandler::FlagNoDefer)){ // Do not mask the signal if no defer is set
+		signalMask |= 1 << (signal - 1);
+	}
+
+	if(handler.action == SignalHandler::ActionDefault){
+		// Default action
+		switch(signal){
+			// Terminate
+		case SIGABRT:
+		case SIGALRM:
+		case SIGBUS:
+		case SIGFPE:
+		case SIGHUP:
+		case SIGILL:
+		case SIGINT: // Keyboard interrupt
+		case SIGIO:
+		case SIGKILL:
+		case SIGPIPE:
+		case SIGPWR:
+		case SIGQUIT:
+		case SIGSEGV:
+		case SIGSTKFLT:
+			Scheduler::EndProcess(parent);
+			return;
+			// Ignore
+		case SIGCHLD:
+		case SIGURG:
+		case SIGWINCH:
+			break;
+			// Unhandled
+		case SIGCONT:
+		case SIGSTOP:
+		default:
+			Log::Error("Thread::HandlePendingSignal: Unhandled signal %i", signal);
+			break;
+		}
+		return;
+	} else if(handler.action == SignalHandler::ActionIgnore){
+		return;
+	}
+
+	// User handler
+	assert(handler.action == SignalHandler::ActionUsermodeHandler);
+
+	// On the usermode stack:
+	// Save the register state
+	// Save the signal mask
+	uint64_t* stack = reinterpret_cast<uint64_t*>(regs->rsp - sizeof(RegisterContext));
+	*reinterpret_cast<RegisterContext*>(stack) = *regs;
+
+	*(--stack) = oldSignalMask;
+	// This could probably be placed in a register but it makes our stack nice and aligned
+	*(--stack) = reinterpret_cast<uintptr_t>(handler.userHandler);
+
+	regs->rip = parent->signalTrampoline->Base(); // Set instruction pointer to signal trampoline
+	regs->rdi = signal; // The first argument of the signal handler is the signal number
+	regs->rsp = reinterpret_cast<uintptr_t>(stack); // Set rsp to new stack value
+
+	assert(!(regs->rsp & 0xf)); // Ensure that stack is 16-byte aligned
 }
 
 bool Thread::Block(ThreadBlocker* newBlocker){
@@ -80,6 +152,13 @@ bool Thread::Block(ThreadBlocker* newBlocker){
 		asm("sti");
 
 		return false;
+	}
+
+	if(pendingSignals & (~signalMask)){
+		releaseLock(&newBlocker->lock); // Pending signals, don't block
+		asm("sti");
+
+		return true; // We were interrupted by a signal
 	}
 
 	blocker = newBlocker;

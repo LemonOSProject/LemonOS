@@ -85,7 +85,7 @@ struct Thread {
     /////////////////////////////
     /// \brief Call the signal handler for the first pending signal
     /////////////////////////////
-	void HandlePendingSignal();
+	void HandlePendingSignal(RegisterContext* regs);
 
     /////////////////////////////
     /// \brief Block a thread

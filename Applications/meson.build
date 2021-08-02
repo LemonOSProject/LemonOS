@@ -120,10 +120,6 @@ app_lemonmonitor = executable('lemonmonitor.lef', lemonmonitor_src,
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-app_ipctest = executable('ipctest.lef', ipctest_src, 
-    cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    install : true)
 app_jsondump = executable('jsondump.lef', jsondump_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
@@ -141,6 +137,15 @@ app_devmgr = executable('devmgr.lef', devicemanager_src,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
 
+
+app_ipctest = executable('ipctest.lef', ipctest_src, 
+    cpp_args : application_cpp_args,
+    dependencies: application_dependencies,
+    install : true)
+
+app_sigtest = executable('sigtest.lef', 'SignalTest/main.c', 
+    install : true)
+
 application_targets = [
     app_fileman,
     app_lsh,
@@ -153,9 +158,11 @@ application_targets = [
     app_guitest,
     app_run,
     app_lemonmonitor,
-    app_ipctest,
     app_jsondump,
     app_minesweeper,
     app_steal,
-    app_devmgr
+    app_devmgr,
+
+    app_ipctest,
+    app_sigtest,
 ]

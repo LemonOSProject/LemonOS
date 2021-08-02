@@ -23,7 +23,7 @@ struct SignalHandler {
         FlagResetHand = SA_RESETHAND, // Restore signal action to default afterwards
         FlagRestart = SA_RESTART, // Make system calls restartable across signals
     };
-    static const int supportedFlags = 0; // Which flags do we support
+    static const int supportedFlags = SA_NODEFER; // Which flags do we support
     
     int action = ActionDefault;
     int flags = 0;

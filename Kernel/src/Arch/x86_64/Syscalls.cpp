@@ -1025,45 +1025,78 @@ long SysGetCWD(RegisterContext* r){
 }
 
 long SysWaitPID(RegisterContext* r){
-	int64_t pid = SC_ARG0(r);
+	int pid = SC_ARG0(r);
 	int64_t flags = SC_ARG2(r);
 
 	Process* currentProcess = Scheduler::GetCurrentProcess();
-	Process* proc = nullptr;
+	Process* child = nullptr;
 
 	if(pid == -1) {
-		if(flags & WNOHANG && currentProcess->children.get_length()){
+		currentProcess->processLock.AcquireWrite();
+		pid = 0;
+
+		for(auto it = currentProcess->children.begin(); it != currentProcess->children.end(); it++){
+			Process* child = *it;
+			if(child->isDead){
+				pid = child->pid;
+			}
+
+			currentProcess->RemoveChild(child);
+		}
+		
+		currentProcess->processLock.ReleaseWrite();
+
+		if(pid){
+			return pid;
+		}
+
+		if(flags & WNOHANG){
 			return 0;
 		}
 
-		int pid = 0;
 		Scheduler::ProcessStateThreadBlocker bl = Scheduler::ProcessStateThreadBlocker(pid);
 
-		for(Process* child : proc->children){
+		for(Process* child : currentProcess->children){
 			bl.WaitOn(child);
 		}
 
 		if(Scheduler::GetCurrentThread()->Block(&bl)){
 			return -EINTR;
 		}
-	} else if((proc = Scheduler::FindProcessByPID(pid))){
+	} else if((child = currentProcess->FindChildByPID(pid)) && child->parent == currentProcess){
+		currentProcess->processLock.AcquireWrite();
+		if(child->isDead){
+			pid = child->pid;
+			currentProcess->RemoveChild(child);
+			return pid;
+		}
+		currentProcess->processLock.ReleaseWrite();
+
 		if(flags & WNOHANG){
 			return 0;
 		}
 
-		int pid = 0;
+		pid = 0;
 		Scheduler::ProcessStateThreadBlocker bl = Scheduler::ProcessStateThreadBlocker(pid);
 
-		bl.WaitOn(proc);
+		bl.WaitOn(child);
 
 		if(Scheduler::GetCurrentThread()->Block(&bl)){
-			return -EINTR;
+			if(child->isDead){ // Could have been SIGCHLD signal
+				currentProcess->RemoveChild(child);
+				return child->pid;
+			} else {
+				return -EINTR;
+			}
 		}
-	} else {
-		return -ECHILD;
-	}
 
-	return pid;
+		if(child->isDead){
+			currentProcess->RemoveChild(child);
+			return child->pid;
+		}
+	}
+	
+	return -ECHILD;
 }
 
 long SysNanoSleep(RegisterContext* r){
@@ -3395,16 +3428,25 @@ long SysSignalAction(RegisterContext* r){
 	int signal = SC_ARG0(r); // Signal number
 	switch (signal)
 	{
-	// Supported an overridable signals
+	// SIGCANCEL is a special case
+	// Can be used for pthread cancellation (we dont support this yet)
+	case SIGCANCEL:
+		Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysSignalAction: SIGCANCEL unsupported, returning ENOSYS");
+		return -ENOSYS;
+	// Supported and overridable signals
 	case SIGINT:
 	case SIGALRM:
 	case SIGCHLD:
 		break;
-	// Either an unsupported signal or cannot be overriden
+	// Cannot be overriden
 	case SIGKILL:
 	case SIGCONT:
 	case SIGSTOP:
+		Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysSignalAction: Signal %d cannot be overriden or ignored!", signal);
+		return -EINVAL; // Invalid signal for sigaction
+	// Unsupported signal
 	default:
+		Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysSignalAction: Unsupported signal %d!", signal);
 		return -EINVAL; // Invalid signal for sigaction
 	}
 	assert(signal < SIGNAL_MAX);
@@ -3415,11 +3457,13 @@ long SysSignalAction(RegisterContext* r){
 	Process* proc = Scheduler::GetCurrentProcess();
 
 	if(sa && !Scheduler::CheckUsermodePointer(sa)){
+		Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysSignalAction: Invalid sigaction pointer!");
 		return -EFAULT;
 	} 
 	
 	if(oldSA){
-		if(Scheduler::CheckUsermodePointer(oldSA)){
+		if(!Scheduler::CheckUsermodePointer(oldSA)){
+			Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysSignalAction: Invalid old sigaction pointer!");
 			return -EFAULT;
 		}
 
@@ -3492,16 +3536,40 @@ long SysProcMask(RegisterContext* r){
 	Thread* t = Scheduler::GetCurrentThread();
 
 	(void)t;
+	Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysProcMask is a stub!");
 
 	return -ENOSYS;
 }
 
 long SysKill(RegisterContext* r){
-	return -ENOSYS;
+	pid_t pid = SC_ARG0(r);
+	int signal = SC_ARG1(r);
+
+	Process* victim = Scheduler::FindProcessByPID(pid);
+	if(!victim){
+		Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysKill: Process with PID %d does not exist!", pid);
+		return -ESRCH; // Process does not exist
+	}
+
+	victim->GetThreadFromID(1)->Signal(signal);
+
+	return 0;
 }
 
 long SysSignalReturn(RegisterContext* r){
-	return -ENOSYS;
+	Thread* th = Scheduler::GetCurrentThread();
+	uint64_t* threadStack = reinterpret_cast<uint64_t*>(r->rsp);
+
+	threadStack++; // Discard signal handler address
+	th->signalMask = *(threadStack++); // Get the old signal mask
+	// Do not allow the thread to modify CS or SS
+	memcpy(r, threadStack, offsetof(RegisterContext, cs));
+	r->rsp = reinterpret_cast<RegisterContext*>(threadStack)->rsp;
+	// Only allow the following to be changed:
+	// Carry, parity, aux carry, zero, sign, direction, overflow
+	r->rflags = reinterpret_cast<RegisterContext*>(threadStack)->rflags & 0xcd5;
+
+	return r->rax; // Ensure we keep the RAX value from before
 }
 
 syscall_t syscalls[NUM_SYSCALLS]{
@@ -3636,10 +3704,6 @@ void SyscallHandler(RegisterContext* regs) {
 
 	Thread* thread = GetCPULocal()->currentThread;
 	if(__builtin_expect(thread->state == ThreadStateZombie, 0)) for(;;);
-	else if(__builtin_expect(thread->pendingSignals & (~thread->signalMask), 0)){
-		// TODO: Invoke signal handler
-		assert(0);
-	}
 
 	#ifdef KERNEL_DEBUG
 	if(debugLevelSyscalls >= DebugLevelNormal){
@@ -3648,14 +3712,16 @@ void SyscallHandler(RegisterContext* regs) {
 	#endif
 
 	if(__builtin_expect(acquireTestLock(&thread->lock), 0)){
+		Log::Debug(debugLevelSyscalls, DebugLevelNormal, "Thread hanging!");
 		for(;;);
 	}
 	
 	regs->rax = syscalls[regs->rax](regs); // Call syscall
 
-	if(__builtin_expect(thread->pendingSignals & (~thread->signalMask), 0)){
-		// TODO: Invoke signal handler
-		assert(0);
-	}
 	releaseLock(&thread->lock);
+
+	if(__builtin_expect(thread->pendingSignals & (~thread->signalMask), 0)){
+		asm("cli");
+		thread->HandlePendingSignal(regs);
+	}
 }

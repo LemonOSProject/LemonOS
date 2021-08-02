@@ -40,6 +40,7 @@ typedef struct Process {
 	int32_t egid = 0; // Effective GID
 	int32_t gid = 0;
 
+	bool isDead = false;
 	Process* parent = nullptr;
 	List<Process*> children;
 
@@ -68,6 +69,7 @@ typedef struct Process {
 			}
 		}
 
+		assert(id != 1);
 		return nullptr;
 	}
 
@@ -135,6 +137,28 @@ typedef struct Process {
 	ALWAYS_INLINE unsigned FileDescriptorCount() const { return fileDescriptors.get_length(); }
 
 	ALWAYS_INLINE PageMap* GetPageMap() { return addressSpace->GetPageMap(); }
+
+	ALWAYS_INLINE void RemoveChild(Process* child) {
+		for(auto it = children.begin(); it != children.end(); it++){
+			Process* process = *it;
+			if(process == child){
+				assert(process->isDead); // Ensure the process is actually dead
+				children.remove(it); // Remove the process
+				process->parent = nullptr; // Let the reaper thread know this process can die
+				break;
+			}
+		}
+	}
+
+	ALWAYS_INLINE Process* FindChildByPID(pid_t pid){
+		for(Process* proc : children){
+			if(proc->pid == pid){
+				return proc;
+			}
+		}
+
+		return nullptr;
+	}
 
 	lock_t fileDescriptorsLock = 0;
 	Vector<fs_fd_t*> fileDescriptors;
