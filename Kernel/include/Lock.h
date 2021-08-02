@@ -43,6 +43,11 @@ protected:
 
                 semaphore = nullptr;
             }
+
+            if(thread){
+                thread->Unblock();
+            }
+            thread = nullptr;
             releaseLock(&lock);
         }
 

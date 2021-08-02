@@ -28,24 +28,23 @@ retry:
 
         releaseLock(&node->blockedLock);
     }
+
+    if(thread){
+        thread->Unblock();
+    }
     releaseLock(&lock);
 }
 
 FilesystemBlocker::~FilesystemBlocker() {
 retry:
-    acquireLock(&lock);
-
     if (node && !removed) {
         if (acquireTestLock(&node->blockedLock)) {
-            releaseLock(&lock);
-
             goto retry;
         }
 
         node->blocked.remove(this);
         releaseLock(&node->blockedLock);
     }
-    releaseLock(&lock);
 }
 
 DirectoryEntry::DirectoryEntry(FsNode* node, const char* name) : node(node) {

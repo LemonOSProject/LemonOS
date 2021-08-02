@@ -50,7 +50,7 @@ void Thread::Signal(int signal){
 void Thread::HandlePendingSignal(RegisterContext* regs){
 	assert(Scheduler::GetCurrentThread() == this); // Make sure we are this thread
 	assert(!CheckInterrupts()); // Assume interrupts are disabled
-	
+
 	SignalHandler handler;
 	int signal = 0;
 	for(int i = 0; i < SIGNAL_MAX; i++) {
@@ -84,6 +84,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs){
 	}
 
 	if(handler.action == SignalHandler::ActionDefault){
+		Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Thread::HandlePendingSignal: Common action for signal %d", signal);
 		// Default action
 		switch(signal){
 			// Terminate
@@ -117,6 +118,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs){
 		}
 		return;
 	} else if(handler.action == SignalHandler::ActionIgnore){
+		Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Thread::HandlePendingSignal: Ignoring signal %d", signal);
 		return;
 	}
 
@@ -138,6 +140,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs){
 	regs->rsp = reinterpret_cast<uintptr_t>(stack); // Set rsp to new stack value
 
 	assert(!(regs->rsp & 0xf)); // Ensure that stack is 16-byte aligned
+	Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Thread::HandlePendingSignal: Executing usermode handler for signal %d", signal);
 }
 
 bool Thread::Block(ThreadBlocker* newBlocker){

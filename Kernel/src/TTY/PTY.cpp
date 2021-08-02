@@ -239,17 +239,21 @@ ssize_t PTY::MasterWrite(char* buffer, size_t count) {
 
     if (slaveFile.blocked.get_length()) {
         if (IsCanonical()) {
-            acquireLock(&slaveFile.blockedLock);
             while (slave.lines && slaveFile.blocked.get_length()) {
-                slaveFile.blocked.get_front()->Unblock();
+                acquireLock(&slaveFile.blockedLock);
+                if(slaveFile.blocked.get_length()) {
+                    slaveFile.blocked.get_front()->Unblock();
+                }
+                releaseLock(&slaveFile.blockedLock);
             }
-            releaseLock(&slaveFile.blockedLock);
         } else {
-            acquireLock(&slaveFile.blockedLock);
             while (slave.bufferPos && slaveFile.blocked.get_length()) {
-                slaveFile.blocked.get_front()->Unblock();
+                acquireLock(&slaveFile.blockedLock);
+                if(slaveFile.blocked.get_length()) {
+                    slaveFile.blocked.get_front()->Unblock();
+                }
+                releaseLock(&slaveFile.blockedLock);
             }
-            releaseLock(&slaveFile.blockedLock);
         }
     }
 
@@ -283,11 +287,13 @@ ssize_t PTY::MasterWrite(char* buffer, size_t count) {
 ssize_t PTY::SlaveWrite(char* buffer, size_t count) {
     ssize_t written = master.Write(buffer, count);
 
-    acquireLock(&masterFile.blockedLock);
     while (master.bufferPos && masterFile.blocked.get_length()) {
-        masterFile.blocked.get_front()->Unblock();
+        acquireLock(&masterFile.blockedLock);
+        if(masterFile.blocked.get_length()){
+            masterFile.blocked.get_front()->Unblock();
+        }
+        releaseLock(&masterFile.blockedLock);
     }
-    releaseLock(&masterFile.blockedLock);
 
     if (master.bufferPos && watchingMaster.get_length()) {
         while (watchingMaster.get_length()) {

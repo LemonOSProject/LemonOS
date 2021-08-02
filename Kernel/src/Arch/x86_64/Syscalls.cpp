@@ -3552,7 +3552,6 @@ long SysKill(RegisterContext* r){
 	}
 
 	victim->GetThreadFromID(1)->Signal(signal);
-
 	return 0;
 }
 

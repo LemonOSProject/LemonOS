@@ -64,7 +64,7 @@ typedef struct Process {
 
 	ALWAYS_INLINE Thread* GetThreadFromID(pid_t id){
 		for(Thread* t : threads){
-			if(t->tid == id){
+			if(t && t->tid == id){
 				return t;
 			}
 		}
