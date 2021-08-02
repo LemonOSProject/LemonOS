@@ -46,6 +46,9 @@ typedef struct Process {
 	char workingDir[PATH_MAX];
 	char name[NAME_MAX];
 
+	MappedRegion* signalTrampoline;
+	SignalHandler signalHandlers[SIGNAL_MAX]; // Signal handlers
+
 	timeval creationTime; // When the process was created
 	uint64_t activeTicks = 0; // How many ticks this process has been active
 
@@ -204,6 +207,12 @@ namespace Scheduler{
 	
 	inline static Thread* GetCurrentThread(){
 		return GetCPULocal()->currentThread;
+	}
+
+	// Checks that a pointer of type T is valid
+	template<typename T>
+	inline bool CheckUsermodePointer(T* ptr, AddressSpace* addressSpace = GetCurrentProcess()->addressSpace){
+		return addressSpace->RangeInRegion(reinterpret_cast<uintptr_t>(ptr), sizeof(T));
 	}
 
 	Handle& RegisterHandle(process_t* proc, FancyRefPtr<KernelObject> ko);

@@ -32,6 +32,42 @@ void ThreadBlocker::Unblock() {
 	releaseLock(&lock);
 }
 
+void Thread::Signal(int signal){
+	SignalHandler& sigHandler = parent->signalHandlers[signal - 1];
+	if(sigHandler.action == SignalHandler::ActionIgnore){
+		return;
+	}
+
+	pendingSignals |= 1 << (signal - 1); // Set corresponding bit for signal
+}
+
+void Thread::HandlePendingSignal(){
+	assert(CheckInterrupts());
+
+	int signal = 0;
+	for(int i = 0; i < SIGNAL_MAX; i++) {
+		if((pendingSignals >> i) & 0x1){ // Check if signal bit is set
+			signal = i + 1;
+			break;
+		}
+	}
+
+	if(signal == 0){
+		Log::Warning("Thread::HandlePendingSignal: No pending signals!");
+		return; // No pending signal
+	}
+
+	if(signal == SIGKILL){
+		Scheduler::EndProcess(parent);
+		return;
+	}
+
+	SignalHandler handler = parent->signalHandlers[signal - 1];
+	if(handler.action == SignalHandler::ActionUsermodeHandler){
+		return;
+	}
+}
+
 bool Thread::Block(ThreadBlocker* newBlocker){
 	assert(CheckInterrupts());
 
@@ -120,7 +156,7 @@ void Thread::Sleep(long us){
 	
 	{
 		Timer::TimerEvent ev(us, timerCallback, this);
-				
+
 		asm("cli");
 		state = ThreadStateBlocked;
 

@@ -260,19 +260,8 @@ public:
         inline uint32_t LocationToBlock(uint64_t l) { return (l >> super.logBlockSize) >> 10; }
         inline uint32_t BlockToLocation(uint64_t b) { return (b << super.logBlockSize) << 10; }
 
-        //inline uint64_t BlockToLBA(uint64_t block) { return block * (blocksize / part->parentDisk->blocksize); }
-
         inline uint32_t ResolveInodeBlockGroup(uint32_t inode) { return (inode - 1) / super.inodesPerGroup; }
-
         inline uint32_t ResolveInodeBlockGroupIndex(uint32_t inode) { return (inode - 1) % super.inodesPerGroup; }
-
-        /*inline uint64_t InodeLBA(uint32_t inode) {
-            uint32_t block = blockGroups[ResolveInodeBlockGroup(inode)].inodeTable;
-            uint64_t lba =
-                (block * blocksize + ResolveInodeBlockGroupIndex(inode) * inodeSize) / part->parentDisk->blocksize;
-
-            return lba;
-        }*/
 
         inline uint64_t InodeOffset(uint32_t inode) {
             uint32_t block = blockGroups[ResolveInodeBlockGroup(inode)].inodeTable;

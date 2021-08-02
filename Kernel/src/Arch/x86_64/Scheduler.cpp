@@ -26,6 +26,9 @@ void IdleProcess();
 
 void KernelProcess();
 
+extern uint8_t signalTrampolineStart[];
+extern uint8_t signalTrampolineEnd[];
+
 namespace Scheduler{
     int schedulerLock = 0;
     bool schedulerReady = false;
@@ -520,7 +523,6 @@ namespace Scheduler{
         while(__builtin_expect(acquireTestLock(&cpu->runQueueLock), 0)) {
             return;
         }
-
     
         if (__builtin_expect(cpu->runQueue->get_length() <= 0 || !cpu->currentThread, 0)){
             cpu->currentThread = cpu->idleProcess->threads[0];
@@ -560,6 +562,15 @@ namespace Scheduler{
 	    asm volatile ("wrmsr" :: "a"(cpu->currentThread->fsBase & 0xFFFFFFFF) /*Value low*/, "d"((cpu->currentThread->fsBase >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
 
         TSS::SetKernelStack(&cpu->tss, (uintptr_t)cpu->currentThread->kernelStack);
+
+        // Check for a few things
+        // - Process is in usermode
+        // - Pending unmasked signals
+        // If true, invoke the signal handler
+        if((cpu->currentThread->registers.cs & 0x3) && (cpu->currentThread->pendingSignals & ~cpu->currentThread->signalMask)){
+            // TODO: Singal handler
+            assert(0);
+        }
 	
         TaskSwitch(&cpu->currentThread->registers, cpu->currentThread->parent->GetPageMap()->pml4Phys);
     }
@@ -624,6 +635,15 @@ namespace Scheduler{
             Log::Warning("Failed to find /dev/kernellog");
         }
         
+        proc->signalTrampoline = proc->addressSpace->AllocateAnonymousVMObject((signalTrampolineEnd - signalTrampolineStart + PAGE_SIZE_4K - 1) & ~static_cast<unsigned>(PAGE_SIZE_4K - 1), 0, false);
+        reinterpret_cast<PhysicalVMObject*>(proc->signalTrampoline->vmObject.get())->ForceAllocate(); // Forcibly allocate all blocks
+        proc->signalTrampoline->vmObject->MapAllocatedBlocks(proc->signalTrampoline->Base(), proc->GetPageMap()); 
+
+        // Copy signal trampoline code into process
+        asm volatile("cli; mov %%rax, %%cr3" :: "a"(proc->GetPageMap()->pml4Phys));
+        memcpy(reinterpret_cast<void*>(proc->signalTrampoline->Base()), signalTrampolineStart, signalTrampolineEnd - signalTrampolineStart);
+        asm volatile("mov %%rax, %%cr3; sti" :: "a"(GetCurrentProcess()->GetPageMap()->pml4Phys));
+
         processes->add_back(proc);
         return proc;
     }
@@ -645,8 +665,6 @@ namespace Scheduler{
             
             if(!VerifyELF(linkerElf)){
                 Log::Warning("Invalid Dynamic Linker ELF");
-                asm volatile("mov %%rax, %%cr3" :: "a"(GetCurrentProcess()->GetPageMap()->pml4Phys));
-                asm("sti");
                 return 0;
             }
 

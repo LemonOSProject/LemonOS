@@ -26,6 +26,7 @@
 #include <Device.h>
 #include <Modules.h>
 #include <Fs/Pipe.h>
+#include <Signal.h>
 
 #include <ABI/Process.h>
 #include <ABI/Syscall.h>
@@ -33,14 +34,14 @@
 #include <sys/ioctl.h>
 #include <abi-bits/vm-flags.h>
 
-#define SC_ARG0(r) (r)->rdi
-#define SC_ARG1(r) (r)->rsi
-#define SC_ARG2(r) (r)->rdx
-#define SC_ARG3(r) (r)->r10
-#define SC_ARG4(r) (r)->r9
-#define SC_ARG5(r) (r)->r8
+#define SC_ARG0(r) ((r)->rdi)
+#define SC_ARG1(r) ((r)->rsi)
+#define SC_ARG2(r) ((r)->rdx)
+#define SC_ARG3(r) ((r)->r10)
+#define SC_ARG4(r) ((r)->r9)
+#define SC_ARG5(r) ((r)->r8)
 
-#define NUM_SYSCALLS 102
+#define NUM_SYSCALLS 106
 
 #define EXEC_CHILD 1
 
@@ -2882,6 +2883,12 @@ long SysKernelObjectDestroy(RegisterContext* r){
 		return -EINVAL;
 	}
 
+	Log::Warning("SysKernelObjectDestroy: destrying ko %d (type %d)", SC_ARG0(r), h->ko->InstanceTypeID());
+	
+	Log::Info("Process %s (PID: %d), Stack Trace:", currentProcess->name, currentProcess->pid);
+	Log::Info("%x", r->rip);
+	UserPrintStackTrace(r->rbp, currentProcess->addressSpace);
+
 	h->ko->Destroy();
 
 	Scheduler::DestroyHandle(currentProcess, SC_ARG0(r));
@@ -3345,7 +3352,6 @@ long SysSocketPair(RegisterContext* r){
 	sv[1] = process->AllocateFileDescriptor(s2Handle);
 	
 	assert(s1->IsConnected() && s2->IsConnected());
-
 	return 0;
 }
 
@@ -3382,6 +3388,119 @@ long SysPeername(RegisterContext* r){
 /// \return Negative error code on failure, otherwise 0
 /////////////////////////////
 long SysSockname(RegisterContext* r){
+	return -ENOSYS;
+}
+
+long SysSignalAction(RegisterContext* r){
+	int signal = SC_ARG0(r); // Signal number
+	switch (signal)
+	{
+	// Supported an overridable signals
+	case SIGINT:
+	case SIGALRM:
+	case SIGCHLD:
+		break;
+	// Either an unsupported signal or cannot be overriden
+	case SIGKILL:
+	case SIGCONT:
+	case SIGSTOP:
+	default:
+		return -EINVAL; // Invalid signal for sigaction
+	}
+	assert(signal < SIGNAL_MAX);
+
+	const sigaction* sa = reinterpret_cast<sigaction*>SC_ARG1(r); // If non-null, new sigaction to set
+	sigaction* oldSA = reinterpret_cast<sigaction*>SC_ARG2(r); // If non-null, filled with old sigaction
+
+	Process* proc = Scheduler::GetCurrentProcess();
+
+	if(sa && !Scheduler::CheckUsermodePointer(sa)){
+		return -EFAULT;
+	} 
+	
+	if(oldSA){
+		if(Scheduler::CheckUsermodePointer(oldSA)){
+			return -EFAULT;
+		}
+
+		const SignalHandler& sigHandler = proc->signalHandlers[signal - 1];
+		if(sigHandler.action == SignalHandler::ActionUsermodeHandler){
+			if(sigHandler.flags & SignalHandler::FlagSignalInfo){
+				*oldSA = {
+					.sa_handler = nullptr,
+					.sa_mask = sigHandler.mask,
+					.sa_flags = sigHandler.flags,
+					.sa_sigaction = reinterpret_cast<void(*)(int, siginfo_t*, void*)>(sigHandler.userHandler),
+				};
+			} else {
+				*oldSA = {
+					.sa_handler = reinterpret_cast<void(*)(int)>(sigHandler.userHandler),
+					.sa_mask = sigHandler.mask,
+					.sa_flags = sigHandler.flags,
+					.sa_sigaction = nullptr,
+				};
+			}
+		} else if(sigHandler.action == SignalHandler::ActionDefault){
+			*oldSA = {
+				.sa_handler = SIG_DFL,
+				.sa_mask = sigHandler.mask,
+				.sa_flags = sigHandler.flags,
+				.sa_sigaction = nullptr,
+			};
+		} else if(sigHandler.action == SignalHandler::ActionIgnore){
+			*oldSA = {
+				.sa_handler = SIG_IGN,
+				.sa_mask = sigHandler.mask,
+				.sa_flags = sigHandler.flags,
+				.sa_sigaction = nullptr,
+			};
+		} else {
+			Log::Error("Invalid signal action!");
+			assert(!"Invalid signal action");
+		}
+	} 
+	
+	if(!sa){
+		return 0; // sa not specified, nothing left to do
+	}
+
+	if(sa->sa_flags & (~SignalHandler::supportedFlags)){
+		Log::Error("SysSignalAction: sa_flags %x not supported!", sa->sa_flags);
+		return -EINVAL;
+	}
+
+	SignalHandler handler;
+	if(sa->sa_handler == SIG_DFL){
+		handler. action = SignalHandler::ActionDefault;
+	} else if(sa->sa_handler == SIG_IGN){
+		handler.action = SignalHandler::ActionIgnore;
+	} else {
+		handler.action = SignalHandler::ActionUsermodeHandler;
+		if(sa->sa_flags & SignalHandler::FlagSignalInfo){
+			handler.userHandler = (void*)sa->sa_sigaction;
+		} else {
+			handler.userHandler = (void*)sa->sa_handler;
+		}
+	}
+	handler.mask = sa->sa_mask;
+	
+	proc->signalHandlers[signal - 1] = handler;
+	return 0;
+}
+
+long SysProcMask(RegisterContext* r){
+	Thread* t = Scheduler::GetCurrentThread();
+
+	(void)t;
+
+	return -ENOSYS;
+}
+
+long SysKill(RegisterContext* r){
+	return -ENOSYS;
+}
+
+long SysSignalReturn(RegisterContext* r){
 	return -ENOSYS;
 }
 
@@ -3488,6 +3607,10 @@ syscall_t syscalls[NUM_SYSCALLS]{
 	SysSocketPair,
 	SysPeername,				// 100
 	SysSockname,
+	SysSignalAction,
+	SysProcMask,
+	SysKill,
+	SysSignalReturn,			// 105
 };
 
 void DumpLastSyscall(Thread* t){
@@ -3513,6 +3636,10 @@ void SyscallHandler(RegisterContext* regs) {
 
 	Thread* thread = GetCPULocal()->currentThread;
 	if(__builtin_expect(thread->state == ThreadStateZombie, 0)) for(;;);
+	else if(__builtin_expect(thread->pendingSignals & (~thread->signalMask), 0)){
+		// TODO: Invoke signal handler
+		assert(0);
+	}
 
 	#ifdef KERNEL_DEBUG
 	if(debugLevelSyscalls >= DebugLevelNormal){
@@ -3525,5 +3652,10 @@ void SyscallHandler(RegisterContext* regs) {
 	}
 	
 	regs->rax = syscalls[regs->rax](regs); // Call syscall
+
+	if(__builtin_expect(thread->pendingSignals & (~thread->signalMask), 0)){
+		// TODO: Invoke signal handler
+		assert(0);
+	}
 	releaseLock(&thread->lock);
 }

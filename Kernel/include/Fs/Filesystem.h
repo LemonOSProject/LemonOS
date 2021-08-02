@@ -10,6 +10,7 @@
 
 #include <abi-bits/abi.h>
 #include <abi-bits/fcntl.h>
+#include <abi-bits/uid_t.h>
 
 #define FD_SETSIZE 1024
 
@@ -92,7 +93,6 @@
 
 typedef int64_t ino_t;
 typedef uint64_t dev_t;
-typedef int32_t uid_t;
 typedef int64_t off_t;
 typedef int32_t mode_t;
 typedef int32_t nlink_t;

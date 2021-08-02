@@ -4,6 +4,7 @@
 #include <List.h>
 #include <MiscHdr.h>
 #include <System.h>
+#include <Signal.h>
 #include <Timer.h>
 
 #include <abi-bits/pid_t.h>
@@ -72,6 +73,19 @@ struct Thread {
 
 	bool blockTimedOut = false;
 	ThreadBlocker* blocker = nullptr;
+
+	uint64_t pendingSignals = 0; // Bitmap of pending signals
+	uint64_t signalMask = 0; // Masked signals
+
+    /////////////////////////////
+    /// \brief Dispatch a signal to the thread
+    /////////////////////////////
+	void Signal(int signal);
+
+    /////////////////////////////
+    /// \brief Call the signal handler for the first pending signal
+    /////////////////////////////
+	void HandlePendingSignal();
 
     /////////////////////////////
     /// \brief Block a thread
