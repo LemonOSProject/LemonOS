@@ -78,6 +78,25 @@ int PhysicalVMObject::Hit(uintptr_t base, uintptr_t offset, PageMap* pMap){
     return 0; // Success
 }
 
+void PhysicalVMObject::ForceAllocate(){
+    void* mapping = Memory::KernelAllocate4KPages(1);
+    for(unsigned i = 0; i < (size >> PAGE_SHIFT_4K); i++){
+        if(physicalBlocks[i]){
+            continue; // Already allocated
+        }
+        assert(anonymous);
+
+        uintptr_t phys = Memory::AllocatePhysicalMemoryBlock();
+        assert(phys < PHYS_BLOCK_MAX);
+        
+        physicalBlocks[i] = phys >> PAGE_SHIFT_4K;
+
+        Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)mapping, 1);
+        memset(mapping, 0, PAGE_SIZE_4K);
+    }
+    Memory::KernelFree4KPages(mapping, 1);
+}
+
 void PhysicalVMObject::MapAllocatedBlocks(uintptr_t base, PageMap* pMap){
     uintptr_t virt = base;
 

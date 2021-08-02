@@ -1,36 +1,33 @@
 #include <MM/AddressSpace.h>
 
-#include <StackTrace.h>
 #include <CPU.h>
+#include <StackTrace.h>
 
-AddressSpace::AddressSpace(PageMap* pm) : pageMap(pm) {
-    
-}
+AddressSpace::AddressSpace(PageMap* pm) : m_pageMap(pm) {}
 
-AddressSpace::~AddressSpace(){
-    IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal), {
-        Log::Info("Destroying address space with %u regions.", regions.get_length());
-    });
+AddressSpace::~AddressSpace() {
+    IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal),
+             { Log::Info("Destroying address space with %u regions.", m_regions.get_length()); });
 
-    for(auto& region : regions){
-        if(region.vmObject){
+    for (auto& region : m_regions) {
+        if (region.vmObject) {
             region.vmObject->refCount--;
         }
     }
-    regions.clear(); // Let FancyRefPTr handle cleanup for us
+    m_regions.clear(); // Let FancyRefPTr handle cleanup for us
 
-    Memory::DestroyPageMap(pageMap);
+    Memory::DestroyPageMap(m_pageMap);
 }
 
-MappedRegion* AddressSpace::AddressToRegionReadLock(uintptr_t address){
-    ScopedSpinLock acquired(lock);
+MappedRegion* AddressSpace::AddressToRegionReadLock(uintptr_t address) {
+    ScopedSpinLock acquired(m_lock);
 
-    for(MappedRegion& region : regions){
-        if(!region.vmObject.get()){
+    for (MappedRegion& region : m_regions) {
+        if (!region.vmObject.get()) {
             continue;
         }
 
-        if(address >= region.Base() && address < region.End()){
+        if (address >= region.Base() && address < region.End()) {
             region.lock.AcquireRead();
             return &region;
         }
@@ -39,15 +36,15 @@ MappedRegion* AddressSpace::AddressToRegionReadLock(uintptr_t address){
     return nullptr;
 }
 
-MappedRegion* AddressSpace::AddressToRegionWriteLock(uintptr_t address){
-    ScopedSpinLock acquired(lock);
+MappedRegion* AddressSpace::AddressToRegionWriteLock(uintptr_t address) {
+    ScopedSpinLock acquired(m_lock);
 
-    for(MappedRegion& region : regions){
-        if(!region.vmObject.get()){
+    for (MappedRegion& region : m_regions) {
+        if (!region.vmObject.get()) {
             continue;
         }
 
-        if(address >= region.Base() && address < region.End()){
+        if (address >= region.Base() && address < region.End()) {
             region.lock.AcquireWrite();
             return &region;
         }
@@ -56,47 +53,52 @@ MappedRegion* AddressSpace::AddressToRegionWriteLock(uintptr_t address){
     return nullptr;
 }
 
-bool AddressSpace::RangeInRegion(uintptr_t base, size_t size){
+bool AddressSpace::RangeInRegion(uintptr_t base, size_t size) {
     uintptr_t end = base + size;
 
-    auto it = regions.begin();
-    for(; it != regions.end(); it++){
-        if(base < it->Base()){
+    auto it = m_regions.begin();
+    for (; it != m_regions.end(); it++) {
+        if (base < it->Base()) {
             IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal), {
                 Log::Warning("range (%x-%x) not in region (%x-%x)!", base, base + size, it->Base(), it->End());
                 PrintStackTrace(GetRBP());
             });
-            return false; // Outside of the region, regions are ordered
-        } else if(base >= it->Base() && base < it->End()){ // We intersect with this region
+            return false;                                    // Outside of the region, regions are ordered
+        } else if (base >= it->Base() && base < it->End()) { // We intersect with this region
             base = it->End();
         }
 
-        if(base >= end){
+        if (base >= end) {
             return true; // Range lies completely within the region
         }
     }
 
-    if(base >= end){
+    if (base >= end) {
         return true; // Range lies completely within the region
     }
 
     return false;
 }
 
-long AddressSpace::UnmapRegion(MappedRegion* region){
-    ScopedSpinLock acquired(lock);
+long AddressSpace::UnmapRegion(MappedRegion* region) {
+    ScopedSpinLock acquired(m_lock);
 
     assert(region->lock.IsWriteLocked());
 
-    for(auto it = regions.begin(); it != regions.end(); it++){
-        if(it->Base() == region->Base()){
-            Memory::MapVirtualMemory4K(0, region->Base(), PAGE_COUNT_4K(region->Size()), 0, pageMap);
-            
-            if(it->vmObject){
+    for (auto it = m_regions.begin(); it != m_regions.end(); it++) {
+        if (it->Base() == region->Base()) {
+            if(IsKernel()){
+                assert(it->Base() >= KERNEL_VIRTUAL_BASE);
+                Memory::KernelMapVirtualMemory4K(0, region->Base(), PAGE_COUNT_4K(region->Size()), 0);
+            } else {
+                Memory::MapVirtualMemory4K(0, region->Base(), PAGE_COUNT_4K(region->Size()), 0, m_pageMap);
+            }
+
+            if (it->vmObject) {
                 it->vmObject->refCount--;
             }
 
-            regions.remove(it);
+            m_regions.remove(it);
             return 0;
         }
     }
@@ -105,19 +107,21 @@ long AddressSpace::UnmapRegion(MappedRegion* region){
     return 1;
 }
 
-MappedRegion* AddressSpace::MapVMO(FancyRefPtr<VMObject> obj, uintptr_t base, bool fixed){
+MappedRegion* AddressSpace::MapVMO(FancyRefPtr<VMObject> obj, uintptr_t base, bool fixed) {
     assert(!(obj->Size() & (PAGE_SIZE_4K - 1)));
     assert(!(base & (PAGE_SIZE_4K - 1)));
 
-    ScopedSpinLock acquired(lock);
+    ScopedSpinLock acquired(m_lock);
 
     MappedRegion* region;
-    if(base && (region = AllocateRegionAt(base, obj->Size()))){
+    if (base && (region = AllocateRegionAt(base, obj->Size()))) {
         region->vmObject = nullptr;
-    } else if(fixed){ // Could not create region at base
+    } else if (fixed) { // Could not create region at base
         IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal), {
-            Log::Warning("Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.", base, obj->Size());
-            for(MappedRegion& region : regions){
+            Log::Warning(
+                "Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.", base,
+                obj->Size());
+            for (MappedRegion& region : m_regions) {
                 Log::Info("region (%x - %x)", region.Base(), region.End());
             }
         });
@@ -126,35 +130,36 @@ MappedRegion* AddressSpace::MapVMO(FancyRefPtr<VMObject> obj, uintptr_t base, bo
         region = FindAvailableRegion(obj->Size());
         assert(region);
     }
-    
+
     assert(region && region->Base());
 
     obj->refCount++;
     region->vmObject = obj;
 
-    obj->MapAllocatedBlocks(region->Base(), pageMap);
+    obj->MapAllocatedBlocks(region->Base(), m_pageMap);
 
     return region;
 }
 
-MappedRegion* AddressSpace::AllocateAnonymousVMObject(size_t size, uintptr_t base, bool fixed){
+MappedRegion* AddressSpace::AllocateAnonymousVMObject(size_t size, uintptr_t base, bool fixed) {
     assert(!(size & (PAGE_SIZE_4K - 1)));
     assert(!(base & (PAGE_SIZE_4K - 1)));
 
-    ScopedSpinLock acquired(lock);
+    ScopedSpinLock acquired(m_lock);
 
     MappedRegion* region;
-    if(base && (region = AllocateRegionAt(base, size))){
+    if (base && (region = AllocateRegionAt(base, size))) {
         region->vmObject = nullptr;
-    } else if(fixed){ // Could not create region at base
-        Log::Warning("Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.", base, size);
+    } else if (fixed) { // Could not create region at base
+        Log::Warning("Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.",
+                     base, size);
         return nullptr;
     } else {
         region = FindAvailableRegion(size);
     }
-    
+
     assert(region && region->Base());
-    
+
     PhysicalVMObject* vmo = new PhysicalVMObject(size, true, false);
     vmo->anonymous = true;
     vmo->copyOnWrite = false;
@@ -162,62 +167,62 @@ MappedRegion* AddressSpace::AllocateAnonymousVMObject(size_t size, uintptr_t bas
 
     region->vmObject = vmo;
 
-    vmo->MapAllocatedBlocks(region->Base(), pageMap);
+    vmo->MapAllocatedBlocks(region->Base(), m_pageMap);
 
     return region;
 }
 
-AddressSpace* AddressSpace::Fork(){
-    ScopedSpinLock acquired(lock);
+AddressSpace* AddressSpace::Fork() {
+    ScopedSpinLock acquired(m_lock);
 
-    AddressSpace* fork = new AddressSpace(Memory::ClonePageMap(pageMap));
-    for(auto it = regions.begin(); it != regions.end(); it++){
+    AddressSpace* fork = new AddressSpace(Memory::ClonePageMap(m_pageMap));
+    for (auto it = m_regions.begin(); it != m_regions.end(); it++) {
         MappedRegion& r = *it;
 
         r.vmObject->refCount++;
-        if(!r.vmObject->IsShared()){ // Shared VM Objects are shared, we do not want COW
+        if (!r.vmObject->IsShared()) { // Shared VM Objects are shared, we do not want COW
             r.vmObject->copyOnWrite = true;
 
             // Remap for both us and the fork as we are no longer setting the write flag because of COW
-            r.vmObject->MapAllocatedBlocks(r.Base(), pageMap);
+            r.vmObject->MapAllocatedBlocks(r.Base(), m_pageMap);
         }
 
-        fork->regions.add_back(const_cast<const MappedRegion&>(r));
-        
-        r.vmObject->MapAllocatedBlocks(r.Base(), fork->pageMap);
+        fork->m_regions.add_back(const_cast<const MappedRegion&>(r));
+
+        r.vmObject->MapAllocatedBlocks(r.Base(), fork->m_pageMap);
     }
 
-    fork->parent = this;
+    fork->m_parent = this;
 
     return fork;
 }
 
-long AddressSpace::UnmapMemory(uintptr_t base, size_t size){
+long AddressSpace::UnmapMemory(uintptr_t base, size_t size) {
     uintptr_t end = base + size;
-    ScopedSpinLock acquired(lock);
+    ScopedSpinLock acquired(m_lock);
 
-    retry:
-    for(auto it = regions.begin(); it != regions.end(); it++){
+retry:
+    for (auto it = m_regions.begin(); it != m_regions.end(); it++) {
         MappedRegion& region = *it;
         region.lock.AcquireWrite();
 
-        if(!region.vmObject){
-            Memory::MapVirtualMemory4K(0, base, PAGE_COUNT_4K(size), 0, pageMap);
+        if (!region.vmObject) {
+            Memory::MapVirtualMemory4K(0, base, PAGE_COUNT_4K(size), 0, m_pageMap);
 
             // Assume vmobject has been removed
-            regions.remove(it);
+            m_regions.remove(it);
             goto retry;
         }
 
-        if(region.Base() >= base && region.Base() <= end){
-            if(region.End() <= end){ // Whole region within our range
-                if(region.vmObject){
+        if (region.Base() >= base && region.Base() <= end) {
+            if (region.End() <= end) { // Whole region within our range
+                if (region.vmObject) {
                     it->vmObject->refCount--;
                 }
 
-                Memory::MapVirtualMemory4K(0, base, PAGE_COUNT_4K(size), 0, pageMap);
+                Memory::MapVirtualMemory4K(0, base, PAGE_COUNT_4K(size), 0, m_pageMap);
 
-                regions.remove(it);
+                m_regions.remove(it);
                 goto retry;
             }
         }
@@ -229,24 +234,24 @@ long AddressSpace::UnmapMemory(uintptr_t base, size_t size){
 }
 
 void AddressSpace::UnmapAll() {
-    ScopedSpinLock acq(lock);
+    ScopedSpinLock acq(m_lock);
 
-    for(MappedRegion& r : regions){
-        Memory::MapVirtualMemory4K(0, r.Base(), PAGE_COUNT_4K(r.Size()), 0, pageMap);
+    for (MappedRegion& r : m_regions) {
+        Memory::MapVirtualMemory4K(0, r.Base(), PAGE_COUNT_4K(r.Size()), 0, m_pageMap);
 
-        if(r.vmObject.get()){
+        if (r.vmObject.get()) {
             r.vmObject->refCount--;
         }
     }
 
-    regions.clear();
+    m_regions.clear();
 }
 
 size_t AddressSpace::UsedPhysicalMemory() const {
     size_t mem = 0;
 
-    for(MappedRegion& region : regions){
-        if(region.vmObject.get()){
+    for (MappedRegion& region : m_regions) {
+        if (region.vmObject.get()) {
             mem += region.vmObject->UsedPhysicalMemory();
         }
     }
@@ -254,69 +259,70 @@ size_t AddressSpace::UsedPhysicalMemory() const {
     return mem;
 }
 
-void AddressSpace::DumpRegions(){
-    for(MappedRegion& region : regions){
-        if(!region.vmObject.get()) continue;
-        Log::Info("region (%x - %x) anon? %Y, shared? %Y, COW? %Y", region.Base(), region.End(), region.vmObject->IsAnonymous(), region.vmObject->IsShared(), region.vmObject->IsCopyOnWrite());
+void AddressSpace::DumpRegions() {
+    for (MappedRegion& region : m_regions) {
+        if (!region.vmObject.get())
+            continue;
+        Log::Info("region (%x - %x) anon? %Y, shared? %Y, COW? %Y", region.Base(), region.End(),
+                  region.vmObject->IsAnonymous(), region.vmObject->IsShared(), region.vmObject->IsCopyOnWrite());
     }
 }
 
-MappedRegion* AddressSpace::FindAvailableRegion(size_t size){
+MappedRegion* AddressSpace::FindAvailableRegion(size_t size) {
     uintptr_t base = PAGE_SIZE_4K; // We do not want zero addresses
     uintptr_t end = base + size;
 
-    auto it = regions.begin();
-    for(; it != regions.end(); it++){
-        if(it->Base() >= end){
-            return &regions.insert(MappedRegion(base, size), it);
+    auto it = m_regions.begin();
+    for (; it != m_regions.end(); it++) {
+        if (it->Base() >= end) {
+            return &m_regions.insert(MappedRegion(base, size), it);
         }
 
-        if(base >= it->Base() && base < it->End()){ // We intersect with this region
-            base = it->End();
-            end = base + size;
-        }
-        
-        if(end > it->Base() && end <= it->End()){ // We intersect with this region
+        if (base >= it->Base() && base < it->End()) { // We intersect with this region
             base = it->End();
             end = base + size;
         }
 
-        if(base < it->Base() && end > it->End()){ // We encapsulate this region
+        if (end > it->Base() && end <= it->End()) { // We intersect with this region
+            base = it->End();
+            end = base + size;
+        }
+
+        if (base < it->Base() && end > it->End()) { // We encapsulate this region
             base = it->End();
             end = base + size;
         }
     }
 
-    if(end < KERNEL_VIRTUAL_BASE){
-        return &regions.add_back(MappedRegion(base, size));
+    if (end < m_endRegion) {
+        return &m_regions.add_back(MappedRegion(base, size));
     }
 
     return nullptr; // Failed to allocate
 }
 
-MappedRegion* AddressSpace::AllocateRegionAt(uintptr_t base, size_t size){
+MappedRegion* AddressSpace::AllocateRegionAt(uintptr_t base, size_t size) {
     uintptr_t end = base + size;
 
-    auto it = regions.begin();
-    auto lastIt = regions.end();
-    for(; it != regions.end(); it++){
-        if(it->End() <= base){
+    auto it = m_regions.begin();
+    auto lastIt = m_regions.end();
+    for (; it != m_regions.end(); it++) {
+        if (it->End() <= base) {
             lastIt = it;
             continue;
         }
 
-        if(it->Base() >= end){
-            return &regions.insert(MappedRegion(base, size), it);
+        if (it->Base() >= end) {
+            return &m_regions.insert(MappedRegion(base, size), it);
         }
 
-        IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal), {
-            Log::Error("AllocateRegionAt: Failed at %x - %x", it->Base(), it->End());
-        });
+        IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal),
+                 { Log::Error("AllocateRegionAt: Failed at %x - %x", it->Base(), it->End()); });
         return nullptr;
     }
 
-    if(!regions.get_length() || regions.get_back().End() <= base){
-        return &regions.add_back(MappedRegion(base, size)); // Region is at end
+    if (!m_regions.get_length() || m_regions.get_back().End() <= base) {
+        return &m_regions.add_back(MappedRegion(base, size)); // Region is at end
     }
 
     return nullptr;

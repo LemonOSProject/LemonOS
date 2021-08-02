@@ -29,6 +29,7 @@ public:
     ALWAYS_INLINE bool IsAnonymous() const { return anonymous; }
     ALWAYS_INLINE bool IsShared() const { return shared; }
     ALWAYS_INLINE bool IsCopyOnWrite() const { return copyOnWrite; }
+    ALWAYS_INLINE bool IsReclaimable() const { return reclaimable; }
 
     ALWAYS_INLINE virtual bool CanMunmap() const { return false; }
     ALWAYS_INLINE size_t ReferenceCount() const { return refCount; }
@@ -40,6 +41,7 @@ protected:
     bool anonymous : 1 = true;
     bool shared : 1 = false;
     bool copyOnWrite : 1 = false;
+    bool reclaimable : 1 = false;
 };
 
 // VMObject that maps to allocated physical pages (as opposed to MMIO, etc.)
@@ -49,6 +51,7 @@ public:
     virtual ~PhysicalVMObject();
 
     int Hit(uintptr_t base, uintptr_t offset, PageMap* pMap) final;
+    void ForceAllocate(); // Force allocate all blocks
     virtual void MapAllocatedBlocks(uintptr_t base, PageMap* pMap);
 
     virtual VMObject* Clone();

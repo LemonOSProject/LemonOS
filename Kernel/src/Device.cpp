@@ -5,6 +5,7 @@
 #include <Fs/Filesystem.h>
 #include <Fs/FsVolume.h>
 #include <Fs/VolumeManager.h>
+#include <Scheduler.h>
 #include <List.h>
 #include <Math.h>
 #include <String.h>
@@ -29,6 +30,18 @@ public:
         flags = FS_NODE_CHARDEVICE;
 
         SetDeviceName("UNIX Null Device");
+    }
+
+    ssize_t Read(size_t, size_t, uint8_t*);
+    ssize_t Write(size_t, size_t, uint8_t*);
+};
+
+class TTY : public Device {
+public:
+    TTY(const char* name) : Device(name, DeviceTypeUNIXPseudo) {
+        flags = FS_NODE_CHARDEVICE;
+
+        SetDeviceName("Process Terminal");
     }
 
     ssize_t Read(size_t, size_t, uint8_t*);
@@ -126,8 +139,28 @@ ssize_t URandom::Read(size_t offset, size_t size, uint8_t* buffer) {
 
 ssize_t URandom::Write(size_t offset, size_t size, uint8_t* buffer) { return size; }
 
+
+ssize_t TTY::Read(size_t offset, size_t size, uint8_t* buffer) {
+    fs_fd_t* stdin = Scheduler::GetCurrentProcess()->GetFileDescriptor(0);
+
+    if(stdin && stdin->node){
+        return fs::Read(stdin->node, offset, size, buffer);
+    }
+    return -EBADF;
+}
+
+ssize_t TTY::Write(size_t offset, size_t size, uint8_t* buffer) {
+    fs_fd_t* stdout = Scheduler::GetCurrentProcess()->GetFileDescriptor(1);
+
+    if(stdout && stdout->node){
+        return fs::Write(stdout->node, offset, size, buffer);
+    }
+    return -EBADF;
+}
+
 Null null = Null("null");
 URandom urand = URandom("urandom");
+TTY tty = TTY("tty");
 
 namespace DeviceManager {
 int64_t nextDeviceID = 1;

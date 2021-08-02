@@ -1,10 +1,10 @@
 #pragma once
 
-#include <Paging.h>
-#include <Vector.h>
 #include <Lock.h>
+#include <Paging.h>
 #include <Pair.h>
 #include <RefPtr.h>
+#include <Vector.h>
 
 #include <MM/VMObject.h>
 
@@ -12,6 +12,11 @@ class AddressSpace final {
 public:
     AddressSpace(PageMap* pm);
     ~AddressSpace();
+
+    /////////////////////////////
+    /// \brief Get Kernel Address Space
+    /////////////////////////////
+    ALWAYS_INLINE AddressSpace* Kernel();
 
     /////////////////////////////
     /// \brief Find and read lock a region from an address
@@ -64,15 +69,23 @@ public:
     size_t UsedPhysicalMemory() const;
     void DumpRegions();
 
-    __attribute__(( always_inline )) inline PageMap* GetPageMap() { return pageMap; }
+    __attribute__((always_inline)) inline PageMap* GetPageMap() { return m_pageMap; }
+
 protected:
     MappedRegion* FindAvailableRegion(size_t size);
     MappedRegion* AllocateRegionAt(uintptr_t base, size_t size);
 
-    lock_t lock = 0;
+    ALWAYS_INLINE bool IsKernel() const { return this == m_kernel; }
 
-    PageMap* pageMap = nullptr;
-    List<MappedRegion> regions;
+    AddressSpace* m_kernel; // Kernel Address Space
 
-    AddressSpace* parent = nullptr;
+    uintptr_t m_startRegion = 0; // Start of the address space (0 for usermode, KERNEL_VIRTUAL_BASE for kernel)
+    uintptr_t m_endRegion = KERNEL_VIRTUAL_BASE;   // End of the address space (KERNEL_VIRTUAL_BASE for usermode, UINT64_MAX for kernel)
+
+    lock_t m_lock = 0;
+
+    PageMap* m_pageMap = nullptr;
+    List<MappedRegion> m_regions;
+
+    AddressSpace* m_parent = nullptr;
 };
