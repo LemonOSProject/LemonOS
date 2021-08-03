@@ -1387,15 +1387,15 @@ void Ext2::Ext2Volume::SyncInode(ext2_inode_t& e2inode, uint32_t inode) {
     uint8_t buf[blocksize];
     uint64_t off = InodeOffset(inode);
 
-    if (int e = fs::Read(m_device, off, blocksize, buf); e != blocksize) {
+    if (int e = fs::Read(m_device, off & (~511U), blocksize, buf); e != blocksize) {
         Log::Error("[Ext2] Sync: Disk Error (%d) Reading Inode %d", e, inode);
         error = DiskReadError;
         return;
     }
 
-    *(ext2_inode_t*)(buf + (ResolveInodeBlockGroupIndex(inode) * inodeSize) % blocksize) = e2inode;
+    *(ext2_inode_t*)(buf + (off & (511U))) = e2inode;
 
-    if (int e = fs::Write(m_device, off, blocksize, buf); e != blocksize) {
+    if (int e = fs::Write(m_device, off & (~511U), blocksize, buf); e != blocksize) {
         Log::Error("[Ext2] Sync: Disk Error (%d) Writing Inode %d", e, inode);
         error = DiskWriteError;
         return;
