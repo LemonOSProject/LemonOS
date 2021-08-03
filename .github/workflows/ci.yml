@@ -146,6 +146,8 @@ jobs:
           Ports/buildport.sh python
           Ports/buildport.sh lemon-binutils
           Ports/buildport.sh llvm
+          Ports/buildport.sh curl
+          Ports/buildport.sh busybox
 
       - name: Building disk image
         run: ninja -C Build disk

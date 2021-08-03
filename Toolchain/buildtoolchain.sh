@@ -83,7 +83,7 @@ _prepare(){
     ./build.sh # Build the interface compiler
 
     cd $LEMON_SYSROOT/..
-	curl https://api.lemonos.org/sysroot.tar.gz | tar -zxf - sysroot/system
+	curl http://api.lemonos.org/sysroot.tar.gz | tar -zxf - sysroot/system
     cd $CWD
 }
 
