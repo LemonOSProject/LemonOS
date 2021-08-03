@@ -215,6 +215,20 @@ protected:
 
     int64_t CreateWindowBuffer(int width, int height, WindowBuffer** buffer);
 
+    inline int GetWindowState(WMWindow* win){
+        if(active == win){
+            return Lemon::WindowState_Active;
+        } else if(win->minimized){
+            return Lemon::WindowState_Minimized;
+        }
+
+        return Lemon::WindowState_Normal;
+    }
+
+    // If force is true send regardless of NOSHELL flag
+    void BroadcastWindowState(WMWindow* win, bool force = false);
+    void BroadcastWindowTitle(WMWindow* win);
+
     void OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title) override;
     void OnDestroyWindow(const Lemon::Handle& client, int64_t windowID) override;
     void OnSetTitle(const Lemon::Handle& client, int64_t windowID, const std::string& title) override;
@@ -229,6 +243,7 @@ protected:
     void OnPeerDisconnect(const Lemon::Handle& client) override;
     void OnGetScreenBounds(const Lemon::Handle& client) override;
     void OnReloadConfig(const Lemon::Handle& client) override;
+    void OnSubscribeToWindowEvents(const Lemon::Handle& client) override;
 
 public:
     timespec startTime;
@@ -245,6 +260,7 @@ public:
     surface_t screenSurface;
 
     std::list<WMWindow*> windows;
+    std::list<std::unique_ptr<LemonWMClientEndpoint>> windowEventSubscribers;
     std::string themePath = "/system/lemon/themes/classic.json";
 
     InputManager input = InputManager(this);

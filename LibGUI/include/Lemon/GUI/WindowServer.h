@@ -12,12 +12,20 @@ namespace GUI {
 class Window;
 }
 
+enum WindowState {
+    WindowState_Normal = 0,
+    WindowState_Minimized = 1,
+    WindowState_Active = 2,
+};
+
 class WindowServer final : public LemonWMServerEndpoint, LemonWMClient {
-  public:
+public:
     static WindowServer* Instance();
 
     void RegisterWindow(GUI::Window* win);
     void UnregisterWindow(long windowID);
+
+    void SubscribeToWindowEvents();
 
     void Poll();
 
@@ -32,13 +40,23 @@ class WindowServer final : public LemonWMServerEndpoint, LemonWMClient {
         return {r.width, r.height};
     }
 
-  private:
+    void (*OnWindowCreatedHandler)(int64_t, uint32_t, const std::string&) = nullptr;
+    void (*OnWindowStateChangedHandler)(int64_t, uint32_t, int32_t) = nullptr;
+    void (*OnWindowTitleChangedHandler)(int64_t, const std::string&) = nullptr;
+    void (*OnWindowDestroyedHandler)(int64_t) = nullptr;
+
+private:
     WindowServer();
 
     void OnPeerDisconnect(const Lemon::Handle& client) override;
     void OnSendEvent(const Lemon::Handle& client, int64_t windowID, int32_t id, uint64_t data) override;
     void OnThemeUpdate(const Lemon::Handle& client, const std::string& name) override;
     void OnPing(const Lemon::Handle& client, int64_t windowID) override;
+
+    void OnWindowCreated(const Lemon::Handle& client, int64_t windowID, uint32_t flags, const std::string& name) override;
+    void OnWindowStateChanged(const Lemon::Handle& client, int64_t windowID, uint32_t flags, int32_t state) override;
+    void OnWindowTitleChanged(const Lemon::Handle& client, int64_t windowID, const std::string& name) override;
+    void OnWindowDestroyed(const Lemon::Handle& client, int64_t windowID) override;
 
     std::map<long, GUI::Window*> m_windows;
 

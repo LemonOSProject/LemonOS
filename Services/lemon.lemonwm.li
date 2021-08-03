@@ -18,12 +18,19 @@ interface LemonWMServer {
 
     ReloadConfig()
 
+    SubscribeToWindowEvents()
+
     Pong(s64 windowID)
 }
 
 interface LemonWMClient {
     SendEvent(s64 windowID, s32 id, u64 data)
     ThemeUpdate(string name)
+
+    WindowCreated(s64 windowID, u32 flags, string name)
+    WindowTitleChanged(s64 windowID, string name)
+    WindowStateChanged(s64 windowID, u32 flags, s32 state)
+    WindowDestroyed(s64 windowID)
 
     Ping(s64 windowID)
 }
