@@ -33,7 +33,7 @@ bool ReadKey(uint8_t* key) {
 }
 
 class KeyboardDevice : public Device {
-  public:
+public:
     DirectoryEntry dirent;
 
     KeyboardDevice(char* name) : Device(name, DeviceTypeLegacyHID) {

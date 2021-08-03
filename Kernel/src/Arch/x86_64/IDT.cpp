@@ -19,7 +19,7 @@ struct ISRDataPair {
 };
 ISRDataPair interrupt_handlers[256];
 
-extern "C"{
+extern "C" {
 void isr0();
 void isr1();
 void isr2();
