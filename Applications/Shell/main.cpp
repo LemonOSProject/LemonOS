@@ -45,9 +45,10 @@ class WindowButton : public Lemon::GUI::Button {
     }
 
     void Paint(surface_t* surface) {
-        /*if(win->state == Lemon::Shell::ShellWindowStateActive || pressed){
+        this->label = win->title;
+        if(win->state == Lemon::WindowState_Active || pressed){
                 Lemon::Graphics::DrawRect(fixedBounds, Lemon::colours[Lemon::Colour::ForegroundDim], surface);
-        }*/
+        }
 
         DrawButtonLabel(surface, false);
     }
@@ -55,34 +56,73 @@ class WindowButton : public Lemon::GUI::Button {
     void OnMouseUp(vector2i_t mousePos) {
         pressed = false;
 
-        /*if(win->lastState == Lemon::Shell::ShellWindowStateActive){
-                window->Minimize(win->id, true);
+        if(win->lastState == Lemon::WindowState_Active){
+            window->Minimize(win->id, true);
         } else {
-                window->Minimize(win->id, false);
-        }*/
+            window->Minimize(win->id, false);
+        }
     }
 };
 
-std::map<ShellWindow*, WindowButton*> taskbarWindows;
+struct WindowEntry {
+    ShellWindow* win;
+    WindowButton* button;
+};
+
+std::map<int64_t, WindowEntry> shellWindows;
 Lemon::GUI::LayoutContainer* taskbarWindowsContainer;
 
 bool paintTaskbar = true;
-void AddWindow(ShellWindow* win) {
+void OnAddWindow(int64_t windowID, uint32_t flags, const std::string& name) {
+    if(flags & WINDOW_FLAGS_NOSHELL){
+        return;
+    }
+
+    ShellWindow* win = new ShellWindow(windowID, name, Lemon::WindowState_Active);
     WindowButton* btn = new WindowButton(win, {0, 0, 0, 0} /* The LayoutContainer will handle bounds for us*/);
-    taskbarWindows.insert(std::pair<ShellWindow*, WindowButton*>(win, btn));
+    
+    shellWindows[windowID] = { win, btn };
 
     taskbarWindowsContainer->AddWidget(btn);
-
     paintTaskbar = true;
 }
 
-void RemoveWindow(ShellWindow* win) {
-    WindowButton* btn = taskbarWindows[win];
-    taskbarWindows.erase(win);
+void OnRemoveWindow(int64_t windowID) {
+    auto it = shellWindows.find(windowID);
+    if(it == shellWindows.end()){
+        return;
+    }
 
-    taskbarWindowsContainer->RemoveWidget(btn);
-    delete btn;
+    taskbarWindowsContainer->RemoveWidget(it->second.button);
+    delete it->second.button;
+    delete it->second.win;
 
+    shellWindows.erase(it);
+    paintTaskbar = true;
+}
+
+void OnWindowStateChanged(int64_t windowID, uint32_t flags, int32_t state){
+    auto it = shellWindows.find(windowID);
+    if(it == shellWindows.end()){
+        return;
+    }
+
+    if(flags & WINDOW_FLAGS_NOSHELL){
+        OnRemoveWindow(windowID);
+        return;
+    }
+
+    it->second.win->state = state;
+    paintTaskbar = true;
+}
+
+void OnWindowTitleChanged(int64_t windowID, const std::string& name){
+    auto it = shellWindows.find(windowID);
+    if(it == shellWindows.end()){
+        return;
+    }
+
+    it->second.win->title = name;
     paintTaskbar = true;
 }
 
@@ -135,13 +175,15 @@ int main() {
     taskbarWindowsContainer->background = {0, 0, 0, 0};
     taskbar->AddWidget(taskbarWindowsContainer);
 
-    shell->AddWindow = AddWindow;
-    shell->RemoveWindow = RemoveWindow;
+    Lemon::WindowServer* ws = Lemon::WindowServer::Instance();
+    ws->OnWindowCreatedHandler = OnAddWindow;
+    ws->OnWindowDestroyedHandler = OnRemoveWindow;
+    ws->OnWindowStateChangedHandler = OnWindowStateChanged;
+    ws->OnWindowTitleChangedHandler = OnWindowTitleChanged;
+    ws->SubscribeToWindowEvents();
 
     Lemon::GUI::Window* menuWindow = InitializeMenu();
     shell->SetMenu(menuWindow);
-
-    // taskbar->InitializeShellConnection();
 
     Lemon::Waiter waiter;
     waiter.WaitOnAll(&shell->GetInterface());

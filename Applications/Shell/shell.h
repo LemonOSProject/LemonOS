@@ -5,24 +5,25 @@
 
 #include <map>
 
-class ShellWindow{
+class ShellWindow {
 public:
-	long id;
-	std::string title;
-	short state;
-	short lastState;
+    long id;
+    std::string title;
+    int state;
+    int lastState = Lemon::WindowState_Normal;
+
+    ShellWindow(long id, std::string title, int state) : id(id), title(std::move(title)), state(state) {
+        
+    }
 };
 
-class ShellInstance
-    : Shell {
+class ShellInstance : Shell {
     Lemon::Interface shellSrv;
 
     Lemon::GUI::Window* taskbar;
     Lemon::GUI::Window* menu;
-public:
-    std::map<long, ShellWindow*> windows;
-    ShellWindow* active = nullptr;
 
+public:
     ShellInstance(const Lemon::Handle& svc, const char* ifName);
 
     void OnPeerDisconnect(const Lemon::Handle& client) override;
@@ -35,10 +36,6 @@ public:
     void Poll();
 
     void SetWindowState(ShellWindow* win);
-
-    void(*AddWindow)(ShellWindow*) = nullptr;
-    void(*RemoveWindow)(ShellWindow*) = nullptr;
-    void(*RefreshWindows)(void) = nullptr;
 
     inline Lemon::Interface& GetInterface() { return shellSrv; }
 };
