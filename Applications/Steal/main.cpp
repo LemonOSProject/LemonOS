@@ -212,7 +212,7 @@ int HTTPGet(IOObject* sock, const std::string& host, const std::string& resource
         char request[4096];
         int reqLength = snprintf(request, 4096, "GET /%s HTTP/1.1\r\n\
 Host: %s\r\n\
-User-Agent: steal/0.1\r\n\
+User-Agent: curl/0.1\r\n\
 Accept: */*\r\n\
 Accept-Encoding: identity\r\n\
 \r\n", resource.c_str(), host.c_str());

@@ -128,7 +128,7 @@ app_minesweeper = executable('minesweeper.lef', minesweeper_src,
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-app_steal = executable('steal.lef', steal_src, 
+app_steal = executable('steal', steal_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lssl', '-lcrypto'], install : true)
