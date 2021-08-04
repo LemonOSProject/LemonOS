@@ -3450,6 +3450,8 @@ long SysSignalAction(RegisterContext* r) {
     case SIGINT:
     case SIGALRM:
     case SIGCHLD:
+    case SIGUSR1:
+    case SIGUSR2:
         break;
     // Cannot be overriden
     case SIGKILL:
@@ -3581,6 +3583,8 @@ long SysSignalReturn(RegisterContext* r) {
     // Only allow the following to be changed:
     // Carry, parity, aux carry, zero, sign, direction, overflow
     r->rflags = reinterpret_cast<RegisterContext*>(threadStack)->rflags & 0xcd5;
+
+    // TODO: Signal FPU state save and restore
 
     return r->rax; // Ensure we keep the RAX value from before
 }

@@ -109,6 +109,8 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
         case SIGCHLD:
         case SIGURG:
         case SIGWINCH:
+        case SIGUSR1:
+        case SIGUSR2:
             break;
             // Unhandled
         case SIGCONT:
