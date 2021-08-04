@@ -1,0 +1,96 @@
+diff --color -ruN icu/source/config/mh-lemon lemon-icu/source/config/mh-lemon
+--- icu/source/config/mh-lemon	1970-01-01 10:00:00.000000000 +1000
++++ lemon-icu/source/config/mh-lemon	2021-08-03 21:00:31.898604744 +1000
+@@ -0,0 +1,69 @@
++## -*-makefile-*-
++
++## Commands to generate dependency files
++GEN_DEPS.c=  $(CC) -E -MM $(DEFS) $(CPPFLAGS)
++GEN_DEPS.cc= $(CXX) -E -MM $(DEFS) $(CPPFLAGS)
++
++## Flags for position independent code
++SHAREDLIBCFLAGS = -fPIC
++SHAREDLIBCXXFLAGS = -fPIC
++SHAREDLIBCPPFLAGS = -DPIC
++
++## Additional flags when building libraries and with threads
++LIBCPPFLAGS =
++THREADSCPPFLAGS =
++
++## Compiler switch to embed a runtime search path
++LD_RPATH=
++LD_RPATH_PRE = -Wl,-rpath,
++SO = so
++## Shared library options
++LD_SOOPTIONS= -Wl,-Bsymbolic
++
++## Compiler switch to embed a library name
++LD_SONAME = -Wl,-soname -Wl,$(notdir $(MIDDLE_SO_TARGET))
++
++## Compilation rules
++%.$(STATIC_O): $(srcdir)/%.c
++	$(COMPILE.c) $(STATICCPPFLAGS) $(STATICCFLAGS) -o $@ $<
++%.o: $(srcdir)/%.c
++	$(COMPILE.c) $(DYNAMICCPPFLAGS) $(DYNAMICCFLAGS) -o $@ $<
++
++%.$(STATIC_O): $(srcdir)/%.cpp
++	$(COMPILE.cc) $(STATICCPPFLAGS) $(STATICCXXFLAGS) -o $@ $<
++%.o: $(srcdir)/%.cpp
++	$(COMPILE.cc) $(DYNAMICCPPFLAGS) $(DYNAMICCXXFLAGS) -o $@ $<
++
++
++## Dependency rules
++%.d: $(srcdir)/%.c
++	@echo "generating dependency information for $<"
++	@$(SHELL) -ec '$(GEN_DEPS.c) $< \
++		| sed '\''s%\($*\)\.o[ :]*%\1.o $@ : %g'\'' > $@; \
++		[ -s $@ ] || rm -f $@'
++
++%.d: $(srcdir)/%.cpp
++	@echo "generating dependency information for $<"
++	@$(SHELL) -ec '$(GEN_DEPS.cc) $< \
++		| sed '\''s%\($*\)\.o[ :]*%\1.o $@ : %g'\'' > $@; \
++		[ -s $@ ] || rm -f $@'
++
++## Versioned libraries rules
++%.$(SO).$(SO_TARGET_VERSION_MAJOR): %.$(SO).$(SO_TARGET_VERSION)
++	$(RM) $@ && ln -s ${<F} $@
++%.$(SO): %.$(SO).$(SO_TARGET_VERSION_MAJOR)
++	$(RM) $@ && ln -s ${*F}.$(SO).$(SO_TARGET_VERSION) $@
++
++##  Bind internal references
++
++# LDflags that pkgdata will use
++BIR_LDFLAGS= -Wl,-Bsymbolic
++
++# Dependencies [i.e. map files] for the final library
++BIR_DEPS=
++
++## Remove shared library 's'
++STATIC_PREFIX_WHEN_USED =
++STATIC_PREFIX =
++
++## End lemon-specific setup
+diff --color -ruN icu/source/config.sub lemon-icu/source/config.sub
+--- icu/source/config.sub	2021-04-08 10:10:27.000000000 +1000
++++ lemon-icu/source/config.sub	2021-08-03 20:42:21.367774073 +1000
+@@ -1415,7 +1415,7 @@
+ 	      | -os2* | -vos* | -palmos* | -uclinux* | -nucleus* \
+ 	      | -morphos* | -superux* | -rtmk* | -rtmk-nova* | -windiss* \
+ 	      | -powermax* | -dnix* | -nx6 | -nx7 | -sei* | -dragonfly* \
+-	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es* \
++	      | -skyos* | -haiku* | -rdos* | -toppers* | -drops* | -es* | -lemon* \
+ 	      | -onefs* | -tirtos* | -phoenix* | -fuchsia* | -redox*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;
+diff --color -ruN icu/source/configure lemon-icu/source/configure
+--- icu/source/configure	2021-04-08 10:10:27.000000000 +1000
++++ lemon-icu/source/configure	2021-08-03 21:20:48.058263122 +1000
+@@ -5323,6 +5323,7 @@
+ *-apple-darwin*)	icu_cv_host_frag=mh-darwin ;;
+ *-*-beos)       icu_cv_host_frag=mh-beos ;;
+ *-*-haiku)      icu_cv_host_frag=mh-haiku ;;
++*-*-lemon)	icu_cv_host_frag=mh-lemon ;;
+ *-*-irix*)	icu_cv_host_frag=mh-irix ;;
+ *-dec-osf*) icu_cv_host_frag=mh-alpha-osf ;;
+ *-*-nto*)	icu_cv_host_frag=mh-qnx ;;
