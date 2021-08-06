@@ -4,11 +4,13 @@
 #include <Lemon/Core/SHA.h>
 
 #include <string.h>
-#include <vector>
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/wait.h>
 
 #include <string>
+#include <vector>
+#include <list>
 
 struct Service {
 	std::string name;
@@ -20,17 +22,26 @@ struct Service {
 		StateError,
 		StateStopped,
 	} state = StateStarting;
+
+	pid_t pid = -1;
 };
 
 std::multimap<std::string, Service> waitingServices;
-std::vector<Service> services;
+std::list<Service> services;
 
-void StartService(const Service& srv){
+void StartService(Service& srv){
 	char* const argv[] = { (char*) srv.target.c_str() };
-	lemon_spawn(srv.target.c_str(), 1, argv, 0);
+	pid_t pid = lemon_spawn(srv.target.c_str(), 1, argv, 1);
+	if(pid <= 0){
+		printf("[lemond] Error: Failed to start '%s'!\n", srv.name.c_str());
+		return;
+	}
+
+	srv.pid = pid;
 
 	auto range = waitingServices.equal_range(srv.name);
 	for(auto it = range.first; it != range.second; it++){
+		services.push_back(it->second);
 		StartService(it->second);
 	}
 }
@@ -135,6 +146,18 @@ int main(int argc, char** argv){
 	for(auto& srv : services){
 		StartService(srv);
 	}
-	
-	return 0;
+
+	while(1){
+		if(pid_t pid = waitpid(-1, nullptr, 0); pid > 0){
+			for(auto it = services.begin(); it != services.end(); it++){
+				Service& svc = *it;
+				if(svc.pid == pid){
+					printf("[lemond] Warning: '%s' (pid %d) closed.\n", svc.name.c_str(), svc.pid);
+				}
+				
+				services.erase(it);
+				break;
+			}
+		}
+	}
 }
