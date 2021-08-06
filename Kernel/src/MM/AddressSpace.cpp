@@ -14,7 +14,7 @@ AddressSpace::~AddressSpace() {
             region.vmObject->refCount--;
         }
     }
-    m_regions.clear(); // Let FancyRefPTr handle cleanup for us
+    m_regions.clear(); // Let FancyRefPtr handle cleanup for us
 
     Memory::DestroyPageMap(m_pageMap);
 }
@@ -111,24 +111,26 @@ MappedRegion* AddressSpace::MapVMO(FancyRefPtr<VMObject> obj, uintptr_t base, bo
     assert(!(obj->Size() & (PAGE_SIZE_4K - 1)));
     assert(!(base & (PAGE_SIZE_4K - 1)));
 
-    ScopedSpinLock acquired(m_lock);
-
     MappedRegion* region;
-    if (base && (region = AllocateRegionAt(base, obj->Size()))) {
-        region->vmObject = nullptr;
-    } else if (fixed) { // Could not create region at base
-        IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal), {
-            Log::Warning(
-                "Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.", base,
-                obj->Size());
-            for (MappedRegion& region : m_regions) {
-                Log::Info("region (%x - %x)", region.Base(), region.End());
-            }
-        });
-        return nullptr;
-    } else {
-        region = FindAvailableRegion(obj->Size());
-        assert(region);
+    
+    {
+        ScopedSpinLock acquired(m_lock);
+        if (base && (region = AllocateRegionAt(base, obj->Size()))) {
+            region->vmObject = nullptr;
+        } else if (fixed) { // Could not create region at base
+            IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal), {
+                Log::Warning(
+                    "Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.", base,
+                    base + obj->Size());
+                for (MappedRegion& region : m_regions) {
+                    Log::Info("region (%x - %x)", region.Base(), region.End());
+                }
+            });
+            return nullptr;
+        } else {
+            region = FindAvailableRegion(obj->Size());
+            assert(region);
+        }
     }
 
     assert(region && region->Base());

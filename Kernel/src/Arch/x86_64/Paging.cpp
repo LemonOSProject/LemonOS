@@ -718,6 +718,20 @@ void PageFaultHandler(void*, RegisterContext* regs) {
         }
     };
 
+    if ((regs->cs & 0x3)) {// Make sure we acquired the lock
+        int res = acquireTestLock(&Scheduler::GetCurrentThread()->lock); // Prevent the thread from being killed, etc.
+        if (res) {            
+            Log::Info("Process %s (PID: %x) page fault.", process->name, process->pid);
+            dumpFaultInformation();
+
+            Log::Info("Stack trace:");
+            UserPrintStackTrace(regs->rbp, Scheduler::GetCurrentProcess()->addressSpace);
+            Log::Info("End stack trace.");         
+            
+            assert(!res);                             
+        }
+    }
+
     if (process) {
         AddressSpace* addressSpace = process->addressSpace;
         asm("sti");
@@ -740,6 +754,9 @@ void PageFaultHandler(void*, RegisterContext* regs) {
                     asm("cli");
 
                     faultRegion->lock.ReleaseRead();
+                    if ((regs->cs & 0x3)) {
+                        releaseLock(&Scheduler::GetCurrentThread()->lock);
+                    }
                     return;
                 } else {
                     asm("sti");
@@ -754,6 +771,10 @@ void PageFaultHandler(void*, RegisterContext* regs) {
                                addressSpace->GetPageMap()); // In case the block was never allocated in the first place
 
                     faultRegion->lock.ReleaseRead();
+
+                    if ((regs->cs & 0x3)) {
+                        releaseLock(&Scheduler::GetCurrentThread()->lock);
+                    }
                     return;
                 }
             }
@@ -764,13 +785,16 @@ void PageFaultHandler(void*, RegisterContext* regs) {
             faultRegion->lock.ReleaseRead();
 
             if (!status) {
+                if ((regs->cs & 0x3)) {
+                    releaseLock(&Scheduler::GetCurrentThread()->lock);
+                }
                 return; // Success!
             }
             asm("cli");
         }
     }
 
-    if ((regs->ss & 0x3)) {
+    if ((regs->cs & 0x3)) {
         assert(process);
 
         Log::Info("Process %s (PID: %x) page fault.", process->name, process->pid);

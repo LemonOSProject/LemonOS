@@ -1,6 +1,7 @@
 #include <APIC.h>
 #include <HAL.h>
 #include <IDT.h>
+#include <Lock.h>
 #include <Logging.h>
 #include <Panic.h>
 #include <Scheduler.h>
@@ -260,6 +261,9 @@ extern "C" void isr_handler(int int_num, RegisterContext* regs, int err_code) {
         for (;;)
             ;
     } else {
+        int res = acquireTestLock(&Scheduler::GetCurrentThread()->lock);
+        assert(!res); // Make sure we acquired the lock
+
         Log::Warning("Process %s crashed, PID: ", Scheduler::GetCurrentProcess()->name);
         Log::Write(Scheduler::GetCurrentProcess()->pid);
         Log::Write(", RIP: ");

@@ -347,6 +347,11 @@ void EndProcess(process_t* process) {
     IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose,
              { Log::Info("ending process: %s (%d)", process->name, process->pid); });
     assert(!process->isDead);
+    assert(!process->isDying);
+    process->isDying = true;
+
+    // Ensure the current thread's lock is acquired
+    assert(acquireTestLock(&Scheduler::GetCurrentThread()->lock));
 
     while (process->children.get_length()) {
         IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, {
@@ -397,10 +402,6 @@ void EndProcess(process_t* process) {
 
         Scheduler::GetCurrentThread()->Sleep(
             50000); // Sleep for 50 ms so we do not chew through CPU time in the event of a deadlock
-    }
-
-    while (process->blocking.get_length()) {
-        process->blocking.get_front()->Unblock(process); // It will handle list removal for us
     }
 
     IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, { Log::Info("removing threads from run queue..."); });
@@ -479,11 +480,17 @@ void EndProcess(process_t* process) {
     process->isDead = true;
     processes->remove(process);
 
-    if (process->parent) {
+    while (process->blocking.get_length()) {
+        process->blocking.get_front()->Unblock(process); // It will handle list removal for us
+    }
+
+    if (process->parent && !process->parent->isDying) {
         IF_DEBUG(debugLevelScheduler >= DebugLevelVerbose, { Log::Info("sending SIGCHLD..."); });
 
         // Do not remove from parent's list, waitpid may want to confirm that the process is dead
-        process->parent->GetThreadFromID(1)->Signal(SIGCHLD); // Send SIGCHLD to let the parent know we are dead
+        Thread* th = process->parent->GetThreadFromID(1);
+        assert(th);
+        th->Signal(SIGCHLD); // Send SIGCHLD to let the parent know we are dead
     }
 
     process->processLock.AcquireWrite();
@@ -585,7 +592,13 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
     // If true, invoke the signal handler
     if ((cpu->currentThread->registers.cs & 0x3) &&
         (cpu->currentThread->pendingSignals & ~cpu->currentThread->signalMask)) {
-        cpu->currentThread->HandlePendingSignal(&cpu->currentThread->registers);
+        if(!cpu->currentThread->parent->isDying){
+            int ret = acquireTestLock(&cpu->currentThread->lock);
+            assert(!ret);
+            
+            cpu->currentThread->HandlePendingSignal(&cpu->currentThread->registers);
+            releaseLock(&cpu->currentThread->lock);
+        }
     }
 
     TaskSwitch(&cpu->currentThread->registers, cpu->currentThread->parent->GetPageMap()->pml4Phys);
@@ -607,25 +620,28 @@ process_t* CreateELFProcess(void* elf, int argc, char** argv, int envc, char** e
     thread->timeSlice = thread->timeSliceDefault;
     thread->priority = 4;
 
-    MappedRegion* stackRegion = proc->addressSpace->AllocateAnonymousVMObject(0x200000, 0, false); // 2MB max stacksize
+    elf_info_t elfInfo = LoadELFSegments(proc, elf, 0);
 
-    thread->stack = reinterpret_cast<void*>(stackRegion->base); // 256KB stack size
-    thread->registers.rsp = (uintptr_t)thread->stack + 0x200000;
-    thread->registers.rbp = (uintptr_t)thread->stack + 0x200000;
+    MappedRegion* stackRegion = proc->addressSpace->AllocateAnonymousVMObject(0x400000, 0, false); // 4MB max stacksize
 
-    // Force the first 8KB to be allocated
-    stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, proc->GetPageMap());
-    stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, proc->GetPageMap());
+    thread->stack = reinterpret_cast<void*>(stackRegion->base); // 4MB stack size
+    thread->registers.rsp = (uintptr_t)thread->stack + 0x400000;
+    thread->registers.rbp = (uintptr_t)thread->stack + 0x400000;
 
-    thread->registers.rip = LoadELF(proc, &thread->registers.rsp, elf, argc, argv, envc, envp, execPath);
+    // Force the first 12KB to be allocated
+    stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x1000, proc->GetPageMap());
+    stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x2000, proc->GetPageMap());
+    stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x3000, proc->GetPageMap());
+
+    thread->registers.rbp = thread->registers.rsp;
+
+    thread->registers.rip = LoadELF(proc, &thread->registers.rsp, elfInfo, argc, argv, envc, envp, execPath);
     if (!thread->registers.rip) {
         delete proc->addressSpace;
         delete proc;
 
         return nullptr;
     }
-
-    thread->registers.rbp = thread->registers.rsp;
 
     assert(!(thread->registers.rsp & 0xF));
 
@@ -651,9 +667,11 @@ process_t* CreateELFProcess(void* elf, int argc, char** argv, int envc, char** e
         Log::Warning("Failed to find /dev/kernellog");
     }
 
+    // Allocate space for both a siginfo struct and the signal trampoline
     proc->signalTrampoline = proc->addressSpace->AllocateAnonymousVMObject(
-        (signalTrampolineEnd - signalTrampolineStart + PAGE_SIZE_4K - 1) & ~static_cast<unsigned>(PAGE_SIZE_4K - 1), 0,
-        false);
+        ((signalTrampolineEnd - signalTrampolineStart) + PAGE_SIZE_4K - 1) &
+            ~static_cast<unsigned>(PAGE_SIZE_4K - 1),
+        0, false);
     reinterpret_cast<PhysicalVMObject*>(proc->signalTrampoline->vmObject.get())
         ->ForceAllocate(); // Forcibly allocate all blocks
     proc->signalTrampoline->vmObject->MapAllocatedBlocks(proc->signalTrampoline->Base(), proc->GetPageMap());
@@ -664,14 +682,14 @@ process_t* CreateELFProcess(void* elf, int argc, char** argv, int envc, char** e
            signalTrampolineEnd - signalTrampolineStart);
     asm volatile("mov %%rax, %%cr3; sti" ::"a"(GetCurrentProcess()->GetPageMap()->pml4Phys));
 
+    releaseLock(&proc->GetThreadFromID(1)->lock);
+
     processes->add_back(proc);
     return proc;
 }
 
-uintptr_t LoadELF(Process* process, uintptr_t* stackPointer, void* elf, int argc, char** argv, int envc, char** envp,
-                  const char* execPath) {
-    elf_info_t elfInfo = LoadELFSegments(process, elf, 0);
-
+uintptr_t LoadELF(Process* process, uintptr_t* stackPointer, elf_info_t elfInfo, int argc, char** argv, int envc,
+                  char** envp, const char* execPath) {
     uintptr_t rip = elfInfo.entry;
     if (elfInfo.linkerPath) {
         // char* linkPath = elfInfo.linkerPath;

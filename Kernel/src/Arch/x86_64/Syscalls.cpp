@@ -506,7 +506,8 @@ long SysExecve(RegisterContext* r) {
     stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, proc->GetPageMap());
     stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, proc->GetPageMap());
 
-    r->rip = Scheduler::LoadELF(proc, &r->rsp, buffer, kernelArgv.size(), kernelArgv.Data(), kernelEnv.size(),
+    elf_info_t elfInfo = LoadELFSegments(proc, buffer, 0);
+    r->rip = Scheduler::LoadELF(proc, &r->rsp, elfInfo, kernelArgv.size(), kernelArgv.Data(), kernelEnv.size(),
                                 kernelEnv.Data(), kernelPath);
     kfree(buffer);
 
@@ -996,7 +997,12 @@ long SysMmap(RegisterContext* r) {
 
     MappedRegion* region = proc->addressSpace->AllocateAnonymousVMObject(size, hint, fixed);
     if (!region || !region->base) {
-        Log::Error("SysMmap: Failed to map region (hint %x)!", hint);
+        IF_DEBUG((debugLevelSyscalls >= DebugLevelNormal), {
+            Log::Error("SysMmap: Failed to map region (hint %x)!", hint);
+            Log::Info("rip: %x", r->rip);
+            UserPrintStackTrace(r->rbp, proc->addressSpace);
+        });
+        
         return -1;
     }
 
@@ -1051,9 +1057,9 @@ long SysWaitPID(RegisterContext* r) {
             Process* child = *it;
             if (child->isDead) {
                 pid = child->pid;
+                currentProcess->RemoveChild(child);
+                break;
             }
-
-            currentProcess->RemoveChild(child);
         }
 
         currentProcess->processLock.ReleaseWrite();
@@ -1075,8 +1081,19 @@ long SysWaitPID(RegisterContext* r) {
         if (Scheduler::GetCurrentThread()->Block(&bl)) {
             return -EINTR;
         }
-    } else if ((child = currentProcess->FindChildByPID(pid)) && child->parent == currentProcess) {
-        currentProcess->processLock.AcquireWrite();
+
+        if(pid > 0){
+            child = currentProcess->FindChildByPID(pid);
+            assert(child && child->isDead);
+
+            currentProcess->RemoveChild(child);
+            return pid;
+        }
+        return -ECHILD;
+    }
+
+    currentProcess->processLock.AcquireWrite();
+    if ((child = currentProcess->FindChildByPID(pid))) {
         if (child->isDead) {
             pid = child->pid;
             currentProcess->RemoveChild(child);
@@ -1108,6 +1125,7 @@ long SysWaitPID(RegisterContext* r) {
         }
         return 0;
     }
+    currentProcess->processLock.AcquireWrite();
 
     return -ECHILD;
 }
@@ -3525,7 +3543,7 @@ long SysSignalAction(RegisterContext* r) {
     }
 
     if (sa->sa_flags & (~SignalHandler::supportedFlags)) {
-        Log::Error("SysSignalAction: sa_flags %x not supported!", sa->sa_flags);
+        Log::Error("SysSignalAction: (sig %d) sa_flags %x not supported!", signal, sa->sa_flags);
         return -EINVAL;
     }
 
@@ -3736,10 +3754,9 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
 
     regs->rax = syscalls[regs->rax](regs); // Call syscall
 
-    releaseLock(&thread->lock);
-
     if (__builtin_expect(thread->pendingSignals & (~thread->signalMask), 0)) {
         asm("cli");
         thread->HandlePendingSignal(regs);
     }
+    releaseLock(&thread->lock);
 }

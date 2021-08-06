@@ -10,6 +10,8 @@
 #include <StackTrace.h>
 #endif
 
+#include <bits/posix/posix_signal.h>
+
 void ThreadBlocker::Interrupt() {
     interrupted = true;
     shouldBlock = false;
@@ -131,6 +133,9 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
     // On the usermode stack:
     // Save the register state
     // Save the signal mask
+    //uint64_t* stack = reinterpret_cast<uint64_t*>(regs->rsp - sizeof(ucontext_t));
+    //ucontext_t* ucontext = reinterpret_cast<ucontext_t*>(stack);
+
     uint64_t* stack = reinterpret_cast<uint64_t*>(regs->rsp - sizeof(RegisterContext));
     *reinterpret_cast<RegisterContext*>(stack) = *regs;
 
@@ -140,11 +145,27 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
 
     regs->rip = parent->signalTrampoline->Base();   // Set instruction pointer to signal trampoline
     regs->rdi = signal;                             // The first argument of the signal handler is the signal number
+    if(handler.flags & SignalHandler::FlagSignalInfo){
+        siginfo_t sigInfo = {
+            .si_signo = signal,
+            .si_code = 0, // TODO: Signal code?? (for SIGCHLD should be CLD_EXITED or signal that caused it to exit)
+            .si_errno = 0,
+            .si_pid = 0, // TODO: Sending process PID in here
+            .si_uid = 0,
+            .si_addr = nullptr, // Fault memory location
+            .si_status = 0, // TODO: Exit value or signal
+            .si_value = {0}, // TODO: Signal value
+        };
+
+        *parent->siginfoPointer = sigInfo;
+
+        regs->rsi = (uintptr_t)parent->siginfoPointer;
+    }
     regs->rsp = reinterpret_cast<uintptr_t>(stack); // Set rsp to new stack value
 
     assert(!(regs->rsp & 0xf)); // Ensure that stack is 16-byte aligned
     Log::Debug(debugLevelScheduler, DebugLevelVerbose,
-               "Thread::HandlePendingSignal: Executing usermode handler for signal %d", signal);
+        "Thread::HandlePendingSignal: Executing usermode handler for signal %d", signal);
 }
 
 bool Thread::Block(ThreadBlocker* newBlocker) {
