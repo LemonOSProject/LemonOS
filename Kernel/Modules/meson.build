@@ -18,6 +18,8 @@ executable('hdaudio.sys', ['HDAudio/Main.cpp'],
 executable('e1k.sys', ['Intel8254x/Main.cpp'],
     c_args: module_c_args, cpp_args: [ module_c_args, module_cpp_args ],
     include_directories : module_include_dirs, link_args : [ '-r', module_c_args ])
-executable('testmodule.sys', ['TestModule/Main.cpp'],
+
+subdir('TestModule')
+executable('testmodule.sys', tests,
     c_args: module_c_args, cpp_args: [ module_c_args, module_cpp_args ],
     include_directories : module_include_dirs, link_args : [ '-r', module_c_args ])

@@ -1,24 +1,32 @@
 #include <Module.h>
 
 #include <Logging.h>
-#include <Scheduler.h>
 
-void Test1(){
-	Scheduler::Yield();
-}
+#include "Tests.h"
 
-int ModuleInit(){
+#define TEST_COUNT 2
+Test tests[TEST_COUNT]{
+    StringTest,
+	ThreadingTest,
+};
+
+static int ModuleInit(){
 	Log::Info("Hello, Module World!");
 
-	Test1();
+	for(unsigned i = 0; i < TEST_COUNT; i++){
+		int ret = tests[i]();
+		if(ret != 0){
+			Log::Info("[TestModule] Failed with code %d", ret);
+		}
+	}
 
 	return 0;
 }
 
-int ModuleExit(){
+static int ModuleExit(){
 	Log::Info("Goodbye, Module World!");
 
 	return 0;
 }
 
-DECLARE_MODULE("testmodule", "A test kernel module.", ModuleInit, ModuleExit)
+DECLARE_MODULE("testmodule", "Runs kernel tests.", ModuleInit, ModuleExit)

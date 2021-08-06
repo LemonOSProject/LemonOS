@@ -8,14 +8,6 @@ struct thread;
 #include <Thread.h>
 #include <Logging.h>
 
-class ScopedSpinLock final {
-public:
-    ALWAYS_INLINE ScopedSpinLock(lock_t& lock) : m_lock(lock) { acquireLock(&m_lock); }
-    ALWAYS_INLINE ~ScopedSpinLock() { releaseLock(&m_lock); }
-private:
-    lock_t& m_lock;
-};
-
 class Semaphore {
 protected:
     lock_t value = 0;

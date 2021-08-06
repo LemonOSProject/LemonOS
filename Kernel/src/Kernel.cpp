@@ -93,6 +93,13 @@ void KernelProcess() {
         fs::VolumeManager::RegisterVolume(new fs::LinkVolume(initrd, "lib")); // If /system/lib is not present is /initrd
     }
 
+
+    if(HAL::runTests){
+        ModuleManager::LoadModule("/initrd/modules/testmodule.sys");
+        Log::Warning("Finished running tests. Hanging.");
+        for(;;);
+    }
+
     if (progressBuffer)
         Video::DrawBitmapImage(videoMode.width / 2 + 24 * 3, videoMode.height / 2 + 292 / 2 + 48, 24, 24,
                                progressBuffer);
@@ -133,11 +140,14 @@ void KernelProcess() {
         for (auto it = Scheduler::destroyedProcesses->begin(); it != Scheduler::destroyedProcesses->end(); it++) {
             if (!((*it)->processLock.TryAcquireWrite())) {
                 Process* proc = *it;
+                if(proc->addressSpace){ // Destroy the address space regardless
+                    delete (proc)->addressSpace;
+                    proc->addressSpace = nullptr;
+                }
                 if(proc->parent){
                     proc->processLock.ReleaseWrite();
                 }
 
-                delete (proc)->addressSpace;
                 delete proc;
                 Scheduler::destroyedProcesses->remove(it);
             }

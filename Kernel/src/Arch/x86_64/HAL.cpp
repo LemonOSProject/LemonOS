@@ -32,6 +32,7 @@ int bootModuleCount;
 bool debugMode = false;
 bool disableSMP = false;
 bool useKCon = false;
+bool runTests = false;
 VideoConsole* con;
 
 void InitMultiboot2(multiboot2_info_header_t* mbInfo);
@@ -343,6 +344,8 @@ void InitStivale2(stivale2_info_header_t* st2Info) {
                 disableSMP = true;
             else if (strcmp(cmdLine, "kcon") == 0)
                 useKCon = true;
+            else if (strcmp(cmdLine, "runtests") == 0)
+                runTests = true;
             cmdLine = strtok(NULL, " ");
         }
     }

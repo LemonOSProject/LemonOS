@@ -14,13 +14,13 @@
 
 namespace fs {
 
-int ModuleInit() {
+static int ModuleInit() {
     Ext2::Instance();
 
     return 0;
 }
 
-int ModuleExit() {
+static int ModuleExit() {
     Ext2::Instance().~Ext2();
 
     return 0;

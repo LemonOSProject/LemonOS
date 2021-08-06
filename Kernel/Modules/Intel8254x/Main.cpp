@@ -42,7 +42,7 @@ uint16_t supportedDevices[supportedDeviceCount]{
 };
 
 static Vector<Intel8254x*>* adapters = nullptr;
-int ModuleInit(){
+static int ModuleInit(){
     adapters = new Vector<Intel8254x*>();
 
     for(int i = 0; i < supportedDeviceCount; i++){
@@ -65,7 +65,7 @@ int ModuleInit(){
     return 0;
 }
 
-int ModuleExit(){
+static int ModuleExit(){
     for(const auto& card : *adapters){
         Network::NetFS::GetInstance()->RemoveAdapter(card);
         delete card;

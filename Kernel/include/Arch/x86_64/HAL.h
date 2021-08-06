@@ -11,6 +11,7 @@ namespace HAL{
     extern bool debugMode;
     extern bool disableSMP;
     extern bool useKCon;
+    extern bool runTests;
 
     void InitCore();
 
