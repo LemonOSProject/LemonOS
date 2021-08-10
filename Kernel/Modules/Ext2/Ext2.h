@@ -252,6 +252,8 @@ public:
         bool sparse, largeFiles, filetype;
         uint32_t inodeSize = 128;
 
+        lock_t m_inodesLock = 0;
+        lock_t m_blocksLock = 0;
         HashMap<uint32_t, Ext2Node*> inodeCache;
         HashMap<uint32_t, uint8_t*> blockCache = HashMap<uint32_t, uint8_t*>(1024);
         HashMap<uint32_t, uint8_t*> bitmapCache = HashMap<uint32_t, uint8_t*>(256);
