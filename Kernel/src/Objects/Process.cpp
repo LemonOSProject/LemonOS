@@ -345,7 +345,7 @@ void Process::Die() {
     while (runningThreads.get_length()) {
         auto it = runningThreads.begin();
         while (it != runningThreads.end()) {
-            FancyRefPtr<Thread>& thread = *it;
+            FancyRefPtr<Thread> thread = *it;
             if (!acquireTestLock(&thread->lock)) { // Loop through all of the threads so we can acquire their locks
                 runningThreads.remove(*(it++));
 

@@ -131,7 +131,7 @@ long SysExec(RegisterContext* r) {
     timeval tv = Timer::GetSystemUptimeStruct();
     uint8_t* buffer = (uint8_t*)kmalloc(node->size);
     size_t read = fs::Read(node, 0, node->size, buffer);
-    if (!read) {
+    if (read != node->size) {
         Log::Warning("Could not read file: %s", filepath);
         return 0;
     }
