@@ -255,7 +255,7 @@ extern "C" void isr_handler(int int_num, RegisterContext* regs, int err_code) {
             "Exception: ",
             itoa(int_num, temp2, 16),
             "Process:",
-            itoa(Scheduler::GetCurrentProcess() ? (Scheduler::GetCurrentProcess()->pid) : 0, temp3, 10)};
+            itoa(Scheduler::GetCurrentProcess() ? (Scheduler::GetCurrentProcess()->PID()) : 0, temp3, 10)};
         ;
         KernelPanic(reasons, 7);
         for (;;)
@@ -264,15 +264,17 @@ extern "C" void isr_handler(int int_num, RegisterContext* regs, int err_code) {
         int res = acquireTestLock(&Scheduler::GetCurrentThread()->lock);
         assert(!res); // Make sure we acquired the lock
 
-        Log::Warning("Process %s crashed, PID: ", Scheduler::GetCurrentProcess()->name);
-        Log::Write(Scheduler::GetCurrentProcess()->pid);
+        Process* current = Process::Current();
+
+        Log::Warning("Process %s crashed, PID: ", current->name);
+        Log::Write(current->PID());
         Log::Write(", RIP: ");
         Log::Write(regs->rip);
         Log::Write(", Exception: ");
         Log::Write(int_num);
         Log::Info("Stack trace:");
-        UserPrintStackTrace(regs->rbp, Scheduler::GetCurrentProcess()->addressSpace);
-        Scheduler::EndProcess(Scheduler::GetCurrentProcess());
+        UserPrintStackTrace(regs->rbp, current->addressSpace);
+        current->Die();
     }
 }
 

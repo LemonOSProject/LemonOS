@@ -12,8 +12,6 @@ static inline bool operator<(timeval l, timeval r){
     return (l.tv_sec < r.tv_sec) || (l.tv_sec == r.tv_sec && l.tv_usec < r.tv_usec);
 }
 
-struct thread;
-
 namespace Timer{
     uint64_t GetSystemUptime();
     uint32_t GetTicks();

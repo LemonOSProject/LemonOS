@@ -60,7 +60,7 @@ int64_t CreateSharedMemory(uint64_t size, uint64_t flags, pid_t owner, pid_t rec
     return key;
 }
 
-void* MapSharedMemory(int64_t key, process_t* proc, uint64_t hint) {
+void* MapSharedMemory(int64_t key, Process* proc, uint64_t hint) {
     ScopedSpinLock acquired(sMemLock);
 
     FancyRefPtr<SharedVMObject> sMem = GetSharedMemory(key);
@@ -71,7 +71,7 @@ void* MapSharedMemory(int64_t key, process_t* proc, uint64_t hint) {
     }
 
     if (sMem->IsPrivate()) { // Private Mapping
-        if (proc->pid != sMem->Owner() && proc->pid != sMem->Recipient()) {
+        if (proc->PID() != sMem->Owner() && proc->PID() != sMem->Recipient()) {
             Log::Warning("Cannot access private mapping!");
             return nullptr; // Does not have access rights
         }

@@ -6,255 +6,257 @@
 #include <Move.h>
 #include <TTraits.h>
 
-template<typename T>
-class Vector{
-	class VectorIterator {
-		friend class Vector;
-	protected:
-		size_t pos = 0;
-		const Vector<T>& vector;
-	public:
-		VectorIterator(const Vector<T>& newVector) : vector(newVector) {};
-		VectorIterator(const VectorIterator& it) : vector(it.vector) { pos = it.pos; };
+template <typename T> class Vector {
+    class VectorIterator {
+        friend class Vector;
 
-		VectorIterator& operator++(){
-			pos++;
-			return *this;
-		}
+    protected:
+        size_t pos = 0;
+        const Vector<T>& vector;
 
-		VectorIterator& operator++(int){
-			auto it = *this;
+    public:
+        VectorIterator(const Vector<T>& newVector) : vector(newVector){};
+        VectorIterator(const VectorIterator& it) : vector(it.vector) { pos = it.pos; };
 
-			pos++;
-			return it;
-		}
+        VectorIterator& operator++() {
+            pos++;
+            return *this;
+        }
 
-		VectorIterator& operator=(const VectorIterator& other){
-			VectorIterator(other.vector);
+        VectorIterator& operator++(int) {
+            auto it = *this;
 
-			pos = other.pos;
+            pos++;
+            return it;
+        }
 
-			return *this;
-		}
+        VectorIterator& operator=(const VectorIterator& other) {
+            VectorIterator(other.vector);
 
-		ALWAYS_INLINE T& operator*() const{
-			return vector.data[pos];
-		}
+            pos = other.pos;
 
-		ALWAYS_INLINE T* operator->() const{
-			return &vector.data[pos];
-		}
+            return *this;
+        }
 
-		ALWAYS_INLINE friend bool operator==(const VectorIterator& l, const VectorIterator& r){
-			return l.pos == r.pos;
-		}
+        ALWAYS_INLINE T& operator*() const { return vector.data[pos]; }
 
-		ALWAYS_INLINE friend bool operator!=(const VectorIterator& l, const VectorIterator& r){
-			return l.pos != r.pos;
-		}
-	};
+        ALWAYS_INLINE T* operator->() const { return &vector.data[pos]; }
+
+        ALWAYS_INLINE friend bool operator==(const VectorIterator& l, const VectorIterator& r) {
+            return l.pos == r.pos;
+        }
+
+        ALWAYS_INLINE friend bool operator!=(const VectorIterator& l, const VectorIterator& r) {
+            return l.pos != r.pos;
+        }
+    };
+
 private:
-	T* data = nullptr;
-	size_t count = 0;
-	size_t capacity = 0;
-	lock_t lock = 0;
+    T* data = nullptr;
+    size_t count = 0;
+    size_t capacity = 0;
+    lock_t lock = 0;
+
 public:
-	Vector() = default;
+    Vector() = default;
 
-	Vector(const Vector<T>& x){
-		EnsureCapacity(x.get_length());
+    Vector(const Vector<T>& x) {
+        EnsureCapacity(x.get_length());
 
-		for(unsigned i = 0; i < x.get_length(); i++){
-			data[i] = x.data[i];
-		}
-	}
+        for (unsigned i = 0; i < x.get_length(); i++) {
+            data[i] = x.data[i];
+        }
+    }
 
-	ALWAYS_INLINE T& at(size_t pos) const{
-		assert(pos < count);
+    template<typename ...D>
+    Vector(D... data){
+        (add_back(data), ...);
+    }
 
-		return data[pos];
-	}
+    ALWAYS_INLINE T& at(size_t pos) {
+        assert(pos < count);
 
-	ALWAYS_INLINE T& get_at(size_t pos) const{
-		return at(pos);
-	}
+        return data[pos];
+    }
+    ALWAYS_INLINE const T& at(size_t pos) const {
+        assert(pos < count);
 
-	ALWAYS_INLINE T& operator[](size_t pos) const{
-		return at(pos);
-	}
+        return data[pos];
+    }
 
-	ALWAYS_INLINE size_t size() const{
-		return count;
-	}
+    ALWAYS_INLINE const T& get_at(size_t pos) const { return at(pos); }
 
-	ALWAYS_INLINE size_t get_length() const {
-		return count;
-	}
+    ALWAYS_INLINE T& operator[](size_t pos) { return at(pos); }
+    ALWAYS_INLINE const T& operator[](size_t pos) const { return at(pos); }
 
-	void erase(unsigned pos){
-		acquireLock(&lock);
-		
-		EraseUnlocked(pos);
+    ALWAYS_INLINE size_t size() const { return count; }
 
-		releaseLock(&lock);
-	}
+    ALWAYS_INLINE size_t get_length() const { return count; }
 
-	void reserve(size_t allocatedSize){
-		acquireLock(&lock);
+    void erase(unsigned pos) {
+        acquireLock(&lock);
 
-		EnsureCapacity(allocatedSize);
+        EraseUnlocked(pos);
 
-		releaseLock(&lock);
-	}
+        releaseLock(&lock);
+    }
 
-	void resize(size_t newSize){
-		acquireLock(&lock);
-		EnsureCapacity(newSize);
+    void reserve(size_t allocatedSize) {
+        acquireLock(&lock);
 
-		size_t oldCount = count;
-		count = newSize;
+        EnsureCapacity(allocatedSize);
 
-		if(count > oldCount){
-			for(unsigned i = oldCount; i < count; i++){
+        releaseLock(&lock);
+    }
+
+    void resize(size_t newSize) {
+        acquireLock(&lock);
+        EnsureCapacity(newSize);
+
+        size_t oldCount = count;
+        count = newSize;
+
+        if (count > oldCount) {
+			for (unsigned i = oldCount; i < count; i++) {
 				new (&data[i]) T();
 			}
-		} else if(count < oldCount){
-			for(unsigned i = count; i < oldCount; i++){
-				data[i].~T();
+        } else if (count < oldCount) {
+            if constexpr (!TTraits<T>::is_trivial()) {
+				for (unsigned i = count; i < oldCount; i++) {
+					data[i].~T();
+				}
 			}
-		}
+        }
 
-		releaseLock(&lock);
-	}
+        releaseLock(&lock);
+    }
 
-	T& add_back(const T& val){
-		acquireLock(&lock);
+    T& add_back(const T& val) {
+        acquireLock(&lock);
 
-		EnsureCapacity(count + 1);
+        EnsureCapacity(count + 1);
 
-		T& ref = data[count];
-		count++;
+        T& ref = data[count];
+        count++;
 
-		new (&ref) T(val);
-		releaseLock(&lock);
+        new (&ref) T(val);
+        releaseLock(&lock);
 
-		return ref;
-	}
+        return ref;
+    }
 
-	T& add_back(T&& val){
-		acquireLock(&lock);
+    T& add_back(T&& val) {
+        acquireLock(&lock);
 
-		EnsureCapacity(count + 1);
+        EnsureCapacity(count + 1);
 
-		T& ref = data[count ];
-		count++;
+        T& ref = data[count];
+        count++;
 
-		new (&ref) T(static_cast<T&&>(val));
-		releaseLock(&lock);
+        new (&ref) T(static_cast<T&&>(val));
+        releaseLock(&lock);
 
-		return ref;
-	}
+        return ref;
+    }
 
-	T& pop_back(){
-		assert(count);
+    T& pop_back() {
+        assert(count);
 
-		return data[--count];
-	}
+        return data[--count];
+    }
 
-	ALWAYS_INLINE T* Data(){
-		return data;
-	}
+    ALWAYS_INLINE T* Data() { return data; }
 
-	void remove(const T& val){
-		acquireLock(&lock);
+    void remove(const T& val) {
+        acquireLock(&lock);
 
-		for(unsigned i = 0; i < count; i++){
-			if(data[i] == val){
-				EraseUnlocked(i);
-				return;
-			}
-		}
+        for (unsigned i = 0; i < count; i++) {
+            if (data[i] == val) {
+                EraseUnlocked(i);
+                return;
+            }
+        }
 
-		releaseLock(&lock);
-	}
+        releaseLock(&lock);
+    }
 
-	~Vector(){
-		if(data){
-			kfree(data);
-		}
-		data = nullptr;
-	}
+    ~Vector() {
+        if (data) {
+            kfree(data);
+        }
+        data = nullptr;
+    }
 
-	VectorIterator begin() const{
-		VectorIterator it = VectorIterator(*this);
+    VectorIterator begin() const {
+        VectorIterator it = VectorIterator(*this);
 
-		it.pos = 0;
+        it.pos = 0;
 
-		return it;
-	}
+        return it;
+    }
 
-	VectorIterator end() const{
-		VectorIterator it = VectorIterator(*this);
-		
-		it.pos = count;
+    VectorIterator end() const {
+        VectorIterator it = VectorIterator(*this);
 
-		return it;
-	}
+        it.pos = count;
 
-	void clear(){
-		acquireLock(&lock);
-		if(data){
-			kfree(data);
-		}
+        return it;
+    }
 
-		count = capacity = 0;
-		data = nullptr;
-		releaseLock(&lock);
-	}
+    void clear() {
+        acquireLock(&lock);
+        if (data) {
+            kfree(data);
+        }
+
+        count = capacity = 0;
+        data = nullptr;
+        releaseLock(&lock);
+    }
 
 private:
-	ALWAYS_INLINE void EnsureCapacity(unsigned size){
-		if(size >= capacity){
-			size_t newCapacity = capacity + (size << 1) + 1;
+    ALWAYS_INLINE void EnsureCapacity(unsigned size) {
+        if (size >= capacity) {
+            size_t newCapacity = capacity + (size << 1) + 1;
 
-			if(data){
-				T* oldData = data;
-				data = reinterpret_cast<T*>(kmalloc(newCapacity * sizeof(T)));
+            if (data) {
+                T* oldData = data;
+                data = reinterpret_cast<T*>(kmalloc(newCapacity * sizeof(T)));
 
-				if constexpr(TTraits<T>::is_trivial()){
-					memcpy(data, oldData, capacity * sizeof(T));
-					memset(data + capacity, 0, sizeof(T) * (size - capacity));
-				} else {
-					for(unsigned i = 0; i < count && i < capacity; i++){
-						new (&data[i]) T(std::move(oldData[i]));
-						oldData[i].~T();
-					}
+                if constexpr (TTraits<T>::is_trivial()) {
+                    memcpy(data, oldData, capacity * sizeof(T));
+                    memset(data + capacity, 0, sizeof(T) * (size - capacity));
+                } else {
+                    for (unsigned i = 0; i < count && i < capacity; i++) {
+                        new (&data[i]) T(std::move(oldData[i]));
+                        oldData[i].~T();
+                    }
 
-					for(unsigned i = capacity; i < size; i++){
-						new (&data[i]) T();
-					}
-				}
-				
-				kfree(oldData);
-			} else {
-				data = reinterpret_cast<T*>(kmalloc(newCapacity * sizeof(T)));
-			}
+                    for (unsigned i = capacity; i < size; i++) {
+                        new (&data[i]) T();
+                    }
+                }
 
-			capacity = newCapacity;
-		}
-	}
+                kfree(oldData);
+            } else {
+                data = reinterpret_cast<T*>(kmalloc(newCapacity * sizeof(T)));
+            }
 
-	ALWAYS_INLINE void EraseUnlocked(unsigned pos){
-		assert(pos < count);
+            capacity = newCapacity;
+        }
+    }
 
-		if constexpr(TTraits<T>::is_trivial()){
-			memcpy(&data[pos], &data[pos + 1], (count - pos - 1) * sizeof(T));
-		} else {
-			for(unsigned i = pos; i < count - 1; i++){
-				data[i] = std::move(data[i + 1]);
-			}
-		}
+    ALWAYS_INLINE void EraseUnlocked(unsigned pos) {
+        assert(pos < count);
 
-		count--;
-	}
+        if constexpr (TTraits<T>::is_trivial()) {
+            memcpy(&data[pos], &data[pos + 1], (count - pos - 1) * sizeof(T));
+        } else {
+            for (unsigned i = pos; i < count - 1; i++) {
+                data[i] = std::move(data[i + 1]);
+            }
+        }
+
+        count--;
+    }
 };

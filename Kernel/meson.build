@@ -72,9 +72,10 @@ kernel_cpp_files = [
     'src/Net/UDP.cpp',
     'src/Net/TCP.cpp',
 
+    'src/Objects/Interface.cpp',
     'src/Objects/KObject.cpp',
     'src/Objects/Message.cpp',
-    'src/Objects/Interface.cpp',
+    'src/Objects/Process.cpp',
     'src/Objects/Service.cpp',
 
     'src/Storage/AHCIController.cpp',

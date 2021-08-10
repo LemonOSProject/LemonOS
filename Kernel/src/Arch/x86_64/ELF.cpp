@@ -19,10 +19,8 @@ int VerifyELF(void* elf) {
         return 1;
 }
 
-elf_info_t LoadELFSegments(process_t* proc, void* _elf, uintptr_t base) {
+elf_info_t LoadELFSegments(Process* proc, void* _elf, uintptr_t base) {
     uint8_t* elf = reinterpret_cast<uint8_t*>(_elf);
-    CPU* cpuLocal = GetCPULocal();
-
     elf_info_t elfInfo;
     memset(&elfInfo, 0, sizeof(elfInfo));
 
@@ -56,14 +54,12 @@ elf_info_t LoadELFSegments(process_t* proc, void* _elf, uintptr_t base) {
         elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
 
         if (elfPHdr.type == PT_LOAD && elfPHdr.memSize > 0) {
-            acquireLock(&cpuLocal->runQueueLock);
             asm("cli");
             asm volatile("mov %%rax, %%cr3" ::"a"(proc->GetPageMap()->pml4Phys));
-            memset((void*)(base + elfPHdr.vaddr), 0, elfPHdr.memSize);
+            memset((void*)(base + elfPHdr.vaddr + elfPHdr.fileSize), 0, (elfPHdr.memSize - elfPHdr.fileSize));
             memcpy((void*)(base + elfPHdr.vaddr), (void*)(elf + elfPHdr.offset), elfPHdr.fileSize);
             asm volatile("mov %%rax, %%cr3" ::"a"(pml4Phys));
             asm("sti");
-            releaseLock(&cpuLocal->runQueueLock);
         } else if (elfPHdr.type == PT_PHDR) {
             elfInfo.pHdrSegment = base + elfPHdr.vaddr;
         } else if (elfPHdr.type == PT_INTERP) {

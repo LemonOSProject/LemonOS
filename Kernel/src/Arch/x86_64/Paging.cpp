@@ -685,7 +685,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
     int reserved = errorCode & 0x8;   // Overwritten CPU-reserved bits of page entry
     int id = errorCode & 0x10;        // Caused by an instruction fetch
 
-    process_t* process = Scheduler::GetCurrentProcess();
+    Process* process = Process::Current();
 
     // We only want to dump fault information when it is fatal
     auto dumpFaultInformation = [&]() -> void {
@@ -721,7 +721,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
     if ((regs->cs & 0x3)) {// Make sure we acquired the lock
         int res = acquireTestLock(&Scheduler::GetCurrentThread()->lock); // Prevent the thread from being killed, etc.
         if (res) {            
-            Log::Info("Process %s (PID: %x) page fault.", process->name, process->pid);
+            Log::Info("Process %s (PID: %x) page fault.", process->name, process->PID());
             dumpFaultInformation();
 
             Log::Info("Stack trace:");
@@ -797,14 +797,14 @@ void PageFaultHandler(void*, RegisterContext* regs) {
     if ((regs->cs & 0x3)) {
         assert(process);
 
-        Log::Info("Process %s (PID: %x) page fault.", process->name, process->pid);
+        Log::Info("Process %s (PID: %x) page fault.", process->name, process->PID());
         dumpFaultInformation();
 
         Log::Info("Stack trace:");
         UserPrintStackTrace(regs->rbp, Scheduler::GetCurrentProcess()->addressSpace);
         Log::Info("End stack trace.");
 
-        Scheduler::EndProcess(Scheduler::GetCurrentProcess());
+        Process::Current()->Die();
         return;
     }
 

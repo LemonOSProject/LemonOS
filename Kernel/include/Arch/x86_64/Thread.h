@@ -18,7 +18,7 @@ enum {
 	ThreadStateDying, // Thread is actively being killed
 };
 
-struct Process;
+class Process;
 struct Thread;
 
 class ThreadBlocker{
@@ -52,9 +52,11 @@ struct Thread {
 	lock_t stateLock = 0; // Thread state lock
 
 	Process* parent; // Parent Process
-	void* stack; // Pointer to the initial stack
-	void* stackLimit; // The limit of the stack
-	void* kernelStack; // Kernel Stack
+	pid_t tid = 1;
+
+	void* stack = nullptr; // Pointer to the initial stack
+	void* stackLimit = nullptr; // The limit of the stack
+	void* kernelStack = nullptr; // Kernel Stack
 	uint32_t timeSlice = 1;
 	uint32_t timeSliceDefault = 1;
 	RegisterContext registers;  // Registers
@@ -68,14 +70,14 @@ struct Thread {
 	uint8_t state = ThreadStateRunning; // Thread state
 
 	uint64_t fsBase = 0;
-	
-	pid_t tid = 1;
 
 	bool blockTimedOut = false;
 	ThreadBlocker* blocker = nullptr;
 
 	uint64_t pendingSignals = 0; // Bitmap of pending signals
 	uint64_t signalMask = 0; // Masked signals
+
+	Thread(class Process* _parent, pid_t _tid);
 
     /////////////////////////////
     /// \brief Dispatch a signal to the thread

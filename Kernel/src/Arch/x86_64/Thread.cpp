@@ -34,6 +34,29 @@ void ThreadBlocker::Unblock() {
     releaseLock(&lock);
 }
 
+Thread::Thread(Process* _parent, pid_t _tid)
+    : parent(_parent), tid(_tid), state(ThreadStateRunning) {
+    memset(&registers, 0, sizeof(RegisterContext));
+    registers.rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
+    registers.cs = KERNEL_CS; // Kernel CS
+    registers.ss = KERNEL_SS; // Kernel SS
+
+    fxState = Memory::KernelAllocate4KPages(1); // Allocate Memory for the FPU/Extended Register State
+    Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)fxState, 1);
+
+    ((fx_state_t*)fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
+    ((fx_state_t*)fxState)->mxcsrMask = 0xffbf;
+    ((fx_state_t*)fxState)->fcw = 0x33f; // Default FPU Control Word State
+
+    kernelStack = Memory::KernelAllocate4KPages(32); // Allocate Memory For Kernel Stack (128KB)
+    for (int i = 0; i < 32; i++) {
+        Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),
+                                         reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * i, 1);
+    }
+    memset(kernelStack, 0, PAGE_SIZE_4K * 32);
+    kernelStack = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * 32);
+}
+
 void Thread::Signal(int signal) {
     SignalHandler& sigHandler = parent->signalHandlers[signal - 1];
     if (sigHandler.action == SignalHandler::ActionIgnore) {
@@ -71,7 +94,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
 
     // These cannot be caught, blocked or ignored
     if (signal == SIGKILL) {
-        Scheduler::EndProcess(parent);
+        parent->Die();
         return;
     } else if (signal == SIGSTOP) {
         Log::Error("Thread::HandlePendingSignal: SIGSTOP not handled!");
@@ -105,7 +128,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
         case SIGQUIT:
         case SIGSEGV:
         case SIGSTKFLT:
-            Scheduler::EndProcess(parent);
+            parent->Die();
             return;
             // Ignore
         case SIGCHLD:
@@ -143,10 +166,10 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
     // This could probably be placed in a register but it makes our stack nice and aligned
     *(--stack) = reinterpret_cast<uintptr_t>(handler.userHandler);
 
-    regs->rip = parent->signalTrampoline->Base();   // Set instruction pointer to signal trampoline
+    regs->rip = parent->m_signalTrampoline->Base();   // Set instruction pointer to signal trampoline
     regs->rdi = signal;                             // The first argument of the signal handler is the signal number
     if(handler.flags & SignalHandler::FlagSignalInfo){
-        siginfo_t sigInfo = {
+        /*siginfo_t sigInfo = {
             .si_signo = signal,
             .si_code = 0, // TODO: Signal code?? (for SIGCHLD should be CLD_EXITED or signal that caused it to exit)
             .si_errno = 0,
@@ -159,7 +182,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
 
         *parent->siginfoPointer = sigInfo;
 
-        regs->rsi = (uintptr_t)parent->siginfoPointer;
+        regs->rsi = (uintptr_t)parent->siginfoPointer;*/
     }
     regs->rsp = reinterpret_cast<uintptr_t>(stack); // Set rsp to new stack value
 

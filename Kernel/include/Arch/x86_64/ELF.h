@@ -177,7 +177,7 @@ using ELFSection = ELF64Section;
 using ELFRelocation = ELF64Relocation;
 using ELFRelocationA = ELF64RelocationA;
 
-typedef struct Process process_t;
+class Process;
 
 int VerifyELF(void* elf);
-elf_info_t LoadELFSegments(process_t* proc, void* elf, uintptr_t base);
+elf_info_t LoadELFSegments(Process* proc, void* elf, uintptr_t base);

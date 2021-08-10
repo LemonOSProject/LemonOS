@@ -225,7 +225,14 @@ protected:
     }
 };
 
-template <typename T> BasicString<T> operator+(const BasicString<T>& l, const BasicString<T>& r) {
+template <typename T> BasicString<T> operator+(const BasicString<T>& l, const T* r) {
+    BasicString<T> str(l);
+    str += r;
+
+    return str;
+}
+
+template <typename T, typename U> BasicString<T> operator+(const BasicString<T>& l, const U& r) {
     BasicString<T> str(l);
     str += r;
 
@@ -233,3 +240,57 @@ template <typename T> BasicString<T> operator+(const BasicString<T>& l, const Ba
 }
 
 using String = BasicString<char>;
+
+ALWAYS_INLINE String to_string(int num, int base = 10){
+    char buf[128];
+    buf[127] = 0;
+
+    int i = 127;
+    if (num == 0) {
+        buf[--i] = '0';
+    }
+
+    while (num != 0 && i) {
+        int rem = num % base;
+        buf[--i] = (rem > 9) ? (rem - 10) + 'a' : rem + '0';
+        num = num / base;
+    }
+
+    return String(buf + i);
+}
+
+ALWAYS_INLINE String to_string(long num, int base = 10){
+    char buf[128];
+    buf[127] = 0;
+
+    int i = 127;
+    if (num == 0) {
+        buf[--i] = '0';
+    }
+
+    while (num != 0 && i) {
+        int rem = num % base;
+        buf[--i] = (rem > 9) ? (rem - 10) + 'a' : rem + '0';
+        num = num / base;
+    }
+
+    return String(buf + i);
+}
+
+ALWAYS_INLINE String to_string(unsigned num, int base = 10){
+    char buf[128];
+    buf[127] = 0;
+
+    int i = 127;
+    if (num == 0) {
+        buf[--i] = '0';
+    }
+
+    while (num != 0 && i) {
+        int rem = num % base;
+        buf[--i] = (rem > 9) ? (rem - 10) + 'a' : rem + '0';
+        num = num / base;
+    }
+
+    return String(buf + i);
+}

@@ -1,20 +1,20 @@
 #include <Scheduler.h>
-
+/*
 static void ProcessEntry(){
     void* buf = kmalloc(4096);
 
     memset(buf, 1, 4096);
 
     acquireLock(&Scheduler::GetCurrentThread()->lock);
-    Scheduler::EndProcess(Scheduler::GetCurrentProcess());
-}
+    Process::Current()->Die();
+}*/
 
 int ThreadingTest(){
-    Process* processes[40];
+    /*FancyRefPtr<Process> processes[40];
     Process* proc = Scheduler::GetCurrentProcess();
 
     for(unsigned i = 0; i < 40; i++){
-        processes[i] = Scheduler::CreateProcess((void*)ProcessEntry);
+        processes[i] = Process::CreateKernelProcess((void*)ProcessEntry, String("proc") + to_string(i), proc);
 
         processes[i]->parent = proc;
         proc->children.add_back(proc);
@@ -29,7 +29,7 @@ int ThreadingTest(){
                 proc->RemoveChild(child);
             }
         }
-    }
+    }*/
 
     return 0;
 }

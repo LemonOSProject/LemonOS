@@ -1,7 +1,5 @@
 #pragma once
 
-struct thread;
-
 #include <List.h>
 
 #include <Spinlock.h>
@@ -90,8 +88,8 @@ class ReadWriteLock {
 
     bool writerAcquiredLock = false; // Whether or not the writer has acquired lock (but not fileLock) 
 
-    FastList<thread*> readers;
-    FastList<thread*> writers;
+    FastList<Thread*> readers;
+    FastList<Thread*> writers;
 public:
 
     ALWAYS_INLINE ReadWriteLock() {}

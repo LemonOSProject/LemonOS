@@ -141,7 +141,7 @@ ssize_t URandom::Write(size_t offset, size_t size, uint8_t* buffer) { return siz
 
 
 ssize_t TTY::Read(size_t offset, size_t size, uint8_t* buffer) {
-    fs_fd_t* stdin = Scheduler::GetCurrentProcess()->GetFileDescriptor(0);
+    auto stdin = Scheduler::GetCurrentProcess()->GetFileDescriptor(0);
 
     if(stdin && stdin->node){
         return fs::Read(stdin->node, offset, size, buffer);
@@ -150,7 +150,7 @@ ssize_t TTY::Read(size_t offset, size_t size, uint8_t* buffer) {
 }
 
 ssize_t TTY::Write(size_t offset, size_t size, uint8_t* buffer) {
-    fs_fd_t* stdout = Scheduler::GetCurrentProcess()->GetFileDescriptor(1);
+    auto stdout = Scheduler::GetCurrentProcess()->GetFileDescriptor(1);
 
     if(stdout && stdout->node){
         return fs::Write(stdout->node, offset, size, buffer);

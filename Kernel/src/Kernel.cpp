@@ -32,10 +32,11 @@
 uint8_t* progressBuffer = nullptr;
 video_mode_t videoMode;
 
-extern "C" void IdleProcess() {
+void IdleProcess() {
+    Thread* th = Scheduler::GetCurrentThread();
     for (;;) {
-        asm("sti");
-        asm("hlt");
+        th->timeSlice = 0;
+        asm volatile("pause");
     }
 }
 
@@ -93,7 +94,6 @@ void KernelProcess() {
         fs::VolumeManager::RegisterVolume(new fs::LinkVolume(initrd, "lib")); // If /system/lib is not present is /initrd
     }
 
-
     if(HAL::runTests){
         ModuleManager::LoadModule("/initrd/modules/testmodule.sys");
         Log::Warning("Finished running tests. Hanging.");
@@ -106,9 +106,6 @@ void KernelProcess() {
 
     Log::Info("Loading Init Process...");
     FsNode* initFsNode = nullptr;
-    char* argv[] = {"init.lef"};
-    int envc = 1;
-    char* envp[] = {"PATH=/initrd", nullptr};
 
     if (HAL::useKCon || !(initFsNode = fs::ResolvePath("/system/lemon/init.lef"))) { // Attempt to start fterm
         initFsNode = fs::ResolvePath("/initrd/fterm.lef");
@@ -124,12 +121,8 @@ void KernelProcess() {
     void* initElf = (void*)kmalloc(initFsNode->size);
     fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 
-    process_t* initProc = Scheduler::CreateELFProcess(initElf, 1, argv, envc, envp);
-
-    strcpy(initProc->workingDir, "/");
-    strcpy(initProc->name, "Init");
-
-    Scheduler::StartProcess(initProc);
+    auto initProc = Process::CreateELFProcess(initElf, Vector<String>("init"), Vector<String>("PATH=/initrd"), "/system/lemon/init.lef", nullptr);
+    initProc->Start();
 
     if (progressBuffer) {
         delete[] progressBuffer;
@@ -138,18 +131,15 @@ void KernelProcess() {
     for (;;) {
         acquireLock(&Scheduler::destroyedProcessesLock);
         for (auto it = Scheduler::destroyedProcesses->begin(); it != Scheduler::destroyedProcesses->end(); it++) {
-            if (!((*it)->processLock.TryAcquireWrite())) {
-                Process* proc = *it;
+            if (!(acquireTestLock(&(*it)->m_processLock))) {
+                FancyRefPtr<Process> proc = *it;
                 if(proc->addressSpace){ // Destroy the address space regardless
                     delete (proc)->addressSpace;
                     proc->addressSpace = nullptr;
                 }
-                if(proc->parent){
-                    proc->processLock.ReleaseWrite();
-                }
 
-                delete proc;
                 Scheduler::destroyedProcesses->remove(it);
+                releaseLock(&proc->m_processLock);
             }
 
             if (it == Scheduler::destroyedProcesses->end()) {

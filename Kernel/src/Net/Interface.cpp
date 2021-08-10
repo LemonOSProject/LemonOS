@@ -163,8 +163,7 @@ namespace Network{
 	}
 
 	void InitializeNetworkThread(){
-		//Scheduler::CreateChildThread(Scheduler::GetCurrentProcess(), (uintptr_t)InterfaceThread, (uintptr_t)kmalloc(NET_INTERFACE_STACKSIZE) + NET_INTERFACE_STACKSIZE, KERNEL_CS, KERNEL_SS);
-		Scheduler::CreateProcess((void*)InterfaceThread);
+		Process::CreateKernelProcess((void*)InterfaceThread, "NetworkStack", nullptr);
 	}
 
 	void Send(void* data, size_t length, NetworkAdapter* adapter){

@@ -59,7 +59,7 @@ namespace Network {
     };
 
     int NetworkAdapter::Ioctl(uint64_t cmd, uint64_t arg){
-        process_t* currentProcess = Scheduler::GetCurrentProcess();
+        Process* currentProcess = Scheduler::GetCurrentProcess();
 
         if(cmd == SIOCADDRT){
             rtentry* route = reinterpret_cast<rtentry*>(arg);

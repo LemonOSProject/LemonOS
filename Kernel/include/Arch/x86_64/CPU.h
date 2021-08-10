@@ -4,8 +4,9 @@
 #include <TSS.h>
 #include <Thread.h>
 #include <System.h>
+#include <RefPtr.h>
 
-struct Process;
+class Process;
 template<typename T>
 class FastList;
 
@@ -20,7 +21,8 @@ struct CPU{
     void* gdt; // GDT
 	gdt_ptr_t gdtPtr;
 	Thread* currentThread = nullptr;
-	Process* idleProcess = nullptr;
+	Thread* idleThread = nullptr;
+	Process* idleProcess;
 	volatile int runQueueLock = 0;
 	FastList<Thread*>* runQueue;
     tss_t tss __attribute__((aligned(16)));

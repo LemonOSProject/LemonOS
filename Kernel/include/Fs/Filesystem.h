@@ -5,7 +5,7 @@
 
 #include <List.h>
 #include <Lock.h>
-
+#include <RefPtr.h>
 #include <Types.h>
 
 #include <abi-bits/abi.h>
@@ -113,11 +113,7 @@ typedef struct {
 
 class FsNode;
 
-typedef struct fs_fd {
-    FsNode* node;
-    off_t pos;
-    mode_t mode;
-} fs_fd_t;
+struct UNIXFileDescriptor;
 
 struct pollfd {
     int fd;
@@ -190,7 +186,7 @@ public:
     /////////////////////////////
     virtual ssize_t Write(size_t off, size_t size, uint8_t* buffer); // Write Data
 
-    virtual fs_fd_t* Open(size_t flags); // Open
+    virtual UNIXFileDescriptor* Open(size_t flags); // Open
     virtual void Close();                // Close
 
     virtual int ReadDir(DirectoryEntry*, uint32_t); // Read Directory
@@ -228,6 +224,15 @@ public:
 
     FilesystemLock nodeLock; // Lock on FsNode info
 };
+
+typedef struct UNIXFileDescriptor {
+    FsNode* node = nullptr;
+    off_t pos = 0;
+    mode_t mode = 0;
+
+    ~UNIXFileDescriptor();
+} fs_fd_t;
+
 
 class DirectoryEntry {
 public:
@@ -274,13 +279,13 @@ public:
 // A thread can wait on it like any semaphore,
 // and when a file is ready it will signal and waiting thread(s) will get woken
 class FilesystemWatcher : public Semaphore {
-    List<fs_fd_t*> watching;
+    List<UNIXFileDescriptor*> watching;
 
 public:
     FilesystemWatcher() : Semaphore(0) {}
 
     inline void WatchNode(FsNode* node, int events) {
-        fs_fd_t* desc = node->Open(0);
+        UNIXFileDescriptor* desc = node->Open(0);
         assert(desc);
 
         desc->node->Watch(*this, events);
@@ -366,7 +371,6 @@ typedef struct fs_dirent {
     uint32_t type;
     char name[NAME_MAX]; // Filename
 } fs_dirent_t;
-
 namespace fs {
 class FsVolume;
 
@@ -375,7 +379,7 @@ public:
     virtual ~FsDriver() = default;
 
     /////////////////////////////
-    /// \brief Mount 
+    /// \brief Mount
     /////////////////////////////
     virtual FsVolume* Mount(FsNode* device, const char* name) = 0;
     virtual FsVolume* Unmount(FsVolume* volume) = 0;
@@ -471,21 +475,23 @@ ssize_t Read(FsNode* node, size_t offset, size_t size, void* buffer);
 /// \return Bytes written or if negative an error code
 /////////////////////////////
 ssize_t Write(FsNode* node, size_t offset, size_t size, void* buffer);
-fs_fd_t* Open(FsNode* node, uint32_t flags = 0);
+UNIXFileDescriptor* Open(FsNode* node, uint32_t flags = 0);
 void Close(FsNode* node);
-void Close(fs_fd_t* handle);
+void Close(UNIXFileDescriptor* handle);
 int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index);
 FsNode* FindDir(FsNode* node, char* name);
 
-ssize_t Read(fs_fd_t* handle, size_t size, uint8_t* buffer);
-ssize_t Write(fs_fd_t* handle, size_t size, uint8_t* buffer);
-int ReadDir(fs_fd_t* handle, DirectoryEntry* dirent, uint32_t index);
-FsNode* FindDir(fs_fd_t* handle, char* name);
+ssize_t Read(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_t* buffer);
+ssize_t Write(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_t* buffer);
+int ReadDir(const FancyRefPtr<UNIXFileDescriptor>& handle, DirectoryEntry* dirent, uint32_t index);
+FsNode* FindDir(const FancyRefPtr<UNIXFileDescriptor>& handle, char* name);
 
 int Link(FsNode*, FsNode*, DirectoryEntry*);
 int Unlink(FsNode*, DirectoryEntry*, bool unlinkDirectories = false);
 
-int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg);
+int Ioctl(const FancyRefPtr<UNIXFileDescriptor>& handle, uint64_t cmd, uint64_t arg);
 
 int Rename(FsNode* olddir, char* oldpath, FsNode* newdir, char* newpath);
 } // namespace fs
+
+ALWAYS_INLINE UNIXFileDescriptor::~UNIXFileDescriptor() { fs::Close(this); }

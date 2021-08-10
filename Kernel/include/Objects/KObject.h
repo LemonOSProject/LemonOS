@@ -16,6 +16,7 @@ typedef long kobject_id_t;
 #define KOBJECT_ID_INTERFACE 2
 #define KOBJECT_ID_SERVICE 3
 #define KOBJECT_ID_UNIX_FILE_DESCRIPTOR 4
+#define KOBJECT_ID_PROCESS 5
 
 class KernelObjectWatcher;
 
@@ -51,7 +52,7 @@ public:
 
     }
 
-    inline void WatchObject(FancyRefPtr<KernelObject>& node, int events){
+    inline void WatchObject(FancyRefPtr<KernelObject> node, int events){
         node->Watch(*this, events);
 
         watching.add_back(node);

@@ -1,5 +1,4 @@
 {
 	"name" : "shell",
-	"target" : "/system/bin/shell.lef",
-	"after" : "lemonwm"
+	"target" : "/system/bin/shell.lef"
 } 

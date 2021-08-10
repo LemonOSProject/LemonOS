@@ -510,8 +510,8 @@ FsNode* FindDir(FsNode* node, char* name) {
     return node->FindDir(name);
 }
 
-ssize_t Read(fs_fd_t* handle, size_t size, uint8_t* buffer) {
-    assert(handle);
+ssize_t Read(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_t* buffer) {
+    assert(handle->node);
     ssize_t ret = Read(handle->node, handle->pos, size, buffer);
 
     if (ret > 0) {
@@ -521,7 +521,7 @@ ssize_t Read(fs_fd_t* handle, size_t size, uint8_t* buffer) {
     return ret;
 }
 
-ssize_t Write(fs_fd_t* handle, size_t size, uint8_t* buffer) {
+ssize_t Write(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_t* buffer) {
     assert(handle->node);
     off_t ret = Write(handle->node, handle->pos, size, buffer);
 
@@ -532,19 +532,19 @@ ssize_t Write(fs_fd_t* handle, size_t size, uint8_t* buffer) {
     return ret;
 }
 
-int ReadDir(fs_fd_t* handle, DirectoryEntry* dirent, uint32_t index) {
+int ReadDir(const FancyRefPtr<UNIXFileDescriptor>& handle, DirectoryEntry* dirent, uint32_t index) {
     assert(handle->node);
 
     return ReadDir(handle->node, dirent, index);
 }
 
-FsNode* FindDir(fs_fd_t* handle, char* name) {
+FsNode* FindDir(const FancyRefPtr<UNIXFileDescriptor>& handle, char* name) {
     assert(handle->node);
 
     return FindDir(handle->node, name);
 }
 
-int Ioctl(fs_fd_t* handle, uint64_t cmd, uint64_t arg) {
+int Ioctl(const FancyRefPtr<UNIXFileDescriptor>& handle, uint64_t cmd, uint64_t arg) {
     assert(handle->node);
 
     return handle->node->Ioctl(cmd, arg);
