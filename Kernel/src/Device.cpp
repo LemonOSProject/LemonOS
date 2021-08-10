@@ -284,7 +284,8 @@ Device* ResolveDevice(const char* path) {
 
     strcpy(pathBuf, path);
 
-    char* file = strtok(pathBuf, "/");
+    char* strtokSavePtr;
+    char* file = strtok_r(pathBuf, "/", &strtokSavePtr);
 
     Device* currentDev = devfs;
     while (file != NULL) { // Iterate through the directories to find the file
@@ -302,11 +303,11 @@ Device* ResolveDevice(const char* path) {
 
         if ((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
             currentDev = reinterpret_cast<Device*>(node);
-            file = strtok(NULL, "/");
+            file = strtok_r(NULL, "/", &strtokSavePtr);
             continue;
         }
 
-        if ((file = strtok(NULL, "/"))) {
+        if ((file = strtok_r(NULL, "/", &strtokSavePtr))) {
             Log::Warning("%s is not a device parent!", file);
             return nullptr;
         }

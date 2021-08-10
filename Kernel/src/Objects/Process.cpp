@@ -433,7 +433,7 @@ void Process::Die() {
     }
     m_watching.clear();
 
-    if(m_parent && !(m_parent->State() == Process_Dying)){
+    if(m_parent && (m_parent->State() == Process_Running)){
         Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Sending SIGCHILD...", m_pid);
         m_parent->GetMainThread()->Signal(SIGCHLD);
     }

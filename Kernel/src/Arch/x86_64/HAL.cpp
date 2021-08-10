@@ -195,7 +195,8 @@ void InitMultiboot2(multiboot2_info_header_t* mbInfo) {
                                  (uintptr_t)&_end - KERNEL_VIRTUAL_BASE); // Make sure kernel memory is marked as used
 
     if (cmdLine) {
-        cmdLine = strtok((char*)cmdLine, " ");
+        char* savePtr = nullptr;
+        cmdLine = strtok_r((char*)cmdLine, " ", &savePtr);
 
         while (cmdLine) {
             if (strcmp(cmdLine, "debug") == 0)
@@ -204,7 +205,7 @@ void InitMultiboot2(multiboot2_info_header_t* mbInfo) {
                 disableSMP = true;
             else if (strcmp(cmdLine, "kcon") == 0)
                 useKCon = true;
-            cmdLine = strtok(NULL, " ");
+            cmdLine = strtok_r(NULL, " ", &savePtr);
         }
     }
 
@@ -335,7 +336,8 @@ void InitStivale2(stivale2_info_header_t* st2Info) {
     }
 
     if (cmdLine) {
-        cmdLine = strtok((char*)cmdLine, " ");
+        char* savePtr = nullptr;
+        cmdLine = strtok_r((char*)cmdLine, " ", &savePtr);
 
         while (cmdLine) {
             if (strcmp(cmdLine, "debug") == 0)
@@ -346,7 +348,7 @@ void InitStivale2(stivale2_info_header_t* st2Info) {
                 useKCon = true;
             else if (strcmp(cmdLine, "runtests") == 0)
                 runTests = true;
-            cmdLine = strtok(NULL, " ");
+            cmdLine = strtok_r(NULL, " ", &savePtr);
         }
     }
 

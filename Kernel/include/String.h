@@ -31,7 +31,6 @@ void strcpy(char* dest, const char* src);
 void strncpy(char* dest, const char* src, size_t n);
 int strcmp(const char* s1, const char* s2);
 
-char* strtok(char* str, const char* delim);
 char* strtok_r(char* str, const char* delim, char** saveptr);
 
 size_t strlen(const char* str);

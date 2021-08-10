@@ -71,11 +71,12 @@ namespace fs::tar{
         n->vol = this;
         n->volumeID = volumeID;
 
+        char* strtokSavePtr;
         char* name = header->ustar.name;
-        char* _name = strtok(header->ustar.name, "/");
+        char* _name = strtok_r(header->ustar.name, "/", &strtokSavePtr);
         while(_name){
             name = _name;
-            _name = strtok(NULL, "/");
+            _name = strtok_r(NULL, "/", &strtokSavePtr);
         }
         strcpy(n->name, name);
         n->size = GetSize(header->ustar.size);

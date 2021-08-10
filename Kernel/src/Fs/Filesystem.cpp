@@ -156,79 +156,13 @@ FsNode* FollowLink(FsNode* link, FsNode* workingDir) {
 FsNode* ResolvePath(const char* path, const char* workingDir, bool followSymlinks) {
     assert(path);
 
-    char* tempPath;
     if (workingDir && path[0] != '/') { // If the path starts with '/' then treat as an absolute path
-        tempPath = (char*)kmalloc(strlen(path) + strlen(workingDir) + 2);
-        strcpy(tempPath, workingDir);
-        strcpy(tempPath + strlen(tempPath), "/");
-        strcpy(tempPath + strlen(tempPath), path);
+        FsNode* wdNode = ResolvePath(workingDir, (FsNode*)nullptr);
+        assert(wdNode);
+        return ResolvePath(path, wdNode, followSymlinks);
     } else {
-        tempPath = (char*)kmalloc(strlen(path) + 1);
-        strcpy(tempPath, path);
+        return ResolvePath(path, (FsNode*)nullptr, followSymlinks);
     }
-
-    FsNode* root = fs::GetRoot();
-    FsNode* currentNode = root;
-
-    char* file = strtok(tempPath, "/");
-
-    while (file != NULL) { // Iterate through the directories to find the file
-        FsNode* node = fs::FindDir(currentNode, file);
-        if (!node) {
-            IF_DEBUG(debugLevelFilesystem >= DebugLevelNormal, { Log::Warning("%s not found!", file); });
-            kfree(tempPath);
-            return nullptr;
-        }
-
-        size_t amountOfSymlinks = 0;
-        while (((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)) { // Check for symlinks
-            if (amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT) {
-                Log::Warning("ResolvePath: Reached maximum number of symlinks");
-                return nullptr;
-            }
-
-            node = FollowLink(node, currentNode);
-
-            if (!node) {
-                Log::Warning("ResolvePath: Unresolved symlink!");
-                kfree(tempPath);
-                return node;
-            }
-        }
-
-        if ((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
-            currentNode = node;
-            file = strtok(NULL, "/");
-            continue;
-        }
-
-        if ((file = strtok(NULL, "/"))) {
-            Log::Warning("%s is not a directory!", file);
-            kfree(tempPath);
-            return nullptr;
-        }
-
-        amountOfSymlinks = 0;
-        while (followSymlinks && ((currentNode->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)) { // Check for symlinks
-            if (amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT) {
-                Log::Warning("ResolvePath: Reached maximum number of symlinks");
-                return nullptr;
-            }
-
-            currentNode = FollowLink(node, currentNode);
-
-            if (!node) {
-                Log::Warning("ResolvePath: Unresolved symlink!");
-                kfree(tempPath);
-                return node;
-            }
-        }
-
-        currentNode = node;
-        break;
-    }
-    kfree(tempPath);
-    return currentNode;
 }
 
 FsNode* ResolvePath(const char* path, FsNode* workingDir, bool followSymlinks) {
@@ -242,8 +176,8 @@ FsNode* ResolvePath(const char* path, FsNode* workingDir, bool followSymlinks) {
         currentNode = workingDir;
     }
 
-    char* file = strtok(tempPath, "/");
-
+    char* strtokSavePtr = nullptr;
+    char* file = strtok_r(tempPath, "/", &strtokSavePtr);
     while (file != NULL) { // Iterate through the directories to find the file
         FsNode* node = fs::FindDir(currentNode, file);
         if (!node) {
@@ -253,7 +187,7 @@ FsNode* ResolvePath(const char* path, FsNode* workingDir, bool followSymlinks) {
         }
 
         size_t amountOfSymlinks = 0;
-        while (followSymlinks && ((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)) { // Check for symlinks
+        while (followSymlinks && node->IsSymlink()) { // Check for symlinks
             if (amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT) {
                 IF_DEBUG((debugLevelFilesystem >= DebugLevelVerbose),
                          { Log::Warning("ResolvePath: Reached maximum number of symlinks"); });
@@ -272,12 +206,12 @@ FsNode* ResolvePath(const char* path, FsNode* workingDir, bool followSymlinks) {
 
         if ((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
             currentNode = node;
-            file = strtok(NULL, "/");
+            file = strtok_r(NULL, "/", &strtokSavePtr);
             continue;
         }
 
-        if ((file = strtok(NULL, "/"))) {
-            IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal), { Log::Warning("%s is not a directory!", file); });
+        if (char* newF = strtok_r(NULL, "/", &strtokSavePtr); newF) {
+            IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal), { Log::Warning("ResolvePath: Failed resolving '%s': %s is not a directory (file flags %x) and there are still unresolved path components '%s'!", path, file, node->flags, newF); });
             return nullptr;
         }
 
@@ -289,13 +223,13 @@ FsNode* ResolvePath(const char* path, FsNode* workingDir, bool followSymlinks) {
                 return nullptr;
             }
 
-            currentNode = FollowLink(node, currentNode);
+            node = FollowLink(node, currentNode);
 
             if (!node) {
                 IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal),
                          { Log::Warning("ResolvePath: Unresolved symlink!"); });
                 kfree(tempPath);
-                return currentNode;
+                return node;
             }
         }
         currentNode = node;
@@ -367,12 +301,13 @@ char* CanonicalizePath(const char* path, char* workingDir) {
         strcpy(tempPath, path);
     }
 
-    char* file = strtok(tempPath, "/");
+    char* savePtr = nullptr;
+    char* file = strtok_r(tempPath, "/", &savePtr);
     List<char*>* tokens = new List<char*>();
 
     while (file != NULL) {
         tokens->add_back(file);
-        file = strtok(NULL, "/");
+        file = strtok_r(NULL, "/", &savePtr);
     }
 
     int newLength = 2; // Separator and null terminator

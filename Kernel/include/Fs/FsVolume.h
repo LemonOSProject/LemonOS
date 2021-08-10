@@ -23,6 +23,7 @@ public:
         mountPointDirent.node = link->mountPoint;
         mountPointDirent.flags = link->mountPointDirent.flags;
         mountPointDirent.node->nlink++;
+        mountPoint = link->mountPoint;
     }
 
     inline LinkVolume(FsNode* link, char* name) {
@@ -30,6 +31,7 @@ public:
         mountPointDirent.node = link;
         mountPointDirent.flags = DT_DIR;
         mountPointDirent.node->nlink++;
+        mountPoint = link;
     }
 };
 } // namespace fs

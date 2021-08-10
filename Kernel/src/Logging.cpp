@@ -18,7 +18,7 @@ size_t logBufferPos = 0;
 size_t logBufferSize = 0;
 size_t logBufferMaxSize = 0x100000; // 1MB
 
-int logLock = 0;
+lock_t logLock = 0;
 
 void WriteN(const char* str, size_t n);
 
@@ -222,31 +222,39 @@ void Print(const char* __restrict fmt, ...) {
 }
 
 void Warning(const char* __restrict fmt, ...) {
-    // acquireLock(&logLock);
+    if(CheckInterrupts())
+        acquireLock(&logLock);
     Write("\r\n[WARN]    ", 255, 255, 0);
     va_list args;
     va_start(args, fmt);
     WriteF(fmt, args);
     va_end(args);
-    // releaseLock(&logLock);
+    if(CheckInterrupts())
+        releaseLock(&logLock);
 }
 
 void Error(const char* __restrict fmt, ...) {
+    if(CheckInterrupts())
+        acquireLock(&logLock);
     Write("\r\n[ERROR]   ", 255, 0, 0);
     va_list args;
     va_start(args, fmt);
     WriteF(fmt, args);
     va_end(args);
+    if(CheckInterrupts())
+        releaseLock(&logLock);
 }
 
 void Info(const char* __restrict fmt, ...) {
-    // acquireLock(&logLock);
+    if(CheckInterrupts())
+        acquireLock(&logLock);
     Write("\r\n[INFO]    ");
     va_list args;
     va_start(args, fmt);
     WriteF(fmt, args);
     va_end(args);
-    // releaseLock(&logLock);
+    if(CheckInterrupts())
+        releaseLock(&logLock);
 }
 
 void Warning(const char* str) {

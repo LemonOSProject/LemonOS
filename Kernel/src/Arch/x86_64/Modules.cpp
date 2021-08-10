@@ -215,6 +215,8 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
             moduleSegment.size = section.size;
             section.addr = segmentBase; // Update the segment address for later on
 
+            memset(reinterpret_cast<void*>(segmentBase), 0, section.size);
+
             if (section.type == SHT_PROGBITS) {
                 ssize_t read = fs::Read(file, section.off, section.size, reinterpret_cast<void*>(segmentBase));
                 assert(read == section.size);
@@ -223,8 +225,6 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
                            "[Module] ELF section '%s' loaded! Index: %d Write? %Y", sectionStringTable + section.name,
                            i, moduleSegment.write);
             } else {
-                memset(reinterpret_cast<void*>(segmentBase), 0, section.size);
-
                 Log::Debug(debugLevelModules, DebugLevelVerbose,
                            "[Module] ELF section '%s' loaded and zeroed! Index: %d Write? %Y",
                            sectionStringTable + section.name, i, moduleSegment.write);
