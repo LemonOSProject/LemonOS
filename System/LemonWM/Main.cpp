@@ -110,7 +110,7 @@ int main(){
         printf("LemonWM: Warning: Error %d loading buttons.\n", e);
     }
 
-    if(int e = Lemon::Graphics::LoadImage("/system/lemon/resources/mouse.png", &wm.compositor.mouseCursor)){
+    if(int e = Lemon::Graphics::LoadImage("/system/lemon/resources/cursors/mouse.png", &wm.compositor.mouseCursor)){
         printf("LemonWM: Warning: Error %d loading mouse cursor.\n", e);
         wm.compositor.mouseCursor.buffer = new uint8_t[4 * 4 * 4];
         wm.compositor.mouseCursor.width = wm.compositor.mouseCursor.height = 4;

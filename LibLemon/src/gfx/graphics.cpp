@@ -76,10 +76,6 @@ void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t
         width = (mask.x + mask.width) - x;
     }
 
-    if (width <= 0) {
-        return;
-    }
-
     if (y < 0) {
         height += y;
         y = 0;
@@ -97,7 +93,7 @@ void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t
         height = (mask.y + mask.height) - y;
     }
 
-    if (height <= 0) {
+    if (width <= 0 || height <= 0) {
         return;
     }
 
@@ -220,6 +216,104 @@ void DrawGradientVertical(int x, int y, int width, int height, rgba_colour_t c1,
                  (uint8_t)(j * (((double)c2.g - (double)c1.g) / height) + c1.g),
                  (uint8_t)(j * (((double)c2.b - (double)c1.b) / height) + c1.b), surface);
     }
+}
+
+static void DrawCircleQuadrant(int x, int y, uint8_t r, uint8_t g, uint8_t b, int radius, int quadrant,
+                               surface_t* surface, const Rect& mask) {
+    int maxWidth = std::min(surface->width, mask.x + mask.width);
+    int maxHeight = std::min(surface->height, mask.y + mask.height);
+    int minX = std::max(0, mask.x);
+    int minY = std::max(0, mask.y);
+
+    // int radiusSquared = radius * radius; // For the pythagorean equ
+    uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
+
+    for (int i = radius; i >= 0; i--) {
+        int iSquared = i * i;
+        int yOffset;
+        int yPos;
+
+        if (quadrant <= 2) {
+            yPos = (y + radius - i);
+            yOffset = surface->width * yPos;
+        } else {
+            yPos = (y + i);
+            yOffset = surface->width * yPos;
+        }
+
+        if(yPos > maxHeight || yPos < minY){
+            continue;
+        }
+
+        for (int j = radius; j >= 0; j--) {
+            int jSquared = j * j;
+            double dist = sqrt(iSquared + jSquared);
+            double opacity = std::clamp(0.5 - (dist - (radius + 0.5)), 0.0, 1.0);
+
+            if (opacity <= 0) {
+                continue;
+            }
+
+            int xPos;
+            if (quadrant == 1 || quadrant == 4) {
+                xPos = x + j - 1;
+
+                if(xPos > maxWidth || xPos < minX){
+                    continue;
+                }
+
+                uint32_t& pixel = reinterpret_cast<uint32_t*>(surface->buffer)[yOffset + xPos];
+                pixel = AlphaBlend(pixel, r, g, b, opacity);
+            } else {
+                xPos = x + radius - j;
+
+                if(xPos > maxWidth || xPos < minX){
+                    continue;
+                }
+
+                uint32_t& pixel = reinterpret_cast<uint32_t*>(surface->buffer)[yOffset + xPos];
+
+                if (opacity >= 1) { // That should be all opaque pixels on this row
+                    memset32_optimized(&pixel, colour_i, j);
+                    break;
+                }
+
+                pixel = AlphaBlend(pixel, r, g, b, opacity);
+            }
+        }
+    }
+}
+
+void DrawRoundedRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, int topleftRadius,
+                     int topRightRadius, int bottomRightRadius, int bottomLeftRadius, surface_t* surface, rect_t mask) {
+    if (topRightRadius) {
+        DrawCircleQuadrant(x + width - topRightRadius, y, r, g, b, topRightRadius, 1, surface, mask);
+    }
+
+    if (topleftRadius) {
+        DrawCircleQuadrant(x, y, r, g, b, topleftRadius, 2, surface, mask);
+    }
+
+    if (bottomLeftRadius) {
+        DrawCircleQuadrant(x, y + height - bottomLeftRadius, r, g, b, bottomLeftRadius, 3, surface, mask);
+    }
+
+    if (bottomRightRadius) {
+        DrawCircleQuadrant(x + width - bottomRightRadius, x + height - bottomRightRadius, r, g, b, bottomRightRadius, 4,
+                           surface, mask);
+    }
+
+    // Fill inbetween the corners
+    DrawRect(x + topleftRadius, y, width - topleftRadius - topRightRadius, topleftRadius, r, g, b, surface,
+             mask); // Top
+    DrawRect(x, y + topleftRadius, topleftRadius, height - topleftRadius - bottomLeftRadius, r, g, b, surface,
+             mask); // Left
+    DrawRect(x + topleftRadius, y + topleftRadius, width - topleftRadius - topRightRadius,
+             height - topleftRadius - bottomRightRadius, r, g, b, surface, mask); // Middle
+    DrawRect(x + width - topRightRadius, y + topRightRadius, topRightRadius,
+             height - topRightRadius - bottomRightRadius, r, g, b, surface, mask); // Right
+    DrawRect(x + bottomLeftRadius, y + height - bottomRightRadius, width - bottomRightRadius - bottomLeftRadius,
+             bottomRightRadius, r, g, b, surface, mask); // Bottom
 }
 
 void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset) {

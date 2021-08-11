@@ -88,8 +88,15 @@ void CompositorInstance::Paint(){
         if(win->Dirty() || wm->redrawBackground || (mouseMoved && Lemon::Graphics::PointInRect(rect, wm->input.mouse.pos))){
             win->SetDirty(0);
 
+            if(!wm->redrawBackground){
+                // TODO: Better solution
+                // Redraw the background at the top of the window for the rounded corners
+                surfacecpy(renderSurface, &backgroundImage, win->pos, {win->pos, {win->size.x + 6, 7}});
+            }
+
             while(it != clips.end() && it->win == win){
                 rect = *it;
+
                 win->DrawClip(renderSurface, rect);
 
                 if(!wm->redrawBackground){
@@ -103,9 +110,9 @@ void CompositorInstance::Paint(){
         }
     }
 
-    //if(wm->redrawBackground){
+    if(wm->redrawBackground){
         surfacecpy(&wm->screenSurface, renderSurface);
-    //}
+    }
 
     if(wm->contextMenuActive){
         rect_t bounds = wm->contextMenuBounds;
