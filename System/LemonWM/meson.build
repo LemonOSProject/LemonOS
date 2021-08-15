@@ -1,8 +1,7 @@
 lemonwm_src = [
+    'Compositor.cpp',
     'Main.cpp',
     'Window.cpp',
-    'Input.cpp',
-    'Compositor.cpp',
     'WM.cpp',
 ]
  
