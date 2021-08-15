@@ -259,9 +259,15 @@ void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t
 void surfacecpyTransparent(surface_t* dest, const surface_t* src, vector2i_t offset = {0, 0});
 void surfacecpyTransparent(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion);
 
-void Blit(Surface* dest, const Surface* src);
-void Blit(Surface* dest, const Surface* src, vector2i_t offset);
-void Blit(Surface* dest, const Surface* src, vector2i_t offset, rect_t region);
+inline void Blit(Surface* dest, const Surface* src) {
+    surfacecpy(dest, src);
+}
+inline void Blit(Surface* dest, const Surface* src, vector2i_t offset) {
+    surfacecpy(dest, src, offset);
+}
+inline void Blit(Surface* dest, const Surface* src, vector2i_t offset, rect_t region) {
+    surfacecpy(dest, src, offset, region);
+}
 
 void BlitRounded(Surface* dest, const Surface* src, vector2i_t offset, int radius);
 } // namespace Lemon::Graphics

@@ -7,7 +7,9 @@
 #include <Lemon/System/Framebuffer.h>
 #endif
 
-surface_t* CreateFramebufferSurface();
-void CreateFramebufferSurface(surface_t& surface);
+namespace Lemon{
+    Surface* CreateFramebufferSurface();
+    void CreateFramebufferSurface(Surface& surface);
+}
 
 #endif

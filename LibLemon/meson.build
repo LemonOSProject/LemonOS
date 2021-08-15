@@ -9,32 +9,33 @@ liblemon_cpp_args = ['-Wno-write-strings', '-Wno-missing-braces',
     '-m64' ]
 
 liblemon_cpp_files = [
-    'src/gfx/font.cpp',
-    'src/gfx/bitmapfont.cpp',
-    'src/gfx/graphics.cpp',
-    'src/gfx/image.cpp',
-    'src/gfx/surface.cpp',
-    'src/gfx/text.cpp',
-    'src/gfx/texture.cpp',
+    'src/Graphics/font.cpp',
+    'src/Graphics/bitmapfont.cpp',
+    'src/Graphics/graphics.cpp',
+    'src/Graphics/image.cpp',
+    'src/Graphics/Surface.cpp',
+    'src/Graphics/text.cpp',
+    'src/Graphics/texture.cpp',
 
-    'src/ipc/message.cpp',
-	'src/ipc/interface.cpp',
+    'src/IPC/message.cpp',
+	'src/IPC/interface.cpp',
 
-    'src/shell/shell.cpp',
+    'src/Shell/shell.cpp',
 
     'src/cfgparser.cpp',
     'src/IconManager.cpp',
     'src/lexer.cpp',
+    'src/Logger.cpp',
     'src/json.cpp',
     'src/sha.cpp',
     'src/url.cpp',
 ]
 
 liblemon_asm_files = [
-    'src/gfx/sse2.asm',
+    'src/Graphics/sse2.asm',
 ]
 
-subdir('src/lemon')
+subdir('src/Lemon')
 
 prefix = get_option('prefix')
 install_subdir('include', install_dir: prefix)

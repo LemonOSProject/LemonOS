@@ -7,4 +7,6 @@
 #error "Lemon OS Only"
 #endif
 
-long LemonMapFramebuffer(void** ptr, FBInfo& fbInfo);
+namespace Lemon{
+    long MapFramebuffer(void** ptr, FBInfo& fbInfo);
+}

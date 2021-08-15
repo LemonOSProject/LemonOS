@@ -13,10 +13,10 @@ int64_t CreateSharedMemory(uint64_t size, uint64_t flags) {
     return key;
 }
 
-volatile void* MapSharedMemory(int64_t key) {
+void* MapSharedMemory(int64_t key) {
     volatile void* ptr;
     syscall(SYS_MAP_SHARED_MEMORY, &ptr, key, 0);
-    return ptr;
+    return (void*)ptr;
 }
 
 long UnmapSharedMemory(void* address, int64_t key) { return syscall(SYS_UNMAP_SHARED_MEMORY, address, key); }

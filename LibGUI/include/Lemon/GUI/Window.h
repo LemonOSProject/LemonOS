@@ -15,6 +15,7 @@
 #define WINDOW_FLAGS_NOSHELL 0x4        // Do not show up in shell events
 #define WINDOW_FLAGS_TOOLTIP 0x8        // Don't receive events
 #define WINDOW_FLAGS_ALWAYS_ACTIVE 0x10 // Hide window when inactive
+#define WINDOW_FLAGS_TRANSPARENT 0x20
 
 #define WINDOW_MENUBAR_HEIGHT 20
 
@@ -25,6 +26,15 @@ enum {
     WMCxtEntryTypeCommand,
     WMCxtEntryTypeDivider,
     WMCxtEntryTypeExpand,
+};
+
+enum {
+    WindowFlag_NoDecoration = 0x1,  // Do not draw window borders
+    WindowFlag_Resizable = 0x2,     // Allow window resizing
+    WindowFlag_NoShell = 0x4,       // Do not show up in shell events
+    WindowFlag_Tooltip = 0x8,       // Don't receive events
+    WindowFlag_AlwaysActive = 0x10, // Hide window when inactive
+    WindowFlag_Transparent = 0x20,  // Enable window alpha channel
 };
 
 struct WindowBuffer {
@@ -43,7 +53,7 @@ enum WindowType {
 using WindowMenu = std::pair<std::string, std::vector<ContextMenuEntry>>;
 
 class WindowMenuBar : public Widget {
-  public:
+public:
     std::vector<WindowMenu> items;
 
     void Paint(surface_t* surface);
@@ -53,9 +63,9 @@ class WindowMenuBar : public Widget {
 };
 
 class Window final {
-    friend class Lemon::WindowServer;
+  friend class Lemon::WindowServer;
 
-  public:
+public:
     Window(const char* title, vector2i_t size, uint32_t flags = 0, int type = WindowType::Basic,
            vector2i_t pos = {20, 20});
     ~Window();
@@ -258,7 +268,7 @@ class Window final {
     surface_t surface = {0, 0, 32, nullptr};
     bool closed = false; // Set to true when close button pressed
 
-  private:
+private:
     class TooltipWindow : protected LemonWMServerEndpoint {
       public:
         TooltipWindow(const char* text, vector2i_t pos, const RGBAColour& bgColour);
@@ -270,7 +280,7 @@ class Window final {
 
         inline void Minimize(bool minimized) { LemonWMServerEndpoint::Minimize(windowID, minimized); }
 
-      private:
+    private:
         int64_t windowID = 0;
 
         Graphics::TextObject textObject;
