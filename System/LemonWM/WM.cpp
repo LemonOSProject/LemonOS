@@ -8,7 +8,7 @@ WM* WM::m_instance = nullptr;
 
 WM::WM(const Surface& displaySurface)
     : m_messageInterface(Lemon::Handle(Lemon::CreateService("lemon.lemonwm")), "Instance", 512),
-      m_compositor(displaySurface) {
+      m_compositor(displaySurface), m_input({displaySurface.width, displaySurface.height}) {
     assert(m_instance == nullptr);
 
     m_instance = this;
@@ -24,6 +24,7 @@ void WM::Run() {
             }
         }
 
+        m_input.Poll();
         m_compositor.Render();
     }
 }

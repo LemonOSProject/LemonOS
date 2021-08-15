@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Compositor.h"
+#include "Input.h"
 #include "Window.h"
 
 #include <Lemon/IPC/Interface.h>
@@ -20,6 +21,7 @@ public:
     void Run();
 
     inline Compositor& Compositor() { return m_compositor; }
+    inline InputManager& Input() { return m_input; }
 
 private:
     static WM* m_instance;
@@ -50,6 +52,7 @@ private:
 
     Lemon::Interface m_messageInterface;
     class Compositor m_compositor;
+    InputManager m_input;
 
     int64_t m_nextWindowID = 1;
 

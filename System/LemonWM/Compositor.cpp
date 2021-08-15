@@ -23,8 +23,13 @@ void Compositor::Render() {
         Lemon::Graphics::DrawRectOutline(rect, {255, 0, 0, 255}, &m_renderSurface);
     }
 
+    Vector2i mousePos = WM::Instance().m_input.mouse.pos;
+    Lemon::Graphics::DrawRect({mousePos, {2, 2}}, {255, 0, 0, 255}, &m_renderSurface);
+
     // Copy the render surface to the display surface
     m_displaySurface.Blit(&m_renderSurface);
+
+    Invalidate({mousePos, {2, 2}});
 }
 
 void Compositor::Invalidate(const Rect& rect) {}

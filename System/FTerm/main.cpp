@@ -439,7 +439,7 @@ void OnKey(int key){
 }
 
 int main(int argc, char** argv){
-    CreateFramebufferSurface(fbSurface);
+    Lemon::CreateFramebufferSurface(fbSurface);
     renderSurface = fbSurface;
     renderSurface.buffer = new uint8_t[fbSurface.width * fbSurface.height * 4];
 
