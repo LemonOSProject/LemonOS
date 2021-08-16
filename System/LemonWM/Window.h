@@ -88,6 +88,9 @@ private:
     // Shared memory key for buffer
     int64_t m_bufferKey = 0;
     GUI::WindowBuffer* m_buffer;
+    uint8_t* m_buffer1;
+    uint8_t* m_buffer2;
+    Surface m_windowSurface;
 
     int64_t m_id;
 

@@ -138,8 +138,9 @@ void WM::SetActiveWindow(WMWindow* win){
         }
 
         if(m_activeWindow->HideWhenInactive()){
+            WMWindow* oldWindow = m_activeWindow;
             m_activeWindow = nullptr; // Prevent recursion as minimize may call SetActiveWindow
-            m_activeWindow->Minimize(true);
+            oldWindow->Minimize(true);
         } else {
             // TODO: Broadcast window state event
         }

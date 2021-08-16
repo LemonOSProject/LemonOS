@@ -42,19 +42,30 @@ void Surface::Blit(const Surface* src, const Vector2i& offset) {
 }
 
 void Surface::Blit(const Surface* src, const Vector2i& offset, const Rect& region) {
-    int xOffset = std::max(offset.x, 0);
-    int yOffset = std::max(offset.y, 0);
+    int xOffset = offset.x;
+    int yOffset = offset.y;
+
+    Rect regionCopy = region;
+    if(offset.x < 0){
+        regionCopy.left(regionCopy.x - offset.x);
+        xOffset = 0;
+    }
+
+    if(offset.y < 0){
+        regionCopy.left(regionCopy.x - offset.x);
+        yOffset = 0;
+    }
 
     // Account for negative offsets
-    int sourceXOffset = std::max(region.x, 0);
-    int sourceYOffset = std::max(region.y, 0);
+    int sourceXOffset = std::max(regionCopy.x, 0);
+    int sourceYOffset = std::max(regionCopy.y, 0);
 
     // By getting the min of region.width and region.width + offset.x we account for a negative region position
     // We get the min on the adjusted region width,
     // and distance between the region start and both the source and destination surface 
     int effectiveWidth =
-        std::min({std::min(region.width, region.width + region.x), src->width - sourceXOffset, width - xOffset});
-    int effectiveHeight = std::min({std::min(region.height, region.height + region.y), src->height - sourceYOffset, height - yOffset});
+        std::min({std::min(regionCopy.width, regionCopy.width + regionCopy.x), src->width - sourceXOffset, width - xOffset});
+    int effectiveHeight = std::min({std::min(regionCopy.height, regionCopy.height + regionCopy.y), src->height - sourceYOffset, height - yOffset});
     if (effectiveWidth <= 0 || effectiveHeight <= 0) {
         return; // No pixels to copy
     }

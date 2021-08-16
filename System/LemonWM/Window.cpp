@@ -10,6 +10,7 @@ WMWindow::WMWindow(const Handle& endpoint, int64_t id, const std::string& title,
                    const Vector2i& size, int flags)
     : LemonWMClientEndpoint(endpoint), m_id(id), m_title(title), m_size(size), m_rect(Rect{pos, size}), m_flags(flags) {
     CreateWindowBuffer();
+    Queue(Lemon::Message(LemonWMServer::ResponseCreateWindow, LemonWMServer::CreateWindowResponse{m_id, m_bufferKey}));
 
     UpdateWindowRects();
 
@@ -17,14 +18,39 @@ WMWindow::WMWindow(const Handle& endpoint, int64_t id, const std::string& title,
 }
 
 void WMWindow::DrawClip(const Rect& clip, Surface* surface) {
+    m_windowSurface.buffer = m_buffer->currentBuffer ? (m_buffer2) : (m_buffer1);
+
     if (ShouldDrawDecoration()) {
         if (clip.Intersects(m_titlebarRect)) {
             Graphics::DrawRoundedRect(m_titlebarRect, theme.titlebarColour, theme.cornerRadius, theme.cornerRadius, 0,
                                       0, surface, clip);
-        
-            Graphics::DrawString(m_title.c_str(), m_titlebarRect.pos.x + theme.cornerRadius + 2, m_titlebarRect.pos.y + (m_titlebarRect.size.y - Graphics::DefaultFont()->pixelHeight) / 2, {0xff, 0xff, 0xff, 0xff}, surface, clip);
+
+            Graphics::DrawString(m_title.c_str(), m_titlebarRect.pos.x + theme.cornerRadius + 2,
+                                 m_titlebarRect.pos.y +
+                                     (m_titlebarRect.size.y - Graphics::DefaultFont()->pixelHeight) / 2,
+                                 {0xff, 0xff, 0xff, 0xff}, surface, clip);
         }
-        Graphics::DrawRectOutline({Vector2i{m_rect.x, m_titlebarRect.bottom()}, m_contentRect.size}, theme.titlebarColour, surface, clip);
+        Graphics::DrawRectOutline({Vector2i{m_rect.x, m_titlebarRect.bottom()}, m_contentRect.size},
+                                  theme.titlebarColour, surface, clip);
+
+        Vector2i pos = {std::max(clip.x, m_contentRect.x), std::max(clip.y, m_contentRect.y)};
+
+        Rect clipCopy = clip;
+        if(m_contentRect.x > clip.x) {
+            clipCopy.left(m_contentRect.x);
+        }
+        if(m_contentRect.y > clip.y){
+            clipCopy.top(m_contentRect.y);
+        }
+
+        clipCopy.pos -= m_contentRect.pos;
+
+        surface->Blit(&m_windowSurface, pos, clipCopy);
+    } else {
+        Rect clipCopy = clip;
+        clipCopy.pos -= m_contentRect.pos;
+
+        surface->Blit(&m_windowSurface, clip.pos, clipCopy);
     }
 }
 
@@ -43,6 +69,7 @@ void WMWindow::Resize(int width, int height) {
     m_size = {width, height};
 
     CreateWindowBuffer();
+    Queue(Lemon::Message(LemonWMServer::ResponseResize, LemonWMServer::ResizeResponse{m_bufferKey}));
 
     WM::Instance().Compositor().InvalidateAll(); // Window size changed, recaclulate clipping
 }
@@ -108,6 +135,11 @@ void WMWindow::CreateWindowBuffer() {
     memset(m_buffer, 0, sizeof(GUI::WindowBuffer));
     m_buffer->buffer1Offset = ((sizeof(GUI::WindowBuffer) + 0x1F) & (~0x1FULL));
     m_buffer->buffer2Offset = ((sizeof(GUI::WindowBuffer) + 0x1F) & (~0x1FULL)) + bufferSize;
+
+    m_buffer1 = reinterpret_cast<uint8_t*>(m_buffer) + m_buffer->buffer1Offset;
+    m_buffer2 = reinterpret_cast<uint8_t*>(m_buffer) + m_buffer->buffer2Offset;
+
+    m_windowSurface = {.width = m_size.x, .height = m_size.y, .buffer = m_buffer1};
 
     assert(!((m_buffer->buffer1Offset | m_buffer->buffer2Offset) & 0x1F)); // Ensure alignment
 }
