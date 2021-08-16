@@ -12,6 +12,7 @@ WM::WM(const Surface& displaySurface)
     assert(m_instance == nullptr);
 
     m_instance = this;
+    m_compositor.SetWallpaper("/system/lemon/resources/backgrounds/bg5.png");
 }
 
 void WM::Run() {
@@ -29,6 +30,94 @@ void WM::Run() {
     }
 }
 
+void WM::OnMouseDown(bool isRightButton){
+    for(auto it = m_windows.rbegin(); it != m_windows.rend(); ++it){
+        WMWindow* win = *it;
+        if(win->GetRect().Contains(m_input.mouse.pos)){
+            // If the window isn't the active window, set it as the active window
+            if(win != m_activeWindow){
+                SetActiveWindow(win);
+            }
+
+            const Rect& ctRect = win->GetContentRect(); // Actual window content
+            if(win->ShouldDrawDecoration()){
+                if(ctRect.Contains(m_input.mouse.pos)){
+                    LemonEvent ev;
+                    
+                    ev.event = (isRightButton) ? EventRightMousePressed : EventMousePressed;
+                    ev.mousePos = m_input.mouse.pos - ctRect.pos;
+
+                    win->SendEvent(ev);
+                } else if(win->GetTitlebarRect().Contains(m_input.mouse.pos)){
+                    vector2i_t mouseOffset = m_input.mouse.pos - win->GetPosition();
+                    m_draggingWindow = true;
+                    m_dragOffset = mouseOffset;
+                }
+            } else { // No window titlebars
+                LemonEvent ev;
+                
+                ev.event = (isRightButton) ? EventRightMousePressed : EventMousePressed;
+                ev.mousePos = m_input.mouse.pos - ctRect.pos;
+
+                win->SendEvent(ev);
+            }
+
+            return;
+        }
+    }
+}
+
+void WM::OnMouseUp(bool isRightButton){
+    if(m_draggingWindow){
+        m_draggingWindow = false;
+        return;
+    }
+
+    if(!m_activeWindow){
+        return; // Only send mouse up events to the active window
+    }
+
+    const Rect& ctRect = m_activeWindow->GetContentRect();
+    LemonEvent ev;
+
+    ev.event = (isRightButton) ? EventRightMouseReleased : EventMouseReleased;
+    ev.mousePos = m_input.mouse.pos - ctRect.pos;
+
+    m_activeWindow->SendEvent(ev);
+}
+
+void WM::OnMouseMove(){
+    if(m_draggingWindow){
+        m_activeWindow->Relocate(m_input.mouse.pos - m_dragOffset);
+        return;
+    }
+
+    for(auto it = m_windows.rbegin(); it != m_windows.rend(); ++it){
+        WMWindow* win = *it;
+        const Rect& ctRect = win->GetContentRect(); // Actual window content
+        if(ctRect.Contains(m_input.mouse.pos)){
+            LemonEvent ev;
+            ev.mousePos = m_input.mouse.pos - ctRect.pos;
+            ev.event = Lemon::EventMouseMoved;
+
+            win->SendEvent(ev);
+        }
+        return;
+    }
+}
+
+void WM::OnKeyUpdate(int key, bool isPressed){
+    if(!m_activeWindow){
+        return;
+    }
+
+    LemonEvent ev;
+    ev.event = (isPressed) ? EventKeyPressed : EventKeyReleased;
+    ev.key = key;
+
+    m_activeWindow->SendEvent(ev);
+}
+
 WMWindow* WM::GetWindowFromID(int64_t id) {
     for (WMWindow* window : m_windows) {
         if (window->GetID() == id) {
@@ -37,6 +126,33 @@ WMWindow* WM::GetWindowFromID(int64_t id) {
     }
 
     return nullptr;
+}
+
+void WM::SetActiveWindow(WMWindow* win){
+    if(m_activeWindow){
+        if(m_activeWindow == m_lastMousedOver){
+            LemonEvent ev;
+            ev.event = EventMouseExit;
+
+            m_activeWindow->SendEvent(ev);
+        }
+
+        if(m_activeWindow->HideWhenInactive()){
+            m_activeWindow = nullptr; // Prevent recursion as minimize may call SetActiveWindow
+            m_activeWindow->Minimize(true);
+        } else {
+            // TODO: Broadcast window state event
+        }
+    }
+
+    m_activeWindow = win;
+
+    if(m_activeWindow){ // win could be nullptr
+        m_windows.remove(win);
+        m_windows.push_back(win); // Place the new active window on top
+
+        m_compositor.InvalidateAll(); // Recalculate clipping
+    }
 }
 
 void WM::OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32_t width, int32_t height,

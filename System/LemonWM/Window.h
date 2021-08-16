@@ -1,22 +1,40 @@
 #pragma once
 
-#include <Lemon/Graphics/Types.h>
 #include <Lemon/GUI/Window.h>
+#include <Lemon/Graphics/Types.h>
 
 #include <string>
+
+#define RESIZE_HANDLE_SIZE 5
 
 using namespace Lemon;
 
 struct WindowTheme {
-    int titlebarHeight = 20;
-    int cornerRadius = 5;
+    int titlebarHeight = 24;
+    int cornerRadius = 10;
     int borderWidth = 1;
+
+    RGBAColour titlebarColour = {0x22, 0x20, 0x22, 0xFF};
 };
 
-class WMWindow 
-    : public LemonWMClientEndpoint {
+enum ResizePoint {
+    ResizePoint_None,
+    ResizePoint_Top = 0x1,
+    ResizePoint_Right = 0x2,
+    ResizePoint_Bottom = 0x4,
+    ResizePoint_Left = 0x8,
+    ResizePoint_TopRight = ResizePoint_Top | ResizePoint_Right,
+    ResizePoint_BottomRight = ResizePoint_Bottom | ResizePoint_Right,
+    ResizePoint_BottomLeft = ResizePoint_Bottom | ResizePoint_Left,
+    ResizePoint_TopLeft = ResizePoint_Top | ResizePoint_Left
+};
+
+class WMWindow : public LemonWMClientEndpoint {
 public:
-    WMWindow(const Handle& endpoint, int64_t id, const std::string& title, const Vector2i& pos, const Vector2i& size, int flags);
+    WMWindow(const Handle& endpoint, int64_t id, const std::string& title, const Vector2i& pos, const Vector2i& size,
+             int flags);
+
+    void DrawClip(const Rect& clip, Surface* surface);
 
     inline int64_t GetID() const { return m_id; }
 
@@ -29,20 +47,40 @@ public:
     inline const Vector2i& GetContentPosition() const { return m_contentRect.pos; }
     inline const Vector2i& GetContentSize() const { return m_contentRect.size; }
 
+    inline const Rect& GetTitlebarRect() const { return m_titlebarRect; }
+
+    // Top border resize handle
+    inline const Rect& GetTopResizeRect() const { return m_borderRects[0]; }
+    // Right border resize handle
+    inline const Rect& GetRightResizeRect() const { return m_borderRects[1]; }
+    // Bottom border resize handle
+    inline const Rect& GetBottomResizeRect() const { return m_borderRects[2]; }
+    // Left border resize handle
+    inline const Rect& GetLeftResizeRect() const { return m_borderRects[3]; }
+    // Check if the window has a resize handle at the given position
+    int GetResizePoint(Vector2i absolutePosition) const;
+
     inline bool ShouldDrawDecoration() const { return !(m_flags & GUI::WindowFlag_NoDecoration); }
     inline bool IsResizable() const { return (m_flags & GUI::WindowFlag_Resizable); }
     inline bool IsTransparent() const { return (m_flags & GUI::WindowFlag_Transparent); }
     inline bool IsMinimized() const { return m_minimized; }
+    inline bool HideWhenInactive() const { return (m_flags & GUI::WindowFlag_AlwaysActive); }
+
+    inline void SendEvent(const Lemon::LemonEvent& event) {
+        LemonWMClientEndpoint::SendEvent(m_id, event.event, event.data);
+    }
 
     void Relocate(int x, int y);
+    inline void Relocate(const Vector2i& pos) { Relocate(pos.x, pos.y); };
     void Resize(int width, int height);
 
     void SetTitle(const std::string& title);
     void SetFlags(int flags);
 
     void Minimize(bool minimized = true);
-    
+
     static WindowTheme theme;
+
 private:
     void UpdateWindowRects();
     void CreateWindowBuffer();
@@ -57,7 +95,12 @@ private:
 
     Vector2i m_size; // Window Content Size
     Rect m_rect;
-    Rect m_contentRect; 
+    Rect m_contentRect;
+    Rect m_titlebarRect;
+    // Border rects for resizing
+    // Top, Right, Bottom, Left
+    Rect m_borderRects[4];
+
     int m_flags = 0;
 
     bool m_minimized = false;

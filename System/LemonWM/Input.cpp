@@ -1,5 +1,7 @@
 #include "Input.h"
 
+#include "WM.h"
+
 #include <Lemon/Core/Keyboard.h>
 #include <Lemon/Core/Input.h>
 
@@ -100,38 +102,42 @@ InputManager::InputManager(const Vector2i& mouseBounds)
 }
 
 void InputManager::Poll(){
-	/*auto handlePacketPress = [=](Lemon::MousePacket& pkt) -> void {
+	auto handlePacketPress = [=](Lemon::MousePacket& pkt) -> void {
         if((!!(pkt.buttons & Lemon::MouseButton::Left)) != mouse.left){ // Use a double negative to make the statement 0 or 1
             mouse.left = !!(pkt.buttons & Lemon::MouseButton::Left);
 
             if(mouse.left){
-                wm->MouseDown();
+                WM::Instance().OnMouseDown(false);
             } else {
-                wm->MouseUp();
+                WM::Instance().OnMouseUp(false);
             }
         }
 
         if((!!(pkt.buttons & Lemon::MouseButton::Right)) != mouse.right){ // Use a double negative to make the statement 0 or 1
             mouse.right = !!(pkt.buttons & Lemon::MouseButton::Right);
 
-            wm->MouseRight(mouse.right);
-		}
-	};*/
+            if(mouse.right){
+                WM::Instance().OnMouseDown(true);
+            } else {
+                WM::Instance().OnMouseUp(true);
+            }
+        }
+	};
 
     if(Lemon::MousePacket mousePacket; Lemon::PollMouse(mousePacket)){
         mouse.pos.x = std::min(mouse.pos.x + mousePacket.xMovement, m_mouseBounds.x);
         mouse.pos.y = std::min(mouse.pos.y + mousePacket.yMovement, m_mouseBounds.y);
 
-		//handlePacketPress(mousePacket);
+		handlePacketPress(mousePacket);
 
 		while(Lemon::PollMouse(mousePacket)){
             mouse.pos.x = std::min(mouse.pos.x + mousePacket.xMovement, m_mouseBounds.x);
             mouse.pos.y = std::min(mouse.pos.y + mousePacket.yMovement, m_mouseBounds.y);
 
-			//handlePacketPress(mousePacket); // If necessary send a mouse press event for each packet, however only send move event after processing all packets
+			handlePacketPress(mousePacket); // If necessary send a mouse press event for each packet, however only send move event after processing all packets
 		}
 
-		//wm->MouseMove();
+		WM::Instance().OnMouseMove();
     }
 
     uint8_t buf[32];
@@ -164,6 +170,6 @@ void InputManager::Poll(){
             break;
         }
 
-        //wm->KeyUpdate(key, isPressed);
+       WM::Instance().OnKeyUpdate(key, isPressed);
     }
 }   

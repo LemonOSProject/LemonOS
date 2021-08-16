@@ -23,6 +23,12 @@ public:
     inline Compositor& Compositor() { return m_compositor; }
     inline InputManager& Input() { return m_input; }
 
+    void OnMouseDown(bool isRightButton);
+    void OnMouseUp(bool isRightButton);
+    void OnMouseMove();
+
+    void OnKeyUpdate(int key, bool isPressed);
+
 private:
     static WM* m_instance;
 
@@ -33,6 +39,8 @@ private:
     inline int64_t NextWindowID() {
         return m_nextWindowID++;
     }
+
+    void SetActiveWindow(WMWindow* win);
 
     void OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title) override;
     void OnDestroyWindow(const Lemon::Handle& client, int64_t windowID) override;
@@ -54,7 +62,14 @@ private:
     class Compositor m_compositor;
     InputManager m_input;
 
-    int64_t m_nextWindowID = 1;
+    bool m_resizingWindow = false; // Resizing active window?
+    bool m_draggingWindow = false; // Dragging active window?
+    Vector2i m_dragOffset = {0, 0}; // Offset of window being dragged
 
+    int64_t m_nextWindowID = 1;
+    // The active window is displayed on top and recieves keyboard input
+    WMWindow* m_activeWindow = nullptr;
+    // The last window the mouse was over
+    WMWindow* m_lastMousedOver = nullptr;
     std::list<WMWindow*> m_windows;
 };
