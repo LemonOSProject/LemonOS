@@ -44,7 +44,7 @@ typedef struct Rect {
         return y + height;
     }
 
-    std::list<Rect> Split(Rect cut) {
+    std::list<Rect> Split(const Rect& cut) {
         std::list<Rect> clips;
         Rect victim = *this;
 
@@ -99,7 +99,11 @@ typedef struct Rect {
         return clips;
     }
 
-    inline bool Intersects(const Rect& other){
+    inline bool Intersects(const Rect& other) const {
         return (left() < other.right() && right() > other.left() && top() < other.bottom() && bottom() > other.top());
+    }
+
+    inline bool Contains(const Vector2i& other) const {
+        return (other.x >= x && other.x < right() && other.y >= y && other.y < bottom());
     }
 } rect_t; // Rectangle
