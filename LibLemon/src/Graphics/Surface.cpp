@@ -52,7 +52,7 @@ void Surface::Blit(const Surface* src, const Vector2i& offset, const Rect& regio
     }
 
     if(offset.y < 0){
-        regionCopy.left(regionCopy.x - offset.x);
+        regionCopy.top(regionCopy.y - offset.y);
         yOffset = 0;
     }
 
