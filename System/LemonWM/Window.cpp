@@ -17,22 +17,32 @@ WMWindow::WMWindow(const Handle& endpoint, int64_t id, const std::string& title,
     WM::Instance().Compositor().InvalidateAll();
 }
 
-void WMWindow::DrawDecorationClip(const Rect& clip, Surface* surface){
+void WMWindow::DrawDecorationClip(const Rect& clip, Surface* surface) {
     if (!ShouldDrawDecoration()) {
         return;
     }
 
     if (clip.Intersects(m_titlebarRect)) {
-        Graphics::DrawRoundedRect(m_titlebarRect, theme.titlebarColour, theme.cornerRadius, theme.cornerRadius, 0,
-                                    0, surface, clip);
+        Graphics::DrawRoundedRect(m_titlebarRect, theme.titlebarColour, theme.cornerRadius, theme.cornerRadius, 0, 0,
+                                  surface, clip);
 
         Graphics::DrawString(m_title.c_str(), m_titlebarRect.pos.x + theme.cornerRadius + 2,
-                                m_titlebarRect.pos.y +
-                                    (m_titlebarRect.size.y - Graphics::DefaultFont()->pixelHeight) / 2,
-                                {0xff, 0xff, 0xff, 0xff}, surface, clip);
+                             m_titlebarRect.pos.y + (m_titlebarRect.size.y - Graphics::DefaultFont()->pixelHeight) / 2,
+                             {0xff, 0xff, 0xff, 0xff}, surface, clip);
     }
-    Graphics::DrawRectOutline({Vector2i{m_rect.x, m_titlebarRect.bottom()}, Vector2i{m_rect.width, m_contentRect.height + theme.borderWidth}},
-                                theme.titlebarColour, surface, clip);
+    Graphics::DrawRectOutline(
+        {Vector2i{m_rect.x, m_titlebarRect.bottom()}, Vector2i{m_rect.width, m_contentRect.height + theme.borderWidth}},
+        theme.titlebarColour, surface, clip);
+
+    Rect closeButtonSourceRect = {0, 0, theme.windowButtons.width / 2, theme.windowButtons.height / 2};
+    if(m_closeRect.Contains(WM::Instance().Input().mouse.pos)){
+        // The mouse hover state window buttons are on next row of image file
+        closeButtonSourceRect.y += theme.windowButtons.height / 2;
+    }
+
+    if(clip.Contains(m_closeRect)){
+        surface->AlphaBlit(&theme.windowButtons, m_closeRect.pos, closeButtonSourceRect);
+    }
 }
 
 void WMWindow::DrawClip(const Rect& clip, Surface* surface) {
@@ -87,8 +97,8 @@ void WMWindow::Minimize(bool minimized) {
         return; // Nothing to do
     }
 
-    if(minimized){
-        if(WM::Instance().ActiveWindow() == this){
+    if (minimized) {
+        if (WM::Instance().ActiveWindow() == this) {
             WM::Instance().SetActiveWindow(nullptr);
         }
 
@@ -100,6 +110,7 @@ void WMWindow::Minimize(bool minimized) {
     m_minimized = minimized;
 
     WM::Instance().Compositor().InvalidateAll(); // Window state changed, recaclulate clipping
+    WM::Instance().BroadcastWindowState(this);
 }
 
 void WMWindow::UpdateWindowRects() {
@@ -118,6 +129,8 @@ void WMWindow::UpdateWindowRects() {
         m_borderRects[2] = {m_rect.pos.x, m_rect.pos.y + m_rect.size.y - RESIZE_HANDLE_SIZE, m_rect.size.x,
                             RESIZE_HANDLE_SIZE};
         m_borderRects[3] = {m_rect.pos, RESIZE_HANDLE_SIZE, m_rect.size.y}; // Left
+
+        m_closeRect = {m_rect.x + m_rect.width - 2 - theme.windowButtons.width / 2, m_rect.y + theme.titlebarHeight / 2 - theme.windowButtons.height / 4, theme.windowButtons.width / 2, theme.windowButtons.height / 2};
     } else {
         m_contentRect = m_rect;
     }

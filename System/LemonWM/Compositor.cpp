@@ -131,8 +131,10 @@ void Compositor::Render() {
 
     Lemon::Graphics::DrawRect({mousePos, {5, 5}}, {0, 255, 0, 255}, &m_renderSurface);
 
-    Lemon::Graphics::DrawRect(0, 0, 80, 18, 0, 0, 0, &m_renderSurface);
-    Lemon::Graphics::DrawString(std::to_string(m_fRate).c_str(), 0, 0, 255, 255, 255, &m_renderSurface);
+    if(m_displayFramerate){
+        Lemon::Graphics::DrawRect(0, 0, 80, 18, 0, 0, 0, &m_renderSurface);
+        Lemon::Graphics::DrawString(std::to_string(m_fRate).c_str(), 0, 0, 255, 255, 255, &m_renderSurface);
+    }
 
     // Copy the render surface to the display surface
     m_displaySurface.Blit(&m_renderSurface);

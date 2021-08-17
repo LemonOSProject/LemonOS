@@ -15,6 +15,10 @@ WM::WM(const Surface& displaySurface)
 
     m_instance = this;
     m_compositor.SetWallpaper("/system/lemon/resources/backgrounds/bg5.png");
+
+    if(Graphics::LoadImage("/system/lemon/resources/winbuttons.png", &WMWindow::theme.windowButtons)){
+        Logger::Error("Failed to load window buttons!");
+    }
 }
 
 void WM::Run() {
@@ -50,6 +54,8 @@ void WM::OnMouseDown(bool isRightButton) {
                     ev.mousePos = m_input.mouse.pos - ctRect.pos;
 
                     win->SendEvent(ev);
+                } else if(win->GetCloseRect().Contains(m_input.mouse.pos)){
+                    win->SendEvent({ .event = EventWindowClosed }); // Close button pressed
                 } else if (win->GetTitlebarRect().Contains(m_input.mouse.pos)) {
                     vector2i_t mouseOffset = m_input.mouse.pos - win->GetPosition();
                     m_draggingWindow = true;
@@ -167,6 +173,8 @@ void WM::SetActiveWindow(WMWindow* win) {
     }
 
     if (m_activeWindow) {
+        WMWindow* oldWindow = m_activeWindow;
+
         if (m_activeWindow == m_lastMousedOver) {
             LemonEvent ev;
             ev.event = EventMouseExit;
@@ -174,12 +182,14 @@ void WM::SetActiveWindow(WMWindow* win) {
             m_activeWindow->SendEvent(ev);
         }
 
-        if (m_activeWindow->HideWhenInactive()) {
-            WMWindow* oldWindow = m_activeWindow;
-            m_activeWindow = nullptr; // Prevent recursion as minimize may call SetActiveWindow
+        // Prevent recursion as minimize may call SetActiveWindow
+        // and make sure we properly broadcast the new window state
+        m_activeWindow = nullptr;
+
+        if (oldWindow->HideWhenInactive()) {
             oldWindow->Minimize(true);
         } else {
-            BroadcastWindowState(m_activeWindow);
+            BroadcastWindowState(oldWindow);
         }
     }
 
@@ -380,6 +390,4 @@ void WM::OnSubscribeToWindowEvents(const Lemon::Handle& client) {
     }
 
     m_wmEventSubscribers.push_back(std::move(endp));
-
-
 }

@@ -32,6 +32,8 @@ public:
     inline const WMWindow* ActiveWindow() const { return m_activeWindow; };
     void SetActiveWindow(WMWindow* win);
 
+    void BroadcastWindowState(WMWindow* win);
+    
 private:
     static WM* m_instance;
 
@@ -45,7 +47,6 @@ private:
 
     void DestroyWindow(WMWindow* win);
 
-    void BroadcastWindowState(WMWindow* win);
     void BroadcastCreatedWindow(WMWindow* win);
     void BroadcastDestroyedWindow(WMWindow* win);
 

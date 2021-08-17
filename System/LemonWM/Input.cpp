@@ -125,14 +125,14 @@ void InputManager::Poll(){
 	};
 
     if(Lemon::MousePacket mousePacket; Lemon::PollMouse(mousePacket)){
-        mouse.pos.x = std::min(mouse.pos.x + mousePacket.xMovement, m_mouseBounds.x);
-        mouse.pos.y = std::min(mouse.pos.y + mousePacket.yMovement, m_mouseBounds.y);
+        mouse.pos.x = std::max(0, std::min(mouse.pos.x + mousePacket.xMovement, m_mouseBounds.x));
+        mouse.pos.y = std::max(0, std::min(mouse.pos.y + mousePacket.yMovement, m_mouseBounds.y));
 
 		handlePacketPress(mousePacket);
 
 		while(Lemon::PollMouse(mousePacket)){
-            mouse.pos.x = std::min(mouse.pos.x + mousePacket.xMovement, m_mouseBounds.x);
-            mouse.pos.y = std::min(mouse.pos.y + mousePacket.yMovement, m_mouseBounds.y);
+            mouse.pos.x = std::max(0, std::min(mouse.pos.x + mousePacket.xMovement, m_mouseBounds.x));
+            mouse.pos.y = std::max(0, std::min(mouse.pos.y + mousePacket.yMovement, m_mouseBounds.y));
 
 			handlePacketPress(mousePacket); // If necessary send a mouse press event for each packet, however only send move event after processing all packets
 		}

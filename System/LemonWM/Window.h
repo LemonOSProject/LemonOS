@@ -15,6 +15,8 @@ struct WindowTheme {
     int borderWidth = 1;
 
     RGBAColour titlebarColour = {0x22, 0x20, 0x22, 0xFF};
+
+    Surface windowButtons{};
 };
 
 enum ResizePoint {
@@ -51,6 +53,8 @@ public:
     inline const Vector2i& GetContentSize() const { return m_contentRect.size; }
 
     inline const Rect& GetTitlebarRect() const { return m_titlebarRect; }
+    // Get absolute close button rect
+    inline const Rect& GetCloseRect() const { return m_closeRect; }
 
     // Top border resize handle
     inline const Rect& GetTopResizeRect() const { return m_borderRects[0]; }
@@ -114,6 +118,7 @@ private:
     // Border rects for resizing
     // Top, Right, Bottom, Left
     Rect m_borderRects[4];
+    Rect m_closeRect;
 
     int m_flags = 0;
 
