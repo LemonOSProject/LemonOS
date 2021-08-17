@@ -17,41 +17,31 @@ WMWindow::WMWindow(const Handle& endpoint, int64_t id, const std::string& title,
     WM::Instance().Compositor().InvalidateAll();
 }
 
+void WMWindow::DrawDecorationClip(const Rect& clip, Surface* surface){
+    if (!ShouldDrawDecoration()) {
+        return;
+    }
+
+    if (clip.Intersects(m_titlebarRect)) {
+        Graphics::DrawRoundedRect(m_titlebarRect, theme.titlebarColour, theme.cornerRadius, theme.cornerRadius, 0,
+                                    0, surface, clip);
+
+        Graphics::DrawString(m_title.c_str(), m_titlebarRect.pos.x + theme.cornerRadius + 2,
+                                m_titlebarRect.pos.y +
+                                    (m_titlebarRect.size.y - Graphics::DefaultFont()->pixelHeight) / 2,
+                                {0xff, 0xff, 0xff, 0xff}, surface, clip);
+    }
+    Graphics::DrawRectOutline({Vector2i{m_rect.x, m_titlebarRect.bottom()}, Vector2i{m_rect.width, m_contentRect.height + theme.borderWidth}},
+                                theme.titlebarColour, surface, clip);
+}
+
 void WMWindow::DrawClip(const Rect& clip, Surface* surface) {
     m_windowSurface.buffer = m_buffer->currentBuffer ? (m_buffer2) : (m_buffer1);
 
-    if (ShouldDrawDecoration()) {
-        if (clip.Intersects(m_titlebarRect)) {
-            Graphics::DrawRoundedRect(m_titlebarRect, theme.titlebarColour, theme.cornerRadius, theme.cornerRadius, 0,
-                                      0, surface, clip);
+    Rect clipCopy = clip;
+    clipCopy.pos -= m_contentRect.pos;
 
-            Graphics::DrawString(m_title.c_str(), m_titlebarRect.pos.x + theme.cornerRadius + 2,
-                                 m_titlebarRect.pos.y +
-                                     (m_titlebarRect.size.y - Graphics::DefaultFont()->pixelHeight) / 2,
-                                 {0xff, 0xff, 0xff, 0xff}, surface, clip);
-        }
-        Graphics::DrawRectOutline({Vector2i{m_rect.x, m_titlebarRect.bottom()}, m_contentRect.size},
-                                  theme.titlebarColour, surface, clip);
-
-        Vector2i pos = {std::max(clip.x, m_contentRect.x), std::max(clip.y, m_contentRect.y)};
-
-        Rect clipCopy = clip;
-        if(m_contentRect.x > clip.x) {
-            clipCopy.left(m_contentRect.x);
-        }
-        if(m_contentRect.y > clip.y){
-            clipCopy.top(m_contentRect.y);
-        }
-
-        clipCopy.pos -= m_contentRect.pos;
-
-        surface->Blit(&m_windowSurface, pos, clipCopy);
-    } else {
-        Rect clipCopy = clip;
-        clipCopy.pos -= m_contentRect.pos;
-
-        surface->Blit(&m_windowSurface, clip.pos, clipCopy);
-    }
+    surface->Blit(&m_windowSurface, clip.pos, clipCopy);
 }
 
 void WMWindow::Relocate(int x, int y) {
@@ -95,6 +85,14 @@ void WMWindow::SetFlags(int flags) {
 void WMWindow::Minimize(bool minimized) {
     if (minimized == m_minimized) {
         return; // Nothing to do
+    }
+
+    if(minimized){
+        if(WM::Instance().ActiveWindow() == this){
+            WM::Instance().SetActiveWindow(nullptr);
+        }
+    } else {
+        WM::Instance().SetActiveWindow(this); // When the window is being shown again set it as active
     }
 
     m_minimized = minimized;

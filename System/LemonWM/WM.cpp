@@ -92,6 +92,7 @@ void WM::OnMouseMove(){
         return;
     }
 
+    WMWindow* mousedOver = nullptr;
     for(auto it = m_windows.rbegin(); it != m_windows.rend(); ++it){
         WMWindow* win = *it;
         const Rect& ctRect = win->GetContentRect(); // Actual window content
@@ -101,8 +102,28 @@ void WM::OnMouseMove(){
             ev.event = Lemon::EventMouseMoved;
 
             win->SendEvent(ev);
+            break;
         }
-        return;
+    }
+
+    if(mousedOver != m_lastMousedOver){
+        if(m_lastMousedOver){
+            LemonEvent ev;
+            ev.event = EventMouseExit;
+            ev.mousePos = m_input.mouse.pos - m_lastMousedOver->GetContentRect().pos;
+
+            m_lastMousedOver->SendEvent(ev);
+        }
+
+        m_lastMousedOver = mousedOver;
+
+        if(mousedOver){
+            LemonEvent ev;
+            ev.event = EventMouseEnter;
+            ev.mousePos = m_input.mouse.pos - mousedOver->GetContentRect().pos;
+
+            mousedOver->SendEvent(ev);
+        }
     }
 }
 
@@ -129,6 +150,10 @@ WMWindow* WM::GetWindowFromID(int64_t id) {
 }
 
 void WM::SetActiveWindow(WMWindow* win){
+    if(win == m_activeWindow){
+        return;
+    }
+
     if(m_activeWindow){
         if(m_activeWindow == m_lastMousedOver){
             LemonEvent ev;

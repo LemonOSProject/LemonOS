@@ -29,6 +29,9 @@ public:
 
     void OnKeyUpdate(int key, bool isPressed);
 
+    inline const WMWindow* ActiveWindow() const { return m_activeWindow; };
+    void SetActiveWindow(WMWindow* win);
+
 private:
     static WM* m_instance;
 
@@ -39,8 +42,6 @@ private:
     inline int64_t NextWindowID() {
         return m_nextWindowID++;
     }
-
-    void SetActiveWindow(WMWindow* win);
 
     void OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title) override;
     void OnDestroyWindow(const Lemon::Handle& client, int64_t windowID) override;

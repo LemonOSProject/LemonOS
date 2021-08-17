@@ -3,14 +3,14 @@
 #include <Lemon/Graphics/Surface.h>
 #include <Lemon/Graphics/Types.h>
 
+#include <atomic>
+#include <ctime>
 #include <list>
 #include <thread>
-#include <atomic>
 
-#define COMPOSITOR_DEBUG 1
+//#define COMPOSITOR_DEBUG 1
 
-template<typename T, class D>
-std::list<T> Split(Rect victim, const Rect& cut, D extraData) {
+template <typename T, class... D> std::list<T> Split(Rect victim, const Rect& cut, D... extraData) {
     std::list<T> clips;
 
     if (cut.left() >= victim.left() && cut.left() <= victim.right()) { // Clip left edge
@@ -22,7 +22,9 @@ std::list<T> Split(Rect victim, const Rect& cut, D extraData) {
 
         victim.left(cut.left());
 
-        clips.push_back({clip, extraData});
+        if (clip.width > 0) {
+            clips.push_back({clip, extraData...});
+        }
     }
 
     if (cut.top() >= victim.top() && cut.top() <= victim.bottom()) { // Clip top edge
@@ -34,7 +36,9 @@ std::list<T> Split(Rect victim, const Rect& cut, D extraData) {
 
         victim.top(cut.top());
 
-        clips.push_back({clip, extraData});
+        if (clip.height > 0) {
+            clips.push_back({clip, extraData...});
+        }
     }
 
     if (cut.right() >= victim.left() && cut.right() <= victim.right()) { // Clip right edge
@@ -46,7 +50,9 @@ std::list<T> Split(Rect victim, const Rect& cut, D extraData) {
 
         victim.right(cut.right());
 
-        clips.push_back({clip, extraData});
+        if (clip.width > 0) {
+            clips.push_back({clip, extraData...});
+        }
     }
 
     if (cut.bottom() >= victim.top() && cut.bottom() <= victim.bottom()) { // Clip bottom edge
@@ -58,7 +64,9 @@ std::list<T> Split(Rect victim, const Rect& cut, D extraData) {
 
         victim.bottom(cut.bottom());
 
-        clips.push_back({clip, extraData});
+        if (clip.height > 0) {
+            clips.push_back({clip, extraData...});
+        }
     }
 
     return clips;
@@ -67,19 +75,16 @@ std::list<T> Split(Rect victim, const Rect& cut, D extraData) {
 struct WindowClipRect {
     Rect rect;
     class WMWindow* win;
+    bool invalid = true;
 
-    std::list<WindowClipRect> Split(const Rect& cut) {
-        return ::Split<WindowClipRect, WMWindow*>(rect, cut, win);
-    }
+    std::list<WindowClipRect> Split(const Rect& cut) { return ::Split<WindowClipRect>(rect, cut, win, true); }
 };
 
 struct BackgroundClipRect {
     Rect rect;
     bool invalid = true;
 
-    std::list<BackgroundClipRect> Split(const Rect& cut) {
-        return ::Split<BackgroundClipRect, bool>(rect, cut, true);
-    }
+    std::list<BackgroundClipRect> Split(const Rect& cut) { return ::Split<BackgroundClipRect, bool>(rect, cut, true); }
 };
 
 class Compositor {
@@ -88,9 +93,9 @@ public:
 
     void Render();
 
-    inline Vector2i GetScreenBounds() const { return { m_renderSurface.width, m_renderSurface.height }; }
+    inline Vector2i GetScreenBounds() const { return {m_renderSurface.width, m_renderSurface.height}; }
 
-    inline void InvalidateAll() { m_invalidateAll = true; }
+    void InvalidateAll();
     void Invalidate(const Rect& rect);
     void InvalidateWindow(class WMWindow* window);
 
@@ -101,6 +106,13 @@ private:
     void RecalculateBackgroundClipping();
 
     bool m_invalidateAll = true;
+    bool m_displayFramerate = true;
+
+    // Used for framerate counter
+    timespec m_lastRender;
+    int m_avgFrametime = 0;
+    int m_fCount = 0;
+    int m_fRate = 0;
 
     Surface m_renderSurface;  // Backbuffer to render to
     Surface m_displaySurface; // Display mapped surface
@@ -108,7 +120,9 @@ private:
     Surface m_wallpaper = {}; // Wallpaper surface
     std::thread m_wallpaperThread;
     std::atomic<int> m_wallpaperStatus = 0;
+    std::mutex m_renderMutex; // Currently only use for the wallpaper
 
     std::list<BackgroundClipRect> m_backgroundRects;
     std::list<WindowClipRect> m_windowClipRects;
+    std::list<WindowClipRect> m_windowDecorationClipRects;
 };

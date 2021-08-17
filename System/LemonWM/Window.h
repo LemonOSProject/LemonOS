@@ -34,6 +34,7 @@ public:
     WMWindow(const Handle& endpoint, int64_t id, const std::string& title, const Vector2i& pos, const Vector2i& size,
              int flags);
 
+    void DrawDecorationClip(const Rect& clip, Surface* surface);
     void DrawClip(const Rect& clip, Surface* surface);
 
     inline int64_t GetID() const { return m_id; }
@@ -65,6 +66,13 @@ public:
     inline bool IsTransparent() const { return (m_flags & GUI::WindowFlag_Transparent); }
     inline bool IsMinimized() const { return m_minimized; }
     inline bool HideWhenInactive() const { return (m_flags & GUI::WindowFlag_AlwaysActive); }
+
+    // Get whether the window buffer is dirty and regardless clear it
+    inline bool IsDirtyAndClear() {
+        bool isDirty = m_buffer->dirty;
+        m_buffer->dirty = 0;
+        return isDirty;
+    }
 
     inline void SendEvent(const Lemon::LemonEvent& event) {
         LemonWMClientEndpoint::SendEvent(m_id, event.event, event.data);
