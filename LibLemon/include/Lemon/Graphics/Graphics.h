@@ -254,19 +254,28 @@ inline void DrawRoundedRect(rect_t rect, const RGBAColour& colour, int topleftRa
                     bottomRightRadius, bottomLeftRadius, surface, mask);
 }
 
-void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset = {0, 0});
-void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion);
-void surfacecpyTransparent(surface_t* dest, const surface_t* src, vector2i_t offset = {0, 0});
-void surfacecpyTransparent(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion);
+inline void surfacecpy(surface_t* dest, const surface_t* src) {
+    dest->Blit(src);
+}
+inline void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset) {
+    dest->Blit(src, offset);
+}
+inline void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion){
+    dest->Blit(src, offset, srcRegion);
+}
+
+inline void surfacecpyTransparent(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion = {0, 0, INT_MAX, INT_MAX}) {
+    dest->AlphaBlit(src, offset, srcRegion);
+}
 
 inline void Blit(Surface* dest, const Surface* src) {
-    surfacecpy(dest, src);
+    dest->Blit(src);
 }
 inline void Blit(Surface* dest, const Surface* src, vector2i_t offset) {
-    surfacecpy(dest, src, offset);
+    dest->Blit(src, offset);
 }
 inline void Blit(Surface* dest, const Surface* src, vector2i_t offset, rect_t region) {
-    surfacecpy(dest, src, offset, region);
+    dest->Blit(src, offset, region);
 }
 
 void BlitRounded(Surface* dest, const Surface* src, vector2i_t offset, int radius);
