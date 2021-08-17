@@ -81,7 +81,8 @@ void KernelProcess() {
 
     fs::VolumeManager::MountSystemVolume();
 
-    if (FsNode* node = fs::ResolvePath("/system/lemon")) {
+    // TODO: Move this to userspace
+    if (FsNode* node = fs::ResolvePath("/system/etc")) {
         fs::VolumeManager::RegisterVolume(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
     }
 
