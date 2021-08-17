@@ -43,6 +43,12 @@ private:
         return m_nextWindowID++;
     }
 
+    void DestroyWindow(WMWindow* win);
+
+    void BroadcastWindowState(WMWindow* win);
+    void BroadcastCreatedWindow(WMWindow* win);
+    void BroadcastDestroyedWindow(WMWindow* win);
+
     void OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title) override;
     void OnDestroyWindow(const Lemon::Handle& client, int64_t windowID) override;
     void OnSetTitle(const Lemon::Handle& client, int64_t windowID, const std::string& title) override;
@@ -73,4 +79,6 @@ private:
     // The last window the mouse was over
     WMWindow* m_lastMousedOver = nullptr;
     std::list<WMWindow*> m_windows;
+
+    std::list<std::unique_ptr<LemonWMClientEndpoint>> m_wmEventSubscribers;
 };

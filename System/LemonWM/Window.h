@@ -38,6 +38,8 @@ public:
     void DrawClip(const Rect& clip, Surface* surface);
 
     inline int64_t GetID() const { return m_id; }
+    inline int GetFlags() const { return m_flags; }
+    inline const std::string& GetTitle() const { return m_title; }
 
     inline const Rect& GetRect() const { return m_rect; }
     inline const Vector2i& GetPosition() const { return m_rect.pos; }
@@ -66,6 +68,7 @@ public:
     inline bool IsTransparent() const { return (m_flags & GUI::WindowFlag_Transparent); }
     inline bool IsMinimized() const { return m_minimized; }
     inline bool HideWhenInactive() const { return (m_flags & GUI::WindowFlag_AlwaysActive); }
+    inline bool NoShellEvents() const { return (m_flags & GUI::WindowFlag_NoShell); }
 
     // Get whether the window buffer is dirty and regardless clear it
     inline bool IsDirtyAndClear() {

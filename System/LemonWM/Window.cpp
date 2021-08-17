@@ -91,6 +91,8 @@ void WMWindow::Minimize(bool minimized) {
         if(WM::Instance().ActiveWindow() == this){
             WM::Instance().SetActiveWindow(nullptr);
         }
+
+        SendEvent({.event = EventWindowMinimized});
     } else {
         WM::Instance().SetActiveWindow(this); // When the window is being shown again set it as active
     }
