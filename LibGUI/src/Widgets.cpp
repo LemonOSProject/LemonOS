@@ -1350,9 +1350,13 @@ int GridView::AddItem(GridItem& item) {
 void GridView::UpdateFixedBounds() {
     Widget::UpdateFixedBounds();
 
+    if(fixedBounds.width <= 0){
+        return;
+    }
+
     assert(itemSize.x);
 
-    itemsPerRow = fixedBounds.width / itemSize.x;
+    itemsPerRow = std::max(1, fixedBounds.width / itemSize.x);
 
     ResetScrollBar();
 }
