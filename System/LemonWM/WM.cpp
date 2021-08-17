@@ -47,7 +47,7 @@ void WM::OnMouseDown(bool isRightButton) {
 
             const Rect& ctRect = win->GetContentRect(); // Actual window content
             if((m_resizePoint = win->GetResizePoint(m_input.mouse.pos))){
-                
+
             } else if (win->ShouldDrawDecoration()) {
                 if (ctRect.Contains(m_input.mouse.pos)) {
                     LemonEvent ev;
@@ -105,6 +105,8 @@ void WM::OnMouseMove() {
     } else if(m_resizePoint != ResizePoint_None){
         assert(m_activeWindow);
 
+        m_compositor.SetResizeCursor();
+
         Rect newRect = m_activeWindow->GetRect();
         if(m_resizePoint & ResizePoint_Top){
             newRect.top(m_input.mouse.pos.y);
@@ -118,7 +120,10 @@ void WM::OnMouseMove() {
         }
 
         m_activeWindow->SendEvent({.event = EventWindowResize, .resizeBounds = m_activeWindow->NewWindowSizeFromRect(newRect)});
+        return;
     }
+
+    m_compositor.SetNormalCursor();
 
     WMWindow* mousedOver = nullptr;
     for (auto it = m_windows.rbegin(); it != m_windows.rend(); ++it) {
@@ -131,6 +136,8 @@ void WM::OnMouseMove() {
 
             win->SendEvent(ev);
             break;
+        } else if(win->GetResizePoint(m_input.mouse.pos)){
+            m_compositor.SetResizeCursor();
         }
     }
 

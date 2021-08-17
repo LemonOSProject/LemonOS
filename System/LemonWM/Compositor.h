@@ -101,12 +101,19 @@ public:
 
     void SetWallpaper(const std::string& path);
 
+    inline void SetNormalCursor() { m_cursorCurrent = &m_cursorNormal; }
+    inline void SetResizeCursor() { m_cursorCurrent = &m_cursorResize; }
+
 private:
     void RecalculateWindowClipping();
     void RecalculateBackgroundClipping();
 
     bool m_invalidateAll = true;
     bool m_displayFramerate = false;
+
+    Surface m_cursorNormal; // Normal mouse cursor
+    Surface m_cursorResize; // Window resize mouse cursor
+    Surface* m_cursorCurrent = &m_cursorNormal; // Current mouse cursor
 
     // Used to invalidate cursor position
     Rect m_lastMouseRect;

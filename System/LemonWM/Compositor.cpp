@@ -11,6 +11,15 @@ Compositor::Compositor(const Surface& displaySurface) : m_displaySurface(display
     // Create a backbuffer surface for rendering
     m_renderSurface = displaySurface;
     m_renderSurface.buffer = new uint8_t[m_displaySurface.width * m_displaySurface.height * 4];
+
+    if (Graphics::LoadImage("/system/lemon/resources/cursors/mouse.png", &m_cursorNormal)) {
+        Logger::Debug("Error loading mouse cursor image!");
+    }
+
+    if (Graphics::LoadImage("/system/lemon/resources/cursors/resize.png", &m_cursorResize)) {
+        Logger::Debug("Error loading resize cursor image!");
+        m_cursorResize = m_cursorNormal;
+    }
 }
 
 void Compositor::Render() {
@@ -41,9 +50,10 @@ void Compositor::Render() {
     m_renderMutex.lock();
 
     Vector2i mousePos = WM::Instance().Input().mouse.pos;
-    if(m_lastMouseRect.pos != mousePos){
+    Rect mouseRect = {mousePos, {m_cursorCurrent->width, m_cursorCurrent->height}};
+    if (m_lastMouseRect.pos != mousePos || m_lastMouseRect.size != mouseRect.size) {
         Invalidate(m_lastMouseRect);
-        m_lastMouseRect = {mousePos, {4, 4}};
+        m_lastMouseRect = mouseRect;
     }
 
     if (m_invalidateAll) {
@@ -129,9 +139,9 @@ void Compositor::Render() {
         rect.invalid = false;
     }
 
-    Lemon::Graphics::DrawRect({mousePos, {5, 5}}, {0, 255, 0, 255}, &m_renderSurface);
+    m_renderSurface.AlphaBlit(m_cursorCurrent, mousePos);
 
-    if(m_displayFramerate){
+    if (m_displayFramerate) {
         Lemon::Graphics::DrawRect(0, 0, 80, 18, 0, 0, 0, &m_renderSurface);
         Lemon::Graphics::DrawString(std::to_string(m_fRate).c_str(), 0, 0, 255, 255, 255, &m_renderSurface);
     }
@@ -141,8 +151,6 @@ void Compositor::Render() {
     m_invalidateAll = false;
 
     m_renderMutex.unlock();
-
-    Invalidate({mousePos, {5, 5}});
 }
 
 void Compositor::InvalidateAll() { m_invalidateAll = true; }
@@ -152,7 +160,7 @@ void Compositor::Invalidate(const Rect& rect) {
         return;
     }
 
-    auto invalidateDecorationRect = [this](WindowClipRect& dRect, const Rect& rect){
+    auto invalidateDecorationRect = [this](WindowClipRect& dRect, const Rect& rect) {
         if (dRect.invalid) {
             return;
         }

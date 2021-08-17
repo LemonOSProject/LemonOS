@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include <Lemon/Graphics/Rect.h>
 #include <Lemon/Graphics/Vector.h>
 
 typedef struct Surface {
@@ -13,5 +14,5 @@ typedef struct Surface {
     void Blit(const Surface* src);
     void Blit(const Surface* src, const Vector2i& offset);
     void Blit(const Surface* src, const Vector2i& offset, const struct Rect& region);
-    void AlphaBlit(const Surface* src, const Vector2i& offset, const Rect& region);
+    void AlphaBlit(const Surface* src, const Vector2i& offset, const Rect& region = {0, 0, INT_MAX, INT_MAX});
 } surface_t;
