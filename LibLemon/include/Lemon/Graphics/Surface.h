@@ -13,4 +13,5 @@ typedef struct Surface {
     void Blit(const Surface* src);
     void Blit(const Surface* src, const Vector2i& offset);
     void Blit(const Surface* src, const Vector2i& offset, const struct Rect& region);
+    void AlphaBlit(const Surface* src, const Vector2i& offset, const Rect& region);
 } surface_t;

@@ -103,6 +103,10 @@ typedef struct Rect {
         return (left() < other.right() && right() > other.left() && top() < other.bottom() && bottom() > other.top());
     }
 
+    inline bool Contains(const Rect& other) const {
+        return (left() < other.right() && left() < other.left() && right() > other.left() && right() > other.right() && top() < other.bottom() && top() < other.top() && bottom() > other.top() && bottom() > other.bottom());
+    }
+
     inline bool Contains(const Vector2i& other) const {
         return (other.x >= x && other.x < right() && other.y >= y && other.y < bottom());
     }
