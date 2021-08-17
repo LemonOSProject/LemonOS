@@ -40,6 +40,12 @@ void Compositor::Render() {
 
     m_renderMutex.lock();
 
+    Vector2i mousePos = WM::Instance().Input().mouse.pos;
+    if(m_lastMouseRect.pos != mousePos){
+        Invalidate(m_lastMouseRect);
+        m_lastMouseRect = {mousePos, {4, 4}};
+    }
+
     if (m_invalidateAll) {
         RecalculateWindowClipping();
         RecalculateBackgroundClipping();
@@ -123,7 +129,6 @@ void Compositor::Render() {
         rect.invalid = false;
     }
 
-    Vector2i mousePos = WM::Instance().m_input.mouse.pos;
     Lemon::Graphics::DrawRect({mousePos, {5, 5}}, {0, 255, 0, 255}, &m_renderSurface);
 
     Lemon::Graphics::DrawRect(0, 0, 80, 18, 0, 0, 0, &m_renderSurface);
@@ -145,29 +150,9 @@ void Compositor::Invalidate(const Rect& rect) {
         return;
     }
 
-    for (auto& bgRect : m_backgroundRects) {
-        if (bgRect.invalid) {
-            continue;
-        }
-
-        if (bgRect.rect.Intersects(rect)) {
-            bgRect.invalid = true; // Set bg rect as invalid
-        }
-    }
-
-    for (auto& wRect : m_windowClipRects) {
-        if (wRect.invalid) {
-            continue;
-        }
-
-        if (wRect.rect.Intersects(rect)) {
-            wRect.invalid = true;
-        }
-    }
-
-    for (auto& dRect : m_windowDecorationClipRects) {
+    auto invalidateDecorationRect = [this](WindowClipRect& dRect, const Rect& rect){
         if (dRect.invalid) {
-            continue;
+            return;
         }
 
         if (dRect.rect.Intersects(rect)) {
@@ -183,7 +168,50 @@ void Compositor::Invalidate(const Rect& rect) {
                     bgRect.invalid = true; // Set bg rect as invalid
                 }
             }
+
+            // Make sure any window clips are redrawn
+            for (auto& wRect : m_windowClipRects) {
+                if (wRect.invalid) {
+                    continue;
+                }
+
+                if (wRect.rect.Intersects(dRect.rect)) {
+                    wRect.invalid = true; // Set bg rect as invalid
+                }
+            }
         }
+    };
+
+    for (auto& bgRect : m_backgroundRects) {
+        if (bgRect.invalid) {
+            continue;
+        }
+
+        if (bgRect.rect.Intersects(rect)) {
+            bgRect.invalid = true; // Set bg rect as invalid
+        }
+
+        // If a decoration rect got clipped by a window,
+        // The background clip may extend beyond the clip
+        // To avoid drawing the background over the decorations
+        // Mark any intersecting window decorations as invalid
+        for (auto& dRect : m_windowDecorationClipRects) {
+            invalidateDecorationRect(dRect, bgRect.rect);
+        }
+    }
+
+    for (auto& wRect : m_windowClipRects) {
+        if (wRect.invalid) {
+            continue;
+        }
+
+        if (wRect.rect.Intersects(rect)) {
+            wRect.invalid = true;
+        }
+    }
+
+    for (auto& dRect : m_windowDecorationClipRects) {
+        invalidateDecorationRect(dRect, rect);
     }
 }
 

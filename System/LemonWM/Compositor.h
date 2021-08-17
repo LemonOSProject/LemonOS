@@ -106,7 +106,10 @@ private:
     void RecalculateBackgroundClipping();
 
     bool m_invalidateAll = true;
-    bool m_displayFramerate = true;
+    bool m_displayFramerate = false;
+
+    // Used to invalidate cursor position
+    Rect m_lastMouseRect;
 
     // Used for framerate counter
     timespec m_lastRender;
