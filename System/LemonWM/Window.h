@@ -5,7 +5,9 @@
 
 #include <string>
 
-#define RESIZE_HANDLE_SIZE 5
+#define RESIZE_HANDLE_SIZE 8
+#define MIN_WINDOW_RESIZE_WIDTH 50
+#define MIN_WINDOW_RESIZE_HEIGHT 50
 
 using namespace Lemon;
 
@@ -73,6 +75,10 @@ public:
     inline bool IsMinimized() const { return m_minimized; }
     inline bool HideWhenInactive() const { return (m_flags & GUI::WindowFlag_AlwaysActive); }
     inline bool NoShellEvents() const { return (m_flags & GUI::WindowFlag_NoShell); }
+
+    // Get new window size from a rect
+    // This will get the window content size accounting for the window decorations
+    Vector2i NewWindowSizeFromRect(const Rect& rect) const;
 
     // Get whether the window buffer is dirty and regardless clear it
     inline bool IsDirtyAndClear() {

@@ -35,12 +35,12 @@ void WMWindow::DrawDecorationClip(const Rect& clip, Surface* surface) {
         theme.titlebarColour, surface, clip);
 
     Rect closeButtonSourceRect = {0, 0, theme.windowButtons.width / 2, theme.windowButtons.height / 2};
-    if(m_closeRect.Contains(WM::Instance().Input().mouse.pos)){
+    if (m_closeRect.Contains(WM::Instance().Input().mouse.pos)) {
         // The mouse hover state window buttons are on next row of image file
         closeButtonSourceRect.y += theme.windowButtons.height / 2;
     }
 
-    if(clip.Contains(m_closeRect)){
+    if (clip.Contains(m_closeRect)) {
         surface->AlphaBlit(&theme.windowButtons, m_closeRect.pos, closeButtonSourceRect);
     }
 }
@@ -52,6 +52,34 @@ void WMWindow::DrawClip(const Rect& clip, Surface* surface) {
     clipCopy.pos -= m_contentRect.pos;
 
     surface->Blit(&m_windowSurface, clip.pos, clipCopy);
+}
+
+int WMWindow::GetResizePoint(Vector2i absolutePosition) const {
+    int point = ResizePoint_None;
+
+    if (m_borderRects[0].Contains(absolutePosition)) {
+        point |= ResizePoint_Top;
+    } else if (m_borderRects[2].Contains(absolutePosition)) {
+        point |= ResizePoint_Bottom;
+    }
+
+    if (m_borderRects[1].Contains(absolutePosition)) {
+        point |= ResizePoint_Right;
+    } else if (m_borderRects[3].Contains(absolutePosition)) {
+        point |= ResizePoint_Left;
+    }
+
+    return point;
+}
+
+Vector2i WMWindow::NewWindowSizeFromRect(const Rect& rect) const {
+    Vector2i newSize = rect.size;
+    if(ShouldDrawDecoration()){
+        newSize.x = std::max(newSize.x - theme.borderWidth * 2, MIN_WINDOW_RESIZE_WIDTH);
+        newSize.y = std::max(newSize.y - theme.borderWidth * 2 - theme.titlebarHeight, MIN_WINDOW_RESIZE_HEIGHT);
+    }
+
+    return newSize;
 }
 
 void WMWindow::Relocate(int x, int y) {
@@ -70,6 +98,7 @@ void WMWindow::Resize(int width, int height) {
 
     CreateWindowBuffer();
     Queue(Lemon::Message(LemonWMServer::ResponseResize, LemonWMServer::ResizeResponse{m_bufferKey}));
+    UpdateWindowRects();
 
     WM::Instance().Compositor().InvalidateAll(); // Window size changed, recaclulate clipping
 }
@@ -115,7 +144,7 @@ void WMWindow::Minimize(bool minimized) {
 
 void WMWindow::UpdateWindowRects() {
     if (ShouldDrawDecoration()) {
-        m_contentRect.top(m_rect.top() + theme.titlebarHeight + theme.borderWidth);
+        m_contentRect.y = m_rect.top() + theme.titlebarHeight + theme.borderWidth;
         m_contentRect.x = m_rect.x + theme.borderWidth;
         m_contentRect.size = m_size;
 
@@ -130,7 +159,9 @@ void WMWindow::UpdateWindowRects() {
                             RESIZE_HANDLE_SIZE};
         m_borderRects[3] = {m_rect.pos, RESIZE_HANDLE_SIZE, m_rect.size.y}; // Left
 
-        m_closeRect = {m_rect.x + m_rect.width - 2 - theme.windowButtons.width / 2, m_rect.y + theme.titlebarHeight / 2 - theme.windowButtons.height / 4, theme.windowButtons.width / 2, theme.windowButtons.height / 2};
+        m_closeRect = {m_rect.x + m_rect.width - 2 - theme.windowButtons.width / 2,
+                       m_rect.y + theme.titlebarHeight / 2 - theme.windowButtons.height / 4,
+                       theme.windowButtons.width / 2, theme.windowButtons.height / 2};
     } else {
         m_contentRect = m_rect;
     }
@@ -140,6 +171,9 @@ void WMWindow::CreateWindowBuffer() {
     // Size of each buffer for the window
     // Aligned to 32 bytes
     unsigned bufferSize = (m_size.x * m_size.y * 4 + 0x1F) & (~0x1FULL);
+    if(m_bufferKey){
+        Lemon::UnmapSharedMemory(m_buffer, m_bufferKey);
+    }
 
     m_bufferKey = Lemon::CreateSharedMemory(((sizeof(GUI::WindowBuffer) + 0x1F) & (~0x1FULL)) + bufferSize * 2,
                                             SMEM_FLAGS_SHARED);

@@ -33,7 +33,7 @@ public:
     void SetActiveWindow(WMWindow* win);
 
     void BroadcastWindowState(WMWindow* win);
-    
+
 private:
     static WM* m_instance;
 
@@ -70,7 +70,8 @@ private:
     class Compositor m_compositor;
     InputManager m_input;
 
-    bool m_resizingWindow = false; // Resizing active window?
+    int m_resizePoint = ResizePoint::ResizePoint_None;
+
     bool m_draggingWindow = false; // Dragging active window?
     Vector2i m_dragOffset = {0, 0}; // Offset of window being dragged
 
