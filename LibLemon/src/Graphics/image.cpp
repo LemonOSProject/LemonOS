@@ -174,7 +174,7 @@ int LoadPNGImage(FILE* f, surface_t* surface) {
         png_set_palette_to_rgb(png);
 
     if (png_get_color_type(png, info) == PNG_COLOR_TYPE_RGB)
-        png_set_filler(png, 0xff, PNG_FILLER_BEFORE);
+        png_set_filler(png, 0xff, PNG_FILLER_AFTER);
 
     png_set_bgr(png);
 
