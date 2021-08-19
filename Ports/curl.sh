@@ -11,7 +11,8 @@ buildp(){
     unset PKG_CONFIG # curl fails when pkg-config is set
 
  	patch -p1 < ../lemon-curl-7.77.0.patch
- 	curl_disallow_getpeername=yes curl_disallow_getsockname=yes ./configure --host=x86_64-lemon --prefix=/system --with-openssl --disable-ipv6
+ 	# TODO: Network stack isnt the most stable
+ 	curl_disallow_alarm=yes curl_disallow_getpeername=yes curl_disallow_getsockname=yes ./configure --host=x86_64-lemon --prefix=/system --with-openssl --disable-ipv6 --disable-unix-sockets --disable-pthreads --disable-threaded-resolver
 
  	make -j$JOBCOUNT
  	make install DESTDIR=$LEMON_SYSROOT
