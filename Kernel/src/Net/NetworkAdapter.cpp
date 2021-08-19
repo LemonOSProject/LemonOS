@@ -96,6 +96,10 @@ namespace Network {
                 return -EPROTONOSUPPORT; // Not IPv4 address
             }
             namedAdapter->gatewayIP.value = addr->sin_addr.s_addr;
+
+            // Add the gateway to the ARP cache
+            MACAddress mac;
+            IPLookup(namedAdapter, namedAdapter->gatewayIP, mac);
             return 0;
         } else if(cmd >= SIOCGIFNAME && cmd <= SIOCGIFCOUNT){
             ifreq* req = reinterpret_cast<ifreq*>(arg);

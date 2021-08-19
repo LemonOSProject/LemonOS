@@ -17,6 +17,7 @@ namespace Network{
 	extern Vector<NetworkAdapter*> adapters;
 
 	Semaphore packetQueueSemaphore(0);
+	FancyRefPtr<Process> netProcess;
 
 	void OnReceiveARP(void* data, size_t length){
 		if(length < sizeof(ARPHeader)){
@@ -140,9 +141,11 @@ namespace Network{
 					adapter->CachePacket(p); // Get the packet back to the NIC driver's cache as soon as possible
 
 					EthernetFrame* etherFrame = reinterpret_cast<EthernetFrame*>(buffer);
+					Log::Warning("[Network] Receiving packet (EtherType %x)", etherFrame->etherType);
 
-					if(etherFrame->dest != adapter->mac){
-						//Log::Warning("[Network] Discarding packet (invalid MAC address %x:%x:%x:%x:%x:%x)", etherFrame->dest[0], etherFrame->dest[1], etherFrame->dest[2], etherFrame->dest[3], etherFrame->dest[4], etherFrame->dest[5]);
+					if(etherFrame->dest != adapter->mac && etherFrame->dest != MACAddress{0xff, 0xff, 0xff, 0xff, 0xff, 0xff}){
+						Log::Warning("[Network] Discarding packet (invalid MAC address %x:%x:%x:%x:%x:%x)", etherFrame->dest[0], etherFrame->dest[1], etherFrame->dest[2], etherFrame->dest[3], etherFrame->dest[4], etherFrame->dest[5]);
+						continue;
 					}
 					
 					switch ((uint16_t)etherFrame->etherType)
@@ -163,7 +166,8 @@ namespace Network{
 	}
 
 	void InitializeNetworkThread(){
-		Process::CreateKernelProcess((void*)InterfaceThread, "NetworkStack", nullptr);
+		netProcess = Process::CreateKernelProcess((void*)InterfaceThread, "NetworkStack", nullptr);
+		netProcess->Start();
 	}
 
 	void Send(void* data, size_t length, NetworkAdapter* adapter){

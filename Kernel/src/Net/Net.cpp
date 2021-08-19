@@ -47,20 +47,23 @@ namespace Network {
 
         Network::Send(buffer, sizeof(EthernetFrame) + sizeof(ARPHeader), adapter);
 
-        int timer = 1000;
-        while(!addressCache.find(ip.value) && timer > 0){
-            timer--;
-            Timer::Wait(1);
+        assert(CheckInterrupts());
+
+        auto t1 = Timer::GetSystemUptimeStruct();
+        int status = 0;
+        while(!(status = addressCache.find(ip.value)) && Timer::TimeDifference(Timer::GetSystemUptimeStruct(), t1) < 2000000){
+            Scheduler::Yield();
         }
 
-        if(timer <= 0){
+        if(status <= 0){
             IF_DEBUG((debugLevelNetwork >= DebugLevelNormal), {
                 Log::Warning("[Network] [ARP] Timed out waiting for ARP reply.");
             });
             return -EADDRNOTAVAIL;
         }
 
-        addressCache.get(ip.value, mac);
+        status = addressCache.get(ip.value, mac);
+        assert(status > 0);
 
         return 0;
     }
@@ -68,6 +71,8 @@ namespace Network {
     int Route(const IPv4Address& local, const IPv4Address& dest, MACAddress& mac, NetworkAdapter*& adapter){
         bool isLocalDestination = false;
         IPv4Address localDestination;
+
+        Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] Route: Attempting to find route from %s to %s", to_string(local).c_str(), to_string(dest).c_str());
 
         if(adapter){
             if(local.value != INADDR_ANY && local.value != adapter->adapterIP.value){ // If the socket address is not 0 then make sure it aligns with the adapter
@@ -115,6 +120,7 @@ namespace Network {
                 return status; // Error obtaining MAC address for IP
             }
         }
+        
         return 0;
     }
 

@@ -8,9 +8,11 @@
 
 namespace Network::UDP{
     HashMap<uint16_t, UDPSocket*> sockets = HashMap<uint16_t, UDPSocket*>(256); // 256 buuckets is enough
+    lock_t socketsLock = 0;
     uint16_t nextEphemeralPort = EPHEMERAL_PORT_RANGE_START;
 
     Socket* FindSocket(BigEndian<uint16_t> port){
+        ScopedSpinLock lockSockets(socketsLock);
         UDPSocket* sock = nullptr;
             
         if(!sockets.get(port.value, sock)){
@@ -20,7 +22,7 @@ namespace Network::UDP{
         return sock;
     }
 
-    int AcquirePort(UDPSocket* sock, unsigned int port){
+    int AcquirePortUnlocked(UDPSocket* sock, unsigned int port){
         if(!port || port > PORT_MAX){
             Log::Warning("[Network] AcquirePort: Invalid port: %d", port);
             return -EINVAL;
@@ -36,17 +38,23 @@ namespace Network::UDP{
         return 0;
     }
 
+    int AcquirePort(UDPSocket* sock, unsigned int port){
+        ScopedSpinLock lockSockets(socketsLock);
+        return AcquirePortUnlocked(sock, port);
+    }
+
     unsigned short AllocatePort(UDPSocket* sock){
         unsigned short port = EPHEMERAL_PORT_RANGE_START;
+        ScopedSpinLock lockSockets(socketsLock);
 
         if(nextEphemeralPort < PORT_MAX){
             port = nextEphemeralPort++;
             
-            if(AcquirePort(sock, port)){
+            if(AcquirePortUnlocked(sock, port)){
                 port = 0;
             }
         } else {
-            while(port < EPHEMERAL_PORT_RANGE_END && AcquirePort(sock, port)) port++;
+            while(port < EPHEMERAL_PORT_RANGE_END && AcquirePortUnlocked(sock, port)) port++;
         }
 
         if(port > EPHEMERAL_PORT_RANGE_END || port <= 0){
@@ -59,6 +67,7 @@ namespace Network::UDP{
 
     int ReleasePort(unsigned short port){
         assert(port <= PORT_MAX);
+        ScopedSpinLock lockSockets(socketsLock);
 
         sockets.remove(port);
 
@@ -248,6 +257,7 @@ namespace Network::UDP{
         if(!adapter){
             MACAddress mac;
             NetworkAdapter* adapter = nullptr;
+            
             if(int e = Route(INADDR_ANY, sendIPAddress, mac, adapter)){
                 return e;
             }
