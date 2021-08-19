@@ -293,3 +293,6 @@ ALWAYS_INLINE String to_string(unsigned num, int base = 10){
 
     return String(buf + i);
 }
+
+String to_string(const struct IPv4Address& addr);
+String to_string(const struct MACAddress& addr);

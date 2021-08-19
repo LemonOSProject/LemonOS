@@ -298,6 +298,7 @@ public:
             fd->node->Unwatch(*this);
 
             fd->node->Close();
+            delete fd;
         }
     }
 };

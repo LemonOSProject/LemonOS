@@ -392,8 +392,6 @@ void Process::Die() {
 
             if (thread->parent == this) {
                 other->runQueue->remove(thread);
-
-                delete thread;
             }
         }
 

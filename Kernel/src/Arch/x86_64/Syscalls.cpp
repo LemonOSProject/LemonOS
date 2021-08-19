@@ -1858,7 +1858,7 @@ long SysSendMsg(RegisterContext* r) {
             Log::Warning("SysSendMsg: msg: Invalid iovec entry base");
             return -EFAULT;
         }
-
+        
         long ret = sock->SendTo(msg->msg_iov[i].iov_base, msg->msg_iov[i].iov_len, flags, (sockaddr*)msg->msg_name,
                                 msg->msg_namelen, msg->msg_control, msg->msg_controllen);
 
@@ -3404,6 +3404,7 @@ long SysSignalAction(RegisterContext* r) {
     case SIGINT:
     case SIGALRM:
     case SIGCHLD:
+    case SIGPIPE:
     case SIGUSR1:
     case SIGUSR2:
         break;

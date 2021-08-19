@@ -223,7 +223,7 @@ public:
     }
     ALWAYS_INLINE Handle FindHandle(handle_id_t id) {
         ScopedSpinLock lockFds(m_handleLock);
-        if (id > m_handles.size()) {
+        if (id < 1 || id > m_handles.size()) {
             return {0, nullptr}; // No such handle
         }
 

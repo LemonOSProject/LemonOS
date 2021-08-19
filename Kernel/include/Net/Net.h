@@ -126,6 +126,12 @@ typedef struct MACAddress {
         
         return data[pos];
     }
+
+    uint8_t operator[](unsigned pos) const{
+        assert(pos < 6);
+        
+        return data[pos];
+    }
 } __attribute__((packed)) mac_address_t;
 
 struct EthernetFrame {

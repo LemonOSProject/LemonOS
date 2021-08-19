@@ -31,6 +31,7 @@ ssize_t UNIXPipe::Write(size_t off, size_t size, uint8_t* buffer){
     if(end != WriteEnd){
         return -ESPIPE;
     } else if(widowed){
+        Scheduler::GetCurrentThread()->Signal(SIGPIPE); // Send SIGPIPE on broken pipe
         return -EPIPE;
     }
 

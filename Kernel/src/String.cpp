@@ -4,6 +4,8 @@
 #include <Paging.h>
 #include <stdint.h>
 
+#include <Net/Net.h>
+
 int HexStringToPointer(const char* buffer, size_t bufferSize, uintptr_t& pointerValue) {
     size_t n = 0;
 
@@ -259,4 +261,14 @@ char* strdup(const char* s) {
     strcpy(buf, s);
 
     return buf;
+}
+
+String to_string(const struct IPv4Address& addr) {
+    return (to_string(addr.data[0]) + "." + to_string(addr.data[1]) + "." + to_string(addr.data[2]) + "." +
+            to_string(addr.data[3]));
+}
+
+String to_string(const struct MACAddress& addr) {
+    return (to_string(addr.data[0], 16) + ":" + to_string(addr.data[1], 16) + ":" + to_string(addr.data[2], 16) + ":" +
+            to_string(addr.data[3], 16) + ":" + to_string(addr.data[4], 16) + ":" + to_string(addr.data[5], 16));
 }
