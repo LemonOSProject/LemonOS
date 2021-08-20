@@ -1,5 +1,6 @@
 #include "WM.h"
 
+#include <Lemon/Core/ConfigManager.h>
 #include <Lemon/Core/Framebuffer.h>
 #include <Lemon/Core/Logger.h>
 #include <Lemon/System/Spawn.h>
@@ -10,9 +11,17 @@ int main() {
 
     Lemon::Logger::Debug("Initializing LemonWM...");
 
+    ConfigManager config;
+    config.AddConfigProperty<std::string>("backgroundImage", "/system/lemon/resources/backgrounds/bg7.png");
+    config.AddConfigProperty<std::string>("theme", "/system/lemon/themes/default.json");
+    config.AddConfigProperty<bool>("displayFramerate", false);
+
+    config.LoadJSONConfig("/system/lemon/lemonwm.json");
+
     WM wm(displaySurface);
 
-    lemon_spawn("/system/bin/terminal.lef", 1, (char * const[]){"terminal.lef"});
+    wm.Compositor().SetWallpaper(config.GetConfigProperty<std::string>("backgroundImage"));
+    wm.Compositor().SetShouldDisplayFramerate(config.GetConfigProperty<bool>("displayFramerate"));
 
     wm.Run();
     return 0;

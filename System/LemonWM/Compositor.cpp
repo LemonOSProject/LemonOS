@@ -10,7 +10,12 @@ using namespace Lemon;
 Compositor::Compositor(const Surface& displaySurface) : m_displaySurface(displaySurface) {
     // Create a backbuffer surface for rendering
     m_renderSurface = displaySurface;
+    m_wallpaper = displaySurface;
     m_renderSurface.buffer = new uint8_t[m_displaySurface.width * m_displaySurface.height * 4];
+    m_wallpaper.buffer = new uint8_t[m_displaySurface.width * m_displaySurface.height * 4];
+
+    // Fallback background colour if wallpaper does not load
+    Graphics::DrawRect(0, 0, m_wallpaper.width, m_wallpaper.height, {64, 128, 128, 255}, &m_wallpaper);
 
     if (Graphics::LoadImage("/system/lemon/resources/cursors/mouse.png", &m_cursorNormal)) {
         Logger::Debug("Error loading mouse cursor image!");
@@ -230,6 +235,8 @@ void Compositor::InvalidateWindow(class WMWindow* window) { m_invalidateAll = tr
 void Compositor::SetWallpaper(const std::string& path) {
     m_wallpaperStatus = 0;
     std::thread wallpaperThread([this, path]() -> void {
+        std::unique_lock lock(m_wallpaperMutex);
+
         if (Graphics::LoadImage(path.c_str(), 0, 0, m_displaySurface.width, m_displaySurface.height, &m_wallpaper,
                                 true)) {
             Logger::Error("Failed to load wallpaper '", path, "'");

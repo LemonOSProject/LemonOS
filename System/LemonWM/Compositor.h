@@ -100,6 +100,7 @@ public:
     void InvalidateWindow(class WMWindow* window);
 
     void SetWallpaper(const std::string& path);
+    void SetShouldDisplayFramerate(bool value) { m_displayFramerate = value; }
 
     inline void SetNormalCursor() { m_cursorCurrent = &m_cursorNormal; }
     inline void SetResizeCursor() { m_cursorCurrent = &m_cursorResize; }
@@ -130,7 +131,8 @@ private:
     Surface m_wallpaper = {}; // Wallpaper surface
     std::thread m_wallpaperThread;
     std::atomic<int> m_wallpaperStatus = 0;
-    std::mutex m_renderMutex; // Currently only use for the wallpaper
+    std::mutex m_renderMutex; // Currently only used for the wallpaper for invalidation
+    std::mutex m_wallpaperMutex;
 
     std::list<BackgroundClipRect> m_backgroundRects;
     std::list<WindowClipRect> m_windowClipRects;

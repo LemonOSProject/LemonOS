@@ -14,8 +14,7 @@ WM::WM(const Surface& displaySurface)
     assert(m_instance == nullptr);
 
     m_instance = this;
-    m_compositor.SetWallpaper("/system/lemon/resources/backgrounds/bg5.png");
-
+    
     if(Graphics::LoadImage("/system/lemon/resources/winbuttons.png", &WMWindow::theme.windowButtons)){
         Logger::Error("Failed to load window buttons!");
     }
