@@ -305,6 +305,7 @@ void Process::Die() {
     List<FancyRefPtr<Thread>> runningThreads;
 
     for (auto& thread : m_threads) {
+        asm("cli");
         if (thread != cpu->currentThread && thread) {
             // TODO: Race condition?
             if (thread->blocker && thread->state == ThreadStateBlocked) {
@@ -313,7 +314,9 @@ void Process::Die() {
             thread->state = ThreadStateZombie;
 
             if (acquireTestLock(&thread->lock)) {
+                asm("sti");
                 runningThreads.add_back(thread); // Thread lock could not be acquired
+                asm("cli");
             } else {
                 thread->state =
                     ThreadStateBlocked; // We have acquired the lock so prevent the thread from getting scheduled
