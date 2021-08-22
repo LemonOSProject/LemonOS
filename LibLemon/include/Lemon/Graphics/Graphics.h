@@ -158,15 +158,32 @@ static inline int IdentifyImage(const void* data) {
     return type;
 }
 
-static inline uint32_t AlphaBlend(uint32_t oldColour, uint8_t r, uint8_t g, uint8_t b, double opacity) {
-    int oldB = oldColour & 0xFF;
-    int oldG = (oldColour >> 8) & 0xFF;
-    int oldR = (oldColour >> 16) & 0xFF;
-    uint32_t newColour = (int)(b * opacity + oldB * (1 - opacity)) |
-                         (((int)(g * opacity + oldG * (1 - opacity)) << 8)) |
-                         (((int)(r * opacity + oldR * (1 - opacity)) << 16));
+static inline uint32_t AlphaBlendInt(uint32_t dest, uint32_t src) {
+    uint16_t alpha = src >> 24;
+    uint16_t destAlpha = dest >> 24;
 
-    return newColour;
+    if(alpha == 0){
+        return dest;
+    } else if(alpha == 0xff || destAlpha == 0){
+        return  src;
+    }
+
+    // TODO: optimize out the divisions
+    // Unfortunately the red channel bleeds into the blue if we do not separate them
+    // Most of the fancy optimizations ive tried have resulted in severe inaccuraccies
+    uint16_t mulAlpha = alpha << 8;
+    uint16_t mulDestAlpha = (255 - alpha) * destAlpha;
+    uint32_t resultAlpha = mulAlpha + mulDestAlpha;
+
+    uint32_t r = ((dest & 0xff) * mulDestAlpha + mulAlpha * (src & 0xff)) / resultAlpha;
+    uint32_t g = (((dest >> 8) & 0xff) * mulDestAlpha + mulAlpha * ((src >> 8) & 0xff)) / resultAlpha;
+    uint32_t b = (((dest >> 16) & 0xff) * mulDestAlpha + mulAlpha * ((src >> 16) & 0xff)) / resultAlpha;
+
+    return ((resultAlpha >> 8 << 24) & 0xff000000) | (r & 0x000000ff) | ((g << 8) & 0x0000ff00) | ((b << 16) & 0x00ff0000);
+}
+
+static inline uint32_t AlphaBlendF(uint32_t oldColour, uint8_t r, uint8_t g, uint8_t b, double opacity) {
+    return AlphaBlendInt(oldColour, RGBAColour::ToARGB({r, g, b, static_cast<uint8_t>(opacity * 255)}));
 }
 
 // PointInRect (rect, point) - Check if a point lies inside a rectangle
