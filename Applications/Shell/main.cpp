@@ -38,7 +38,7 @@ char memString[128];
 class WindowButton : public Lemon::GUI::Button {
     ShellWindow* win;
 
-  public:
+public:
     WindowButton(ShellWindow* win, rect_t bounds) : Button(win->title.c_str(), bounds) {
         this->win = win;
         labelAlignment = Lemon::GUI::TextAlignment::Left;
@@ -46,8 +46,8 @@ class WindowButton : public Lemon::GUI::Button {
 
     void Paint(surface_t* surface) {
         this->label = win->title;
-        if(win->state == Lemon::WindowState_Active || pressed){
-                Lemon::Graphics::DrawRect(fixedBounds, Lemon::colours[Lemon::Colour::ForegroundDim], surface);
+        if (win->state == Lemon::WindowState_Active || pressed) {
+            Lemon::Graphics::DrawRect(fixedBounds, Lemon::colours[Lemon::Colour::ForegroundDim], surface);
         }
 
         DrawButtonLabel(surface, false);
@@ -56,7 +56,7 @@ class WindowButton : public Lemon::GUI::Button {
     void OnMouseUp(vector2i_t mousePos) {
         pressed = false;
 
-        if(win->lastState == Lemon::WindowState_Active){
+        if (win->lastState == Lemon::WindowState_Active) {
             window->Minimize(win->id, true);
         } else {
             window->Minimize(win->id, false);
@@ -74,14 +74,14 @@ Lemon::GUI::LayoutContainer* taskbarWindowsContainer;
 
 bool paintTaskbar = true;
 void OnAddWindow(int64_t windowID, uint32_t flags, const std::string& name) {
-    if(flags & WINDOW_FLAGS_NOSHELL){
+    if (flags & WINDOW_FLAGS_NOSHELL) {
         return;
     }
 
     ShellWindow* win = new ShellWindow(windowID, name, Lemon::WindowState_Active);
     WindowButton* btn = new WindowButton(win, {0, 0, 0, 0} /* The LayoutContainer will handle bounds for us*/);
-    
-    shellWindows[windowID] = { win, btn };
+
+    shellWindows[windowID] = {win, btn};
 
     taskbarWindowsContainer->AddWidget(btn);
     paintTaskbar = true;
@@ -89,7 +89,7 @@ void OnAddWindow(int64_t windowID, uint32_t flags, const std::string& name) {
 
 void OnRemoveWindow(int64_t windowID) {
     auto it = shellWindows.find(windowID);
-    if(it == shellWindows.end()){
+    if (it == shellWindows.end()) {
         return;
     }
 
@@ -101,13 +101,13 @@ void OnRemoveWindow(int64_t windowID) {
     paintTaskbar = true;
 }
 
-void OnWindowStateChanged(int64_t windowID, uint32_t flags, int32_t state){
+void OnWindowStateChanged(int64_t windowID, uint32_t flags, int32_t state) {
     auto it = shellWindows.find(windowID);
-    if(it == shellWindows.end()){
+    if (it == shellWindows.end()) {
         return;
     }
 
-    if(flags & WINDOW_FLAGS_NOSHELL){
+    if (flags & WINDOW_FLAGS_NOSHELL) {
         OnRemoveWindow(windowID);
         return;
     }
@@ -116,9 +116,9 @@ void OnWindowStateChanged(int64_t windowID, uint32_t flags, int32_t state){
     paintTaskbar = true;
 }
 
-void OnWindowTitleChanged(int64_t windowID, const std::string& name){
+void OnWindowTitleChanged(int64_t windowID, const std::string& name) {
     auto it = shellWindows.find(windowID);
-    if(it == shellWindows.end()){
+    if (it == shellWindows.end()) {
         return;
     }
 
@@ -126,21 +126,19 @@ void OnWindowTitleChanged(int64_t windowID, const std::string& name){
     paintTaskbar = true;
 }
 
-void OnTaskbarPaint(surface_t* surface) {
-    Lemon::Graphics::DrawGradientVertical(0, 0, surface->width, surface->height, {0x1d, 0x1c, 0x1b, 255},
-                                          {0x1b, 0x1b, 0x1b, 255}, surface);
+void OnTaskbarPaint(Surface* surface) {
+    memset(surface->buffer, 0, surface->BufferSize()); // Clear the buffer, important for alpha blending
+    Lemon::Graphics::DrawRoundedRect(2, 2, taskbar->GetSize().x - 4, taskbar->GetSize().y - 4, 0x22, 0x20, 0x22, 10, 10, 10, 10, surface);
 
     if (showMenu) {
-        Lemon::Graphics::surfacecpyTransparent(surface, &menuButton,
-                                               {18 - menuButton.width / 2, 18 - menuButton.height / 4},
-                                               {0, menuButton.height / 2, menuButton.width, 30});
+        surface->AlphaBlit(&menuButton, {22 - menuButton.width / 2, 17 - menuButton.height / 4},
+                           {0, menuButton.height / 2, menuButton.width, 30});
     } else {
-        Lemon::Graphics::surfacecpyTransparent(surface, &menuButton,
-                                               {18 - menuButton.width / 2, 18 - menuButton.height / 4},
-                                               {0, 0, menuButton.width, 30});
+        surface->AlphaBlit(&menuButton, {22 - menuButton.width / 2, 17 - menuButton.height / 4},
+                           {0, 0, menuButton.width, 30});
     }
 
-    sprintf(memString, "Used Memory: %lu/%lu KB", sysInfo.usedMem, sysInfo.totalMem);
+    sprintf(memString, "%.1f/%1.f MB", sysInfo.usedMem / 1024.0, sysInfo.totalMem / 1024.0);
     Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255,
                                 255, surface);
 }
@@ -160,14 +158,15 @@ int main() {
     handle_t tempEndpoint = 0;
     while (tempEndpoint <= 0) {
         tempEndpoint = Lemon::InterfaceConnect("lemon.lemonwm/Instance");
+        usleep(10000);
     } // Wait for LemonWM to create the interface (if not already created)
     Lemon::DestroyKObject(tempEndpoint);
 
-	vector2i_t screenBounds = Lemon::WindowServer::Instance()->GetScreenBounds();
+    vector2i_t screenBounds = Lemon::WindowServer::Instance()->GetScreenBounds();
 
     taskbar = new Lemon::GUI::Window("", {static_cast<int>(screenBounds.x), 36},
-                                     WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL, Lemon::GUI::WindowType::GUI,
-                                     {0, static_cast<int>(screenBounds.y) - 36});
+                                     WINDOW_FLAGS_NODECORATION | WINDOW_FLAGS_NOSHELL | WINDOW_FLAGS_TRANSPARENT,
+                                     Lemon::GUI::WindowType::GUI, {0, 0});
     taskbar->OnPaint = OnTaskbarPaint;
     taskbar->rootContainer.background = {0, 0, 0, 0};
     taskbarWindowsContainer = new Lemon::GUI::LayoutContainer(
