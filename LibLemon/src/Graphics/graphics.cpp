@@ -263,11 +263,11 @@ void DrawRoundedRect(int x, int y, int width, int height, uint8_t r, uint8_t g, 
     }
 
     if (bottomLeftRadius) {
-        DrawCircleQuadrant(x, y + height - bottomLeftRadius, r, g, b, bottomLeftRadius, 3, surface, mask);
+        DrawCircleQuadrant(x, y + height - bottomLeftRadius - 1, r, g, b, bottomLeftRadius, 3, surface, mask);
     }
 
     if (bottomRightRadius) {
-        DrawCircleQuadrant(x + width - bottomRightRadius, x + height - bottomRightRadius, r, g, b, bottomRightRadius, 4,
+        DrawCircleQuadrant(x + width - bottomRightRadius, y + height - bottomRightRadius - 1, r, g, b, bottomRightRadius, 4,
                            surface, mask);
     }
 
