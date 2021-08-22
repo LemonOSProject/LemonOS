@@ -78,8 +78,7 @@ int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surf
             if (font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] == 255)
                 buffer[yOffset + (j + x)] = colour_i;
             else if (font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] > 0) {
-                double val = font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] * 1.0 / 255;
-                buffer[yOffset + (j + x)] = AlphaBlend(buffer[yOffset + (j + x)], r, g, b, val);
+                buffer[yOffset + (j + x)] = AlphaBlendInt(buffer[yOffset + (j + x)], RGBAColour::ToARGB({r, g, b, font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j]}));
             }
         }
     }
@@ -186,8 +185,7 @@ int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, s
                 if (font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] == 255)
                     buffer[off] = colour_i;
                 else if (font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j]) {
-                    double val = font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] * 1.0 / 255;
-                    buffer[off] = AlphaBlend(buffer[off], r, g, b, val);
+                    buffer[off] = AlphaBlendInt(buffer[off], RGBAColour::ToARGB({r, g, b, font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j]}));
                 }
             }
         }

@@ -66,7 +66,7 @@ void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t
     }
 
     int _width = ((x + width) < surface->width) ? width : (surface->width - x);
-    uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
+    uint32_t colour_i = 0xFF000000 | (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) | b;
     uint32_t* buffer = (uint32_t*)surface->buffer; // Convert byte array into an array of 32-bit unsigned integers as
                                                    // the supported colour depth is 32 bit
     for (int i = 0; i < height && (i + y) < surface->height; i++) {
@@ -231,7 +231,7 @@ static void DrawCircleQuadrant(int x, int y, uint8_t r, uint8_t g, uint8_t b, in
                 }
 
                 uint32_t& pixel = reinterpret_cast<uint32_t*>(surface->buffer)[yOffset + xPos];
-                pixel = AlphaBlend(pixel, r, g, b, opacity);
+                pixel = AlphaBlendF(pixel, r, g, b, opacity);
             } else {
                 xPos = x + radius - j;
 
@@ -246,7 +246,7 @@ static void DrawCircleQuadrant(int x, int y, uint8_t r, uint8_t g, uint8_t b, in
                     break;
                 }
 
-                pixel = AlphaBlend(pixel, r, g, b, opacity);
+                pixel = AlphaBlendF(pixel, r, g, b, opacity);
             }
         }
     }
