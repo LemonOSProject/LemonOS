@@ -266,6 +266,22 @@ void UpdateWindowSize(){ // Update window size according to the map size
     window->Resize(mapSize);
 }
 
+bool OnWindowCommand(Lemon::LemonEvent& ev){
+    switch(ev.windowCmd){
+        case MenuEasy:
+            game.Generate(EasyDifficulty);
+            break;
+        case MenuMedium:
+            game.Generate(MediumDifficulty);
+            break;
+        case MenuHard:
+            game.Generate(HardDifficulty);
+            break;
+    }
+    UpdateWindowSize();
+    return true;
+}
+
 int main(int argc, char** argv){
     window = new Lemon::GUI::Window("Minesweeper", {160, 160}, 0, Lemon::GUI::GUI);
     window->rootContainer.background = {0, 0, 0, 0};
@@ -281,33 +297,12 @@ int main(int argc, char** argv){
     UpdateWindowSize();
 
     window->Paint();
+    window->GUIRegisterEventHandler(Lemon::EventWindowCommand, OnWindowCommand);
 
     while(!window->closed){
 	    Lemon::WindowServer::Instance()->Poll();
 
-        Lemon::LemonEvent ev;
-        while (window->PollEvent(ev))
-        {
-            switch(ev.event){
-                case Lemon::EventWindowCommand:
-                    switch(ev.windowCmd){
-                        case MenuEasy:
-                            game.Generate(EasyDifficulty);
-                            break;
-                        case MenuMedium:
-                            game.Generate(MediumDifficulty);
-                            break;
-                        case MenuHard:
-                            game.Generate(HardDifficulty);
-                            break;
-                    }
-                    UpdateWindowSize();
-                    break;
-                default:
-                    window->GUIHandleEvent(ev);
-                    break;
-            }
-        }
+        window->GUIPollEvents();
         
         window->Paint();
         Lemon::WindowServer::Instance()->Wait();

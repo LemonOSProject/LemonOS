@@ -110,11 +110,7 @@ char* FileDialog(const char* path, int flags) {
     while (!win->closed && !selectedPth) {
         Lemon::WindowServer::Instance()->Poll();
 
-        LemonEvent ev;
-        while (win->PollEvent(ev)) {
-            win->GUIHandleEvent(ev);
-        }
-
+        win->GUIPollEvents();
         win->Paint();
         Lemon::WindowServer::Instance()->Wait();
     }

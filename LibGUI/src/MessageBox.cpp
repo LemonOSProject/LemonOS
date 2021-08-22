@@ -43,21 +43,11 @@ int DisplayMessageBox(const char* title, const char* message, MsgBoxButtons butt
         okBtn->OnPress = OnMessageBoxOKPressed;
     }
 
-    bool paint = true;
-
     while (!win->closed) {
         Lemon::WindowServer::Instance()->Poll();
 
-        LemonEvent ev;
-        while (win->PollEvent(ev)) {
-            win->GUIHandleEvent(ev);
-            paint = true;
-        }
-
-        if (paint) {
-            win->Paint();
-            paint = false;
-        }
+        win->GUIPollEvents();
+        win->Paint();
 
         Lemon::WindowServer::Instance()->Wait();
     }

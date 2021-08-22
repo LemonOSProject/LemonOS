@@ -260,38 +260,37 @@ Lemon::GUI::Window* InitializeMenu(){
 
     menuModel.filter.SetFilter("");
 
+    menuWindow->GUIRegisterEventHandler(Lemon::EventKeyPressed, [](Lemon::LemonEvent& ev) -> bool {
+        if(ev.key == KEY_ARROW_DOWN || ev.key == KEY_ARROW_UP){ // Send straight to listview
+            listView->OnKeyPress(ev.key);
+        } else if(ev.key == KEY_ENTER) {
+            menuModel.filter.OnSubmit(listView->selected);
+        } else {
+            filterBox->OnKeyPress(ev.key); // Send straight to textbox
+            menuModel.filter.SetFilter(filterBox->contents.front());
+        }
+        return true;
+    });
+
+    menuWindow->GUIRegisterEventHandler(Lemon::EventWindowMinimized, [](Lemon::LemonEvent& ev) -> bool {
+        showMenu = false;
+        return false;
+    });
+
+    menuWindow->GUIRegisterEventHandler(Lemon::EventMouseReleased, [](Lemon::LemonEvent& ev) -> bool {
+        if(ev.mousePos.y > 24){
+            menuModel.filter.OnSubmit(listView->selected);
+        }
+        
+        return true;
+    });
+
     menuWindow->Paint();
     return menuWindow;
 }
 
 void PollMenu(){
-    Lemon::LemonEvent ev;
-    while(menuWindow->PollEvent(ev)){
-        switch(ev.event){
-        case Lemon::EventKeyPressed:
-            if(ev.key == KEY_ARROW_DOWN || ev.key == KEY_ARROW_UP){ // Send straight to listview
-                listView->OnKeyPress(ev.key);
-            } else if(ev.key == KEY_ENTER) {
-                menuModel.filter.OnSubmit(listView->selected);
-            } else {
-                filterBox->OnKeyPress(ev.key); // Send straight to textbox
-                menuModel.filter.SetFilter(filterBox->contents.front());
-            }
-            break;
-        case Lemon::EventWindowMinimized:
-            showMenu = false;
-            break;
-        case Lemon::EventMouseReleased:
-            if(ev.mousePos.y > 24){
-                menuModel.filter.OnSubmit(listView->selected);
-                break;
-            }
-        default:
-            menuWindow->GUIHandleEvent(ev);
-            break;
-        }
-    }
-
+    menuWindow->GUIPollEvents();
     menuWindow->Paint();
 }
 

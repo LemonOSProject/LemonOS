@@ -137,16 +137,9 @@ int main(int argc, char** argv){
         }
 
 	    Lemon::WindowServer::Instance()->Poll();
-        Lemon::LemonEvent ev;
-        while(window->PollEvent(ev)){
-            window->GUIHandleEvent(ev);
-            
-            paint = true;
-        }
+        window->GUIPollEvents();
 
-        if(paint){
-            window->Paint();
-        }
+        window->Paint();
         
         Lemon::WindowServer::Instance()->Wait(800000);
     }

@@ -188,24 +188,20 @@ int main() {
     waiter.WaitOnAll(&shell->GetInterface());
     waiter.WaitOn(Lemon::WindowServer::Instance());
 
+    taskbar->GUIRegisterEventHandler(Lemon::EventMouseReleased, [](Lemon::LemonEvent& ev) -> bool {
+        if (ev.mousePos.x < 50) {
+            MinimizeMenu(showMenu); // Toggle whether window is minimized or not
+            return true; // Do not process event further
+        }
+
+        return false;
+    });
+
     for (;;) {
         Lemon::WindowServer::Instance()->Poll();
         shell->Poll();
 
-        Lemon::LemonEvent ev;
-        while (taskbar->PollEvent(ev)) {
-            if (ev.event == Lemon::EventMouseReleased) {
-                if (ev.mousePos.x < 50) {
-                    MinimizeMenu(showMenu); // Toggle whether window is minimized or not
-                } else {
-                    taskbar->GUIHandleEvent(ev);
-                }
-            } else {
-                taskbar->GUIHandleEvent(ev);
-            }
-            paintTaskbar = true;
-        }
-
+        taskbar->GUIPollEvents();
         PollMenu();
 
         uint64_t usedMemLast = sysInfo.usedMem;

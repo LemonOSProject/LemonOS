@@ -9,6 +9,8 @@
 
 #include <queue>
 #include <utility>
+#include <functional>
+#include <map>
 
 #define WINDOW_FLAGS_NODECORATION 0x1   // Do not draw window borders
 #define WINDOW_FLAGS_RESIZABLE 0x2      // Allow window resizing
@@ -147,14 +149,24 @@ public:
     bool PollEvent(LemonEvent& ev);
 
     /////////////////////////////
-    /// \brief Send event
-    ///
-    /// Send an event for the root container widget (and its children) to handle.
-    /// If the application decides to use the GUI they can pass events from PollEvent to here
-    ///
-    /// \param ev Event to send
+    /// \brief Poll for window events and send to the root container
     /////////////////////////////
-    void GUIHandleEvent(LemonEvent& ev);
+    void GUIPollEvents();
+
+    /////////////////////////////
+    /// \brief Register GUI event handler
+    ///
+    /// When \a GUIPollEvents is called,
+    /// any corresponding event handler gets called first for each window event.
+    /// If the event handler returns true, the event is not sent to the root container.
+    /////////////////////////////
+    inline void GUIRegisterEventHandler(int event, std::function<bool(LemonEvent&)> handler){
+        m_eventHandlers[event] = handler;
+    }
+
+    inline void GUIDeregisterEventHandler(int event){
+        m_eventHandlers.erase(event);
+    }
 
     /////////////////////////////
     /// \brief Add a widget to the window
@@ -238,7 +250,14 @@ public:
     ///
     /// \return window size
     /////////////////////////////
-    inline vector2i_t GetSize() const { return {surface.width, surface.height}; };
+    inline Vector2i GetSize() const { return {surface.width, surface.height}; };
+
+    /////////////////////////////
+    /// \brief Get Window Size
+    ///
+    /// \return window size
+    /////////////////////////////
+    inline Rect GetRect() const { return {0, 0, GetSize()}; }
 
     /////////////////////////////
     /// \brief Get Window Position
@@ -294,6 +313,19 @@ private:
         surface_t surface = {0, 0, 32, nullptr};
     };
 
+    /////////////////////////////
+    /// \brief Send GUI event
+    ///
+    /// Send an event for the root container widget (and its children) to handle.
+    /// If the application decides to use the GUI they can pass events from PollEvent to here
+    ///
+    /// \param ev Event to send
+    /////////////////////////////
+    void GUIHandleEvent(LemonEvent& ev);
+
+    bool m_shouldResize = false;
+    vector2i_t m_resizeBounds;
+
     int64_t m_windowID = 0;
 
     WindowBuffer* m_windowBufferInfo = nullptr;
@@ -309,5 +341,7 @@ private:
 
     std::unique_ptr<TooltipWindow> m_tooltipWindow = nullptr;
     std::queue<Lemon::LemonEvent> m_eventQueue;
+
+    std::map<int, std::function<bool(LemonEvent&)>> m_eventHandlers;
 };
 } // namespace Lemon::GUI

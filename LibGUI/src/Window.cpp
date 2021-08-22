@@ -134,6 +134,24 @@ bool Window::PollEvent(LemonEvent& ev) {
     return false;
 }
 
+void Window::GUIPollEvents(){
+    LemonEvent ev;
+    while(PollEvent(ev)){
+        // If the handler returns true, the event is not processed.
+        auto handler = m_eventHandlers.find(ev.event);
+        if(handler != m_eventHandlers.end() && handler->second(ev)){
+            continue;
+        }
+
+        GUIHandleEvent(ev);
+    }
+
+    if(m_shouldResize){
+        Resize(m_resizeBounds);
+        m_shouldResize = false;
+    }
+}
+
 void Window::GUIHandleEvent(LemonEvent& ev) {
     switch (ev.event) {
     case EventMousePressed: {
@@ -222,7 +240,8 @@ void Window::GUIHandleEvent(LemonEvent& ev) {
         break;
     case EventWindowResize:
         if (m_flags & WINDOW_FLAGS_RESIZABLE) {
-            Resize(ev.resizeBounds);
+            m_shouldResize = true;
+            m_resizeBounds = ev.resizeBounds;
         }
         break;
     case EventWindowMinimized:

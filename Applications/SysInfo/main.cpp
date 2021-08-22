@@ -52,11 +52,7 @@ int main(int argc, char** argv){
 	while(!window->closed){
 		Lemon::WindowServer::Instance()->Poll();
         
-		Lemon::LemonEvent ev;
-		while(window->PollEvent(ev)){
-			window->GUIHandleEvent(ev);
-		}
-
+		window->GUIPollEvents();
 		window->Paint();
 
         lemon_sysinfo_t _sysInfo = Lemon::SysInfo();

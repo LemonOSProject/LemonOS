@@ -283,7 +283,7 @@ void LayoutContainer::UpdateFixedBounds() {
 
         w->UpdateFixedBounds();
 
-        pos.x += itemSize.x;
+        pos.x += itemSize.x + xPadding;
 
         if (pos.x + itemSize.x > fixedBounds.width) {
             pos.x = xPadding;
@@ -338,7 +338,7 @@ void Button::DrawButtonLabel(surface_t* surface, bool white) {
         Graphics::DrawString(label.c_str(), btnPos.x + (fixedBounds.size.x / 2) - (labelLength / 2),
                              btnPos.y + (fixedBounds.size.y / 2 - 8), colour.r, colour.g, colour.b, surface);
     } else {
-        Graphics::DrawString(label.c_str(), btnPos.x + 2, btnPos.y + (fixedBounds.size.y / 2 - 6), colour.r, colour.g,
+        Graphics::DrawString(label.c_str(), btnPos.x + 3, btnPos.y + (fixedBounds.size.y / 2 - 6), colour.r, colour.g,
                              colour.b, surface);
     }
 }
