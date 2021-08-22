@@ -1,13 +1,18 @@
 {
-    "gui" : {
-        "background" : [ 53, 51, 50, 255 ],
-        "content" : [ 36, 34, 31, 255 ],
-        "text" : [ 255, 255, 255, 255 ],
-        "textAlternate" : [ 0, 0, 0, 255 ],
-        "highlight" : [ 184, 96, 22, 255 ],
-        "contentShadow" : [ 190, 190, 180, 255]
+    "colours" : {
+        "activeWindow" : "",
+        "activeWindowText" : "",
+        "inactiveWindow" : "",
+        "inactiveWindowText" : "",
+        "background" : "",
+        "containerBackground" : "",
+        "foreground" : "",
+        "foregroundInactive" : "",
+        "foregroundAlternate" : "",
     },
     "wm" : {
-        
+        "windowCornerRadius" : 9,
+        "windowBorderThickness" : 1,
+        "windowTitlebarHeight" : 24
     }
 }

@@ -2,6 +2,9 @@ project('Lemon OS',
     default_options : ['warning_level=2', 'cpp_std=c++2a', 'optimization=0', 'werror=true'])
 add_languages('c', 'cpp')
 
+# TODO: Change to -march=x86_64-v2 when LLVM is updated
+add_global_arguments(['-msse3', '-mssse3', '-msse4.1', '-msse4.2', '-mpopcnt', '-mcx16', '-msahf'], language: ['c', 'cpp'])
+
 if host_machine.system() != 'lemon'
     error('Invalid host system: \'' + host_machine.system() + '\', should be \'lemon\'')
 endif

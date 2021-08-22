@@ -15,6 +15,10 @@ fi
 
 set -e
 
+mkdir -p $HOME/.local/share/lemon/sysroot/system/lib
+mkdir -p $HOME/.local/share/lemon/sysroot/system/include
+mkdir -p $HOME/.local/share/lemon/sysroot/system/bin
+
 ln -sfT ../../../include/c++ $HOME/.local/share/lemon/sysroot/system/include/c++
 cp $HOME/.local/share/lemon/lib/x86_64-lemon/c++/*.so* $HOME/.local/share/lemon/sysroot/system/lib
 

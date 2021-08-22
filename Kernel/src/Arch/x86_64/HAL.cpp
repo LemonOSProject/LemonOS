@@ -9,6 +9,7 @@
 #include <Logging.h>
 #include <PCI.h>
 #include <Paging.h>
+#include <Panic.h>
 #include <PhysicalAllocator.h>
 #include <SMP.h>
 #include <Serial.h>
@@ -71,6 +72,22 @@ void InitVideo() {
 }
 
 void InitExtra() {
+    Log::Info("Checking CPU supports x86_64-v2...");
+    cpuid_info_t cpuidInfo = CPUID();
+
+    if (!(cpuidInfo.features_ecx & CPUID_ECX_SSE4_2)) {
+        KernelPanic("CPU does not support SSE4.2, Lemon OS requires x86_64-v2 support!");
+    }
+
+    if (!(cpuidInfo.features_ecx & CPUID_ECX_POPCNT)) {
+        KernelPanic("CPU does not support POPCNT, Lemon OS requires x86_64-v2 support!");
+    }
+
+    if (!(cpuidInfo.features_ecx & CPUID_ECX_CX16)) {
+        KernelPanic("CPU does not support CMPXCHG16, Lemon OS requires x86_64-v2 support!");
+    }
+    Log::Write("OK");
+
     Log::Info("Initializing ACPI...");
     ACPI::Init();
     Log::Write("OK");

@@ -55,11 +55,6 @@ void Compositor::Render() {
     m_renderMutex.lock();
 
     Vector2i mousePos = WM::Instance().Input().mouse.pos;
-    Rect mouseRect = {mousePos, {m_cursorCurrent->width, m_cursorCurrent->height}};
-    if (m_lastMouseRect.pos != mousePos || m_lastMouseRect.size != mouseRect.size) {
-        Invalidate(m_lastMouseRect);
-        m_lastMouseRect = mouseRect;
-    }
 
     if (m_invalidateAll) {
         RecalculateWindowClipping();
@@ -83,7 +78,15 @@ void Compositor::Render() {
                 rect.invalid = false;
             }
         }
-    } else if (m_wallpaper.buffer) {
+    } else {
+        for(WMWindow* win : WM::Instance().m_windows){
+            if(win->IsDirtyAndClear()){
+                Invalidate(win->GetContentRect());
+            }
+        }
+    }
+    
+    if (m_wallpaper.buffer) {
         for (BackgroundClipRect& rect : m_backgroundRects) {
             if (!rect.invalid) {
                 continue;
@@ -102,19 +105,7 @@ void Compositor::Render() {
     for (auto it = m_windowClipRects.begin(); it != m_windowClipRects.end();) {
         WMWindow* win = it->win;
 
-        if (win->IsDirtyAndClear()) { // Window buffer is dirty, draw all clips
-            while (it != m_windowClipRects.end() && it->win == win) {
-                win->DrawClip(it->rect, &m_renderSurface);
-
-                it->invalid = false;
-                it++;
-            }
-
-#ifdef COMPOSITOR_DEBUG
-            Lemon::Graphics::DrawRect(it->rect, {255, 0, 255, 255}, &m_displaySurface);
-            Lemon::Graphics::DrawRectOutline(it->rect, {0, 0, 255, 255}, &m_renderSurface);
-#endif
-        } else if (m_invalidateAll || it->invalid) { // Window buffer not dirty, only draw invalid clips
+        if (m_invalidateAll || it->invalid) { // Window buffer not dirty, only draw invalid clips
             win->DrawClip(it->rect, &m_renderSurface);
 
             it->invalid = false;
@@ -145,6 +136,7 @@ void Compositor::Render() {
     }
 
     m_renderSurface.AlphaBlit(m_cursorCurrent, mousePos);
+    Invalidate({mousePos, m_cursorCurrent->width, m_cursorCurrent->height});
 
     if (m_displayFramerate) {
         Lemon::Graphics::DrawRect(0, 0, 80, 18, 0, 0, 0, &m_renderSurface);
@@ -204,14 +196,20 @@ void Compositor::Invalidate(const Rect& rect) {
 
         if (bgRect.rect.Intersects(rect)) {
             bgRect.invalid = true; // Set bg rect as invalid
-        }
 
-        // If a decoration rect got clipped by a window,
-        // The background clip may extend beyond the clip
-        // To avoid drawing the background over the decorations
-        // Mark any intersecting window decorations as invalid
-        for (auto& dRect : m_windowDecorationClipRects) {
-            invalidateDecorationRect(dRect, bgRect.rect);
+            // If a decoration rect got clipped by a window,
+            // The background clip may extend beyond the clip
+            // To avoid drawing the background over the decorations
+            // Mark any intersecting window decorations as invalid
+            for (auto& dRect : m_windowDecorationClipRects) {
+                invalidateDecorationRect(dRect, bgRect.rect);
+            }
+
+            for(auto& winRect : m_windowClipRects){
+                if(winRect.win->IsTransparent() && bgRect.rect.Intersects(winRect.rect)){
+                    winRect.invalid = true;
+                }
+            }
         }
     }
 

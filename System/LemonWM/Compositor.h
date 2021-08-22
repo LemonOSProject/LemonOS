@@ -116,9 +116,6 @@ private:
     Surface m_cursorResize; // Window resize mouse cursor
     Surface* m_cursorCurrent = &m_cursorNormal; // Current mouse cursor
 
-    // Used to invalidate cursor position
-    Rect m_lastMouseRect;
-
     // Used for framerate counter
     timespec m_lastRender;
     int m_avgFrametime = 0;

@@ -51,7 +51,11 @@ void WMWindow::DrawClip(const Rect& clip, Surface* surface) {
     Rect clipCopy = clip;
     clipCopy.pos -= m_contentRect.pos;
 
-    surface->Blit(&m_windowSurface, clip.pos, clipCopy);
+    if(IsTransparent()){
+        surface->AlphaBlit(&m_windowSurface, clip.pos, clipCopy);
+    } else {
+        surface->Blit(&m_windowSurface, clip.pos, clipCopy);
+    }
 }
 
 int WMWindow::GetResizePoint(Vector2i absolutePosition) const {
