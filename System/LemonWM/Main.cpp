@@ -15,6 +15,7 @@ int main() {
     config.AddConfigProperty<std::string>("backgroundImage", "/system/lemon/resources/backgrounds/bg7.png");
     config.AddConfigProperty<std::string>("theme", "/system/lemon/themes/default.json");
     config.AddConfigProperty<bool>("displayFramerate", false);
+    config.AddConfigProperty<long>("targetFramerate", 90);
 
     config.LoadJSONConfig("/system/lemon/lemonwm.json");
 
@@ -22,6 +23,7 @@ int main() {
 
     wm.Compositor().SetWallpaper(config.GetConfigProperty<std::string>("backgroundImage"));
     wm.Compositor().SetShouldDisplayFramerate(config.GetConfigProperty<bool>("displayFramerate"));
+    wm.SetTargetFramerate(config.GetConfigProperty<long>("targetFramerate"));
 
     wm.Run();
     return 0;

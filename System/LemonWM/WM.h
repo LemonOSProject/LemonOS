@@ -9,12 +9,12 @@
 
 #include <list>
 
-class WM final
-    : public LemonWMServer {
+class WM final : public LemonWMServer {
     friend int main();
     friend class Compositor;
+
 public:
-    inline static WM& Instance(){
+    inline static WM& Instance() {
         return *m_instance; // Assume main has initialize m_instance
     }
 
@@ -34,6 +34,14 @@ public:
 
     void BroadcastWindowState(WMWindow* win);
 
+    inline void SetTargetFramerate(long fps) {
+        m_targetFramerate = fps;
+        if (fps > 0) {
+            m_targetFrameInterval = 1000000 / fps;
+            m_targetFrameIntervalThreshold = m_targetFrameInterval / 3 * 2;
+        }
+    }
+
 private:
     static WM* m_instance;
 
@@ -41,16 +49,15 @@ private:
 
     WMWindow* GetWindowFromID(int64_t id);
 
-    inline int64_t NextWindowID() {
-        return m_nextWindowID++;
-    }
+    inline int64_t NextWindowID() { return m_nextWindowID++; }
 
     void DestroyWindow(WMWindow* win);
 
     void BroadcastCreatedWindow(WMWindow* win);
     void BroadcastDestroyedWindow(WMWindow* win);
 
-    void OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32_t width, int32_t height, uint32_t flags, const std::string& title) override;
+    void OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32_t width, int32_t height,
+                        uint32_t flags, const std::string& title) override;
     void OnDestroyWindow(const Lemon::Handle& client, int64_t windowID) override;
     void OnSetTitle(const Lemon::Handle& client, int64_t windowID, const std::string& title) override;
     void OnUpdateFlags(const Lemon::Handle& client, int64_t windowID, uint32_t flags) override;
@@ -58,7 +65,8 @@ private:
     void OnGetPosition(const Lemon::Handle& client, int64_t windowID) override;
     void OnResize(const Lemon::Handle& client, int64_t windowID, int32_t width, int32_t height) override;
     void OnMinimize(const Lemon::Handle& client, int64_t windowID, bool minimized) override;
-    void OnDisplayContextMenu(const Lemon::Handle& client, int64_t windowID, int32_t x, int32_t y, const std::string& entries) override;
+    void OnDisplayContextMenu(const Lemon::Handle& client, int64_t windowID, int32_t x, int32_t y,
+                              const std::string& entries) override;
     void OnPong(const Lemon::Handle& client, int64_t windowID) override;
 
     void OnPeerDisconnect(const Lemon::Handle& client) override;
@@ -66,13 +74,18 @@ private:
     void OnReloadConfig(const Lemon::Handle& client) override;
     void OnSubscribeToWindowEvents(const Lemon::Handle& client) override;
 
+    timespec m_lastUpdate;
+    long m_targetFramerate = 0;              // Used for framerate limiter
+    long m_targetFrameIntervalThreshold = 0; // The maximum time difference to thread sleep
+    long m_targetFrameInterval = 0;
+
     Lemon::Interface m_messageInterface;
     class Compositor m_compositor;
     InputManager m_input;
 
     int m_resizePoint = ResizePoint::ResizePoint_None;
 
-    bool m_draggingWindow = false; // Dragging active window?
+    bool m_draggingWindow = false;  // Dragging active window?
     Vector2i m_dragOffset = {0, 0}; // Offset of window being dragged
 
     int64_t m_nextWindowID = 1;

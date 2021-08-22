@@ -5,6 +5,7 @@
 #include <Lemon/GUI/WindowServer.h>
 
 #include <cassert>
+#include <unistd.h>
 
 WM* WM::m_instance = nullptr;
 
@@ -15,13 +16,15 @@ WM::WM(const Surface& displaySurface)
 
     m_instance = this;
 
-    if(Graphics::LoadImage("/system/lemon/resources/winbuttons.png", &WMWindow::theme.windowButtons)){
+    if (Graphics::LoadImage("/system/lemon/resources/winbuttons.png", &WMWindow::theme.windowButtons)) {
         Logger::Error("Failed to load window buttons!");
     }
 }
 
 void WM::Run() {
     for (;;) {
+        clock_gettime(CLOCK_BOOTTIME, &m_lastUpdate);
+
         Lemon::Handle client;
         Lemon::Message message;
         while (m_messageInterface.Poll(client, message)) {
@@ -32,6 +35,19 @@ void WM::Run() {
 
         m_input.Poll();
         m_compositor.Render();
+
+        if (m_targetFramerate <= 0) {
+            continue; // Do not limit framerate
+        }
+
+        timespec timeSinceBoot;
+        clock_gettime(CLOCK_BOOTTIME, &timeSinceBoot);
+
+        long timeDiff = (timeSinceBoot.tv_sec - m_lastUpdate.tv_sec) * 1000000 +
+                        (timeSinceBoot.tv_nsec - m_lastUpdate.tv_nsec) / 1000;
+        if (timeDiff < m_targetFrameIntervalThreshold) {
+            usleep(m_targetFrameInterval - timeDiff); // Sleep the remaining time
+        }
     }
 }
 
@@ -39,7 +55,7 @@ void WM::OnMouseDown(bool isRightButton) {
     for (auto it = m_windows.rbegin(); it != m_windows.rend(); ++it) {
         WMWindow* win = *it;
         if (win->GetRect().Contains(m_input.mouse.pos)) {
-            if(win->IsMinimized()){
+            if (win->IsMinimized()) {
                 continue;
             }
 
@@ -49,7 +65,7 @@ void WM::OnMouseDown(bool isRightButton) {
             }
 
             const Rect& ctRect = win->GetContentRect(); // Actual window content
-            if((m_resizePoint = win->GetResizePoint(m_input.mouse.pos))){
+            if ((m_resizePoint = win->GetResizePoint(m_input.mouse.pos))) {
 
             } else if (win->ShouldDrawDecoration()) {
                 if (ctRect.Contains(m_input.mouse.pos)) {
@@ -59,8 +75,8 @@ void WM::OnMouseDown(bool isRightButton) {
                     ev.mousePos = m_input.mouse.pos - ctRect.pos;
 
                     win->SendEvent(ev);
-                } else if(win->GetCloseRect().Contains(m_input.mouse.pos)){
-                    win->SendEvent({ .event = EventWindowClosed }); // Close button pressed
+                } else if (win->GetCloseRect().Contains(m_input.mouse.pos)) {
+                    win->SendEvent({.event = EventWindowClosed}); // Close button pressed
                 } else if (win->GetTitlebarRect().Contains(m_input.mouse.pos)) {
                     vector2i_t mouseOffset = m_input.mouse.pos - win->GetPosition();
                     m_draggingWindow = true;
@@ -107,24 +123,25 @@ void WM::OnMouseMove() {
     if (m_draggingWindow) {
         m_activeWindow->Relocate(m_input.mouse.pos - m_dragOffset);
         return;
-    } else if(m_resizePoint != ResizePoint_None){
+    } else if (m_resizePoint != ResizePoint_None) {
         assert(m_activeWindow);
 
         m_compositor.SetResizeCursor();
 
         Rect newRect = m_activeWindow->GetRect();
-        if(m_resizePoint & ResizePoint_Top){
+        if (m_resizePoint & ResizePoint_Top) {
             newRect.top(m_input.mouse.pos.y);
-        } else if(m_resizePoint & ResizePoint_Bottom){
+        } else if (m_resizePoint & ResizePoint_Bottom) {
             newRect.bottom(m_input.mouse.pos.y);
         }
-        if(m_resizePoint & ResizePoint_Left){
+        if (m_resizePoint & ResizePoint_Left) {
             newRect.left(m_input.mouse.pos.x);
-        } else if(m_resizePoint & ResizePoint_Right){
+        } else if (m_resizePoint & ResizePoint_Right) {
             newRect.right(m_input.mouse.pos.x);
         }
 
-        m_activeWindow->SendEvent({.event = EventWindowResize, .resizeBounds = m_activeWindow->NewWindowSizeFromRect(newRect)});
+        m_activeWindow->SendEvent(
+            {.event = EventWindowResize, .resizeBounds = m_activeWindow->NewWindowSizeFromRect(newRect)});
         return;
     }
 
@@ -141,7 +158,7 @@ void WM::OnMouseMove() {
 
             win->SendEvent(ev);
             break;
-        } else if(win->GetResizePoint(m_input.mouse.pos)){
+        } else if (win->GetResizePoint(m_input.mouse.pos)) {
             m_compositor.SetResizeCursor();
         }
     }
@@ -239,7 +256,7 @@ void WM::SetActiveWindow(WMWindow* win) {
 }
 
 void WM::DestroyWindow(WMWindow* win) {
-    if(win->NoShellEvents()){
+    if (win->NoShellEvents()) {
         return; // Dont send events for these windows
     }
 
@@ -253,7 +270,7 @@ void WM::DestroyWindow(WMWindow* win) {
 }
 
 void WM::BroadcastWindowState(WMWindow* win) {
-    if(win->NoShellEvents()){
+    if (win->NoShellEvents()) {
         return; // Dont send events for these windows
     }
 
@@ -269,7 +286,7 @@ void WM::BroadcastWindowState(WMWindow* win) {
 }
 
 void WM::BroadcastCreatedWindow(WMWindow* win) {
-    if(win->NoShellEvents()){
+    if (win->NoShellEvents()) {
         return; // Dont send events for these windows
     }
 
@@ -279,7 +296,7 @@ void WM::BroadcastCreatedWindow(WMWindow* win) {
 }
 
 void WM::BroadcastDestroyedWindow(WMWindow* win) {
-    if(win->NoShellEvents()){
+    if (win->NoShellEvents()) {
         return; // Dont send events for these windows
     }
 
@@ -415,12 +432,13 @@ void WM::OnReloadConfig(const Lemon::Handle& client) {}
 
 void WM::OnSubscribeToWindowEvents(const Lemon::Handle& client) {
     auto endp = std::make_unique<LemonWMClientEndpoint>(client);
-    for(WMWindow* win : m_windows){
-        if(win->NoShellEvents()){
+    for (WMWindow* win : m_windows) {
+        if (win->NoShellEvents()) {
             continue; // Dont send events for these windows
         }
 
-        endp->WindowCreated(win->GetID(), win->GetFlags(), win->GetTitle()); // Send a create event for all existing windows
+        endp->WindowCreated(win->GetID(), win->GetFlags(),
+                            win->GetTitle()); // Send a create event for all existing windows
     }
 
     m_wmEventSubscribers.push_back(std::move(endp));

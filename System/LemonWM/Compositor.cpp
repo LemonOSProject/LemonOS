@@ -157,7 +157,10 @@ void Compositor::Invalidate(const Rect& rect) {
         return;
     }
 
-    auto invalidateDecorationRect = [this](WindowClipRect& dRect, const Rect& rect) {
+    std::function<void(WindowClipRect& dRect, const Rect& rect)> invalidateDecorationRect;
+    std::function<void(BackgroundClipRect& dRect, const Rect& rect)> invalidateBackgroundRect;
+
+    invalidateDecorationRect = [this, invalidateBackgroundRect](WindowClipRect& dRect, const Rect& rect) {
         if (dRect.invalid) {
             return;
         }
@@ -166,15 +169,9 @@ void Compositor::Invalidate(const Rect& rect) {
             dRect.invalid = true; // Set bg rect as invalid
 
             // Make sure any background clips are redrawn
-            for (auto& bgRect : m_backgroundRects) {
-                if (bgRect.invalid) {
-                    continue;
-                }
-
-                if (bgRect.rect.Intersects(dRect.rect)) {
-                    bgRect.invalid = true; // Set bg rect as invalid
-                }
-            }
+            /*for (auto& bgRect : m_backgroundRects) {
+                invalidateBackgroundRect(bgRect, dRect.rect);
+            }*/
 
             // Make sure any window clips are redrawn
             for (auto& wRect : m_windowClipRects) {
@@ -183,15 +180,15 @@ void Compositor::Invalidate(const Rect& rect) {
                 }
 
                 if (wRect.rect.Intersects(dRect.rect)) {
-                    wRect.invalid = true; // Set bg rect as invalid
+                    wRect.invalid = true; // Set wubdiw rect as invalid
                 }
             }
         }
     };
 
-    for (auto& bgRect : m_backgroundRects) {
+    invalidateBackgroundRect = [this, invalidateDecorationRect](BackgroundClipRect& bgRect, const Rect& rect) {
         if (bgRect.invalid) {
-            continue;
+            return;
         }
 
         if (bgRect.rect.Intersects(rect)) {
@@ -205,12 +202,20 @@ void Compositor::Invalidate(const Rect& rect) {
                 invalidateDecorationRect(dRect, bgRect.rect);
             }
 
-            for(auto& winRect : m_windowClipRects){
-                if(winRect.win->IsTransparent() && bgRect.rect.Intersects(winRect.rect)){
-                    winRect.invalid = true;
+            for(auto& wRect : m_windowClipRects){
+                if (wRect.invalid) {
+                    continue;
+                }
+
+                if(wRect.win->IsTransparent() && bgRect.rect.Intersects(wRect.rect)){
+                    wRect.invalid = true;
                 }
             }
         }
+    };
+
+    for (auto& bgRect : m_backgroundRects) {
+        invalidateBackgroundRect(bgRect, rect);
     }
 
     for (auto& wRect : m_windowClipRects) {
@@ -220,6 +225,10 @@ void Compositor::Invalidate(const Rect& rect) {
 
         if (wRect.rect.Intersects(rect)) {
             wRect.invalid = true;
+        
+            for (auto& dRect : m_windowDecorationClipRects) {
+                invalidateDecorationRect(dRect, wRect.rect);
+            }
         }
     }
 
