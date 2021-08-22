@@ -47,10 +47,10 @@ public:
     void Paint(surface_t* surface) {
         this->label = win->title;
         if (win->state == Lemon::WindowState_Active || pressed) {
-            Lemon::Graphics::DrawRect(fixedBounds, Lemon::colours[Lemon::Colour::ForegroundDim], surface);
+            Lemon::Graphics::DrawRoundedRect(fixedBounds, Lemon::colours[Lemon::Colour::ForegroundDim], 10, 10, 10, 10, surface);
         }
 
-        DrawButtonLabel(surface, false);
+        Lemon::Graphics::DrawString(label.c_str(), fixedBounds.x + 10, fixedBounds.y + fixedBounds.height / 2 - Lemon::Graphics::DefaultFont()->lineHeight / 2, Lemon::colours[Lemon::Colour::Text], surface);
     }
 
     void OnMouseUp(vector2i_t mousePos) {
@@ -170,7 +170,7 @@ int main() {
     taskbar->OnPaint = OnTaskbarPaint;
     taskbar->rootContainer.background = {0, 0, 0, 0};
     taskbarWindowsContainer = new Lemon::GUI::LayoutContainer(
-        {40, 0, static_cast<int>(screenBounds.x) - 104, static_cast<int>(screenBounds.y)}, {160, 36 - 4});
+        {40, 4, static_cast<int>(screenBounds.x) - 108, static_cast<int>(screenBounds.y)}, {160, 24});
     taskbarWindowsContainer->background = {0, 0, 0, 0};
     taskbar->AddWidget(taskbarWindowsContainer);
 
