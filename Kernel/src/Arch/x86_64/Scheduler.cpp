@@ -130,12 +130,7 @@ FancyRefPtr<Process> FindProcessByPID(pid_t pid) {
 pid_t GetNextProcessPID(pid_t pid){
     ScopedSpinLock lockProcesses(processesLock);
     for(auto it = processes->begin(); it != processes->end(); it++){
-        if(it->get()->PID() == pid){ // Found process with PID pid
-            it++; // Get next process
-            if(it == processes->end()){
-                return 0; // End of the list
-            }
-
+        if(it->get()->PID() > pid){ // Found process with PID greater than pid
             return it->get()->PID();
         }
     }
