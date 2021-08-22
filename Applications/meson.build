@@ -48,6 +48,10 @@ application_cpp_args = [
     '-Wno-unused-parameter', '-Wno-missing-braces'
 ]
 
+graphicstest_src = [
+    'GraphicsTest/main.cpp',
+]
+
 guitest_src = [
     'GUITest/main.cpp',
 ]
@@ -105,6 +109,10 @@ app_imgview = executable('imgview.lef', imgview_src,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
 app_sysinfo = executable('sysinfo.lef', sysinfo_src, 
+    cpp_args : application_cpp_args,
+    dependencies: application_dependencies,
+    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+app_graphicstest = executable('gfxtest.lef', graphicstest_src,
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
