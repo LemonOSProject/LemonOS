@@ -14,7 +14,7 @@ WM::WM(const Surface& displaySurface)
     assert(m_instance == nullptr);
 
     m_instance = this;
-    
+
     if(Graphics::LoadImage("/system/lemon/resources/winbuttons.png", &WMWindow::theme.windowButtons)){
         Logger::Error("Failed to load window buttons!");
     }
@@ -39,6 +39,10 @@ void WM::OnMouseDown(bool isRightButton) {
     for (auto it = m_windows.rbegin(); it != m_windows.rend(); ++it) {
         WMWindow* win = *it;
         if (win->GetRect().Contains(m_input.mouse.pos)) {
+            if(win->IsMinimized()){
+                continue;
+            }
+
             // If the window isn't the active window, set it as the active window
             if (win != m_activeWindow) {
                 SetActiveWindow(win);
@@ -74,6 +78,8 @@ void WM::OnMouseDown(bool isRightButton) {
             return;
         }
     }
+
+    SetActiveWindow(nullptr); // No window was pressed
 }
 
 void WM::OnMouseUp(bool isRightButton) {
