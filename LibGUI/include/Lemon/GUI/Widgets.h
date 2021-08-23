@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Lemon/GUI/Colours.h>
-#include <Lemon/GUI/CtxEntry.h>
+#include <Lemon/GUI/ContextMenu.h>
 #include <Lemon/Graphics/Graphics.h>
 #include <Lemon/Graphics/Surface.h>
 

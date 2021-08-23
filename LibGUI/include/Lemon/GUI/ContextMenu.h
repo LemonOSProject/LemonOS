@@ -4,7 +4,7 @@
 
 namespace Lemon::GUI {
 struct ContextMenuEntry {
-    unsigned short id;
+    int id;
     std::string name;
 };
 } // namespace Lemon::GUI

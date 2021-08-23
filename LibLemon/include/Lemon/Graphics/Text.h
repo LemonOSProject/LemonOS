@@ -10,7 +10,7 @@
 
 namespace Lemon::Graphics {
 class TextObject {
-  public:
+public:
     enum {
         RenderLeftToRight,
         RenderNormal = RenderLeftToRight,
@@ -19,22 +19,7 @@ class TextObject {
         RenderVerticalUpToDown,
     };
 
-  protected:
-    std::string text;
-    Font* font = nullptr;
-
-    vector2i_t pos;
-
-    bool textDirty = true;
-    vector2i_t textSize;
-
-    int renderMode = RenderNormal;
-
-    rgba_colour_t colour = {0, 0, 0, 255};
-
-    void CalculateSizes();
-
-  public:
+public:
     TextObject(vector2i_t pos, const std::string& text, Font* font = DefaultFont());
     TextObject(vector2i_t pos, const char* text, Font* font = DefaultFont());
     TextObject(vector2i_t pos = {0, 0}, Font* font = DefaultFont());
@@ -44,7 +29,7 @@ class TextObject {
     ///
     /// \param surface Surface to render to
     /////////////////////////////
-    void Render(surface_t* surface);
+    void BlitTo(Surface* dest) { if(m_textDirty) Update(); dest->AlphaBlit(&m_surface, m_pos); }
 
     /////////////////////////////
     /// \brief Set TextObject font
@@ -54,8 +39,8 @@ class TextObject {
     inline void SetFont(Font* font) {
         assert(font);
 
-        this->font = font;
-        textDirty = true;
+        m_font = font;
+        m_textDirty = true;
     }
 
     /////////////////////////////
@@ -64,9 +49,9 @@ class TextObject {
     /// \param text Text to render
     /////////////////////////////
     inline void SetText(const char* t) {
-        text = t;
+        m_text = t;
 
-        textDirty = true;
+        m_textDirty = true;
     }
 
     /////////////////////////////
@@ -75,9 +60,9 @@ class TextObject {
     /// \param text Text to render
     /////////////////////////////
     inline void SetText(const std::string& t) {
-        text = t;
+        m_text = t;
 
-        textDirty = true;
+        m_textDirty = true;
     }
 
     /////////////////////////////
@@ -85,14 +70,14 @@ class TextObject {
     ///
     /// \param pos New position
     /////////////////////////////
-    inline void SetPos(vector2i_t pos) { this->pos = pos; }
+    inline void SetPos(const Vector2i& pos) { m_pos = pos; }
 
     /////////////////////////////
     /// \brief Set colour of TextObject
     ///
     /// \param colour New colour
     /////////////////////////////
-    inline void SetColour(rgba_colour_t colour) { this->colour = colour; }
+    inline void SetColour(const RGBAColour& colour) { m_colour = colour; }
 
     /////////////////////////////
     /// \brief Get size of the font being rendered
@@ -102,9 +87,9 @@ class TextObject {
     /// \return Font size as int
     /////////////////////////////
     inline int FontSize() {
-        assert(font);
+        assert(m_font);
 
-        return font->height;
+        return m_font->height;
     }
 
     /////////////////////////////
@@ -115,10 +100,10 @@ class TextObject {
     /// \return Return Vector2i containing the size of the text object in pixels
     /////////////////////////////
     inline vector2i_t Size() {
-        if (textDirty) {
-            CalculateSizes();
+        if (m_textDirty) {
+            Update();
         }
-        return textSize;
+        return m_textSize;
     }
 
     /////////////////////////////
@@ -128,6 +113,22 @@ class TextObject {
     ///
     /// \return Return Vector2i containing the position of the TextObject on the surface
     /////////////////////////////
-    inline vector2i_t Pos() { return pos; }
+    inline const Vector2i& Pos() const { return m_pos; }
+
+protected:
+    std::string m_text;
+    Font* m_font = nullptr;
+
+    vector2i_t m_pos;
+
+    bool m_textDirty = true;
+    vector2i_t m_textSize;
+
+    int m_renderMode = RenderNormal;
+    rgba_colour_t m_colour = {0, 0, 0, 255};
+    Surface m_surface{};
+
+    void CalculateSizes();
+    void Update();
 };
 } // namespace Lemon::Graphics

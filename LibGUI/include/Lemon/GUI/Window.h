@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Lemon/GUI/CtxEntry.h>
+#include <Lemon/GUI/ContextMenu.h>
 #include <Lemon/GUI/Event.h>
 #include <Lemon/GUI/Widgets.h>
 #include <Lemon/GUI/WindowServer.h>

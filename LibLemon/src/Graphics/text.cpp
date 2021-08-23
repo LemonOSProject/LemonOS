@@ -277,38 +277,57 @@ int GetTextLength(const char* str, size_t n) { return GetTextLength(str, n, main
 int GetTextLength(const char* str) { return GetTextLength(str, strlen(str)); }
 
 TextObject::TextObject(vector2i_t pos, const std::string& text, Font* font) {
-    this->pos = pos;
-    this->text = text;
-    this->font = font;
+    m_pos = pos;
+    m_text = text;
+    m_font = font;
 
-    CalculateSizes();
+    Update();
 }
 
 TextObject::TextObject(vector2i_t pos, const char* text, Font* font) {
-    this->pos = pos;
-    this->text = text;
-    this->font = font;
+    m_pos = pos;
+    m_text = text;
+    m_font = font;
 
-    CalculateSizes();
+    Update();
 }
 
 TextObject::TextObject(vector2i_t pos, Font* font) {
-    this->pos = pos;
-    this->font = font;
+    m_pos = pos;
+    m_font = font;
 
-    CalculateSizes();
+    Update();
 }
 
-void TextObject::CalculateSizes() {
-    textSize.x = GetTextLength(text.c_str(), font);
-    textSize.y = font->height;
-}
+void TextObject::Update() {
+    m_textSize.x = GetTextLength(m_text.c_str(), m_font);
+    m_textSize.y = m_font->lineHeight;
 
-void TextObject::Render(surface_t* surface) {
-    switch (renderMode) {
+    if(!m_font){
+        m_font = DefaultFont();
+    }
+
+    if(m_textSize.x <= 0){
+        return; // Nothing to render
+    }
+
+    // Check if we need to reallocate the surface
+    if(m_surface.width < m_textSize.x || m_surface.height < m_textSize.y) {
+        if(m_surface.buffer){
+            delete[] m_surface.buffer;
+        }
+
+        m_surface.buffer = new uint8_t[m_textSize.x * m_textSize.y * 4];
+        m_surface.width = m_textSize.x;
+        m_surface.height = m_textSize.y;
+    }
+
+    switch (m_renderMode) {
     case RenderNormal:
     default:
-        DrawString(text.c_str(), pos.x, pos.y, colour, surface, font);
+        memset(m_surface.buffer, 0, m_surface.BufferSize());
+        DrawString(m_text.c_str(), 0, 0, m_colour, &m_surface, m_font);
+        break;
     }
 }
 } // namespace Lemon::Graphics

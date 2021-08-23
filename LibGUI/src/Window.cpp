@@ -364,7 +364,7 @@ void Window::TooltipWindow::Paint() {
 
     Graphics::DrawRect(0, 0, surface.width, surface.height, backgroundColour, &surface);
 
-    textObject.Render(&surface);
+    textObject.BlitTo(&surface);
 
     if (surface.buffer == buffer1) {
         windowBufferInfo->currentBuffer = 0;
