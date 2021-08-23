@@ -135,6 +135,14 @@ void Compositor::Render() {
         rect.invalid = false;
     }
 
+    if(WM::Instance().m_showContextMenu){
+        Lemon::Graphics::DrawRoundedRect(WM::Instance().m_contextMenu.bounds, WMWindow::theme.titlebarColour, 5, 5, 5, 5, &m_renderSurface);
+        for(const auto& ent : WM::Instance().m_contextMenu.entries){
+            const Vector2i& pos = ent.bounds.pos;
+            Lemon::Graphics::DrawString(ent.text.c_str(), pos.x, pos.y, Lemon::colours[Lemon::Colour::Text], &m_renderSurface);
+        }
+    }
+
     m_renderSurface.AlphaBlit(m_cursorCurrent, mousePos);
     Invalidate({mousePos, m_cursorCurrent->width, m_cursorCurrent->height});
 

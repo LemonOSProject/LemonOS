@@ -4,10 +4,20 @@
 #include "Input.h"
 #include "Window.h"
 
+#include <Lemon/GUI/ContextMenu.h>
 #include <Lemon/IPC/Interface.h>
 #include <Lemon/Services/lemon.lemonwm.h>
 
 #include <list>
+
+#define CONTEXT_MENU_ITEM_WIDTH 100
+#define CONTEXT_MENU_ITEM_HEIGHT 20
+
+struct WMContextMenuEntry {
+    int id;
+    std::string text;
+    Rect bounds;
+};
 
 class WM final : public LemonWMServer {
     friend int main();
@@ -94,6 +104,13 @@ private:
     // The last window the mouse was over
     WMWindow* m_lastMousedOver = nullptr;
     std::list<WMWindow*> m_windows;
+
+    bool m_showContextMenu = false;
+    struct {
+        WMWindow* window = nullptr;
+        std::vector<WMContextMenuEntry> entries;
+        Rect bounds;
+    } m_contextMenu;
 
     std::list<std::unique_ptr<LemonWMClientEndpoint>> m_wmEventSubscribers;
 };

@@ -52,6 +52,12 @@ void WM::Run() {
 }
 
 void WM::OnMouseDown(bool isRightButton) {
+    // Check if the user clicked on the context menu
+    if (m_showContextMenu && m_contextMenu.bounds.Contains(m_input.mouse.pos)) {
+        return;
+    }
+    m_showContextMenu = false;
+
     for (auto it = m_windows.rbegin(); it != m_windows.rend(); ++it) {
         WMWindow* win = *it;
         if (win->GetRect().Contains(m_input.mouse.pos)) {
@@ -105,6 +111,22 @@ void WM::OnMouseUp(bool isRightButton) {
         m_draggingWindow = false;
         return;
     }
+
+    // Check if the user clicked on the context menu
+    if (m_showContextMenu && m_contextMenu.bounds.Contains(m_input.mouse.pos)) {
+        for (const auto& ent : m_contextMenu.entries) {
+            if (ent.bounds.Contains(m_input.mouse.pos)) {
+                // Send the window command
+                m_contextMenu.window->SendEvent(
+                    LemonEvent{.event = EventWindowCommand, .windowCmd = static_cast<uint16_t>(ent.id)});
+                m_showContextMenu = false;
+                break; // Found the right menu entry
+            }
+        }
+        return;
+    }
+
+    m_showContextMenu = false;
 
     if (!m_activeWindow) {
         return; // Only send mouse up events to the active window
@@ -393,6 +415,37 @@ void WM::OnDisplayContextMenu(const Lemon::Handle& client, int64_t windowID, int
         Lemon::Logger::Warning("OnDisplayContextMenu: Invalid Window ID: ", windowID);
         return;
     }
+
+    m_contextMenu.bounds = {win->GetPosition() + (vector2i_t){x, y}, {CONTEXT_MENU_ITEM_WIDTH + 10, 12}};
+    if (win->ShouldDrawDecoration()) {
+        m_contextMenu.bounds.y += WMWindow::theme.titlebarHeight + WMWindow::theme.borderWidth;
+    }
+
+    m_contextMenu.entries.clear();
+
+    size_t oldPos = 0;
+    size_t pos = 0;
+    Vector2i entryPos = m_contextMenu.bounds.pos + Vector2i{5, 6};
+    while ((pos = entries.find(";", oldPos)) != std::string::npos) {
+        size_t cPos = entries.find(",", oldPos);
+        if (cPos >= pos || cPos == std::string::npos) {
+            m_contextMenu.entries.push_back(WMContextMenuEntry{
+                0, entries.substr(oldPos, pos), {entryPos, CONTEXT_MENU_ITEM_WIDTH, CONTEXT_MENU_ITEM_HEIGHT}});
+        } else {
+            m_contextMenu.entries.push_back(
+                WMContextMenuEntry{std::stoi(entries.substr(oldPos, cPos)),
+                                   entries.substr(cPos + 1, pos - (cPos + 1)),
+                                   {entryPos, CONTEXT_MENU_ITEM_WIDTH, CONTEXT_MENU_ITEM_HEIGHT}});
+        }
+
+        oldPos = pos + 1;
+
+        m_contextMenu.bounds.height += CONTEXT_MENU_ITEM_HEIGHT;
+        entryPos.y += CONTEXT_MENU_ITEM_HEIGHT;
+    }
+
+    m_contextMenu.window = win;
+    m_showContextMenu = true;
 }
 
 void WM::OnPong(const Lemon::Handle& client, int64_t windowID) {
