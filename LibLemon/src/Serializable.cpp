@@ -24,7 +24,9 @@ template <> std::string Serialize(const RGBAColour& colour) {
 }
 
 template <> RGBAColour Deserialize(const std::string& value) {
-    assert(value.front() == '#'); // Expect a hash out the front
+    if(value.front() == '#'){
+        return RGBAColour::FromARGB(std::strtoul(value.c_str() + 1, nullptr, 16));
+    }
 
     return RGBAColour::FromARGB(static_cast<uint32_t>(std::stoul(value, nullptr, 16)));
 }

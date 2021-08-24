@@ -9,8 +9,9 @@ liblemon_cpp_args = ['-Wno-write-strings', '-Wno-missing-braces',
     '-m64' ]
 
 liblemon_cpp_files = [
-    'src/Graphics/font.cpp',
     'src/Graphics/bitmapfont.cpp',
+    'src/Graphics/Colour.cpp',
+    'src/Graphics/font.cpp',
     'src/Graphics/graphics.cpp',
     'src/Graphics/image.cpp',
     'src/Graphics/Surface.cpp',

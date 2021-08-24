@@ -12,5 +12,4 @@ std::string Serialize(const T& t);
 template<typename T>
 concept Serializable = requires(T t){
     { Serialize<T>(t) } -> std::same_as<std::string>;
-    { Deserialize<const std::string&>(t) } -> std::same_as<T>;
 };

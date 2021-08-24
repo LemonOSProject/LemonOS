@@ -112,11 +112,12 @@ class Message final {
     uint8_t* m_data;
 
     Message& operator=(const Message& m);
-
     template <typename T> void Insert(uint16_t& pos, const T& obj) {
         memcpy(&m_data[pos], &obj, sizeof(T));
         pos += sizeof(T);
     }
+
+    template <> void Insert(uint16_t& pos, const std::string& obj);
 
     template <typename O> long Decode(uint16_t& pos, O& o) const {
         uint8_t* currentData = m_data + pos;

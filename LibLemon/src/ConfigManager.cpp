@@ -1,5 +1,6 @@
 #include <Lemon/Core/ConfigManager.h>
 
+#include <Lemon/Core/Logger.h>
 #include <Lemon/Core/JSON.h>
 
 #include <functional>
@@ -18,8 +19,8 @@ void ConfigManager::LoadJSONConfig(const std::string& path) {
                 // We add the key to the prefix.
                 // Config keys will look like this
                 //     object.subobject.key
-                readObject(configPrefix + val.first, val.second);
-            } else if(auto it = m_entries.find(val.first); it != m_entries.end()) {
+                readObject(configPrefix + val.first + ".", val.second);
+            } else if(auto it = m_entries.find(configPrefix + val.first); it != m_entries.end()) {
                 ConfigValue& configEntry = it->second; // Make sure the config entry exists
                 if(std::holds_alternative<long>(configEntry)){
                     configEntry = val.second.AsSignedNumber();
@@ -35,6 +36,11 @@ void ConfigManager::LoadJSONConfig(const std::string& path) {
     };
 
     auto root = parser.Parse();
+    if(!root.IsObject()){
+        Logger::Warning("[ConfigManager] Failed to laod JSON config at ", path);
+        return;
+    }
+
     readObject("", root);
 }
 
