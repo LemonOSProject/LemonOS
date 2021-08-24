@@ -456,6 +456,15 @@ void WM::OnPong(const Lemon::Handle& client, int64_t windowID) {
     }
 }
 
+void WM::OnSetSystemTheme(const Lemon::Handle& client, const std::string& path){
+    m_systemTheme = path;
+}
+
+void WM::OnGetSystemTheme(const Lemon::Handle& client){
+    Lemon::Message m = Lemon::Message(LemonWMServer::ResponseGetSystemTheme, m_systemTheme);
+    Lemon::Endpoint(client).Queue(m);
+}
+ 
 void WM::OnPeerDisconnect(const Lemon::Handle& client) {
     std::list<WMWindow*> windowsToDestroy;
     for (WMWindow* win : m_windows) {

@@ -126,10 +126,6 @@ void WMWindow::SetFlags(int flags) {
 }
 
 void WMWindow::Minimize(bool minimized) {
-    if (minimized == m_minimized) {
-        return; // Nothing to do
-    }
-
     if (minimized) {
         if (WM::Instance().ActiveWindow() == this) {
             WM::Instance().SetActiveWindow(nullptr);

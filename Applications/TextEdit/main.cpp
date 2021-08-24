@@ -123,7 +123,7 @@ void OnWindowPaint(surface_t* surface){
 	char buf[38];
 	sprintf(buf, "Line: %d    Col: %d", textBox->cursorPos.y + 1, textBox->cursorPos.x + 1); // lines and columns don't start at 0
 
-	Lemon::Graphics::DrawString(buf, 4 + WINDOW_MENUBAR_HEIGHT, window->GetSize().y - 20 + 4, Lemon::colours[Lemon::Colour::Text], surface);
+	Lemon::Graphics::DrawString(buf, 4 + WINDOW_MENUBAR_HEIGHT, window->GetSize().y - 20 + 4, Lemon::GUI::Theme::Current().ColourText(), surface);
 }
 
 void OnWindowCmd(unsigned short cmd, Lemon::GUI::Window* win){

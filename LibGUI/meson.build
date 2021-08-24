@@ -9,11 +9,11 @@ libgui_cpp_args = ['-Wno-missing-braces',
     '-m64' ]
 
 libgui_cpp_files = [
-    'src/Colours.cpp',
     'src/FileView.cpp',
     'src/FileDialog.cpp',
     'src/Image.cpp',
     'src/MessageBox.cpp',
+    'src/Theme.cpp',
     'src/Widgets.cpp',
     'src/Window.cpp',
     'src/WindowServer.cpp',

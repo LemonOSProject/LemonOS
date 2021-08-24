@@ -139,7 +139,7 @@ void Compositor::Render() {
         Lemon::Graphics::DrawRoundedRect(WM::Instance().m_contextMenu.bounds, WMWindow::theme.titlebarColour, 5, 5, 5, 5, &m_renderSurface);
         for(const auto& ent : WM::Instance().m_contextMenu.entries){
             const Vector2i& pos = ent.bounds.pos;
-            Lemon::Graphics::DrawString(ent.text.c_str(), pos.x, pos.y, Lemon::colours[Lemon::Colour::Text], &m_renderSurface);
+            Lemon::Graphics::DrawString(ent.text.c_str(), pos.x, pos.y, GUI::Theme::Current().ColourText(), &m_renderSurface);
         }
     }
 

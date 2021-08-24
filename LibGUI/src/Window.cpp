@@ -292,7 +292,7 @@ void Window::CreateMenuBar() {
 
 void Window::SetTooltip(const char* text, vector2i_t pos) {
     if (!m_tooltipWindow.get()) {
-        m_tooltipWindow = std::make_unique<TooltipWindow>(text, pos, colours[Colour::ContentBackground]);
+        m_tooltipWindow = std::make_unique<TooltipWindow>(text, pos, Theme::Current().ColourContentBackground());
     } else {
         m_tooltipWindow->SetText(text);
 
@@ -314,7 +314,7 @@ Window::TooltipWindow::TooltipWindow(const char* text, vector2i_t pos, const RGB
         return;
     }
 
-    textObject.SetColour(colours[Colour::Text]);
+    textObject.SetColour(Theme::Current().ColourText());
 
     windowBufferInfo = (WindowBuffer*)Lemon::MapSharedMemory(windowBufferKey);
 
@@ -380,12 +380,12 @@ void Window::TooltipWindow::Paint() {
 void WindowMenuBar::Paint(surface_t* surface) {
     fixedBounds = {0, 0, window->GetSize().x, WINDOW_MENUBAR_HEIGHT};
 
-    Graphics::DrawRect(fixedBounds, colours[Colour::Background], surface);
-    Graphics::DrawRect(0, fixedBounds.height, fixedBounds.width, 1, colours[Colour::Foreground], surface);
+    Graphics::DrawRect(fixedBounds, Theme::Current().ColourBackground(), surface);
+    Graphics::DrawRect(0, fixedBounds.height, fixedBounds.width, 1, Theme::Current().ColourForeground(), surface);
 
     int xpos = 0;
     for (auto& item : items) {
-        xpos += Graphics::DrawString(item.first.c_str(), xpos + 4, 4, colours[Colour::Text], surface) + 8;
+        xpos += Graphics::DrawString(item.first.c_str(), xpos + 4, 4, Theme::Current().ColourText(), surface) + 8;
     }
 }
 

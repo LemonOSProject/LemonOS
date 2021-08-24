@@ -1,17 +1,20 @@
 {
     "colours" : {
-        "activeWindow" : "",
-        "activeWindowText" : "",
-        "inactiveWindow" : "",
-        "inactiveWindowText" : "",
-        "background" : "",
-        "containerBackground" : "",
-        "foreground" : "",
-        "foregroundInactive" : "",
-        "foregroundAlternate" : "",
+        "activeWindow" : "#ff222022",
+        "activeWindowText" : "#ffeeeeee",
+        "inactiveWindow" : "#ff222022",
+        "inactiveWindowText" : "#ffeeeeee",
+        "background" : "#ff282629",
+        "containerBackground" : "#ff454047",
+        "foreground" : "#ffb86016",
+        "foregroundInactive" : "#ffa66129",
+        "foregroundAlternate" : "#ffff0000",
+        "border" : "#ff333333",
+        "textLight" : "#ffeeeeee",
+        "textDark" : "#ffeeeeee"
     },
     "wm" : {
-        "windowCornerRadius" : 9,
+        "windowCornerRadius" : 10,
         "windowBorderThickness" : 1,
         "windowTitlebarHeight" : 24
     }

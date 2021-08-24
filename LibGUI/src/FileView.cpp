@@ -2,8 +2,8 @@
 
 #include <Lemon/Core/IconManager.h>
 #include <Lemon/Core/Keyboard.h>
-#include <Lemon/GUI/Colours.h>
 #include <Lemon/GUI/Messagebox.h>
+#include <Lemon/GUI/Theme.h>
 #include <Lemon/GUI/Window.h>
 
 #include <assert.h>
@@ -35,7 +35,7 @@ void FileViewOnListSelect(GridItem& item, GridView* lv) {
 }
 
 class FileButton : public Button {
-  public:
+public:
     std::string file;
     int icon = 0;
     FileButton(const char* _label, rect_t _bounds) : Button(_label, _bounds) { drawText = false; }
@@ -55,14 +55,14 @@ class FileButton : public Button {
         }
 
         if (Graphics::PointInRect(fixedBounds, window->lastMousePos)) {
-            Graphics::DrawRect(fixedBounds, colours[Colour::Foreground], surface);
+            Graphics::DrawRect(fixedBounds, Theme::Current().ColourForeground(), surface);
         }
 
         if (iconS && iconS->buffer)
             Graphics::surfacecpyTransparent(surface, iconS, bounds.pos + (vector2i_t){2, 2});
 
         Graphics::DrawString(label.c_str(), bounds.pos.x + 20, bounds.pos.y + bounds.size.y / 2 - 8,
-                             colours[Colour::Text], surface);
+                             Theme::Current().ColourTextLight(), surface);
     }
 };
 

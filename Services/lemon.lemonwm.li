@@ -16,16 +16,18 @@ interface LemonWMServer {
 
     DisplayContextMenu(s64 windowID, s32 x, s32 y, string entries)
 
+    Pong(s64 windowID)
+
     ReloadConfig()
+    SetSystemTheme(string path)
+    GetSystemTheme() -> (string path)
 
     SubscribeToWindowEvents()
-
-    Pong(s64 windowID)
 }
 
 interface LemonWMClient {
     SendEvent(s64 windowID, s32 id, u64 data)
-    ThemeUpdate(string name)
+    ThemeUpdated()
 
     WindowCreated(s64 windowID, u32 flags, string name)
     WindowTitleChanged(s64 windowID, string name)

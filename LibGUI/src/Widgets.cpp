@@ -1,7 +1,8 @@
-#include <Lemon/GUI/Colours.h>
 #include <Lemon/GUI/Model.h>
+#include <Lemon/GUI/Theme.h>
 #include <Lemon/GUI/Widgets.h>
 #include <Lemon/GUI/Window.h>
+#include <Lemon/Graphics/Surface.h>
 
 #include <Lemon/Core/Keyboard.h>
 
@@ -308,19 +309,19 @@ void Button::DrawButtonBorders(surface_t* surface, bool white) {
     rect_t bounds = fixedBounds;
 
     if (white) {
-        Graphics::DrawRect(bounds.pos.x + 1, btnPos.y, bounds.size.x - 2, 1, colours[Colour::ContentShadow], surface);
+        Graphics::DrawRect(bounds.pos.x + 1, btnPos.y, bounds.size.x - 2, 1, Theme::Current().ColourBorder(), surface);
         Graphics::DrawRect(btnPos.x + 1, btnPos.y + bounds.size.y - 1, bounds.size.x - 2, 1,
-                           colours[Colour::ContentShadow], surface);
-        Graphics::DrawRect(btnPos.x, btnPos.y + 1, 1, bounds.size.y - 2, colours[Colour::ContentShadow], surface);
+                           Theme::Current().ColourBorder(), surface);
+        Graphics::DrawRect(btnPos.x, btnPos.y + 1, 1, bounds.size.y - 2, Theme::Current().ColourBorder(), surface);
         Graphics::DrawRect(btnPos.x + bounds.size.x - 1, btnPos.y + 1, 1, bounds.size.y - 2,
-                           colours[Colour::ContentShadow], surface);
+                           Theme::Current().ColourBorder(), surface);
     } else {
-        Graphics::DrawRect(bounds.pos.x + 1, btnPos.y, bounds.size.x - 2, 1, colours[Colour::ContentShadow], surface);
+        Graphics::DrawRect(bounds.pos.x + 1, btnPos.y, bounds.size.x - 2, 1, Theme::Current().ColourBorder(), surface);
         Graphics::DrawRect(btnPos.x + 1, btnPos.y + bounds.size.y - 1, bounds.size.x - 2, 1,
-                           colours[Colour::ContentShadow], surface);
-        Graphics::DrawRect(btnPos.x, btnPos.y + 1, 1, bounds.size.y - 2, colours[Colour::ContentShadow], surface);
+                           Theme::Current().ColourBorder(), surface);
+        Graphics::DrawRect(btnPos.x, btnPos.y + 1, 1, bounds.size.y - 2, Theme::Current().ColourBorder(), surface);
         Graphics::DrawRect(btnPos.x + bounds.size.x - 1, btnPos.y + 1, 1, bounds.size.y - 2,
-                           colours[Colour::ContentShadow], surface);
+                           Theme::Current().ColourBorder(), surface);
     }
 }
 
@@ -329,9 +330,9 @@ void Button::DrawButtonLabel(surface_t* surface, bool white) {
     vector2i_t btnPos = fixedBounds.pos;
 
     if (white) {
-        colour = colours[Colour::TextAlternate];
+        colour = Theme::Current().ColourTextLight();
     } else {
-        colour = colours[Colour::Text];
+        colour = Theme::Current().ColourTextLight();
     }
 
     if (labelAlignment == TextAlignment::Centre) {
@@ -378,7 +379,7 @@ void Button::Paint(surface_t* surface) {
             break;
         default:
             Graphics::DrawRect(btnPos.x + 1, btnPos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y,
-                               colours[Colour::ContentBackground], surface);
+                               Theme::Current().ColourContentBackground(), surface);
             DrawButtonBorders(surface, false);
             if (drawText)
                 DrawButtonLabel(surface, false);
@@ -387,7 +388,7 @@ void Button::Paint(surface_t* surface) {
 
         if (Graphics::PointInRect(fixedBounds, window->lastMousePos)) {
             Graphics::DrawRectOutline(fixedBounds.x + 1, fixedBounds.y + 1, fixedBounds.width - 2,
-                                      fixedBounds.height - 2, colours[Colour::Foreground], surface);
+                                      fixedBounds.height - 2, Theme::Current().ColourForeground(), surface);
         }
     }
 }
@@ -555,12 +556,12 @@ TextBox::TextBox(rect_t bounds, bool multiline) : Widget(bounds) {
 
 void TextBox::Paint(surface_t* surface) {
     Graphics::DrawRect(fixedBounds.pos.x + 1, fixedBounds.pos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2,
-                       colours[Colour::ContentBackground], surface);
+                       Theme::Current().ColourContentBackground(), surface);
 
     if (IsActive() || Graphics::PointInRect(fixedBounds, window->lastMousePos)) {
-        Graphics::DrawRectOutline(fixedBounds, colours[Colour::Foreground], surface);
+        Graphics::DrawRectOutline(fixedBounds, Theme::Current().ColourForeground(), surface);
     } else {
-        Graphics::DrawRectOutline(fixedBounds, colours[Colour::ContentShadow], surface);
+        Graphics::DrawRectOutline(fixedBounds, Theme::Current().ColourBorder(), surface);
     }
     int xpos = 2;
     int ypos = 2;
@@ -857,16 +858,16 @@ void ListView::SetModel(DataModel* model) {
 void ListView::Paint(surface_t* surface) {
     if (drawBackground) {
         Graphics::DrawRect(fixedBounds.x, fixedBounds.y, fixedBounds.width, columnDisplayHeight,
-                           colours[Colour::Background], surface);
+                           Theme::Current().ColourBackground(), surface);
         Graphics::DrawRect(fixedBounds.x, fixedBounds.y + columnDisplayHeight, fixedBounds.width,
-                           fixedBounds.height - 20, colours[Colour::ContentBackground], surface);
+                           fixedBounds.height - 20, Theme::Current().ColourContentBackground(), surface);
     }
 
     if (!model) {
         return; // If there is no model there is no data to display
     }
 
-    rgba_colour_t textColour = colours[Colour::Text];
+    rgba_colour_t textColour = Theme::Current().ColourText();
 
     int totalColumnWidth;
     int xPos = fixedBounds.x;
@@ -879,7 +880,7 @@ void ListView::Paint(surface_t* surface) {
 
             Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, textColour, surface); // Divider
             xPos++;
-            Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, colours[Colour::TextAlternate],
+            Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, Theme::Current().ColourTextDark(),
                                surface); // Divider
             xPos++;
         }
@@ -901,11 +902,11 @@ void ListView::Paint(surface_t* surface) {
         xPos = fixedBounds.x;
 
         if (index == selected) {
-            Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::Foreground],
-                               surface, fixedBounds);
+            Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2,
+                               Theme::Current().ColourForeground(), surface, fixedBounds);
         } else if (Graphics::PointInRect({xPos, yPos, fixedBounds.width, itemHeight}, window->lastMousePos)) {
-            Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2, colours[Colour::ForegroundDim],
-                               surface, fixedBounds);
+            Graphics::DrawRect(xPos + 1, yPos + 1, totalColumnWidth - 2, itemHeight - 2,
+                               Theme::Current().ColourForegroundInactive(), surface, fixedBounds);
         }
 
         for (int i = 0; i < model->ColumnCount(); i++) {
@@ -945,7 +946,7 @@ void ListView::Paint(surface_t* surface) {
 
             vector2i_t textPos = {xPos + 2, yPos + itemHeight / 2 - font->height / 2};
             if (index == selected) {
-                Graphics::DrawString(str.c_str(), textPos.x, textPos.y, colours[Colour::TextAlternate], surface,
+                Graphics::DrawString(str.c_str(), textPos.x, textPos.y, Theme::Current().ColourTextDark(), surface,
                                      fixedBounds);
             } else {
                 Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour, surface, fixedBounds);
@@ -1141,11 +1142,11 @@ void GridView::ResetScrollBar() {
 }
 
 void GridView::Paint(surface_t* surface) {
-    Graphics::DrawRect(fixedBounds, colours[Colour::ContentBackground], surface);
+    Graphics::DrawRect(fixedBounds, Theme::Current().ColourContentBackground(), surface);
     if (Graphics::PointInRect(fixedBounds, window->lastMousePos)) {
-        Graphics::DrawRectOutline(fixedBounds, colours[Colour::Foreground], surface);
+        Graphics::DrawRectOutline(fixedBounds, Theme::Current().ColourForeground(), surface);
     } else {
-        Graphics::DrawRectOutline(fixedBounds, colours[Colour::ContentShadow], surface);
+        Graphics::DrawRectOutline(fixedBounds, Theme::Current().ColourBorder(), surface);
     }
 
     int xPos = 0;
@@ -1204,19 +1205,20 @@ void GridView::Paint(surface_t* surface) {
 
         if (static_cast<int>(idx) == selected) {
             Graphics::DrawRect(textX - 4, textY, len + 7, Graphics::DefaultFont()->height + 7,
-                               colours[Colour::Foreground], surface, fixedBounds); // Highlight the label if selected
+                               Theme::Current().ColourForeground(), surface,
+                               fixedBounds); // Highlight the label if selected
         } else if (Graphics::PointInRect({{textX, textY}, {len, fontHeight}}, window->lastMousePos)) {
             Graphics::DrawRect(textX - 4, textY, len + 7, Graphics::DefaultFont()->height + 7,
-                               colours[Colour::ForegroundDim], surface,
+                               Theme::Current().ColourForegroundInactive(), surface,
                                fixedBounds); // Highlight the label if moused over
         } else if (item.icon &&
                    Graphics::PointInRect({iconPos, {item.icon->width, item.icon->height}}, window->lastMousePos)) {
             Graphics::DrawRect(textX - 4, textY, len + 7, Graphics::DefaultFont()->height + 7,
-                               colours[Colour::ForegroundDim], surface,
+                               Theme::Current().ColourForegroundInactive(), surface,
                                fixedBounds); // Highlight the label if moused over
         }
 
-        Graphics::DrawString(str.c_str(), textX, textY, colours[Colour::Text], surface, fixedBounds);
+        Graphics::DrawString(str.c_str(), textX, textY, Theme::Current().ColourText(), surface, fixedBounds);
 
         xPos += itemSize.x;
 
@@ -1350,7 +1352,7 @@ int GridView::AddItem(GridItem& item) {
 void GridView::UpdateFixedBounds() {
     Widget::UpdateFixedBounds();
 
-    if(fixedBounds.width <= 0){
+    if (fixedBounds.width <= 0) {
         return;
     }
 

@@ -17,7 +17,7 @@ void ExtendedTextBox::Paint(surface_t* surface){
         int yPos = fixedBounds.y + (i * font->lineHeight) - sBar.scrollPos;
         snprintf(num, 10, "%d", i + 1);
         int textSz = Lemon::Graphics::GetTextLength(num);
-        Lemon::Graphics::DrawString(num, fixedBounds.pos.x + (LINE_NUM_PANEL_WIDTH / 2) - textSz / 2, yPos + lineSpacing / 2, Lemon::colours[Lemon::Colour::Text], surface, {fixedBounds.pos, {fixedBounds.width, textBoxBounds.height}});
+        Lemon::Graphics::DrawString(num, fixedBounds.pos.x + (LINE_NUM_PANEL_WIDTH / 2) - textSz / 2, yPos + lineSpacing / 2, Lemon::GUI::Theme::Current().ColourText(), surface, {fixedBounds.pos, {fixedBounds.width, textBoxBounds.height}});
     }
     fixedBounds = textBoxBounds;
     TextBox::Paint(surface);

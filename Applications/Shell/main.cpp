@@ -3,6 +3,7 @@
 #include <Lemon/Core/Keyboard.h>
 #include <Lemon/Core/SharedMemory.h>
 #include <Lemon/Core/Shell.h>
+#include <Lemon/GUI/Theme.h>
 #include <Lemon/GUI/Window.h>
 #include <Lemon/Graphics/Graphics.h>
 #include <Lemon/System/Framebuffer.h>
@@ -47,16 +48,19 @@ public:
     void Paint(surface_t* surface) {
         this->label = win->title;
         if (win->state == Lemon::WindowState_Active || pressed) {
-            Lemon::Graphics::DrawRoundedRect(fixedBounds, Lemon::colours[Lemon::Colour::ForegroundDim], 10, 10, 10, 10, surface);
+            Lemon::Graphics::DrawRoundedRect(fixedBounds, Lemon::GUI::Theme::Current().ColourForegroundInactive(), 10, 10, 10, 10, surface);
         }
 
-        Lemon::Graphics::DrawString(label.c_str(), fixedBounds.x + 10, fixedBounds.y + fixedBounds.height / 2 - Lemon::Graphics::DefaultFont()->lineHeight / 2, Lemon::colours[Lemon::Colour::Text], surface);
+        Lemon::Graphics::DrawString(label.c_str(), fixedBounds.x + 10,
+                                    fixedBounds.y + fixedBounds.height / 2 -
+                                        Lemon::Graphics::DefaultFont()->lineHeight / 2,
+                                    Lemon::GUI::Theme::Current().ColourText(), surface);
     }
 
     void OnMouseUp(vector2i_t mousePos) {
         pressed = false;
 
-        if (win->lastState == Lemon::WindowState_Active) {
+        if (win->state == Lemon::WindowState_Active) {
             window->Minimize(win->id, true);
         } else {
             window->Minimize(win->id, false);
@@ -128,7 +132,8 @@ void OnWindowTitleChanged(int64_t windowID, const std::string& name) {
 
 void OnTaskbarPaint(Surface* surface) {
     memset(surface->buffer, 0, surface->BufferSize()); // Clear the buffer, important for alpha blending
-    Lemon::Graphics::DrawRoundedRect(2, 2, taskbar->GetSize().x - 4, taskbar->GetSize().y - 4, 0x22, 0x20, 0x22, 10, 10, 10, 10, surface);
+    Lemon::Graphics::DrawRoundedRect(2, 2, taskbar->GetSize().x - 4, taskbar->GetSize().y - 4, 0x22, 0x20, 0x22, 10, 10,
+                                     10, 10, surface);
 
     if (showMenu) {
         surface->AlphaBlit(&menuButton, {22 - menuButton.width / 2, 17 - menuButton.height / 4},
@@ -191,7 +196,7 @@ int main() {
     taskbar->GUIRegisterEventHandler(Lemon::EventMouseReleased, [](Lemon::LemonEvent& ev) -> bool {
         if (ev.mousePos.x < 50) {
             MinimizeMenu(showMenu); // Toggle whether window is minimized or not
-            return true; // Do not process event further
+            return true;            // Do not process event further
         }
 
         return false;

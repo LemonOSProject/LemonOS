@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Lemon/GUI/Colours.h>
 #include <Lemon/GUI/ContextMenu.h>
+#include <Lemon/GUI/Theme.h>
 #include <Lemon/Graphics/Graphics.h>
 #include <Lemon/Graphics/Surface.h>
 
@@ -32,7 +32,7 @@ enum WidgetAlignment {
 };
 
 class Widget {
-  public:
+public:
     Widget();
     Widget(rect_t bounds, LayoutSize newSizeX = LayoutSize::Fixed, LayoutSize newSizeY = LayoutSize::Fixed);
     virtual ~Widget();
@@ -87,7 +87,7 @@ class Widget {
     };
 
     Widget* active = nullptr; // Only applies to containers, etc. is so widgets know whether they are active or not
-  protected:
+protected:
     Widget* parent = nullptr;
     Window* window = nullptr;
 
@@ -105,8 +105,8 @@ class Widget {
 };
 
 class Container : public Widget {
-  public:
-    rgba_colour_t background = Lemon::colours[Lemon::Colour::Background];
+public:
+    rgba_colour_t background = Theme::Current().ColourBackground();
 
     Container(rect_t bounds);
     virtual ~Container();
@@ -130,18 +130,18 @@ class Container : public Widget {
 
     virtual void UpdateFixedBounds();
 
-  protected:
+protected:
     std::vector<Widget*> children;
 
     Widget* lastMousedOver = nullptr;
 };
 
 class LayoutContainer : public Container {
-  protected:
+protected:
     vector2i_t itemSize;
     bool isOverflowing = false;
 
-  public:
+public:
     int xPadding = 2;
     int yPadding = 2;
 
@@ -155,12 +155,12 @@ class LayoutContainer : public Container {
 };
 
 class ScrollBar { /* Not a widget, but is to be used in widgets*/
-  protected:
+protected:
     int scrollIncrement;
     int pressOffset;
     int height;
 
-  public:
+public:
     bool pressed = false;
 
     rect_t scrollBar;
@@ -178,12 +178,12 @@ class ScrollBar { /* Not a widget, but is to be used in widgets*/
 };
 
 class ScrollBarHorizontal { /* Not a widget, but is to be used in widgets*/
-  protected:
+protected:
     int scrollIncrement;
     int pressOffset;
     int width;
 
-  public:
+public:
     bool pressed = false;
 
     rect_t scrollBar;
@@ -199,7 +199,7 @@ class ScrollBarHorizontal { /* Not a widget, but is to be used in widgets*/
 };
 
 class Button : public Widget {
-  protected:
+protected:
     bool drawText = true;
 
     TextAlignment labelAlignment = TextAlignment::Centre;
@@ -210,7 +210,7 @@ class Button : public Widget {
     void DrawButtonBorders(surface_t* surface, bool white);
     void DrawButtonLabel(surface_t* surface, bool white);
 
-  public:
+public:
     bool active = false;
     bool pressed = false;
     int style = 0; // 0 - Normal, 1 - Blue, 2 - Red, 3 - Yellow
@@ -227,7 +227,7 @@ class Button : public Widget {
 };
 
 class Bitmap : public Widget {
-  public:
+public:
     surface_t surface;
 
     Bitmap(rect_t _bounds);
@@ -236,7 +236,7 @@ class Bitmap : public Widget {
 };
 
 class Image : public Widget {
-  public:
+public:
     Image(rect_t _bounds);
     Image(rect_t _bounds, const char* path);
 
@@ -248,13 +248,13 @@ class Image : public Widget {
 
     void UpdateFixedBounds();
 
-  protected:
+protected:
     Graphics::Texture texture;
 };
 
 class Label : public Widget {
-  public:
-    rgba_colour_t textColour = colours[Colour::Text];
+public:
+    rgba_colour_t textColour = Theme::Current().ColourTextLight();
     std::string label;
     Label(const char* _label, rect_t _bounds);
 
@@ -269,13 +269,13 @@ enum {
 };
 
 class TextBox : public Widget {
-  protected:
+protected:
     ScrollBar sBar;
 
     std::vector<ContextMenuEntry> ctxEntries;
     bool masked = false;
 
-  public:
+public:
     bool editable = true;
     bool multiline = false;
     bool active = false;
@@ -301,7 +301,7 @@ class TextBox : public Widget {
 
     void ResetScrollBar();
 
-    rgba_colour_t textColour = colours[Colour::Text];
+    rgba_colour_t textColour = Theme::Current().ColourTextLight();
 
     void (*OnSubmit)(TextBox*) = nullptr;
 };
@@ -317,7 +317,7 @@ struct ListColumn {
 };
 
 class ListView : public Widget {
-  public:
+public:
     ListView(rect_t bounds);
     ~ListView();
 
@@ -352,7 +352,7 @@ class ListView : public Widget {
     bool displayColumnNames = true;
     bool drawBackground = true;
 
-  protected:
+protected:
     DataModel* model = nullptr;
     std::vector<int> columnDisplayWidths;
 
@@ -369,7 +369,7 @@ class ListView : public Widget {
     void ResetScrollBar();
 
     class ListEditTextbox : public TextBox {
-      public:
+    public:
         ListEditTextbox(ListView* lv, rect_t bounds) : TextBox(bounds, false) { SetParent(lv); }
     };
 
@@ -378,13 +378,13 @@ class ListView : public Widget {
 };
 
 class GridItem {
-  public:
+public:
     const Surface* icon = nullptr;
     std::string name;
 };
 
 class GridView : public Widget {
-  public:
+public:
     GridView(rect_t bounds) : Widget(bounds) {}
     ~GridView() = default;
 
@@ -410,7 +410,7 @@ class GridView : public Widget {
 
     int selected = -1;
 
-  protected:
+protected:
     std::vector<GridItem> items;
 
     const vector2i_t itemSize = {96, 80};
@@ -446,7 +446,7 @@ class GridView : public Widget {
 };
 
 class FileView : public Container {
-  protected:
+protected:
     vector2i_t pathBoxPadding = {6, 6};
     int pathBoxHeight = 24;
     int sidepanelWidth = 132;
@@ -461,7 +461,7 @@ class FileView : public Container {
 
     ListColumn nameCol, sizeCol;
 
-  public:
+public:
     static const Surface* diskIcon;
     static const Surface* folderIcon;
     static const Surface* fileIcon;
@@ -491,7 +491,7 @@ class ScrollView : public Container {
 
     rect_t scrollBounds = {0, 0, 0, 0};
 
-  public:
+public:
     ScrollView(rect_t b) : Container(b) {}
     void Paint(surface_t* surface);
     void AddWidget(Widget* w);

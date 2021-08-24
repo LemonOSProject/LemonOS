@@ -79,6 +79,9 @@ private:
                               const std::string& entries) override;
     void OnPong(const Lemon::Handle& client, int64_t windowID) override;
 
+    void OnSetSystemTheme(const Lemon::Handle& client, const std::string& path) override;
+    void OnGetSystemTheme(const Lemon::Handle& client) override;
+
     void OnPeerDisconnect(const Lemon::Handle& client) override;
     void OnGetScreenBounds(const Lemon::Handle& client) override;
     void OnReloadConfig(const Lemon::Handle& client) override;
@@ -88,6 +91,8 @@ private:
     long m_targetFramerate = 0;              // Used for framerate limiter
     long m_targetFrameIntervalThreshold = 0; // The maximum time difference to thread sleep
     long m_targetFrameInterval = 0;
+
+    std::string m_systemTheme = "/system/lemon/resources/themes/default.json";
 
     Lemon::Interface m_messageInterface;
     class Compositor m_compositor;

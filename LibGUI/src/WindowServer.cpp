@@ -1,5 +1,6 @@
 #include <Lemon/GUI/WindowServer.h>
 
+#include <Lemon/GUI/Theme.h>
 #include <Lemon/GUI/Window.h>
 
 #include <assert.h>
@@ -25,9 +26,7 @@ void WindowServer::RegisterWindow(GUI::Window* win) { m_windows[win->ID()] = win
 
 void WindowServer::UnregisterWindow(long windowID) { m_windows.erase(windowID); }
 
-void WindowServer::SubscribeToWindowEvents(){
-    LemonWMServerEndpoint::SubscribeToWindowEvents();
-}
+void WindowServer::SubscribeToWindowEvents() { LemonWMServerEndpoint::SubscribeToWindowEvents(); }
 
 void WindowServer::Poll() {
     Lemon::Message m;
@@ -36,7 +35,10 @@ void WindowServer::Poll() {
     }
 }
 
-WindowServer::WindowServer() : LemonWMServerEndpoint("lemon.lemonwm/Instance") { assert(!m_instance); }
+WindowServer::WindowServer() : LemonWMServerEndpoint("lemon.lemonwm/Instance") {
+    assert(!m_instance);
+    GUI::Theme::Current().Update(GetSystemTheme());
+}
 
 void WindowServer::OnPeerDisconnect(const Lemon::Handle&) {
     throw std::runtime_error("WindowServer has disconnected!");
@@ -49,27 +51,27 @@ void WindowServer::OnSendEvent(const Lemon::Handle&, int64_t windowID, int32_t i
     }
 }
 
-void WindowServer::OnThemeUpdate(const Lemon::Handle&, const std::string& name) { (void)name; }
+void WindowServer::OnThemeUpdated(const Lemon::Handle&) { GUI::Theme::Current().Update(GetSystemTheme()); }
 
 void WindowServer::OnPing(const Lemon::Handle&, int64_t windowID) { Pong(windowID); }
 
 void WindowServer::OnWindowCreated(const Lemon::Handle&, int64_t windowID, uint32_t flags, const std::string& name) {
-    if(OnWindowCreatedHandler)
+    if (OnWindowCreatedHandler)
         OnWindowCreatedHandler(windowID, flags, name);
 }
 
 void WindowServer::OnWindowStateChanged(const Lemon::Handle&, int64_t windowID, uint32_t flags, int32_t state) {
-    if(OnWindowStateChangedHandler)
+    if (OnWindowStateChangedHandler)
         OnWindowStateChangedHandler(windowID, flags, state);
 }
 
 void WindowServer::OnWindowTitleChanged(const Lemon::Handle&, int64_t windowID, const std::string& name) {
-    if(OnWindowTitleChangedHandler)
+    if (OnWindowTitleChangedHandler)
         OnWindowTitleChangedHandler(windowID, name);
 }
 
 void WindowServer::OnWindowDestroyed(const Lemon::Handle&, int64_t windowID) {
-    if(OnWindowDestroyedHandler)
+    if (OnWindowDestroyedHandler)
         OnWindowDestroyedHandler(windowID);
 }
 

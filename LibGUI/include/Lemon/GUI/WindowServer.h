@@ -40,6 +40,17 @@ public:
         return {r.width, r.height};
     }
 
+    /////////////////////////////
+    /// \brief Get path to system theme
+    ///
+    /// \return Path to system theme
+    /////////////////////////////
+    inline std::string GetSystemTheme() {
+        LemonWMServer::GetSystemThemeResponse r = LemonWMServerEndpoint::GetSystemTheme();
+
+        return r.path;
+    }
+
     void (*OnWindowCreatedHandler)(int64_t, uint32_t, const std::string&) = nullptr;
     void (*OnWindowStateChangedHandler)(int64_t, uint32_t, int32_t) = nullptr;
     void (*OnWindowTitleChangedHandler)(int64_t, const std::string&) = nullptr;
@@ -50,7 +61,7 @@ private:
 
     void OnPeerDisconnect(const Lemon::Handle& client) override;
     void OnSendEvent(const Lemon::Handle& client, int64_t windowID, int32_t id, uint64_t data) override;
-    void OnThemeUpdate(const Lemon::Handle& client, const std::string& name) override;
+    void OnThemeUpdated(const Lemon::Handle& client) override;
     void OnPing(const Lemon::Handle& client, int64_t windowID) override;
 
     void OnWindowCreated(const Lemon::Handle& client, int64_t windowID, uint32_t flags, const std::string& name) override;
