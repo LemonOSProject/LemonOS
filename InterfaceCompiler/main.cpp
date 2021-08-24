@@ -487,7 +487,21 @@ void Generate(std::ostream& out){
                             << "        Lemon::Message m = Lemon::Message(buffer, size, " << interfaceStatement->interfaceName << "::Request" << sync->methodName << ", " << parameterString << ");\n"
                             << "        if(Call(m, " << interfaceStatement->interfaceName << "::Response" << sync->methodName << ")) throw std::runtime_error(\"Failed calling " << sync->methodName << "\");\n\n"
                             << "        " << interfaceStatement->interfaceName << "::" << sync->methodName << "Response response;\n" // $(methodName)Response response;
-                            << "        if(m.Decode(response)){\n"
+                            << "        if(m.Decode(";
+                            
+                        // The struct may not be trivally copyable,
+                        // We pass each member individually
+                        for(auto param = sync->returnParameters.parameters.begin(); param != sync->returnParameters.parameters.end();){
+                            clientRequests << "response." << param->second;
+
+                            param++;
+                            // Make sure we dont insert a comma at the end
+                            if(param != sync->returnParameters.parameters.end()){
+                                clientRequests << ", ";
+                            }
+                        }
+
+                        clientRequests << ")){\n"
                             << "            throw std::runtime_error(\"Invalid response to request " << sync->methodName << "!\");\n"
                             << "            return response; // Error decoding response\n"
                             << "        }\n\n"
@@ -501,7 +515,21 @@ void Generate(std::ostream& out){
                             << "        Lemon::Message m = Lemon::Message(buffer, 0, " << interfaceStatement->interfaceName << "::Request" << sync->methodName << ");\n"
                             << "        if(Call(m, " << interfaceStatement->interfaceName << "::Response" << sync->methodName << ")) throw std::runtime_error(\"Failed calling " << sync->methodName << "\");\n\n"
                             << "        " << interfaceStatement->interfaceName << "::" << sync->methodName << "Response response;\n" // $(methodName)Response response;
-                            << "        if(m.Decode(response)){\n"
+                            << "        if(m.Decode(";
+                            
+                        // The struct may not be trivally copyable,
+                        // We pass each member individually
+                        for(auto param = sync->returnParameters.parameters.begin(); param != sync->returnParameters.parameters.end();){
+                            clientRequests << "response." << param->second;
+
+                            param++;
+                            // Make sure we dont insert a comma at the end
+                            if(param != sync->returnParameters.parameters.end()){
+                                clientRequests << ", ";
+                            }
+                        }
+
+                        clientRequests << ")){\n"
                             << "            throw std::runtime_error(\"Invalid response to request " << sync->methodName << "!\");\n"
                             << "            return response; // Error decoding response\n"
                             << "        }\n\n"
