@@ -216,7 +216,7 @@ public:
         ssize_t Read(size_t, size_t, uint8_t*);
         ssize_t Write(size_t, size_t, uint8_t*);
         int ReadDir(DirectoryEntry*, uint32_t);
-        FsNode* FindDir(char* name);
+        FsNode* FindDir(const char* name);
         int Create(DirectoryEntry*, uint32_t);
         int CreateDirectory(DirectoryEntry*, uint32_t);
 
@@ -304,7 +304,7 @@ public:
         ssize_t Read(Ext2Node* node, size_t offset, size_t size, uint8_t* buffer);
         ssize_t Write(Ext2Node* node, size_t offset, size_t size, uint8_t* buffer);
         int ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index);
-        FsNode* FindDir(Ext2Node* node, char* name);
+        FsNode* FindDir(Ext2Node* node, const char* name);
         int Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
         int CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
         ssize_t ReadLink(Ext2Node* node, char* pathBuffer, size_t bufSize);

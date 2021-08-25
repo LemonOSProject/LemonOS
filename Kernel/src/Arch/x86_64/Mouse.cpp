@@ -1,11 +1,11 @@
 #include <Mouse.h>
 
 #include <APIC.h>
+#include <CString.h>
 #include <Device.h>
 #include <Fs/Filesystem.h>
 #include <IDT.h>
 #include <Logging.h>
-#include <String.h>
 #include <System.h>
 #include <stddef.h>
 

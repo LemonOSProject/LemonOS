@@ -1,18 +1,19 @@
 #include <Logging.h>
 
-#include <Panic.h>
 #include <APIC.h>
-#include <Serial.h>
-#include <String.h>
+#include <CString.h>
 #include <IDT.h>
+#include <Panic.h>
+#include <Serial.h>
 #include <StackTrace.h>
 
-extern "C"{
+extern "C" {
 
-[[noreturn]] void KernelAssertionFailed(const char* msg, const char* file, int line){
+[[noreturn]] void KernelAssertionFailed(const char* msg, const char* file, int line) {
     asm("cli");
 
-    APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
+    APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED,
+                         IPI_HALT);
 
     Log::Error("Kernel Assertion Failed (%s) - file: %s, line: %d", msg, file, line);
 
@@ -28,5 +29,4 @@ extern "C"{
 
     asm("hlt");
 }
-
 }

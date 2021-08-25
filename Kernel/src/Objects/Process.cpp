@@ -120,7 +120,11 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
 
 Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process* parent)
     : m_pid(pid), m_parent(parent) {
-    strncpy(workingDir, _workingDir, PATH_MAX);
+    if(_workingDir){
+        strncpy(workingDir, _workingDir, PATH_MAX);
+    } else {
+        strcpy(workingDir, "/");
+    }
     strncpy(name, _name, NAME_MAX);
 
     addressSpace = new AddressSpace(Memory::CreatePageMap());
@@ -435,7 +439,7 @@ void Process::Die() {
     m_watching.clear();
 
     if(m_parent && (m_parent->State() == Process_Running)){
-        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Sending SIGCHILD...", m_pid);
+        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Sending SIGCHILD to %s...", m_pid, m_parent->name);
         m_parent->GetMainThread()->Signal(SIGCHLD);
     }
 

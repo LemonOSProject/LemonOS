@@ -1,6 +1,6 @@
 #include <Device.h>
 
-#include <String.h>
+#include <CString.h>
 #include <Errno.h>
 
 PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk)

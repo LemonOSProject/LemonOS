@@ -1,13 +1,13 @@
 #include <ACPI.h>
 
 #include <APIC.h>
+#include <CString.h>
 #include <Liballoc.h>
 #include <List.h>
 #include <Logging.h>
 #include <PCI.h>
 #include <Paging.h>
 #include <Panic.h>
-#include <String.h>
 #include <Timer.h>
 
 #include <lai/core.h>

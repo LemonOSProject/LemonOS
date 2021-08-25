@@ -159,7 +159,7 @@ namespace Network {
         return 1;
     }
 
-    FsNode* NetFS::FindDir(char* name){
+    FsNode* NetFS::FindDir(const char* name){
         if(strcmp(name, ".") == 0){
             return this;
         } else if(strcmp(name, "..") == 0){

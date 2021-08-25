@@ -69,7 +69,7 @@ namespace fs::tar {
         ssize_t Write(size_t, size_t, uint8_t *);
         void Close();
         int ReadDir(DirectoryEntry*, uint32_t);
-        FsNode* FindDir(char* name);
+        FsNode* FindDir(const char* name);
 
         TarVolume* vol;
     };
@@ -95,6 +95,6 @@ namespace fs::tar {
         void Open(TarNode* node, uint32_t flags);
         void Close(TarNode* node);
         int ReadDir(TarNode* node, DirectoryEntry* dirent, uint32_t index);
-        FsNode* FindDir(TarNode* node, char* name);
+        FsNode* FindDir(TarNode* node, const char* name);
     };
 };

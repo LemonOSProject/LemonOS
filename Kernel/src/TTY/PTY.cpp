@@ -1,12 +1,12 @@
 #include <Assert.h>
 #include <CPU.h>
+#include <CString.h>
 #include <Errno.h>
 #include <Fs/Filesystem.h>
 #include <List.h>
 #include <Logging.h>
 #include <PTY.h>
 #include <Scheduler.h>
-#include <String.h>
 #include <Types.h>
 
 cc_t c_cc_default[NCCS]{
@@ -241,7 +241,7 @@ ssize_t PTY::MasterWrite(char* buffer, size_t count) {
         if (IsCanonical()) {
             while (slave.lines && slaveFile.blocked.get_length()) {
                 acquireLock(&slaveFile.blockedLock);
-                if(slaveFile.blocked.get_length()) {
+                if (slaveFile.blocked.get_length()) {
                     slaveFile.blocked.get_front()->Unblock();
                 }
                 releaseLock(&slaveFile.blockedLock);
@@ -249,7 +249,7 @@ ssize_t PTY::MasterWrite(char* buffer, size_t count) {
         } else {
             while (slave.bufferPos && slaveFile.blocked.get_length()) {
                 acquireLock(&slaveFile.blockedLock);
-                if(slaveFile.blocked.get_length()) {
+                if (slaveFile.blocked.get_length()) {
                     slaveFile.blocked.get_front()->Unblock();
                 }
                 releaseLock(&slaveFile.blockedLock);
@@ -289,7 +289,7 @@ ssize_t PTY::SlaveWrite(char* buffer, size_t count) {
 
     while (master.bufferPos && masterFile.blocked.get_length()) {
         acquireLock(&masterFile.blockedLock);
-        if(masterFile.blocked.get_length()){
+        if (masterFile.blocked.get_length()) {
             masterFile.blocked.get_front()->Unblock();
         }
         releaseLock(&masterFile.blockedLock);

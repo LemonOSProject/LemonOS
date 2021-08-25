@@ -4,9 +4,9 @@
 
 #include <Fs/Filesystem.h>
 
+#include <CString.h>
 #include <List.h>
 #include <Logging.h>
-#include <String.h>
 
 struct DevicePCIInformation {
     uint16_t vendorID; // PCI Vendor ID
@@ -126,7 +126,7 @@ public:
 
     ssize_t Read(size_t off, size_t size, uint8_t* buffer) override;
     ssize_t Write(size_t off, size_t size, uint8_t* buffer) override;
-    
+
     virtual ~PartitionDevice();
 
     DiskDevice* parentDisk;

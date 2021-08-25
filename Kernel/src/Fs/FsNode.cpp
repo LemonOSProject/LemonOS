@@ -38,12 +38,14 @@ int FsNode::ReadDir(DirectoryEntry*, uint32_t){
         return -ENOTDIR;
     }
     
-    Log::Warning("Base FsNode::ReadDir called!");
+    assert(!"Base FsNode::ReadDir called!");
     return -ENOSYS;
 }
 
-FsNode* FsNode::FindDir(char* name){
-    Log::Warning("Base FsNode::FindDir called!");
+FsNode* FsNode::FindDir(const char*){
+    assert(IsDirectory());
+
+    assert(!"Base FsNode::FindDir called!");
     return nullptr;
 }
 
@@ -52,7 +54,7 @@ int FsNode::Create(DirectoryEntry*, uint32_t){
         return -ENOTDIR;
     }
 
-    Log::Warning("Base FsNode::Create called!");
+    assert("Base FsNode::Create called!");
     return -ENOSYS;
 }
 
@@ -61,7 +63,7 @@ int FsNode::CreateDirectory(DirectoryEntry*, uint32_t){
         return -ENOTDIR;
     }
 
-    Log::Warning("Base FsNode::CreateDirectory called!");
+    assert("Base FsNode::CreateDirectory called!");
     return -ENOSYS;
 }
 
@@ -70,22 +72,22 @@ ssize_t FsNode::ReadLink(char* pathBuffer, size_t bufSize){
         return -EINVAL; // Not a symlink
     }
 
-    Log::Warning("Base FsNode::ReadLink called!");
+    assert("Base FsNode::ReadLink called!");
     return -ENOSYS;
 }
 
 int FsNode::Link(FsNode*, DirectoryEntry*){
-    Log::Warning("Base FsNode::Link called!");
+    assert(!"Base FsNode::Link called!");
     return -ENOSYS;
 }
 
 int FsNode::Unlink(DirectoryEntry*, bool unlinkDirs){
-    Log::Warning("Base FsNode::Unlink called!");
+    assert(!"Base FsNode::Unlink called!");
     return -ENOSYS;
 }
 
 int FsNode::Truncate(off_t length){
-    Log::Warning("Base FsNode::Truncate called!");
+    assert(!"Base FsNode::Truncate called!");
     return -ENOSYS;
 }
 

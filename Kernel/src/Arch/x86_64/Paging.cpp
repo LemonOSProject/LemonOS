@@ -1,4 +1,5 @@
 #include <APIC.h>
+#include <CString.h>
 #include <IDT.h>
 #include <Logging.h>
 #include <Memory.h>
@@ -7,7 +8,6 @@
 #include <PhysicalAllocator.h>
 #include <Scheduler.h>
 #include <StackTrace.h>
-#include <String.h>
 #include <Syscalls.h>
 #include <System.h>
 
@@ -718,17 +718,17 @@ void PageFaultHandler(void*, RegisterContext* regs) {
         }
     };
 
-    if ((regs->cs & 0x3)) {// Make sure we acquired the lock
+    if ((regs->cs & 0x3)) {                                              // Make sure we acquired the lock
         int res = acquireTestLock(&Scheduler::GetCurrentThread()->lock); // Prevent the thread from being killed, etc.
-        if (res) {            
+        if (res) {
             Log::Info("Process %s (PID: %x) page fault.", process->name, process->PID());
             dumpFaultInformation();
 
             Log::Info("Stack trace:");
             UserPrintStackTrace(regs->rbp, Scheduler::GetCurrentProcess()->addressSpace);
-            Log::Info("End stack trace.");         
-            
-            assert(!res);                             
+            Log::Info("End stack trace.");
+
+            assert(!res);
         }
     }
 

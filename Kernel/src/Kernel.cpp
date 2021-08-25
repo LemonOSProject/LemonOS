@@ -29,7 +29,6 @@
 
 #include <Debug.h>
 
-uint8_t* progressBuffer = nullptr;
 video_mode_t videoMode;
 
 void IdleProcess() {
@@ -41,18 +40,10 @@ void IdleProcess() {
 }
 
 void KernelProcess() {
-    if (progressBuffer)
-        Video::DrawBitmapImage(videoMode.width / 2 + 24 * 1, videoMode.height / 2 + 292 / 2 + 48, 24, 24,
-                               progressBuffer);
-
     NVMe::Initialize();
     USB::XHCIController::Initialize();
     ATA::Init();
     AHCI::Init();
-
-    if (progressBuffer)
-        Video::DrawBitmapImage(videoMode.width / 2 + 24 * 2, videoMode.height / 2 + 292 / 2 + 48, 24, 24,
-                               progressBuffer);
 
     ServiceFS::Initialize();
 
@@ -82,28 +73,25 @@ void KernelProcess() {
     fs::VolumeManager::MountSystemVolume();
 
     // TODO: Move this to userspace
-    if (FsNode* node = fs::ResolvePath("/system/etc")) {
-        fs::VolumeManager::RegisterVolume(new fs::LinkVolume(node, "etc")); // Very hacky and cheap workaround for /etc/localtime
-    }
+    fs::VolumeManager::RegisterVolume(new fs::LinkVolume("/system/etc", "etc"));
+    fs::VolumeManager::RegisterVolume(new fs::LinkVolume("/system/bin", "bin"));
 
     if (FsNode* node = fs::ResolvePath("/system/lib")) {
-        fs::VolumeManager::RegisterVolume(new fs::LinkVolume(node, "lib"));
+        fs::VolumeManager::RegisterVolume(new fs::LinkVolume("/system/lib", "lib"));
     } else {
         FsNode* initrd = fs::ResolvePath("/initrd");
         assert(initrd);
 
-        fs::VolumeManager::RegisterVolume(new fs::LinkVolume(initrd, "lib")); // If /system/lib is not present is /initrd
+        fs::VolumeManager::RegisterVolume(
+            new fs::LinkVolume("/initrd", "lib")); // If /system/lib is not present is /initrd
     }
 
-    if(HAL::runTests){
+    if (HAL::runTests) {
         ModuleManager::LoadModule("/initrd/modules/testmodule.sys");
         Log::Warning("Finished running tests. Hanging.");
-        for(;;);
+        for (;;)
+            ;
     }
-
-    if (progressBuffer)
-        Video::DrawBitmapImage(videoMode.width / 2 + 24 * 3, videoMode.height / 2 + 292 / 2 + 48, 24, 24,
-                               progressBuffer);
 
     Log::Info("Loading Init Process...");
     FsNode* initFsNode = nullptr;
@@ -122,19 +110,16 @@ void KernelProcess() {
     void* initElf = (void*)kmalloc(initFsNode->size);
     fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
 
-    auto initProc = Process::CreateELFProcess(initElf, Vector<String>("init"), Vector<String>("PATH=/initrd"), "/system/lemon/init.lef", nullptr);
+    auto initProc = Process::CreateELFProcess(initElf, Vector<String>("init"), Vector<String>("PATH=/initrd"),
+                                              "/system/lemon/init.lef", nullptr);
     initProc->Start();
-
-    if (progressBuffer) {
-        delete[] progressBuffer;
-    }
 
     for (;;) {
         acquireLock(&Scheduler::destroyedProcessesLock);
         for (auto it = Scheduler::destroyedProcesses->begin(); it != Scheduler::destroyedProcesses->end(); it++) {
             if (!(acquireTestLock(&(*it)->m_processLock))) {
                 FancyRefPtr<Process> proc = *it;
-                if(proc->addressSpace){ // Destroy the address space regardless
+                if (proc->addressSpace) { // Destroy the address space regardless
                     delete (proc)->addressSpace;
                     proc->addressSpace = nullptr;
                 }
@@ -218,19 +203,6 @@ extern "C" [[noreturn]] void kmain() {
         } else
             Log::Warning("Could not load splash image");
 
-        if ((splashFile = fs::FindDir(initrd, "pbar.bmp"))) {
-            uint32_t size = splashFile->size;
-            progressBuffer = new uint8_t[size];
-
-            if (fs::Read(splashFile, 0, size, progressBuffer) > 0) {
-                Video::DrawBitmapImage(videoMode.width / 2 - 24 * 4, videoMode.height / 2 + 292 / 2 + 48, 24, 24,
-                                       progressBuffer);
-                Video::DrawBitmapImage(videoMode.width / 2 - 24 * 3, videoMode.height / 2 + 292 / 2 + 48, 24, 24,
-                                       progressBuffer);
-            }
-        } else
-            Log::Warning("Could not load progress bar image");
-
         if ((symbolFile = fs::FindDir(initrd, "kernel.map"))) {
             LoadSymbolsFromFile(symbolFile);
         } else {
@@ -243,23 +215,12 @@ extern "C" [[noreturn]] void kmain() {
     Video::DrawString("Copyright 2018-2021 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
     Video::DrawString(Lemon::versionString, 2, videoMode.height - 20, 255, 255, 255);
 
-    if (progressBuffer)
-        Video::DrawBitmapImage(videoMode.width / 2 - 24 * 2, videoMode.height / 2 + 292 / 2 + 48, 24, 24,
-                               progressBuffer);
-
     Log::Info("Initializing HID...");
 
     Mouse::Install();
     Keyboard::Install();
 
     Log::Info("OK");
-
-    if (progressBuffer)
-        Video::DrawBitmapImage(videoMode.width / 2 - 24 * 1, videoMode.height / 2 + 292 / 2 + 48, 24, 24,
-                               progressBuffer);
-
-    if (progressBuffer)
-        Video::DrawBitmapImage(videoMode.width / 2, videoMode.height / 2 + 292 / 2 + 48, 24, 24, progressBuffer);
 
     Log::Info("Initializing Task Scheduler...");
     Scheduler::Initialize();

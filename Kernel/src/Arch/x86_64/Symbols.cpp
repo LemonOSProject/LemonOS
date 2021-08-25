@@ -2,8 +2,8 @@
 
 #include <Debug.h>
 
+#include <CString.h>
 #include <Hash.h>
-#include <String.h>
 #include <StringView.h>
 #include <Vector.h>
 

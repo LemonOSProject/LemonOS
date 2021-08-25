@@ -40,7 +40,7 @@ namespace fs::Temp{
         int Truncate(off_t length); // Truncate file
 
         int ReadDir(DirectoryEntry*, uint32_t); // Read Directory
-        FsNode* FindDir(char* name); // Find in directory
+        FsNode* FindDir(const char* name); // Find in directory
 
         int Create(DirectoryEntry* entry, uint32_t mode); // Create regular file
         int CreateDirectory(DirectoryEntry* entry, uint32_t mode); // Create directory

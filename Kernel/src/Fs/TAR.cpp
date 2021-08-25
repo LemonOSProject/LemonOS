@@ -55,7 +55,7 @@ namespace fs::tar{
             return vol->ReadDir(this, dirent, index);
         } else return -10;
     }
-    FsNode* TarNode::FindDir(char* name){
+    FsNode* TarNode::FindDir(const char* name){
         if(vol){
             return vol->FindDir(this, name);
         } else return nullptr;
@@ -250,7 +250,7 @@ namespace fs::tar{
         return 1;
     }
 
-    FsNode* TarVolume::FindDir(TarNode* node, char* name){
+    FsNode* TarVolume::FindDir(TarNode* node, const char* name){
         TarNode* tarNode = &nodes[node->inode];
         
         if(!(node->flags & FS_NODE_DIRECTORY)) return nullptr;

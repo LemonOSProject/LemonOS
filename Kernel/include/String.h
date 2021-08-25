@@ -1,52 +1,13 @@
 #pragma once
 
 #include <Assert.h>
+#include <CString.h>
 #include <Compiler.h>
 #include <Move.h>
 #include <Paging.h>
 #include <Spinlock.h>
 #include <TTraits.h>
-#include <stddef.h>
-
-/////////////////////////////
-/// \brief safe strlen
-///
-/// Get the length of a usermode string and check if the pointer is valid
-///
-/// \return 0 on success, 1 when invalid pointer / not null terminated
-/////////////////////////////
-long strlenSafe(const char* str, size_t& size, AddressSpace* aSpace);
-
-char* itoa(unsigned long long num, char* str, int base);
-
-int HexStringToPointer(const char* buffer, size_t bufferSize, uintptr_t& pointerValue);
-
-extern "C" void* memset(void* src, int c, size_t count);
-extern "C" void* memcpy(void* dest, const void* src, size_t count);
-extern "C" int memcmp(const void* s1, const void* s2, size_t n);
-
-void memcpy_optimized(void* dest, void* src, size_t count);
-
-void strcpy(char* dest, const char* src);
-void strncpy(char* dest, const char* src, size_t n);
-int strcmp(const char* s1, const char* s2);
-
-char* strtok_r(char* str, const char* delim, char** saveptr);
-
-size_t strlen(const char* str);
-char* strcat(char* dest, const char* src);
-char* strncat(char* dest, const char* src, size_t n);
-
-int strncmp(const char* s1, const char* s2, size_t n);
-
-char* strupr(char* s);
-char* strnupr(char* s, size_t n);
-
-char* strchr(const char* s, int c);
-char* strnchr(const char* s, int c, size_t n);
-char* strrchr(const char* s, int c);
-
-char* strdup(const char* s);
+#include <Vector.h>
 
 template <typename T> class BasicString {
 private:
@@ -65,6 +26,11 @@ public:
     BasicString(const T* data) {
         m_buffer = nullptr;
         CopyFromNullTerminatedBuffer(data);
+    }
+
+    BasicString(const T* data, size_t len) {
+        m_buffer = nullptr;
+        CopyFromBuffer(data, len);
     }
 
     BasicString(const BasicString& other) {
@@ -148,6 +114,30 @@ public:
         return *this;
     }
 
+    T& operator[](unsigned pos) { return m_buffer[pos]; }
+
+    const T& operator[](unsigned pos) const { return m_buffer[pos]; }
+
+    Vector<BasicString<T>> Split(T delim) const {
+        Vector<BasicString<T>> result;
+
+        int start = 0;
+        unsigned i = 0; 
+        for (; i < m_len; i++) {
+            if (m_buffer[i] == delim) {
+                if ((i - start) > 0) { // Do not add empty strings
+                    result.add_back(BasicString<T>((m_buffer + start), (i - start)));
+                }
+                start = i + 1;
+            }
+        }
+
+        if ((i - start) > 0) { // Do not add empty strings
+            result.add_back(BasicString<T>((m_buffer + start), (i - start)));
+        }
+        return result;
+    }
+
     int Compare(const T* data) const {
         const T* s1 = m_buffer;
 
@@ -163,9 +153,7 @@ public:
         return (*s1) - (*data);
     };
 
-    ALWAYS_INLINE int Compare(const BasicString& other) const {
-        return Compare(other.Data());
-    };
+    ALWAYS_INLINE int Compare(const BasicString& other) const { return Compare(other.Data()); };
 
     /////////////////////////////
     /// \brief Get length of string
@@ -195,6 +183,10 @@ protected:
         while (data[len])
             len++; // Get the length of data assuming its null-terminated
 
+        CopyFromBuffer(data, len);
+    }
+
+    ALWAYS_INLINE void CopyFromBuffer(const T* data, size_t len) {
         Resize(len);
 
         memcpy(m_buffer, data, m_len * sizeof(T));
@@ -240,7 +232,7 @@ template <typename T, typename U> BasicString<T> operator+(const BasicString<T>&
 
 using String = BasicString<char>;
 
-ALWAYS_INLINE String to_string(int num, int base = 10){
+ALWAYS_INLINE String to_string(int num, int base = 10) {
     char buf[128];
     buf[127] = 0;
 
@@ -258,7 +250,7 @@ ALWAYS_INLINE String to_string(int num, int base = 10){
     return String(buf + i);
 }
 
-ALWAYS_INLINE String to_string(long num, int base = 10){
+ALWAYS_INLINE String to_string(long num, int base = 10) {
     char buf[128];
     buf[127] = 0;
 
@@ -276,7 +268,7 @@ ALWAYS_INLINE String to_string(long num, int base = 10){
     return String(buf + i);
 }
 
-ALWAYS_INLINE String to_string(unsigned num, int base = 10){
+ALWAYS_INLINE String to_string(unsigned num, int base = 10) {
     char buf[128];
     buf[127] = 0;
 

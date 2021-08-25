@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 
-
 enum {
 	VideoModeIndexed = 0,
 	VideoModeRGB = 1,

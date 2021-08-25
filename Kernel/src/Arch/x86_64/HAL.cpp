@@ -3,6 +3,7 @@
 #include <ACPI.h>
 #include <APIC.h>
 #include <BootProtocols.h>
+#include <CString.h>
 #include <Device.h>
 #include <IDT.h>
 #include <Liballoc.h>
@@ -13,7 +14,6 @@
 #include <PhysicalAllocator.h>
 #include <SMP.h>
 #include <Serial.h>
-#include <String.h>
 #include <TSS.h>
 #include <Timer.h>
 #include <Video/Video.h>

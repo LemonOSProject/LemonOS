@@ -2,13 +2,13 @@
 
 #include <Debug.h>
 #ifdef DEBUG_KOBJECTS
-    #include <Logging.h>
+#include <Logging.h>
 #endif
 
-#include <stdint.h>
-#include <String.h>
+#include <CString.h>
 #include <Lock.h>
 #include <RefPtr.h>
+#include <stdint.h>
 
 typedef long kobject_id_t;
 
@@ -20,22 +20,19 @@ typedef long kobject_id_t;
 
 class KernelObjectWatcher;
 
-class KernelObject{
+class KernelObject {
 protected:
     int64_t oid = -1;
     static int64_t nextOID;
+
 public:
-    KernelObject(){
-        oid = nextOID++;
-    }
+    KernelObject() { oid = nextOID++; }
 
     inline int64_t ObjectID() { return oid; }
 
     virtual kobject_id_t InstanceTypeID() const = 0;
 
-    inline bool IsType(kobject_id_t id){
-        return InstanceTypeID() == id;
-    }
+    inline bool IsType(kobject_id_t id) { return InstanceTypeID() == id; }
 
     virtual void Watch(KernelObjectWatcher& watcher, int events);
     virtual void Unwatch(KernelObjectWatcher& watcher);
@@ -45,21 +42,20 @@ public:
     virtual ~KernelObject() = default;
 };
 
-class KernelObjectWatcher : public Semaphore{
+class KernelObjectWatcher : public Semaphore {
     List<FancyRefPtr<KernelObject>> watching;
+
 public:
-    KernelObjectWatcher() : Semaphore(0){
+    KernelObjectWatcher() : Semaphore(0) {}
 
-    }
-
-    inline void WatchObject(FancyRefPtr<KernelObject> node, int events){
+    inline void WatchObject(FancyRefPtr<KernelObject> node, int events) {
         node->Watch(*this, events);
 
         watching.add_back(node);
     }
 
-    ~KernelObjectWatcher(){
-        for(auto& node : watching){
+    ~KernelObjectWatcher() {
+        for (auto& node : watching) {
             node->Unwatch(*this);
         }
 

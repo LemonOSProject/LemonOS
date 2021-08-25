@@ -1,9 +1,9 @@
 #pragma once
 
+#include <MiscHdr.h>
 #include <Paging.h>
 #include <Serial.h>
-#include <String.h>
-#include <MiscHdr.h>
+#include <stddef.h>
 
 // The size of a block in phyiscal memory
 #define PHYSALLOC_BLOCK_SIZE 4096
@@ -16,30 +16,30 @@
 
 extern void* kernel_end;
 
-namespace Memory{
+namespace Memory {
 
-    // Initialize the physical page allocator
-    void InitializePhysicalAllocator(memory_info_t* mem_info);
+// Initialize the physical page allocator
+void InitializePhysicalAllocator(memory_info_t* mem_info);
 
-    // Finds the first free block in physical memory
-    uint64_t GetFirstFreeMemoryBlock();
+// Finds the first free block in physical memory
+uint64_t GetFirstFreeMemoryBlock();
 
-    // Marks a region in physical memory as being used
-    void MarkMemoryRegionUsed(uint64_t base, size_t size);
+// Marks a region in physical memory as being used
+void MarkMemoryRegionUsed(uint64_t base, size_t size);
 
-    // Marks a region in physical memory as being free
-    void MarkMemoryRegionFree(uint64_t base, size_t size) ;
+// Marks a region in physical memory as being free
+void MarkMemoryRegionFree(uint64_t base, size_t size);
 
-    // Allocates a block of physical memory
-    uint64_t AllocatePhysicalMemoryBlock();
+// Allocates a block of physical memory
+uint64_t AllocatePhysicalMemoryBlock();
 
-    // Allocates a 2MB block of physical memory
-    uint64_t AllocateLargePhysicalMemoryBlock();
+// Allocates a 2MB block of physical memory
+uint64_t AllocateLargePhysicalMemoryBlock();
 
-    // Frees a block of physical memory
-    void FreePhysicalMemoryBlock(uint64_t addr);
+// Frees a block of physical memory
+void FreePhysicalMemoryBlock(uint64_t addr);
 
-    // Used Blocks of Memory
-    extern uint64_t usedPhysicalBlocks;
-    extern uint64_t maxPhysicalBlocks;
-}
+// Used Blocks of Memory
+extern uint64_t usedPhysicalBlocks;
+extern uint64_t maxPhysicalBlocks;
+} // namespace Memory

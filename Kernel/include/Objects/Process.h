@@ -268,13 +268,20 @@ public:
     /////////////////////////////
     ALWAYS_INLINE FancyRefPtr<Process> RemoveDeadChild() {
         ScopedSpinLock lock(m_processLock);
+        FancyRefPtr<Process> proc;
+
         for (auto it = m_children.begin(); it != m_children.end(); it++) {
             if ((*it)->State() == Process_Dead) {
-                FancyRefPtr<Process> proc = std::move(*it);
-                proc->m_parent = nullptr;
+                proc = std::move(*it);
                 m_children.remove(it);
-                return proc;
+                break;
             }
+        }
+
+        if(proc.get()){
+            ScopedSpinLock lockChild(proc->m_processLock);
+            proc->m_parent = nullptr;
+            return proc;
         }
 
         return nullptr;

@@ -1,11 +1,11 @@
 #include <PhysicalAllocator.h>
 
+#include <CString.h>
 #include <Lock.h>
 #include <Logging.h>
 #include <Paging.h>
 #include <Panic.h>
 #include <Serial.h>
-#include <String.h>
 
 namespace Memory {
 uint32_t physicalMemoryBitmap[PHYSALLOC_BITMAP_SIZE_DWORDS];

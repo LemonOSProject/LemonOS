@@ -2,54 +2,32 @@
 
 #include <Module.h>
 
-#include <PCI.h>
+#include <APIC.h>
+#include <IDT.h>
 #include <Logging.h>
+#include <Net/Net.h>
+#include <PCI.h>
 #include <Paging.h>
 #include <PhysicalAllocator.h>
 #include <System.h>
-#include <IDT.h>
 #include <Timer.h>
-#include <APIC.h>
-#include <Net/Net.h>
 #include <Vector.h>
 
 const int supportedDeviceCount = 24;
 uint16_t supportedDevices[supportedDeviceCount]{
-    0x1019,
-    0x101A,
-    0x1010,
-    0x1012,
-    0x101D,
-    0x1079,
-    0x107A,
-    0x107B,
-    0x100F,
-    0x1011,
-    0x1026,
-    0x1027,
-    0x1028,
-    0x1004,
-    0x1107,
-    0x1112,
-    0x1013,
-    0x1018,
-    0x1076,
-    0x1078,
-    0x1017,
-    0x1016,
-    0x100e,
-    0x1015,
+    0x1019, 0x101A, 0x1010, 0x1012, 0x101D, 0x1079, 0x107A, 0x107B, 0x100F, 0x1011, 0x1026, 0x1027,
+    0x1028, 0x1004, 0x1107, 0x1112, 0x1013, 0x1018, 0x1076, 0x1078, 0x1017, 0x1016, 0x100e, 0x1015,
 };
 
 static Vector<Intel8254x*>* adapters = nullptr;
-static int ModuleInit(){
+static int ModuleInit() {
     adapters = new Vector<Intel8254x*>();
 
-    for(int i = 0; i < supportedDeviceCount; i++){
+    for (int i = 0; i < supportedDeviceCount; i++) {
         PCI::EnumeratePCIDevices(supportedDevices[i], INTEL_VENDOR_ID, [](const PCIInfo& dev) -> void {
             Intel8254x* card = new Intel8254x(dev);
 
-            if(card->dState == Intel8254x::DriverState::OK){
+            if (card->dState == Intel8254x::DriverState::OK) {
                 Network::NetFS::GetInstance()->RegisterAdapter(card);
                 adapters->add_back(card);
             } else {
@@ -58,15 +36,15 @@ static int ModuleInit(){
         });
     }
 
-    if(adapters->get_length() == 0){
+    if (adapters->get_length() == 0) {
         return 1; // We haven't found or successfully initialized any cards so let the kernel unload us
     }
 
     return 0;
 }
 
-static int ModuleExit(){
-    for(const auto& card : *adapters){
+static int ModuleExit() {
+    for (const auto& card : *adapters) {
         Network::NetFS::GetInstance()->RemoveAdapter(card);
         delete card;
     }
@@ -78,20 +56,18 @@ static int ModuleExit(){
 
 DECLARE_MODULE("e1k", "Intel 8254x/e1000 Ethernet Adapter Driver", ModuleInit, ModuleExit);
 
-void Intel8254x::InterruptHandler(Intel8254x* card, RegisterContext* r){
-    card->OnInterrupt();
-}
+void Intel8254x::InterruptHandler(Intel8254x* card, RegisterContext* r) { card->OnInterrupt(); }
 
-void Intel8254x::WriteMem32(uintptr_t address, uint32_t data){
-    if(useIO){
+void Intel8254x::WriteMem32(uintptr_t address, uint32_t data) {
+    if (useIO) {
         outportl(ioBase + address, data);
     } else {
         *((uint32_t*)(reinterpret_cast<uintptr_t>(memBaseVirt) + address)) = data;
     }
 }
 
-uint32_t Intel8254x::ReadMem32(uintptr_t address){
-    if(useIO){
+uint32_t Intel8254x::ReadMem32(uintptr_t address) {
+    if (useIO) {
         return inportl(ioBase + address);
     } else {
         return *((uint32_t*)(reinterpret_cast<uintptr_t>(memBaseVirt) + address));
@@ -101,46 +77,50 @@ uint32_t Intel8254x::ReadMem32(uintptr_t address){
 uint16_t Intel8254x::ReadEEPROM(uint8_t addr) {
     uint32_t temp = 0;
     WriteMem32(I8254_REGISTER_EEPROM, 1 | (((uint32_t)addr) << 8));
-    while (!((temp = ReadMem32(I8254_REGISTER_EEPROM)) & (1 << 4)));
+    while (!((temp = ReadMem32(I8254_REGISTER_EEPROM)) & (1 << 4)))
+        ;
     return (uint16_t)((temp >> 16) & 0xFFFF);
 }
 
-bool Intel8254x::CheckForEEPROM(){
+bool Intel8254x::CheckForEEPROM() {
     WriteMem32(I8254_REGISTER_EEPROM, 1);
 
     for (int i = 0; i < 1000; i++) {
         uint32_t reg = ReadMem32(I8254_REGISTER_EEPROM);
-        if(reg & 0x10) return true;
+        if (reg & 0x10)
+            return true;
     }
 
     return false;
 }
 
-void Intel8254x::OnInterrupt(){
+void Intel8254x::OnInterrupt() {
     uint32_t status = ReadMem32(I8254_REGISTER_INT_READ);
-    
-    if(status & 0x4){
+
+    if (status & 0x4) {
         Log::Info("[i8254x] Initializing Link...");
 
         WriteMem32(I8254_REGISTER_CTRL, ReadMem32(I8254_REGISTER_CTRL) | CTRL_SLU | CTRL_ASDE);
 
         UpdateLink();
-    } else if(status & 0x80){
+    } else if (status & 0x80) {
         do {
             rxTail = ReadMem32(I8254_REGISTER_RDESC_TAIL);
-            if(rxTail == ReadMem32(I8254_REGISTER_RDESC_HEAD)) return;
+            if (rxTail == ReadMem32(I8254_REGISTER_RDESC_HEAD))
+                return;
             rxTail = (rxTail + 1) % RX_DESC_COUNT;
 
-            if(!(rxDescriptors[rxTail].status & 0x1)) break;
+            if (!(rxDescriptors[rxTail].status & 0x1))
+                break;
 
             rxDescriptors[rxTail].status = 0;
 
-            if(rxDescriptors[rxTail].length <= ETHERNET_MAX_PACKET_SIZE && cache.get_length()){
+            if (rxDescriptors[rxTail].length <= ETHERNET_MAX_PACKET_SIZE && cache.get_length()) {
                 NetworkPacket* pkt = cache.remove_at(0);
 
                 pkt->length = rxDescriptors[rxTail].length;
                 memcpy(pkt->data, rxDescriptorsVirt[rxTail], pkt->length);
-                
+
                 queue.add_back(pkt);
                 packetSemaphore.Signal();
                 Network::packetQueueSemaphore.Signal();
@@ -149,15 +129,15 @@ void Intel8254x::OnInterrupt(){
             }
 
             WriteMem32(I8254_REGISTER_RDESC_TAIL, rxTail);
-        } while(1);
+        } while (1);
     }
 }
 
-int Intel8254x::GetSpeed(){
+int Intel8254x::GetSpeed() {
     int spd = ReadMem32(I8254_REGISTER_STATUS) & STATUS_SPEED;
     spd >>= 6;
 
-    switch(spd){
+    switch (spd) {
     case SPEED_10:
         spd = 10;
         break;
@@ -176,18 +156,18 @@ int Intel8254x::GetSpeed(){
     return spd;
 }
 
-void Intel8254x::UpdateLink(){
-    int _link =  (ReadMem32(I8254_REGISTER_STATUS) | STATUS_LINK_UP);
+void Intel8254x::UpdateLink() {
+    int _link = (ReadMem32(I8254_REGISTER_STATUS) | STATUS_LINK_UP);
     Log::Info("[i8254x] Link %s, Speed: %d", (_link) ? "Up" : "Down", GetSpeed());
-    
-    if(_link){
+
+    if (_link) {
         linkState = LinkUp;
     } else {
         linkState = LinkDown;
-    }  
+    }
 }
 
-void Intel8254x::InitializeRx(){
+void Intel8254x::InitializeRx() {
     uint64_t rxDescPhys = Memory::AllocatePhysicalMemoryBlock(); // The card wants a physical address
     rxDescriptors = (r_desc_t*)Memory::KernelAllocate4KPages(1);
     Memory::KernelMapVirtualMemory4K(rxDescPhys, (uintptr_t)rxDescriptors, 1);
@@ -208,7 +188,7 @@ void Intel8254x::InitializeRx(){
     WriteMem32(I8254_REGISTER_RDESC_HEAD, rxHead);
     WriteMem32(I8254_REGISTER_RDESC_TAIL, _rxTail);
 
-    for(int i = 0; i < RX_DESC_COUNT; i++){
+    for (int i = 0; i < RX_DESC_COUNT; i++) {
         r_desc_t* rxd = &rxDescriptors[i];
         uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
         rxd->addr = phys;
@@ -218,10 +198,11 @@ void Intel8254x::InitializeRx(){
         Memory::KernelMapVirtualMemory4K(phys, (uintptr_t)rxDescriptorsVirt[i], 1);
     }
 
-    WriteMem32(I8254_REGISTER_RCTRL, (RCTRL_ENABLE | RCTRL_SBP | RCTRL_UPE | RCTRL_MPE | RCTRL_LPE | RCTRL_BAM | RCTRL_SECRC | BSIZE_4096));
+    WriteMem32(I8254_REGISTER_RCTRL,
+               (RCTRL_ENABLE | RCTRL_SBP | RCTRL_UPE | RCTRL_MPE | RCTRL_LPE | RCTRL_BAM | RCTRL_SECRC | BSIZE_4096));
 }
 
-void Intel8254x::InitializeTx(){
+void Intel8254x::InitializeTx() {
     uint64_t txDescPhys = Memory::AllocatePhysicalMemoryBlock(); // The card wants a physical address
     txDescriptors = (t_desc_t*)Memory::GetIOMapping(txDescPhys);
     uint32_t txLow = txDescPhys & 0xFFFFFFFF;
@@ -238,7 +219,7 @@ void Intel8254x::InitializeTx(){
     WriteMem32(I8254_REGISTER_TDESC_HEAD, txHead);
     WriteMem32(I8254_REGISTER_TDESC_TAIL, _txTail);
 
-    for(int i = 0; i < TX_DESC_COUNT; i++){
+    for (int i = 0; i < TX_DESC_COUNT; i++) {
         t_desc_t* txd = &txDescriptors[i];
         uint64_t phys = Memory::AllocatePhysicalMemoryBlock();
         txd->addr = phys;
@@ -251,25 +232,29 @@ void Intel8254x::InitializeTx(){
     WriteMem32(I8254_REGISTER_TCTRL, (TCTRL_ENABLE | TCTRL_PSP));
 }
 
-Intel8254x::Intel8254x(const PCIInfo& device) : NetworkAdapter(NetworkAdapterEthernet), PCIDevice(device.bus, device.slot, device.func){
+Intel8254x::Intel8254x(const PCIInfo& device)
+    : NetworkAdapter(NetworkAdapterEthernet), PCIDevice(device.bus, device.slot, device.func) {
     assert(device.vendorID != 0xFFFF);
 
     txTail = rxTail = 0;
 
     memBase = GetBaseAddressRegister(0);
 
-    if(BarIsIOPort(1)) {
+    if (BarIsIOPort(1)) {
         ioBase = GetBaseAddressRegister(1);
-    } else if(BarIsIOPort(2)) {
+    } else if (BarIsIOPort(2)) {
         ioBase = GetBaseAddressRegister(2);
-    } 
+    }
 
     memBaseVirt = (void*)Memory::GetIOMapping(memBase);
     hasEEPROM = CheckForEEPROM();
 
-    Log::Info("[i8254x]    Base Address: %x, Base Address (virtual): %x, IO Base: %x, EEPROM Present: %s, Base Address 1: %x, Base Address 2: %x", GetBaseAddressRegister(0), memBaseVirt, ioBase, (hasEEPROM ? "true" : "false"), GetBaseAddressRegister(1), GetBaseAddressRegister(2));
+    Log::Info("[i8254x]    Base Address: %x, Base Address (virtual): %x, IO Base: %x, EEPROM Present: %s, Base Address "
+              "1: %x, Base Address 2: %x",
+              GetBaseAddressRegister(0), memBaseVirt, ioBase, (hasEEPROM ? "true" : "false"), GetBaseAddressRegister(1),
+              GetBaseAddressRegister(2));
 
-    if(!hasEEPROM){
+    if (!hasEEPROM) {
         Log::Error("[i8254x] No EEPROM Present!");
         dState = DriverState::Error;
         return;
@@ -297,8 +282,7 @@ Intel8254x::Intel8254x(const PCIInfo& device) : NetworkAdapter(NetworkAdapterEth
 
     mac = macAddr;
 
-    Log::Info("[i8254x] MAC Address: %x:%x:%x:%x:%x:%x",
-        mac[0], mac[1],mac[2], mac[3], mac[4], mac[5]);
+    Log::Info("[i8254x] MAC Address: %x:%x:%x:%x:%x:%x", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
 
     char tempName[NAME_MAX];
     char busS[16];
@@ -323,7 +307,7 @@ Intel8254x::Intel8254x(const PCIInfo& device) : NetworkAdapter(NetworkAdapterEth
     dState = DriverState::OK;
 
     maxCache = 256;
-    for(unsigned i = 0; i < maxCache; i++){
+    for (unsigned i = 0; i < maxCache; i++) {
         cache.add_back(new NetworkPacket()); // Fill the cache
     }
 
@@ -331,14 +315,16 @@ Intel8254x::Intel8254x(const PCIInfo& device) : NetworkAdapter(NetworkAdapterEth
     UpdateLink();
 }
 
-void Intel8254x::SendPacket(void* data, size_t len){
+void Intel8254x::SendPacket(void* data, size_t len) {
+    asm("cli");
     t_desc_t* txd = &(txDescriptors[txTail]);
 
     memcpy(txDescriptorsVirt[txTail], data, len);
     txd->length = len;
     txd->cmd = TCMD_EOP | TCMD_IFCS | TCMD_RS;
-    
+
     txTail = (txTail + 1) % TX_DESC_COUNT;
 
     WriteMem32(I8254_REGISTER_TDESC_TAIL, txTail);
+    asm("sti");
 }

@@ -200,7 +200,7 @@ public:
         }
     }
 
-    FsNode* FindDir(char* name) final {
+    FsNode* FindDir(const char* name) final {
         if (!strcmp(name, ".")) {
             return this;
         } else if (!strcmp(name, "..")) {

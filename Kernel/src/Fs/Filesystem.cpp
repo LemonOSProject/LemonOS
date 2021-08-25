@@ -29,7 +29,7 @@ retry:
         releaseLock(&node->blockedLock);
     }
 
-    if(thread){
+    if (thread) {
         thread->Unblock();
     }
     releaseLock(&lock);
@@ -97,9 +97,9 @@ void UnregisterDriver(FsDriver* driver) {
     assert(!"Driver not found!");
 }
 
-FsDriver* IdentifyFilesystem(FsNode* node){
-    for(auto drv : drivers){
-        if(drv->Identify(node)){
+FsDriver* IdentifyFilesystem(FsNode* node) {
+    for (auto drv : drivers) {
+        if (drv->Identify(node)) {
             return drv;
         }
     }
@@ -115,7 +115,7 @@ public:
     }
 
     int ReadDir(DirectoryEntry*, uint32_t);
-    FsNode* FindDir(char* name);
+    FsNode* FindDir(const char* name);
 
     int Create(DirectoryEntry* ent, uint32_t mode) {
         Log::Warning("[RootFS] Attempted to create a file!");
@@ -153,8 +153,13 @@ FsNode* FollowLink(FsNode* link, FsNode* workingDir) {
     return node;
 }
 
-FsNode* ResolvePath(const char* path, const char* workingDir, bool followSymlinks) {
-    assert(path);
+FsNode* ResolvePath(const String& path, const char* workingDir, bool followSymlinks) {
+    if(path.Empty()){
+        Log::Warning("fs::ResolvePath: path is empty!");
+        return nullptr;
+    }
+
+    assert(path.Length() >= 1);
 
     if (workingDir && path[0] != '/') { // If the path starts with '/' then treat as an absolute path
         FsNode* wdNode = ResolvePath(workingDir, (FsNode*)nullptr);
@@ -165,31 +170,35 @@ FsNode* ResolvePath(const char* path, const char* workingDir, bool followSymlink
     }
 }
 
-FsNode* ResolvePath(const char* path, FsNode* workingDir, bool followSymlinks) {
+FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks) {
+    if(path.Empty()){
+        Log::Warning("fs::ResolvePath: path is empty!");
+        return nullptr;
+    }
+
     FsNode* root = fs::GetRoot();
     FsNode* currentNode = root;
-
-    char* tempPath = (char*)kmalloc(strlen(path) + 1);
-    strcpy(tempPath, path);
 
     if (workingDir && path[0] != '/') {
         currentNode = workingDir;
     }
 
-    char* strtokSavePtr = nullptr;
-    char* file = strtok_r(tempPath, "/", &strtokSavePtr);
-    while (file != NULL) { // Iterate through the directories to find the file
-        FsNode* node = fs::FindDir(currentNode, file);
+    Vector<String> components = path.Split('/');
+    
+    unsigned i = 0;
+    for(; i < components.size() - 1; i++){
+        String& component = components[i];
+        FsNode* node = fs::FindDir(currentNode, component.c_str());
         if (!node) {
-            IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal), { Log::Warning("%s not found!", path); });
+            Log::Debug(debugLevelFilesystem, DebugLevelVerbose, "%s not found!", component.c_str());
 
             return nullptr;
         }
 
         size_t amountOfSymlinks = 0;
-        while (followSymlinks && node->IsSymlink()) { // Check for symlinks
+        if(node->IsSymlink()) { // Check for symlinks
             if (amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT) {
-                IF_DEBUG((debugLevelFilesystem >= DebugLevelVerbose),
+                IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal),
                          { Log::Warning("ResolvePath: Reached maximum number of symlinks"); });
                 return nullptr;
             }
@@ -199,45 +208,47 @@ FsNode* ResolvePath(const char* path, FsNode* workingDir, bool followSymlinks) {
             if (!node) {
                 IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal),
                          { Log::Warning("ResolvePath: Unresolved symlink!"); });
-                kfree(tempPath);
                 return node;
             }
         }
 
-        if ((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
-            currentNode = node;
-            file = strtok_r(NULL, "/", &strtokSavePtr);
-            continue;
-        }
-
-        if (char* newF = strtok_r(NULL, "/", &strtokSavePtr); newF) {
-            IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal), { Log::Warning("ResolvePath: Failed resolving '%s': %s is not a directory (file flags %x) and there are still unresolved path components '%s'!", path, file, node->flags, newF); });
+        if(!(node->IsDirectory())){
+            Log::Debug(debugLevelFilesystem, DebugLevelNormal, "Failed to resolve path component: Expected a directory at '%s'!", component.c_str());
             return nullptr;
         }
 
-        amountOfSymlinks = 0;
-        while (followSymlinks && ((currentNode->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)) { // Check for symlinks
-            if (amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT) {
-                IF_DEBUG((debugLevelFilesystem >= DebugLevelVerbose),
-                         { Log::Warning("ResolvePath: Reached maximum number of symlinks"); });
-                return nullptr;
-            }
-
-            node = FollowLink(node, currentNode);
-
-            if (!node) {
-                IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal),
-                         { Log::Warning("ResolvePath: Unresolved symlink!"); });
-                kfree(tempPath);
-                return node;
-            }
-        }
         currentNode = node;
-        break;
     }
 
-    kfree(tempPath);
-    return currentNode;
+    if(i >= components.size()){
+        return currentNode;
+    }
+
+    FsNode* node = fs::FindDir(currentNode, components[i].c_str());
+    if(!node){
+        Log::Debug(debugLevelFilesystem, DebugLevelVerbose, "ResolvePath: Failed to find %s!", components[i].c_str());
+        return nullptr;
+    }
+
+    size_t amountOfSymlinks = 0;
+    while(followSymlinks && node->IsSymlink()) { // Check for symlinks
+        if (amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT) {
+            IF_DEBUG((debugLevelFilesystem >= DebugLevelVerbose),
+                        { Log::Warning("ResolvePath: Reached maximum number of symlinks"); });
+            return nullptr;
+        }
+
+        node = FollowLink(node, currentNode);
+
+        if (!node) {
+            IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal),
+                        { Log::Warning("ResolvePath: Unresolved symlink!"); });
+            return nullptr;
+        }
+    }
+
+    Log::Debug(debugLevelFilesystem, DebugLevelVerbose, "Found %s!", components[i].c_str());
+    return node;
 }
 
 FsNode* ResolveParent(const char* path, const char* workingDir) {
@@ -379,7 +390,7 @@ int Root::ReadDir(DirectoryEntry* dirent, uint32_t index) {
         return 0;
 }
 
-FsNode* Root::FindDir(char* name) {
+FsNode* Root::FindDir(const char* name) {
     if (strcmp(name, ".") == 0)
         return this;
     if (strcmp(name, "..") == 0)
@@ -390,7 +401,7 @@ FsNode* Root::FindDir(char* name) {
             return (VolumeManager::volumes->get_at(i)->mountPointDirent.node);
     }
 
-    return NULL;
+    return nullptr;
 }
 
 ssize_t Read(FsNode* node, size_t offset, size_t size, void* buffer) {
@@ -439,7 +450,7 @@ int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index) {
     return node->ReadDir(dirent, index);
 }
 
-FsNode* FindDir(FsNode* node, char* name) {
+FsNode* FindDir(FsNode* node, const char* name) {
     assert(node);
 
     return node->FindDir(name);
@@ -473,7 +484,7 @@ int ReadDir(const FancyRefPtr<UNIXFileDescriptor>& handle, DirectoryEntry* diren
     return ReadDir(handle->node, dirent, index);
 }
 
-FsNode* FindDir(const FancyRefPtr<UNIXFileDescriptor>& handle, char* name) {
+FsNode* FindDir(const FancyRefPtr<UNIXFileDescriptor>& handle, const char* name) {
     assert(handle->node);
 
     return FindDir(handle->node, name);

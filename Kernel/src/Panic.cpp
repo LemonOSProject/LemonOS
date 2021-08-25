@@ -1,9 +1,9 @@
 #include <Video/Video.h>
 
 #include <APIC.h>
+#include <CString.h>
 #include <IDT.h>
 #include <Logging.h>
-#include <String.h>
 
 void KernelPanic(const char** reasons, int reasonCount) {
     asm("cli");
@@ -28,7 +28,7 @@ void KernelPanic(const char** reasons, int reasonCount) {
     asm("hlt");
 }
 
-void PrintReason(const video_mode_t& v, int& pos, const char* reason){
+void PrintReason(const video_mode_t& v, int& pos, const char* reason) {
     Video::DrawString(reason, v.width / 2 - strlen(reason) * 8 / 2, pos, 255, 0, 0);
     pos += 10;
 }

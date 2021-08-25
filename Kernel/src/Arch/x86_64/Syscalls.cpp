@@ -226,6 +226,7 @@ long SysOpen(RegisterContext* r) {
     }
 
 open:
+    Log::Debug(debugLevelSyscalls, DebugLevelVerbose, "Working dir: %s", proc->workingDir);
     FsNode* node = fs::ResolvePath(filepath, proc->workingDir, !(flags & O_NOFOLLOW));
 
     if (!node) {
@@ -254,9 +255,13 @@ open:
                      { Log::Warning("SysOpen (flags %x): Failed to open file %s", flags, filepath); });
             return -ENOENT;
         }
+    } else if(node->IsSymlink()){
+        Log::Warning("SysOpen: Is a symlink (O_NOFOLLOW specified)");
+        return -ELOOP;
     }
 
     if (flags & O_DIRECTORY && ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY)) {
+        Log::Warning("SysOpen: Not a directory! (O_DIRECTORY specified)");
         return -ENOTDIR;
     }
 
@@ -969,6 +974,13 @@ long SysMmap(RegisterContext* r) {
     uint64_t unknownFlags = flags & ~static_cast<uint64_t>(MAP_ANON | MAP_FIXED | MAP_PRIVATE);
     if (unknownFlags || !anon) {
         Log::Warning("SysMmap: Unsupported mmap flags %x", flags);
+        return -EINVAL;
+    }
+
+    if(size > 0x40000000){ // size > 1GB
+        Log::Warning("MMap size: %u (>1GB)", size);
+        Log::Info("rip: %x", r->rip);
+        UserPrintStackTrace(r->rbp, proc->addressSpace);
         return -EINVAL;
     }
 
@@ -3402,6 +3414,7 @@ long SysSignalAction(RegisterContext* r) {
         return -ENOSYS;
     // Supported and overridable signals
     case SIGINT:
+    case SIGABRT:
     case SIGALRM:
     case SIGCHLD:
     case SIGPIPE:
@@ -3684,7 +3697,7 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
 #endif
 
     if (__builtin_expect(acquireTestLock(&thread->lock), 0)) {
-        Log::Debug(debugLevelSyscalls, DebugLevelNormal, "Thread hanging!");
+        Log::Info("Thread hanging!");
         for (;;)
             ;
     }

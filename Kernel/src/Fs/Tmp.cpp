@@ -199,7 +199,7 @@ namespace fs::Temp{
         }
     }
 
-    FsNode* TempNode::FindDir(char* name){
+    FsNode* TempNode::FindDir(const char* name){
         if(strcmp(name, ".") == 0){
             return this;
         }

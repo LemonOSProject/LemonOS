@@ -100,7 +100,7 @@ namespace fs::FAT32{
         //fs_fd_t* Open(size_t flags);
         //void Close();
         int ReadDir(DirectoryEntry*, uint32_t);
-        FsNode* FindDir(char* name);
+        FsNode* FindDir(const char* name);
 
         Fat32Volume* vol;
     };
@@ -114,7 +114,7 @@ namespace fs::FAT32{
         void Open(Fat32Node* node, uint32_t flags);
         void Close(Fat32Node* node);
         int ReadDir(Fat32Node* node, DirectoryEntry* dirent, uint32_t index);
-        FsNode* FindDir(Fat32Node* node, char* name);
+        FsNode* FindDir(Fat32Node* node, const char* name);
 
     private:
         uint64_t ClusterToLBA(uint32_t cluster);

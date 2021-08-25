@@ -1,9 +1,9 @@
 #include <Module.h>
 #include <Modules.h>
 
+#include <CString.h>
 #include <Hash.h>
 #include <Memory.h>
-#include <String.h>
 #include <StringView.h>
 
 #include <ELF.h>

@@ -23,7 +23,7 @@ lock_t logLock = 0;
 void WriteN(const char* str, size_t n);
 
 class LogDevice : public Device {
-  public:
+public:
     LogDevice(char* name) : Device(name, DeviceTypeKernelLog) { flags = FS_NODE_FILE; }
 
     ssize_t Read(size_t offset, size_t size, uint8_t* buffer) {
@@ -141,6 +141,11 @@ void WriteF(const char* __restrict format, va_list args) {
         bool isLong = false;
     again:
         switch (*format) {
+        case 'l':
+            isLong = true;
+            format++;
+
+            goto again;
         case 'h':
             if (!isLong) {
                 isHalf = true;
@@ -222,38 +227,38 @@ void Print(const char* __restrict fmt, ...) {
 }
 
 void Warning(const char* __restrict fmt, ...) {
-    if(CheckInterrupts())
+    if (CheckInterrupts())
         acquireLock(&logLock);
     Write("\r\n[WARN]    ", 255, 255, 0);
     va_list args;
     va_start(args, fmt);
     WriteF(fmt, args);
     va_end(args);
-    if(CheckInterrupts())
+    if (CheckInterrupts())
         releaseLock(&logLock);
 }
 
 void Error(const char* __restrict fmt, ...) {
-    if(CheckInterrupts())
+    if (CheckInterrupts())
         acquireLock(&logLock);
     Write("\r\n[ERROR]   ", 255, 0, 0);
     va_list args;
     va_start(args, fmt);
     WriteF(fmt, args);
     va_end(args);
-    if(CheckInterrupts())
+    if (CheckInterrupts())
         releaseLock(&logLock);
 }
 
 void Info(const char* __restrict fmt, ...) {
-    if(CheckInterrupts())
+    if (CheckInterrupts())
         acquireLock(&logLock);
     Write("\r\n[INFO]    ");
     va_list args;
     va_start(args, fmt);
     WriteF(fmt, args);
     va_end(args);
-    if(CheckInterrupts())
+    if (CheckInterrupts())
         releaseLock(&logLock);
 }
 

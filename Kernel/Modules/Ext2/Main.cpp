@@ -1068,7 +1068,7 @@ int Ext2::Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t i
     return 1;
 }
 
-FsNode* Ext2::Ext2Volume::FindDir(Ext2Node* node, char* name) {
+FsNode* Ext2::Ext2Volume::FindDir(Ext2Node* node, const char* name) {
     if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
         return nullptr;
     }
@@ -1703,7 +1703,7 @@ int Ext2::Ext2Node::ReadDir(DirectoryEntry* ent, uint32_t idx) {
     return ret;
 }
 
-FsNode* Ext2::Ext2Node::FindDir(char* name) {
+FsNode* Ext2::Ext2Node::FindDir(const char* name) {
     flock.AcquireRead();
     auto ret = vol->FindDir(this, name);
     flock.ReleaseRead();

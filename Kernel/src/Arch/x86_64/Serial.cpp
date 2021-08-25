@@ -1,7 +1,7 @@
 #include <CPU.h>
+#include <CString.h>
 #include <Lock.h>
 #include <Serial.h>
-#include <String.h>
 #include <System.h>
 
 namespace Serial {

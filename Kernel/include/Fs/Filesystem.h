@@ -6,6 +6,7 @@
 #include <List.h>
 #include <Lock.h>
 #include <RefPtr.h>
+#include <String.h>
 #include <Types.h>
 
 #include <abi-bits/abi.h>
@@ -187,10 +188,10 @@ public:
     virtual ssize_t Write(size_t off, size_t size, uint8_t* buffer); // Write Data
 
     virtual UNIXFileDescriptor* Open(size_t flags); // Open
-    virtual void Close();                // Close
+    virtual void Close();                           // Close
 
     virtual int ReadDir(DirectoryEntry*, uint32_t); // Read Directory
-    virtual FsNode* FindDir(char* name);            // Find in directory
+    virtual FsNode* FindDir(const char* name);            // Find in directory
 
     virtual int Create(DirectoryEntry* ent, uint32_t mode);
     virtual int CreateDirectory(DirectoryEntry* ent, uint32_t mode);
@@ -232,7 +233,6 @@ typedef struct UNIXFileDescriptor {
 
     ~UNIXFileDescriptor();
 } fs_fd_t;
-
 
 class DirectoryEntry {
 public:
@@ -425,7 +425,7 @@ FsNode* FollowLink(FsNode* link, FsNode* workingDir);
 ///
 /// \return FsNode which path points to, nullptr on failure
 /////////////////////////////
-FsNode* ResolvePath(const char* path, const char* workingDir = nullptr, bool followSymlinks = true);
+FsNode* ResolvePath(const String& path, const char* workingDir = nullptr, bool followSymlinks = true);
 
 /////////////////////////////
 /// \brief Resolve a path.
@@ -435,7 +435,7 @@ FsNode* ResolvePath(const char* path, const char* workingDir = nullptr, bool fol
 ///
 /// \return FsNode which path points to, nullptr on failure
 /////////////////////////////
-FsNode* ResolvePath(const char* path, FsNode* workingDir, bool followSymlinks = true);
+FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks = true);
 
 /////////////////////////////
 /// \brief Resolve parent directory of path.
@@ -480,12 +480,12 @@ UNIXFileDescriptor* Open(FsNode* node, uint32_t flags = 0);
 void Close(FsNode* node);
 void Close(UNIXFileDescriptor* handle);
 int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index);
-FsNode* FindDir(FsNode* node, char* name);
+FsNode* FindDir(FsNode* node, const char* name);
 
 ssize_t Read(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_t* buffer);
 ssize_t Write(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_t* buffer);
 int ReadDir(const FancyRefPtr<UNIXFileDescriptor>& handle, DirectoryEntry* dirent, uint32_t index);
-FsNode* FindDir(const FancyRefPtr<UNIXFileDescriptor>& handle, char* name);
+FsNode* FindDir(const FancyRefPtr<UNIXFileDescriptor>& handle, const char* name);
 
 int Link(FsNode*, FsNode*, DirectoryEntry*);
 int Unlink(FsNode*, DirectoryEntry*, bool unlinkDirectories = false);

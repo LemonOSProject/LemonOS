@@ -1,9 +1,9 @@
 #pragma once
 
+#include <CString.h>
 #include <Memory.h>
-#include <Spinlock.h>
-
 #include <Move.h>
+#include <Spinlock.h>
 #include <TTraits.h>
 
 template <typename T> class Vector {
@@ -68,10 +68,7 @@ public:
         }
     }
 
-    template<typename ...D>
-    Vector(D... data){
-        (add_back(data), ...);
-    }
+    template <typename... D> Vector(D... data) { (add_back(data), ...); }
 
     ALWAYS_INLINE T& at(size_t pos) {
         assert(pos < count);
@@ -117,15 +114,15 @@ public:
         count = newSize;
 
         if (count > oldCount) {
-			for (unsigned i = oldCount; i < count; i++) {
-				new (&data[i]) T();
-			}
+            for (unsigned i = oldCount; i < count; i++) {
+                new (&data[i]) T();
+            }
         } else if (count < oldCount) {
             if constexpr (!TTraits<T>::is_trivial()) {
-				for (unsigned i = count; i < oldCount; i++) {
-					data[i].~T();
-				}
-			}
+                for (unsigned i = count; i < oldCount; i++) {
+                    data[i].~T();
+                }
+            }
         }
 
         releaseLock(&lock);

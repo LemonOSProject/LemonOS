@@ -93,17 +93,17 @@ void Initialize() {
     assert(!"Failed to initiailze scheduler!");
 }
 
-void RegisterProcess(FancyRefPtr<Process> proc){
+void RegisterProcess(FancyRefPtr<Process> proc) {
     ScopedSpinLock acq(processesLock);
     processes->add_back(std::move(proc));
 }
 
-void MarkProcessForDestruction(Process* proc){
+void MarkProcessForDestruction(Process* proc) {
     ScopedSpinLock lockProcesses(processesLock);
     ScopedSpinLock lockDestroyedProcesses(destroyedProcessesLock);
 
-    for(auto it = processes->begin(); it != processes->end(); it++){
-        if(it->get() == proc){
+    for (auto it = processes->begin(); it != processes->end(); it++) {
+        if (it->get() == proc) {
             destroyedProcesses->add_back(*it);
             processes->remove(it);
             return;
@@ -113,9 +113,7 @@ void MarkProcessForDestruction(Process* proc){
     assert(!"Failed to mark process for destruction!");
 }
 
-pid_t GetNextPID() {
-    return nextPID++;
-}
+pid_t GetNextPID() { return nextPID++; }
 
 FancyRefPtr<Process> FindProcessByPID(pid_t pid) {
     ScopedSpinLock lockProcesses(processesLock);
@@ -127,10 +125,10 @@ FancyRefPtr<Process> FindProcessByPID(pid_t pid) {
     return nullptr;
 }
 
-pid_t GetNextProcessPID(pid_t pid){
+pid_t GetNextProcessPID(pid_t pid) {
     ScopedSpinLock lockProcesses(processesLock);
-    for(auto it = processes->begin(); it != processes->end(); it++){
-        if(it->get()->PID() > pid){ // Found process with PID greater than pid
+    for (auto it = processes->begin(); it != processes->end(); it++) {
+        if (it->get()->PID() > pid) { // Found process with PID greater than pid
             return it->get()->PID();
         }
     }
@@ -217,10 +215,10 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
     // If true, invoke the signal handler
     if ((cpu->currentThread->registers.cs & 0x3) &&
         (cpu->currentThread->pendingSignals & ~cpu->currentThread->signalMask)) {
-        if(cpu->currentThread->parent->State() == ThreadStateRunning){
+        if (cpu->currentThread->parent->State() == ThreadStateRunning) {
             int ret = acquireTestLock(&cpu->currentThread->lock);
             assert(!ret);
-            
+
             cpu->currentThread->HandlePendingSignal(&cpu->currentThread->registers);
             releaseLock(&cpu->currentThread->lock);
         }

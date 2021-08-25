@@ -1,4 +1,5 @@
 #include <APIC.h>
+#include <CString.h>
 #include <HAL.h>
 #include <IDT.h>
 #include <Lock.h>
@@ -6,7 +7,6 @@
 #include <Panic.h>
 #include <Scheduler.h>
 #include <StackTrace.h>
-#include <String.h>
 #include <Syscalls.h>
 #include <System.h>
 
