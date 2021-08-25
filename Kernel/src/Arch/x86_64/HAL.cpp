@@ -6,8 +6,8 @@
 #include <CString.h>
 #include <Device.h>
 #include <IDT.h>
-#include <Liballoc.h>
 #include <Logging.h>
+#include <MM/KMalloc.h>
 #include <PCI.h>
 #include <Paging.h>
 #include <Panic.h>

@@ -2,9 +2,9 @@
 
 #include <APIC.h>
 #include <CString.h>
-#include <Liballoc.h>
 #include <List.h>
 #include <Logging.h>
+#include <MM/KMalloc.h>
 #include <PCI.h>
 #include <Paging.h>
 #include <Panic.h>

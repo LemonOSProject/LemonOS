@@ -1,9 +1,9 @@
 #include <CharacterBuffer.h>
 
 #include <CString.h>
-#include <Liballoc.h>
 #include <Lock.h>
 #include <Logging.h>
+#include <MM/KMalloc.h>
 
 CharacterBuffer::CharacterBuffer() {
     buffer = (char*)kmalloc(bufferSize);

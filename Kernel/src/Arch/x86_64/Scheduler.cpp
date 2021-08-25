@@ -6,10 +6,10 @@
 #include <ELF.h>
 #include <Fs/Initrd.h>
 #include <IDT.h>
-#include <Liballoc.h>
 #include <List.h>
 #include <Lock.h>
 #include <Logging.h>
+#include <MM/KMalloc.h>
 #include <Paging.h>
 #include <Panic.h>
 #include <PhysicalAllocator.h>

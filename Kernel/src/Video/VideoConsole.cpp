@@ -1,7 +1,7 @@
 
 #include <Video/VideoConsole.h>
 
-#include <Liballoc.h>
+#include <MM/KMalloc.h>
 #include <Math.h>
 #include <String.h>
 #include <Video/Video.h>

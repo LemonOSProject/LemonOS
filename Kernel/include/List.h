@@ -3,7 +3,7 @@
 #include <Assert.h>
 #include <CString.h>
 #include <Compiler.h>
-#include <Liballoc.h>
+#include <MM/KMalloc.h>
 #include <Move.h>
 #include <Spinlock.h>
 

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <PhysicalAllocator.h>
-#include <Paging.h>
-#include <Liballoc.h>
 #include <Compiler.h>
+#include <MM/KMalloc.h>
+#include <Paging.h>
+#include <PhysicalAllocator.h>
 
 typedef struct {
     uint64_t base;

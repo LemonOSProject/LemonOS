@@ -1,5 +1,6 @@
 #include <Memory.h>
 #include <Panic.h>
+#include <Lock.h>
 #include <stddef.h>
 
 void* operator new(size_t size) { return kmalloc(size); }

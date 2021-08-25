@@ -20,13 +20,17 @@ kernel_cpp_args = [
 ]
 
 lai = subproject('lai')
+frigg = subproject('frigg', default_options : [ 'frigg_no_install=true' ])
+cxxshim = subproject('cxxshim')
 subdir('Modules')
 
 kernel_include_dirs = [
     include_directories('include'),
     include_directories('include/Arch/x86_64'),
 
-    lai.get_variable('includes')
+    lai.get_variable('includes'),
+    frigg.get_variable('incl'),
+    cxxshim.get_variable('incl')
 ]
 
 kernel_cpp_files = [
@@ -58,10 +62,8 @@ kernel_cpp_files = [
     'src/Fs/Tmp.cpp',
     'src/Fs/VolumeManager.cpp',
 
-    'src/Liballoc/_liballoc.cpp',
-    'src/Liballoc/liballoc.c',
-
     'src/MM/AddressSpace.cpp',
+    'src/MM/KMalloc.cpp',
     'src/MM/VMObject.cpp',
     
     'src/Net/NetworkAdapter.cpp',
