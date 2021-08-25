@@ -15,6 +15,7 @@ Window::Window(const char* title, vector2i_t size, uint32_t flags, int type, vec
     rootContainer.SetWindow(this);
 
     WindowServer* server = WindowServer::Instance();
+    rootContainer.background = Theme::Current().ColourBackground();
 
     auto response = server->CreateWindow(pos.x, pos.y, size.x, size.y, flags, title);
 

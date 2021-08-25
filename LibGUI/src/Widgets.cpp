@@ -872,8 +872,6 @@ void ListView::Paint(surface_t* surface) {
     int totalColumnWidth;
     int xPos = fixedBounds.x;
     for (int i = 0; i < model->ColumnCount(); i++) {
-        xPos += columnDisplayWidths.at(i);
-
         if (displayColumnNames) {
             Graphics::DrawString(model->ColumnName(i).c_str(), xPos + 4, fixedBounds.y + 4, textColour.r, textColour.g,
                                  textColour.b, surface);
@@ -884,6 +882,8 @@ void ListView::Paint(surface_t* surface) {
                                surface); // Divider
             xPos++;
         }
+
+        xPos += columnDisplayWidths.at(i);
     }
 
     totalColumnWidth = xPos;
