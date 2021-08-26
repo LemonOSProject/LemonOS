@@ -3,7 +3,7 @@
 #include <Device.h>
 #include <Fs/Filesystem.h>
 #include <MM/KMalloc.h>
-#include <PTY.h>
+#include <TTY/PTY.h>
 #include <Serial.h>
 #include <String.h>
 #include <Video/VideoConsole.h>

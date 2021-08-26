@@ -90,6 +90,7 @@ kernel_cpp_files = [
     'src/Storage/NVMeNamespace.cpp',
     'src/Storage/PartitionDevice.cpp',
     
+    'src/TTY/PTMX.cpp',
     'src/TTY/PTY.cpp',
     
     'src/USB/XHCI.cpp',

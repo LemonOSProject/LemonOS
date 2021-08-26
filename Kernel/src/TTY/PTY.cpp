@@ -5,7 +5,7 @@
 #include <Fs/Filesystem.h>
 #include <List.h>
 #include <Logging.h>
-#include <PTY.h>
+#include <TTY/PTY.h>
 #include <Scheduler.h>
 #include <Types.h>
 
@@ -35,25 +35,18 @@ char GetNextPTY() {
     return nextPTY;
 }
 
-List<PTY*>* ptys = NULL;
-
 PTY* GrantPTY(uint64_t pid) {
-    if (!ptys)
-        ptys = new List<PTY*>();
-
     char name[5] = {'p', 't', 'y', 0, 0};
     name[4] = nextPTY;
     GetNextPTY();
 
-    PTY* pty = new PTY(name);
+    //PTY* pty = new PTY(name);
 
-    return pty;
+    return nullptr;
 }
 
-PTYDevice::PTYDevice(const char* name) : Device(name, DeviceTypeUNIXPseudoTerminal) {
-    dirent.node = this;
+PTYDevice::PTYDevice() {
 
-    SetDeviceName("UNIX Pseudoterminal Device");
 }
 
 ssize_t PTYDevice::Read(size_t offset, size_t size, uint8_t* buffer) {
@@ -149,6 +142,9 @@ int PTYDevice::Ioctl(uint64_t cmd, uint64_t arg) {
             pty->master.Flush();
         }
         break;
+    case TIOCGPTN:
+        *((int*)arg) = pty->GetID();
+        break;
     default:
         return -EINVAL;
     }
@@ -189,7 +185,7 @@ bool PTYDevice::CanRead() {
     }
 }
 
-PTY::PTY(const char* name) : masterFile(name), slaveFile(name) {
+PTY::PTY(int id) : m_id(id) {
     slaveFile.flags = FS_NODE_CHARDEVICE;
 
     master.ignoreBackspace = true;
@@ -197,6 +193,10 @@ PTY::PTY(const char* name) : masterFile(name), slaveFile(name) {
     master.Flush();
     slave.Flush();
     tios.c_lflag = ECHO | ICANON;
+
+    strcpy(slaveDirent.name, to_string(id).c_str());
+    slaveDirent.flags = DT_CHR;
+    slaveDirent.inode = id;
 
     masterFile.pty = this;
     masterFile.device = PTYMasterDevice;
@@ -206,8 +206,6 @@ PTY::PTY(const char* name) : masterFile(name), slaveFile(name) {
 
     for (int i = 0; i < NCCS; i++)
         tios.c_cc[i] = c_cc_default[i];
-
-    ptys->add_back(this);
 }
 
 ssize_t PTY::MasterRead(char* buffer, size_t count) { return master.Read(buffer, count); }
@@ -268,15 +266,15 @@ ssize_t PTY::MasterWrite(char* buffer, size_t count) {
     }
 
     if (IsCanonical()) {
-        if (slave.lines && watchingSlave.get_length()) {
-            while (watchingSlave.get_length()) {
-                watchingSlave.remove_at(0)->Signal(); // Signal all watching
+        if (slave.lines && m_watchingSlave.get_length()) {
+            while (m_watchingSlave.get_length()) {
+                m_watchingSlave.remove_at(0)->Signal(); // Signal all watching
             }
         }
     } else {
-        if (slave.bufferPos && watchingSlave.get_length()) {
-            while (watchingSlave.get_length()) {
-                watchingSlave.remove_at(0)->Signal(); // Signal all watching
+        if (slave.bufferPos && m_watchingSlave.get_length()) {
+            while (m_watchingSlave.get_length()) {
+                m_watchingSlave.remove_at(0)->Signal(); // Signal all watching
             }
         }
     }
@@ -295,9 +293,9 @@ ssize_t PTY::SlaveWrite(char* buffer, size_t count) {
         releaseLock(&masterFile.blockedLock);
     }
 
-    if (master.bufferPos && watchingMaster.get_length()) {
-        while (watchingMaster.get_length()) {
-            watchingMaster.remove_at(0)->Signal(); // Signal all watching
+    if (master.bufferPos && m_watchingMaster.get_length()) {
+        while (m_watchingMaster.get_length()) {
+            m_watchingMaster.remove_at(0)->Signal(); // Signal all watching
         }
     }
 
@@ -313,7 +311,7 @@ void PTY::WatchMaster(FilesystemWatcher& watcher, int events) {
         return;
     }
 
-    watchingMaster.add_back(&watcher);
+    m_watchingMaster.add_back(&watcher);
 }
 
 void PTY::WatchSlave(FilesystemWatcher& watcher, int events) {
@@ -325,9 +323,9 @@ void PTY::WatchSlave(FilesystemWatcher& watcher, int events) {
         return;
     }
 
-    watchingSlave.add_back(&watcher);
+    m_watchingSlave.add_back(&watcher);
 }
 
-void PTY::UnwatchMaster(FilesystemWatcher& watcher) { watchingMaster.remove(&watcher); }
+void PTY::UnwatchMaster(FilesystemWatcher& watcher) { m_watchingMaster.remove(&watcher); }
 
-void PTY::UnwatchSlave(FilesystemWatcher& watcher) { watchingSlave.remove(&watcher); }
+void PTY::UnwatchSlave(FilesystemWatcher& watcher) { m_watchingSlave.remove(&watcher); }

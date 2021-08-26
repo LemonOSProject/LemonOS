@@ -26,7 +26,7 @@ rgba_colour_t AverageColour(rgba_colour_t c1, rgba_colour_t c2) {
             static_cast<uint8_t>(a / 2)};
 }
 
-void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t mask) {
+void DrawRect(int x, int y, int width, int height, const RGBAColour& colour, surface_t* surface, const Rect& mask) {
     if (x < 0) {
         width += x;
         x = 0;
@@ -66,14 +66,18 @@ void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t
     }
 
     int _width = ((x + width) < surface->width) ? width : (surface->width - x);
-    uint32_t colour_i = 0xFF000000 | (static_cast<uint32_t>(r) << 16) | (static_cast<uint32_t>(g) << 8) | b;
+    if (_width < 0){
+        return;
+    }
+
+    uint32_t colour_i = (static_cast<uint32_t>(colour.a) << 24) | (static_cast<uint32_t>(colour.r) << 16) | (static_cast<uint32_t>(colour.g) << 8) | colour.b;
     uint32_t* buffer = (uint32_t*)surface->buffer; // Convert byte array into an array of 32-bit unsigned integers as
                                                    // the supported colour depth is 32 bit
+
     for (int i = 0; i < height && (i + y) < surface->height; i++) {
         uint32_t yOffset = (i + y) * (surface->width);
 
-        if (_width > 0)
-            memset32_optimized((void*)(buffer + (yOffset + x)), colour_i, _width);
+        memset32_optimized((void*)(buffer + (yOffset + x)), colour_i, _width);
     }
 }
 

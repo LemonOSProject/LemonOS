@@ -5,8 +5,8 @@
 #include <HAL.h>
 #include <Keyboard.h>
 #include <Lemon.h>
-#include <MM/KMalloc.h>
 #include <Logging.h>
+#include <MM/KMalloc.h>
 #include <Math.h>
 #include <Modules.h>
 #include <Mouse.h>
@@ -22,6 +22,7 @@
 #include <String.h>
 #include <Symbols.h>
 #include <Syscalls.h>
+#include <TTY/PTY.h>
 #include <Timer.h>
 #include <Types.h>
 #include <USB/XHCI.h>
@@ -92,6 +93,8 @@ void KernelProcess() {
         for (;;)
             ;
     }
+
+    PTMultiplexor::Initialize();
 
     Log::Info("Loading Init Process...");
     FsNode* initFsNode = nullptr;

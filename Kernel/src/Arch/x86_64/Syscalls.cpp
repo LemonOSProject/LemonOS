@@ -15,7 +15,7 @@
 #include <Modules.h>
 #include <Net/Socket.h>
 #include <Objects/Service.h>
-#include <PTY.h>
+#include <TTY/PTY.h>
 #include <Pair.h>
 #include <PhysicalAllocator.h>
 #include <SMP.h>
@@ -164,7 +164,7 @@ long SysRead(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
 
     FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
-    if (!handle) {
+    if (!handle.get() || !handle->node) {
         Log::Warning("SysRead: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
     }
@@ -368,137 +368,109 @@ long SysUnlink(RegisterContext* r) {
 }
 
 long SysExecve(RegisterContext* r) {
-    Log::Error("Execve not implemented!");
-    Process::Current()->Die();
-    return -ENOSYS;
-    /*Process* proc = Scheduler::GetCurrentProcess();
+    Process* currentProcess = Scheduler::GetCurrentProcess();
 
-    const char* path = (const char*)SC_ARG0(r);
-    char** argv = (char**)SC_ARG1(r);
-    char** envp = (char**)SC_ARG2(r);
-
-    size_t pathLength = 0;
-    if (strlenSafe(path, pathLength, proc->addressSpace)) {
-        Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid path pointer");
+    size_t filePathLength;
+    long filePathInvalid =
+        strlenSafe(reinterpret_cast<char*>(SC_ARG0(r)), filePathLength, currentProcess->addressSpace);
+    if (filePathInvalid) {
+        Log::Warning("SysExec: Reached unallocated memory reading file path");
         return -EFAULT;
     }
 
-    char* kernelPath = new char[pathLength + 1];
-    strncpy(kernelPath, path, pathLength);
-    kernelPath[pathLength] = 0;
+    char filepath[filePathLength + 1];
 
-    FsNode* node = fs::ResolvePath(kernelPath, proc->workingDir, true / * Follow Symlinks * /);
+    strncpy(filepath, (char*)SC_ARG0(r), filePathLength);
+    char** argv = (char**)SC_ARG1(r);
+    char** envp = (char**)SC_ARG2(r);
+
+    FsNode* node = fs::ResolvePath(filepath, currentProcess->workingDir, true /* Follow Symlinks */);
     if (!node) {
-        Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid path '%s'!", kernelPath);
         return -ENOENT;
     }
 
-    if (!node->IsFile()) {
-        Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: '%s' is not a regular file!", kernelPath);
-        return -EACCES;
+    Vector<String> kernelEnvp;
+    if (envp) {
+        int i = 0;
+        while (envp[i]) {
+            size_t len;
+            if (strlenSafe(envp[i], len, currentProcess->addressSpace)) {
+                Log::Warning("SysExecve: Reached unallocated memory reading environment");
+                return -EFAULT;
+            }
+
+            kernelEnvp.add_back(envp[i]);
+            i++;
+        }
     }
 
-    int argc = 0;
-    Vector<char*> kernelArgv;
+    Log::Info("Loading: %s", (char*)SC_ARG0(r));
 
-    for (;;) {
-        if (!argv[argc]) {
-            break; // End of args
-        }
-
-        if (!Memory::CheckUsermodePointer(reinterpret_cast<uintptr_t>(argv + argc), sizeof(char*),
-                                          proc->addressSpace)) {
-            Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid argument pointer");
-            return -EFAULT;
-        }
-
-        size_t argLength = 0;
-        if (strlenSafe(argv[argc], argLength, proc->addressSpace)) {
-            Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid argument pointer");
-
-            for (char* arg : kernelArgv) {
-                delete[] arg;
+    Vector<String> kernelArgv;
+    if (argv) {
+        int i = 0;
+        while (argv[i]) {
+            size_t len;
+            if (strlenSafe(argv[i], len, currentProcess->addressSpace)) {
+                Log::Warning("SysExecve: Reached unallocated memory reading argv");
+                return -EFAULT;
             }
 
-            return -EFAULT;
+            kernelArgv.add_back(argv[i]);
+            i++;
         }
-
-        char* buf = new char[argLength + 1];
-        strncpy(buf, argv[argc], argLength);
-        buf[argLength] = 0;
-
-        argc++;
     }
 
-    int envc = 0;
-    Vector<char*> kernelEnv;
-
-    for (;;) {
-        if (!envp[envc]) {
-            break; // End of args
-        }
-
-        if (!Memory::CheckUsermodePointer(reinterpret_cast<uintptr_t>(envp + envc), sizeof(char*),
-                                          proc->addressSpace)) {
-            Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid environment pointer");
-            return -EFAULT;
-        }
-
-        size_t envLength = 0;
-        if (strlenSafe(envp[envc], envLength, proc->addressSpace)) {
-            Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysExecve: Invalid environment pointer");
-
-            for (char* arg : kernelArgv) {
-                delete[] arg;
-            }
-
-            for (char* env : kernelEnv) {
-                delete[] env;
-            }
-
-            return -EFAULT;
-        }
-
-        char* buf = new char[envLength + 1];
-        strncpy(buf, envp[envc], envLength);
-        buf[envLength] = 0;
-
-        envc++;
+    if (!kernelArgv.size()) {
+        kernelArgv.add_back(filepath); // Ensure at least argv[0] is set
     }
 
     timeval tv = Timer::GetSystemUptimeStruct();
     uint8_t* buffer = (uint8_t*)kmalloc(node->size);
-    ssize_t read = fs::Read(node, 0, node->size, buffer);
-    if (read < 0) {
-        Log::Warning("Could not read file: %s", kernelPath);
-        return read;
+    size_t read = fs::Read(node, 0, node->size, buffer);
+    if (read != node->size) {
+        Log::Warning("Could not read file: %s", filepath);
+        return -EIO;
     }
     timeval tvnew = Timer::GetSystemUptimeStruct();
     Log::Info("Done (took %d us)", Timer::TimeDifference(tvnew, tv));
 
     Thread* currentThread = Scheduler::GetCurrentThread();
+    ScopedSpinLock lockProcess(currentProcess->m_processLock);
 
-    proc->addressSpace->UnmapAll();
+    currentProcess->addressSpace->UnmapAll();
+    currentProcess->usedMemoryBlocks = 0;
 
-    MappedRegion* stackRegion = proc->addressSpace->AllocateAnonymousVMObject(0x200000, 0, false); // 2MB max stacksize
+    currentProcess->MapSignalTrampoline();
+
+    strncpy(currentProcess->name, kernelArgv[0].c_str(), sizeof(currentProcess->name));
+
+    // Reset register state
+    memset(r, 0, sizeof(RegisterContext));
+
+    MappedRegion* stackRegion = currentProcess->addressSpace->AllocateAnonymousVMObject(0x200000, 0, false); // 2MB max stacksize
     currentThread->stack = reinterpret_cast<void*>(stackRegion->base);                             // 256KB stack size
     r->rsp = (uintptr_t)currentThread->stack + 0x200000;
 
     // Force the first 8KB to be allocated
-    stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, proc->GetPageMap());
-    stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, proc->GetPageMap());
+    stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, currentProcess->GetPageMap());
+    stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, currentProcess->GetPageMap());
 
-    elf_info_t elfInfo = LoadELFSegments(proc, buffer, 0);
-    r->rip = Scheduler::LoadELF(proc, &r->rsp, elfInfo, kernelArgv.size(), kernelArgv.Data(), kernelEnv.size(),
-                                kernelEnv.Data(), kernelPath);
+    elf_info_t elfInfo = LoadELFSegments(currentProcess, buffer, 0);
+    r->rip = currentProcess->LoadELF(&r->rsp, elfInfo, kernelArgv, kernelEnvp, filepath);
     kfree(buffer);
 
     if (!r->rip) {
-        proc->Die();
-        for (;;)
-            ;
+        // Its really important that we kill the process afterwards,
+        // Otherwise the process pointer reference counter will not be decremeneted,
+        // and the ScopedSpinlocks will not be released.
+        currentThread->Signal(SIGKILL);
+        return -1;
     }
     assert(!(r->rsp & 0xF));
+
+    r->cs = USER_CS;
+    r->ss = USER_SS;
 
     r->rbp = r->rsp;
     r->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
@@ -508,16 +480,19 @@ long SysExecve(RegisterContext* r) {
     ((fx_state_t*)currentThread->fxState)->mxcsrMask = 0xffbf;
     ((fx_state_t*)currentThread->fxState)->fcw = 0x33f; // Default FPU Control Word State
 
-    for (UNIXFileDescriptor*& fd : proc->fileDescriptors) {
-        if (fd) {
+    // Restore default FPU state
+    asm volatile("fxrstor64 (%0)" ::"r"((uintptr_t)currentThread->fxState) : "memory");
+
+    ScopedSpinLock lockProcessFds(currentProcess->m_fileDescriptorLock);
+    for (FancyRefPtr<UNIXFileDescriptor>& fd : currentProcess->m_fileDescriptors) {
+        if (fd.get()) {
             if (fd->mode & O_CLOEXEC) {
-                fs::Close(fd);
                 fd = nullptr;
             }
         }
     }
 
-    return 0;*/
+    return 0;
 }
 
 long SysChdir(RegisterContext* r) {
@@ -996,23 +971,6 @@ long SysMmap(RegisterContext* r) {
     }
 
     *address = region->base;
-    return 0;
-}
-
-long SysGrantPTY(RegisterContext* r) {
-    if (!SC_ARG0(r))
-        return 1;
-
-    PTY* pty = GrantPTY(Scheduler::GetCurrentProcess()->PID());
-
-    Process* currentProcess = Scheduler::GetCurrentProcess();
-
-    currentProcess->ReplaceFileDescriptor(0, fs::Open(&pty->slaveFile)); // Stdin
-    currentProcess->ReplaceFileDescriptor(1, fs::Open(&pty->slaveFile)); // Stdout
-    currentProcess->ReplaceFileDescriptor(2, fs::Open(&pty->slaveFile)); // Stderr
-
-    *((int*)SC_ARG0(r)) = currentProcess->AllocateFileDescriptor(fs::Open(&pty->masterFile));
-
     return 0;
 }
 
@@ -2245,12 +2203,13 @@ long SysDup(RegisterContext* r) {
 
     FancyRefPtr<UNIXFileDescriptor> handle = currentProcess->GetFileDescriptor(fd);
     if (!handle) {
+        Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysDup: Invalid file descriptor %d", fd);
         return -EBADF;
     }
 
-    UNIXFileDescriptor* newHandle = new UNIXFileDescriptor;
-    *newHandle = *handle;
-    newHandle->node->handleCount++;
+    UNIXFileDescriptor* newHandle = fs::Open(handle->node);
+    newHandle->mode = handle->mode;
+    newHandle->pos = handle->pos;
 
     if (flags & O_CLOEXEC) {
         newHandle->mode |= O_CLOEXEC;
@@ -3594,7 +3553,7 @@ syscall_t syscalls[NUM_SYSCALLS]{
     SysReadDir,
     SysSetFsBase,
     SysMmap, // 35
-    SysGrantPTY,
+    nullptr,
     SysGetCWD,
     SysWaitPID,
     SysNanoSleep,

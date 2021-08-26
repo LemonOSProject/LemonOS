@@ -162,10 +162,10 @@ static inline uint32_t AlphaBlendInt(uint32_t dest, uint32_t src) {
     uint16_t alpha = src >> 24;
     uint16_t destAlpha = dest >> 24;
 
-    if(alpha == 0){
+    if (alpha == 0) {
         return dest;
-    } else if(alpha == 0xff || destAlpha == 0){
-        return  src;
+    } else if (alpha == 0xff || destAlpha == 0) {
+        return src;
     }
 
     // TODO: optimize out the divisions
@@ -179,7 +179,8 @@ static inline uint32_t AlphaBlendInt(uint32_t dest, uint32_t src) {
     uint32_t g = (((dest >> 8) & 0xff) * mulDestAlpha + mulAlpha * ((src >> 8) & 0xff)) / resultAlpha;
     uint32_t b = (((dest >> 16) & 0xff) * mulDestAlpha + mulAlpha * ((src >> 16) & 0xff)) / resultAlpha;
 
-    return ((resultAlpha >> 8 << 24) & 0xff000000) | (r & 0x000000ff) | ((g << 8) & 0x0000ff00) | ((b << 16) & 0x00ff0000);
+    return ((resultAlpha >> 8 << 24) & 0xff000000) | (r & 0x000000ff) | ((g << 8) & 0x0000ff00) |
+           ((b << 16) & 0x00ff0000);
 }
 
 static inline uint32_t AlphaBlendF(uint32_t oldColour, uint8_t r, uint8_t g, uint8_t b, double opacity) {
@@ -192,15 +193,17 @@ bool PointInRect(rect_t rect, vector2i_t point);
 rgba_colour_t AverageColour(rgba_colour_t c1, rgba_colour_t c2);
 
 // DrawRect (rect, colour, surface*) - Draw filled rectangle
-void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface,
-              rect_t mask = {0, 0, INT_MAX, INT_MAX});
+void DrawRect(int x, int y, int width, int height, const RGBAColour& colour, surface_t* surface,
+                     const Rect& mask = {0, 0, INT_MAX, INT_MAX});
+
+inline void DrawRect(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface,
+              const Rect& mask = {0, 0, INT_MAX, INT_MAX}) {
+    DrawRect(x, y, width, height, {r, g, b, 0xff}, surface, mask);
+}
+
 inline void DrawRect(rect_t rect, const RGBAColour& colour, surface_t* surface,
                      const Rect& mask = {0, 0, INT_MAX, INT_MAX}) {
-    DrawRect(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour.r, colour.g, colour.b, surface, mask);
-}
-inline void DrawRect(int x, int y, int width, int height, const RGBAColour& colour, surface_t* surface,
-                     const Rect& mask = {0, 0, INT_MAX, INT_MAX}) {
-    DrawRect(x, y, width, height, colour.r, colour.g, colour.b, surface, mask);
+    DrawRect(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour, surface, mask);
 }
 
 void DrawRectOutline(int x, int y, int width, int height, uint8_t r, uint8_t g, uint8_t b, surface_t* surface,
@@ -267,30 +270,23 @@ void DrawRoundedRect(int x, int y, int width, int height, uint8_t r, uint8_t g, 
 inline void DrawRoundedRect(rect_t rect, const RGBAColour& colour, int topleftRadius, int topRightRadius,
                             int bottomRightRadius, int bottomLeftRadius, surface_t* surface,
                             rect_t mask = {0, 0, INT_MAX, INT_MAX}) {
-    DrawRoundedRect(rect.x, rect.y, rect.width, rect.height, colour.r, colour.g, colour.b, topleftRadius, topRightRadius,
-                    bottomRightRadius, bottomLeftRadius, surface, mask);
+    DrawRoundedRect(rect.x, rect.y, rect.width, rect.height, colour.r, colour.g, colour.b, topleftRadius,
+                    topRightRadius, bottomRightRadius, bottomLeftRadius, surface, mask);
 }
 
-inline void surfacecpy(surface_t* dest, const surface_t* src) {
-    dest->Blit(src);
-}
-inline void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset) {
-    dest->Blit(src, offset);
-}
-inline void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion){
+inline void surfacecpy(surface_t* dest, const surface_t* src) { dest->Blit(src); }
+inline void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset) { dest->Blit(src, offset); }
+inline void surfacecpy(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion) {
     dest->Blit(src, offset, srcRegion);
 }
 
-inline void surfacecpyTransparent(surface_t* dest, const surface_t* src, vector2i_t offset, rect_t srcRegion = {0, 0, INT_MAX, INT_MAX}) {
+inline void surfacecpyTransparent(surface_t* dest, const surface_t* src, vector2i_t offset,
+                                  rect_t srcRegion = {0, 0, INT_MAX, INT_MAX}) {
     dest->AlphaBlit(src, offset, srcRegion);
 }
 
-inline void Blit(Surface* dest, const Surface* src) {
-    dest->Blit(src);
-}
-inline void Blit(Surface* dest, const Surface* src, vector2i_t offset) {
-    dest->Blit(src, offset);
-}
+inline void Blit(Surface* dest, const Surface* src) { dest->Blit(src); }
+inline void Blit(Surface* dest, const Surface* src, vector2i_t offset) { dest->Blit(src, offset); }
 inline void Blit(Surface* dest, const Surface* src, vector2i_t offset, rect_t region) {
     dest->Blit(src, offset, region);
 }

@@ -84,7 +84,7 @@ app_fileman = executable('fileman.lef', fileman_src,
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-app_lsh = executable('lsh.lef', lsh_src, 
+app_lsh = executable('lsh', lsh_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     install : true)

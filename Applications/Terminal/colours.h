@@ -258,25 +258,23 @@ rgba_colour_t coloursProfile1[] = {
 	{ 238, 238, 238, 255}
 };
 
-// These first 16 colours are from the Paraiso theme (https://github.com/idleberg/atom-paraiso-dark)
-// This colour theme and Paraiso are under the following license: (https://creativecommons.org/licenses/by-sa/4.0/deed.en_US)
 rgba_colour_t coloursProfile2[] = {
-	RGBAColour::FromRGB(0x2f1e2e), // Black
-	RGBAColour::FromRGB(0xef6155), // Dark Red
-	RGBAColour::FromRGB(0x48b685), // Dark Green
-	RGBAColour::FromRGB(0xfec418), // Dark Yellow
+	{ 0x14, 0x14, 0x14, 200},	   // Black
+	RGBAColour::FromRGB(0xea192f), // Dark Red
+	RGBAColour::FromRGB(0xb0db43), // Dark Green
+	RGBAColour::FromRGB(0xffc145), // Dark Yellow
 	RGBAColour::FromRGB(0x06b6ef), // Dark Blue
-	RGBAColour::FromRGB(0x815ba4), // Dark Magenta
-	RGBAColour::FromRGB(0x5bc4bf), // Dark Cyan
+	RGBAColour::FromRGB(0xC200FB), // Dark Magenta
+	RGBAColour::FromRGB(0x558c8c), // Dark Cyan
 	RGBAColour::FromRGB(0xa39e9b), // Gray
-	RGBAColour::FromRGB(0x2f1e2e), // Black
-	RGBAColour::FromRGB(0xef6155), // Red
-	RGBAColour::FromRGB(0x48b685), // Green
-	RGBAColour::FromRGB(0xfec418), // Yellow
+	RGBAColour::FromRGB(0x141414), // Black
+	RGBAColour::FromRGB(0xea192f), // Red
+	RGBAColour::FromRGB(0xb0db43), // Green
+	RGBAColour::FromRGB(0xffc145), // Yellow
 	RGBAColour::FromRGB(0x06b6ef), // Blue
-	RGBAColour::FromRGB(0x815ba4), // Magenta
-	RGBAColour::FromRGB(0x5bc4bf), // Cyan
-	RGBAColour::FromRGB(0xe7e9db), // White
+	RGBAColour::FromRGB(0xC200FB), // Magenta
+	RGBAColour::FromRGB(0x558c8c), // Cyan
+	RGBAColour::FromRGB(0xeee7ee), // White
 	{ 0, 0, 0, 255 },
 	{ 0, 0, 95, 255 },
 	{ 0, 0, 135, 255 },

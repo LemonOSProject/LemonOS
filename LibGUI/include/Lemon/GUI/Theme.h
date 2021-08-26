@@ -15,6 +15,7 @@ enum {
     Colour_InactiveWindowText,
     Colour_Background,         // Window Background, etc.
     Colour_ContainerBackground,  // Container Background, etc.
+    Colour_Button,
     Colour_TextLight,          // Text used on light backgrounds
     Colour_TextDark,           // Text used on dark backgrounds
     Colour_Foreground,         // Used for highlighting, etc.
@@ -41,6 +42,7 @@ public:
 
     const Colour& ColourContainerBackground() const { return m_colours[Colour_ContainerBackground]; }
     const Colour& ColourContentBackground() const { return m_colours[Colour_ContainerBackground]; }
+    const Colour& ColourButton() const { return m_colours[Colour_Button]; }
 
     const Colour& ColourText() const { return m_colours[Colour_TextLight]; }
     const Colour& ColourTextLight() const { return m_colours[Colour_TextLight]; }

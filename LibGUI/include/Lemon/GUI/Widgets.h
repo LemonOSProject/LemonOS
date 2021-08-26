@@ -207,8 +207,7 @@ protected:
     std::string label;
     int labelLength;
 
-    void DrawButtonBorders(surface_t* surface, bool white);
-    void DrawButtonLabel(surface_t* surface, bool white);
+    void DrawButtonLabel(surface_t* surface);
 
 public:
     bool active = false;

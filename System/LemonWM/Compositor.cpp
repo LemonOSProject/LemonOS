@@ -273,12 +273,13 @@ void Compositor::RecalculateWindowClipping() {
     for (WMWindow* win : WM::Instance().m_windows) {
         if (win->IsMinimized()) {
             continue;
-        } else if (win->IsTransparent()) {
-            // Transparent windows do not cut other windows
-            m_windowClipRects.push_back({win->GetContentRect(), win});
-            continue;
         }
 
+        if (win->IsTransparent()) {
+            // Transparent windows do not cut other windows
+            m_windowClipRects.push_back({win->GetContentRect(), win});
+            goto retryDecoration;
+        }
     retry:
         for (auto it = m_windowClipRects.begin(); it != m_windowClipRects.end(); it++) {
             if (it->rect.Intersects(win->GetContentRect())) {

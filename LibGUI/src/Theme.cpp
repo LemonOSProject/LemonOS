@@ -13,12 +13,13 @@ Theme::Theme() noexcept {
     m_config.AddSerializedConfigProperty<RGBAColour>("colours.inactiveWindowText", RGBAColour{0xEE, 0xEE, 0xEE, 0xFF});
     m_config.AddSerializedConfigProperty<RGBAColour>("colours.background", RGBAColour{});
     m_config.AddSerializedConfigProperty<RGBAColour>("colours.containerBackground", RGBAColour{});
-    m_config.AddSerializedConfigProperty<RGBAColour>("colours.containerTextLight", RGBAColour{0xee, 0xee, 0xee, 0xff});
-    m_config.AddSerializedConfigProperty<RGBAColour>("colours.containerTextDark", RGBAColour{0, 0, 0, 0xff});
+    m_config.AddSerializedConfigProperty<RGBAColour>("colours.button", RGBAColour{});
     m_config.AddSerializedConfigProperty<RGBAColour>("colours.foreground", RGBAColour{});
     m_config.AddSerializedConfigProperty<RGBAColour>("colours.foregroundInactive", RGBAColour{});
     m_config.AddSerializedConfigProperty<RGBAColour>("colours.foregroundAlternate", RGBAColour{});
     m_config.AddSerializedConfigProperty<RGBAColour>("colours.border", RGBAColour{});
+    m_config.AddSerializedConfigProperty<RGBAColour>("colours.textLight", RGBAColour{0xee, 0xee, 0xee, 0xff});
+    m_config.AddSerializedConfigProperty<RGBAColour>("colours.textDark", RGBAColour{0, 0, 0, 0xff});
 
     m_colours.resize(Colour_Count);
 
@@ -38,12 +39,13 @@ void Theme::Update(const std::string& path){
     m_colours[Colour_InactiveWindowText] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.inactiveWindowText");
     m_colours[Colour_Background] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.background");
     m_colours[Colour_ContainerBackground] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.containerBackground");
-    m_colours[Colour_TextLight] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.containerTextLight");
-    m_colours[Colour_TextDark] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.containerTextDark");
+    m_colours[Colour_Button] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.button");
     m_colours[Colour_Foreground] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.foreground");
     m_colours[Colour_ForegroundInactive] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.foregroundInactive");
     m_colours[Colour_ForegroundAlternate] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.foregroundAlternate");
     m_colours[Colour_Border] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.border");
+    m_colours[Colour_TextLight] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.textLight");
+    m_colours[Colour_TextDark] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.textDark");
 }
 
 }

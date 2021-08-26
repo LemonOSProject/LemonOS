@@ -119,4 +119,11 @@ inline void alphablend_optimized(uint32_t* dest, uint32_t* src, size_t count) {
     }
 }
 
+inline void alphafill_optimized(uint32_t* dest, uint32_t colour, size_t count) {
+    for(; count; count--, dest++){
+        *dest = Lemon::Graphics::AlphaBlendInt(*dest, colour);
+    }
+}
+
+
 extern "C" void memcpy_optimized(void* dest, void* src, size_t count);

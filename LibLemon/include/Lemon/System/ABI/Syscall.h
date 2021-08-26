@@ -34,7 +34,7 @@
 #define SYS_READDIR 33
 #define SYS_SET_FS_BASE 34
 #define SYS_MMAP 35
-#define SYS_GRANT_PTY 36
+// Unused
 #define SYS_GET_CWD 37
 #define SYS_WAIT_PID 38
 #define SYS_NANO_SLEEP 39

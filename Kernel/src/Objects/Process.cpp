@@ -99,20 +99,7 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
         Log::Warning("Failed to find /dev/kernellog");
     }
 
-    // Allocate space for both a siginfo struct and the signal trampoline
-    proc->m_signalTrampoline = proc->addressSpace->AllocateAnonymousVMObject(
-        ((signalTrampolineEnd - signalTrampolineStart) + PAGE_SIZE_4K - 1) &
-            ~static_cast<unsigned>(PAGE_SIZE_4K - 1),
-        0, false);
-    reinterpret_cast<PhysicalVMObject*>(proc->m_signalTrampoline->vmObject.get())
-        ->ForceAllocate(); // Forcibly allocate all blocks
-    proc->m_signalTrampoline->vmObject->MapAllocatedBlocks(proc->m_signalTrampoline->Base(), proc->GetPageMap());
-
-    // Copy signal trampoline code into process
-    asm volatile("cli; mov %%rax, %%cr3" ::"a"(proc->GetPageMap()->pml4Phys));
-    memcpy(reinterpret_cast<void*>(proc->m_signalTrampoline->Base()), signalTrampolineStart,
-           signalTrampolineEnd - signalTrampolineStart);
-    asm volatile("mov %%rax, %%cr3; sti" ::"a"(Scheduler::GetCurrentProcess()->GetPageMap()->pml4Phys));
+    proc->MapSignalTrampoline();
 
     Scheduler::RegisterProcess(proc);
     return proc;
@@ -517,9 +504,12 @@ FancyRefPtr<Process> Process::Fork() {
 
         dest->mode = source->mode;
         dest->pos = source->pos;
+
+        newProcess->m_fileDescriptors[i] = dest;
     }
 
     m_children.add_back(newProcess);
+    Scheduler::RegisterProcess(newProcess);
     return newProcess;
 }
 
@@ -568,4 +558,21 @@ FancyRefPtr<Thread> Process::GetThreadFromTID_Unlocked(pid_t tid) {
     }
 
     return nullptr;
+}
+
+void Process::MapSignalTrampoline(){
+    // Allocate space for both a siginfo struct and the signal trampoline
+    m_signalTrampoline = addressSpace->AllocateAnonymousVMObject(
+        ((signalTrampolineEnd - signalTrampolineStart) + PAGE_SIZE_4K - 1) &
+            ~static_cast<unsigned>(PAGE_SIZE_4K - 1),
+        0, false);
+    reinterpret_cast<PhysicalVMObject*>(m_signalTrampoline->vmObject.get())
+        ->ForceAllocate(); // Forcibly allocate all blocks
+    m_signalTrampoline->vmObject->MapAllocatedBlocks(m_signalTrampoline->Base(), GetPageMap());
+
+    // Copy signal trampoline code into process
+    asm volatile("cli; mov %%rax, %%cr3" ::"a"(GetPageMap()->pml4Phys));
+    memcpy(reinterpret_cast<void*>(m_signalTrampoline->Base()), signalTrampolineStart,
+           signalTrampolineEnd - signalTrampolineStart);
+    asm volatile("mov %%rax, %%cr3; sti" ::"a"(Scheduler::GetCurrentProcess()->GetPageMap()->pml4Phys));
 }

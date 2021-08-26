@@ -13,12 +13,14 @@
 #include <Objects/Handle.h>
 #include <Objects/KObject.h>
 #include <RefPtr.h>
+#include <System.h>
 #include <Thread.h>
 #include <Vector.h>
 
 class Process : public KernelObject {
     friend struct Thread;
     friend void KernelProcess();
+    friend long SysExecve(RegisterContext* r);
 
 public:
     enum {
@@ -278,7 +280,7 @@ public:
             }
         }
 
-        if(proc.get()){
+        if (proc.get()) {
             ScopedSpinLock lockChild(proc->m_processLock);
             proc->m_parent = nullptr;
             return proc;
@@ -367,6 +369,7 @@ private:
     Process(pid_t pid, const char* name, const char* workingDir, Process* parent);
 
     FancyRefPtr<Thread> GetThreadFromTID_Unlocked(pid_t tid);
+    void MapSignalTrampoline();
 
     lock_t m_processLock = 0;        // Should be acquired when modifying the data structure
     lock_t m_watchingLock = 0;       // Should be acquired when modifying watching processes
