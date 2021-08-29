@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <thread>
 #include <unistd.h>
 
 #include "shell.h"
@@ -34,7 +35,12 @@ bool showMenu = true;
 char versionString[80];
 
 lemon_sysinfo_t sysInfo;
+int64_t cpuUsage;
+// Used to get CPU usage
+std::map<pid_t, LemonProcessInfo> processes;
+
 char memString[128];
+char cpuString[128];
 
 class WindowButton : public Lemon::GUI::Button {
     ShellWindow* win;
@@ -48,7 +54,8 @@ public:
     void Paint(surface_t* surface) {
         this->label = win->title;
         if (win->state == Lemon::WindowState_Active || pressed) {
-            Lemon::Graphics::DrawRoundedRect(fixedBounds, Lemon::GUI::Theme::Current().ColourForegroundInactive(), 10, 10, 10, 10, surface);
+            Lemon::Graphics::DrawRoundedRect(fixedBounds, Lemon::GUI::Theme::Current().ColourForegroundInactive(), 10,
+                                             10, 10, 10, surface);
         }
 
         Lemon::Graphics::DrawString(label.c_str(), fixedBounds.x + 10,
@@ -143,9 +150,43 @@ void OnTaskbarPaint(Surface* surface) {
                            {0, 0, menuButton.width, 30});
     }
 
-    sprintf(memString, "%.1f/%1.f MB", sysInfo.usedMem / 1024.0, sysInfo.totalMem / 1024.0);
+    snprintf(memString, sizeof(memString), "%.1f/%1.f MB", sysInfo.usedMem / 1024.0, sysInfo.totalMem / 1024.0);
     Lemon::Graphics::DrawString(memString, surface->width - Lemon::Graphics::GetTextLength(memString) - 8, 10, 255, 255,
                                 255, surface);
+
+    snprintf(cpuString, sizeof(cpuString), "%3li%%", cpuUsage);
+    Lemon::Graphics::DrawString(cpuString,
+                                surface->width - Lemon::Graphics::GetTextLength(memString) -
+                                    Lemon::Graphics::GetTextLength(cpuString) - 12,
+                                10, 255, 255, 255, surface);
+}
+
+// Use another thread to get the CPU usage
+void CPUUsageThread() {
+    for(;;) {
+        LemonProcessInfo pInfo;
+        pid_t nextPID = 0;
+        int64_t processTimeSumTemp = 0;
+        int64_t activeTimeSumTemp = 0;
+        while (!Lemon::GetNextProcessInfo(&nextPID, pInfo)) {
+            if (auto it = processes.find(nextPID); it != processes.end()) {
+                processTimeSumTemp += (pInfo.activeUs - it->second.activeUs);
+                if (!it->second.isCPUIdle) { // Only add to active if not idle
+                    activeTimeSumTemp += (pInfo.activeUs - it->second.activeUs);
+                }
+
+                it->second = pInfo;
+            } else {
+                processes[nextPID] = pInfo;
+            }
+        }
+
+        if (processTimeSumTemp > 0) {
+            cpuUsage = (activeTimeSumTemp * 100) / processTimeSumTemp;
+        }
+
+        usleep(1000000); // Wait 1s
+    }
 }
 
 int main() {
@@ -202,6 +243,8 @@ int main() {
         return false;
     });
 
+    std::thread cpuUsageThread(CPUUsageThread);
+
     for (;;) {
         Lemon::WindowServer::Instance()->Poll();
         shell->Poll();
@@ -209,19 +252,11 @@ int main() {
         taskbar->GUIPollEvents();
         PollMenu();
 
-        uint64_t usedMemLast = sysInfo.usedMem;
         sysInfo = Lemon::SysInfo();
 
-        if (sysInfo.usedMem != usedMemLast)
-            paintTaskbar = true;
+        taskbar->Paint();
 
-        if (paintTaskbar) {
-            taskbar->Paint();
-
-            paintTaskbar = false;
-        }
-
-        waiter.Wait();
+        waiter.Wait(1000000);
     }
 
     for (;;)
