@@ -5,7 +5,7 @@
 
 #include <string>
 
-#define RESIZE_HANDLE_SIZE 8
+#define RESIZE_HANDLE_SIZE 7
 #define MIN_WINDOW_RESIZE_WIDTH 50
 #define MIN_WINDOW_RESIZE_HEIGHT 50
 

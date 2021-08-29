@@ -347,6 +347,8 @@ void WM::OnDestroyWindow(const Lemon::Handle& client, int64_t windowID) {
         Lemon::Logger::Warning("OnDestroyWindow: Invalid Window ID: ", windowID);
         return;
     }
+
+    DestroyWindow(win);
 }
 
 void WM::OnSetTitle(const Lemon::Handle& client, int64_t windowID, const std::string& title) {

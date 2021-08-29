@@ -162,12 +162,12 @@ void WMWindow::UpdateWindowRects() {
 
         m_titlebarRect = {m_rect.x, m_rect.y, m_rect.size.x, theme.titlebarHeight + theme.borderWidth};
 
-        m_borderRects[0] = {m_rect.pos, m_rect.size.x, RESIZE_HANDLE_SIZE}; // Top
-        m_borderRects[1] = {m_rect.pos.x + m_rect.size.x - RESIZE_HANDLE_SIZE, m_rect.pos.y, RESIZE_HANDLE_SIZE,
-                            m_rect.size.y}; // Right
-        m_borderRects[2] = {m_rect.pos.x, m_rect.pos.y + m_rect.size.y - RESIZE_HANDLE_SIZE, m_rect.size.x,
-                            RESIZE_HANDLE_SIZE};
-        m_borderRects[3] = {m_rect.pos, RESIZE_HANDLE_SIZE, m_rect.size.y}; // Left
+        m_borderRects[0] = {m_rect.pos - Vector2i{0, 3}, m_rect.size.x + 6, RESIZE_HANDLE_SIZE}; // Top
+        m_borderRects[1] = {m_rect.pos.x + m_rect.size.x + 3 - RESIZE_HANDLE_SIZE, m_rect.pos.y, RESIZE_HANDLE_SIZE,
+                            m_rect.size.y + 6}; // Right
+        m_borderRects[2] = {m_rect.pos.x, m_rect.pos.y + m_rect.size.y + 3 - RESIZE_HANDLE_SIZE, m_rect.size.x + 6,
+                            RESIZE_HANDLE_SIZE}; // Bottom
+        m_borderRects[3] = {m_rect.pos - Vector2i{3, 0}, RESIZE_HANDLE_SIZE, m_rect.size.y + 6}; // Left
 
         m_closeRect = {m_rect.x + m_rect.width - 2 - theme.windowButtons.width / 2,
                        m_rect.y + theme.titlebarHeight / 2 - theme.windowButtons.height / 4,
