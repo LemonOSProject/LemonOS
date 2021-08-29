@@ -1,11 +1,13 @@
 #include <cassert>
 #include <cstdlib>
+#include <thread>
 #include <vector>
 
 #include <fcntl.h>
 #include <pty.h>
 #include <signal.h>
 #include <sys/ioctl.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <Lemon/Core/Keyboard.h>
@@ -54,7 +56,7 @@ TerminalLine& GetLine(int cursorY) {
     TerminalLine& ln = scrollbackBuffer[scrollbackBuffer.size() - terminalSize.y + (cursorY - 1)];
 
     // Ensure the line is the right size
-    if(ln.size() != static_cast<unsigned>(terminalSize.x))
+    if (ln.size() != static_cast<unsigned>(terminalSize.x))
         ln.resize(terminalSize.x);
     return ln;
 }
@@ -361,7 +363,8 @@ void ParseChar(char ch) {
             size_t secondSemicolon = escapeBuffer.find(';', semicolon + 1);
             // Next argument should be '5' for 256 colours
             // e.g. [48;5;<colour number>
-            if (semicolon != std::string::npos && escapeBuffer[semicolon + 1] == '5' && secondSemicolon != std::string::npos) {
+            if (semicolon != std::string::npos && escapeBuffer[semicolon + 1] == '5' &&
+                secondSemicolon != std::string::npos) {
                 int col = atoi(escapeBuffer.substr(secondSemicolon + 1).c_str());
                 if (col < 256) {
                     currentBackgroundColour = colours[col];
@@ -371,6 +374,38 @@ void ParseChar(char ch) {
 
         parseState = State_Normal;
     }
+}
+
+bool shouldPaint = true;
+std::mutex paintMutex;
+
+bool isOpen = true;
+int ptyMasterFd = -1;
+
+void* PTYThread() {
+    pollfd pollFd = {.fd = ptyMasterFd, .events = POLLIN};
+    while (isOpen) {
+        if (poll(&pollFd, 1, 500000) > 0) {
+            char buf[512];
+            ssize_t r;
+            while ((r = read(ptyMasterFd, buf, 512)) > 0) {
+                int i = 0;
+                while (r--) {
+                    ParseChar(buf[i++]);
+                }
+            }
+
+            std::unique_lock lock(paintMutex);
+            terminalWindow->Paint();
+            shouldPaint = false;
+        }
+
+        if (waitpid(shellPID, nullptr, WNOHANG)) {
+            isOpen = false;
+        }
+    }
+
+    return nullptr;
 }
 
 int main(int argc, char** argv) {
@@ -392,7 +427,6 @@ int main(int argc, char** argv) {
     assert(FirstLine() == scrollbackBuffer.begin());
     assert(&GetLine(1) == &scrollbackBuffer.at(0));
 
-    int ptyMasterFd = -1;
     int ptySlaveFd = -1;
 
     setenv("TERM", "xterm-256color", 1);
@@ -412,7 +446,7 @@ int main(int argc, char** argv) {
     ioctl(ptyMasterFd, TIOCSWINSZ, &wSz);
 
     // No need to use Lemon OS specifics here
-    pid_t shellPID = fork();
+    shellPID = fork();
     if (shellPID == 0) {
         if (dup2(ptySlaveFd, STDIN_FILENO) < 0) {
             perror("dup2");
@@ -442,7 +476,7 @@ int main(int argc, char** argv) {
 
     close(ptySlaveFd);
 
-    bool isOpen = true;
+    std::thread ptyThread(PTYThread);
     while (isOpen) {
         Lemon::WindowServer::Instance()->Poll();
 
@@ -481,16 +515,7 @@ int main(int argc, char** argv) {
             }
         }
 
-        char buf[512];
-        ssize_t r;
-        while ((r = read(ptyMasterFd, buf, 512)) > 0) {
-            int i = 0;
-            while (r--) {
-                ParseChar(buf[i++]);
-            }
-        }
-
-        terminalWindow->Paint();
+        Lemon::WindowServer::Instance()->Wait();
     }
 
     delete terminalWindow;
