@@ -322,7 +322,8 @@ void Process::Die() {
     while (m_children.get_length()) {
         FancyRefPtr<Process> child = m_children.get_front();
         if (child->State() == Process_Running) {
-            child->Die(); // Kill it, burn it with fire
+            child->GetMainThread()->Signal(SIGKILL); // Kill it, burn it with fire
+            while(child->State() != Process_Dead); // Wait for it to die
         } else if (child->State() == Process_Dying) {
             KernelObjectWatcher w;
             child->Watch(w, 0);
@@ -401,9 +402,6 @@ void Process::Die() {
     }
     asm("sti");
 
-    // All threads have ceased, set state to dead
-    m_state = Process_Dead;
-
     Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Closing fds...", m_pid);
     for (auto& fd : m_fileDescriptors) {
         // Deferences the file descriptor
@@ -427,6 +425,9 @@ void Process::Die() {
 
     }
     m_watching.clear();
+
+    // All threads have ceased, set state to dead
+    m_state = Process_Dead;
 
     if(m_parent && (m_parent->State() == Process_Running)){
         Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Sending SIGCHILD to %s...", m_pid, m_parent->name);

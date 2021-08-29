@@ -302,9 +302,12 @@ public:
         for (auto it = m_children.begin(); it != m_children.end(); it++) {
             if ((*it)->PID() == pid) {
                 assert((*it)->IsDead());
+
+                acquireLock(&(*it)->m_processLock);
                 FancyRefPtr<Process> proc = std::move(*it);
                 proc->m_parent = nullptr;
                 m_children.remove(it);
+                releaseLock(&proc->m_processLock);
                 return proc;
             }
         }
