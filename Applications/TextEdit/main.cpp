@@ -137,7 +137,7 @@ void OnWindowCmd(unsigned short cmd, Lemon::GUI::Window* win){
 }
 
 int main(int argc, char** argv){
-	window = new Lemon::GUI::Window("Text Editor", {512, 256}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
+	window = new Lemon::GUI::Window("Text Editor", {640, 400}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
 	window->CreateMenuBar();
 
 	fileMenu.first = "File";

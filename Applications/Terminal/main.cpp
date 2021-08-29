@@ -17,6 +17,8 @@
 #include "colours.h"
 #include "escape.h"
 
+#define SCROLLBACK_BUFFER_MAX 400
+
 using namespace Lemon;
 
 Colour* colours = coloursProfile2;
@@ -82,10 +84,19 @@ void ClearScrollbackBuffer() {
     scrollbackBuffer = std::vector<TerminalLine>(terminalSize.y, TerminalLine(terminalSize.x, TerminalChar(0)));
 }
 
+void AddLine(){
+    if(scrollbackBuffer.size() < SCROLLBACK_BUFFER_MAX){
+        scrollbackBuffer.push_back(TerminalLine(terminalSize.x, TerminalChar(0)));
+    } else {
+        scrollbackBuffer.erase(scrollbackBuffer.begin());
+        scrollbackBuffer.push_back(TerminalLine(terminalSize.x, TerminalChar(0)));
+    }
+}
+
 void AdvanceCursorY() {
     cursorPosition.y++;
     while (cursorPosition.y > terminalSize.y) {
-        scrollbackBuffer.push_back(TerminalLine(terminalSize.x, TerminalChar(0)));
+        AddLine();
         cursorPosition.y--;
     }
 }
@@ -480,6 +491,10 @@ int main(int argc, char** argv) {
     while (isOpen) {
         Lemon::WindowServer::Instance()->Poll();
 
+        // Make sure we do not resize more than necessary
+        bool shouldResize = false;
+        Vector2i newSize;
+
         Lemon::LemonEvent ev;
         while (terminalWindow->PollEvent(ev)) {
             if (ev.event == EventWindowClosed) {
@@ -512,7 +527,38 @@ int main(int argc, char** argv) {
                     const char key = (char)ev.key;
                     write(ptyMasterFd, &key, 1);
                 }
+            } else if(ev.event == EventWindowResize) {
+                shouldResize = true;
+                newSize = ev.resizeBounds;
             }
+        }
+
+        if(shouldResize){
+            int linesToAdd = newSize.y / characterSize.y - terminalSize.y;
+            int colsToAdd = newSize.x / characterSize.x - terminalSize.x;
+
+            terminalSize =
+                Vector2i{newSize.x / characterSize.x, newSize.y / characterSize.y};
+
+            for(auto it = FirstLine(); it != scrollbackBuffer.end(); ++it){
+                if(colsToAdd > 0){
+                    it->insert(it->end(), colsToAdd, TerminalChar(0));
+                }
+
+                it->resize(terminalSize.x);
+            }
+
+            while(linesToAdd > 0){
+                AddLine();
+                linesToAdd--;
+            }
+
+            // Round to nearest character
+            terminalWindow->Resize({terminalSize.x * characterSize.x, terminalSize.y * characterSize.y});
+
+            // Make sure we repaint the window
+            std::unique_lock lock(paintMutex);
+            shouldPaint = true;
         }
 
         Lemon::WindowServer::Instance()->Wait();
