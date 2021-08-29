@@ -57,6 +57,10 @@ void Compositor::Render() {
     m_renderMutex.lock();
 
     Vector2i mousePos = WM::Instance().Input().mouse.pos;
+    if(mousePos != m_lastMousePos){
+        Invalidate({m_lastMousePos, m_cursorCurrent->width, m_cursorCurrent->height});
+        m_lastMousePos = mousePos;
+    }
 
     if (m_invalidateAll) {
         RecalculateBackgroundClipping();
@@ -152,7 +156,6 @@ void Compositor::Render() {
     }
 
     m_renderSurface.AlphaBlit(m_cursorCurrent, mousePos);
-    Invalidate({mousePos, m_cursorCurrent->width, m_cursorCurrent->height});
 
     if (m_displayFramerate) {
         Lemon::Graphics::DrawRect(0, 0, 80, 18, 0, 0, 0, &m_renderSurface);
@@ -180,6 +183,12 @@ void Compositor::Invalidate(const Rect& rect) {
 
         if (bgRect.rect.Intersects(rect)) {
             bgRect.invalid = true; // Set bg rect as invalid
+        }
+
+        for (auto& wRect : m_windowClipRects) {
+            if(wRect.rect.Intersects(bgRect.rect)){
+                wRect.invalid = true;
+            }
         }
     }
 

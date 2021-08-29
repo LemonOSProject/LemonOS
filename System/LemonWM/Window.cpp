@@ -40,8 +40,18 @@ void WMWindow::DrawDecorationClip(const Rect& clip, Surface* surface) {
         closeButtonSourceRect.y += theme.windowButtons.height / 2;
     }
 
+    Rect minimizeButtonSourceRect = {theme.windowButtons.width / 2, 0, theme.windowButtons.width / 2, theme.windowButtons.height / 2};
+    if (m_closeRect.Contains(WM::Instance().Input().mouse.pos)) {
+        // The mouse hover state window buttons are on next row of image file
+        minimizeButtonSourceRect.y += theme.windowButtons.height / 2;
+    }
+
     if (clip.Contains(m_closeRect)) {
         surface->AlphaBlit(&theme.windowButtons, m_closeRect.pos, closeButtonSourceRect);
+    }
+
+    if (clip.Contains(m_minimizeRect)) {
+        surface->AlphaBlit(&theme.windowButtons, m_minimizeRect.pos, minimizeButtonSourceRect);
     }
 }
 
@@ -162,6 +172,9 @@ void WMWindow::UpdateWindowRects() {
         m_closeRect = {m_rect.x + m_rect.width - 2 - theme.windowButtons.width / 2,
                        m_rect.y + theme.titlebarHeight / 2 - theme.windowButtons.height / 4,
                        theme.windowButtons.width / 2, theme.windowButtons.height / 2};
+
+        m_minimizeRect = m_closeRect;
+        m_minimizeRect.x -= theme.windowButtons.width / 2 + 4;
     } else {
         m_contentRect = m_rect;
     }

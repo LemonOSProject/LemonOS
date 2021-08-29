@@ -57,6 +57,7 @@ public:
     inline const Rect& GetTitlebarRect() const { return m_titlebarRect; }
     // Get absolute close button rect
     inline const Rect& GetCloseRect() const { return m_closeRect; }
+    inline const Rect& GetMinimizeRect() const { return m_minimizeRect; }
 
     // Top border resize handle
     inline const Rect& GetTopResizeRect() const { return m_borderRects[0]; }
@@ -130,6 +131,7 @@ private:
     // Top, Right, Bottom, Left
     Rect m_borderRects[4];
     Rect m_closeRect;
+    Rect m_minimizeRect;
 
     int m_flags = 0;
 

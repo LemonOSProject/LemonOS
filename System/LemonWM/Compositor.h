@@ -124,6 +124,7 @@ private:
     bool m_invalidateAll = true;
     bool m_displayFramerate = false;
 
+    Vector2i m_lastMousePos = {0, 0};
     Surface m_cursorNormal; // Normal mouse cursor
     Surface m_cursorResize; // Window resize mouse cursor
     Surface* m_cursorCurrent = &m_cursorNormal; // Current mouse cursor

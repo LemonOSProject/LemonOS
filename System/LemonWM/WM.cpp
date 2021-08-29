@@ -83,6 +83,8 @@ void WM::OnMouseDown(bool isRightButton) {
                     win->SendEvent(ev);
                 } else if (win->GetCloseRect().Contains(m_input.mouse.pos)) {
                     win->SendEvent({.event = EventWindowClosed}); // Close button pressed
+                } else if (win->GetMinimizeRect().Contains(m_input.mouse.pos)) {
+                    win->Minimize(true);
                 } else if (win->GetTitlebarRect().Contains(m_input.mouse.pos)) {
                     vector2i_t mouseOffset = m_input.mouse.pos - win->GetPosition();
                     m_draggingWindow = true;
