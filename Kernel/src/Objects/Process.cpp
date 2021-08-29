@@ -254,6 +254,7 @@ Process::~Process() {
 
     if (addressSpace) {
         delete addressSpace;
+        addressSpace = nullptr;
     }
 }
 
@@ -436,6 +437,8 @@ void Process::Die() {
 
     bool isDyingProcess = (cpu->currentThread->parent == this);
     if(isDyingProcess){
+        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Rescheduling...", m_pid);
+
         asm("cli");
 
         asm volatile("mov %%rax, %%cr3" ::"a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE));

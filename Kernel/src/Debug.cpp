@@ -1,6 +1,6 @@
 #include <Debug.h>
 
-const int debugLevelHAL = DebugLevelVerbose;
+const int debugLevelHAL = 0;
 const int debugLevelMisc = 0;
 const int debugLevelScheduler = 0;
 const int debugLevelModules = 0;

@@ -208,6 +208,7 @@ VMObject* AnonymousVMObject::Split(uintptr_t offset){
     memcpy(newPhysicalBlocks, physicalBlocks, offsetBlocks * sizeof(uint32_t));
 
     delete physicalBlocks;
+    physicalBlocks = newPhysicalBlocks;
     size = offset;
 
     return newObject;    

@@ -67,8 +67,8 @@ public:
 
     inline bool IsRootDevice() const { return isRootDevice; }
 
-    inline const char* InstanceName() const { return instanceName; }
-    inline const char* DeviceName() const { return deviceName; }
+    inline const String& InstanceName() const { return instanceName; }
+    inline const String& DeviceName() const { return deviceName; }
 
     inline DeviceType Type() const { return type; }
     inline int64_t ID() const { return deviceID; }
@@ -79,8 +79,8 @@ protected:
 
     bool isRootDevice = true;
 
-    char* instanceName = nullptr;
-    char* deviceName = strdup("Unknown Device");
+    String instanceName;
+    String deviceName;
 
     DeviceType type = DeviceTypeUnknown;
 

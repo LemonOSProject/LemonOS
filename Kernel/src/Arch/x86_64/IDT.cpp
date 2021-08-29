@@ -247,7 +247,6 @@ extern "C" void isr_handler(int int_num, RegisterContext* regs, int err_code) {
 
         char temp[19];
         char temp2[19];
-        char temp3[19];
         const char* reasons[]{
             "Generic Exception",
             "RIP: ",
@@ -255,8 +254,8 @@ extern "C" void isr_handler(int int_num, RegisterContext* regs, int err_code) {
             "Exception: ",
             itoa(int_num, temp2, 16),
             "Process:",
-            itoa(Scheduler::GetCurrentProcess() ? (Scheduler::GetCurrentProcess()->PID()) : 0, temp3, 10)};
-        ;
+            Scheduler::GetCurrentThread() ? Scheduler::GetCurrentThread()->parent->name : "none"
+        };
         KernelPanic(reasons, 7);
         for (;;)
             ;

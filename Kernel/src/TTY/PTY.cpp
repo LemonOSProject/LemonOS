@@ -23,28 +23,6 @@ cc_t c_cc_default[NCCS]{
     0,    // VTIME
 };
 
-char nextPTY = '0';
-
-char GetNextPTY() {
-    nextPTY++;
-    if (nextPTY < 'a' && nextPTY > '9')
-        nextPTY = 'a';
-    else if (nextPTY < 'A' && nextPTY > 'z')
-        nextPTY = 'A';
-
-    return nextPTY;
-}
-
-PTY* GrantPTY(uint64_t pid) {
-    char name[5] = {'p', 't', 'y', 0, 0};
-    name[4] = nextPTY;
-    GetNextPTY();
-
-    //PTY* pty = new PTY(name);
-
-    return nullptr;
-}
-
 PTYDevice::PTYDevice() {
 
 }
@@ -187,6 +165,7 @@ bool PTYDevice::CanRead() {
 
 PTY::PTY(int id) : m_id(id) {
     slaveFile.flags = FS_NODE_CHARDEVICE;
+    masterFile.flags = FS_NODE_CHARDEVICE;
 
     master.ignoreBackspace = true;
     slave.ignoreBackspace = false;

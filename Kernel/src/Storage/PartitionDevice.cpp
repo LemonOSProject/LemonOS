@@ -12,7 +12,7 @@ PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice*
     flags = FS_NODE_CHARDEVICE;
 
     char buf[18];
-    strcpy(buf, parentDisk->InstanceName());
+    strcpy(buf, parentDisk->InstanceName().c_str());
     strcat(buf, "p");
     itoa(parentDisk->nextPartitionNumber++, buf + strlen(buf), 10);
 

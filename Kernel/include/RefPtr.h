@@ -127,10 +127,10 @@ protected:
                 delete obj;
                 delete refCount;
             }
-
-            refCount = nullptr;
-            obj = nullptr;
         }
+
+        refCount = nullptr;
+        obj = nullptr;
     }
 
     unsigned* refCount = nullptr; // Reference Count

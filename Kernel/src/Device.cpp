@@ -102,19 +102,11 @@ Device::Device(const char* name, DeviceType type, Device* parent) : isRootDevice
 Device::~Device() { DeviceManager::UnregisterDevice(this); }
 
 void Device::SetInstanceName(const char* name) {
-    if (this->instanceName) {
-        kfree(this->instanceName);
-    }
-
-    this->instanceName = strdup(name);
+    this->instanceName = name;
 }
 
 void Device::SetDeviceName(const char* name) {
-    if (this->deviceName) {
-        kfree(this->deviceName);
-    }
-
-    this->deviceName = strdup(name);
+    this->deviceName = name;
 }
 
 ssize_t Null::Read(size_t offset, size_t size, uint8_t* buffer) {
@@ -194,7 +186,7 @@ public:
 
             return 1;
         } else {
-            strcpy(dirPtr->name, rootDevices->get_at(index - 2)->InstanceName());
+            strcpy(dirPtr->name, rootDevices->get_at(index - 2)->InstanceName().c_str());
 
             return 1;
         }
@@ -208,7 +200,7 @@ public:
         }
 
         for (auto& dev : *rootDevices) {
-            if (!strcmp(dev->InstanceName(), name)) {
+            if (!strcmp(dev->InstanceName().c_str(), name)) {
                 return dev;
             }
         }

@@ -119,7 +119,7 @@ namespace Network {
                     return -ENOENT;
                 }
                 
-                strcpy(req->ifr_name, adapters[req->ifr_ifindex]->instanceName);
+                strcpy(req->ifr_name, adapters[req->ifr_ifindex]->instanceName.c_str());
                 break;
             case SIOCGIFADDR: {
                 sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&req->ifr_addr);

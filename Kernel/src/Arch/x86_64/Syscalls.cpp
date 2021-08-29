@@ -280,7 +280,7 @@ open:
         handle->pos = handle->node->size;
     }
 
-    return proc->AllocateFileDescriptor(fs::Open(node, flags));
+    return proc->AllocateFileDescriptor(handle);
 }
 
 long SysClose(RegisterContext* r) {
@@ -3015,7 +3015,7 @@ long SysDeviceManagement(RegisterContext* r) {
             return -ENOENT;
         }
 
-        strncpy(name, dev->DeviceName(), nameBufferSize);
+        strncpy(name, dev->DeviceName().c_str(), nameBufferSize);
         return 0;
     }
     case DeviceManager::RequestDeviceGetInstanceName: {
@@ -3032,7 +3032,7 @@ long SysDeviceManagement(RegisterContext* r) {
             return -ENOENT;
         }
 
-        strncpy(name, dev->InstanceName(), nameBufferSize);
+        strncpy(name, dev->InstanceName().c_str(), nameBufferSize);
         return 0;
     }
     case DeviceManager::RequestDeviceGetPCIInformation:

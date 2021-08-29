@@ -297,7 +297,6 @@ public:
         for (auto& fd : watching) {
             fd->node->Unwatch(*this);
 
-            fd->node->Close();
             delete fd;
         }
     }
