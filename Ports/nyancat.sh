@@ -7,5 +7,5 @@ buildp(){
  	cd $BUILD_DIR
  	patch -p1 < ../lemon-nyancat.patch
  	make -j$JOBCOUNT
-	cp src/nyancat $LEMON_SYSROOT/$LEMON_PREFIX/bin/nyancat.lef
+	cp src/nyancat $LEMON_SYSROOT/$LEMON_PREFIX/bin/nyancat
 }
