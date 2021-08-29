@@ -119,6 +119,10 @@ public:
     /////////////////////////////
     ALWAYS_INLINE int IsDead() const { return m_state == Process_Dead; }
     /////////////////////////////
+    /// \brief Retrieve Whether Process is the Idle Process of a CPU
+    /////////////////////////////
+    ALWAYS_INLINE int IsCPUIdleProcess() const { return m_isIdleProcess; }
+    /////////////////////////////
     /// \brief Retrieve Process Parent
     /////////////////////////////
     ALWAYS_INLINE const Process* Parent() const { return m_parent; }
@@ -382,6 +386,7 @@ private:
     MappedRegion* m_signalTrampoline = nullptr;
 
     int m_state = Process_Running;
+    bool m_isIdleProcess = false;
 
     // Give thread pointers to other processes as reference counted.
     // If the process ends whilst another process/structure

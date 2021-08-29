@@ -26,6 +26,8 @@ FancyRefPtr<Process> Process::CreateIdleProcess(const char* name){
     proc->m_mainThread->registers.rsp = reinterpret_cast<uintptr_t>(proc->m_mainThread->kernelStack);
     proc->m_mainThread->registers.rbp = reinterpret_cast<uintptr_t>(proc->m_mainThread->kernelStack);
 
+    proc->m_isIdleProcess = true;
+
     Scheduler::RegisterProcess(proc);
     return proc;
 }

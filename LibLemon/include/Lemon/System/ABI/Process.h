@@ -2,7 +2,7 @@
 
 #include <abi-bits/pid_t.h>
 
-typedef struct {
+typedef struct LemonProcessInfo {
     pid_t pid; // Process ID
 
     uint32_t threadCount; // Process Thread Count
@@ -16,6 +16,7 @@ typedef struct {
 
     uint64_t runningTime; // Amount of time in seconds that the process has been running
     uint64_t activeUs;
+    bool isCPUIdle = false; // Whether or not the process is an idle process
 
     uint64_t usedMem; // Used memory in KB
 } lemon_process_info_t;

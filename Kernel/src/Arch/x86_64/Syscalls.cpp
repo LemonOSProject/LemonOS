@@ -1984,6 +1984,7 @@ long SysGetProcessInfo(RegisterContext* r) {
     pInfo->activeUs = reqProcess->activeTicks * 1000000 / Timer::GetFrequency();
 
     pInfo->usedMem = reqProcess->addressSpace->UsedPhysicalMemory();
+    pInfo->isCPUIdle = reqProcess->IsCPUIdleProcess();
 
     return 0;
 }
@@ -2037,6 +2038,8 @@ long SysGetNextProcessInfo(RegisterContext* r) {
     pInfo->activeUs = reqProcess->activeTicks * 1000000 / Timer::GetFrequency();
 
     pInfo->usedMem = reqProcess->usedMemoryBlocks / 4;
+    pInfo->isCPUIdle = reqProcess->IsCPUIdleProcess();
+
     return 0;
 }
 
