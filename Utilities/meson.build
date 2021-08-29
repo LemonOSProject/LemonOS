@@ -8,6 +8,10 @@ echo_src = [
     'echo.cpp',
 ]
 
+lemonfetch_src = [
+    'lemonfetch.cpp',
+]
+
 ls_src = [
     'ls.cpp',
 ]
@@ -30,11 +34,15 @@ ps_src = [
 
 utils_cpp_args = [
     '-Wno-unused-parameter',
+    '-Wno-missing-braces'
 ]
 
 executable('cat', cat_src, cpp_args : utils_cpp_args, install : true)
 executable('echo', echo_src, cpp_args : utils_cpp_args, install : true)
 executable('rm', rm_src, cpp_args : utils_cpp_args, install : true)
+executable('lemonfetch', lemonfetch_src, cpp_args : utils_cpp_args,
+    dependencies: [liblemon_dep, libgui_dep],
+    install : true)
 executable('ls', ls_src, cpp_args : utils_cpp_args, install : true)
 executable('uname', uname_src, cpp_args : utils_cpp_args, install : true)
 executable('hexdump', hexdump_src, cpp_args : utils_cpp_args, install : true)
