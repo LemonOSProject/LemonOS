@@ -57,7 +57,7 @@ void Window::Resize(vector2i_t size) {
     Lemon::UnmapSharedMemory(m_windowBufferInfo, m_windowBufferKey);
 
     if (menuBar) {
-        rootContainer.SetBounds({{0, 16}, {size.x, size.y - WINDOW_MENUBAR_HEIGHT}});
+        rootContainer.SetBounds({{0, WINDOW_MENUBAR_HEIGHT}, {size.x, size.y - WINDOW_MENUBAR_HEIGHT}});
     } else {
         rootContainer.SetBounds({{0, 0}, size});
     }
