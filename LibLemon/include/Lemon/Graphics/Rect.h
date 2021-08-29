@@ -44,7 +44,7 @@ typedef struct Rect {
         return y + height;
     }
 
-    std::list<Rect> Split(const Rect& cut) {
+    std::list<Rect> Split(const Rect& cut) const {
         std::list<Rect> clips;
         Rect victim = *this;
 
@@ -103,8 +103,31 @@ typedef struct Rect {
         return (left() < other.right() && right() > other.left() && top() < other.bottom() && bottom() > other.top());
     }
 
+    // Get overlap of two rectangles
+    inline Rect GetIntersect(const Rect& cut) const {
+        Rect victim = *this;
+
+        if (cut.left() >= victim.left() && cut.left() <= victim.right()) { // Clip left edge
+            victim.left(cut.left());
+        }
+
+        if (cut.top() >= victim.top() && cut.top() <= victim.bottom()) { // Clip top edge
+            victim.top(cut.top());
+        }
+
+        if (cut.right() >= victim.left() && cut.right() <= victim.right()) { // Clip right edge
+            victim.right(cut.right());
+        }
+
+        if (cut.bottom() >= victim.top() && cut.bottom() <= victim.bottom()) { // Clip bottom edge
+            victim.bottom(cut.bottom());
+        }
+
+        return victim;
+    }
+
     inline bool Contains(const Rect& other) const {
-        return (left() < other.right() && left() < other.left() && right() > other.left() && right() > other.right() && top() < other.bottom() && top() < other.top() && bottom() > other.top() && bottom() > other.bottom());
+        return (left() < other.right() && left() <= other.left() && right() > other.left() && right() >= other.right() && top() < other.bottom() && top() <= other.top() && bottom() > other.top() && bottom() >= other.bottom());
     }
 
     inline bool Contains(const Vector2i& other) const {

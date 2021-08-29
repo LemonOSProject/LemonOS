@@ -102,6 +102,11 @@ public:
 
     static WindowTheme theme;
 
+    // Used when invalidating transparent windows
+    std::list<struct BackgroundClipRect*> occludedBackgroundRects;
+    std::list<struct WindowClipRect*> occludedWindowRects;
+    std::list<struct WindowClipRect*> occludedWindowDecorationRects;
+
 private:
     void UpdateWindowRects();
     void CreateWindowBuffer();

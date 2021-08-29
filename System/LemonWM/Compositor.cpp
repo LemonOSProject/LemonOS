@@ -25,6 +25,8 @@ Compositor::Compositor(const Surface& displaySurface) : m_displaySurface(display
         Logger::Debug("Error loading resize cursor image!");
         m_cursorResize = m_cursorNormal;
     }
+
+    clock_gettime(CLOCK_BOOTTIME, &m_lastRender);
 }
 
 void Compositor::Render() {
@@ -37,7 +39,7 @@ void Compositor::Render() {
 
         m_avgFrametime += renderTime;
 
-        if (m_avgFrametime > 1000000000) {
+        if (m_avgFrametime > 1000000000 && m_fCount) {
             if (m_avgFrametime)
                 m_fRate = 1000000000 / (m_avgFrametime / m_fCount);
             m_fCount = 0;
@@ -57,8 +59,8 @@ void Compositor::Render() {
     Vector2i mousePos = WM::Instance().Input().mouse.pos;
 
     if (m_invalidateAll) {
-        RecalculateWindowClipping();
         RecalculateBackgroundClipping();
+        RecalculateWindowClipping();
 
         // We fill the areas of the screen being redrawn in debug mode
         // This happens before the render surface is blitted to the display surface
@@ -79,13 +81,13 @@ void Compositor::Render() {
             }
         }
     } else {
-        for(WMWindow* win : WM::Instance().m_windows){
-            if(win->IsDirtyAndClear()){
+        for (WMWindow* win : WM::Instance().m_windows) {
+            if (win->IsDirtyAndClear()) {
                 Invalidate(win->GetContentRect());
             }
         }
     }
-    
+
     if (m_wallpaper.buffer) {
         for (BackgroundClipRect& rect : m_backgroundRects) {
             if (!rect.invalid) {
@@ -106,7 +108,11 @@ void Compositor::Render() {
         WMWindow* win = it->win;
 
         if (m_invalidateAll || it->invalid) { // Window buffer not dirty, only draw invalid clips
-            win->DrawClip(it->rect, &m_renderSurface);
+            if(it->type == WindowClipRect::TypeWindowDecoration){
+                win->DrawDecorationClip(it->rect, &m_renderSurface);
+            } else {
+                win->DrawClip(it->rect, &m_renderSurface);
+            }
 
             it->invalid = false;
             it++;
@@ -135,11 +141,13 @@ void Compositor::Render() {
         rect.invalid = false;
     }
 
-    if(WM::Instance().m_showContextMenu){
-        Lemon::Graphics::DrawRoundedRect(WM::Instance().m_contextMenu.bounds, WMWindow::theme.titlebarColour, 5, 5, 5, 5, &m_renderSurface);
-        for(const auto& ent : WM::Instance().m_contextMenu.entries){
+    if (WM::Instance().m_showContextMenu) {
+        Lemon::Graphics::DrawRoundedRect(WM::Instance().m_contextMenu.bounds, WMWindow::theme.titlebarColour, 5, 5, 5,
+                                         5, &m_renderSurface);
+        for (const auto& ent : WM::Instance().m_contextMenu.entries) {
             const Vector2i& pos = ent.bounds.pos;
-            Lemon::Graphics::DrawString(ent.text.c_str(), pos.x, pos.y, GUI::Theme::Current().ColourText(), &m_renderSurface);
+            Lemon::Graphics::DrawString(ent.text.c_str(), pos.x, pos.y, GUI::Theme::Current().ColourText(),
+                                        &m_renderSurface);
         }
     }
 
@@ -165,83 +173,38 @@ void Compositor::Invalidate(const Rect& rect) {
         return;
     }
 
-    std::function<void(WindowClipRect& dRect, const Rect& rect)> invalidateDecorationRect;
-    std::function<void(BackgroundClipRect& dRect, const Rect& rect)> invalidateBackgroundRect;
-
-    invalidateDecorationRect = [this, invalidateBackgroundRect](WindowClipRect& dRect, const Rect& rect) {
-        if (dRect.invalid) {
-            return;
-        }
-
-        if (dRect.rect.Intersects(rect)) {
-            dRect.invalid = true; // Set bg rect as invalid
-
-            // Make sure any background clips are redrawn
-            /*for (auto& bgRect : m_backgroundRects) {
-                invalidateBackgroundRect(bgRect, dRect.rect);
-            }*/
-
-            // Make sure any window clips are redrawn
-            for (auto& wRect : m_windowClipRects) {
-                if (wRect.invalid) {
-                    continue;
-                }
-
-                if (wRect.rect.Intersects(dRect.rect)) {
-                    wRect.invalid = true; // Set wubdiw rect as invalid
-                }
-            }
-        }
-    };
-
-    invalidateBackgroundRect = [this, invalidateDecorationRect](BackgroundClipRect& bgRect, const Rect& rect) {
+    for (auto& bgRect : m_backgroundRects) {
         if (bgRect.invalid) {
-            return;
+            continue;
         }
 
         if (bgRect.rect.Intersects(rect)) {
             bgRect.invalid = true; // Set bg rect as invalid
-
-            // If a decoration rect got clipped by a window,
-            // The background clip may extend beyond the clip
-            // To avoid drawing the background over the decorations
-            // Mark any intersecting window decorations as invalid
-            for (auto& dRect : m_windowDecorationClipRects) {
-                invalidateDecorationRect(dRect, bgRect.rect);
-            }
-
-            for(auto& wRect : m_windowClipRects){
-                if (wRect.invalid) {
-                    continue;
-                }
-
-                if(wRect.win->IsTransparent() && bgRect.rect.Intersects(wRect.rect)){
-                    wRect.invalid = true;
-                }
-            }
         }
-    };
-
-    for (auto& bgRect : m_backgroundRects) {
-        invalidateBackgroundRect(bgRect, rect);
     }
 
     for (auto& wRect : m_windowClipRects) {
         if (wRect.invalid) {
+            for (auto* bgRect : wRect.win->occludedBackgroundRects) {
+                bgRect->invalid = true;
+            }
+
+            for (auto* oRect : wRect.win->occludedWindowRects) {
+                oRect->invalid = true;
+            }
             continue;
         }
 
         if (wRect.rect.Intersects(rect)) {
             wRect.invalid = true;
-        
-            for (auto& dRect : m_windowDecorationClipRects) {
-                invalidateDecorationRect(dRect, wRect.rect);
+            for (auto* bgRect : wRect.win->occludedBackgroundRects) {
+                bgRect->invalid = true;
+            }
+
+            for (auto* oRect : wRect.win->occludedWindowRects) {
+                oRect->invalid = true;
             }
         }
-    }
-
-    for (auto& dRect : m_windowDecorationClipRects) {
-        invalidateDecorationRect(dRect, rect);
     }
 }
 
@@ -268,46 +231,69 @@ void Compositor::SetWallpaper(const std::string& path) {
 
 void Compositor::RecalculateWindowClipping() {
     m_windowClipRects.clear();
-    m_windowDecorationClipRects.clear();
 
     for (WMWindow* win : WM::Instance().m_windows) {
+        win->occludedBackgroundRects.clear();
+        win->occludedWindowRects.clear();
+
         if (win->IsMinimized()) {
             continue;
         }
 
-        if (win->IsTransparent()) {
-            // Transparent windows do not cut other windows
-            m_windowClipRects.push_back({win->GetContentRect(), win});
-            goto retryDecoration;
-        }
     retry:
         for (auto it = m_windowClipRects.begin(); it != m_windowClipRects.end(); it++) {
-            if (it->rect.Intersects(win->GetContentRect())) {
-                m_windowClipRects.erase(it);
+            if (win->IsTransparent() && win->GetContentRect().Contains(it->rect)) {
+                continue;
+            }
 
-                // Only use the window content to clip other windows
-                // This is so the windows render under the rounded corners
-                m_windowClipRects.splice(m_windowClipRects.end(), it->Split(win->GetContentRect()));
+            if (it->rect.Intersects(win->GetContentRect())) {
+                auto result = it->SplitModify(win->GetContentRect());
+
+                if (!win->IsTransparent()) {
+                    m_windowClipRects.erase(it);
+                }
+
+                m_windowClipRects.splice(m_windowClipRects.end(), std::move(result));
                 goto retry;
             }
         }
 
-        m_windowClipRects.push_back({win->GetContentRect(), win});
+        if(win->ShouldDrawDecoration()){
+            auto decorationRects = WindowClipRect{win->GetRect(), win, WindowClipRect::TypeWindowDecoration}.Split(win->GetContentRect());
 
-    retryDecoration:
-        if (win->ShouldDrawDecoration()) {
-            for (auto it = m_windowDecorationClipRects.begin(); it != m_windowDecorationClipRects.end(); it++) {
-                if (it->rect.Intersects(win->GetRect())) {
-                    m_windowDecorationClipRects.erase(it);
+            for (auto& rect : decorationRects) {
+                for (auto it = m_windowClipRects.begin(); it != m_windowClipRects.end(); it++) {
+                    // Decoration rects are treated as transparent
+                    if (rect.rect.Contains(it->rect)) {
+                        continue;
+                    }
 
-                    // Only use the window content to clip other windows
-                    // This is so the windows render under the rounded corners
-                    m_windowDecorationClipRects.splice(m_windowDecorationClipRects.end(), it->Split(win->GetRect()));
-                    goto retryDecoration;
+                    if (it->rect.Intersects(rect.rect)) {
+                        auto result = it->SplitModify(rect.rect);
+
+                        m_windowClipRects.splice(m_windowClipRects.end(), std::move(result));
+                        goto retry;
+                    }
                 }
             }
 
-            m_windowDecorationClipRects.push_back({win->GetRect(), win});
+            m_windowClipRects.splice(m_windowClipRects.end(), std::move(decorationRects));
+        }
+
+        m_windowClipRects.push_back({win->GetContentRect(), win, WindowClipRect::TypeWindow});
+
+        if (win->IsTransparent()) {
+            for (auto& bgRect : m_backgroundRects) {
+                if (bgRect.rect.Intersects(win->GetContentRect())) {
+                    win->occludedBackgroundRects.push_back(&bgRect);
+                }
+            }
+
+            for (auto& bgRect : m_windowClipRects) {
+                if (bgRect.rect.Intersects(win->GetContentRect())) {
+                    win->occludedWindowRects.push_back(&bgRect);
+                }
+            }
         }
     }
 }
@@ -319,23 +305,41 @@ void Compositor::RecalculateBackgroundClipping() {
 
     auto& windows = WM::Instance().m_windows;
     for (WMWindow* win : windows) {
-        if (win->IsMinimized() || win->IsTransparent()) {
+        if (win->IsMinimized()) {
             continue;
         }
+
+        std::list<Rect> splitDecorationRects;
+        if (win->ShouldDrawDecoration()) {
+            splitDecorationRects = win->GetRect().Split(win->GetContentRect());
+        }
+
     retry:
         for (auto it = m_backgroundRects.begin(); it != m_backgroundRects.end(); it++) {
-            if (it->rect.Intersects(win->GetRect())) {
-                auto result = it->Split(win->GetRect());
+            if (win->ShouldDrawDecoration()) {
+                for (auto& dRect : splitDecorationRects) {
+                    if (it->rect.Intersects(dRect) && !dRect.Contains(it->rect)) {
+                        auto result = it->SplitModify(dRect);
 
-                m_backgroundRects.erase(it);
+                        m_backgroundRects.splice(m_backgroundRects.end(), std::move(result));
+                        goto retry;
+                    }
+                }
+            }
+
+            if (win->IsTransparent() && win->GetContentRect().Contains(it->rect)) {
+                continue; // Background rect entirely within transparent window
+            }
+
+            if (it->rect.Intersects(win->GetContentRect())) {
+                auto result = it->SplitModify(win->GetContentRect());
+
+                if (!win->IsTransparent()) {
+                    m_backgroundRects.erase(it);
+                }
                 m_backgroundRects.splice(m_backgroundRects.end(), std::move(result));
                 goto retry;
             }
-        }
-
-        if (win->ShouldDrawDecoration()) {
-            // Add a background clip under the titlebar
-            m_backgroundRects.push_back({win->GetTitlebarRect(), true});
         }
     }
 }

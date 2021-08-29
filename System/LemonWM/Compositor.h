@@ -8,9 +8,7 @@
 #include <list>
 #include <thread>
 
-//#define COMPOSITOR_DEBUG 1
-
-template <typename T, class... D> std::list<T> Split(Rect victim, const Rect& cut, D... extraData) {
+template <typename T, class... D> std::list<T> SplitModify(Rect& victim, const Rect& cut, D... extraData) {
     std::list<T> clips;
 
     if (cut.left() >= victim.left() && cut.left() <= victim.right()) { // Clip left edge
@@ -72,18 +70,28 @@ template <typename T, class... D> std::list<T> Split(Rect victim, const Rect& cu
     return clips;
 }
 
+template <typename T, class... D> inline std::list<T> Split(Rect victim, const Rect& cut, D... extraData){
+    return SplitModify<T, D...>(victim, cut, extraData...);
+}
+
 struct WindowClipRect {
     Rect rect;
     class WMWindow* win;
+    enum {
+        TypeWindow,
+        TypeWindowDecoration,
+    } type = TypeWindow;
     bool invalid = true;
 
-    std::list<WindowClipRect> Split(const Rect& cut) { return ::Split<WindowClipRect>(rect, cut, win, true); }
+    std::list<WindowClipRect> SplitModify(const Rect& cut) { return ::SplitModify<WindowClipRect>(rect, cut, win, type, true); }
+    std::list<WindowClipRect> Split(const Rect& cut) { return ::Split<WindowClipRect>(rect, cut, win, type, true); }
 };
 
 struct BackgroundClipRect {
     Rect rect;
     bool invalid = true;
 
+    std::list<BackgroundClipRect> SplitModify(const Rect& cut) { return ::SplitModify<BackgroundClipRect, bool>(rect, cut, true); }
     std::list<BackgroundClipRect> Split(const Rect& cut) { return ::Split<BackgroundClipRect, bool>(rect, cut, true); }
 };
 
@@ -108,6 +116,10 @@ public:
 private:
     void RecalculateWindowClipping();
     void RecalculateBackgroundClipping();
+
+    void InvalidateBackgroundRect(BackgroundClipRect& bgRect);
+    void InvalidateWindowRect(WindowClipRect& wRect);
+    void InvalidateDecorationRect(WindowClipRect& dRect);
 
     bool m_invalidateAll = true;
     bool m_displayFramerate = false;
