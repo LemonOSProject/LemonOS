@@ -78,14 +78,18 @@ void OnPaint(Surface* surf) {
         }
         screenPos.y += characterSize.y;
     }
+
+    Lemon::Graphics::DrawRect(
+        Rect{{(cursorPosition.x - 1) * characterSize.x, (cursorPosition.y - 1) * characterSize.y}, characterSize},
+        currentForegroundColour, surf);
 }
 
 void ClearScrollbackBuffer() {
     scrollbackBuffer = std::vector<TerminalLine>(terminalSize.y, TerminalLine(terminalSize.x, TerminalChar(0)));
 }
 
-void AddLine(){
-    if(scrollbackBuffer.size() < SCROLLBACK_BUFFER_MAX){
+void AddLine() {
+    if (scrollbackBuffer.size() < SCROLLBACK_BUFFER_MAX) {
         scrollbackBuffer.push_back(TerminalLine(terminalSize.x, TerminalChar(0)));
     } else {
         scrollbackBuffer.erase(scrollbackBuffer.begin());
@@ -389,9 +393,14 @@ void ParseChar(char ch) {
 
 bool shouldPaint = true;
 std::mutex paintMutex;
+std::mutex bufferMutex;
 
 bool isOpen = true;
 int ptyMasterFd = -1;
+
+void SIGCHLDHandler(int){
+    isOpen = false; // Shell has closed
+}
 
 void* PTYThread() {
     pollfd pollFd = {.fd = ptyMasterFd, .events = POLLIN};
@@ -399,20 +408,18 @@ void* PTYThread() {
         if (poll(&pollFd, 1, 500000) > 0) {
             char buf[512];
             ssize_t r;
+            bufferMutex.lock();
             while ((r = read(ptyMasterFd, buf, 512)) > 0) {
                 int i = 0;
                 while (r--) {
                     ParseChar(buf[i++]);
                 }
             }
+            bufferMutex.unlock();
 
             std::unique_lock lock(paintMutex);
             terminalWindow->Paint();
             shouldPaint = false;
-        }
-
-        if (waitpid(shellPID, nullptr, WNOHANG)) {
-            isOpen = false;
         }
     }
 
@@ -441,6 +448,18 @@ int main(int argc, char** argv) {
     int ptySlaveFd = -1;
 
     setenv("TERM", "xterm-256color", 1);
+
+    struct sigaction action = {
+        .sa_handler = SIGCHLDHandler,
+        .sa_flags = 0,
+    };
+    sigemptyset(&action.sa_mask);
+
+    // We want to exit on SIGCHLD
+    if(sigaction(SIGCHLD, &action, nullptr)){
+        perror("sigaction");
+        return 99;
+    }
 
     if (openpty(&ptyMasterFd, &ptySlaveFd, nullptr, nullptr, nullptr)) {
         perror("openpty");
@@ -476,7 +495,12 @@ int main(int argc, char** argv) {
 
         close(ptySlaveFd);
 
-        if (execve("/bin/lsh", argv, environ)) {
+        char arg0[] = "/bin/lsh";
+        char* const shArgv[] {
+            arg0,
+            nullptr,
+        };
+        if (execve(arg0, shArgv, environ)) {
             perror("execve");
             exit(1);
         }
@@ -527,37 +551,46 @@ int main(int argc, char** argv) {
                     const char key = (char)ev.key;
                     write(ptyMasterFd, &key, 1);
                 }
-            } else if(ev.event == EventWindowResize) {
+            } else if (ev.event == EventWindowResize) {
                 shouldResize = true;
                 newSize = ev.resizeBounds;
             }
         }
 
-        if(shouldResize){
+        if (shouldResize) {
             int linesToAdd = newSize.y / characterSize.y - terminalSize.y;
             int colsToAdd = newSize.x / characterSize.x - terminalSize.x;
 
-            terminalSize =
-                Vector2i{newSize.x / characterSize.x, newSize.y / characterSize.y};
+            // Make sure we repaint the window and stop other thread from painting
+            std::unique_lock lock(bufferMutex);
+            std::unique_lock lockPaint(paintMutex);
 
-            for(auto it = FirstLine(); it != scrollbackBuffer.end(); ++it){
-                if(colsToAdd > 0){
+            terminalSize = Vector2i{newSize.x / characterSize.x, newSize.y / characterSize.y};
+
+            for (auto it = FirstLine(); it != scrollbackBuffer.end(); ++it) {
+                if (colsToAdd > 0) {
                     it->insert(it->end(), colsToAdd, TerminalChar(0));
                 }
 
                 it->resize(terminalSize.x);
             }
 
-            while(linesToAdd > 0){
+            while (linesToAdd > 0) {
                 AddLine();
                 linesToAdd--;
             }
 
             // Round to nearest character
             terminalWindow->Resize({terminalSize.x * characterSize.x, terminalSize.y * characterSize.y});
+            wSz = {
+                .ws_row = static_cast<unsigned short>(terminalSize.y),
+                .ws_col = static_cast<unsigned short>(terminalSize.x),
+                .ws_xpixel = static_cast<unsigned short>(terminalWindow->GetSize().x),
+                .ws_ypixel = static_cast<unsigned short>(terminalWindow->GetSize().y),
+            };
 
-            // Make sure we repaint the window
-            std::unique_lock lock(paintMutex);
+            ioctl(ptyMasterFd, TIOCSWINSZ, &wSz);
+            kill(shellPID, SIGWINCH); // Send SIGWINCH to child
             shouldPaint = true;
         }
 

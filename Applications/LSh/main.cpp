@@ -74,8 +74,8 @@ pid_t job = -1;
 
 void InterruptSignalHandler(int sig){
     if(job > 0){
-        // If we have a current job, send SIGINT to child.
-        kill(job, SIGINT);
+        // If we have a current job, send signal to child.
+        kill(job, sig);
     }
 }
 
@@ -280,7 +280,13 @@ int main() {
     };
     sigemptyset(&action.sa_mask);
 
+    // Send both SIGINT and SIGWINCH to child
     if(sigaction(SIGINT, &action, nullptr)){
+        perror("sigaction");
+        return 99;
+    }
+
+    if(sigaction(SIGWINCH, &action, nullptr)){
         perror("sigaction");
         return 99;
     }
