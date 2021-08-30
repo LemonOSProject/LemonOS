@@ -443,8 +443,6 @@ long SysExecve(RegisterContext* r) {
 
     currentProcess->MapSignalTrampoline();
 
-    strncpy(currentProcess->name, kernelArgv[0].c_str(), sizeof(currentProcess->name));
-
     // Reset register state
     memset(r, 0, sizeof(RegisterContext));
 
@@ -467,6 +465,9 @@ long SysExecve(RegisterContext* r) {
         currentThread->Signal(SIGKILL);
         return -1;
     }
+
+    strncpy(currentProcess->name, kernelArgv[0].c_str(), sizeof(currentProcess->name));
+    
     assert(!(r->rsp & 0xF));
 
     r->cs = USER_CS;
@@ -3376,6 +3377,7 @@ long SysSignalAction(RegisterContext* r) {
         return -ENOSYS;
     // Supported and overridable signals
     case SIGINT:
+    case SIGWINCH:
     case SIGABRT:
     case SIGALRM:
     case SIGCHLD:

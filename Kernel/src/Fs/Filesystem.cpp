@@ -184,6 +184,13 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
     }
 
     Vector<String> components = path.Split('/');
+    if(components.size() == 0){
+        if(path.Compare("/") == 0){
+            return fs::GetRoot();
+        } else {
+            return nullptr;
+        }
+    }
     
     unsigned i = 0;
     for(; i < components.size() - 1; i++){
@@ -383,7 +390,15 @@ char* BaseName(const char* path) {
 }
 
 int Root::ReadDir(DirectoryEntry* dirent, uint32_t index) {
-    if (index < VolumeManager::volumes->get_length()) {
+    if(index == 0){
+        *dirent = DirectoryEntry(this, ".");
+        return 1;
+    } else if(index == 2){
+        *dirent = DirectoryEntry(this, "..");
+        return 1;
+    }
+
+    if (index - 2 < VolumeManager::volumes->get_length()) {
         *dirent = (VolumeManager::volumes->get_at(index)->mountPointDirent);
         return 1;
     } else
