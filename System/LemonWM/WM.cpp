@@ -60,7 +60,9 @@ void WM::OnMouseDown(bool isRightButton) {
 
     for (auto it = m_windows.rbegin(); it != m_windows.rend(); ++it) {
         WMWindow* win = *it;
-        if (win->GetRect().Contains(m_input.mouse.pos)) {
+        if ((m_resizePoint = win->GetResizePoint(m_input.mouse.pos))) {
+            return;
+        } else if (win->GetRect().Contains(m_input.mouse.pos)) {
             if (win->IsMinimized()) {
                 continue;
             }
@@ -71,9 +73,7 @@ void WM::OnMouseDown(bool isRightButton) {
             }
 
             const Rect& ctRect = win->GetContentRect(); // Actual window content
-            if ((m_resizePoint = win->GetResizePoint(m_input.mouse.pos))) {
-
-            } else if (win->ShouldDrawDecoration()) {
+            if (win->ShouldDrawDecoration()) {
                 if (ctRect.Contains(m_input.mouse.pos)) {
                     LemonEvent ev;
 
