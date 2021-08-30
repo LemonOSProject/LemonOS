@@ -1585,41 +1585,43 @@ found:
         return -EINVAL;
     }
 
-    ScopedSpinLock lockInodes(m_inodesLock);
-    if (Ext2Node * file; inodeCache.get(ent->inode, file)) {
-        if ((file->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
-            if (!unlinkDirectories) {
-                return -EISDIR;
+    {
+        ScopedSpinLock lockInodes(m_inodesLock);
+        if (Ext2Node * file; inodeCache.get(ent->inode, file)) {
+            if ((file->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
+                if (!unlinkDirectories) {
+                    return -EISDIR;
+                }
             }
-        }
 
-        file->nlink--;
-        file->e2inode.linkCount--;
+            file->nlink--;
+            file->e2inode.linkCount--;
 
-        if (!file->handleCount) {
-            inodeCache.remove(file->inode);
-            CleanNode(file);
-        }
-    } else {
-        ext2_inode_t e2inode;
-        if (int e = ReadInode(ent->inode, e2inode)) {
-            IF_DEBUG(debugLevelExt2 >= DebugLevelNormal,
-                     { Log::Error("[Ext2] Link: Error reading inode %d", ent->inode); });
-            return e;
-        }
-
-        if ((e2inode.mode & EXT2_S_IFMT) == EXT2_S_IFDIR) {
-            if (!unlinkDirectories) {
-                return -EISDIR;
+            if (!file->handleCount) {
+                inodeCache.remove(file->inode);
+                CleanNode(file);
             }
-        }
+        } else {
+            ext2_inode_t e2inode;
+            if (int e = ReadInode(ent->inode, e2inode)) {
+                IF_DEBUG(debugLevelExt2 >= DebugLevelNormal,
+                        { Log::Error("[Ext2] Link: Error reading inode %d", ent->inode); });
+                return e;
+            }
 
-        e2inode.linkCount--;
+            if ((e2inode.mode & EXT2_S_IFMT) == EXT2_S_IFDIR) {
+                if (!unlinkDirectories) {
+                    return -EISDIR;
+                }
+            }
 
-        if (e2inode.linkCount) {
-            SyncInode(e2inode, ent->inode);
-        } else { // Last link, delete inode
-            EraseInode(e2inode, ent->inode);
+            e2inode.linkCount--;
+
+            if (e2inode.linkCount) {
+                SyncInode(e2inode, ent->inode);
+            } else { // Last link, delete inode
+                EraseInode(e2inode, ent->inode);
+            }
         }
     }
 
