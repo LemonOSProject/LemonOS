@@ -159,6 +159,12 @@ FsNode* ResolvePath(const String& path, const char* workingDir, bool followSymli
         return nullptr;
     }
 
+    if(!path.Compare("/")){
+        return fs::GetRoot();
+    }
+
+    Log::Debug(debugLevelFilesystem, DebugLevelVerbose, "Opening '%s'", path.c_str());
+
     assert(path.Length() >= 1);
 
     if (workingDir && path[0] != '/') { // If the path starts with '/' then treat as an absolute path
@@ -393,16 +399,17 @@ int Root::ReadDir(DirectoryEntry* dirent, uint32_t index) {
     if(index == 0){
         *dirent = DirectoryEntry(this, ".");
         return 1;
-    } else if(index == 2){
+    } else if(index == 1){
         *dirent = DirectoryEntry(this, "..");
         return 1;
     }
 
     if (index - 2 < VolumeManager::volumes->get_length()) {
-        *dirent = (VolumeManager::volumes->get_at(index)->mountPointDirent);
+        *dirent = (VolumeManager::volumes->get_at(index - 2)->mountPointDirent);
         return 1;
-    } else
+    } else {
         return 0;
+    }
 }
 
 FsNode* Root::FindDir(const char* name) {

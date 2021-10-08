@@ -164,7 +164,7 @@ public:
     /// \brief Get NULL-terminated data of string
     /////////////////////////////
     ALWAYS_INLINE const T* Data() const { return m_buffer; }
-    ALWAYS_INLINE const T* c_str() const { return m_buffer; }
+    ALWAYS_INLINE const T* c_str() const { assert(m_buffer); return m_buffer; }
 
     /////////////////////////////
     /// \brief Get whether the string is empty

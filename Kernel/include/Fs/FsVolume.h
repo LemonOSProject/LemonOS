@@ -42,14 +42,6 @@ private:
 
 class LinkVolume : public FsVolume {
 public:
-    inline LinkVolume(FsVolume* link, const char* name) {
-        strcpy(mountPointDirent.name, name);
-        mountPointDirent.node = link->mountPoint;
-        mountPointDirent.flags = link->mountPointDirent.flags;
-        mountPointDirent.node->nlink++;
-        mountPoint = link->mountPoint;
-    }
-
     inline LinkVolume(const String& link, const char* name) {
         strcpy(mountPointDirent.name, name);
         mountPoint = new LinkNode(link);
