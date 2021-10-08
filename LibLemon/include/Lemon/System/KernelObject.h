@@ -26,6 +26,7 @@ inline long WaitForKernelObject(const handle_t& obj, const long timeout) {
 ///
 /// \param objects Pointer to array of handles to wait on
 /// \param count Amount of objects to wait on
+/// \param timeout Timeout in us
 ///
 /// \return negative error code on failure
 /////////////////////////////

@@ -11,9 +11,9 @@
 namespace Lemon {
 namespace Logger {
 
-const char* GetProgramName(){
-    static const char* programName = nullptr;
+static const char* programName = nullptr;
 
+const char* GetProgramName(){
     if(programName == nullptr){
         if(peekauxval(AT_EXECPATH, reinterpret_cast<uintptr_t*>(&programName))){
             programName = "unknown";

@@ -71,7 +71,7 @@ void Widget::UpdateFixedBounds() {
 
         if (sizeY == LayoutSize::Stretch) {
             if (verticalAlign == WidgetAlignment::WAlignBottom)
-                fixedBounds.height = (parent->GetFixedBounds().height - bounds.y) - parent->GetFixedBounds().y;
+                fixedBounds.height = (parent->GetFixedBounds().height - bounds.height) - parent->GetFixedBounds().y;
             else
                 fixedBounds.height = parent->GetFixedBounds().height - bounds.height - bounds.y;
         } else {

@@ -50,6 +50,9 @@ public:
     void StopWaitingOn(Waitable* waitable);
     void StopWaitingOnAll(Waitable* waitable);
 
+    /////////////////////////////
+    /// \param timeout Timeout in us
+    /////////////////////////////
     void Wait(long timeout = -1);
 
     virtual ~Waiter();
