@@ -80,6 +80,10 @@ devicemanager_src = [
     'DeviceManager/main.cpp'
 ]
 
+tests_src = [
+    'Tests/Main.cpp'
+]
+
 app_fileman = executable('fileman.lef', fileman_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
@@ -154,6 +158,9 @@ app_ipctest = executable('ipctest.lef', ipctest_src,
 app_sigtest = executable('sigtest.lef', 'SignalTest/main.c', 
     install : true)
 
+app_tests = executable('tests.lef', tests_src, 
+    install : true)
+
 application_targets = [
     app_fileman,
     app_lsh,
@@ -173,4 +180,5 @@ application_targets = [
 
     app_ipctest,
     app_sigtest,
+    app_tests
 ]
