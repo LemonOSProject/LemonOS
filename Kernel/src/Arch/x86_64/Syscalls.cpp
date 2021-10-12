@@ -53,7 +53,7 @@
 typedef long (*syscall_t)(RegisterContext*);
 
 long SysExit(RegisterContext* r) {
-    int64_t code = SC_ARG0(r);
+    int code = SC_ARG0(r);
 
     Log::Info("Process %s (PID: %d) exiting with code %d", Scheduler::GetCurrentProcess()->name,
               Scheduler::GetCurrentProcess()->PID(), code);
@@ -63,6 +63,7 @@ long SysExit(RegisterContext* r) {
         UserPrintStackTrace(r->rbp, Scheduler::GetCurrentProcess()->addressSpace);
     });
 
+    Process::Current()->exitCode = code;
     Process::Current()->Die();
     return 0;
 }
@@ -992,6 +993,7 @@ long SysGetCWD(RegisterContext* r) {
 
 long SysWaitPID(RegisterContext* r) {
     int pid = SC_ARG0(r);
+    int* status = reinterpret_cast<int*>(SC_ARG1(r));
     int64_t flags = SC_ARG2(r);
 
     Process* currentProcess = Scheduler::GetCurrentProcess();
@@ -1012,6 +1014,10 @@ long SysWaitPID(RegisterContext* r) {
         }
 
         assert(child.get());
+        if(status){
+            *status = child->exitCode;
+        }
+
         return child->PID();
     }
 
@@ -1041,7 +1047,12 @@ long SysWaitPID(RegisterContext* r) {
         }
 
         assert(child->IsDead());
+        if(status){
+            *status = child->exitCode;
+        }
+
         currentProcess->RemoveDeadChild(child->PID());
+
         return child->PID();
     }
 
@@ -3416,7 +3427,7 @@ long SysSignalAction(RegisterContext* r) {
         }
 
         const SignalHandler& sigHandler = proc->signalHandlers[signal - 1];
-        if (sigHandler.action == SignalHandler::ActionUsermodeHandler) {
+        if (sigHandler.action == SignalHandler::HandlerAction::UsermodeHandler) {
             if (sigHandler.flags & SignalHandler::FlagSignalInfo) {
                 *oldSA = {
                     .sa_handler = nullptr,
@@ -3432,14 +3443,14 @@ long SysSignalAction(RegisterContext* r) {
                     .sa_sigaction = nullptr,
                 };
             }
-        } else if (sigHandler.action == SignalHandler::ActionDefault) {
+        } else if (sigHandler.action == SignalHandler::HandlerAction::Default) {
             *oldSA = {
                 .sa_handler = SIG_DFL,
                 .sa_mask = sigHandler.mask,
                 .sa_flags = sigHandler.flags,
                 .sa_sigaction = nullptr,
             };
-        } else if (sigHandler.action == SignalHandler::ActionIgnore) {
+        } else if (sigHandler.action == SignalHandler::HandlerAction::Ignore) {
             *oldSA = {
                 .sa_handler = SIG_IGN,
                 .sa_mask = sigHandler.mask,
@@ -3463,11 +3474,11 @@ long SysSignalAction(RegisterContext* r) {
 
     SignalHandler handler;
     if (sa->sa_handler == SIG_DFL) {
-        handler.action = SignalHandler::ActionDefault;
+        handler.action = SignalHandler::HandlerAction::Default;
     } else if (sa->sa_handler == SIG_IGN) {
-        handler.action = SignalHandler::ActionIgnore;
+        handler.action = SignalHandler::HandlerAction::Ignore;
     } else {
-        handler.action = SignalHandler::ActionUsermodeHandler;
+        handler.action = SignalHandler::HandlerAction::UsermodeHandler;
         if (sa->sa_flags & SignalHandler::FlagSignalInfo) {
             handler.userHandler = (void*)sa->sa_sigaction;
         } else {

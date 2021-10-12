@@ -59,9 +59,13 @@ Thread::Thread(Process* _parent, pid_t _tid)
 
 void Thread::Signal(int signal) {
     SignalHandler& sigHandler = parent->signalHandlers[signal - 1];
-    if (sigHandler.action == SignalHandler::ActionIgnore) {
+    if (sigHandler.action == SignalHandler::HandlerAction::Ignore) {
         Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Ignoring signal %d!", signal);
         return;
+    } else if(sigHandler.action == SignalHandler::HandlerAction::Default){
+        if(DefaultActionForSignal(signal) == SignalAction::Ignore){
+            return;
+        }
     }
 
     pendingSignals |= 1 << (signal - 1); // Set corresponding bit for signal
@@ -108,7 +112,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
         signalMask |= 1 << (signal - 1);
     }
 
-    if (handler.action == SignalHandler::ActionDefault) {
+    if (handler.action == SignalHandler::HandlerAction::Default) {
         Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Thread::HandlePendingSignal: Common action for signal %d",
                    signal);
         // Default action
@@ -145,13 +149,13 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
             break;
         }
         return;
-    } else if (handler.action == SignalHandler::ActionIgnore) {
+    } else if (handler.action == SignalHandler::HandlerAction::Ignore) {
         Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Thread::HandlePendingSignal: Ignoring signal %d", signal);
         return;
     }
 
     // User handler
-    assert(handler.action == SignalHandler::ActionUsermodeHandler);
+    assert(handler.action == SignalHandler::HandlerAction::UsermodeHandler);
 
     // On the usermode stack:
     // Save the register state

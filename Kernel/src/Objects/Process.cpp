@@ -121,7 +121,7 @@ Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process*
     // Initialize signal handlers
     for (unsigned i = 0; i < SIGNAL_MAX; i++) {
         signalHandlers[i] = {
-            .action = SignalHandler::ActionDefault,
+            .action = SignalHandler::HandlerAction::Default,
             .flags = 0,
             .mask = 0,
             .userHandler = nullptr,

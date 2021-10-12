@@ -12,7 +12,7 @@ ssize_t UNIXPipe::Read(size_t off, size_t size, uint8_t* buffer){
         return -ESPIPE;
     }
 
-    if(!widowed && stream->Empty()){
+    if(!widowed && size > stream->Pos()){
         FilesystemBlocker bl(this, size);
 
         if(Scheduler::GetCurrentThread()->Block(&bl)){
@@ -30,7 +30,7 @@ ssize_t UNIXPipe::Read(size_t off, size_t size, uint8_t* buffer){
 ssize_t UNIXPipe::Write(size_t off, size_t size, uint8_t* buffer){
     if(end != WriteEnd){
         return -ESPIPE;
-    } else if(widowed){
+    } else if(widowed || !otherEnd){
         Scheduler::GetCurrentThread()->Signal(SIGPIPE); // Send SIGPIPE on broken pipe
         return -EPIPE;
     }
@@ -43,6 +43,19 @@ ssize_t UNIXPipe::Write(size_t off, size_t size, uint8_t* buffer){
         for(auto& w : otherEnd->watching){
             w->Signal();
         }
+
+        acquireLock(&otherEnd->blockedLock);
+        FilesystemBlocker* bl = otherEnd->blocked.get_front();
+        while(bl){
+            FilesystemBlocker* next = otherEnd->blocked.next(bl);
+
+            if(bl->RequestedLength() <= stream->Pos()){
+                bl->Unblock();
+            }
+
+            bl = next;
+        }
+        releaseLock(&otherEnd->blockedLock);
 
         otherEnd->watching.clear();
     }

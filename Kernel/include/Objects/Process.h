@@ -372,6 +372,8 @@ public:
 
     HashMap<uintptr_t, List<FutexThreadBlocker*>*> futexWaitQueue = HashMap<uintptr_t, List<FutexThreadBlocker*>*>(8);
 
+    int exitCode = 0;
+
 private:
     Process(pid_t pid, const char* name, const char* workingDir, Process* parent);
 

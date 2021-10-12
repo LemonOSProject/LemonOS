@@ -7,11 +7,38 @@ typedef void (*__sighandler) (int);
 
 #define SIGNAL_MAX 34 // Maximum amount of signal handlers
 
+enum class SignalAction : int {
+    Die = 0, // Kill the thread
+    Ignore = 1, // Ignore signal entirely
+    UsermodeHandler = 2, // Execute usermode handler
+};
+
+ALWAYS_INLINE SignalAction DefaultActionForSignal(int signum){
+    switch(signum){
+        case SIGSEGV:
+        case SIGBUS:
+        case SIGILL:
+        case SIGFPE:
+        case SIGABRT:
+        case SIGALRM:
+        case SIGHUP:
+        case SIGINT: // Keyboard interrupt
+        case SIGIO:
+        case SIGKILL:
+        case SIGPIPE:
+        case SIGPWR:
+        case SIGQUIT:
+            return SignalAction::Die;
+        default:
+            return SignalAction::Ignore;
+    }
+}
+
 struct SignalHandler {
-    enum {
-        ActionDefault = 0, // Default signal action
-        ActionIgnore = 1, // Ignore signal entirely
-        ActionUsermodeHandler = 2, // Execute usermode handler
+    enum class HandlerAction {
+        Default = 0, // Default signal action
+        Ignore = 1, // Ignore signal entirely
+        UsermodeHandler = 2, // Execute usermode handler
     };
 
     enum {
@@ -25,7 +52,7 @@ struct SignalHandler {
     };
     static const int supportedFlags = SA_NODEFER; // Which flags do we support
     
-    int action = ActionDefault;
+    HandlerAction action = HandlerAction::Default;
     int flags = 0;
 
     // The mask that is set when the signal is raised
@@ -34,5 +61,5 @@ struct SignalHandler {
 
     void* userHandler = nullptr;
 
-    ALWAYS_INLINE bool Ignore() const { return action == ActionIgnore; }   
+    ALWAYS_INLINE bool Ignore() const { return action == HandlerAction::Ignore; }
 };
