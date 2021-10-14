@@ -2,7 +2,7 @@ unpack(){
     if ! [ -f cache/pixman-0.40.0.tar.gz ]; then # Check if tarball exists
         curl -Lo cache/pixman-0.40.0.tar.gz "https://www.cairographics.org/releases/pixman-0.40.0.tar.gz"
     fi
-    tar -xzvf cache/pixman-0.40.0.tar.gz
+    tar -xzf cache/pixman-0.40.0.tar.gz
     export BUILD_DIR=pixman-0.40.0
 }
 

@@ -3,7 +3,7 @@ unpack(){
         curl -Lo cache/libxml2-v2.9.11.tar.gz "https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.11/libxml2-v2.9.11.tar.gz"
     fi
 
- 	tar -xzvf cache/libxml2-v2.9.11.tar.gz
+ 	tar -xzf cache/libxml2-v2.9.11.tar.gz
  	export BUILD_DIR=libxml2-v2.9.11
 }
  

@@ -2,7 +2,7 @@ export BINUTILS_SRC_DIR=binutils-2.32
 
 unpack(){
     wget "http://ftpmirror.gnu.org/binutils/binutils-2.32.tar.gz"
-    tar -xzvf binutils-2.32.tar.gz
+    tar -xzf binutils-2.32.tar.gz
  	rm binutils-2.32.tar.gz
 }
 

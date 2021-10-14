@@ -3,7 +3,7 @@ unpack(){
         curl -Lo cache/Python-3.8.2.tgz "https://www.python.org/ftp/python/3.8.2/Python-3.8.2.tgz"
     fi
 
- 	tar -xzvf cache/Python-3.8.2.tgz
+ 	tar -xzf cache/Python-3.8.2.tgz
  	export BUILD_DIR=Python-3.8.2
 }
 

@@ -3,7 +3,7 @@ unpack(){
  		curl -Lo cache/icu4c-69_1-src.tgz "https://github.com/unicode-org/icu/releases/download/release-69-1/icu4c-69_1-src.tgz"
 	fi
 
- 	tar -xzvf cache/icu4c-69_1-src.tgz
+ 	tar -xzf cache/icu4c-69_1-src.tgz
  	export BUILD_DIR=icu
 }
 

@@ -3,7 +3,7 @@ unpack(){
         curl -Lo cache/libpng-1.6.37.tar.gz "https://download.sourceforge.net/libpng/libpng-1.6.37.tar.gz"
     fi
 	
- 	tar -xzvf cache/libpng-1.6.37.tar.gz
+ 	tar -xzf cache/libpng-1.6.37.tar.gz
  	export BUILD_DIR=libpng-1.6.37
 }
  

@@ -2,7 +2,7 @@ unpack(){
     if ! [ -f cache/cairo-1.16.0.tar.xz ]; then # Check if tarball exists
         curl -Lo cache/cairo-1.16.0.tar.xz "https://www.cairographics.org/releases/cairo-1.16.0.tar.xz"
     fi
-    tar -xJvf cache/cairo-1.16.0.tar.xz
+    tar -xJf cache/cairo-1.16.0.tar.xz
     export BUILD_DIR=cairo-1.16.0
 }
 

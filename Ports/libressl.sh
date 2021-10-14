@@ -3,7 +3,7 @@ unpack(){
         curl -Lo cache/libressl-3.3.1.tar.gz "https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-3.3.1.tar.gz"
     fi
 
- 	tar -xzvf cache/libressl-3.3.1.tar.gz
+ 	tar -xzf cache/libressl-3.3.1.tar.gz
  	export BUILD_DIR=libressl-3.3.1
 }
  

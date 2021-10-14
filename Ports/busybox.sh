@@ -3,7 +3,7 @@ unpack(){
  		curl -Lo cache/busybox-1.33.1.tar.bz2 "https://www.busybox.net/downloads/busybox-1.33.1.tar.bz2"
 	fi
 
- 	tar -xjvf cache/busybox-1.33.1.tar.bz2
+ 	tar -xjf cache/busybox-1.33.1.tar.bz2
  	export BUILD_DIR=busybox-1.33.1
 }
 

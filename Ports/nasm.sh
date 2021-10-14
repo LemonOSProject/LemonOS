@@ -3,7 +3,7 @@ unpack(){
         curl -Lo cache/nasm-2.15.02.tar.gz "https://www.nasm.us/pub/nasm/releasebuilds/2.15.02/nasm-2.15.02.tar.gz"
     fi
 	
- 	tar -xzvf cache/nasm-2.15.02.tar.gz
+ 	tar -xzf cache/nasm-2.15.02.tar.gz
  	export BUILD_DIR=nasm-2.15.02
 }
  

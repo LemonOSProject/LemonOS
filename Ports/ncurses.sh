@@ -3,7 +3,7 @@ unpack(){
         curl -Lo cache/ncurses-6.2.tar.gz "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.2.tar.gz"
     fi
 
- 	tar -xzvf cache/ncurses-6.2.tar.gz
+ 	tar -xzf cache/ncurses-6.2.tar.gz
  	export BUILD_DIR=ncurses-6.2
 }
  

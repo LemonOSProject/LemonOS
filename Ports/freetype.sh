@@ -4,7 +4,7 @@ unpack(){
     if ! [ -f cache/freetype-2.10.4.tar.gz ]; then # Check if tarball exists
         curl -Lo cache/freetype-2.10.4.tar.gz "https://download.savannah.gnu.org/releases/freetype/freetype-2.10.4.tar.gz"
     fi
- 	tar -xzvf cache/freetype-2.10.4.tar.gz
+ 	tar -xzf cache/freetype-2.10.4.tar.gz
  	export BUILD_DIR=freetype-2.10.4
 }
  

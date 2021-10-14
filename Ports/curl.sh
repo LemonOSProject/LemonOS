@@ -2,7 +2,7 @@ unpack(){
     if ! [ -f cache/cache/curl-7.77.0.tar.gz ]; then # Check if tarball exists
         curl -Lo cache/curl-7.77.0.tar.gz "https://curl.se/download/curl-7.77.0.tar.gz"
     fi
-    tar -xzvf cache/curl-7.77.0.tar.gz
+    tar -xzf cache/curl-7.77.0.tar.gz
     export BUILD_DIR=curl-7.77.0
 }
 
