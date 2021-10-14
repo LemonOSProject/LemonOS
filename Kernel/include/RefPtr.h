@@ -7,6 +7,8 @@
 #include <Logging.h>
 #endif
 
+#include <cstddef>
+
 template <typename T> class FancyRefPtr {
 public:
     template <class U> FancyRefPtr(const FancyRefPtr<U>& s, T* p) : refCount(s.GetRefCount()), obj(p) {
@@ -15,7 +17,7 @@ public:
 
     FancyRefPtr() : refCount(nullptr), obj(nullptr) {}
 
-    FancyRefPtr(nullptr_t) : refCount(nullptr), obj(nullptr) {}
+    FancyRefPtr(std::nullptr_t) : refCount(nullptr), obj(nullptr) {}
 
     FancyRefPtr(T&& v) {
         refCount = new unsigned(1);
@@ -87,7 +89,7 @@ public:
         return *this;
     }
 
-    ALWAYS_INLINE FancyRefPtr& operator=(nullptr_t) {
+    ALWAYS_INLINE FancyRefPtr& operator=(std::nullptr_t) {
         Dereference();
 
         obj = nullptr;

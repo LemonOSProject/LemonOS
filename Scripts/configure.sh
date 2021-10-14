@@ -6,7 +6,7 @@ if [ -z "$LEMON_SYSROOT" ]; then
 fi
 
 export TOOLCHAIN_PATH="$HOME/.local/share/lemon/bin"
-export PATH="$TOOLCHAIN_PATH:$PATH"
+source $SPATH/env.sh
 
 if ! [ -x "$(command -v lemon-clang)" ]; then
     echo "Lemon cross toolchain not found (Did you forget to build toolchain?)"
@@ -20,7 +20,7 @@ mkdir -p $HOME/.local/share/lemon/sysroot/system/include
 mkdir -p $HOME/.local/share/lemon/sysroot/system/bin
 
 ln -sfT ../../../include/c++ $HOME/.local/share/lemon/sysroot/system/include/c++
-cp $HOME/.local/share/lemon/lib/x86_64-lemon/c++/*.so* $HOME/.local/share/lemon/sysroot/system/lib
+cp $HOME/.local/share/lemon/lib/x86_64-unknown-lemon/*.so* $HOME/.local/share/lemon/sysroot/system/lib
 
 cd $SPATH
 $SPATH/libc.sh

@@ -4,10 +4,7 @@ module_c_args = kernel_c_args
 
 module_cpp_args = kernel_cpp_args
 
-module_include_dirs = [
-    include_directories('../include'),
-    include_directories('../include/Arch/x86_64'),
-]
+module_include_dirs = kernel_include_dirs
 
 executable('ext2fs.sys', ['Ext2/Main.cpp'],
     c_args: module_c_args, cpp_args: [ module_c_args, module_cpp_args ],

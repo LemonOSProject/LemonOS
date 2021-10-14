@@ -221,22 +221,20 @@ void DrawBitmapImage(unsigned int x, unsigned int y, unsigned int w, unsigned in
 
     uint8_t bmpBpp = 24;
     uint32_t rowSize = floor((bmpBpp * w + 31) / 32) * 4;
-    uint32_t bmp_offset = rowSize * (h - 1);
-    uint32_t bmp_buffer_offset = 0;
+    uint32_t bmpOffset = rowSize * (h - 1);
 
     uint32_t pixelSize = 4;
     for (unsigned i = 0; i < h && i + y < videoMode.height; i++) {
         for (unsigned j = 0; j < w && j + x < videoMode.width; j++) {
-            if (data[bmp_offset + j * (bmpBpp / 8)] == 1 && data[bmp_offset + j * (bmpBpp / 8) + 1] == 1 &&
-                data[bmp_offset + j * (bmpBpp / 8) + 2] == 1)
+            if (data[bmpOffset + j * (bmpBpp / 8)] == 1 && data[bmpOffset + j * (bmpBpp / 8) + 1] == 1 &&
+                data[bmpOffset + j * (bmpBpp / 8) + 2] == 1)
                 continue;
             uint32_t offset = (y + i) * (videoMode.width * pixelSize) + (x + j) * pixelSize;
-            videoMemory[offset] = data[bmp_offset + j * (bmpBpp / 8)];
-            videoMemory[offset + 1] = data[bmp_offset + j * (bmpBpp / 8) + 1];
-            videoMemory[offset + 2] = data[bmp_offset + j * (bmpBpp / 8) + 2];
+            videoMemory[offset] = data[bmpOffset + j * (bmpBpp / 8)];
+            videoMemory[offset + 1] = data[bmpOffset + j * (bmpBpp / 8) + 1];
+            videoMemory[offset + 2] = data[bmpOffset + j * (bmpBpp / 8) + 2];
         }
-        bmp_offset -= rowSize;
-        bmp_buffer_offset += w * pixelSize;
+        bmpOffset -= rowSize;
     }
 }
 

@@ -22,7 +22,6 @@ kernel_cpp_args = [
 lai = subproject('lai')
 frigg = subproject('frigg', default_options : [ 'frigg_no_install=true' ])
 cxxshim = subproject('cxxshim')
-subdir('Modules')
 
 kernel_include_dirs = [
     include_directories('include'),
@@ -32,6 +31,8 @@ kernel_include_dirs = [
     frigg.get_variable('incl'),
     cxxshim.get_variable('incl')
 ]
+
+subdir('Modules')
 
 kernel_cpp_files = [
     'src/Assert.cpp',

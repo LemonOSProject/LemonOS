@@ -814,7 +814,6 @@ int Ext2::Ext2Volume::ListDir(Ext2Node* node, List<DirectoryEntry>& entries) {
     uint8_t buffer[blocksize];
     uint32_t currentBlockIndex = 0;
     uint32_t blockOffset = 0;
-    uint32_t totalOffset = 0;
 
     ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
 
@@ -843,7 +842,6 @@ int Ext2::Ext2Volume::ListDir(Ext2Node* node, List<DirectoryEntry>& entries) {
         }
 
         blockOffset += e2dirent->recordLength;
-        totalOffset += e2dirent->recordLength;
 
         if (blockOffset >= blocksize) {
             currentBlockIndex++;
@@ -990,7 +988,6 @@ int Ext2::Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t i
     uint8_t buffer[blocksize];
     uint32_t currentBlockIndex = 0;
     uint32_t blockOffset = 0;
-    uint32_t totalOffset = 0;
 
     ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
 
@@ -1005,7 +1002,6 @@ int Ext2::Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t i
             return 0;
 
         blockOffset += e2dirent->recordLength;
-        totalOffset += e2dirent->recordLength;
 
         if (e2dirent->recordLength < 8) {
             IF_DEBUG(debugLevelExt2 >= DebugLevelNormal, {
