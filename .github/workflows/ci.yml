@@ -140,9 +140,9 @@ jobs:
           Ports/buildport.sh doom
           Ports/buildport.sh nyancat
           Ports/buildport.sh nasm
-          Ports/buildport.sh python
           Ports/buildport.sh lemon-binutils
           Ports/buildport.sh llvm
+          Ports/buildport.sh python
           Ports/buildport.sh curl
           Ports/buildport.sh busybox
 
