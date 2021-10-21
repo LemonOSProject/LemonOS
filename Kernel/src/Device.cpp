@@ -44,8 +44,7 @@ public:
         SetDeviceName("Process Terminal");
     }
 
-    ssize_t Read(size_t, size_t, uint8_t*);
-    ssize_t Write(size_t, size_t, uint8_t*);
+    UNIXFileDescriptor* Open(size_t flags) override;
 };
 
 int Device::nextUnnamedDeviceNumber = 0;
@@ -131,23 +130,14 @@ ssize_t URandom::Read(size_t offset, size_t size, uint8_t* buffer) {
 
 ssize_t URandom::Write(size_t offset, size_t size, uint8_t* buffer) { return size; }
 
-
-ssize_t TTY::Read(size_t offset, size_t size, uint8_t* buffer) {
-    auto stdin = Scheduler::GetCurrentProcess()->GetFileDescriptor(0);
-
-    if(stdin && stdin->node){
-        return fs::Read(stdin->node, offset, size, buffer);
-    }
-    return -EBADF;
-}
-
-ssize_t TTY::Write(size_t offset, size_t size, uint8_t* buffer) {
+UNIXFileDescriptor* TTY::Open(size_t flags){
     auto stdout = Scheduler::GetCurrentProcess()->GetFileDescriptor(1);
 
     if(stdout && stdout->node){
-        return fs::Write(stdout->node, offset, size, buffer);
+        return stdout->node->Open(flags);
     }
-    return -EBADF;
+
+    return nullptr;
 }
 
 Null null = Null("null");

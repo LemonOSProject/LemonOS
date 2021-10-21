@@ -12,6 +12,12 @@ CharacterBuffer::CharacterBuffer() {
     lines = 0;
 }
 
+CharacterBuffer::~CharacterBuffer() {
+    if(buffer){
+        delete buffer;
+    }
+}
+
 ssize_t CharacterBuffer::Write(char* _buffer, size_t size) {
     if (bufferPos + size > maxBufferSize) {
         size = maxBufferSize - bufferPos;

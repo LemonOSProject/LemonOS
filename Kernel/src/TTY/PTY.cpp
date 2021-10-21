@@ -27,6 +27,14 @@ PTYDevice::PTYDevice() {
 
 }
 
+void PTYDevice::Close() {
+    handleCount--;
+
+    if(handleCount == 0 && device == PTYMasterDevice){
+        PTMultiplexor::Instance().DestroyPTY(pty);
+    }
+}
+
 ssize_t PTYDevice::Read(size_t offset, size_t size, uint8_t* buffer) {
     assert(pty);
     assert(device == PTYSlaveDevice || device == PTYMasterDevice);
@@ -99,6 +107,13 @@ int PTYDevice::Ioctl(uint64_t cmd, uint64_t arg) {
     assert(pty);
 
     switch (cmd) {
+    case TCGETS:
+        *((termios*)arg) = pty->tios;
+        break;
+    case TCSETS:
+        pty->tios = *((termios*)arg);
+        pty->slave.ignoreBackspace = !pty->IsCanonical();
+        break;
     case TIOCGWINSZ:
         *((winsz*)arg) = pty->wSz;
         break;
@@ -185,6 +200,16 @@ PTY::PTY(int id) : m_id(id) {
 
     for (int i = 0; i < NCCS; i++)
         tios.c_cc[i] = c_cc_default[i];
+}
+
+PTY::~PTY(){
+    while (m_watchingSlave.get_length()) {
+        m_watchingSlave.remove_at(0)->Signal(); // Signal all watching
+    }
+
+    while (m_watchingMaster.get_length()) {
+        m_watchingMaster.remove_at(0)->Signal(); // Signal all watching
+    }
 }
 
 ssize_t PTY::MasterRead(char* buffer, size_t count) { return master.Read(buffer, count); }

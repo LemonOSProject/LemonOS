@@ -163,7 +163,8 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
     //uint64_t* stack = reinterpret_cast<uint64_t*>(regs->rsp - sizeof(ucontext_t));
     //ucontext_t* ucontext = reinterpret_cast<ucontext_t*>(stack);
 
-    uint64_t* stack = reinterpret_cast<uint64_t*>(regs->rsp - sizeof(RegisterContext));
+    // Ensure stack alignment
+    uint64_t* stack = reinterpret_cast<uint64_t*>((regs->rsp & (~0xfULL)) - sizeof(RegisterContext));
     *reinterpret_cast<RegisterContext*>(stack) = *regs;
 
     *(--stack) = oldSignalMask;

@@ -66,3 +66,15 @@ UNIXFileDescriptor* PTMultiplexor::Open(size_t flags){
 
     return pty->masterFile.Open(flags);
 }
+
+void PTMultiplexor::DestroyPTY(PTY* pt){
+    ScopedSpinLock lock(m_ptmxLock);
+    for(auto it = m_ptList.begin(); it != m_ptList.end(); it++) {
+        if(*it == pt){
+            m_ptList.remove(pt);
+            delete pt;
+
+            return;
+        }
+    }
+}

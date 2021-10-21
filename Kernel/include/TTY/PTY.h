@@ -38,6 +38,7 @@ public:
     static inline PTMultiplexor& Instance() { return *m_instance; }
 
     UNIXFileDescriptor* Open(size_t flags) override;
+    void DestroyPTY(PTY* pt);
 
 private:
     static PTMultiplexor* m_instance;
@@ -57,6 +58,8 @@ public:
     int device;
 
     PTYDevice();
+
+    void Close() override;
 
     ssize_t Read(size_t, size_t, uint8_t *) override;
     ssize_t Write(size_t, size_t, uint8_t *) override;
@@ -83,6 +86,7 @@ public:
     termios tios;
 
     PTY(int id);
+    ~PTY();
 
     inline int GetID() const { return m_id; }
 
