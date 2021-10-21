@@ -1,11 +1,11 @@
-diff --color -ruN busybox-1.33.1/configs/lemon_defconfig lemon-busybox/configs/lemon_defconfig
+diff -ruN busybox-1.33.1/configs/lemon_defconfig lemon-busybox/configs/lemon_defconfig
 --- busybox-1.33.1/configs/lemon_defconfig	1970-01-01 10:00:00.000000000 +1000
-+++ lemon-busybox/configs/lemon_defconfig	2021-08-02 22:28:50.478329439 +1000
++++ lemon-busybox/configs/lemon_defconfig	2021-10-22 09:20:10.654429177 +1100
 @@ -0,0 +1,1183 @@
 +#
 +# Automatically generated make config: don't edit
 +# Busybox version: 1.33.1
-+# Mon Aug  2 22:28:50 2021
++# Sun Oct 17 12:07:09 2021
 +#
 +CONFIG_HAVE_DOT_CONFIG=y
 +
@@ -17,8 +17,8 @@ diff --color -ruN busybox-1.33.1/configs/lemon_defconfig lemon-busybox/configs/l
 +# CONFIG_FEDORA_COMPAT is not set
 +# CONFIG_INCLUDE_SUSv2 is not set
 +CONFIG_LONG_OPTS=y
-+# CONFIG_SHOW_USAGE is not set
-+# CONFIG_FEATURE_VERBOSE_USAGE is not set
++CONFIG_SHOW_USAGE=y
++CONFIG_FEATURE_VERBOSE_USAGE=y
 +# CONFIG_FEATURE_COMPRESS_USAGE is not set
 +# CONFIG_LFS is not set
 +# CONFIG_PAM is not set
@@ -942,10 +942,10 @@ diff --color -ruN busybox-1.33.1/configs/lemon_defconfig lemon-busybox/configs/l
 +# CONFIG_FEATURE_TC_INGRESS is not set
 +# CONFIG_TCPSVD is not set
 +# CONFIG_UDPSVD is not set
-+CONFIG_TELNET=y
-+CONFIG_FEATURE_TELNET_TTYPE=y
-+CONFIG_FEATURE_TELNET_AUTOLOGIN=y
-+CONFIG_FEATURE_TELNET_WIDTH=y
++# CONFIG_TELNET is not set
++# CONFIG_FEATURE_TELNET_TTYPE is not set
++# CONFIG_FEATURE_TELNET_AUTOLOGIN is not set
++# CONFIG_FEATURE_TELNET_WIDTH is not set
 +# CONFIG_TELNETD is not set
 +# CONFIG_FEATURE_TELNETD_STANDALONE is not set
 +# CONFIG_FEATURE_TELNETD_INETD_WAIT is not set
@@ -1101,7 +1101,7 @@ diff --color -ruN busybox-1.33.1/configs/lemon_defconfig lemon-busybox/configs/l
 +# CONFIG_ASH_OPTIMIZE_FOR_SIZE is not set
 +# CONFIG_ASH_INTERNAL_GLOB is not set
 +CONFIG_ASH_BASH_COMPAT=y
-+# CONFIG_ASH_BASH_SOURCE_CURDIR is not set
++CONFIG_ASH_BASH_SOURCE_CURDIR=y
 +CONFIG_ASH_BASH_NOT_FOUND_HOOK=y
 +CONFIG_ASH_JOB_CONTROL=y
 +CONFIG_ASH_ALIAS=y
@@ -1185,9 +1185,9 @@ diff --color -ruN busybox-1.33.1/configs/lemon_defconfig lemon-busybox/configs/l
 +# CONFIG_FEATURE_IPC_SYSLOG is not set
 +CONFIG_FEATURE_IPC_SYSLOG_BUFFER_SIZE=0
 +# CONFIG_FEATURE_KMSG_SYSLOG is not set
-diff --color -ruN busybox-1.33.1/coreutils/env.c lemon-busybox/coreutils/env.c
+diff -ruN busybox-1.33.1/coreutils/env.c lemon-busybox/coreutils/env.c
 --- busybox-1.33.1/coreutils/env.c	2021-01-01 21:52:27.000000000 +1100
-+++ lemon-busybox/coreutils/env.c	2021-08-02 22:02:37.568153319 +1000
++++ lemon-busybox/coreutils/env.c	2021-10-17 12:07:05.613408653 +1100
 @@ -65,7 +65,11 @@
  		++argv;
  	}
@@ -1200,14 +1200,14 @@ diff --color -ruN busybox-1.33.1/coreutils/env.c lemon-busybox/coreutils/env.c
  	}
  	while (unset_env) {
  		char *var = llist_pop(&unset_env);
-diff --color -ruN busybox-1.33.1/include/common_bufsiz.h.method lemon-busybox/include/common_bufsiz.h.method
+diff -ruN busybox-1.33.1/include/common_bufsiz.h.method lemon-busybox/include/common_bufsiz.h.method
 --- busybox-1.33.1/include/common_bufsiz.h.method	1970-01-01 10:00:00.000000000 +1000
-+++ lemon-busybox/include/common_bufsiz.h.method	2021-08-02 22:05:41.966698467 +1000
++++ lemon-busybox/include/common_bufsiz.h.method	2021-10-17 12:07:16.223627057 +1100
 @@ -0,0 +1 @@
 +std
-diff --color -ruN busybox-1.33.1/include/libbb.h lemon-busybox/include/libbb.h
+diff -ruN busybox-1.33.1/include/libbb.h lemon-busybox/include/libbb.h
 --- busybox-1.33.1/include/libbb.h	2021-01-02 00:37:14.000000000 +1100
-+++ lemon-busybox/include/libbb.h	2021-08-02 22:05:33.766476946 +1000
++++ lemon-busybox/include/libbb.h	2021-10-17 12:07:05.730077722 +1100
 @@ -1173,7 +1173,7 @@
   * in the parent. It must be a macro. */
  #define xvfork() \
@@ -1217,9 +1217,9 @@ diff --color -ruN busybox-1.33.1/include/libbb.h lemon-busybox/include/libbb.h
  	if (bb__xvfork_pid < 0) \
  		bb_simple_perror_msg_and_die("vfork"); \
  	bb__xvfork_pid; \
-diff --color -ruN busybox-1.33.1/libbb/herror_msg.c lemon-busybox/libbb/herror_msg.c
+diff -ruN busybox-1.33.1/libbb/herror_msg.c lemon-busybox/libbb/herror_msg.c
 --- busybox-1.33.1/libbb/herror_msg.c	2021-01-01 21:52:27.000000000 +1100
-+++ lemon-busybox/libbb/herror_msg.c	2021-08-02 21:59:13.224084616 +1000
++++ lemon-busybox/libbb/herror_msg.c	2021-10-17 12:07:05.743411330 +1100
 @@ -8,6 +8,8 @@
   */
  #include "libbb.h"
@@ -1229,9 +1229,21 @@ diff --color -ruN busybox-1.33.1/libbb/herror_msg.c lemon-busybox/libbb/herror_m
  void FAST_FUNC bb_herror_msg(const char *s, ...)
  {
  	va_list p;
-diff --color -ruN busybox-1.33.1/libbb/vfork_daemon_rexec.c lemon-busybox/libbb/vfork_daemon_rexec.c
+diff -ruN busybox-1.33.1/libbb/makedev.c lemon-busybox/libbb/makedev.c
+--- busybox-1.33.1/libbb/makedev.c	2021-01-01 21:52:27.000000000 +1100
++++ lemon-busybox/libbb/makedev.c	2021-10-17 12:07:05.743411330 +1100
+@@ -11,7 +11,7 @@
+ 
+ /* Different Unixes want different headers for makedev */
+ #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) \
+- || defined(__APPLE__)
++ || defined(__APPLE__) || defined(__lemon__)
+ # include <sys/types.h>
+ #else
+ # include <features.h>
+diff -ruN busybox-1.33.1/libbb/vfork_daemon_rexec.c lemon-busybox/libbb/vfork_daemon_rexec.c
 --- busybox-1.33.1/libbb/vfork_daemon_rexec.c	2021-01-01 21:52:27.000000000 +1100
-+++ lemon-busybox/libbb/vfork_daemon_rexec.c	2021-08-02 21:58:10.822851838 +1000
++++ lemon-busybox/libbb/vfork_daemon_rexec.c	2021-10-17 12:07:05.753411534 +1100
 @@ -162,7 +162,7 @@
  
  	/* Be nice to nommu machines. */
@@ -1241,9 +1253,9 @@ diff --color -ruN busybox-1.33.1/libbb/vfork_daemon_rexec.c lemon-busybox/libbb/
  	if (pid < 0) /* error */
  		return pid;
  	if (!pid) { /* child */
-diff --color -ruN busybox-1.33.1/Makefile lemon-busybox/Makefile
+diff -ruN busybox-1.33.1/Makefile lemon-busybox/Makefile
 --- busybox-1.33.1/Makefile	2021-05-04 04:07:13.000000000 +1000
-+++ lemon-busybox/Makefile	2021-08-02 21:33:03.260402439 +1000
++++ lemon-busybox/Makefile	2021-10-17 12:07:05.756744938 +1100
 @@ -289,7 +289,6 @@
  # Make variables (CC, etc...)
  
@@ -1252,9 +1264,9 @@ diff --color -ruN busybox-1.33.1/Makefile lemon-busybox/Makefile
  LD		= $(CC) -nostdlib
  CPP		= $(CC) -E
  AR		= $(CROSS_COMPILE)ar
-diff --color -ruN busybox-1.33.1/networking/hostname.c lemon-busybox/networking/hostname.c
+diff -ruN busybox-1.33.1/networking/hostname.c lemon-busybox/networking/hostname.c
 --- busybox-1.33.1/networking/hostname.c	2021-01-01 21:52:27.000000000 +1100
-+++ lemon-busybox/networking/hostname.c	2021-08-02 22:00:50.612670863 +1000
++++ lemon-busybox/networking/hostname.c	2021-10-17 12:07:05.760078338 +1100
 @@ -49,6 +49,11 @@
  
  static void do_sethostname(char *s, int isfile)
@@ -1275,9 +1287,9 @@ diff --color -ruN busybox-1.33.1/networking/hostname.c lemon-busybox/networking/
  }
  
  /* Manpage circa 2009:
-diff --color -ruN busybox-1.33.1/networking/httpd.c lemon-busybox/networking/httpd.c
+diff -ruN busybox-1.33.1/networking/httpd.c lemon-busybox/networking/httpd.c
 --- busybox-1.33.1/networking/httpd.c	2021-03-09 10:28:26.000000000 +1100
-+++ lemon-busybox/networking/httpd.c	2021-08-02 22:01:18.799892219 +1000
++++ lemon-busybox/networking/httpd.c	2021-10-17 12:07:05.760078338 +1100
 @@ -1630,7 +1630,7 @@
  	xpiped_pair(fromCgi);
  	xpiped_pair(toCgi);
@@ -1287,9 +1299,9 @@ diff --color -ruN busybox-1.33.1/networking/httpd.c lemon-busybox/networking/htt
  	if (pid < 0) {
  		/* TODO: log perror? */
  		log_and_exit();
-diff --color -ruN busybox-1.33.1/networking/nc.c lemon-busybox/networking/nc.c
+diff -ruN busybox-1.33.1/networking/nc.c lemon-busybox/networking/nc.c
 --- busybox-1.33.1/networking/nc.c	2021-01-01 21:52:27.000000000 +1100
-+++ lemon-busybox/networking/nc.c	2021-08-02 22:04:43.268426736 +1000
++++ lemon-busybox/networking/nc.c	2021-10-17 12:07:05.760078338 +1100
 @@ -230,7 +230,7 @@
  	if (execparam) {
  		pid_t pid;
@@ -1299,3 +1311,15 @@ diff --color -ruN busybox-1.33.1/networking/nc.c lemon-busybox/networking/nc.c
  			/* parent */
  			/* prevent zombies */
  			signal(SIGCHLD, SIG_IGN);
+diff -ruN busybox-1.33.1/shell/ash.c lemon-busybox/shell/ash.c
+--- busybox-1.33.1/shell/ash.c	2021-05-04 04:06:49.000000000 +1000
++++ lemon-busybox/shell/ash.c	2021-10-17 12:07:05.766745142 +1100
+@@ -2804,7 +2804,7 @@
+ static char *
+ getpwd(void)
+ {
+-	char *dir = getcwd(NULL, 0); /* huh, using glibc extension? */
++	char *dir = getcwd(malloc(PATH_MAX), PATH_MAX); /* huh, using glibc extension? */
+ 	return dir ? dir : nullstr;
+ }
+ 
