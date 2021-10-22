@@ -10,6 +10,7 @@
 #include <StackTrace.h>
 #include <Syscalls.h>
 #include <System.h>
+#include <UserPointer.h>
 
 // extern uint32_t kernel_end;
 
@@ -26,6 +27,8 @@ page_dir_t kernelDir __attribute__((aligned(4096)));
 page_dir_t kernelHeapDir __attribute__((aligned(4096)));
 page_t kernelHeapDirTables[TABLES_PER_DIR][PAGES_PER_TABLE] __attribute__((aligned(4096)));
 page_dir_t ioDirs[4] __attribute__((aligned(4096)));
+
+HashMap<uintptr_t, PageFaultTrap>* pageFaultTraps;
 
 uint64_t VirtualToPhysicalAddress(uint64_t addr) {
     uint64_t address = 0;
@@ -133,6 +136,13 @@ void InitializeVirtualMemory() {
 
     kernelPML4Phys = (uint64_t)kernelPML4 - KERNEL_VIRTUAL_BASE;
     asm("mov %%rax, %%cr3" ::"a"((uint64_t)kernelPML4 - KERNEL_VIRTUAL_BASE));
+}
+
+void LateInitializeVirtualMemory(){
+    pageFaultTraps = new HashMap<uintptr_t, PageFaultTrap>();
+
+    RegisterPageFaultTrap(PageFaultTrap{.instructionPointer = reinterpret_cast<uintptr_t>(UserMemcpyTrap),
+                                        .handler = UserMemcpyTrapHandler});
 }
 
 PageMap* CreatePageMap() {
@@ -674,6 +684,8 @@ uintptr_t GetIOMapping(uintptr_t addr) {
     return addr + IO_VIRTUAL_BASE;
 }
 
+void RegisterPageFaultTrap(PageFaultTrap trap) { pageFaultTraps->insert(trap.instructionPointer, trap); }
+
 void PageFaultHandler(void*, RegisterContext* regs) {
     uint64_t faultAddress;
     asm volatile("movq %%cr2, %0" : "=r"(faultAddress));
@@ -791,6 +803,11 @@ void PageFaultHandler(void*, RegisterContext* regs) {
                 return; // Success!
             }
             asm("cli");
+        } else if (PageFaultTrap trap; pageFaultTraps->get(regs->rip, trap)) {
+            // If we have found a handler, set the IP to the handler
+            // and run
+            regs->rip = reinterpret_cast<uintptr_t>(trap.handler);
+            return;
         }
     }
 

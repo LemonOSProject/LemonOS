@@ -25,6 +25,7 @@
 #include <StackTrace.h>
 #include <Timer.h>
 #include <Video/Video.h>
+#include <UserPointer.h>
 
 #include <ABI/Process.h>
 #include <ABI/Syscall.h>
@@ -39,7 +40,7 @@
 #define SC_ARG4(r) ((r)->r9)
 #define SC_ARG5(r) ((r)->r8)
 
-#define NUM_SYSCALLS 106
+#define NUM_SYSCALLS 108
 
 #define EXEC_CHILD 1
 
@@ -49,6 +50,8 @@
 #define WEXITED 8
 #define WNOWAIT 16
 #define WSTOPPED 32
+
+#define TRY_STORE_UMODE_VALUE(ptrObject, value) if(ptrObject.StoreValue(value)) { return -EFAULT; }
 
 typedef long (*syscall_t)(RegisterContext*);
 
@@ -537,8 +540,11 @@ long SysMapFB(RegisterContext* r) {
     if (HAL::debugMode)
         fbInfo.height = vMode.height / 3 * 2;
 
-    *((uintptr_t*)SC_ARG0(r)) = fbVirt;
-    *((fb_info_t*)SC_ARG1(r)) = fbInfo;
+    UserPointer<uintptr_t> virt = SC_ARG0(r);
+    UserPointer<fb_info_t> info = SC_ARG1(r);
+
+    TRY_STORE_UMODE_VALUE(virt, fbVirt);
+    TRY_STORE_UMODE_VALUE(info, fbInfo);
 
     Log::Info("fb mapped at %x", region->Base());
 
@@ -3532,6 +3538,25 @@ long SysSignalReturn(RegisterContext* r) {
     return r->rax; // Ensure we keep the RAX value from before
 }
 
+long SysAlarm(RegisterContext* r) {
+    Process* proc = Scheduler::GetCurrentProcess();
+
+    proc->SetAlarm(SC_ARG0(r));
+
+    return 0;
+}
+
+long SysGetResourceLimit(RegisterContext* r){
+    Process* proc = Scheduler::GetCurrentProcess();
+    int resource = SC_ARG0(r);
+    // struct rlimit* = SC_ARG1(r);
+
+    (void)proc;
+    (void)resource;
+
+    return -ENOSYS;
+}
+
 syscall_t syscalls[NUM_SYSCALLS]{
     SysDebug,
     SysExit, // 1
@@ -3639,6 +3664,8 @@ syscall_t syscalls[NUM_SYSCALLS]{
     SysProcMask,
     SysKill,
     SysSignalReturn, // 105
+    SysAlarm,
+    SysGetResourceLimit,
 };
 
 void DumpLastSyscall(Thread* t) {

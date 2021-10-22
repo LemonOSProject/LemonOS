@@ -1,7 +1,7 @@
 #pragma once
 
-#include <stdint.h>
 #include <System.h>
+#include <stdint.h>
 
 #define KERNEL_VIRTUAL_BASE 0xFFFFFFFF80000000ULL
 #define IO_VIRTUAL_BASE (KERNEL_VIRTUAL_BASE - 0x100000000ULL) // KERNEL_VIRTUAL_BASE - 4GB
@@ -36,7 +36,9 @@
 #define PAGE_CACHE_DISABLED (1 << 4)
 #define PAGE_FRAME 0xFFFFFFFFFF000ULL
 #define PAGE_PAT (1 << 7)
-#define PAGE_PAT_WRITE_COMBINING (PAGE_PAT | PAGE_CACHE_DISABLED | PAGE_WRITETHROUGH) // We set PA7 to write combining, PAGE_PAT is the high bit of the PAT index
+#define PAGE_PAT_WRITE_COMBINING                                                                                       \
+    (PAGE_PAT | PAGE_CACHE_DISABLED |                                                                                  \
+     PAGE_WRITETHROUGH) // We set PA7 to write combining, PAGE_PAT is the high bit of the PAT index
 
 #define PAGE_SIZE_4K 4096U
 #define PAGE_SIZE_2M 0x200000U
@@ -44,7 +46,7 @@
 #define PDPT_SIZE 0x8000000000U
 
 #define PAGES_PER_TABLE 512
-#define TABLES_PER_DIR	512
+#define TABLES_PER_DIR 512
 #define DIRS_PER_PDPT 512
 #define PDPTS_PER_PML4 512
 
@@ -58,7 +60,7 @@ typedef uint64_t pd_entry_t;
 typedef uint64_t pdpt_entry_t;
 typedef uint64_t pml4_entry_t;
 
-typedef struct{
+typedef struct {
     uint64_t phys;
     page_t* virt;
 } __attribute__((packed)) page_table_t;
@@ -68,7 +70,7 @@ using pdpt_t = pdpt_entry_t[DIRS_PER_PDPT];
 using pml4_t = pml4_entry_t[PDPTS_PER_PML4];
 
 typedef struct PageMap { // Each process will have a maximum of 96GB of virtual memory.
-    pdpt_entry_t* pdpt; // 512GB is more than ample
+    pdpt_entry_t* pdpt;  // 512GB is more than ample
     pd_entry_t** pageDirs;
     uint64_t* pageDirsPhys;
     page_t*** pageTables;
@@ -77,89 +79,89 @@ typedef struct PageMap { // Each process will have a maximum of 96GB of virtual 
     uint64_t pml4Phys;
 } __attribute__((packed)) page_map_t;
 
+// Allows handling of page faults without kernel panic
+struct PageFaultTrap {
+    uintptr_t instructionPointer;
+    void(*handler)();
+};
+
 class AddressSpace;
-namespace Memory{
-    extern pml4_t kernelPML4;
-    
-    // Creates a new pagemap object
-    PageMap* CreatePageMap();
-    // Clones an existing pagemap object
-    PageMap* ClonePageMap(PageMap* pageMap);
-    // Destroy pagemap
-    void DestroyPageMap(PageMap* pageMap);
+namespace Memory {
+extern pml4_t kernelPML4;
 
-    void InitializeVirtualMemory();
+// Creates a new pagemap object
+PageMap* CreatePageMap();
+// Clones an existing pagemap object
+PageMap* ClonePageMap(PageMap* pageMap);
+// Destroy pagemap
+void DestroyPageMap(PageMap* pageMap);
 
-    void* KernelAllocate4KPages(uint64_t amount);
+void InitializeVirtualMemory();
+void LateInitializeVirtualMemory();
 
-    void Free4KPages(void* addr, uint64_t amount, page_map_t* addressSpace);
-	void KernelFree4KPages(void* addr, uint64_t amount);
-    void FreeVirtualMemory(void* pointer, uint64_t size);
-    
-    /////////////////////////////
-    /// \brief Map 4KB Pages
-    ///
-    /// \param phys Physical address to map to
-    /// \param virt Virtual address of the mapping
-    /// \param amount Amount of pages to map
-    /////////////////////////////
-    void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount);
+void* KernelAllocate4KPages(uint64_t amount);
 
-    /////////////////////////////
-    /// \brief Map 4KB Pages
-    ///
-    /// \param phys Physical address to map to
-    /// \param virt Virtual address of the mapping
-    /// \param amount Amount of pages to map
-    /// \param flags Page Flags
-    /////////////////////////////
-    void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags);
+void Free4KPages(void* addr, uint64_t amount, page_map_t* addressSpace);
+void KernelFree4KPages(void* addr, uint64_t amount);
+void FreeVirtualMemory(void* pointer, uint64_t size);
 
-    /////////////////////////////
-    /// \brief Map 4KB Pages
-    ///
-    /// \param phys Physical address to map to
-    /// \param virt Virtual address of the mapping
-    /// \param amount Amount of pages to map
-    /// \param pageMap PageMap to map pages
-    /////////////////////////////
-    void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, PageMap* pageMap);
+/////////////////////////////
+/// \brief Map 4KB Pages
+///
+/// \param phys Physical address to map to
+/// \param virt Virtual address of the mapping
+/// \param amount Amount of pages to map
+/////////////////////////////
+void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount);
 
-    /////////////////////////////
-    /// \brief Map 4KB Pages
-    ///
-    /// \param phys Physical address to map to
-    /// \param virt Virtual address of the mapping
-    /// \param amount Amount of pages to map
-    /// \param flags Page Flags
-    /// \param pageMap PageMap to map pages
-    /////////////////////////////
-    void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags, PageMap* pageMap);
+/////////////////////////////
+/// \brief Map 4KB Pages
+///
+/// \param phys Physical address to map to
+/// \param virt Virtual address of the mapping
+/// \param amount Amount of pages to map
+/// \param flags Page Flags
+/////////////////////////////
+void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags);
 
-    uintptr_t GetIOMapping(uintptr_t addr);
+/////////////////////////////
+/// \brief Map 4KB Pages
+///
+/// \param phys Physical address to map to
+/// \param virt Virtual address of the mapping
+/// \param amount Amount of pages to map
+/// \param pageMap PageMap to map pages
+/////////////////////////////
+void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, PageMap* pageMap);
 
-	bool CheckKernelPointer(uintptr_t addr, uint64_t len);
-	bool CheckUsermodePointer(uintptr_t addr, uint64_t len, AddressSpace* addressSpace);
-    uint64_t VirtualToPhysicalAddress(uint64_t addr);
-    uint64_t VirtualToPhysicalAddress(uint64_t addr, page_map_t* addressSpace);
+/////////////////////////////
+/// \brief Map 4KB Pages
+///
+/// \param phys Physical address to map to
+/// \param virt Virtual address of the mapping
+/// \param amount Amount of pages to map
+/// \param flags Page Flags
+/// \param pageMap PageMap to map pages
+/////////////////////////////
+void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags, PageMap* pageMap);
 
-    void SwitchPageDirectory(uint64_t phys);
-    
-	void PageFaultHandler(void*, RegisterContext* regs);
+uintptr_t GetIOMapping(uintptr_t addr);
 
-    inline void SetPageFrame(uint64_t* page, uint64_t addr){
-        *page = (*page & ~PAGE_FRAME) | (addr & PAGE_FRAME);
-    }
+bool CheckKernelPointer(uintptr_t addr, uint64_t len);
+bool CheckUsermodePointer(uintptr_t addr, uint64_t len, AddressSpace* addressSpace);
+uint64_t VirtualToPhysicalAddress(uint64_t addr);
+uint64_t VirtualToPhysicalAddress(uint64_t addr, page_map_t* addressSpace);
 
-    inline void SetPageFlags(uint64_t* page, uint64_t flags){
-        *page |= flags;
-    }
+void SwitchPageDirectory(uint64_t phys);
 
-    inline uint32_t GetPageFrame(uint64_t p) {
-	    return (p & PAGE_FRAME) >> 12;
-    }
+void RegisterPageFaultTrap(PageFaultTrap trap);
+void PageFaultHandler(void*, RegisterContext* regs);
 
-    inline void invlpg(uintptr_t addr){
-        asm("invlpg (%0)" :: "r"(addr));
-    }
-}
+inline void SetPageFrame(uint64_t* page, uint64_t addr) { *page = (*page & ~PAGE_FRAME) | (addr & PAGE_FRAME); }
+
+inline void SetPageFlags(uint64_t* page, uint64_t flags) { *page |= flags; }
+
+inline uint32_t GetPageFrame(uint64_t p) { return (p & PAGE_FRAME) >> 12; }
+
+inline void invlpg(uintptr_t addr) { asm("invlpg (%0)" ::"r"(addr)); }
+} // namespace Memory

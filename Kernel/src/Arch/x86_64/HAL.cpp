@@ -103,6 +103,8 @@ void InitExtra() {
     Log::Info("Initializing SMP...");
     SMP::Initialize();
     Log::Write("OK");
+
+    Memory::LateInitializeVirtualMemory();
 }
 
 void InitMultiboot2(multiboot2_info_header_t* mbInfo) {

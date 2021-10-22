@@ -126,6 +126,7 @@ kernel_cpp_files_x86_64 = [
 kernel_asm_files_x86_64 = [
     'src/Arch/x86_64/Entry.asm',
     'src/Arch/x86_64/IDT.asm',
+    'src/Arch/x86_64/Memcpy.asm',
     'src/Arch/x86_64/Scheduler.asm',
     'src/Arch/x86_64/SignalTrampoline.asm',
     'src/Arch/x86_64/TSS.asm',
