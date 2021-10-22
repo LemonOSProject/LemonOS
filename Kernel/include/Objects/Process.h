@@ -15,6 +15,7 @@
 #include <RefPtr.h>
 #include <System.h>
 #include <Thread.h>
+#include <TimerEvent.h>
 #include <Vector.h>
 
 class Process : public KernelObject {
@@ -352,6 +353,24 @@ public:
         goto retry; // Keep waiting
     }
 
+    ALWAYS_INLINE void SetAlarm(unsigned int seconds) {
+        ScopedSpinLock lockProcess(m_processLock);
+
+        if (seconds == 0) {
+            m_alarmEvent = nullptr;
+            return;
+        }
+
+        m_alarmEvent = new Timer::TimerEvent(
+            seconds * 1000000,
+            [](void* thread) {
+                Thread* t = reinterpret_cast<Thread*>(thread);
+
+                t->Signal(SIGALRM);
+            },
+            m_mainThread.get());
+    }
+
     char name[NAME_MAX + 1];
     char workingDir[PATH_MAX + 1];
 
@@ -425,6 +444,9 @@ private:
 
     // Watcher objects watching the process
     List<KernelObjectWatcher*> m_watching;
+
+    // Used for SIGALARM
+    FancyRefPtr<Timer::TimerEvent> m_alarmEvent = nullptr;
 
     Process* m_parent = nullptr;
 };
