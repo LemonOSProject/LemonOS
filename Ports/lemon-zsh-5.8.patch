@@ -1,0 +1,12 @@
+diff -ruN zsh-5.8/config.sub lemon-zsh/config.sub
+--- zsh-5.8/config.sub	2019-08-18 07:14:27.000000000 +1000
++++ lemon-zsh/config.sub	2021-10-15 13:52:06.785557125 +1100
+@@ -1367,7 +1367,7 @@
+ 	     | morphos* | superux* | rtmk* | windiss* \
+ 	     | powermax* | dnix* | nx6 | nx7 | sei* | dragonfly* \
+ 	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
+-	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
++	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* | lemon* \
+ 	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi*)
+ 	# Remember, each alternative MUST END IN *, to match a version number.
+ 		;;

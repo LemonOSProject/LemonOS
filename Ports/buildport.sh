@@ -1,4 +1,6 @@
-export JOBCOUNT=$(nproc)
+if [ -z "$JOBCOUNT" ]; then
+    export JOBCOUNT=$(nproc)
+fi
 
 export LEMON_BUILDROOT=$(readlink -f -- $(dirname $(readlink -f -- "$0"))/..)
 . $LEMON_BUILDROOT/Scripts/env.sh
