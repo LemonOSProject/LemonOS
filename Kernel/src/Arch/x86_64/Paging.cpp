@@ -280,6 +280,8 @@ void DestroyPageMap(PageMap* pageMap) {
         pageMap->pdpt[i] = 0;
         KernelFree4KPages(pageMap->pageDirs[i], 1);
         Memory::FreePhysicalMemoryBlock(pageMap->pageDirsPhys[i]);
+
+        pageMap->pageDirs[i] = 0;
     }
 
     Memory::FreePhysicalMemoryBlock(pageMap->pdptPhys);
@@ -803,6 +805,8 @@ void PageFaultHandler(void*, RegisterContext* regs) {
                 return; // Success!
             }
             asm("cli");
+        } else if(faultRegion) {
+            faultRegion->lock.ReleaseRead();
         } else if (PageFaultTrap trap; pageFaultTraps->get(regs->rip, trap)) {
             // If we have found a handler, set the IP to the handler
             // and run

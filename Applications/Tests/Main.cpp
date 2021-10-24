@@ -6,9 +6,11 @@
 #include <unistd.h>
 
 #include "Pipe.h"
+#include "Terminal.h"
 
 const std::unordered_map<std::string, Test> tests = {
     {"pipe", pipeTest},
+    {"terminal", termTest},
 };
 
 void ExecuteTest(const Test& test) {

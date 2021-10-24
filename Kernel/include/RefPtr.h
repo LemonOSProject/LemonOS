@@ -2,6 +2,7 @@
 
 #include <Debug.h>
 #include <TTraits.h>
+#include <Assert.h>
 
 #ifdef REFPTR_DEBUG
 #include <Logging.h>

@@ -78,6 +78,7 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
     if (!thread->registers.rip) {
         proc->Die();
         delete proc->addressSpace;
+        proc->addressSpace = nullptr;
 
         return nullptr;
     }

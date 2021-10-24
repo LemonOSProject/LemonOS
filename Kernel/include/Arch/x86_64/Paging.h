@@ -163,5 +163,5 @@ inline void SetPageFlags(uint64_t* page, uint64_t flags) { *page |= flags; }
 
 inline uint32_t GetPageFrame(uint64_t p) { return (p & PAGE_FRAME) >> 12; }
 
-inline void invlpg(uintptr_t addr) { asm("invlpg (%0)" ::"r"(addr)); }
+inline void invlpg(uintptr_t addr) { asm volatile("invlpg (%0)" ::"r"(addr)); }
 } // namespace Memory

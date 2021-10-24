@@ -1,5 +1,6 @@
 #include <PhysicalAllocator.h>
 
+#include <CPU.h>
 #include <CString.h>
 #include <Lock.h>
 #include <Logging.h>
@@ -103,6 +104,7 @@ void MarkMemoryRegionFree(uint64_t base, size_t size) {
 // Allocates a block of physical memory
 uint64_t AllocatePhysicalMemoryBlock() {
     acquireLock(&allocatorLock);
+    InterruptDisabler disableInterrupts;
 
     uint64_t index = GetFirstFreeMemoryBlock();
     if (!index) {

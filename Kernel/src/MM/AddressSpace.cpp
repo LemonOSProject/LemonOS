@@ -7,7 +7,7 @@ AddressSpace::AddressSpace(PageMap* pm) : m_pageMap(pm) {}
 
 AddressSpace::~AddressSpace() {
     IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal),
-             { Log::Info("Destroying address space with %u regions.", m_regions.get_length()); });
+             { Log::Info("Destroying address space %x with %u regions.", this, m_regions.get_length()); });
 
     for (auto& region : m_regions) {
         if (region.vmObject) {
@@ -82,6 +82,7 @@ bool AddressSpace::RangeInRegion(uintptr_t base, size_t size) {
 
 long AddressSpace::UnmapRegion(MappedRegion* region) {
     ScopedSpinLock acquired(m_lock);
+    InterruptDisabler disableInterrupts;
 
     assert(region->lock.IsWriteLocked());
 
@@ -147,20 +148,22 @@ MappedRegion* AddressSpace::AllocateAnonymousVMObject(size_t size, uintptr_t bas
     assert(!(size & (PAGE_SIZE_4K - 1)));
     assert(!(base & (PAGE_SIZE_4K - 1)));
 
-    ScopedSpinLock acquired(m_lock);
-
     MappedRegion* region;
-    if (base && (region = AllocateRegionAt(base, size))) {
-        region->vmObject = nullptr;
-    } else if (fixed) { // Could not create region at base
-        Log::Warning("Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.",
-                     base, size);
-        return nullptr;
-    } else {
-        region = FindAvailableRegion(size);
-    }
+    {
+        ScopedSpinLock acquired(m_lock);
 
-    assert(region && region->Base());
+        if (base && (region = AllocateRegionAt(base, size))) {
+            region->vmObject = nullptr;
+        } else if (fixed) { // Could not create region at base
+            Log::Warning("Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.",
+                        base, size);
+            return nullptr;
+        } else {
+            region = FindAvailableRegion(size);
+        }
+
+        assert(region && region->Base());
+    }
 
     PhysicalVMObject* vmo = new PhysicalVMObject(size, true, false);
     vmo->anonymous = true;
