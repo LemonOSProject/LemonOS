@@ -3707,7 +3707,6 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
     regs->rax = syscalls[regs->rax](regs); // Call syscall
 
     if (__builtin_expect(thread->pendingSignals & (~thread->signalMask), 0)) {
-        asm("cli");
         thread->HandlePendingSignal(regs);
     }
     releaseLock(&thread->lock);

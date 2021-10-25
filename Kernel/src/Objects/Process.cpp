@@ -288,6 +288,8 @@ void Process::Destroy() {
 }
 
 void Process::Die() {
+    assert(CheckInterrupts());
+
     CPU* cpu = GetCPULocal();
 
     m_state = Process_Dying;

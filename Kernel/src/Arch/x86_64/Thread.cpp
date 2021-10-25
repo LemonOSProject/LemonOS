@@ -78,7 +78,6 @@ void Thread::Signal(int signal) {
 
 void Thread::HandlePendingSignal(RegisterContext* regs) {
     assert(Scheduler::GetCurrentThread() == this); // Make sure we are this thread
-    assert(!CheckInterrupts());                    // Assume interrupts are disabled
 
     SignalHandler handler;
     int signal = 0;

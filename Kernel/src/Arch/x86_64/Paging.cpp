@@ -275,7 +275,9 @@ void DestroyPageMap(PageMap* pageMap) {
             pageMap->pageDirs[i][j] = 0;
         }
 
-        kfree(pageMap->pageTables[i]);
+        if(pageMap->pageTables[i]){
+            kfree(pageMap->pageTables[i]);
+        }
 
         pageMap->pdpt[i] = 0;
         KernelFree4KPages(pageMap->pageDirs[i], 1);
