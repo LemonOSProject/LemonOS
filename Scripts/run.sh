@@ -9,7 +9,7 @@ qemu(){
 }
 
 qemuefi(){
-	qemu-system-x86_64 --enable-kvm -cpu host --bios /usr/share/edk2-ovmf/x64/OVMF.fd -M q35 -m 512M -drive file=Disks/Lemon.img,id=nvme0 -device nvme,serial=deadbeef69,id=nvme0 -serial stdio
+	qemu-system-x86_64 --enable-kvm -cpu host --bios /usr/share/edk2-ovmf/x64/OVMF.fd -M q35 -m 512M -drive file=$LEMOND/Disks/Lemon.img,id=nvme0 -device nvme,serial=deadbeef69,id=nvme0 -serial stdio
 }
 
 qemuusb(){
