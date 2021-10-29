@@ -58,7 +58,7 @@ void NVMeQueue::Submit(NVMeCommand& cmd) {
 }
 
 void NVMeQueue::SubmitWait(NVMeCommand& cmd, NVMeCompletion& complet) {
-    acquireLock(&queueLock);
+    ScopedSpinLock lockQueue(queueLock);
     cmd.commandID = nextCommandID++;
     if (nextCommandID == 0xffff) {
         nextCommandID = 0;
@@ -89,17 +89,16 @@ void NVMeQueue::SubmitWait(NVMeCommand& cmd, NVMeCompletion& complet) {
     }
 
     *completionDB = cqHead;
-    releaseLock(&queueLock);
 }
 
 Controller::Controller(const PCIInfo& dev) : PCIDevice(dev) {
 
     cRegs = reinterpret_cast<Registers*>(Memory::KernelAllocate4KPages(4));
-    Memory::KernelMapVirtualMemory4K(pciDevice->GetBaseAddressRegister(0), (uintptr_t)cRegs, 4,
+    Memory::KernelMapVirtualMemory4K(GetBaseAddressRegister(0), (uintptr_t)cRegs, 4,
                                      PAGE_PRESENT | PAGE_WRITABLE | PAGE_CACHE_DISABLED | PAGE_WRITETHROUGH);
 
-    pciDevice->EnableBusMastering();
-    pciDevice->EnableMemorySpace();
+    EnableBusMastering();
+    EnableMemorySpace();
     // pciDevice->EnableInterrupts();
 
     Log::Info("[NVMe] Initializing Controller... Version: %d.%d.%d, Maximum Queue Entries Supported: %u",
@@ -283,8 +282,8 @@ long Controller::CreateIOQueue(NVMeQueue* qPtr) {
     void* sq = Memory::KernelAllocate4KPages(1);
     void* cq = Memory::KernelAllocate4KPages(1);
 
-    Memory::KernelMapVirtualMemory4K(cqBase, (uintptr_t)cq, 1, PAGE_CACHE_DISABLED);
-    Memory::KernelMapVirtualMemory4K(sqBase, (uintptr_t)sq, 1, PAGE_CACHE_DISABLED);
+    Memory::KernelMapVirtualMemory4K(cqBase, (uintptr_t)cq, 1, PAGE_CACHE_DISABLED | PAGE_WRITABLE | PAGE_PRESENT);
+    Memory::KernelMapVirtualMemory4K(sqBase, (uintptr_t)sq, 1, PAGE_CACHE_DISABLED | PAGE_WRITABLE | PAGE_PRESENT);
 
     uint16_t queueID = AllocateQueueID();
 

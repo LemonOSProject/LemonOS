@@ -357,7 +357,6 @@ namespace NVMe{
 		} __attribute__((packed));
 
 		Registers* cRegs = nullptr;
-		PCIDevice* pciDevice;
 		
 		ControllerIdentity* controllerIdentity = nullptr;
 		uintptr_t controllerIdentityPhys = 0;
