@@ -288,7 +288,7 @@ void Process::Destroy() {
 }
 
 void Process::Die() {
-    assert(CheckInterrupts());
+    asm volatile("sti");
 
     CPU* cpu = GetCPULocal();
 
@@ -322,6 +322,7 @@ void Process::Die() {
         }
     }
 
+    asm("sti");
     while (m_children.get_length()) {
         FancyRefPtr<Process> child = m_children.get_front();
         if (child->State() == Process_Running) {
