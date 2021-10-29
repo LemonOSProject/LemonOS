@@ -36,6 +36,8 @@ public:
 
     ALWAYS_INLINE T* Pointer() { return m_ptr; }
 
+    ALWAYS_INLINE operator bool() const { return m_ptr != nullptr; }
+
 private:
     T* m_ptr;
 };
@@ -43,6 +45,9 @@ private:
 template <typename T> class UserBuffer {
 public:
     UserBuffer(uintptr_t ptr) : m_ptr(reinterpret_cast<T*>(ptr)) {}
+
+    ALWAYS_INLINE int GetValue(unsigned index, T& kernelValue) const { return UserMemcpy(&kernelValue, &m_ptr[index], sizeof(T)); }
+    ALWAYS_INLINE int StoreValue(unsigned index, const T& kernelValue) { return UserMemcpy(&m_ptr[index], &kernelValue, sizeof(T)); }
 
     ALWAYS_INLINE int Read(T* data, size_t offset, size_t count) const {
         if (!IsUsermodePointer(m_ptr, offset, count)) { // Don't allow kernel memory access
