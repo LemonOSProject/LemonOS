@@ -1,13 +1,12 @@
 #pragma once
 
 #include <Compiler.h>
-#include <RefPtr.h>
 #include <System.h>
 #include <TSS.h>
-#include <Thread.h>
 #include <stdint.h>
 
 class Process;
+struct Thread;
 template <typename T> class FastList;
 
 typedef struct {

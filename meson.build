@@ -39,3 +39,6 @@ run_target('run-netdump',
 
 run_target('run-vbox', 
     command: ['Scripts/run.sh', 'vbox'])
+
+run_target('run-efi',
+    command: ['Scripts/run.sh', 'qemuefi'])
