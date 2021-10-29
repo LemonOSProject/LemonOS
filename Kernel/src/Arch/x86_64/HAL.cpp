@@ -191,12 +191,16 @@ void InitMultiboot2(multiboot2_info_header_t* mbInfo) {
         }
         case Mboot2ACPI1RSDP: {
             auto rsdp = &(reinterpret_cast<multiboot2_acpi1_rsdp_t*>(tag)->rsdp);
-            ACPI::SetRSDP(rsdp);
+            ACPI::SetRSDP(new acpi_xsdp_t{*rsdp});
+
+            Log::Debug(debugLevelHAL, DebugLevelVerbose, "Found MB2 ACPI 1 RSDP at %x", rsdp);
             break;
         }
         case Mboot2ACPI2RSDP: {
             auto rsdp = &(reinterpret_cast<multiboot2_acpi2_rsdp_t*>(tag)->rsdp);
-            ACPI::SetRSDP(rsdp);
+            ACPI::SetRSDP(new acpi_xsdp_t{*rsdp});
+
+            Log::Debug(debugLevelHAL, DebugLevelVerbose, "Found MB2 ACPI 2 RSDP at %x, revision: %d", rsdp, rsdp->revision);
             break;
         }
         default: {
