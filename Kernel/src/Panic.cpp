@@ -26,6 +26,7 @@ void KernelPanic(const char** reasons, int reasonCount) {
     }
 
     asm("hlt");
+    for(;;);
 }
 
 void PrintReason(const video_mode_t& v, int& pos, const char* reason) {
