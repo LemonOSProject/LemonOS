@@ -3,16 +3,15 @@
 #include <Fs/Tmp.h>
 #include <Fs/VolumeManager.h>
 #include <HAL.h>
-#include <Keyboard.h>
 #include <Lemon.h>
 #include <Logging.h>
 #include <MM/KMalloc.h>
 #include <Math.h>
 #include <Modules.h>
-#include <Mouse.h>
 #include <Net/Net.h>
 #include <Objects/Service.h>
 #include <PCI.h>
+#include <PS2.h>
 #include <Panic.h>
 #include <Scheduler.h>
 #include <SharedMemory.h>
@@ -220,8 +219,7 @@ extern "C" [[noreturn]] void kmain() {
 
     Log::Info("Initializing HID...");
 
-    Mouse::Install();
-    Keyboard::Install();
+    PS2::Initialize();
 
     Log::Info("OK");
 
