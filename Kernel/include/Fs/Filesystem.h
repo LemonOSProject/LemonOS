@@ -39,12 +39,12 @@
 
 #define FS_NODE_TYPE 0xF000
 #define FS_NODE_FILE S_IFREG
-#define FS_NODE_DIRECTORY S_IFDIR  // 0x2
-#define FS_NODE_MOUNTPOINT S_IFDIR // 0x8
-#define FS_NODE_BLKDEVICE S_IFBLK  // 0x10
-#define FS_NODE_SYMLINK S_IFLNK    // 0x20
-#define FS_NODE_CHARDEVICE S_IFCHR // 0x40
-#define FS_NODE_SOCKET S_IFSOCK    // 0x80
+#define FS_NODE_DIRECTORY S_IFDIR 
+#define FS_NODE_MOUNTPOINT S_IFDIR
+#define FS_NODE_BLKDEVICE S_IFBLK 
+#define FS_NODE_SYMLINK S_IFLNK   
+#define FS_NODE_CHARDEVICE S_IFCHR
+#define FS_NODE_SOCKET S_IFSOCK   
 
 #define POLLIN 0x01
 #define POLLOUT 0x02
@@ -217,6 +217,7 @@ public:
     virtual inline bool IsSymlink() { return (flags & FS_NODE_TYPE) == FS_NODE_SYMLINK; }
     virtual inline bool IsCharDevice() { return (flags & FS_NODE_TYPE) == FS_NODE_CHARDEVICE; }
     virtual inline bool IsSocket() { return (flags & FS_NODE_TYPE) == FS_NODE_SOCKET; }
+    virtual inline bool IsEPoll() const { return false; }
 
     void UnblockAll();
 
