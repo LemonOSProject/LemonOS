@@ -26,6 +26,8 @@
 
 #define MOUSE_X_SIGN (1 << 4)
 #define MOUSE_Y_SIGN (1 << 5)
+#define MOUSE_X_OVERFLOW (1 << 6)
+#define MOUSE_Y_OVERFLOW (1 << 7)
 
 #define KEY_QUEUE_SIZE 256
 
@@ -106,7 +108,7 @@ void KBHandler(void*, RegisterContext* r) {
     keyCount++;
 }
 
-uint8_t mouseData[3];
+uint8_t mouseData[4];
 
 struct MousePacket {
     int8_t buttons;
@@ -122,6 +124,7 @@ short packetQueueStart = 0;
 short packetCount = 0;
 
 uint8_t mouseCycle = 0;
+bool hasScrollWheel = false;
 void MouseHandler(void*, RegisterContext* regs) {
     switch (mouseCycle) {
     case 0:
@@ -136,8 +139,17 @@ void MouseHandler(void*, RegisterContext* regs) {
         mouseData[1] = inportb(0x60);
         mouseCycle++;
         break;
-    case 2: {
+    case 2:
         mouseData[2] = inportb(0x60);
+
+        if(hasScrollWheel){
+            mouseCycle++;
+            break;
+        }
+    case 3: {
+        if(hasScrollWheel){
+            mouseData[3] = inportb(0x60);
+        }
         mouseCycle = 0;
 
         if (packetCount >= PACKET_QUEUE_SIZE)
@@ -150,8 +162,15 @@ void MouseHandler(void*, RegisterContext* regs) {
         int x = mouseData[1] - ((mouseData[0] & MOUSE_X_SIGN) << 4);
         int y = mouseData[2] - ((mouseData[1] & MOUSE_Y_SIGN) << 3);
 
+        if(mouseData[0] & (MOUSE_X_OVERFLOW | MOUSE_Y_OVERFLOW)){
+            // If either overflow bit is set, discard movement
+            x = 0;
+            y = 0;
+        }
+
         pkt.xMovement = x;
         pkt.yMovement = -y;
+        pkt.verticalScroll = mouseData[3];
 
         // Add packet to queue
         packetQueue[packetQueueEnd] = pkt;
@@ -165,6 +184,7 @@ void MouseHandler(void*, RegisterContext* regs) {
         packetCount++;
         break;
     }
+
     default: {
         mouseCycle = 0;
         break;
@@ -237,6 +257,18 @@ public:
     }
 };
 
+// Some touchpads want 'sliced commands'
+// They are encoded in resolution commands with a leading
+// scale command
+void SendSlicedMouseCommand(uint8_t cmd){
+    SendCommand<true>(0xE6);
+
+    for(int i = 3; i >= 0; i--){
+        SendCommand<true>(0xE8);
+        SendCommand<true>(cmd >> (i * 2));
+    }
+}
+
 namespace PS2 {
 KeyboardDevice kbDev("keyboard0");
 MouseDevice mouseDev("mouse0");
@@ -255,34 +287,57 @@ void Initialize() {
     WaitData<false>();
     uint8_t status = inportb(0x20);
 
-    if(status & PS2_STATUS_MOUSE_CLOCK) {
-        // Must be dual channel
-        WaitSignal();
-        outportb(0x64, PS2_ENABLE_AUX_INPUT);
-        int timeout = 1000;
-        while (inportb(0x60) != 0x1 && timeout-- > 0)
-            ;
-        inportb(0x60);
-    }
-
+    WaitSignal();
     outportb(0x64, 0xAE);
-    //outportb(0x64, PS2_ENABLE_AUX_INPUT);
+    WaitSignal();
+    outportb(0x64, PS2_ENABLE_AUX_INPUT);
 
-    status = ((inportb(0x60) & ~0x20) | 2); // Enable interrupts, enable mouse clock
+    // Enable interrupts, enable keyboard and mouse clock
+    status = ((status & ~0x30) | 3);
+    WaitSignal();
     outportb(0x64, 0x60);
     WaitSignal();
     outportb(0x60, status);
     WaitData<false>();
-    inportb(0x60); // ACK may have been sent
+    inportb(0x60);
+
+    Timer::Wait(500);
 
     SendCommand<true>(0xF6);
     SendCommand<true>(0xF4);
+
+    // Set the sample rate a bunch of times
+    // to enable scroll wheel
+    SendCommand<true>(0xF3);
+    SendCommand<true>(200);
+    SendCommand<true>(0xF3);
+    SendCommand<true>(100);
+    SendCommand<true>(0xF3);
+    SendCommand<true>(80);
+    // Get MouseID
+    SendCommand<true>(0xF2);
+    WaitData<true>();
+    int id = inportb(0x60);
+    Log::Info("[PS/2] MouseID: %d", id);
+    if(id >= 3){
+        hasScrollWheel = true;
+    }
+
+    // Attempt to reset synaptics touchpads
+    /*SendSlicedMouseCommand(0);
+    SendCommand<true>(0xE8);
+    SendCommand<true>(0x28);
+    WaitData<true>();*/
 
     // Linear scaling
     SendCommand<true>(0xE6);
     // 2 px/mm
     SendCommand<true>(0xE8);
     SendCommand<true>(1);
+
+    // Set keyboard scancode set 1
+    SendCommand<false>(0xF0);
+    SendCommand<false>(1);
 
     IDT::RegisterInterruptHandler(IRQ0 + 12, MouseHandler);
     APIC::IO::MapLegacyIRQ(12);
