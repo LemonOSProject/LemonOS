@@ -265,6 +265,8 @@ void InitStivale2(stivale2_info_header_t* st2Info) {
     char* cmdLine = nullptr;
 
     while (tagPhys) {
+        tagPhys = Memory::GetIOMapping(tagPhys);
+
         stivale2_tag_t* tag = reinterpret_cast<stivale2_tag_t*>(tagPhys);
         Log::Debug(debugLevelHAL, DebugLevelVerbose, "[HAL] [stivale2] Found tag with ID: %x", tag->id);
 
@@ -272,7 +274,7 @@ void InitStivale2(stivale2_info_header_t* st2Info) {
         case Stivale2TagCmdLine: {
             stivale2_tag_cmdline_t* cmdLineTag = reinterpret_cast<stivale2_tag_cmdline_t*>(tagPhys);
 
-            cmdLine = reinterpret_cast<char*>(cmdLineTag->cmdLine);
+            cmdLine = reinterpret_cast<char*>(Memory::GetIOMapping(cmdLineTag->cmdLine));
             break;
         }
         case Stivale2TagMemoryMap: {
@@ -348,7 +350,7 @@ void InitStivale2(stivale2_info_header_t* st2Info) {
         case Stivale2TagACPIRSDP: {
             stivale2_tag_rsdp_t* rsdpTag = reinterpret_cast<stivale2_tag_rsdp_t*>(tag);
 
-            ACPI::SetRSDP(reinterpret_cast<acpi_xsdp_t*>(rsdpTag->rsdp));
+            ACPI::SetRSDP(new acpi_xsdp_t(*reinterpret_cast<acpi_xsdp_t*>(Memory::GetIOMapping(rsdpTag->rsdp))));
             break;
         }
         default:
