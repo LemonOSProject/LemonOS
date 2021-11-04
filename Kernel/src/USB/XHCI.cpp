@@ -79,13 +79,7 @@ XHCIController::XHCIController(const PCIInfo& dev) : PCIDevice(dev) {
         }
     }
 
-    controllerIRQ = AllocateVector(PCIVectorAny);
-    if (controllerIRQ == 0xFF) {
-        Log::Error("[XHCI] Failed to allocate IRQ!");
-        return;
-    }
-
-    IDT::RegisterInterruptHandler(controllerIRQ, reinterpret_cast<isr_t>(&XHCIIRQHandler), this);
+    assert((opRegs->usbStatus & (USB_STS_CNR | USB_STS_HCH)) == USB_STS_HCH);
 
     devContextBaseAddressArrayPhys = Memory::AllocatePhysicalMemoryBlock();
     devContextBaseAddressArray = reinterpret_cast<uint64_t*>(Memory::GetIOMapping(devContextBaseAddressArrayPhys));
@@ -109,32 +103,37 @@ XHCIController::XHCIController(const PCIInfo& dev) : PCIDevice(dev) {
         devContextBaseAddressArray[0] = scratchpadBuffersPhys;
     }
 
-    commandRing = reinterpret_cast<xhci_trb_t*>(Memory::KernelAllocate4KPages(1));
-    cmdRingPointerPhys = Memory::AllocatePhysicalMemoryBlock();
-    Memory::KernelMapVirtualMemory4K(cmdRingPointerPhys, reinterpret_cast<uintptr_t>(commandRing), 1,
+    controllerIRQ = AllocateVector(PCIVectorAny);
+    if (controllerIRQ == 0xFF) {
+        Log::Error("[XHCI] Failed to allocate IRQ!");
+        return;
+    }
+
+    IDT::RegisterInterruptHandler(controllerIRQ, reinterpret_cast<isr_t>(&XHCIIRQHandler), this);
+
+    commandRing.ring = reinterpret_cast<xhci_trb_t*>(Memory::KernelAllocate4KPages(1));
+    commandRing.physicalAddr = Memory::AllocatePhysicalMemoryBlock();
+    Memory::KernelMapVirtualMemory4K(commandRing.physicalAddr, reinterpret_cast<uintptr_t>(commandRing.ring), 1,
                                      PAGE_PRESENT | PAGE_WRITABLE | PAGE_CACHE_DISABLED);
 
-    commandRingIndexMax = PAGE_SIZE_4K / XHCI_TRB_SIZE;
-    memset(commandRing, 0, PAGE_SIZE_4K);
+    commandRing.maxIndex = PAGE_SIZE_4K / XHCI_TRB_SIZE;
+    memset(commandRing.ring, 0, PAGE_SIZE_4K);
+
+    // Initialize an array of completion events
+    commandRing.events = new CommandCompletionEvent[commandRing.maxIndex];
 
     opRegs->cmdRingCtl = 0; // Clear everything
-    opRegs->cmdRingCtl = cmdRingPointerPhys | 1;
-
-    opRegs->deviceNotificationControl = 2; // FUNCTION_WAKE notification, all others should be handled automatically
+    opRegs->cmdRingCtl = commandRing.physicalAddr | 1;
 
     maxSlots = 40;
     if (maxSlots > capRegs->MaxSlots()) {
         maxSlots = capRegs->MaxSlots();
     }
+    
+    opRegs->SetMaxSlotsEnabled(maxSlots);
 
-    ports = new XHCIPort[capRegs->MaxPorts()];
-
-    InitializeProtocols();
-
-    interrupter = &runtimeRegs->interrupters[0];
-    interrupter->interruptEnable = 1;
-    // interrupter->intModerationInterval = 4000; // (~1ms)
-
+    ports = new Port[capRegs->MaxPorts()];
+    
     eventRingSegmentTablePhys = Memory::AllocatePhysicalMemoryBlock();
     eventRingSegmentTable = reinterpret_cast<xhci_event_ring_segment_table_entry_t*>(Memory::KernelAllocate4KPages(1));
     Memory::KernelMapVirtualMemory4K(eventRingSegmentTablePhys, reinterpret_cast<uintptr_t>(eventRingSegmentTable), 1,
@@ -143,6 +142,10 @@ XHCIController::XHCIController(const PCIInfo& dev) : PCIDevice(dev) {
 
     eventRingSegmentTableSize =
         1; // For now we support one segment // PAGE_SIZE_4K / XHCI_EVENT_RING_SEGMENT_TABLE_ENTRY_SIZE;
+
+    int erstMax = 1 << capRegs->ERSTMax();
+    assert(eventRingSegmentTableSize <= erstMax);
+
     eventRingSegments = new XHCIEventRingSegment[eventRingSegmentTableSize];
     for (unsigned i = 0; i < eventRingSegmentTableSize; i++) {
         xhci_event_ring_segment_table_entry_t* entry = &eventRingSegmentTable[i];
@@ -160,22 +163,37 @@ XHCIController::XHCIController(const PCIInfo& dev) : PCIDevice(dev) {
         entry->ringSegmentSize = PAGE_SIZE_4K / XHCI_TRB_SIZE; // Comes down to 256 TRBs per segment
         segment->size = PAGE_SIZE_4K / XHCI_TRB_SIZE;
     }
-    eventRingDequeue = eventRingSegments[0].segment;
+    
+    eventRingDequeue = 0;
+    eventRingCycleState = true;
 
+    assert(!(opRegs->usbStatus & (USB_STS_HCE)));
+
+    interrupter = &runtimeRegs->interrupters[0];
+    interrupter->intModerationInterval = 0; // Disable interrupt moderation
+    // Setting ERDP busy clears it
     interrupter->eventRingSegmentTableSize = eventRingSegmentTableSize;
+    interrupter->eventRingDequeuePointer = eventRingSegments[0].segmentPhys | XHCI_INT_ERDP_BUSY;
     interrupter->eventRingSegmentTableBaseAddress = eventRingSegmentTablePhys;
-    interrupter->eventRingDequeuePointer = reinterpret_cast<uintptr_t>(eventRingSegments[0].segment);
-    opRegs->SetMaxSlotsEnabled(maxSlots);
+    interrupter->interruptEnable = 1;
+    interrupter->interruptPending = 1;
+
+    assert(!(opRegs->usbStatus & (USB_STS_HCE)));
 
     Log::Info("[XHCI] Interface version: %x, Page size: %d, Operational registers offset: %x, Runtime registers "
-              "offset: %x, Doorbell registers offset: %x",
-              capRegs->hciVersion, opRegs->pageSize, capRegs->capLength, capRegs->rtsOff, capRegs->dbOff);
+              "offset: %x, Doorbell registers offset: %x, Supported ERST entries: %d",
+              capRegs->hciVersion, opRegs->pageSize, capRegs->capLength, capRegs->rtsOff, capRegs->dbOff, erstMax);
 
     if (debugLevelXHCI >= DebugLevelNormal) {
-        Log::Info("[XHCI] MaxSlots: %x, Max Scratchpad Buffers: %x", capRegs->MaxSlots(),
+        Log::Info("[XHCI] MaxSlots: %x, Max Scratchpad Buffers: %x", maxSlots,
                   capRegs->MaxScratchpadBuffers());
     }
+    
+    InitializeProtocols();
 
+    opRegs->usbStatus = USB_STS_PCD | USB_STS_EINT | USB_STS_HSE;
+
+    assert(!(opRegs->usbCommand & USB_CMD_RS));
     opRegs->usbCommand |= USB_CMD_HSEE | USB_CMD_INTE | USB_CMD_RS;
     {
         int timer = 20;
@@ -189,51 +207,104 @@ XHCIController::XHCIController(const PCIInfo& dev) : PCIDevice(dev) {
     }
 
     interrupter->interruptEnable = 1;
-    interrupter->interruptPending = 0;
-    interrupter->eventHandlerBusy = 0;
-    opRegs->usbStatus &= ~USB_STS_EINT;
+    interrupter->interruptPending = 1;
+    opRegs->usbStatus |= USB_STS_EINT;
+
+    assert(!(opRegs->usbStatus & (USB_STS_HCH)));
+    assert(!(opRegs->usbStatus & (USB_STS_CNR)));
+    assert(!(opRegs->usbStatus & (USB_STS_HSE)));
+    assert(!(opRegs->usbStatus & (USB_STS_HCE)));
 
     xhci_noop_command_trb_t testCommand;
     memset(&testCommand, 0, sizeof(xhci_noop_command_trb_t));
     testCommand.trbType = TRBTypes::TRBTypeNoOpCommand;
     testCommand.cycleBit = 1;
+    commandRing.SendCommandRaw(&testCommand);
 
-    SendCommand(&testCommand);
     doorbellRegs[0].target = 0;
-
-    InitializePorts();
+    //InitializePorts();
 }
 
-void XHCIController::SendCommand(void* data) {
+void XHCIController::CommandRing::SendCommandRaw(void* data) {
     xhci_trb_t* command = reinterpret_cast<xhci_trb_t*>(data);
 
-    if (commandRingCycleState)
+    ScopedSpinLock<true> lockRing(lock);
+
+    if (cycleState)
         command->cycleBit = 1;
     else
         command->cycleBit = 0;
 
-    commandRing[commandRingEnqueueIndex++] = *command;
+    memcpy(&ring[enqueueIndex++], command, sizeof(xhci_trb_t));
 
-    if (commandRingEnqueueIndex >= commandRingIndexMax - 1) {
+    if (enqueueIndex >= maxIndex - 1) {
         xhci_link_trb_t lnkTrb;
 
         memset(&lnkTrb, 0, sizeof(xhci_link_trb_t));
 
-        if (commandRingCycleState)
+        if (cycleState)
             lnkTrb.cycleBit = 1;
         else
             lnkTrb.cycleBit = 0;
 
         lnkTrb.interrupterTarget = 0;
-        lnkTrb.interruptOnCompletion = 0;
-        lnkTrb.segmentPtr = cmdRingPointerPhys;
+        lnkTrb.interruptOnCompletion = 1;
+        lnkTrb.segmentPtr = physicalAddr;
         lnkTrb.toggleCycle = 1;
 
-        commandRing[commandRingEnqueueIndex] = *reinterpret_cast<xhci_trb_t*>(&lnkTrb);
-        commandRingEnqueueIndex = 0;
+        ring[enqueueIndex] = *reinterpret_cast<xhci_trb_t*>(&lnkTrb);
+        enqueueIndex = 0;
 
-        commandRingCycleState = !commandRingCycleState;
+        cycleState = !cycleState;
     }
+}
+
+XHCIController::xhci_command_completion_event_trb_t XHCIController::CommandRing::SendCommand(void* data) {
+    CommandCompletionEvent* ev;
+
+    {
+        xhci_trb_t* command = reinterpret_cast<xhci_trb_t*>(data);
+
+        ScopedSpinLock<true> lockRing(lock);
+
+        ev = &events[enqueueIndex];
+        ev->completion.SetValue(0);
+
+        if (cycleState)
+            command->cycleBit = 1;
+        else
+            command->cycleBit = 0;
+
+        ring[enqueueIndex++] = *command;
+
+        if (enqueueIndex >= maxIndex - 1) {
+            xhci_link_trb_t lnkTrb;
+
+            memset(&lnkTrb, 0, sizeof(xhci_link_trb_t));
+
+            if (cycleState)
+                lnkTrb.cycleBit = 1;
+            else
+                lnkTrb.cycleBit = 0;
+
+            lnkTrb.interrupterTarget = 0;
+            lnkTrb.interruptOnCompletion = 0;
+            lnkTrb.segmentPtr = physicalAddr;
+            lnkTrb.toggleCycle = 1;
+
+            ring[enqueueIndex] = *reinterpret_cast<xhci_trb_t*>(&lnkTrb);
+            enqueueIndex = 0;
+
+            cycleState = !cycleState;
+        }
+    }
+
+    hcd->doorbellRegs[0].target = 0;
+
+    bool wasInterrupted = ev->completion.Wait();
+    assert(!wasInterrupted);
+
+    return ev->event;
 }
 
 void XHCIController::EnableSlot() {
@@ -242,20 +313,39 @@ void XHCIController::EnableSlot() {
 
     trb.trbType = TRBTypes::TRBTypeEnableSlotCommand;
 
-    SendCommand(&trb);
+    commandRing.SendCommandRaw(&trb);
+    doorbellRegs[0].target = 0;
 }
 
 void XHCIController::OnInterrupt() {
     Log::Info("[XHCI] Interrupt!");
 
-    if (!eventRingSegments)
+    if(!(opRegs->usbStatus & USB_STS_HCH)){
+        Log::Debug(debugLevelXHCI, DebugLevelNormal, "[XHCI] OnInterrupt: Controller Halted");
+    }
+
+    if(!(opRegs->usbStatus & USB_STS_EINT)) {
         return;
+    }
+
+    opRegs->usbStatus |= USB_STS_EINT;
+
+    if(interrupter->interruptPending){
+        interrupter->interruptPending = 1;
+    }
+
+    if(!(interrupter->eventRingDequeuePointer & XHCI_INT_ERDP_BUSY)){
+        return; // No events
+    }
 
     XHCIEventRingSegment* segment = &eventRingSegments[0];
-    xhci_event_trb_t* event = eventRingDequeue;
+    xhci_event_trb_t* event = &segment->segment[eventRingDequeue];
 
     if (debugLevelXHCI >= DebugLevelVerbose) {
         Log::Info("cycle: %Y event cycle: %Y", event->cycleBit, eventRingCycleState);
+        for (int i = 0; i < segment->size; i++) {
+            Log::Info("%d: cycle: %Y event cycle: %Y (TRB type: %x)", i, segment->segment[i].cycleBit, eventRingCycleState, segment->segment[i].trbType);
+        }
     }
 
     while (!!event->cycleBit == !!eventRingCycleState) {
@@ -264,20 +354,36 @@ void XHCIController::OnInterrupt() {
                       (((uint32_t*)event)[3] >> 10) & 0x3f);
         }
 
+        if (event->trbType == TRBTypeCommandCompletionEvent) {
+            ScopedSpinLock lockRing(commandRing.lock);
+            xhci_command_completion_event_trb_t* ccEvent =
+                reinterpret_cast<xhci_command_completion_event_trb_t*>(event);
+
+            unsigned cmdIndex = (ccEvent->commandTRBPointer - commandRing.physicalAddr) / XHCI_TRB_SIZE;
+            assert(cmdIndex < commandRing.maxIndex);
+
+            auto& ev = commandRing.events[cmdIndex];
+            ev.event = *ccEvent;
+            ev.completion.Signal();
+        }
+
         event++;
-        uintptr_t diff = reinterpret_cast<uintptr_t>(event) - reinterpret_cast<uintptr_t>(segment->segment);
-        if (!diff ||
-            !((diff) % (segment->size * XHCI_TRB_SIZE))) { // Check if we are at either beginning or end of ring segment
-            eventRingDequeue = segment->segment;
-            event = eventRingDequeue;
+        eventRingDequeue++;
+        if (eventRingDequeue &&
+            !(eventRingDequeue % segment->size)) { // Check if we are at either beginning or end of ring segment
+            eventRingDequeue = 0;
+            event = segment->segment;
             eventRingCycleState = !eventRingCycleState;
             break;
         }
     }
 
-    interrupter->eventRingDequeuePointer = reinterpret_cast<uintptr_t>(eventRingDequeue) | XHCI_INT_ERDP_BUSY;
+    uintptr_t newPtr = reinterpret_cast<uintptr_t>(segment->segmentPhys) + eventRingDequeue * XHCI_TRB_SIZE;
+
+    // Disable XHCI_INT_ERDP_BUSY
+    interrupter->eventRingDequeuePointer = (newPtr & ~64ULL) | XHCI_INT_ERDP_BUSY;
     interrupter->interruptPending = 0;
-    opRegs->usbStatus &= ~USB_STS_EINT;
+    assert(interrupter->interruptEnable);
 }
 
 bool XHCIController::TakeOwnership() {
@@ -309,18 +415,20 @@ bool XHCIController::TakeOwnership() {
 }
 
 void XHCIController::InitializeProtocols() {
-    auto initializeProto = [&](xhci_ext_cap_supported_protocol_t* cap) {
+    auto initializeProto = [&](xhci_ext_cap_supported_protocol_t* ptr) {
+        xhci_ext_cap_supported_protocol_t cap = *ptr;
+
         if (debugLevelXHCI) {
-            Log::Info("[XHCI] Initializing protocol \"%c%c%c%c\", Version: %u%u.%u%u, Port Range: %u-%u", cap->name[0],
-                      cap->name[1], cap->name[2], cap->name[3], (cap->majorRevision >> 4), (cap->majorRevision & 0xF),
-                      (cap->minorRevision >> 4), (cap->minorRevision & 0xF), cap->portOffset,
-                      (cap->portOffset + cap->portCount));
+            Log::Info("[XHCI] Initializing protocol \"%c%c%c%c\", Version: %hu%hu.%hu%hu, Port Range: %u-%u",
+                      cap.name[0], cap.name[1], cap.name[2], cap.name[3], (cap.majorRevision >> 4),
+                      (cap.majorRevision & 0xF), (cap.minorRevision >> 4), (cap.minorRevision & 0xF), cap.portOffset,
+                      (cap.portOffset + cap.portCount));
         }
 
-        protocols.add_back(cap);
+        protocols.add_back(ptr);
 
-        for (unsigned i = cap->portOffset; i < cap->portOffset + cap->portCount && i < capRegs->MaxPorts(); i++) {
-            ports[i].protocol = cap;
+        for (unsigned i = cap.portOffset; i < cap.portOffset + cap.portCount && i < capRegs->MaxPorts(); i++) {
+            ports[i].protocol = ptr;
         }
     };
 
@@ -328,6 +436,8 @@ void XHCIController::InitializeProtocols() {
     for (;;) {
         if (cap->capID == XHCIExtendedCapabilities::XHCIExtCapSupportedProtocol) {
             initializeProto(cap);
+        } else {
+            Log::Debug(debugLevelXHCI, DebugLevelVerbose, "[XHCI] Found cap: %d (%x)", cap->capID, cap->capID);
         }
 
         if (!cap->nextCap) {
@@ -375,8 +485,27 @@ void XHCIController::InitializePorts() {
                 if (debugLevelXHCI >= DebugLevelVerbose) {
                     Log::Info("Port %i is enabled!", i);
                 }
+
+                Device* dev = new Device(this);
+                dev->port = i;
+                dev->AllocateSlot();
             }
         }
     }
 }
+
+void XHCIController::Device::AllocateSlot() {
+    assert(port > 0);
+    assert(slot == -1);
+
+    xhci_enable_slot_command_trb_t cmd = {};
+    cmd.trbType = TRBTypeEnableSlotCommand;
+    cmd.slotType = 0;
+
+    auto result = c->commandRing.SendCommand(&cmd);
+
+    auto* cc = reinterpret_cast<xhci_command_completion_event_trb_t*>(&result);
+    Log::Info("[XHCI] Allocated slot: %d", (int)cc->slotID);
+}
+
 } // namespace USB
