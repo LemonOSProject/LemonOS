@@ -325,7 +325,6 @@ protected:
         uint32_t rsvdZ[7]; // Reserved
         xhci_interrupter_t interrupters[];
     } __attribute__((packed)) xhci_runtime_regs_t;
-    static_assert(offsetof(xhci_runtime_regs_t, interrupters) == 0x20);
 
     enum DoorbellTarget {
         DBTargetHostCommand = 0,
@@ -343,7 +342,7 @@ protected:
     }
 
     typedef union {
-        uint64_t doorbell;
+        uint32_t doorbell;
         struct {
             uint32_t target : 8; // 0 for host command ring
             uint32_t rsvdZ : 8;
@@ -654,20 +653,9 @@ protected:
     static_assert(XHCI_TRB_SIZE == sizeof(xhci_setup_trb_t));
     static_assert(XHCI_TRB_SIZE == sizeof(xhci_normal_trb_t));
 
-    struct Port {
+    struct XHCIPort {
         xhci_ext_cap_supported_protocol_t* protocol;
         xhci_port_regs_t* registers;
-    };
-
-    struct Device {
-        XHCIController* c;
-
-        int port = -1;
-        int slot = -1;
-
-        void AllocateSlot();
-
-        ALWAYS_INLINE Device(XHCIController* c) : c(c) {}
     };
 
     struct CommandCompletionEvent {
@@ -678,14 +666,50 @@ protected:
         };
     };
 
-    struct XHCIEventRingSegment {
-        xhci_event_ring_segment_table_entry_t* entry; // Entry given to the xHC
+    struct CommandRing {
+        XHCIController* hcd;
 
-        uint64_t segmentPhys;      // The physical address of the segment itself
-        xhci_event_trb_t* segment; // The segment itself
+        uintptr_t physicalAddr;
+        xhci_trb_t* ring = nullptr;
+        unsigned enqueueIndex = 0;
+        unsigned maxIndex = 0;
+        bool cycleState = 1;
 
-        size_t size; // Segment size in TRB entries
-    };
+        lock_t lock = 0;
+        CommandCompletionEvent* events = nullptr;
+
+        CommandRing(XHCIController* c);
+
+        void SendCommandRaw(void* cmd);
+        xhci_command_completion_event_trb_t SendCommand(void* cmd);
+    } commandRing = CommandRing(this);
+
+    struct EventRingSegment {
+        uintptr_t physicalAddr;
+        xhci_event_trb_t* segment = nullptr;
+
+        uint32_t size;
+    } eventRingSegment;
+
+    struct EventRing {
+        XHCIController* hcd;
+
+        uintptr_t segmentsPhys;
+        xhci_event_ring_segment_table_entry_t* segmentTable;
+        EventRingSegment* segments;
+
+        uint32_t segmentCount = 1;
+        uint32_t dequeueIndex = 0;
+
+        bool cycleState = 1; // Software maintains an Event Ring Consumer Cycle State (CCS) bit, initializing it
+                             // to ‘1’ and toggling it every time the Event Ring Dequeue Pointer wraps back to
+                             // the beginning of the Event Ring. If the Cycle bit of the Event TRB pointed to by
+                             // the Event Ring Dequeue Pointer equals CCS, then the Event TRB is a valid event.
+
+        EventRing(XHCIController* c);
+
+        bool Dequeue(xhci_event_trb_t* outTRB);
+    } eventRing = EventRing(this);
 
     uintptr_t xhciBaseAddress;
     uintptr_t xhciVirtualAddress;
@@ -698,37 +722,9 @@ protected:
     xhci_doorbell_register_t* doorbellRegs;
 
     xhci_interrupter_t* interrupter;
-    uintptr_t eventRingSegmentTablePhys = 0;
-    xhci_event_ring_segment_table_entry_t* eventRingSegmentTable = nullptr;
-
-    unsigned eventRingSegmentTableSize = 0;
-    unsigned eventRingDequeue = 0;
-    XHCIEventRingSegment* eventRingSegments = nullptr;
-    bool eventRingCycleState = true; // Software maintains an Event Ring Consumer Cycle State (CCS) bit, initializing it
-                                     // to ‘1’ and toggling it every time the Event Ring Dequeue Pointer wraps back to
-                                     // the beginning of the Event Ring. If the Cycle bit of the Event TRB pointed to by
-                                     // the Event Ring Dequeue Pointer equals CCS, then the Event TRB is a valid event.
 
     uintptr_t devContextBaseAddressArrayPhys = 0;
     uint64_t* devContextBaseAddressArray = nullptr;
-
-    struct CommandRing {
-        XHCIController* hcd;
-
-        uintptr_t physicalAddr;
-        xhci_trb_t* ring = nullptr;
-        unsigned enqueueIndex = 0;
-        unsigned maxIndex = 0;
-        bool cycleState = 1;
-
-        lock_t lock;
-        CommandCompletionEvent* events = nullptr;
-
-        ALWAYS_INLINE CommandRing(XHCIController* c) : hcd(c) {}
-
-        void SendCommandRaw(void* cmd);
-        xhci_command_completion_event_trb_t SendCommand(void* cmd);
-    } commandRing = CommandRing(this);
 
     uintptr_t scratchpadBuffersPhys = 0;
     uint64_t* scratchpadBuffers = nullptr;
@@ -740,8 +736,7 @@ protected:
     uint8_t controllerIRQ = 0xFF;
     Vector<xhci_ext_cap_supported_protocol_t*> protocols;
 
-    Port* ports;
-    List<Device*> m_devices;
+    XHCIPort* ports;
 
     bool TakeOwnership();
 
