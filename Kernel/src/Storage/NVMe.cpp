@@ -112,7 +112,7 @@ Controller::Controller(const PCIInfo& dev) : PCIDevice(dev) {
             Timer::Wait(1);
 
         if (spin <= 0) {
-            Log::Warning("[NVMe] Controller not disabled! (NVME_CSTS_READY == 1)");
+            Log::Warning("[NVMe] Controller not disabled! Disable it now!!! 🙁 (NVME_CSTS_READY == 1)");
             dStatus = DriverStatus::ControllerError;
             return;
         }
@@ -121,7 +121,7 @@ Controller::Controller(const PCIInfo& dev) : PCIDevice(dev) {
     // memset(cRegs, 0, sizeof(Registers));
 
     if (GetMinMemoryPageSize() > PAGE_SIZE_4K || GetMaxMemoryPageSize() < PAGE_SIZE_4K) {
-        Log::Error("[NVMe] Error: Controller does not support 4K pages");
+        Log::Error("[NVMe] Error: Controller does not support 4K pages :(");
         return;
     }
 
