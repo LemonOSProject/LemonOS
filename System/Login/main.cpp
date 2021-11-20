@@ -38,7 +38,7 @@ void OnOKPress(__attribute__((unused)) Lemon::GUI::Button* b){
 		if(user.hash.compare(passwordHash.GetHash())){
 			char buf[128];
 			printf("Actual hash: %s, inserted hash: %s\n", user.hash.c_str(), passwordHash.GetHash().c_str());
-			snprintf(buf, 128, "Incorrect password for '%s'!", usernameBox->contents.front().c_str());
+			snprintf(buf, 128, "password for '%s'! is not correct. Try again", usernameBox->contents.front().c_str());
 			Lemon::GUI::DisplayMessageBox("Incorrect Password", buf);
 			return;
 		}
@@ -55,7 +55,7 @@ void OnOKPress(__attribute__((unused)) Lemon::GUI::Button* b){
 	} else {
 		char buf[128];
 		snprintf(buf, 128, "Unknown user '%s'", usernameBox->contents.front().c_str());
-		Lemon::GUI::DisplayMessageBox("Invalid Username", buf);
+		Lemon::GUI::DisplayMessageBox("Illegal Username 😒", buf);
 		return;
 	}
 }
