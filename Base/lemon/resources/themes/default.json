@@ -2,7 +2,7 @@
     "colours" : {
         "activeWindow" : "#ff222022",
         "activeWindowText" : "#ffeeeeee",
-        "inactiveWindow" : "#ff222022",
+        "inactiveWindow" : "#808080",
         "inactiveWindowText" : "#ffeeeeee",
         "background" : "#ff2d2a2e",
         "containerBackground" : "#ff282629",
