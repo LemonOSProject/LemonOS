@@ -46,7 +46,7 @@ class MinesweeperGame : public Lemon::GUI::Widget{
         }
 
         window->Paint();
-        Lemon::GUI::DisplayMessageBox("Minesweeper", "Game Over!");
+        Lemon::GUI::DisplayMessageBox("Minesweeper", "You Lost!");
 
         Generate(difficulty);
     }
