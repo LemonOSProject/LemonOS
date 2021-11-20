@@ -54,8 +54,8 @@ void OnOKPress(__attribute__((unused)) Lemon::GUI::Button* b){
 		exit(0);
 	} else {
 		char buf[128];
-		snprintf(buf, 128, "Unknown user '%s'", usernameBox->contents.front().c_str());
-		Lemon::GUI::DisplayMessageBox("Illegal Username 😒", buf);
+		snprintf(buf, 128, "Unknown user :O '%s'", usernameBox->contents.front().c_str());
+		Lemon::GUI::DisplayMessageBox("Unusable Username 😒", buf);
 		return;
 	}
 }
