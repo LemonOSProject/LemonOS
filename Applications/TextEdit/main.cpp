@@ -28,7 +28,7 @@ void LoadFile(const char* path){
 	FILE* textFile = fopen(path, "r");
 
 	if(!textFile){
-		Lemon::GUI::DisplayMessageBox("Text Editor", "Failed to open file!", Lemon::GUI::MsgButtonsOK);
+		Lemon::GUI::DisplayMessageBox("Text Editor", "The System Failed to open file!", Lemon::GUI::MsgButtonsOK);
 		return;
 	}
 
@@ -49,7 +49,7 @@ void LoadFile(const char* path){
 	openPath = path;
 
 	char title[32 + openPath.length()];
-	sprintf(title, "Text Editor: %s", openPath.c_str());
+	sprintf(title, "Text zFile Editor: %s", openPath.c_str());
 
 	window->SetTitle(title);
 }
@@ -63,14 +63,14 @@ void SaveFile(const char* path){
 	}
 
 	if(S_ISDIR(sResult.st_mode)){
-		Lemon::GUI::DisplayMessageBox("Text Editor", "File is a directory!", Lemon::GUI::MsgButtonsOK);
+		Lemon::GUI::DisplayMessageBox("Text Editor", "File is a folder!", Lemon::GUI::MsgButtonsOK);
 		return;
 	}
 
 	FILE* textFile = fopen(path, "w");
 
 	if(!textFile){
-		Lemon::GUI::DisplayMessageBox("Text Editor", "Failed to open file for writing!", Lemon::GUI::MsgButtonsOK);
+		Lemon::GUI::DisplayMessageBox("Text Editor", "Failed to open file for writing! disable write protection", Lemon::GUI::MsgButtonsOK);
 		return;
 	}
 
@@ -100,7 +100,7 @@ void SaveFileAs(){
 	char* filePath = Lemon::GUI::FileDialog(".", FILE_DIALOG_CREATE);
 
 	if(!filePath){
-		Lemon::GUI::DisplayMessageBox("Message", "Invalid filepath!", Lemon::GUI::MsgButtonsOK);
+		Lemon::GUI::DisplayMessageBox("Error!", "Invalid filepath!", Lemon::GUI::MsgButtonsOK);
 		return;
 	}
 
