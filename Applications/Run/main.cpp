@@ -67,7 +67,7 @@ void Run(){
 err:
     char buf[512];
     snprintf(buf, 512, "Failed to run '%s'", args.front());
-    Lemon::GUI::DisplayMessageBox("Failed to run!", buf);
+    Lemon::GUI::DisplayMessageBox("Failed to execute the app!", buf);
 
     for(char* s : args){
         free(s);
