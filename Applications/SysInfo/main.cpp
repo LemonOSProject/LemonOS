@@ -26,7 +26,7 @@ int main(int argc, char** argv){
 
     int winWidth = (banner.width > 200) ? banner.width : 200; 
 
-    window = new Lemon::GUI::Window("System Information", {winWidth, 300}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
+    window = new Lemon::GUI::Window("Computer Information", {winWidth, 300}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
     window->AddWidget(bannerW);
 
     int ypos = banner.height + 4;
