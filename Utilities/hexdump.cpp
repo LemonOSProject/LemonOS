@@ -37,7 +37,7 @@ int main(int argc, char** argv){
         FILE* f = fopen(argv[i], "rb");
 
         if(!f){
-            fprintf(stderr, "Failed to open %s for reading: %s", argv[i], strerror(errno));
+            fprintf(stderr, "The System Failed to open %s for reading: %s", argv[i], strerror(errno));
             return 1;
         }
 
