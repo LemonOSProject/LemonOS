@@ -37,7 +37,7 @@ jobs:
 
       - name: Get hash of latest llvm-project commit
         run: |
-          git ls-remote https://github.com/fido2020/llvm-project.git | head -1 > llvm-hash.txt
+          git ls-remote https://github.com/LemonOSProject/llvm-project.git | head -1 > llvm-hash.txt
           echo "Commit Hash:"
           cat llvm-hash.txt
 
@@ -48,11 +48,9 @@ jobs:
             **/Toolchain/
             !**/Toolchain/*.sh
             !**/Toolchain/*.patch
-          key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}-${{ hashFiles('**/Toolchain/buildtoolchain.sh') }}-${{ hashFiles('**/Toolchain/lemon-binutils-2.32.patch') }}
+          key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('**/Toolchain/buildtoolchain.sh') }}-${{ hashFiles('llvm-hash.txt') }}-${{ hashFiles('**/Toolchain/lemon-binutils-2.32.patch') }}
           restore-keys: |
-            ${{ runner.os }}-lemon-toolchain-
-            ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}-
-            ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}-${{ hashFiles('**/Toolchain/buildtoolchain.sh', '**/Toolchain/lemon-binutils-2.32.patch') }}
+            ${{ runner.os }}-lemon-toolchain-${{ hashFiles('**/Toolchain/buildtoolchain.sh') }}-${{ hashFiles('llvm-hash.txt') }}-${{ hashFiles('**/Toolchain/lemon-binutils-2.32.patch') }}
 
       - name: Build the toolchain
         run: Toolchain/buildtoolchain.sh build
