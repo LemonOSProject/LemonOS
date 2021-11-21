@@ -49,7 +49,7 @@ void LoadFile(const char* path){
 	openPath = path;
 
 	char title[32 + openPath.length()];
-	sprintf(title, "Text zFile Editor: %s", openPath.c_str());
+	sprintf(title, "Text File Editor: %s", openPath.c_str());
 
 	window->SetTitle(title);
 }
