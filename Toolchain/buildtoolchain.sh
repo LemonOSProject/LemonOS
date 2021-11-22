@@ -43,6 +43,8 @@ _build_binutils(){
     
     make -j $JOBCOUNT
     make install
+
+    ln -sf x86_64-lemon-ld $TOOLCHAIN_PREFIX/bin/x86_64-unknown-lemon-ld
 }
 
 _build_llvm(){

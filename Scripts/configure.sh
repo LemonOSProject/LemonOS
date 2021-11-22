@@ -1,11 +1,5 @@
-SPATH=$(dirname $(readlink -f "$0"))
-export LEMOND="$SPATH/.."
-
-if [ -z "$LEMON_SYSROOT" ]; then
-    export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
-fi
-
 export TOOLCHAIN_PATH="$HOME/.local/share/lemon/bin"
+SPATH=$(dirname $(readlink -f "$0"))
 source $SPATH/env.sh
 
 if ! [ -x "$(command -v lemon-clang)" ]; then
@@ -13,7 +7,7 @@ if ! [ -x "$(command -v lemon-clang)" ]; then
     exit 1
 fi
 
-set -e
+set -e 1
 
 mkdir -p $HOME/.local/share/lemon/sysroot/system/lib
 mkdir -p $HOME/.local/share/lemon/sysroot/system/include
@@ -21,9 +15,6 @@ mkdir -p $HOME/.local/share/lemon/sysroot/system/bin
 
 ln -sfT ../../../include/c++ $HOME/.local/share/lemon/sysroot/system/include/c++
 cp $HOME/.local/share/lemon/lib/x86_64-unknown-lemon/*.so* $HOME/.local/share/lemon/sysroot/system/lib
-
-cd $SPATH
-$SPATH/libc.sh
 
 cd $SPATH/..
 
@@ -45,11 +36,16 @@ endian = 'little'
 [built-in options]
 prefix = '$HOME/.local/share/lemon/sysroot/system'" > $SPATH/lemon-crossfile.txt
 
-meson Build --cross $SPATH/lemon-crossfile.txt
-$SPATH/buildinterfaces.sh
+cd $SPATH
+$SPATH/libc.sh
 
-cd "$LEMOND/Ports"
+cd "$LEMON_BUILDROOT/Ports"
 ./buildport.sh zlib
 ./buildport.sh libpng
 ./buildport.sh freetype
 ./buildport.sh libressl
+
+cd $SPATH/..
+
+meson Build --cross $SPATH/lemon-crossfile.txt
+$SPATH/buildinterfaces.sh
