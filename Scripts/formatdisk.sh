@@ -31,6 +31,7 @@ trap 'cleanup2' 1
 mkdir -p /mnt/LemonEFI/EFI/BOOT
 if [ ! -z "$USE_GRUB_EFI" ]; then
     grub-install --target=x86_64-efi --boot-directory=/mnt/Lemon/lemon/boot --efi-directory=/mnt/LemonEFI "${LOOPBACK_DEVICE}" --removable
+    echo ".\EFI\BOOT\BOOTX64.EFI" > /mnt/LemonEFI/startup.nsh
 elif [ -e "$HOME/.local/share/lemon/share/limine/BOOTX64.EFI" ]; then
     cp "$HOME/.local/share/lemon/share/limine/BOOTX64.EFI" /mnt/LemonEFI/EFI/BOOT/
     cp "$HOME/.local/share/lemon/share/limine/limine.sys" /mnt/Lemon/

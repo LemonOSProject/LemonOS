@@ -8,9 +8,9 @@ export LEMON_BUILDROOT=$(readlink -f -- $(dirname $(readlink -f -- "$0"))/..)
 export PKG_CONFIG="$LEMON_BUILDROOT/Scripts/pkg-config"
 export PATH="$PATH:$HOME/.local/share/lemon/bin"
 
+export LD=x86_64-lemon-ld
 export CC=lemon-clang
 export CXX=lemon-clang++
-#export CFLAGS=-Wno-error
 export LEMON_PREFIX=/system
 
 WORKING_DIR=$(pwd)
@@ -20,7 +20,7 @@ mkdir -p cache
 . ./$1.sh
 
 if [ "$2" != build ]; then
-    unpack 
+    unpack
 fi
 
 if [ "$2" != unpack ]; then

@@ -6,7 +6,8 @@ RUN cd /root && curl https://raw.githubusercontent.com/fido2020/Lemon-OS/master/
 
 RUN /root/buildtoolchain.sh prepare
 RUN /root/buildtoolchain.sh binutils
-RUN /root/buildtoolchain.sh llvm JOBCOUNT=5 CC=gcc CXX=g++
+RUN /root/buildtoolchain.sh llvm CC=gcc CXX=g++
+RUN /root/buildtoolchain.sh limine
 RUN if [ ! -f "/root/.local/share/lemon/bin/clang" ]; then ninja -C /root/llvm-project/build install; fi && ln -sf /root/.local/share/lemon/bin/clang /root/.local/share/lemon/bin/lemon-clang && ln -sf /root/.local/share/lemon/bin/clang++ /root/.local/share/lemon/bin/lemon-clang++ && ln -sf ../../include/c++ /root/.local/share/lemon/sysroot/system/include/c++
 
 RUN apk del g++ && /root/buildtoolchain.sh clean && python3 -m ensurepip --default-pip && python3 -m pip install meson && chmod -R a+rx /root
