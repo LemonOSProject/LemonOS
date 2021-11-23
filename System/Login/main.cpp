@@ -39,7 +39,7 @@ void OnOKPress(__attribute__((unused)) Lemon::GUI::Button* b){
 			char buf[128];
 			printf("Actual hash: %s, inserted hash: %s\n", user.hash.c_str(), passwordHash.GetHash().c_str());
 			snprintf(buf, 128, "password for '%s'! is not correct. Try again", usernameBox->contents.front().c_str());
-			Lemon::GUI::DisplayMessageBox("Incorrect Password", buf);
+			Lemon::GUI::DisplayMessageBox("Password Wrong", buf);
 			return;
 		}
 

@@ -1,2 +1,2 @@
 Lemon::GUI::Window* window;
-Lemon::GUI::DisplayMessageBox("Credits", "me (LoL), you (contribute!)", Lemon::GUI::MsgButtonsOK);
+Lemon::GUI::DisplayMessageBox("Credits", "Frank, you (contribute!), fido2020 (original creator of LemonOS)", Lemon::GUI::MsgButtonsOK);
