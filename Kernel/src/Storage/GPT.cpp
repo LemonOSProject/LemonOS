@@ -21,9 +21,9 @@ int Parse(DiskDevice* disk) {
     }
 
     if (debugLevelPartitions >= DebugLevelNormal) {
-        Log::Info("Found GPT Header Partitions: ");
+        Log::Info("Found GPT Partitions: ");
         Log::Write(header->partNum);
-        Log::Write(" Entry Size:");
+        Log::Write(" Partition Size:");
         Log::Write(header->partEntrySize);
     }
 
