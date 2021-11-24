@@ -7,10 +7,10 @@
 
 #include "interfacec.h"
 
-std::vector<Token> tokens;
+std::vector<Code> Codes;
 std::vector<std::shared_ptr<Statement>> statements;
 
-void BuildTokens(std::string& input){
+void BuildCodes(std::string& input){
     int lineNum = 1;
     int linePos = 0;
 
@@ -21,7 +21,7 @@ void BuildTokens(std::string& input){
 
         auto appendIdentifier = [lineNum, linePos](std::string& buf) { 
             if(buf.length()){
-                tokens.push_back(Token(lineNum, linePos, TokenIdentifier, buf));
+                Codes.push_back(Code(lineNum, linePos, CodeIdentifier, buf));
                 buf.clear();
             }
         };
@@ -30,38 +30,38 @@ void BuildTokens(std::string& input){
         {   
         case ',':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, linePos, TokenComma));
+            Codes.push_back(Code(lineNum, linePos, CodeComma));
             break;
         case ')':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, linePos, TokenRightParens));
+            Codes.push_back(Code(lineNum, linePos, CodeRightParens));
             break;
         case '(':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, linePos, TokenLeftParens));
+            Codes.push_back(Code(lineNum, linePos, CodeLeftParens));
             break;
         case '}':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, linePos, TokenRightBrace));
+            Codes.push_back(Code(lineNum, linePos, CodeRightBrace));
             break;
         case '{':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, linePos, TokenLeftBrace));
+            Codes.push_back(Code(lineNum, linePos, CodeLeftBrace));
             break;
         case '\n':
             appendIdentifier(buf);
-            tokens.push_back(Token(lineNum, linePos, TokenEndline));
+            Codes.push_back(Code(lineNum, linePos, CodeEndline));
             lineNum++;
             linePos = 0;
             break;
         case '-':
             appendIdentifier(buf);
 
-            if(*(it + 1) == '>'){ // Response token is '->' so look ahead by one character
-                tokens.push_back(Token(lineNum, linePos, TokenResponse));
+            if(*(it + 1) == '>'){ // Response Code is '->' so look ahead by one character
+                Codes.push_back(Code(lineNum, linePos, CodeResponse));
                 it++;
             } else {
-                printf("error: [line %d:%d] Unsupported character '%c'\n", lineNum, linePos, c);
+                printf("error: [line %d:%d] Unsupported  Unicode character '%c'\n", lineNum, linePos, c);
                 exit(2);
             }
             break;
@@ -72,18 +72,18 @@ void BuildTokens(std::string& input){
             if(isalnum(c) || c == '_'){ // Must match 0-9A-Za-z_
                 buf += c;
             } else {
-                printf("error: [line %d:%d] Unsupported character '%c'\n", lineNum, linePos, c);
+                printf("error: [line %d:%d] Unsupported character! '%c'\n", lineNum, linePos, c);
                 exit(2);
             }
             break;
         }
     }
 
-    for(Token& tok : tokens){
-        if(tok.type == TokenIdentifier){
-            for(auto keyword : keywordTokens){
+    for(Code& tok : Codes){
+        if(tok.type == CodeIdentifier){
+            for(auto keyword : keywordCodes){
                 if(!tok.value.compare(keyword)){
-                    tok.type = TokenKeyword;
+                    tok.type = CodeKeyword;
                     break;
                 }
             }
@@ -92,22 +92,22 @@ void BuildTokens(std::string& input){
 }
 
 // interface IDENTIFIER {
-std::shared_ptr<InterfaceDeclarationStatement> ParseInterfaceDeclarationStatement(std::vector<Token>::iterator& it){
+std::shared_ptr<InterfaceDeclarationStatement> ParseInterfaceDeclarationStatement(std::vector<Code>::iterator& it){
     std::string ifName = "";
 
-    Token& nameTok = *it;
+    Code& nameTok = *it;
 
-    if(nameTok.type != TokenIdentifier){
-        printf("error: [line %d:%d] Invalid token '%s'\n", nameTok.lineNum, nameTok.linePos, tokenNames[nameTok.type].c_str());
+    if(nameTok.type != CodeIdentifier){
+        printf("error: [line %d:%d] Invalid Code '%s'\n", nameTok.lineNum, nameTok.linePos, CodeNames[nameTok.type].c_str());
         exit(4);
     }
 
     ifName = nameTok.value;
 
-    Token& enterTok = *(++it);
+    Code& enterTok = *(++it);
 
-    if(enterTok.type != TokenLeftBrace){
-        printf("error: [line %d:%d] Invalid token '%s'\n", nameTok.lineNum, nameTok.linePos, tokenNames[nameTok.type].c_str());
+    if(enterTok.type != CodeLeftBrace){
+        printf("error: [line %d:%d] Invalid Code '%s'\n", nameTok.lineNum, nameTok.linePos, CodeNames[nameTok.type].c_str());
         exit(4);
     }
 
@@ -115,48 +115,48 @@ std::shared_ptr<InterfaceDeclarationStatement> ParseInterfaceDeclarationStatemen
 }
 
 // (TYPE IDENTIFIER, ...)
-ParameterList ParseParameterListStatement(const std::vector<Token>::iterator& end, std::vector<Token>::iterator& it){
+ParameterList ParseParameterListStatement(const std::vector<Code>::iterator& end, std::vector<Code>::iterator& it){
     std::vector<std::pair<Type, std::string>> parameters;
 
     while(it != end){
-        Token tok = *(it++);
+        Code tok = *(it++);
         Type type;
 
-        if(tok.type == TokenIdentifier && IsType(tok.value)){ // Check if the token is a typename
+        if(tok.type == CodeIdentifier && IsType(tok.value)){ // Check if the Code is a typename
             type = types.at(tok.value);
-        } else if(tok.type == TokenRightParens) { // Check if list is beign terminated
+        } else if(tok.type == CodeRightParens) { // Check if list is beign terminated
             return ParameterList(parameters);
-        } else if(tok.type == TokenEndline) {
+        } else if(tok.type == CodeEndline) {
             continue; // Eat line ending
         } else {
             printf("error: [line %d:%d] Invalid type '%s'!", tok.lineNum, tok.linePos, tok.value.c_str());
             exit(4);
         }
 
-        Token idTok = *(it++);
-        while(it != end && idTok.type == TokenEndline) idTok = *(it++); // Eat line endings
+        Code idTok = *(it++);
+        while(it != end && idTok.type == CodeEndline) idTok = *(it++); // Eat line endings
 
-        if(idTok.type != TokenIdentifier){
-            printf("error: [line %d:%d] Unexpected token '%s', expected identifier!", idTok.lineNum, idTok.linePos, tokenNames[idTok.type].c_str());
+        if(idTok.type != CodeIdentifier){
+            printf("error: [line %d:%d] Unexpected code '%s', expected identifier!", idTok.lineNum, idTok.linePos, CodeNames[idTok.type].c_str());
             exit(4);
         }
 
-        Token nextTok = *(it++);
-        while(it != end && nextTok.type == TokenEndline) nextTok = *(it++); // Eat line endings
+        Code nextTok = *(it++);
+        while(it != end && nextTok.type == CodeEndline) nextTok = *(it++); // Eat line endings
 
-        if(nextTok.type == TokenComma){
+        if(nextTok.type == CodeComma){
             parameters.push_back({type, idTok.value});
             continue;
-        } else if(nextTok.type == TokenRightParens) { // Check if list is beign terminated
+        } else if(nextTok.type == CodeRightParens) { // Check if list is beign terminated
             parameters.push_back({type, idTok.value});
             return ParameterList(parameters);
         } else {
-            printf("error: [line %d:%d] Unexpected token '%s'!", nextTok.lineNum, nextTok.linePos, tokenNames[nextTok.type].c_str());
+            printf("error: [line %d:%d] Unexpected code '%s'!", nextTok.lineNum, nextTok.linePos, CodeNames[nextTok.type].c_str());
             exit(4);
         }
     }
     
-    printf("error: Unterminated parameter list!");
+    printf("error: Unterminated parameter list! (if you are a end user, wait for a patch)");
     exit(4);
 }
 
@@ -165,15 +165,15 @@ void Parse(){
 
     states.push(ParserState(ParserStateRoot));
 
-    auto it = tokens.begin();
-    while(it != tokens.end()){
-        Token& tok = *it;
+    auto it = Codes.begin();
+    while(it != Codes.end()){
+        Code& tok = *it;
         ParserState pState = states.top();
 
         switch(pState.state){
         case ParserStateRoot:
             switch(tok.type){
-            case TokenKeyword: {
+            case CodeKeyword: {
                 KeywordType kw = keywords.at(tok.value); // Get keyword id
 
                 if(kw == KeywordInterface){
@@ -187,30 +187,30 @@ void Parse(){
                     exit(3);
                 }
                 break;
-            } case TokenEndline:
+            } case CodeEndline:
                 it++;
                 continue;
             default:
-                printf("error: [line %d:%d] Unexpected token '%s'!", tok.lineNum, tok.linePos, tokenNames[tok.type].c_str());
+                printf("error: [line %d:%d] Unexpected code '%s'!", tok.lineNum, tok.linePos, CodeNames[tok.type].c_str());
                 exit(3);
                 continue;
             } 
             break;
         case ParserStateInterface:
             switch(tok.type){
-            case TokenIdentifier: {
-                Token next = *(++it);
+            case CodeIdentifier: {
+                Code next = *(++it);
 
-                if(next.type == TokenLeftParens){ // Parse parameter list
-                    ParameterList pList = ParseParameterListStatement(tokens.end(), ++it);
+                if(next.type == CodeLeftParens){ // Parse parameter list
+                    ParameterList pList = ParseParameterListStatement(Codes.end(), ++it);
 
-                    Token response = *(it++);
-                    if(response.type == TokenResponse){
+                    Code response = *(it++);
+                    if(response.type == CodeResponse){
                         // Synchronous method
-                        if(it->type == TokenLeftParens){ // Check for return parameters
+                        if(it->type == CodeLeftParens){ // Check for return parameters
                             it++;
 
-                            ParameterList rPList = ParseParameterListStatement(tokens.end(), it);
+                            ParameterList rPList = ParseParameterListStatement(Codes.end(), it);
 
                             std::shared_ptr method = std::shared_ptr<SynchronousMethod>(new SynchronousMethod(tok.value));
                             method->parameters = pList;
@@ -226,7 +226,7 @@ void Parse(){
                             auto ifStatement = std::dynamic_pointer_cast<InterfaceDeclarationStatement, Statement>(states.top().statement);
                             ifStatement->children.push_back(std::static_pointer_cast<Statement, SynchronousMethod>(method));
                         }
-                    } else if(response.type == TokenEndline){ // New method on a new line
+                    } else if(response.type == CodeEndline){ // New method on a new line
                         // Asynchronous method
                         std::shared_ptr method = std::shared_ptr<ASynchronousMethod>(new ASynchronousMethod(tok.value));
                         method->parameters = pList;
@@ -234,15 +234,15 @@ void Parse(){
                         auto ifStatement = std::dynamic_pointer_cast<InterfaceDeclarationStatement, Statement>(states.top().statement);
                         ifStatement->children.push_back(std::static_pointer_cast<Statement, ASynchronousMethod>(method));
                     } else {
-                        printf("error: [line %d] Unexpected token '%s'!", tok.lineNum, tokenNames[tok.type].c_str());
+                        printf("error: [line %d] Unexpected Code '%s'!", tok.lineNum, CodeNames[tok.type].c_str());
                         exit(3);
                     }
                 } else {
-                    printf("error: [line %d] Unexpected token '%s'!", tok.lineNum, tokenNames[tok.type].c_str());
+                    printf("error: [line %d] Unexpected Code '%s'!", tok.lineNum, CodeNames[tok.type].c_str());
                     exit(3);
                 }
                 break;
-            } case TokenRightBrace: {
+            } case CodeRightBrace: {
                 auto ifStatement = std::dynamic_pointer_cast<InterfaceDeclarationStatement, Statement>(states.top().statement);
 
                 statements.push_back(ifStatement);
@@ -251,11 +251,11 @@ void Parse(){
 
                 it++;
                 break;
-            } case TokenEndline: { // Ignore Line Endings
+            } case CodeEndline: { // Ignore Line Endings
                 it++;
                 break;
             } default:
-                printf("error: [line %d] Unexpected token '%s'!", tok.lineNum, tokenNames[tok.type].c_str());
+                printf("error: [line %d] Unexpected Code '%s'!", tok.lineNum, CodeNames[tok.type].c_str());
                 exit(3);
                 break;
             }
@@ -630,7 +630,7 @@ int main(int argc, char** argv){
 
     fread(&input.front(), 1, inputSz, inputFile);
 
-    BuildTokens(input);
+    BuildCodes(input);
 
     Parse();
 
