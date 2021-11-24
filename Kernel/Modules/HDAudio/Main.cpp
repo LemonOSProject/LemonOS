@@ -78,7 +78,7 @@ namespace Audio {
 		cRegs->globalControl = 1; // Set CRST bit to leave reset mode
 		while(!(cRegs->globalControl & 0x1));
 
-		Log::Info("[HDAudio] Initializing Intel HD Audio Controller (Base: %x, Virtual Base: %x, Global Control: %x)", bar, cRegs, cRegs->globalControl);
+		Log::Info("[HDAudio] Creating Intel HD Audio Controller (Base: %x, Virtual Base: %x, Global Control: %x)", bar, cRegs, cRegs->globalControl);
 	}
 
 	int ModuleInit(){
@@ -110,5 +110,5 @@ namespace Audio {
 		return 0;
 	}
 
-	DECLARE_MODULE("hdaudio", "Intel HD Audio Controller Driver", ModuleInit, ModuleExit);
+	DECLARE_MODULE("hdaudio", "Intel High Definition Audio Controller Driver", ModuleInit, ModuleExit);
 }
