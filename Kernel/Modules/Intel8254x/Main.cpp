@@ -98,7 +98,7 @@ void Intel8254x::OnInterrupt() {
     uint32_t status = ReadMem32(I8254_REGISTER_INT_READ);
 
     if (status & 0x4) {
-        Log::Info("[i8254x] Initializing Link...");
+        Log::Info("[i8254x] Making Links...");
 
         WriteMem32(I8254_REGISTER_CTRL, ReadMem32(I8254_REGISTER_CTRL) | CTRL_SLU | CTRL_ASDE);
 
