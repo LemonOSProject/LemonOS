@@ -59,7 +59,7 @@ FsVolume* Ext2::Mount(FsNode* device, const char* name) {
     return vol;
 }
 
-FsVolume* Ext2::Unmount(FsVolume* volume) { assert(!"Ext2::Unmount is a stub!"); }
+FsVolume* Ext2::Unmount(FsVolume* volume) { assert(!"Ext2::Unmount is not good!"); }
 
 int Ext2::Identify(FsNode* device) {
     struct {
@@ -81,7 +81,7 @@ Ext2::Ext2Volume::Ext2Volume(FsNode* device, const char* name) {
     assert(device->IsCharDevice() || device->IsBlockDevice());
 
     if (fs::Read(m_device, EXT2_SUPERBLOCK_LOCATION, sizeof(ext2_superblock_t), &super) != sizeof(ext2_superblock_t)) {
-        Log::Error("[Ext2] Disk Error Initializing Volume");
+        Log::Error("[Ext2] Disk Error Making Disk Partition");
         error = DiskReadError;
         return; // Disk Error
     }
@@ -89,7 +89,7 @@ Ext2::Ext2Volume::Ext2Volume(FsNode* device, const char* name) {
     if (super.revLevel) { // If revision level >= 0 grab the extended superblock as well
         if (fs::Read(m_device, EXT2_SUPERBLOCK_LOCATION, sizeof(ext2_superblock_t) + sizeof(ext2_superblock_extended_t),
                      &super) != sizeof(ext2_superblock_t) + sizeof(ext2_superblock_extended_t)) {
-            Log::Error("[Ext2] Disk Error Initializing Volume");
+            Log::Error("[Ext2] Disk Error Making Volume");
             error = DiskReadError;
             return; // Disk Error
         }
@@ -98,7 +98,7 @@ Ext2::Ext2Volume::Ext2Volume(FsNode* device, const char* name) {
             (superext.featuresRoCompat & (~EXT2_READONLY_FEATURE_SUPPORT)) !=
                 0) { // Check support for incompatible/read-only compatible features
             Log::Error(
-                "[Ext2] Incompatible Ext2 features present (Incompt: %x, Read-only Compt: %x). Will not mount volume.",
+                "[Ext2] Incompatible Ext2 features present (Incompt: %x, Read-only Compt: %x). Will not show volume.",
                 superext.featuresIncompat, superext.featuresRoCompat);
             error = IncompatibleError;
             return;
@@ -143,7 +143,7 @@ Ext2::Ext2Volume::Ext2Volume(FsNode* device, const char* name) {
         inodeSize = 128;
     }
 
-    Log::Info("[Ext2] Initializing Volume\tRevision: %d, Block Size: %d, %d KB/%d KB used, Last mounted on: %s",
+    Log::Info("[Ext2] Making Volume\tRevision: %d, Block Size: %d, %d KB/%d KB used, Last mounted on: %s",
               super.revLevel, blocksize, super.freeBlockCount * blocksize / 1024, super.blockCount * blocksize / 1024,
               superext.lastMounted);
 
@@ -161,14 +161,14 @@ Ext2::Ext2Volume::Ext2Volume(FsNode* device, const char* name) {
 
     if (fs::Read(m_device, blockGroupOffset, blockGroupCount * sizeof(ext2_blockgrp_desc_t), blockGroups) !=
         blockGroupCount * sizeof(ext2_blockgrp_desc_t)) {
-        Log::Error("[Ext2] Disk Error Initializing Volume");
+        Log::Error("[Ext2] Disk Error Making Volume");
         error = DiskReadError;
         return; // Disk Error
     }
 
     ext2_inode_t root;
     if (ReadInode(EXT2_ROOT_INODE_INDEX, root)) {
-        Log::Error("[Ext2] Disk Error Initializing Volume");
+        Log::Error("[Ext2] Disk Error Making Volume");
         error = DiskReadError;
         return;
     }
@@ -264,7 +264,7 @@ uint32_t Ext2::Ext2Volume::GetInodeBlock(uint32_t index, ext2_inode_t& ino) {
 
         return buffer[(index - doublyIndirectStart) % blocksPerPointer];
     } else {
-        assert(!"Yet to support triply indirect");
+        assert(!"Yet to support triply indirect. Stay up-to-date with updates!");
         return 0;
     }
 }
