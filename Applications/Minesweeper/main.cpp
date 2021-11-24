@@ -255,7 +255,7 @@ enum {
     MenuHard,
 };
 
-Lemon::GUI::WindowMenu gameMenu = {{"Game"}, {{MenuEasy, "Play Easy"}, {MenuMedium, "Play Medium"}, {MenuHard, "Play Hard"}}};
+Lemon::GUI::WindowMenu gameMenu = {{"Game"}, {{MenuEasy, "Play Hardcore"}, {MenuMedium, "Play Insane"}, {MenuHard, "Play Impossible"}}};
 
 void UpdateWindowSize(){ // Update window size according to the map size
     vector2i_t mapSize = difficultySizes[game.GetDifficulty()];
