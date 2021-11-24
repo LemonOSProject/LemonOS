@@ -25,7 +25,7 @@ Window::Window(const char* title, vector2i_t size, uint32_t flags, int type, vec
     server->RegisterWindow(this);
 
     if (m_windowBufferKey <= 0) {
-        printf("[LibLemon] Warning: Window::Window: Failed to obtain window buffer!\n");
+        printf("[LibLemon] Warning: Window::Window: Failed to find window buffer!\n");
         return;
     }
 
