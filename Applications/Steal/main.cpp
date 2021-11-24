@@ -200,7 +200,7 @@ int RecieveResponse(IOObject* sock, HTTPResponse& response){
     if(ret == 0){
         return 12; // Unexpected
     } else if(ret < 0) {
-        printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
+        printf("Browser: Error (%i) recieving data: %s\n", errno, strerror(errno));
         return 12;
     }
 
@@ -223,9 +223,9 @@ Accept-Encoding: identity\r\n\
 
         if(ssize_t len = sock->Write(request, reqLength); len != reqLength){
             if(len < 0){
-                perror("steal: Failed to send data");
+                perror("browser: Failed to send data");
             } else {
-                printf("steal: Failed to send all %i bytes (only sent %li).\n", reqLength, len);
+                printf("browser: Failed to send all %i bytes (only sent %li).\n", reqLength, len);
             }
 
             return 11;
@@ -260,7 +260,7 @@ Accept-Encoding: identity\r\n\
             transferEncoding = TransferNormal;
         } else {
             transferEncoding = TransferUnknown;
-            printf("steal: Unknown transfer encoding '%s'.\n", it->second.c_str());
+            printf("browser: Unknown transfer encoding '%s'.\n", it->second.c_str());
             return 21;
         }
     }
@@ -271,7 +271,7 @@ Accept-Encoding: identity\r\n\
 
     if(transferEncoding == TransferNormal){
         if(contentLength <= 0){
-            printf("steal: Content length not specified and transfer encoding is not 'chunked'.\n");
+            printf("browser: Content length not specified and transfer encoding is not 'chunked'.\n");
             return 22;
         }
 
@@ -285,7 +285,7 @@ Accept-Encoding: identity\r\n\
 
             ssize_t len = sock->Read(receiveBuffer, readSize);
             if(len < 0){
-                printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
+                printf("browser: Error (%i) recieving data: %s\n", errno, strerror(errno));
                 return 12;
             }
 
@@ -318,7 +318,7 @@ Accept-Encoding: identity\r\n\
             while(1){
                 int c = getSocketChar();
                 if(c <= 0){ // Read error
-                    printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
+                    printf("browser: Error (%i) recieving data: %s\n", errno, strerror(errno));
                     return 12;
                 } else if(c == '\r'){ // Ignore carriage return
                     continue;
@@ -328,16 +328,16 @@ Accept-Encoding: identity\r\n\
                     }
                     break;
                 } else if(c == ';'){ // Marks start of extra information
-                    fprintf(stderr, "steal: Warning: Ignoring extra chunk information.\n"); // We don't care about the extra chunk information 
+                    fprintf(stderr, "browser: Warning: Ignoring extra chunk information.\n"); // We don't care about the extra chunk information 
                     while((c = getSocketChar()) != '\n'){ // Discard everything until newline
                         if(c <= 0){
-                            printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
+                            printf("browser: Error (%i) recieving data: %s\n", errno, strerror(errno));
                             return 12;
                         }
                     }
                     break;
                 } else if(bufIndex >= 32){
-                    printf("steal: Error: chunk size field >= 32 characters\n");
+                    printf("browser: Error: chunk size field >= 32 characters\n");
                     return 23;
                 } else {
                     buf[bufIndex++] = c;
@@ -361,7 +361,7 @@ Accept-Encoding: identity\r\n\
             while(received < chunkSize){
                 ssize_t ret = sock->Read(recieveBuffer + received, chunkSize - received);
                 if(ret <= 0){
-                    printf("steal: Error (%i) recieving data: %s\n", errno, strerror(errno));
+                    printf("browser: Error (%i) recieving data: %s\n", errno, strerror(errno));
                     return 12;
                 }
 
@@ -390,7 +390,7 @@ int ResolveHostname(const std::string& host, uint32_t& ip){
 
         addrinfo* result;
         if(getaddrinfo(host.c_str(), nullptr, &hint, &result)){
-            printf("steal: Failed to resolve host '%s': %s.\n", host.c_str(), strerror(errno));
+            printf("browser: Failed to resolve host '%s': %s.\n", host.c_str(), strerror(errno));
             return 4;
         }
 
@@ -431,8 +431,8 @@ int main(int argc, char** argv){
     }
 
     if(help){
-        printf("steal [options] <url>\n");
-        printf("Steal data from <url> (Default HTTP)\n\n");
+        printf("browser [options] <url>\n");
+        printf("browser data from <url> (Default HTTP)\n\n");
         printf("--help              Show Help\n");
         printf("-v, --verbose       Show extra information\n");
 
@@ -442,7 +442,7 @@ int main(int argc, char** argv){
     Lemon::URL url(argv[optind]);
 
     if(!url.IsValid() || !url.Host().length()){
-        printf("steal: Invalid/malformed URL.\n");
+        printf("browser: Invalid/malformed URL.\n");
         return 2;
     }
 
@@ -457,7 +457,7 @@ int main(int argc, char** argv){
         } else if(!url.Protocol().compare("https")){
             protocol = ProtocolHTTPS;
         } else {
-            printf("steal: Unsupported protocol: '%s'.\n", url.Protocol().c_str());
+            printf("browser: Unsupported protocol: '%s'.\n", url.Protocol().c_str());
             return 2;
         }
     }
@@ -466,7 +466,7 @@ int main(int argc, char** argv){
     if(outFile){
         FILE* file = fopen(outFile, "w");
         if(!file){
-            perror("steal: Error creating file for output");
+            perror("browser: Error creating file for output");
             return 3;
         }
 
@@ -497,7 +497,7 @@ redirect:
         address.sin_port = htons(80);
 
         if(int e = connect(sock, reinterpret_cast<sockaddr*>(&address), sizeof(sockaddr_in)); e){
-            perror("steal: Failed to connect");
+            perror("browser: Failed to connect");
             return 10;
         }
 
@@ -519,8 +519,8 @@ redirect:
         }
 
         if(!method){
-            perror("steal: TLS Error obtaining SSL method");
-            printf("steal: Error setting TLS connection hostname:");
+            perror("browser: TLS Error obtaining SSL method");
+            printf("browser: Error setting TLS connection hostname:");
             ERR_print_errors_fp(stderr);
             return 50;
         }
@@ -548,7 +548,7 @@ redirect:
             BIO_free_all(sslBasicIO);
             BIO_free_all(basicIO);
 
-            printf("steal: (BIO_do_connect) Failed to establish TLS connection to '%s'.", url.Host().c_str());
+            printf("browser: (BIO_do_connect) Failed to establish TLS connection to '%s'.", url.Host().c_str());
             ERR_print_errors_fp(stdout);
             
             return 42;
@@ -571,7 +571,7 @@ redirect:
     if(response.statusCode == HTTPStatusCode::MovedPermanently){
         auto it = response.fields.find("location");
         if(it == response.fields.end()){
-            printf("steal: Invalid redirect: No location field");
+            printf("browser: Invalid redirect: No location field");
             return 13;
         }
 
@@ -580,7 +580,7 @@ redirect:
         url = Lemon::URL(redirectURL.substr(pos).c_str());
 
         if(!url.IsValid()){
-            printf("steal: Invalid redirect: Invalid URL '%s'.\n", redirectURL.c_str());
+            printf("browser: Invalid redirect: Invalid URL '%s'.\n", redirectURL.c_str());
             return 14;
         }
 
@@ -589,16 +589,16 @@ redirect:
         } else if(!url.Protocol().compare("https")){
             protocol = ProtocolHTTPS;
         } else {
-            printf("steal: Invalid redirect: Unknown URL protocol '%s'.\n", url.Protocol().c_str());
+            printf("browser: Invalid redirect: Unknown URL protocol '%s'.\n", url.Protocol().c_str());
             return 15;
         }
 
         if(verbose){
-            printf("steal: Redirecting to '%s' (%s).\n", url.Host().c_str(), url.Protocol().c_str());
+            printf("browser: Redirecting to '%s' (%s).\n", url.Host().c_str(), url.Protocol().c_str());
         }
         goto redirect;
     } else if(response.statusCode != HTTPStatusCode::OK){
-        printf("steal: HTTP %d.\n", response.statusCode);
+        printf("browser: HTTP %d.\n", response.statusCode);
         return 20;
     }
 
