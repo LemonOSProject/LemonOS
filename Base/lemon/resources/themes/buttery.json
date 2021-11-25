@@ -1,0 +1,22 @@
+{
+    "colours" : {
+        "activeWindow" : "#ff222022",
+        "activeWindowText" : "#ffeeeeee",
+        "inactiveWindow" : "#808080",
+        "inactiveWindowText" : "#ffeeeeee",
+        "background" : "#808080",
+        "containerBackground" : "#ff282629",
+        "button" : "#bcbcbc",
+        "foreground" : "#ffb86016",
+        "foregroundInactive" : "#ffa66129",
+        "foregroundAlternate" : "#ffff0000",
+        "border" : "#ff44433f",
+        "textLight" : "#ffeeeeee",
+        "textDark" : "#ffeeeeee"
+    },
+    "wm" : {
+        "windowCornerRadius" : 10,
+        "windowBorderThickness" : 1,
+        "windowTitlebarHeight" : 24
+    }
+}
