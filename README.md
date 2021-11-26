@@ -1,4 +1,4 @@
-![banner](Base/lemon/resources/splash.png)
+![banner](Documentation/AdCampaignImage.png)
 
 Butter OS is a fork of LemonOS
 
