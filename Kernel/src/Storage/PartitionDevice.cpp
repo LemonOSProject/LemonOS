@@ -39,7 +39,7 @@ int PartitionDevice::ReadAbsolute(uint64_t offset, uint32_t count, void* buffer)
 int PartitionDevice::ReadBlock(uint64_t lba, uint32_t count, void* buffer) {
     if (lba * parentDisk->blocksize + count > (m_endLBA - m_startLBA) * parentDisk->blocksize) {
         Log::Debug(debugLevelPartitions, DebugLevelNormal,
-                   "[PartitionDevice] ReadBlock: LBA %x out of partition range!", lba + count / parentDisk->blocksize);
+                   "[PartitionDevice] ReadBlock: LBA %x out of partition range! :O", lba + count / parentDisk->blocksize);
         return 2;
     }
 

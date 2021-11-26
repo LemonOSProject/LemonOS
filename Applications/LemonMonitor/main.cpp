@@ -112,7 +112,7 @@ private:
 };
 
 int main(int argc, char** argv){
-    window = new Lemon::GUI::Window("LemonMonitor", {424, 480}, 0, Lemon::GUI::WindowType::GUI);
+    window = new Lemon::GUI::Window("ButterMonitor", {424, 480}, 0, Lemon::GUI::WindowType::GUI);
     
     listView = new Lemon::GUI::ListView({0, 0, 0, 0});
     listView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
