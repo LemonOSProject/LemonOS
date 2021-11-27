@@ -88,7 +88,7 @@ void KernelProcess() {
 
     if (HAL::runTests) {
         ModuleManager::LoadModule("/initrd/modules/testmodule.sys");
-        Log::Warning("Finished running tests. Hanging.");
+        Log::Warning("Finished running tests. Freezing. (do not restart! your kernel is doing stuff!)");
         for (;;)
             ;
     }
@@ -102,11 +102,11 @@ void KernelProcess() {
         initFsNode = fs::ResolvePath("/initrd/fterm.lef");
 
         if (!initFsNode) { // Shit has really hit the fan and fterm is not on the ramdisk
-            const char* panicReasons[]{"Failed to load either init task (init.lef) or fterm (fterm.lef)!"};
+            const char* panicReasons[]{"Failed to load either init task (init.lef) or fterm (fterm.lef)! You're screwed BADLY :("};
             KernelPanic(panicReasons, 1);
         }
     }
-
+z
     Log::Write("OK");
 
     void* initElf = (void*)kmalloc(initFsNode->size);
@@ -166,17 +166,17 @@ extern "C" [[noreturn]] void kmain() {
     videoMode = Video::GetVideoMode();
 
     if (debugLevelMisc >= DebugLevelVerbose) {
-        Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
+        Log::Info("Video Resolution: %dx%dx%d (hopefully this user's resolution is good)", videoMode.width, videoMode.height, videoMode.bpp);
     }
 
     if (videoMode.height < 600)
-        Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");
+        Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible. (makes your games and stuff better!)");
     if (videoMode.bpp != 32)
         Log::Warning("Unsupported Colour Depth expect issues.");
 
     Video::DrawRect(0, 0, videoMode.width, videoMode.height, 0, 0, 0);
 
-    Log::Info("Used RAM: %d MB", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);
+    Log::Info("Used RAM: %d MB (but why in MB?)", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);
 
     assert(fs::GetRoot());
 
@@ -203,7 +203,7 @@ extern "C" [[noreturn]] void kmain() {
 
             delete[] buffer;
         } else
-            Log::Warning("Could not load splash image");
+            Log::Warning("Could not load splash image :( though your files are safe");
 
         if ((symbolFile = fs::FindDir(initrd, "kernel.map"))) {
             LoadSymbolsFromFile(symbolFile);
