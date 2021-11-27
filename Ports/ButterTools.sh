@@ -1,6 +1,6 @@
 unpack(){
  	git clone https://github.com/Butterzz1288/ButterTools.git --depth 1 lemon-BTools
- 	export BUILD_DIR=lemon-gnuboy
+ 	export BUILD_DIR=ButterTools-3.1
 }
  
 buildp(){
