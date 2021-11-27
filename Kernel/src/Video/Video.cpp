@@ -162,7 +162,7 @@ class FramebufferVMO : public VMObject {
         Memory::MapVirtualMemory4K(videoMode.physicalAddress, base, size >> PAGE_SHIFT_4K, pMap);
     }
 
-    [[noreturn]] VMObject* Clone() { assert(!"Framebuffer VMO cannot be copied!"); }
+    [[noreturn]] VMObject* Clone() { assert(!"Framebuffer VMO cannot be copied! (copyright?)"); }
 };
 FramebufferVMO* framebufferVMO = nullptr;
 FancyRefPtr<VMObject>* framebufferVMOPtr = nullptr;
