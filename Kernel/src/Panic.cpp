@@ -18,8 +18,8 @@ void KernelPanic(const char** reasons, int reasonCount) {
         pos += 10;
     }
 
-    Video::DrawString("Lemon has encountered a fatal error.", 0, v.height - 200, 255, 255, 255);
-    Video::DrawString("The system has been halted.", 0, v.height - 200 + 8, 255, 255, 255);
+    Video::DrawString("ButterOS has encountered a fatal error. :(", 0, v.height - 200, 255, 255, 255);
+    Video::DrawString("The system has been stopped. hopefully you dont have any unsaved documents", 0, v.height - 200 + 8, 255, 255, 255);
 
     if (Log::console) {
         Log::console->Update();
