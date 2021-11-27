@@ -49,7 +49,7 @@ void LoadFile(const char* path){
 	openPath = path;
 
 	char title[32 + openPath.length()];
-	sprintf(title, "Text File Editor: %s", openPath.c_str());
+	sprintf(title, "Text Editor: %s", openPath.c_str());
 
 	window->SetTitle(title);
 }
@@ -63,7 +63,7 @@ void SaveFile(const char* path){
 	}
 
 	if(S_ISDIR(sResult.st_mode)){
-		Lemon::GUI::DisplayMessageBox("Text Editor", "File is a folder!", Lemon::GUI::MsgButtonsOK);
+		Lemon::GUI::DisplayMessageBox("Text Editor", "File is a folder! choose a file instead.", Lemon::GUI::MsgButtonsOK);
 		return;
 	}
 
