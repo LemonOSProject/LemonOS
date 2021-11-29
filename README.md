@@ -1,6 +1,8 @@
 ![banner](Documentation/AdCampaignImage.png)
 
-Butter OS is a fork of LemonOS
+Vote for a feature [here](https://docs.google.com/forms/d/e/1FAIpQLSesUoCekN2PGFcqOll6-0yWx8PKkZi1XENgwR8okMS8BnaJNw/viewform?usp=sf_link) 
+
+# Butter OS is a fork of LemonOS
 
 ## About butter OS
 Butter OS includes its own [modular kernel](Kernel) with SMP and networking, [window server/compositor](System/LemonWM) and [userspace applications](Applications) as well as [a collection of software ports](Ports).
