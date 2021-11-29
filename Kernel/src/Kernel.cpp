@@ -95,7 +95,7 @@ void KernelProcess() {
 
     PTMultiplexor::Initialize();
 
-    Log::Info("Loading Init Process...");
+    Log::Info("Loading Initialize Process...");
     FsNode* initFsNode = nullptr;
 
     if (HAL::useKCon || !(initFsNode = fs::ResolvePath("/system/lemon/init.lef"))) { // Attempt to start fterm
