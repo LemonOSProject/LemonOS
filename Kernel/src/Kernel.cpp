@@ -88,7 +88,7 @@ void KernelProcess() {
 
     if (HAL::runTests) {
         ModuleManager::LoadModule("/initrd/modules/testmodule.sys");
-        Log::Warning("Finished running tests. Freezing. (do not restart! your kernel is doing stuff!)");
+        Log::Warning("Finished running tests. Freezing. (do not restart! your OS is doing stuff!)");
         for (;;)
             ;
     }
