@@ -26,7 +26,7 @@ int main(int argc, char** argv){
 
     int winWidth = (banner.width > 200) ? banner.width : 200; 
 
-    window = new Lemon::GUI::Window("Computer Information", {winWidth, 300}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
+    window = new Lemon::GUI::Window(" Your Computer's Information", {winWidth, 300}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
     window->AddWidget(bannerW);
 
     int ypos = banner.height + 4;
@@ -39,7 +39,7 @@ int main(int argc, char** argv){
     window->AddWidget(new Lemon::GUI::Label(versionString, {{4, ypos}, {200, 12}}));
     ypos += 24;
 
-    snprintf(buf, 64, "Total System Memory: %lu MB (%lu KB)", sysInfo.totalMem / 1024, sysInfo.totalMem);
+    snprintf(buf, 64, "Total System disk space: %lu MB (%lu KB )", sysInfo.totalMem / 1024, sysInfo.totalMem);
     totalMem = new Lemon::GUI::Label(buf, {{4, ypos}, {200, 12}});
     window->AddWidget(totalMem);
     ypos += 16;
