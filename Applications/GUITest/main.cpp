@@ -19,11 +19,11 @@ void OnPaint(surface_t* surface){
 int main(){
     Lemon::GUI::Window* win = new Lemon::GUI::Window("Test Window", {640, 480}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
 
-    Lemon::GUI::Button* button = new Lemon::GUI::Button("I am a Button", {10, 10, 125, 24});
+    Lemon::GUI::Button* button = new Lemon::GUI::Button("I am a Button :)", {10, 10, 125, 24});
     win->AddWidget(button);
     button->SetLayout(Lemon::GUI::LayoutSize::Fixed, Lemon::GUI::LayoutSize::Fixed, Lemon::GUI::WidgetAlignment::WAlignRight);
 
-    Lemon::GUI::Button* button2 = new Lemon::GUI::Button("I am a Looooong Button", {10, 10, 145, 24});
+    Lemon::GUI::Button* button2 = new Lemon::GUI::Button("I am a Looooong Button :D", {10, 10, 145, 24});
     win->AddWidget(button2);
     button2->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Fixed, Lemon::GUI::WidgetAlignment::WAlignLeft);
     
@@ -55,6 +55,8 @@ int main(){
     Lemon::Graphics::LoadImage("/system/lemon/resources/icons/folder.png", &folderIcon);
     surface_t fileIcon;
     Lemon::Graphics::LoadImage("/system/lemon/resources/icons/file.png", &fileIcon);
+	surface_t calcIcon;
+    Lemon::Graphics::LoadImage("/system/lemon/resources/icons/calc.png", &calcIcon);
 
     Lemon::GUI::GridItem item1;
     item1.name = "Item";
