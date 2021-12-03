@@ -22,7 +22,7 @@ namespace Network{
 	void OnReceiveARP(void* data, size_t length){
 		if(length < sizeof(ARPHeader)){
 			IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
-				Log::Warning("[Network] [ARP] Discarding packet (too short)");
+				Log::Warning("[Network] [ARP] Discarding packet (too short, make it looonger)");
 			});
 
 			return;
@@ -88,7 +88,7 @@ namespace Network{
 		IPv4Header* header = (IPv4Header*)data;
 
 		if(header->version != 4){
-			Log::Warning("[Network] [IPv4] Discarding packet (invalid version)");
+			Log::Warning("[Network] [IPv4] Discarding packet (invalid version :( )");
 			return;
 		}
 
