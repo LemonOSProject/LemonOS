@@ -57,7 +57,7 @@ namespace Network {
 
         if(status <= 0){
             IF_DEBUG((debugLevelNetwork >= DebugLevelNormal), {
-                Log::Warning("[Network] [ARP] Timed out waiting for ARP reply.");
+                Log::Warning("[Network] [ARP] The system is bored waiting for ARP reply.");
             });
             return -EADDRNOTAVAIL;
         }
@@ -105,7 +105,7 @@ namespace Network {
         }
 
         if(!adapter){
-            Log::Warning("[Network] Could not find any adapters!");
+            Log::Warning("[Network] Could not find any adapters! find one!!!!");
             return -ENETUNREACH;
         }
 
