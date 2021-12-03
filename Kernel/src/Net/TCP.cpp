@@ -92,7 +92,7 @@ namespace Network {
             }
 
             if(port > EPHEMERAL_PORT_RANGE_END || port <= 0){
-                Log::Warning("[Network] Could not allocate ephemeral port!");
+                Log::Warning("[Network] Could not allocate ephemeral port! :(");
                 return 0;
             }
 
@@ -174,7 +174,7 @@ namespace Network {
             TCPHeader* tcpHeader = reinterpret_cast<TCPHeader*>(data);
             BigEndian<uint16_t> checksum = tcpHeader->checksum;
 
-            Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] Recieving Packet from %hd.%hd.%hd.%hd:%hu (dest: %hd.%hd.%hd.%hd:%hu)!", ipHeader.sourceIP.data[0], ipHeader.sourceIP.data[1], ipHeader.sourceIP.data[2], ipHeader.sourceIP.data[3], (uint16_t)tcpHeader->srcPort, ipHeader.destIP.data[0], ipHeader.destIP.data[1], ipHeader.destIP.data[2], ipHeader.destIP.data[3], (uint16_t)tcpHeader->destPort);
+            Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] Recieving Packet from %hd.%hd.%hd.%hd:%hu (destination: %hd.%hd.%hd.%hd:%hu)!", ipHeader.sourceIP.data[0], ipHeader.sourceIP.data[1], ipHeader.sourceIP.data[2], ipHeader.sourceIP.data[3], (uint16_t)tcpHeader->srcPort, ipHeader.destIP.data[0], ipHeader.destIP.data[1], ipHeader.destIP.data[2], ipHeader.destIP.data[3], (uint16_t)tcpHeader->destPort);
 
             /*tcpHeader->checksum = 0;
             if(uint16_t chk = CalculateTCPChecksum(ipHeader.sourceIP, ipHeader.destIP, data, ipHeader.length).value; chk != checksum.value){
@@ -188,7 +188,7 @@ namespace Network {
 
             TCPSocket* sock = FindSocket(TCPConnectionIdentifier(ipHeader.destIP, ipHeader.sourceIP, tcpHeader->destPort, tcpHeader->srcPort));
             if(!sock){
-                Log::Info("no such sock! (Source: %hd.%hd.%hd.%hd:%hu)", ipHeader.sourceIP.data[0], ipHeader.sourceIP.data[1], ipHeader.sourceIP.data[2], ipHeader.sourceIP.data[3], tcpHeader->srcPort);
+                Log::Info("no such socket! (Source: %hd.%hd.%hd.%hd:%hu)", ipHeader.sourceIP.data[0], ipHeader.sourceIP.data[1], ipHeader.sourceIP.data[2], ipHeader.sourceIP.data[3], tcpHeader->srcPort);
                 return; // Port not bound to socket
             }
 
@@ -218,7 +218,7 @@ namespace Network {
                 }
 
                 if(syn){
-                    Log::Warning("[Network] [TCP] (State: LISTEN) TCP listen sockets not yet supported!");
+                    Log::Warning("[Network] [TCP] (State: LISTEN) TCP listen sockets not yet supported! (maybe update your system)");
                 }
                 return;
             }
