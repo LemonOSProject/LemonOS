@@ -28,7 +28,7 @@ extern "C"
 int main(int argc, char** argv){
 	Lemon::GUI::Window* window;
 
-	window = new Lemon::GUI::Window("Fileman", {600, 348}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
+	window = new Lemon::GUI::Window("File Manager", {600, 348}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
 	
 	Lemon::GUI::FileView* fv = new Lemon::GUI::FileView({{0,0},{0,0}}, "/", OnFileOpened);
 	window->AddWidget(fv);
