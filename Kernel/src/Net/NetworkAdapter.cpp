@@ -91,7 +91,7 @@ namespace Network {
             sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&route->rt_gateway);
             if(addr->sin_family != SocketProtocol::InternetProtocol){
                 IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
-                    Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address!");
+                    Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address! :O :O");
                 });
                 return -EPROTONOSUPPORT; // Not IPv4 address
             }
@@ -137,7 +137,7 @@ namespace Network {
                 sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&req->ifr_addr);
                 if(addr->sin_family != SocketProtocol::InternetProtocol){
                     IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
-                        Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address!", currentProcess->euid);
+                        Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address! :O", currentProcess->euid);
                     });
                     return -EPROTONOSUPPORT; // Not IPv4 address
                 }
@@ -160,7 +160,7 @@ namespace Network {
                 sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&req->ifr_netmask);
                 if(addr->sin_family != SocketProtocol::InternetProtocol){
                     IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
-                        Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address!", currentProcess->euid);
+                        Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address! :O", currentProcess->euid);
                     });
                     return -EPROTONOSUPPORT; // Not IPv4 address
                 }
