@@ -19,7 +19,7 @@ int Socket::CreateSocket(int domain, int type, int protocol, Socket** sock) {
     }
 
     if (protocol) {
-        Log::Warning("CreateSocket: protocol is ignored");
+        Log::Warning("CreateSocket: protocol is ignored >:(");
     }
 
     if (domain == UnixDomain) {
@@ -305,7 +305,7 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen) {
     }
 
     if (m_connected) {
-        Log::Info("Connect: Already connected");
+        Log::Info("Connect: Already connected :)");
         return -EISCONN;
     }
 
