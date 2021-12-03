@@ -9,7 +9,7 @@ Butter OS includes its own [modular kernel](Kernel) with SMP and networking, [wi
 
 If you have any questions or concerns feel free to open a GitHub issue, join our [Discord server](https://discord.gg/NAYp6AUYWM) or email me at computerfido@gmail.com.
 
-[Website](https://lemonos.org) \
+[Website](https://frankenderman.github.io/ButterOS.github.io/) \
 [Discord Server](https://discord.gg/NAYp6AUYWM)
 
 ## Building
