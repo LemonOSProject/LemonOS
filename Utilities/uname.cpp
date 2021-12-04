@@ -6,7 +6,7 @@ int main(int argc, char** argv){
     char str[80];
 	syscall(SYS_UNAME, (uintptr_t)str,0,0,0,0);
 
-    printf("%s\n", str);
+    printf("%s is your username.\n", str);
     
     return 0;
 }
