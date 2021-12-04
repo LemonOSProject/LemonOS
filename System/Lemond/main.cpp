@@ -67,7 +67,7 @@ int main(int argc, char** argv){
 			}
 		}
 	} else {
-        printf("[Lemond] Warning: Error parsing JSON configuration file!\n");
+        printf("[Lemond] Warning: Error parsing JSON configuration file! Be careful!\n");
     }
 
 	DIR* dir = opendir("/system/lemon/lemond");
