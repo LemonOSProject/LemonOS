@@ -373,7 +373,7 @@ Accept-Encoding: identity\r\n\
         }
         
     } else {
-        assert(!"Invalid transfer encoding!");
+        assert(!"Invalid transfer encoding! :(");
     }
 
     fflush(stream);
@@ -390,7 +390,7 @@ int ResolveHostname(const std::string& host, uint32_t& ip){
 
         addrinfo* result;
         if(getaddrinfo(host.c_str(), nullptr, &hint, &result)){
-            printf("browser: Failed to resolve host '%s': %s.\n", host.c_str(), strerror(errno));
+            printf("browser: Failed to resolve IP adress :( '%s': %s.\n", host.c_str(), strerror(errno));
             return 4;
         }
 
@@ -457,7 +457,7 @@ int main(int argc, char** argv){
         } else if(!url.Protocol().compare("https")){
             protocol = ProtocolHTTPS;
         } else {
-            printf("browser: Unsupported protocol: '%s'.\n", url.Protocol().c_str());
+            printf("browser: Unsupported protocol: '%s'. wait for a update.\n", url.Protocol().c_str());
             return 2;
         }
     }
@@ -466,7 +466,7 @@ int main(int argc, char** argv){
     if(outFile){
         FILE* file = fopen(outFile, "w");
         if(!file){
-            perror("browser: Error creating file for output");
+            perror("browser: Error creating file for output :(");
             return 3;
         }
 
@@ -497,7 +497,7 @@ redirect:
         address.sin_port = htons(80);
 
         if(int e = connect(sock, reinterpret_cast<sockaddr*>(&address), sizeof(sockaddr_in)); e){
-            perror("browser: Failed to connect");
+            perror("browser: Failed to connect. Check your WiFi");
             return 10;
         }
 
@@ -598,7 +598,7 @@ redirect:
         }
         goto redirect;
     } else if(response.statusCode != HTTPStatusCode::OK){
-        printf("browser: HTTP %d.\n", response.statusCode);
+        printf("browser: HTTP %d. make sure you trust this website!\n", response.statusCode);
         return 20;
     }
 
