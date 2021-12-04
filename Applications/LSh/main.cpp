@@ -35,7 +35,7 @@ std::vector<std::string> history;
 
 void LShBuiltin_Cd(int argc, char** argv) {
     if (argc > 3) {
-        printf("cd: Too many arguments");
+        printf("cd: Too many parameters :O");
     } else if (argc == 2) {
         if (chdir(argv[1])) {
             printf("cd: Error changing working directory to %s\n", argv[1]);
