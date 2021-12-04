@@ -214,7 +214,8 @@ Lemon::GUI::Window* InitializeMenu(){
     listView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft, Lemon::GUI::WidgetAlignment::WAlignBottom);
     filterBox->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Fixed, Lemon::GUI::WidgetAlignment::WAlignLeft, Lemon::GUI::WidgetAlignment::WAlignTop);
 
-    const char* itemsPath = "/system/lemon/menu/";
+    // Loads .CFG files
+	const char* itemsPath = "/system/lemon/menu/";
     int itemsDir = open(itemsPath, O_DIRECTORY);
     if(itemsDir >= 0){
         struct dirent** entries = nullptr;

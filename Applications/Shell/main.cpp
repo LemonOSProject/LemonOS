@@ -199,6 +199,7 @@ int main() {
 
     syscall(SYS_UNAME, (uintptr_t)versionString, 0, 0, 0, 0);
 
+	// Load menubuttons 
     Lemon::Graphics::LoadImage("/system/lemon/resources/menubuttons.png", &menuButton);
 
     handle_t tempEndpoint = 0;
