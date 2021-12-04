@@ -20,6 +20,7 @@ void KernelPanic(const char** reasons, int reasonCount) {
 
     Video::DrawString("ButterOS has encountered a fatal error. :(", 0, v.height - 200, 255, 255, 255);
     Video::DrawString("ButterOS has been stopped because its going crazy", 0, v.height - 200 + 8, 255, 255, 255);
+	Lemon::LibError::main
 
     if (Log::console) {
         Log::console->Update();
