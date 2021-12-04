@@ -446,7 +446,7 @@ int main(int argc, char** argv){
     wSize.ws_xpixel = renderSurface.width;
     wSize.ws_ypixel = renderSurface.height;
     
-	terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
+	terminalFont = Lemon::Graphics::LoadFont("/initrd/comicsansbutbetter.ttf", "termmonospace");
 	if(!terminalFont){
 		terminalFont = Lemon::Graphics::GetFont("default");
 	}
