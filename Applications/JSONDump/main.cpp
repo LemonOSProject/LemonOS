@@ -78,7 +78,7 @@ int main(int argc, char** argv){
 
     auto json = p.Parse();
     if(!json.IsObject()){
-        std::cout << "Error parsing JSON file!\n";
+        std::cout << "Error parsing JSON file! :(\n";
         return 3;
     }
 
