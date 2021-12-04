@@ -49,7 +49,7 @@ public:
 				case Lemon::DeviceTypeStorageController:
 					return "Storage Controller";
 				case Lemon::DeviceTypeStorageDevice:
-					return "Storage Device";
+					return "Storage Device/Disks";
 				case Lemon::DeviceTypeStoragePartition:
 					return "Storage Partition";
 				case Lemon::DeviceTypeNetworkAdapter:
@@ -117,7 +117,7 @@ private:
 };
 
 int main(int argc, char** argv){
-	window = new Lemon::GUI::Window("Device Manager", {400, 480}, 0, Lemon::GUI::WindowType::GUI);
+	window = new Lemon::GUI::Window("Butter Device Manager", {400, 480}, 0, Lemon::GUI::WindowType::GUI);
 
 	Lemon::GUI::ListView* lv = new Lemon::GUI::ListView({0, 0, 0, 0});
 	lv->SetLayout(Lemon::GUI::Stretch, Lemon::GUI::Stretch);
