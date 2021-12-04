@@ -13,16 +13,16 @@
 
 Lemon::GUI::Window* window;
 Lemon::GUI::Image* imgWidget;
-Lemon::GUI::WindowMenu fileMenu = { "Image", {{.id = IMGVIEW_OPEN, .name = std::string("Open...")}} };
+Lemon::GUI::WindowMenu fileMenu = { "File", {{.id = IMGVIEW_OPEN, .name = std::string("Open File...")}} };
 Lemon::GUI::WindowMenu viewMenu = { "View", {
-    { .id = IMGVIEW_SCALING_NONE, .name = std::string("No Scaling") },
+    { .id = IMGVIEW_SCALING_NONE, .name = std::string("No Scaling for Image") },
     { .id = IMGVIEW_SCALING_FIT, .name = std::string("Fit Image") },
     { .id = IMGVIEW_SCALING_FILL, .name = std::string("Fill Image") }
 } };
 
 int LoadImage(char* path){
     if(!path){
-        Lemon::GUI::DisplayMessageBox("Image Viewer 2.0", "Invalid Filepath");
+        Lemon::GUI::DisplayMessageBox("Image Viewer 2.1", "Invalid Filepath");
         return 1;
     }
 
@@ -31,7 +31,7 @@ int LoadImage(char* path){
     if(ret){
         char msg[128];
         sprintf(msg, "Failed to open image, Error Code: %d", ret);
-        Lemon::GUI::DisplayMessageBox("Image Viewer 2.0", msg);
+        Lemon::GUI::DisplayMessageBox("Image Viewer 2.1", msg);
         return ret;
     }
 
@@ -68,7 +68,7 @@ int main(int argc, char** argv){
         return -1;
     }
     
-    window = new Lemon::GUI::Window("Image Viewer 2.0", {800, 500}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
+    window = new Lemon::GUI::Window("Image Viewer 2.1", {800, 500}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
     window->CreateMenuBar();
 
     window->menuBar->items.push_back(fileMenu);
