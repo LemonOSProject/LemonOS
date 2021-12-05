@@ -107,13 +107,13 @@ public:
 private:
     uint64_t activeTimeSum = 0;
 
-    std::vector<Column> columns = { Column("Name"), Column("Process ID"), Column("CPU Usage"), Column("Memory Usage"), Column("Uptime") };
+    std::vector<Column> columns = { Column("Name Of Process"), Column("Process ID"), Column("CPU Usage"), Column("RAM Usage"), Column("Uptime") };
     std::vector<ProcessEntry> processes;
 };
 
 int main(int argc, char** argv){
-    window = new Lemon::GUI::Window("ButterMonitor 2.0", {424, 480}, 0, Lemon::GUI::WindowType::GUI);
-    
+    window = new Lemon::GUI::Window("ButterMonitor 2.1", {424, 480}, 0, Lemon::GUI::WindowType::GUI);
+    Lemon::Graphics::LoadImage("/system/lemon/resources/splash.png", &banner);
     listView = new Lemon::GUI::ListView({0, 0, 0, 0});
     listView->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch);
 
