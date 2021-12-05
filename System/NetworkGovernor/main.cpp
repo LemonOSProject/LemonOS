@@ -63,7 +63,7 @@ public:
 		name = strdup(ifName);
 		sock = ifSocket;
 
-		printf("Initializing interface %s!\n", ifName);
+		printf("Initializing interface %s! hang in there\n", ifName);
 	}
 
 	void AcquireLease(){
