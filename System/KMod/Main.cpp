@@ -16,7 +16,7 @@ kmod unload <name>\n", argv[0]);
     } else if(!strcmp(argv[1], "unload")){
         return Lemon::UnloadKernelModule(argv[2]);
     } else {
-        printf("Unknown argument: %s\n", argv[1]);
+        printf("Unknown parameter: %s\n", argv[1]);
         return 2;
     }
 }
