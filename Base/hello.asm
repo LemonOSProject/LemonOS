@@ -13,5 +13,5 @@ _start:
     mov rdi, 0
     int 0x69 ; Exit
 string:
- db "Hello, Lemon OS World!"
+ db "Hello, Butter OS World!"
 string_end:
