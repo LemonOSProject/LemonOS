@@ -43,7 +43,7 @@ Fat32Volume::Fat32Volume(PartitionDevice* _part, char* name) {
     fat32_boot_record_t* bootRecord = (fat32_boot_record_t*)kmalloc(512);
 
     if (part->ReadBlock(0, 512, (uint8_t*)bootRecord)) { // Read Volume Boot Record (First sector of partition)
-        Log::Warning("Disk Error Initializing Volume");  // Disk Error
+        Log::Warning("Disk Error Initializing Volume :(");  // Disk Error
         return;
     }
 
