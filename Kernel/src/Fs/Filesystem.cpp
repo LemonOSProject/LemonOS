@@ -94,7 +94,7 @@ void UnregisterDriver(FsDriver* driver) {
         }
     }
 
-    assert(!"Driver not found!");
+    assert(!"Driver not found! :( You're in a lot of trouble");
 }
 
 FsDriver* IdentifyFilesystem(FsNode* node) {
@@ -118,7 +118,7 @@ public:
     FsNode* FindDir(const char* name);
 
     int Create(DirectoryEntry* ent, uint32_t mode) {
-        Log::Warning("[RootFS] Attempted to create a file!");
+        Log::Warning("[RootFS] Attempted to create a file! (anyways what kind of file did you make)");
         return -EROFS;
     }
 
@@ -148,7 +148,7 @@ FsNode* FollowLink(FsNode* link, FsNode* workingDir) {
     FsNode* node = ResolvePath(buffer, workingDir, false);
 
     if (!node) {
-        Log::Warning("FollowLink: Failed to resolve symlink %s!", buffer);
+        Log::Warning("FollowLink: Failed to resolve symbolic link %s!", buffer);
     }
     return node;
 }
