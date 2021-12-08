@@ -66,7 +66,7 @@ void Window::Resize(vector2i_t size) {
 
     m_windowBufferKey = WindowServer::Instance()->Resize(m_windowID, size.x, size.y).bufferKey;
     if (m_windowBufferKey <= 0) {
-        printf("[LibLemon] Warning: Window::Resize: Failed to obtain window buffer!\n");
+        printf("[LibLemon] Warning: Window::Resize: Failed to obtain window buffer! :O :O\n");
 
         surface.buffer = nullptr;
         return;
@@ -311,7 +311,7 @@ Window::TooltipWindow::TooltipWindow(const char* text, vector2i_t pos, const RGB
     windowBufferKey = response.bufferKey;
 
     if (windowBufferKey <= 0) {
-        printf("[LibLemon] Warning: Window::TooltipWindow::TooltipWindow: Failed to obtain window buffer!\n");
+        printf("[LibLemon] Warning: Window::TooltipWindow::TooltipWindow: Failed to obtain window buffer! :O\n");
         return;
     }
 
@@ -341,7 +341,7 @@ void Window::TooltipWindow::SetText(const char* text) {
 
     windowBufferKey = Resize(windowID, textObject.Size().x + 8, textObject.Size().y + 8).bufferKey;
     if (windowBufferKey <= 0) {
-        printf("[LibLemon] Warning: Window::TooltipWindow::Resize: Failed to obtain window buffer!\n");
+        printf("[LibLemon] Warning: Window::TooltipWindow::Resize: Failed to obtain window buffer! :O\n");
         return;
     }
 
