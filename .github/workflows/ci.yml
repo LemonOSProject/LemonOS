@@ -37,7 +37,7 @@ jobs:
 
       - name: Get hash of latest llvm-project commit
         run: |
-          git ls-remote https://github.com/LemonOSProject/llvm-project.git | head -1 > llvm-hash.txt
+          git ls-remote https://github.com/Butterzz1288/llvm-for-butteros | head -1 > llvm-hash.txt
           echo "Commit Hash:"
           cat llvm-hash.txt
 
@@ -87,7 +87,7 @@ jobs:
 
       - name: Get hash of latest llvm-project commit
         run: |
-          git ls-remote https://github.com/LemonOSProject/llvm-project.git | head -1 > llvm-hash.txt
+          git ls-remote https://github.com/Butterzz1288/llvm-for-butteros | head -1 > llvm-hash.txt
           echo "Commit Hash:"
           cat llvm-hash.txt
 
