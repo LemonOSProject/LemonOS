@@ -52,6 +52,10 @@ graphicstest_src = [
     'GraphicsTest/main.cpp',
 ]
 
+credits_src = [
+    'credits/main.cpp',
+]
+
 guitest_src = [
     'GUITest/main.cpp',
 ]
@@ -97,6 +101,10 @@ app_shell = executable('shell.lef', shell_src,
     dependencies: application_dependencies,
     link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
 app_snake = executable('snake.lef', snake_src, 
+    cpp_args : application_cpp_args,
+    dependencies: application_dependencies,
+    link_args : ['-lfreetype'], install : true)
+app_credits = executable('credits.lef', credits_src, 
     cpp_args : application_cpp_args,
     dependencies: application_dependencies,
     link_args : ['-lfreetype'], install : true)
