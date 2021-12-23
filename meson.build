@@ -6,7 +6,7 @@ add_languages('c', 'cpp')
 add_global_arguments(['-msse3', '-mssse3', '-msse4.1', '-msse4.2', '-mpopcnt', '-mcx16', '-msahf'], language: ['c', 'cpp'])
 
 if host_machine.system() != 'lemon'
-    error('Invalid host system: \'' + host_machine.system() + '\', should be \'lemon\'')
+    error('Invalid host system: \'' + host_machine.system() + '\', should be \'ButterOS\'')
 endif
 
 nasm = find_program('nasm')
