@@ -12,7 +12,7 @@ int main() {
     Lemon::Logger::Debug("Initializing Butter Window Manager ...");
 
     ConfigManager config;
-    config.AddConfigProperty<std::string>("backgroundImage", "/system/lemon/resources/backgrounds/bg10.png");
+    config.AddConfigProperty<std::string>("backgroundImage", "/system/lemon/resources/backgrounds/bg15.png");
     config.AddConfigProperty<std::string>("theme", "/system/lemon/themes/default.json");
     config.AddConfigProperty<bool>("displayFramerate", false);
     config.AddConfigProperty<long>("targetFramerate", 90);

@@ -33,7 +33,7 @@ void StartService(Service& srv){
 	char* const argv[] = { (char*) srv.target.c_str() };
 	pid_t pid = lemon_spawn(srv.target.c_str(), 1, argv, 1);
 	if(pid <= 0){
-		printf("[lemond] Error: Failed to start '%s'!\n", srv.name.c_str());
+		printf("[butterd] Error: Failed to start '%s'!\n", srv.name.c_str());
 		return;
 	}
 
@@ -50,7 +50,7 @@ int main(int argc, char** argv){
 	setenv("HOME", "/system", 1); // Default home
 	setenv("PATH", "/initrd:/system/bin:/system/lemon", 1); // Default path
 
-	Lemon::JSONParser confParser = Lemon::JSONParser("/system/lemon/lemond.json");
+	Lemon::JSONParser confParser = Lemon::JSONParser("/system/lemon/butterd.json");
 	auto json = confParser.Parse();
     if(json.IsObject()){
         std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *json.object;
@@ -67,12 +67,12 @@ int main(int argc, char** argv){
 			}
 		}
 	} else {
-        printf("[Lemond] Warning: Error parsing JSON configuration file! Be careful!\n");
+        printf("[butterd] Warning: Error parsing JSON configuration file! Be careful!\n");
     }
 
 	DIR* dir = opendir("/system/lemon/lemond");
 	if(!dir){
-		perror("[Lemond] Error: Failed to open '/system/lemon/lemond'");
+		perror("[butterd] Error: Failed to open '/system/lemon/butterd'");
 
 		return 1;
 	}
@@ -87,13 +87,13 @@ int main(int argc, char** argv){
 
 		FILE* f = fopen(ent->d_name, "r"); // Attempt to open service file
 		if(!f){
-			printf("[Lemond] Warning: Error opening '%s'\n", ent->d_name);
+			printf("[butterd] Warning: Error opening '%s'\n", ent->d_name);
 			continue;
 		}
 
 		fseek(f, 0, SEEK_END);
 		if(ftell(f) > 4096){
-			printf("[Lemond] Warning: Abnormally large service file '%s', should not be >4K\n", ent->d_name);
+			printf("[butterd] Warning: Abnormally large service file '%s', should not be >4K\n", ent->d_name);
 			fclose(f);
 			continue;
 		}
@@ -117,10 +117,10 @@ int main(int argc, char** argv){
 			std::string name;
 			std::string target;
 			if(auto it = values.find("target"); it == values.end() || !it->second.IsString()){ // Check for valid name field
-				printf("[Lemond] Warning: Empty or invalid target for '%s'\n", ent->d_name);
+				printf("[butterd] Warning: Empty or invalid target for '%s'\n", ent->d_name);
 				continue;
 			} else if(auto it = values.find("name"); it == values.end() || !it->second.IsString()){ // Check for valid target field
-				printf("[Lemond] Warning: Empty or invalid name for '%s'\n", ent->d_name);
+				printf("[butterd] Warning: Empty or invalid name for '%s'\n", ent->d_name);
 				continue;
 			}
 
@@ -138,7 +138,7 @@ int main(int argc, char** argv){
 	}
 
 	if(errno){
-		perror("[Lemond] Error reading '/system/lemon/lemond'");
+		perror("[butterd] Error reading '/system/lemon/lemond'");
 		
 		return 2;
 	}
@@ -152,7 +152,7 @@ int main(int argc, char** argv){
 			for(auto it = services.begin(); it != services.end(); it++){
 				Service& svc = *it;
 				if(svc.pid == pid){
-					printf("[lemond] Warning: '%s' (pid %d) closed.\n", svc.name.c_str(), svc.pid);
+					printf("[butterd] Warning: '%s' (pid %d) closed.\n", svc.name.c_str(), svc.pid);
 				}
 				
 				services.erase(it);
