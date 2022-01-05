@@ -15,7 +15,7 @@ __thread int dflags = 0;
 void FileDialogOnFileOpened(const char* path, __attribute__((unused)) FileView* fv) {
     if (!(dflags & FILE_DIALOG_CREATE) || access(path, W_Ok) ||
         DisplayMessageBox(
-            "Open...", "File already exists! Overwrite?",
+            "Open File...", "File already exists! Replace?",
             MsgButtonsOkCancel)) { // Only open if create flag not specified OR user responds Ok to message
         if (selectedPth) {
             free(selectedPth);
