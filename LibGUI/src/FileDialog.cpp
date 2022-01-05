@@ -80,7 +80,7 @@ char* FileDialog(const char* path, int flags) {
     dialogFileView = nullptr;
     dialogFileBox = nullptr;
 
-    Window* win = new Window("Open...", {504, 300}, WINDOW_FLAGS_RESIZABLE, WindowType::GUI);
+    Window* win = new Window("Open File 2.0", {504, 300}, WINDOW_FLAGS_RESIZABLE, WindowType::GUI);
 
     FileView* fv = new FileView({0, 0, 0, 62}, path, FileDialogOnFileOpened);
     win->AddWidget(fv);
