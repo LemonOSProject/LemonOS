@@ -9,14 +9,14 @@
 // This more than anything is to stress the kernel
 // for any deadlocks or memory issues
 int RunTerminalTest()  {
-    pid_t pids[16] = {};
+    pid_t pids[12] = {};
 
     const char* const argv[] = {
         "/system/bin/terminal.lef",
         nullptr
     };
 
-    for(int i = 0; i < 16; i++){
+    for(int i = 0; i < 12; i++){
         pid_t p = fork();
 
         if(p == 0){
@@ -30,7 +30,7 @@ int RunTerminalTest()  {
 
     usleep(1000000);
 
-    for(int i = 0; i < 16; i++){
+    for(int i = 0; i < 12; i++){
         if(kill(pids[i], SIGKILL)) {
             return 1; // Process may have already died?
         }
