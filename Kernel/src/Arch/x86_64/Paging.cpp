@@ -28,6 +28,8 @@ page_dir_t kernelHeapDir __attribute__((aligned(4096)));
 page_t kernelHeapDirTables[TABLES_PER_DIR][PAGES_PER_TABLE] __attribute__((aligned(4096)));
 page_dir_t ioDirs[4] __attribute__((aligned(4096)));
 
+lock_t kernelHeapDirLock = 0;
+
 HashMap<uintptr_t, PageFaultTrap>* pageFaultTraps;
 
 uint64_t VirtualToPhysicalAddress(uint64_t addr) {
@@ -434,6 +436,8 @@ void* KernelAllocate4KPages(uint64_t amount) {
     uint64_t pml4Index = KERNEL_HEAP_PML4_INDEX;
     uint64_t pdptIndex = KERNEL_HEAP_PDPT_INDEX;
 
+    ScopedSpinLock lockKDir(kernelHeapDirLock);
+
     /* Attempt 1: Already Allocated Page Tables*/
     for (int i = 0; i < TABLES_PER_DIR; i++) {
         if (kernelHeapDir[i] & 0x1 && !(kernelHeapDir[i] & 0x80)) {
@@ -517,6 +521,8 @@ void* KernelAllocate2MPages(uint64_t amount) {
     uint64_t pdptIndex = KERNEL_HEAP_PDPT_INDEX;
     uint64_t pml4Index = KERNEL_HEAP_PML4_INDEX;
 
+    ScopedSpinLock lockKDir(kernelHeapDirLock);
+
     for (int i = 0; i < TABLES_PER_DIR; i++) {
         if (kernelHeapDir[i] & 0x1) {
             offset = i + 1;
@@ -547,6 +553,8 @@ void KernelFree4KPages(void* addr, uint64_t amount) {
     uint64_t pageDirIndex, pageIndex;
     uint64_t virt = (uint64_t)addr;
 
+    ScopedSpinLock lockKDir(kernelHeapDirLock);
+
     while (amount--) {
         pageDirIndex = PAGE_DIR_GET_INDEX(virt);
         pageIndex = PAGE_TABLE_GET_INDEX(virt);
@@ -557,6 +565,8 @@ void KernelFree4KPages(void* addr, uint64_t amount) {
 }
 
 void KernelFree2MPages(void* addr, uint64_t amount) {
+    ScopedSpinLock lockKDir(kernelHeapDirLock);
+
     while (amount--) {
         uint64_t pageDirIndex = PAGE_DIR_GET_INDEX((uint64_t)addr);
         kernelHeapDir[pageDirIndex] = 0;
@@ -593,6 +603,8 @@ void Free4KPages(void* addr, uint64_t amount, page_map_t* addressSpace) {
 void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount) {
     uint64_t pageDirIndex = PAGE_DIR_GET_INDEX(virt);
 
+    ScopedSpinLock lockKDir(kernelHeapDirLock);
+
     while (amount--) {
         kernelHeapDir[pageDirIndex] = 0x83;
         SetPageFrame(&(kernelHeapDir[pageDirIndex]), phys);
@@ -604,6 +616,8 @@ void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount) {
 
 void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags) {
     uint64_t pageDirIndex, pageIndex;
+
+    ScopedSpinLock lockKDir(kernelHeapDirLock);
 
     while (amount--) {
         pageDirIndex = PAGE_DIR_GET_INDEX(virt);
