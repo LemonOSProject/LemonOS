@@ -135,19 +135,19 @@ bool Window::PollEvent(LemonEvent& ev) {
     return false;
 }
 
-void Window::GUIPollEvents(){
+void Window::GUIPollEvents() {
     LemonEvent ev;
-    while(PollEvent(ev)){
+    while (PollEvent(ev)) {
         // If the handler returns true, the event is not processed.
         auto handler = m_eventHandlers.find(ev.event);
-        if(handler != m_eventHandlers.end() && handler->second(ev)){
+        if (handler != m_eventHandlers.end() && handler->second(ev)) {
             continue;
         }
 
         GUIHandleEvent(ev);
     }
 
-    if(m_shouldResize){
+    if (m_shouldResize) {
         Resize(m_resizeBounds);
         m_shouldResize = false;
     }
@@ -384,9 +384,19 @@ void WindowMenuBar::Paint(surface_t* surface) {
     Graphics::DrawRect(fixedBounds, Theme::Current().ColourBackground(), surface);
     Graphics::DrawRect(0, fixedBounds.height, fixedBounds.width, 1, Theme::Current().ColourForeground(), surface);
 
-    int xpos = 0;
+    int xpos = 4;
     for (auto& item : items) {
-        xpos += Graphics::DrawString(item.first.c_str(), xpos + 4, 4, Theme::Current().ColourText(), surface) + 8;
+        int width = Graphics::GetTextLength(item.first.c_str()) + 8;
+        Rect mouseRect = {{xpos - 4, fixedBounds.y}, {width, fixedBounds.height}};
+        Colour textCol = Theme::Current().ColourText();
+
+        if (Graphics::PointInRect(mouseRect, window->lastMousePos)) {
+            Graphics::DrawRoundedRect(
+                {mouseRect.pos + Vector2i{2, 2}, {width + 4, Graphics::DefaultFont()->pixelHeight + 4}},
+                Theme::Current().ColourForeground(), 6, 6, 6, 6, surface);
+        }
+
+        xpos += Graphics::DrawString(item.first.c_str(), xpos + 4, 4, textCol, surface) + 8;
     }
 }
 
