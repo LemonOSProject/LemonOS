@@ -5,8 +5,8 @@
 #include <Device.h>
 #include <Fs/Filesystem.h>
 #include <IDT.h>
+#include <IOPorts.h>
 #include <Logging.h>
-#include <System.h>
 #include <stddef.h>
 
 #include "PS2.h"
@@ -142,12 +142,12 @@ void MouseHandler(void*, RegisterContext* regs) {
     case 2:
         mouseData[2] = inportb(0x60);
 
-        if(hasScrollWheel){
+        if (hasScrollWheel) {
             mouseCycle++;
             break;
         }
     case 3: {
-        if(hasScrollWheel){
+        if (hasScrollWheel) {
             mouseData[3] = inportb(0x60);
         }
         mouseCycle = 0;
@@ -162,7 +162,7 @@ void MouseHandler(void*, RegisterContext* regs) {
         int x = mouseData[1] - ((mouseData[0] & MOUSE_X_SIGN) << 4);
         int y = mouseData[2] - ((mouseData[1] & MOUSE_Y_SIGN) << 3);
 
-        if(mouseData[0] & (MOUSE_X_OVERFLOW | MOUSE_Y_OVERFLOW)){
+        if (mouseData[0] & (MOUSE_X_OVERFLOW | MOUSE_Y_OVERFLOW)) {
             // If either overflow bit is set, discard movement
             x = 0;
             y = 0;
@@ -260,10 +260,10 @@ public:
 // Some touchpads want 'sliced commands'
 // They are encoded in resolution commands with a leading
 // scale command
-void SendSlicedMouseCommand(uint8_t cmd){
+void SendSlicedMouseCommand(uint8_t cmd) {
     SendCommand<true>(0xE6);
 
-    for(int i = 3; i >= 0; i--){
+    for (int i = 3; i >= 0; i--) {
         SendCommand<true>(0xE8);
         SendCommand<true>(cmd >> (i * 2));
     }
@@ -319,7 +319,7 @@ void Initialize() {
     WaitData<true>();
     int id = inportb(0x60);
     Log::Info("[PS/2] MouseID: %d", id);
-    if(id >= 3){
+    if (id >= 3) {
         hasScrollWheel = true;
     }
 

@@ -13,7 +13,6 @@
 #include <Objects/Handle.h>
 #include <Objects/KObject.h>
 #include <RefPtr.h>
-#include <System.h>
 #include <Thread.h>
 #include <TimerEvent.h>
 #include <Vector.h>

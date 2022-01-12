@@ -1,8 +1,8 @@
 #include <CPU.h>
 #include <CString.h>
+#include <IOPorts.h>
 #include <Lock.h>
 #include <Serial.h>
-#include <System.h>
 
 namespace Serial {
 enum Ports { COM1 = 0x3F8 };

@@ -4,8 +4,8 @@
 #include <APIC.h>
 #include <CPU.h>
 #include <IDT.h>
+#include <IOPorts.h>
 #include <Logging.h>
-#include <System.h>
 #include <Vector.h>
 
 namespace PCI {

@@ -2,6 +2,7 @@
 
 #include <APIC.h>
 #include <CString.h>
+#include <IOPorts.h>
 #include <List.h>
 #include <Logging.h>
 #include <MM/KMalloc.h>

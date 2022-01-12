@@ -4,6 +4,7 @@
 #include <APIC.h>
 #include <Device.h>
 #include <IDT.h>
+#include <IOPorts.h>
 #include <Logging.h>
 #include <Memory.h>
 #include <PCI.h>

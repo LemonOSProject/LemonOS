@@ -2,6 +2,7 @@
 
 #include <ABI.h>
 #include <APIC.h>
+#include <CPU.h>
 #include <Debug.h>
 #include <ELF.h>
 #include <Fs/Initrd.h>
@@ -16,7 +17,6 @@
 #include <SMP.h>
 #include <Serial.h>
 #include <String.h>
-#include <System.h>
 #include <TSS.h>
 #include <Timer.h>
 

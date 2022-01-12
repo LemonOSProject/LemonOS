@@ -1,4 +1,5 @@
 #include <APIC.h>
+#include <CPU.h>
 #include <CString.h>
 #include <IDT.h>
 #include <Logging.h>
@@ -9,7 +10,6 @@
 #include <Scheduler.h>
 #include <StackTrace.h>
 #include <Syscalls.h>
-#include <System.h>
 #include <UserPointer.h>
 
 // extern uint32_t kernel_end;
@@ -140,7 +140,7 @@ void InitializeVirtualMemory() {
     asm("mov %%rax, %%cr3" ::"a"((uint64_t)kernelPML4 - KERNEL_VIRTUAL_BASE));
 }
 
-void LateInitializeVirtualMemory(){
+void LateInitializeVirtualMemory() {
     pageFaultTraps = new HashMap<uintptr_t, PageFaultTrap>();
 
     RegisterPageFaultTrap(PageFaultTrap{.instructionPointer = reinterpret_cast<uintptr_t>(UserMemcpyTrap),
@@ -277,7 +277,7 @@ void DestroyPageMap(PageMap* pageMap) {
             pageMap->pageDirs[i][j] = 0;
         }
 
-        if(pageMap->pageTables[i]){
+        if (pageMap->pageTables[i]) {
             kfree(pageMap->pageTables[i]);
         }
 
@@ -708,7 +708,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
     uint64_t faultAddress;
     asm volatile("movq %%cr2, %0" : "=r"(faultAddress));
 
-    int errorCode = IDT::GetErrCode();
+    int errorCode = regs->err;
     int present = !(errorCode & 0x1); // Page not present
     int rw = errorCode & 0x2;         // Attempted write to read only page
     int us = errorCode & 0x4;         // Processor was in user-mode and tried to access kernel page
@@ -821,7 +821,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
                 return; // Success!
             }
             asm("cli");
-        } else if(faultRegion) {
+        } else if (faultRegion) {
             faultRegion->lock.ReleaseRead();
         } else if (PageFaultTrap trap; pageFaultTraps->get(regs->rip, trap)) {
             // If we have found a handler, set the IP to the handler

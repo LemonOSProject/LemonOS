@@ -8,8 +8,6 @@ extern LocalAPICEOI
 global idt_flush
 global int_vectors
 
-extern idt_ptr
-
 section .text
 %macro pushaq 0
     push rax
@@ -47,70 +45,63 @@ section .text
     pop rax
 %endmacro
 
-idt_flush:
-    lidt[idt_ptr]
-	ret
+%macro ISR_COMMON_EXIT 0
+    popaq
+    add rsp, 8; Remove the error code
     iretq
+%endmacro
 
 %macro ISR_ERROR_CODE 1
 	global isr%1
 	isr%1:
         cli
-        push qword [rsp+5*8] ; SS
-        push qword [rsp+5*8] ; RSP
-        push qword [rsp+5*8] ; RFLAGS
-        push qword [rsp+5*8] ; CS
-        push qword [rsp+5*8] ; RIP
         pushaq
         mov rdi, %1
         mov rsi, rsp
-        mov rdx, qword [rsp+20*8]
         xor rbp, rbp
         call isr_handler
-        popaq
-        iretq
+        ISR_COMMON_EXIT
 %endmacro
 
 %macro ISR_NO_ERROR_CODE 1
 	global isr%1
 	isr%1:
 		cli
+        push 0
         pushaq
         mov rdi, %1
         mov rsi, rsp
-        xor rdx, rdx
         xor rbp, rbp
         call isr_handler
-        popaq
-        iretq
+        ISR_COMMON_EXIT
 %endmacro
 
 %macro IPI 1
 	global ipi%1
 	ipi%1:
 		cli
+        push 0
         pushaq
         mov rdi, %1
         mov rsi, rsp
         xor rdx, rdx
         xor rbp, rbp
         call ipi_handler
-        popaq
-        iretq
+        ISR_COMMON_EXIT
 %endmacro
 
 %macro IRQ 2
   global irq%1
   irq%1:
     cli
+    push 0
     pushaq
     mov rdi, %2
     mov rsi, rsp
     xor rdx, rdx
     xor rbp, rbp
     call irq_handler
-    popaq
-    iretq
+    ISR_COMMON_EXIT
 %endmacro
 
 ISR_NO_ERROR_CODE  0
@@ -151,12 +142,12 @@ extern SyscallHandler ; Syscall
 global isr0x69
 isr0x69:
     cli
+    push 0
     pushaq
     mov rdi, rsp
     xor rbp, rbp
     call SyscallHandler
-    popaq
-    iretq
+    ISR_COMMON_EXIT
 
 %assign num 48
 %rep 256-48

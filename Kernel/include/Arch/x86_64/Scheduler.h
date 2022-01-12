@@ -8,14 +8,13 @@
 #include <Lock.h>
 #include <MM/AddressSpace.h>
 #include <Memory.h>
+#include <Objects/Handle.h>
+#include <Objects/Process.h>
 #include <Paging.h>
-#include <System.h>
+#include <Thread.h>
 #include <Timer.h>
 #include <Vector.h>
 #include <stdint.h>
-#include <Objects/Process.h>
-#include <Objects/Handle.h>
-#include <Thread.h>
 
 #define KERNEL_CS 0x08
 #define KERNEL_SS 0x10

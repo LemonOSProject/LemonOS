@@ -4,12 +4,12 @@
 
 #include <APIC.h>
 #include <IDT.h>
+#include <IOPorts.h>
 #include <Logging.h>
 #include <Net/Net.h>
 #include <PCI.h>
 #include <Paging.h>
 #include <PhysicalAllocator.h>
-#include <System.h>
 #include <Timer.h>
 #include <Vector.h>
 

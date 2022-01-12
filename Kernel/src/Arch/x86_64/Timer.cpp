@@ -9,7 +9,7 @@
 #include <List.h>
 #include <Logging.h>
 #include <Scheduler.h>
-#include <System.h>
+#include <IOPorts.h>
 
 namespace Timer {
 int frequency;         // Timer frequency

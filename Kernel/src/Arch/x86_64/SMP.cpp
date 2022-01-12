@@ -34,6 +34,7 @@ volatile uint64_t* smpEntry2 = (uint64_t*)SMP_TRAMPOLINE_ENTRY2;
 volatile bool doneInit = false;
 
 extern gdt_ptr_t GDT64Pointer64;
+extern idt_ptr_t idtPtr;
 
 namespace SMP {
 CPU* cpus[256];
@@ -51,10 +52,10 @@ void SMPEntry(uint16_t id) {
     Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)cpu->gdt, 1);
     memcpy(cpu->gdt, (void*)GDT64Pointer64.base, GDT64Pointer64.limit + 1); // Make a copy of the GDT
     cpu->gdtPtr = {.limit = GDT64Pointer64.limit, .base = (uint64_t)cpu->gdt};
+    cpu->idtPtr = {.limit = idtPtr.limit, .base = idtPtr.base};
 
     asm volatile("lgdt (%%rax)" ::"a"(&cpu->gdtPtr));
-
-    idt_flush();
+    asm volatile("lidt %0" ::"m"(cpu->idtPtr));
 
     TSS::InitializeTSS(&cpu->tss, cpu->gdt);
 

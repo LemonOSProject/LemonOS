@@ -1,6 +1,6 @@
 #pragma once
 
-#include <System.h>
+#include <CPU.h>
 #include <stdint.h>
 
 #define KERNEL_VIRTUAL_BASE 0xFFFFFFFF80000000ULL
@@ -82,7 +82,7 @@ typedef struct PageMap { // Each process will have a maximum of 96GB of virtual 
 // Allows handling of page faults without kernel panic
 struct PageFaultTrap {
     uintptr_t instructionPointer;
-    void(*handler)();
+    void (*handler)();
 };
 
 class AddressSpace;

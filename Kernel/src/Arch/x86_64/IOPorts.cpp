@@ -1,5 +1,5 @@
-#include <System.h>
-extern "C" {
+#include <stdint.h>
+
 void outportb(uint16_t port, uint8_t value) { asm volatile("outb %1, %0" : : "dN"(port), "a"(value)); }
 
 uint8_t inportb(uint16_t port) {
@@ -30,5 +30,4 @@ uint32_t inportl(uint16_t port) {
     uint32_t value;
     asm volatile("inl %1, %0" : "=a"(value) : "dN"(port));
     return value;
-}
 }

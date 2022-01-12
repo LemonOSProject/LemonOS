@@ -33,4 +33,5 @@ TaskSwitch:
     mov cr3, rax ; Set CR3
 
     pop rax ; Now pop RAX
+    add rsp, 8 ; Remove fake error code
     iretq ; This will pop RIP, CS, RFLAGS, RSP and SS.

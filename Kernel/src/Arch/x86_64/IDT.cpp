@@ -2,17 +2,17 @@
 #include <CString.h>
 #include <HAL.h>
 #include <IDT.h>
+#include <IOPorts.h>
 #include <Lock.h>
 #include <Logging.h>
 #include <Panic.h>
 #include <Scheduler.h>
 #include <StackTrace.h>
 #include <Syscalls.h>
-#include <System.h>
 
 idt_entry_t idt[256];
 
-idt_ptr_t idt_ptr;
+idt_ptr_t idtPtr;
 
 struct ISRDataPair {
     isr_t handler;
@@ -70,12 +70,9 @@ void irq13();
 void irq14();
 void irq15();
 void isr0x69();
-void idt_flush();
 }
 
 extern uint64_t int_vectors[];
-
-int errCode = 0;
 
 namespace IDT {
 void IPIHalt(void*, RegisterContext* r) {
@@ -98,8 +95,8 @@ static void SetGate(uint8_t num, uint64_t base, uint16_t sel, uint8_t flags, uin
 }
 
 void Initialize() {
-    idt_ptr.limit = sizeof(idt_entry_t) * 256 - 1;
-    idt_ptr.base = (uint64_t)&idt;
+    idtPtr.limit = sizeof(idt_entry_t) * 256 - 1;
+    idtPtr.base = (uint64_t)&idt;
 
     for (int i = 0; i < 256; i++) {
         SetGate(i, 0, 0x08, 0x8E);
@@ -143,7 +140,7 @@ void Initialize() {
     SetGate(31, (uint64_t)isr31, 0x08, 0x8E);
     SetGate(0x69, (uint64_t)isr0x69, 0x08, 0xEE /* Allow syscalls to be called from user mode*/, 0); // Syscall
 
-    idt_flush();
+    asm volatile("lidt %0;" ::"m"(idtPtr));
 
     outportb(0x20, 0x11);
     outportb(0xA0, 0x11);
@@ -205,14 +202,11 @@ void DisablePIC() {
     outportb(0x21, 0xFF); // Mask all interrupts
     outportb(0xA1, 0xFF);
 }
-
-int GetErrCode() { return errCode; }
 } // namespace IDT
 
-extern "C" void isr_handler(int int_num, RegisterContext* regs, int err_code) {
-    errCode = err_code;
-    if (__builtin_expect(interrupt_handlers[int_num].handler != 0, 1)) {
-        interrupt_handlers[int_num].handler(interrupt_handlers[int_num].data, regs);
+extern "C" void isr_handler(int intNum, RegisterContext* regs) {
+    if (__builtin_expect(interrupt_handlers[intNum].handler != 0, 1)) {
+        interrupt_handlers[intNum].handler(interrupt_handlers[intNum].data, regs);
     } else if (!(regs->ss & 0x3)) { // Check the CPL of the segment, caused by kernel?
         // Kernel Panic so tell other processors to stop executing
         APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED,
@@ -220,11 +214,11 @@ extern "C" void isr_handler(int int_num, RegisterContext* regs, int err_code) {
 
         IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, { DumpLastSyscall(GetCPULocal()->currentThread); });
         Log::Error("Fatal Kernel Exception: ");
-        Log::Info(int_num);
+        Log::Info(intNum);
         Log::Info("RIP: ");
         Log::Info(regs->rip);
         Log::Info("Error Code: ");
-        Log::Info(err_code);
+        Log::Info(regs->err);
         Log::Info("Register Dump: a: ");
         Log::Write(regs->rax);
         Log::Write(", b:");
@@ -247,15 +241,13 @@ extern "C" void isr_handler(int int_num, RegisterContext* regs, int err_code) {
 
         char temp[19];
         char temp2[19];
-        const char* reasons[]{
-            "Generic Exception",
-            "RIP: ",
-            itoa(regs->rip, temp, 16),
-            "Exception: ",
-            itoa(int_num, temp2, 16),
-            "Process:",
-            Scheduler::GetCurrentThread() ? Scheduler::GetCurrentThread()->parent->name : "none"
-        };
+        const char* reasons[]{"Generic Exception",
+                              "RIP: ",
+                              itoa(regs->rip, temp, 16),
+                              "Exception: ",
+                              itoa(intNum, temp2, 16),
+                              "Process:",
+                              Scheduler::GetCurrentThread() ? Scheduler::GetCurrentThread()->parent->name : "none"};
         KernelPanic(reasons, 7);
         for (;;)
             ;
@@ -270,7 +262,7 @@ extern "C" void isr_handler(int int_num, RegisterContext* regs, int err_code) {
         Log::Write(", RIP: ");
         Log::Write(regs->rip);
         Log::Write(", Exception: ");
-        Log::Write(int_num);
+        Log::Write(intNum);
         Log::Info("Stack trace:");
         UserPrintStackTrace(regs->rbp, current->addressSpace);
         current->Die();
