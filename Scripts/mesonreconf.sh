@@ -1,3 +1,4 @@
+#!/bin/sh
 SPATH=$(dirname $(readlink -f "$0"))
 
 cd $SPATH/..
