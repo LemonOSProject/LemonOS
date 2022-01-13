@@ -1,3 +1,4 @@
+#!/bin/sh
 export TOOLCHAIN_PATH="$HOME/.local/share/lemon/bin"
 SPATH=$(dirname $(readlink -f "$0"))
 source $SPATH/env.sh

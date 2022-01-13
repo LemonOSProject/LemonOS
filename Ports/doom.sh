@@ -1,3 +1,4 @@
+#!/bin/sh
 unpack(){
  	git clone https://github.com/LemonOSProject/LemonDOOM.git --depth 1 LemonDOOM
  	export BUILD_DIR=LemonDOOM/lemondoom
