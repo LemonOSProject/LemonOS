@@ -1,3 +1,4 @@
+#!/bin/sh
 unpack(){
     if ! [ -f cache/busybox-1.33.1.tar.bz2 ]; then # Check if tarball exists
  		curl -Lo cache/busybox-1.33.1.tar.bz2 "https://www.busybox.net/downloads/busybox-1.33.1.tar.bz2"
