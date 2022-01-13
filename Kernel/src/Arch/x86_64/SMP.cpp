@@ -24,7 +24,7 @@ static inline void wait(uint64_t ms) {
 extern void* _binary_SMPTrampoline_bin_start;
 extern void* _binary_SMPTrampoline_bin_size;
 
-volatile uint16_t* smpMagic = (uint16_t*)SMP_TRAMPOLINE_DATA_MAGIC;
+volatile uint16_t* smpMagic = (uint16_t*)SMP_MAGIC;
 volatile uint16_t* smpID = (uint16_t*)SMP_TRAMPOLINE_CPU_ID;
 gdt_ptr_t* smpGDT = (gdt_ptr_t*)SMP_TRAMPOLINE_GDT_PTR;
 volatile uint64_t* smpCR3 = (uint64_t*)SMP_TRAMPOLINE_CR3;
