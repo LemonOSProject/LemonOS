@@ -20,8 +20,6 @@
 #include <TSS.h>
 #include <Timer.h>
 
-extern "C" [[noreturn]] void TaskSwitch(RegisterContext* r, uint64_t pml4);
-
 extern "C" void IdleProcess();
 
 void KernelProcess();
@@ -224,7 +222,29 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
         }
     }
 
-    TaskSwitch(&cpu->currentThread->registers, cpu->currentThread->parent->GetPageMap()->pml4Phys);
+    asm volatile(
+        R"(mov %0, %%rsp;
+        mov %1, %%rax;
+        pop %%r15;
+        pop %%r14;
+        pop %%r13;
+        pop %%r12;
+        pop %%r11;
+        pop %%r10;
+        pop %%r9;
+        pop %%r8;
+        pop %%rbp;
+        pop %%rdi;
+        pop %%rsi;
+        pop %%rdx;
+        pop %%rcx;
+        pop %%rbx;
+        
+        mov %%rax, %%cr3
+        pop %%rax
+        addq $8, %%rsp
+        iretq)"
+    :: "r"(&cpu->currentThread->registers), "r"(cpu->currentThread->parent->GetPageMap()->pml4Phys));
 }
 
 } // namespace Scheduler
