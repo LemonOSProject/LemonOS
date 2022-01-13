@@ -89,14 +89,14 @@ void DisplayPath(const char* path, bool displayPath = false){
 int main(int argc, char** argv){
     
     option opts[] = {
-        {"help", no_argument, &help, true},
+        {"help", no_argument, nullptr, 'h'},
         {"inode", no_argument, nullptr, 'i'},
         {"size", no_argument, nullptr, 's'},
         {"recursive", no_argument, nullptr, 'R'},
     };
     
     int option;
-    while((option = getopt_long(argc, argv, "isdR", opts, nullptr)) >= 0){
+    while((option = getopt_long(argc, argv, "ihsdR", opts, nullptr)) >= 0){
         switch(option){
             case 'i':
                 inode = true;
@@ -109,6 +109,9 @@ int main(int argc, char** argv){
                 break;
             case 'R':
                 recursive = true;
+                break;
+            case 'h':
+                help = true;
                 break;
             case '?':
                 printf("For usage see '%s --help'", argv[0]);
