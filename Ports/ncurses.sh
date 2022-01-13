@@ -1,3 +1,4 @@
+#!/bin/sh
 unpack(){
     if ! [ -f cache/ncurses-6.2.tar.gz ]; then # Check if tarball exists
         curl -Lo cache/ncurses-6.2.tar.gz "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.2.tar.gz"
