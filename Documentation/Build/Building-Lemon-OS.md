@@ -1,4 +1,6 @@
-*~~It is recommended that you [build with docker](Building-Lemon-OS-with-Docker.md), building the toolchain will takes a long time.~~ Docker build Outdated*
+### *Building the toolchain can take an extremely long time, a Docker image has been built. Consider [Building Lemon OS with Docker](Building-Lemon-OS-with-Docker.md)*
+
+
 
 ## Prerequisites
 _NOTE: Building on WSL2 is doable, however I strongly recommend an actual UNIX system._
@@ -56,15 +58,15 @@ ninja disk
 ```
 
 ### Running with QEMU/KVM
-To run with QEMU run `ninja run`
+To run with QEMU run `Scripts/run.sh`
 ```sh
-ninja run
+Scripts/run.sh
 ```
 
 ### Running with VirtualBox
-To run with VirtualBox create a vm called "LemonOS". You'll need to symlink `Disks/Lemon.img` to `Disks/Lemon.hdd` Then run `ninja run-vbox`
+To run with VirtualBox create a vm called "LemonOS". You'll need to symlink `Disks/Lemon.img` to `Disks/Lemon.hdd` as VirtualBox cannot use `.img` files.
 ```sh
-ninja run-vbox
+Scripts/run.sh vbox
 ```
 
 ## Building Ports

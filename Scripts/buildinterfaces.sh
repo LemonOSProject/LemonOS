@@ -2,30 +2,26 @@
 
 set -e
 
-if [ -z $LEMOND ]; then
-	export LEMOND=$(dirname $(readlink -f "$0"))/..
-fi
-
-if [ -z "$LEMON_SYSROOT" ]; then
-    export LEMON_SYSROOT=$HOME/.local/share/lemon/sysroot
-fi
+SPATH=$(dirname $(readlink -f "$0"))
+source $SPATH/env.sh
 
 INCLUDEDIR="$LEMON_SYSROOT/system/include/Lemon/Services/"
 
-LIC="$LEMOND/InterfaceCompiler/lic"
-LIC_SRC="$LEMOND/InterfaceCompiler/main.cpp"
+LIC="$LEMON_BUILDROOT/InterfaceCompiler/lic"
+LIC_SRC="$LEMON_BUILDROOT/InterfaceCompiler/main.cpp"
 
 WD="$(pwd)"
 
 if ! [ -f "$LIC" ] || [ "$LIC_SRC" -nt "$LIC" ]; then # If the lic executable doesent exist or is older than source, build it
-    cd "$LEMOND/InterfaceCompiler"
+    echo "Rebuilding $LIC_SRC"
+    cd "$LEMON_BUILDROOT/InterfaceCompiler"
     ./build.sh
     cd "$WD"
 fi
 
 
 mkdir -p "$INCLUDEDIR" 
-cd "$LEMOND/Services"
+cd "$LEMON_BUILDROOT/Services"
 
 "$LIC" lemon.lemond.li "$INCLUDEDIR/lemon.lemond.h"
 "$LIC" lemon.networkgovernor.li "$INCLUDEDIR/lemon.networkgovernor.h"

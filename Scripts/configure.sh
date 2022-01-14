@@ -48,4 +48,7 @@ cd "$LEMON_BUILDROOT/Ports"
 cd $SPATH/..
 
 meson Build --cross $SPATH/lemon-crossfile.txt
+
 $SPATH/buildinterfaces.sh
+
+>&2 echo "Done configuring system."

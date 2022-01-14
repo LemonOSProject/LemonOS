@@ -11,17 +11,16 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 [Discord Server](https://discord.gg/NAYp6AUYWM)
 
 ## Building
-- [Building Lemon OS](Documentation/Build/Building-Lemon-OS.md)
-- [Building Lemon OS with Docker (Outdated)](Documentation/Build/Building-Lemon-OS-with-Docker.md)
+- [Building Lemon OS (Requires building toolchain)](Documentation/Build/Building-Lemon-OS.md)
+- [Building Lemon OS with Docker](Documentation/Build/Building-Lemon-OS-with-Docker.md)
 
 ## Prebuilt Image
 [Nightly Images](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml?query=is%3Asuccess+branch%3Amaster) - Go to latest job, `Lemon.img` located under Artifacts\
-[Latest Release](https://github.com/LemonOSProject/LemonOS/releases/latest)
 
 **Before running**
 See [System Requirements](#system-requirements)
 
-![Lemon OS Screenshot](Screenshots/image8.png)\
+![Lemon OS Screenshot](Screenshots/image9.png)\
 [More screenshots](Screenshots)
 ## Features
 - Modular Kernel
