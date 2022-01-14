@@ -3,7 +3,7 @@
 set -e
 
 SPATH=$(dirname $(readlink -f "$0"))
-source $SPATH/env.sh
+. $SPATH/env.sh
 
 INCLUDEDIR="$LEMON_SYSROOT/system/include/Lemon/Services/"
 

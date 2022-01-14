@@ -1,5 +1,7 @@
 ![banner](Extra/lemonlt.png)
 
+[![CI](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml/badge.svg)](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml)
+
 Lemon OS is a UNIX-like 64-bit operating system written in C++.
 
 ## About Lemon OS
