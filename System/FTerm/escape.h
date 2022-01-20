@@ -1,6 +1,11 @@
 #pragma once
 
-#define ANSI_ESC 27
+enum {
+    Control_Escape = '\e',
+    Control_Backspace = '\b', // Backspaces one column, however not past the beginning of the line
+    Control_LineFeed = '\n', // Line feed, by default will also carriage return
+    Control_CarriageReturn = '\r', // Carriage return
+};
 
 #define ESC_SAVE_CURSOR '7'
 #define ESC_RESTORE_CURSOR '8'

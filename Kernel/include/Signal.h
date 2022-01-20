@@ -6,6 +6,7 @@ typedef void (*__sighandler) (int);
 #include <abi-bits/signal.h>
 
 #define SIGNAL_MAX 34 // Maximum amount of signal handlers
+#define UNMASKABLE_SIGNALS (1 << (SIGKILL - 1)) | (1 << (SIGSTOP - 1))
 
 enum class SignalAction : int {
     Die = 0, // Kill the thread

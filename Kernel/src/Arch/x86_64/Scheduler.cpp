@@ -212,7 +212,7 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
     // - Pending unmasked signals
     // If true, invoke the signal handler
     if ((cpu->currentThread->registers.cs & 0x3) &&
-        (cpu->currentThread->pendingSignals & ~cpu->currentThread->signalMask)) {
+        (cpu->currentThread->pendingSignals & ~cpu->currentThread->EffectiveSignalMask())) {
         if (cpu->currentThread->parent->State() == ThreadStateRunning) {
             int ret = acquireTestLock(&cpu->currentThread->lock);
             assert(!ret);

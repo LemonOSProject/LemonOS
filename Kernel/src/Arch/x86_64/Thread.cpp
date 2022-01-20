@@ -209,7 +209,7 @@ bool Thread::Block(ThreadBlocker* newBlocker) {
         return false;
     }
 
-    if (pendingSignals & (~signalMask)) {
+    if (pendingSignals & (~EffectiveSignalMask())) {
         releaseLock(&newBlocker->lock); // Pending signals, don't block
         asm("sti");
 

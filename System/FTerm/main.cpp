@@ -1,488 +1,554 @@
+#include <cassert>
+#include <cstdlib>
+#include <thread>
 #include <vector>
-#include <cctype>
 
-#include <termios.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <pty.h>
+#include <signal.h>
 #include <sys/ioctl.h>
+#include <sys/wait.h>
+#include <sys/poll.h>
+#include <unistd.h>
 
-#include <lemon/syscall.h>
-#include <Lemon/System/Spawn.h>
+#include <Lemon/Core/Keyboard.h>
 #include <Lemon/Core/Framebuffer.h>
-#include <Lemon/Graphics/Graphics.h>
 
-#include "fterm.h"
+#include <Lemon/Graphics/Graphics.h>
 
 #include "colours.h"
 #include "escape.h"
+#include "fterm.h"
 
-struct TermState{
-	bool bold : 1 = false;
-	bool italic : 1 = false;
-	bool faint : 1 = false;
-	bool underline : 1 = false;
-	bool blink : 1 = false;
-	bool reverse : 1 = false;
-	bool strikethrough: 1 = false;
+#define SCROLLBACK_BUFFER_MAX 400
 
-	uint8_t fgColour = 15;
-	uint8_t bgColour = 0;
-};
+using namespace Lemon;
 
-TermState defaultState {
-	.bold = false,
-	.italic = false,
-	.faint = false,
-	.underline = false,
-	.blink = false,
-	.reverse = false,
-	.strikethrough = false,
-	.fgColour = 136,
-	.bgColour = 0,
-};
+Colour* colours = coloursProfile2;
+Lemon::Graphics::Font* terminalFont = nullptr;
+
+Surface renderSurface;
+Surface framebufferSurface;
+
+RGBAColour defaultBackgroundColour = colours[0];
+RGBAColour defaultForegroundColour = colours[15];
+RGBAColour currentBackgroundColour = colours[0];
+RGBAColour currentForegroundColour = colours[15];
+
+Vector2i characterSize;
+Vector2i terminalSize;            // The size of the terminal window in characters
+Vector2i cursorPosition = {1, 1}; // The position of the cursor in characters
+
+pid_t shellPID = -1;
 
 struct TerminalChar {
-	TermState s = defaultState;
-	char c = ' ';
+    char ch;
+    RGBAColour background;
+    RGBAColour foreground;
+
+    TerminalChar() = default;
+    TerminalChar(char ch) : ch(ch), background(currentBackgroundColour), foreground(currentForegroundColour) {}
+
+    inline operator char() { return ch; }
 };
 
-int masterPTYFd;
-TermState state = defaultState;
-bool escapeSequence = false;
-int escapeType = 0;
+using TerminalLine = std::vector<TerminalChar>;
 
-Lemon::Graphics::Font* terminalFont;
+std::vector<TerminalLine> scrollbackBuffer;
 
-surface_t fbSurface;
-surface_t renderSurface;
+TerminalLine& GetLine(int cursorY) {
+    assert(scrollbackBuffer.size() >= static_cast<unsigned>(terminalSize.y));
 
-winsize wSize;
+    // Cursor starts at (1, 1)
+    TerminalLine& ln = scrollbackBuffer[scrollbackBuffer.size() - terminalSize.y + (cursorY - 1)];
 
-std::vector<std::vector<TerminalChar>> screenBuffer;
-
-vector2i_t curPos = {0, 0};
-vector2i_t storedCurPos = {0, 0};
-
-const int escBufMax = 256;
-char escBuf[escBufMax];
-
-void Scroll(){
-	while(curPos.y >= wSize.ws_row){
-		screenBuffer.erase(screenBuffer.begin());
-		screenBuffer.push_back(std::vector<TerminalChar>());
-
-        curPos.y--;
-	}
-
-	Lemon::Graphics::DrawRect({0, 0, renderSurface.width, renderSurface.height}, colours[state.bgColour], &renderSurface);
+    // Ensure the line is the right size
+    if (ln.size() != static_cast<unsigned>(terminalSize.x))
+        ln.resize(terminalSize.x);
+    return ln;
 }
 
-void Paint(){
-    int lnPos = 0;
-    int fontHeight = terminalFont->height;
-    for(std::vector<TerminalChar>& line : screenBuffer){
-        for(int j = 0; j < static_cast<long>(line.size()) && j < wSize.ws_col; j++){
-			TerminalChar ch = screenBuffer[lnPos][j];
-			rgba_colour_t fg = colours[ch.s.fgColour];
-			rgba_colour_t bg = colours[ch.s.bgColour];
+inline auto FirstLine() { return scrollbackBuffer.begin() + (scrollbackBuffer.size() - terminalSize.y); }
 
-			Lemon::Graphics::DrawRect(j * 8, lnPos * fontHeight, 8, fontHeight, bg.r, bg.g, bg.b, &renderSurface);
+void Paint() {
+    assert(scrollbackBuffer.size() >= static_cast<unsigned>(terminalSize.y));
 
-			if(isprint(ch.c))
-				Lemon::Graphics::DrawChar(ch.c, j * 8, lnPos * fontHeight, fg.r, fg.g, fg.b, &renderSurface, {0, 0, renderSurface.width, renderSurface.height}, terminalFont);
+    Vector2i screenPos = {0, 0};
+    for (unsigned i = scrollbackBuffer.size() - terminalSize.y; i < scrollbackBuffer.size(); i++) {
+        screenPos.x = 0;
+        for (auto& c : scrollbackBuffer[i]) {
+            Lemon::Graphics::DrawRect(Rect{screenPos, characterSize}, c.background, &renderSurface);
+            Lemon::Graphics::DrawChar(c.ch, screenPos.x, screenPos.y, c.foreground, &renderSurface, terminalFont);
+            screenPos.x += characterSize.x;
         }
-
-        if(++lnPos >= wSize.ws_row){
-            break;
-        }
+        screenPos.y += characterSize.y;
     }
 
-	timespec t;
-	clock_gettime(CLOCK_BOOTTIME, &t);
+    Lemon::Graphics::DrawRect(
+        Rect{{(cursorPosition.x - 1) * characterSize.x, (cursorPosition.y - 1) * characterSize.y}, characterSize},
+        currentForegroundColour, &renderSurface);
 	
-	long msec = (t.tv_nsec / 1000000.0);
-	if(msec < 250 || (msec > 500 && msec < 750)) // Only draw the cursor for a quarter of a second so it blinks
-		Lemon::Graphics::DrawRect(curPos.x * 8, curPos.y * fontHeight + (fontHeight / 4 * 3), 8, fontHeight / 4, colours[state.fgColour], &renderSurface);
-
-    Lemon::Graphics::surfacecpy(&fbSurface, &renderSurface);
+	framebufferSurface.Blit(&renderSurface);
 }
 
-void DoAnsiSGR(){
-	int r = -1;
-	if(strchr(escBuf, ';')){
-		char temp[strchr(escBuf, ';') - escBuf + 1];
-		temp[strchr(escBuf, ';') - escBuf] = 0;
-		strncpy(temp, escBuf, (int)(strchr(escBuf, ';') - escBuf));
-		r = atoi(escBuf);
-
-	} else r = atoi(escBuf);
-	if(r < 30){
-		switch (r)
-		{
-		case 0:
-			state = defaultState;
-			break;
-		case 1:
-			state.bold = true;
-			break;
-		case 2:
-			state.faint = true;
-			break;
-		case 3:
-			state.italic = true;
-			break;
-		case 4:
-			state.underline = true;
-			break;
-		case 5:
-		case 6:
-			state.blink = true;
-			break;
-		case 7:
-			state.reverse = true;
-			break;
-		case 9:
-			state.strikethrough = true;
-			break;
-		case 21:
-			state.underline = true;
-			break;
-		case 24:
-			state.underline = false;
-			break;
-		case 25:
-			state.blink = false;
-			break;
-		case 27:
-			state.reverse = false;
-			break;
-		default:
-			break;
-		}
-	} else if (r >= ANSI_CSI_SGR_FG_BLACK && r <= ANSI_CSI_SGR_FG_WHITE){ // Foreground Colour
-		state.fgColour = r - ANSI_CSI_SGR_FG_BLACK;
-	} else if (r >= ANSI_CSI_SGR_BG_BLACK && r <= ANSI_CSI_SGR_BG_WHITE){ // Background Colour
-		state.bgColour = r - ANSI_CSI_SGR_BG_BLACK;
-	} else if (r >= ANSI_CSI_SGR_FG_BLACK_BRIGHT && r <= ANSI_CSI_SGR_FG_WHITE_BRIGHT){ // Foreground Colour (Bright)
-		state.fgColour = r - ANSI_CSI_SGR_FG_BLACK_BRIGHT + 8;
-	} else if (r >= ANSI_CSI_SGR_BG_BLACK_BRIGHT && r <= ANSI_CSI_SGR_BG_WHITE_BRIGHT){ // Background Colour (Bright)
-		state.bgColour = r - ANSI_CSI_SGR_BG_BLACK_BRIGHT + 8;
-	} else if (r == ANSI_CSI_SGR_FG){
-		if(strchr(escBuf, ';') && *(strchr(escBuf, ';') + 1) == '5' && strchr(strchr(escBuf, ';') + 1, ';')/* Check if 2 arguments are given */){ // Next argument should be '5' for 256 colours
-			state.fgColour = atoi(strchr(strchr(escBuf, ';') + 1, ';') + 1); // Get argument
-		}
-	} else if (r == ANSI_CSI_SGR_BG){
-		if(strchr(escBuf, ';') && *(strchr(escBuf, ';') + 1) == '5' && strchr(strchr(escBuf, ';') + 1, ';')/* Check if 2 arguments are given */){ // Next argument should be '5' for 256 colours
-			state.bgColour = atoi(strchr(strchr(escBuf, ';') + 1, ';') + 1); // Get argument
-		}
-	}
+void ClearScrollbackBuffer() {
+    scrollbackBuffer = std::vector<TerminalLine>(terminalSize.y, TerminalLine(terminalSize.x, TerminalChar(0)));
 }
 
-void DoAnsiCSI(char ch){
-	switch(ch){
-	case ANSI_CSI_SGR:
-		DoAnsiSGR(); // Set Graphics Rendition
-		break;
-	case ANSI_CSI_CUU:
-		{
-			int amount = 1;
-			if(strlen(escBuf)){
-				amount = atoi(escBuf);
-			}
-			curPos.y -= amount;
-			if(curPos.y < 0) curPos.y = 0;
-			break;
-		}
-	case ANSI_CSI_CUD:
-		{
-			int amount = 1;
-			if(strlen(escBuf)){
-				amount = atoi(escBuf);
-			}
-			curPos.y += amount;
-			Scroll();
-			break;
-		}
-	case ANSI_CSI_CUF:
-		{
-			int amount = 1;
-			if(strlen(escBuf)){
-				amount = atoi(escBuf);
-			}
-			curPos.x += amount;
-			if(curPos.x > wSize.ws_col) {
-				curPos.x = 0;
-				curPos.y++;
-				Scroll();
-			}
-			break;
-		}
-	case ANSI_CSI_CUB:
-		{
-			int amount = 1;
-			if(strlen(escBuf)){
-				amount = atoi(escBuf);
-			}
-			curPos.x -= amount;
-			if(curPos.x < 0) {
-				curPos.x = wSize.ws_col - 1;
-				curPos.y--;
-			}
-			if(curPos.y < 0) curPos.y = 0;
-			break;
-		}
-	case ANSI_CSI_CUP: // Set cursor position
-		{
-			char* scolon = strchr(escBuf, ';');
-			if(scolon){
-				*scolon = 0;
-
-				curPos.y = atoi(escBuf);
-				Scroll();
-
-				if(*(scolon + 1) == 0){
-					curPos.x = 0;
-				} else {
-					curPos.x = atoi(scolon + 1);
-				}
-			}
-		}
-		break;
-	case ANSI_CSI_ED:
-		{
-			int num = atoi(escBuf);
-			switch(num){
-				case 0: // Clear entire screen from cursor
-					for(int i = curPos.y + 1; i < wSize.ws_row && i < static_cast<long>(screenBuffer.size()); i++){
-						screenBuffer[i].clear();
-					}
-					break;
-				case 1: // Clear screen and move cursor
-				case 2: // Same as 1 but delete everything in the scrollback buffer
-					screenBuffer.clear();
-					curPos = {0, 0};
-					for(int i = 0; i < wSize.ws_row; i++){
-						screenBuffer.push_back(std::vector<TerminalChar>());
-					}
-					break;
-			}
-		}
-		break;
-	case ANSI_CSI_EL:
-		screenBuffer[curPos.y].erase(screenBuffer[curPos.y].begin() + curPos.x, screenBuffer[curPos.y].end());
-		break;
-	case ANSI_CSI_IL: // Insert blank lines
-		{
-			int amount = atoi(escBuf);
-			screenBuffer.insert(screenBuffer.begin() + curPos.y, amount, std::vector<TerminalChar>());
-			break;
-		}
-	case ANSI_CSI_DL:
-		{
-			int amount = atoi(escBuf);
-			screenBuffer.erase(screenBuffer.begin() + curPos.y - amount, screenBuffer.begin() + curPos.y);
-
-			while(screenBuffer.size() < wSize.ws_row){
-				screenBuffer.push_back(std::vector<TerminalChar>());
-			}
-			break;
-		}
-	case ANSI_CSI_SU: // Scroll Down
-        {
-            int amount = 1;
-            if(strlen(escBuf)){
-                amount = atoi(escBuf);
-            }
-
-            while(amount--){
-                screenBuffer.erase(screenBuffer.begin());
-                screenBuffer.push_back(std::vector<TerminalChar>());
-            }
-
-            break;
-        }
-	case ANSI_CSI_SD: // Scroll up
-		break;
-	default:
-		//fprintf(stderr, "Unknown Control Sequence Introducer (CSI) '%c'\n", ch);
-		break;
-	}
-}
-
-void DoAnsiOSC(char ch){
-
-}
-
-void PrintChar(char ch){
-	if(escapeSequence){
-		if(isspace(ch)){
-			return;
-		}
-
-		if(!escapeType){
-			escapeType = ch;
-			ch = 0;
-		}
-		
-		if(escapeType == ANSI_CSI || escapeType == ANSI_OSC){
-			if(!isalpha(ch)){ // Found output sequence
-				if(strlen(escBuf) >= escBufMax){
-					escapeSequence = false;
-					return;
-				}
-				char s[] = {ch, 0};
-				strncat(escBuf, s, 2); // Add to buff
-				return;
-			}
-
-			if(escapeType == ANSI_CSI){
-				DoAnsiCSI(ch);
-			} else if (escapeType == ANSI_OSC) {
-				DoAnsiOSC(ch);
-			}
-		} else if (escapeType == ANSI_RIS){
-			state = defaultState;
-			screenBuffer.clear();
-			curPos = {0, 0};
-			for(int i = 0; i < wSize.ws_row; i++){
-				screenBuffer.push_back(std::vector<TerminalChar>());
-			}
-		} else if(escapeType == ESC_SAVE_CURSOR) {
-			storedCurPos = curPos;	
-		} else if(escapeType == ESC_RESTORE_CURSOR) {
-			curPos = storedCurPos;	
-		} else {
-			//fprintf(stderr, "Unknown ANSI escape code '%c'\n", ch);
-		}
-		escapeSequence = 0;
-		escapeType = 0;
-	} else {
-
-		switch (ch)
-		{
-		case ANSI_ESC:
-			escapeSequence = true;
-			escapeType = 0;
-			escBuf[0] = 0;
-			break;
-		case '\n':
-			curPos.y++;
-			curPos.x = 0;
-			Scroll();
-			break;
-		case '\b':
-			if(curPos.x > 0) {
-				curPos.x--;
-			} else if(curPos.y > 0) {
-				curPos.y--;
-				curPos.x = screenBuffer[curPos.y].size();
-			}
-			
-			if(curPos.x < static_cast<long>(screenBuffer[curPos.y].size()))
-				screenBuffer[curPos.y].erase(screenBuffer[curPos.y].begin() + curPos.x);
-
-			break;
-		case ' ':
-		default:
-			if(!(isgraph(ch) || isspace(ch))) break;
-
-			if(curPos.x > wSize.ws_col){
-				curPos.y++;
-				curPos.x = 0;
-				Scroll();
-			}
-
-			if(curPos.x >= static_cast<long>(screenBuffer[curPos.y].size()))
-				screenBuffer[curPos.y].push_back({.s = state, .c = ch});
-			else
-				screenBuffer[curPos.y][curPos.x] = {.s = state, .c = ch};
-
-			curPos.x++;
-
-			if(curPos.x > wSize.ws_col){
-				curPos.x = 0;
-				curPos.y++;
-				Scroll();
-			}
-			
-			break;
-		}
-	}
-}
-
-void OnKey(int key){
-    if(key == KEY_ARROW_UP){
-        const char* esc = "\e[A";
-        write(masterPTYFd, esc, strlen(esc));
-    } else if(key == KEY_ARROW_DOWN){
-        const char* esc = "\e[B";
-        write(masterPTYFd, esc, strlen(esc));
-    } else if(key == KEY_ARROW_RIGHT){
-        const char* esc = "\e[C";
-        write(masterPTYFd, esc, strlen(esc));
-    } else if(key == KEY_ARROW_LEFT){
-        const char* esc = "\e[D";
-        write(masterPTYFd, esc, strlen(esc));
-    } else if(key == KEY_END){
-        const char* esc = "\e[F";
-        write(masterPTYFd, esc, strlen(esc));
-    } else if(key == KEY_HOME){
-        const char* esc = "\e[H";
-        write(masterPTYFd, esc, strlen(esc));
-    } else if(key == KEY_ESCAPE){
-        const char* esc = "\e\e";
-        write(masterPTYFd, esc, strlen(esc));
-    } else if(key < 128){
-        const char tkey = (char)key;
-        write(masterPTYFd, &tkey, 1);
+void AddLine() {
+    if (scrollbackBuffer.size() < SCROLLBACK_BUFFER_MAX) {
+        scrollbackBuffer.push_back(TerminalLine(terminalSize.x, TerminalChar(0)));
+    } else {
+        scrollbackBuffer.erase(scrollbackBuffer.begin());
+        scrollbackBuffer.push_back(TerminalLine(terminalSize.x, TerminalChar(0)));
     }
 }
 
-int main(int argc, char** argv){
-    Lemon::CreateFramebufferSurface(fbSurface);
-    renderSurface = fbSurface;
-    renderSurface.buffer = new uint8_t[fbSurface.width * fbSurface.height * 4];
+void AdvanceCursorY() {
+    cursorPosition.y++;
+    while (cursorPosition.y > terminalSize.y) {
+        AddLine();
+        cursorPosition.y--;
+    }
+}
 
-    wSize.ws_xpixel = renderSurface.width;
-    wSize.ws_ypixel = renderSurface.height;
-    
-	terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
-	if(!terminalFont){
-		terminalFont = Lemon::Graphics::GetFont("default");
-	}
+void AdvanceCursorX() {
+    if (cursorPosition.x++ > terminalSize.x) {
+        cursorPosition.x = 1;
+        AdvanceCursorY();
+    }
+}
 
-    wSize.ws_col = renderSurface.width / 8;
-    wSize.ws_row = renderSurface.height / terminalFont->height;
+// Place char at the cursor position
+void PutChar(char ch) {
+    assert(isprint(ch));
+
+    if (cursorPosition.x > terminalSize.x) {
+        cursorPosition.x = 1;
+        AdvanceCursorY();
+    }
+
+    TerminalLine& line = GetLine(cursorPosition.y);
+    line.at(cursorPosition.x - 1) = TerminalChar(ch);
+}
+
+// Print a char on screen and advance the cursor
+void PrintChar(char ch) {
+    PutChar(ch);
+    AdvanceCursorX();
+}
+
+enum TerminalParseState {
+    State_Normal,
+    State_Escape,
+    State_CSI,
+    State_OSC,
+    State_SGR,
+};
+TerminalParseState parseState = State_Normal;
+std::string escapeBuffer = "";
+
+Vector2i savedCursorPosition; // Cursor for save/restore
+
+// Parse input character
+void ParseChar(char ch) {
+    if (parseState == State_Normal) {
+        if (isprint(ch) || ch == ' ') {
+            PrintChar(ch);
+        } else if (ch == Control_Escape) {
+            escapeBuffer.clear();
+            parseState = State_Escape;
+        } else if (ch == Control_Backspace) {
+            if (cursorPosition.x > 1) {
+                cursorPosition.x--;
+                PutChar(' ');
+            } else {
+                PutChar(' ');
+            }
+        } else if (ch == Control_LineFeed) {
+            AdvanceCursorY();
+            cursorPosition.x = 1;
+        } else if (ch == Control_CarriageReturn) {
+            cursorPosition.x = 1;
+        }
+    } else if (parseState == State_Escape) {
+        switch (ch) {
+        case ANSI_RIS: // Reset to initial state
+            parseState = State_Normal;
+            ClearScrollbackBuffer();
+            cursorPosition = {1, 1};
+            break;
+        case ANSI_CSI:
+            parseState = State_CSI;
+            break;
+        case ANSI_OSC:
+            parseState = State_OSC;
+            break;
+        case ESC_SAVE_CURSOR:
+            savedCursorPosition = cursorPosition;
+            parseState = State_Normal;
+            break;
+        case ESC_RESTORE_CURSOR:
+            cursorPosition = savedCursorPosition;
+            parseState = State_Normal;
+            break;
+        default: // Unsupported escape sequence
+            parseState = State_Normal;
+            break;
+        }
+
+        assert(parseState != State_Escape); // Make sure the statement changed the parser state
+    } else if (parseState == State_CSI) {
+        if (!isalpha(ch)) { // If it is not a letter, add to the escape buffer
+            escapeBuffer += ch;
+        } else {
+            switch (ch) {
+            case ANSI_CSI_SGR:
+                parseState = State_SGR;
+                break;
+            case ANSI_CSI_CUU: { // Cursor up
+                int amount = 1;
+                if (escapeBuffer.size()) {
+                    amount = std::stoi(escapeBuffer);
+                }
+
+                cursorPosition.y = std::max(cursorPosition.y - amount, 1);
+                break;
+            }
+            case ANSI_CSI_CUD: { // Cursor down
+                int amount = 1;
+                if (escapeBuffer.size()) {
+                    amount = std::stoi(escapeBuffer);
+                }
+
+                cursorPosition.y = std::min(cursorPosition.y + amount, terminalSize.y);
+                break;
+            }
+            case ANSI_CSI_CUF: { // Cursor forward
+                int amount = 1;
+                if (escapeBuffer.size()) {
+                    amount = std::stoi(escapeBuffer);
+                }
+
+                cursorPosition.x = std::min(cursorPosition.x + amount, terminalSize.x);
+                break;
+            }
+            case ANSI_CSI_CUB: { // Cursor back
+                int amount = 1;
+                if (escapeBuffer.size()) {
+                    amount = std::stoi(escapeBuffer);
+                }
+
+                cursorPosition.x = std::max(cursorPosition.x - amount, 1);
+                break;
+            }
+            case ANSI_CSI_CUP: // Set cursor position
+            {
+                cursorPosition.x = 1;
+                cursorPosition.y = 1;
+
+                size_t semicolon = escapeBuffer.find(';');
+                if (semicolon != std::string::npos) {
+                    // Use atoi to prevent exceptions
+                    // 0 on error works well as the cursor position cannot be 0
+                    cursorPosition.y =
+                        std::min(std::max(atoi(escapeBuffer.substr(0, semicolon).c_str()), 1), terminalSize.y);
+
+                    std::string afterSemicolon = escapeBuffer.substr(semicolon + 1);
+                    if (afterSemicolon.length()) {
+                        cursorPosition.x = std::min(std::max(atoi(afterSemicolon.c_str()), 1), terminalSize.x);
+                    }
+                }
+            } break;
+            case ANSI_CSI_ED: {
+                int num = atoi(escapeBuffer.c_str());
+                auto& ln = GetLine(cursorPosition.y);
+                switch (num) {
+                default:
+                case 0: // Clear entire screen from cursor
+                    ln.erase(ln.begin() + (cursorPosition.x - 1), ln.end());
+                    ln.insert(ln.end(), terminalSize.x - (cursorPosition.x - 1), TerminalChar(0));
+
+                    assert(ln.size() == static_cast<unsigned>(terminalSize.x));
+                    scrollbackBuffer.erase(FirstLine() + (cursorPosition.y - 1) + 1, scrollbackBuffer.end());
+                    scrollbackBuffer.insert(scrollbackBuffer.end(), terminalSize.y - (cursorPosition.y - 1),
+                                            TerminalLine(terminalSize.x, TerminalChar(0)));
+                    break;
+                case 1: // Clear screen and move cursor
+                case 2: // Same as 1 but delete everything in the scrollback buffer
+                    ClearScrollbackBuffer();
+                    cursorPosition = {1, 1};
+                    break;
+                }
+                break;
+            }
+            case ANSI_CSI_EL: {
+                int n = 0;
+                if (escapeBuffer.length()) {
+                    n = atoi(escapeBuffer.c_str());
+                }
+
+                auto& ln = GetLine(cursorPosition.y);
+                switch (n) {
+                case 2: // Clear entire screen
+                    ClearScrollbackBuffer();
+                    cursorPosition = {1, 1};
+                    break;
+                case 1: // Clear from cursor to beginning of line
+                    ln.erase(ln.begin(), ln.begin() + cursorPosition.x);
+                    ln.insert(ln.begin(), cursorPosition.x, TerminalChar(0));
+                    break;
+                case 0: // Clear from cursor to end of line
+                default:
+                    ln.erase(ln.begin() + (cursorPosition.x - 1), ln.end());
+                    ln.insert(ln.end(), terminalSize.x - (cursorPosition.x - 1), TerminalChar(0));
+                    break;
+                }
+                break;
+            }
+            case ANSI_CSI_IL: // Insert blank lines
+            {
+                // Unsupported
+                break;
+            }
+            case ANSI_CSI_DL: {
+                // Unsupported
+                break;
+            }
+            case ANSI_CSI_SU: // Scroll Up
+            {
+                int amount = 1;
+                if (strlen(escapeBuffer.c_str())) {
+                    amount = atoi(escapeBuffer.c_str());
+                }
+
+                scrollbackBuffer.insert(scrollbackBuffer.end(), amount, TerminalLine(terminalSize.x, TerminalChar(0)));
+                break;
+            }
+            case ANSI_CSI_SD: { // Scroll Down
+                int amount = 1;
+                if (strlen(escapeBuffer.c_str())) {
+                    amount = atoi(escapeBuffer.c_str());
+                }
+
+                scrollbackBuffer.insert(FirstLine(), amount, TerminalLine(terminalSize.x, TerminalChar(0)));
+                break;
+            }
+            default:
+                break;
+            }
+
+            if (parseState == State_CSI) {
+                parseState = State_Normal;
+            }
+        }
+    } else if (parseState == State_OSC) {
+        parseState = State_Normal;
+    }
+
+    if (parseState == State_SGR) {
+        size_t semicolon = escapeBuffer.find(';');
+        int r = 0;
+
+        if (semicolon != std::string::npos) {
+            r = atoi(escapeBuffer.substr(0, semicolon).c_str());
+        } else {
+            r = atoi(escapeBuffer.c_str());
+        }
+
+        if (r == 0) {
+            currentBackgroundColour = defaultBackgroundColour;
+            currentForegroundColour = defaultForegroundColour;
+        } else if (r >= ANSI_CSI_SGR_FG_BLACK && r <= ANSI_CSI_SGR_FG_WHITE) { // Foreground Colour
+            currentForegroundColour = colours[r - ANSI_CSI_SGR_FG_BLACK];
+        } else if (r >= ANSI_CSI_SGR_BG_BLACK && r <= ANSI_CSI_SGR_BG_WHITE) { // Background Colour
+            currentBackgroundColour = colours[r - ANSI_CSI_SGR_BG_BLACK];
+        } else if (r >= ANSI_CSI_SGR_FG_BLACK_BRIGHT &&
+                   r <= ANSI_CSI_SGR_FG_WHITE_BRIGHT) { // Foreground Colour (Bright)
+            currentForegroundColour = colours[r - ANSI_CSI_SGR_FG_BLACK_BRIGHT + 8];
+        } else if (r >= ANSI_CSI_SGR_BG_BLACK_BRIGHT &&
+                   r <= ANSI_CSI_SGR_BG_WHITE_BRIGHT) { // Background Colour (Bright)
+            currentBackgroundColour = colours[r - ANSI_CSI_SGR_BG_BLACK_BRIGHT + 8];
+        } else if (r == ANSI_CSI_SGR_FG) {
+            size_t firstSemicolon = escapeBuffer.find_first_of(';');
+            size_t secondSemicolon = escapeBuffer.find(';', firstSemicolon + 1);
+            // Next argument should be '5' for 256 colours
+            // e.g. [38;5;<colour number>
+            if (firstSemicolon != std::string::npos && escapeBuffer[firstSemicolon + 1] == '5' &&
+                secondSemicolon != std::string::npos) {
+                int col = atoi(escapeBuffer.substr(secondSemicolon + 1).c_str());
+                if (col < 256) {
+                    currentForegroundColour = colours[col];
+                }
+            }
+        } else if (r == ANSI_CSI_SGR_BG) {
+            size_t secondSemicolon = escapeBuffer.find(';', semicolon + 1);
+            // Next argument should be '5' for 256 colours
+            // e.g. [48;5;<colour number>
+            if (semicolon != std::string::npos && escapeBuffer[semicolon + 1] == '5' &&
+                secondSemicolon != std::string::npos) {
+                int col = atoi(escapeBuffer.substr(secondSemicolon + 1).c_str());
+                if (col < 256) {
+                    currentBackgroundColour = colours[col];
+                }
+            }
+        }
+
+        parseState = State_Normal;
+    }
+}
+
+bool shouldPaint = true;
+std::mutex paintMutex;
+std::mutex bufferMutex;
+
+bool isOpen = true;
+int ptyMasterFd = -1;
+
+void SIGCHLDHandler(int){
+    isOpen = false; // Shell has closed
+}
+
+void* PTYThread() {
+    pollfd pollFd = {.fd = ptyMasterFd, .events = POLLIN};
+    while (isOpen) {
+        if (poll(&pollFd, 1, 500000) > 0) {
+            char buf[512];
+            ssize_t r;
+            bufferMutex.lock();
+            while ((r = read(ptyMasterFd, buf, 512)) > 0) {
+                int i = 0;
+                while (r--) {
+                    ParseChar(buf[i++]);
+                }
+            }
+            bufferMutex.unlock();
+
+            std::unique_lock lock(paintMutex);
+			Paint();
+            shouldPaint = false;
+        }
+    }
+
+    return nullptr;
+}
+
+void OnKey(int key) {
+    if (key == KEY_ARROW_UP) {
+        const char* esc = "\e[A";
+        write(ptyMasterFd, esc, strlen(esc));
+    } else if (key == KEY_ARROW_DOWN) {
+        const char* esc = "\e[B";
+        write(ptyMasterFd, esc, strlen(esc));
+    } else if (key == KEY_ARROW_RIGHT) {
+        const char* esc = "\e[C";
+        write(ptyMasterFd, esc, strlen(esc));
+    } else if (key == KEY_ARROW_LEFT) {
+        const char* esc = "\e[D";
+        write(ptyMasterFd, esc, strlen(esc));
+    } else if (key == KEY_END) {
+        const char* esc = "\e[F";
+        write(ptyMasterFd, esc, strlen(esc));
+    } else if (key == KEY_HOME) {
+        const char* esc = "\e[H";
+        write(ptyMasterFd, esc, strlen(esc));
+    } else if (key == KEY_ESCAPE) {
+        const char* esc = "\e\e";
+        write(ptyMasterFd, esc, strlen(esc));
+    } else if (key < 128) {
+        const char tkey = (char)key;
+        write(ptyMasterFd, &tkey, 1);
+    }
+}
+
+int main(int argc, char** argv) {
+    Lemon::CreateFramebufferSurface(framebufferSurface);
+    renderSurface = framebufferSurface;
+    renderSurface.buffer = new uint8_t[framebufferSurface.width * framebufferSurface.height * 4];
+
+    terminalFont = Lemon::Graphics::LoadFont("/initrd/sourcecodepro.ttf", "termmonospace");
+    if (!terminalFont) {
+        terminalFont = Lemon::Graphics::GetFont("default");
+    }
+	
+	characterSize = Vector2i{terminalFont->width, terminalFont->lineHeight};
+    terminalSize =
+        Vector2i{renderSurface.width / characterSize.x, renderSurface.height / characterSize.y};
+
+    ClearScrollbackBuffer();
+    assert(FirstLine() == scrollbackBuffer.begin());
+    assert(&GetLine(1) == &scrollbackBuffer.at(0));
+
+    int ptySlaveFd = -1;
+
+    setenv("TERM", "xterm-256color", 1);
+
+    struct sigaction action = {
+        .sa_handler = SIGCHLDHandler,
+        .sa_flags = 0,
+    };
+    sigemptyset(&action.sa_mask);
+
+    // We want to exit on SIGCHLD
+    if(sigaction(SIGCHLD, &action, nullptr)){
+        perror("sigaction");
+        return 99;
+    }
+
+    if (openpty(&ptyMasterFd, &ptySlaveFd, nullptr, nullptr, nullptr)) {
+        perror("openpty");
+        return 2;
+    }
+
+    winsize wSz = {
+        .ws_row = static_cast<unsigned short>(terminalSize.y),
+        .ws_col = static_cast<unsigned short>(terminalSize.x),
+        .ws_xpixel = static_cast<unsigned short>(framebufferSurface.width),
+        .ws_ypixel = static_cast<unsigned short>(framebufferSurface.height),
+    };
 
     InputManager input;
 
-    for(int i = 0; i < wSize.ws_row; i++){
-        screenBuffer.push_back(std::vector<TerminalChar>(wSize.ws_col));
-    }
+    ioctl(ptyMasterFd, TIOCSWINSZ, &wSz);
 
-	syscall(SYS_GRANT_PTY, (uintptr_t)&masterPTYFd, 0, 0, 0, 0);
-
-	setenv("TERM", "xterm-256color", 1);
-	ioctl(masterPTYFd, TIOCSWINSZ, &wSize);
-
-    char* const args[] = {"/initrd/lsh.lef"};
-    lemon_spawn(*args, 1, args, 1);
-
-    char _buf[512];
-	bool paint = true;
-
-    for(;;){
-        input.Poll();
-
-		while(int len = read(masterPTYFd, _buf, 512)){
-			for(int i = 0; i < len; i++){
-				PrintChar(_buf[i]);
+	for(;;) {
+		// No need to use Lemon OS specifics here
+		shellPID = fork();
+		if (shellPID == 0) {
+			if (dup2(ptySlaveFd, STDIN_FILENO) < 0) {
+				perror("dup2");
+				exit(3);
 			}
-			paint = true;
+
+			if (dup2(ptySlaveFd, STDOUT_FILENO) < 0) {
+				perror("dup2");
+				exit(3);
+			}
+
+			if (dup2(ptySlaveFd, STDERR_FILENO) < 0) {
+				perror("dup2");
+				exit(3);
+			}
+
+			close(ptySlaveFd);
+
+			char arg0[] = "/bin/lsh";
+			char* const shArgv[] {
+				arg0,
+				nullptr,
+			};
+			if (execve(arg0, shArgv, environ)) {
+				perror("execve");
+				exit(1);
+			}
+		} else if (shellPID < 0) {
+			perror("fork");
+			return 1;
 		}
 
-		if(paint){
-        	Paint();
+		std::thread ptyThread(PTYThread);
+		while (isOpen) {
+			input.Poll();
 		}
-    }
+	}
 }

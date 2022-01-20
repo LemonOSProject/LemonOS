@@ -81,6 +81,8 @@ struct Thread {
 
     Thread(class Process* _parent, pid_t _tid);
 
+    ALWAYS_INLINE static Thread* Current() { return GetCPULocal()->currentThread; }
+
     /////////////////////////////
     /// \brief Dispatch a signal to the thread
     /////////////////////////////
@@ -90,6 +92,13 @@ struct Thread {
     /// \brief Call the signal handler for the first pending signal
     /////////////////////////////
     void HandlePendingSignal(RegisterContext* regs);
+    
+    /////////////////////////////
+    /// \brief Get the signal mask accounting for unmaskable signals
+    /////////////////////////////
+    ALWAYS_INLINE uint64_t EffectiveSignalMask() const {
+        return signalMask & (~UNMASKABLE_SIGNALS);
+    }
 
     /////////////////////////////
     /// \brief Block a thread

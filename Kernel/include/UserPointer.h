@@ -31,8 +31,12 @@ template <typename T> class UserPointer {
 public:
     UserPointer(uintptr_t ptr) : m_ptr(reinterpret_cast<T*>(ptr)) {}
 
-    ALWAYS_INLINE int GetValue(T& kernelValue) const { return UserMemcpy(&kernelValue, m_ptr, sizeof(T)); }
-    ALWAYS_INLINE int StoreValue(const T& kernelValue) { return UserMemcpy(m_ptr, &kernelValue, sizeof(T)); }
+    [[nodiscard]] ALWAYS_INLINE int GetValue(T& kernelValue) const {
+        return UserMemcpy(&kernelValue, m_ptr, sizeof(T));
+    }
+    [[nodiscard]] ALWAYS_INLINE int StoreValue(const T& kernelValue) {
+        return UserMemcpy(m_ptr, &kernelValue, sizeof(T));
+    }
 
     ALWAYS_INLINE T* Pointer() { return m_ptr; }
 
@@ -46,20 +50,24 @@ template <typename T> class UserBuffer {
 public:
     UserBuffer(uintptr_t ptr) : m_ptr(reinterpret_cast<T*>(ptr)) {}
 
-    ALWAYS_INLINE int GetValue(unsigned index, T& kernelValue) const { return UserMemcpy(&kernelValue, &m_ptr[index], sizeof(T)); }
-    ALWAYS_INLINE int StoreValue(unsigned index, const T& kernelValue) { return UserMemcpy(&m_ptr[index], &kernelValue, sizeof(T)); }
+    [[nodiscard]] ALWAYS_INLINE int GetValue(unsigned index, T& kernelValue) const {
+        return UserMemcpy(&kernelValue, &m_ptr[index], sizeof(T));
+    }
+    [[nodiscard]] ALWAYS_INLINE int StoreValue(unsigned index, const T& kernelValue) {
+        return UserMemcpy(&m_ptr[index], &kernelValue, sizeof(T));
+    }
 
-    ALWAYS_INLINE int Read(T* data, size_t offset, size_t count) const {
+    [[nodiscard]] ALWAYS_INLINE int Read(T* data, size_t offset, size_t count) const {
         if (!IsUsermodePointer(m_ptr, offset, count)) { // Don't allow kernel memory access
-            return 0;
+            return 1;
         }
 
         return UserMemcpy(data, &m_ptr[offset], sizeof(T) * count);
     }
 
-    ALWAYS_INLINE int Write(T* data, size_t offset, size_t count) {
+    [[nodiscard]] ALWAYS_INLINE int Write(T* data, size_t offset, size_t count) {
         if (!IsUsermodePointer(m_ptr, offset, count)) { // Don't allow kernel memory access
-            return 0;
+            return 1;
         }
 
         return UserMemcpy(&m_ptr[offset], data, sizeof(T) * count);
