@@ -45,6 +45,25 @@ sources:
     git: 'https://github.com/managarm/mlibc.git'
     branch: 'master'
 
+  - name: wayland
+    subdir: 'Ports'
+    git: 'https://gitlab.freedesktop.org/wayland/wayland.git'
+    tag: '1.19.93'
+    version: '1.19.93'
+    tools_required:
+      - host-pkgconfig
+
+  - name: icu
+    subdir: 'Ports'
+    git: 'https://github.com/unicode-org/icu.git'
+    tag: 'release-69-1'
+    version: '69.1'
+    patch-path-strip: 1
+    regenerate:
+      - args: ['cp',
+          '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub',
+          '@THIS_SOURCE_DIR@/icu4c/source']
+
 tools:
   - name: host-automake
     from_source: automake
@@ -168,8 +187,10 @@ tools:
       regenerate:
         - args: ['./bootstrap']
     tools_required:
-      - host-autoconf-v2.69
-      - host-automake
+      - tool: host-autoconf-v2.69
+        recursive: true
+      - tool: host-automake
+        recursive: true
     configure:
       - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=@PREFIX@']
     compile:
@@ -198,6 +219,33 @@ tools:
         - '@THIS_SOURCE_DIR@/configure'
         - '--prefix=@PREFIX@'
         - '--with-internal-glib'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+
+  - name: host-wayland-scanner
+    from_source: wayland
+    tools_required:
+      - host-libtool
+    configure:
+      - args:
+        - 'meson'
+        - '--prefix=@PREFIX@'
+        - '-Dlibraries=false'
+        - '-Dtests=false'
+        - '-Ddocumentation=false'
+        - '-Ddtd_validation=false'
+        - '@THIS_SOURCE_DIR@'
+    compile:
+      - args: ['ninja']
+    install:
+      - args: ['ninja', 'install']
+
+  - name: host-icu
+    from_source: icu
+    configure:
+      - args: ['@THIS_SOURCE_DIR@/icu4c/source/configure', '--prefix=@PREFIX@']
     compile:
       - args: ['make', '-j@PARALLELISM@']
     install:

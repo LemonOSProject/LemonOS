@@ -2,18 +2,22 @@ packages:
   - name: nyancat
     source:
       git: 'https://github.com/klange/nyancat/'
+      branch: 'master'
       subdir: 'Ports'
     tools_required:
       - host-llvm
     pkgs_required:
       - mlibc
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
     build:
       - args: ['make']
         environ:
           CC: 'clang'
           CXX: 'clang++'
+          CFLAGS: '-include termios.h'
       - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/system/bin']
-      - args: ['cp', 'bin/nyancat', '@THIS_COLLECT_DIR@/system/bin/']
+      - args: ['cp', 'src/nyancat', '@THIS_COLLECT_DIR@/system/bin/']
   - name: curl
     source:
       url: 'https://curl.se/download/curl-7.77.0.tar.gz'
@@ -52,3 +56,216 @@ packages:
       - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+  - name: lemondoom
+    source:
+      git: 'https://github.com/LemonOSProject/LemonDOOM.git'
+      branch: 'master'
+      subdir: 'Ports'
+    tools_required:
+      - host-llvm
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+    build:
+      - args: ['make', '-Clemondoom', '-fMakefile.lemon', '-j@PARALLELISM@']
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/system/doom']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/system/bin']
+      - args: ['cp', 'lemondoom/doom.lef', '@THIS_COLLECT_DIR@/system/bin']
+      - args:
+        - 'sh'
+        - '-c'
+        - 'if ! [ -f "@THIS_COLLECT_DIR@/system/doom/doom1.wad" ]; then
+            curl -Lo "@THIS_COLLECT_DIR@/system/doom/doom1.wad" "http://distro.ibiblio.org/pub/linux/distributions/slitaz/sources/packages/d/doom1.wad";
+          fi;'
+    
+  - name: busybox
+    source:
+      subdir: 'Ports'
+      url: 'https://www.busybox.net/downloads/busybox-1.33.1.tar.bz2'
+      format: 'tar.bz2'
+      extract_path: 'busybox-1.33.1'
+      patch-path-strip: 1
+    tools_required:
+      - host-llvm
+    configure:
+      - args: ['cp', '-ra', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+      - args: ['cp', '@THIS_BUILD_DIR@/configs/lemon_defconfig', '@THIS_BUILD_DIR@/.config']
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+      - args: ['make', 'install']
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      - args: ['cp', '-ar', '@THIS_BUILD_DIR@/_install/.', '@THIS_COLLECT_DIR@/system']
+  - name: binutils
+    from_source: binutils
+    tools_required:
+      - host-llvm
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-lemon'
+        - '--target=x86_64-lemon'
+        - '--prefix=/system'
+        - '--disable-werror'
+        - '--enable-shared'
+        - '--disable-nls'
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+          ac_cv_func_getrusage: 'no'
+          ac_cv_func_getrlimit: 'no'
+    build:
+      - args: ['make', '-j@PARALLELISM@', 'all-binutils', 'all-gas', 'all-ld']
+        environ:
+          MAKEINFO: 'true'
+      - args: ['make', 'install-binutils', 'install-gas', 'install-ld']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+  - name: libffi
+    source:
+      subdir: 'Ports'
+      git: 'https://github.com/libffi/libffi.git'
+      tag: 'v3.4.2'
+      tools_required:
+        - host-libtool
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: '1'
+        - args: ['cp', '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub', '@THIS_SOURCE_DIR@/']
+    pkgs_required:
+      - mlibc
+    tools_required:
+      - host-libtool
+      - host-llvm
+    configure:
+      - args: ['@THIS_SOURCE_DIR@/configure', '--host=x86_64-lemon', '--prefix=/system', '--with-pic']
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+  - name: libexpat
+    source:
+      subdir: 'Ports'
+      git: 'https://github.com/libexpat/libexpat.git'
+      tag: 'R_2_4_1'
+    configure:
+      - args:
+        - 'cmake'
+        - '-GNinja'
+        - '@THIS_SOURCE_DIR@/expat' 
+        - '-DCMAKE_CROSSCOMPILING=True'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_INSTALL_PREFIX=/system'
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+    pkgs_required:
+      - mlibc
+    tools_required:
+      - host-llvm
+    build:
+      - args: ['ninja']
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+  - name: icu
+    from_source: icu
+    pkgs_required:
+      - mlibc
+    tools_required:
+      - host-llvm
+      - host-pkgconfig
+      - host-libtool
+      - host-icu
+    configure:
+      - args: ['cp', '@THIS_SOURCE_DIR@/icu4c/source/config/mh-linux', '@THIS_SOURCE_DIR@/icu4c/source/config/mh-unknown']
+      - args: ['@THIS_SOURCE_DIR@/icu4c/source/configure', '--host=x86_64-lemon', '--prefix=/system', '--sbindir=/system/bin', '--sysconfdir=/system/share', '--with-cross-build=@BUILD_ROOT@/tool-builds/host-icu']
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libxml2
+    source:
+      subdir: 'Ports'
+      url: 'https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.11/libxml2-v2.9.11.tar.gz'
+      format: 'tar.gz'
+      extract_path: 'libxml2-v2.9.11'
+    pkgs_required:
+      - mlibc
+      - icu
+    tools_required:
+      - host-llvm
+      - host-pkgconfig
+    configure:
+      - args:
+        - 'cmake'
+        - '-GNinja'
+        - '@THIS_SOURCE_DIR@' 
+        - '-DCMAKE_CROSSCOMPILING=True'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_INSTALL_PREFIX=/system'
+        - '-DLIBXML2_WITH_LZMA=OFF'
+        - '-DLIBXML2_WITH_ICU=ON'
+        - '-DLIBXML2_WITH_PYTHON=OFF'
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+    build:
+      - args: ['ninja']
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+    
+  - name: wayland
+    from_source: wayland
+    pkgs_required:
+      - mlibc
+      - libffi
+      - libexpat
+      - libxml2
+    tools_required:
+      - host-llvm
+      - host-wayland-scanner
+      - host-pkgconfig
+    configure:
+      - args:
+        - 'meson'
+        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
+        - '--prefix=/system'
+        - '-Ddocumentation=false'
+        - '-Ddtd_validation=false'
+        - '-Dscanner=false'
+        - '@THIS_SOURCE_DIR@'
+        environ:
+          PKG_CONFIG_SYSROOT_DIR: '@SYSROOT_DIR@'
+          PKG_CONFIG_LIBDIR: '@SYSROOT_DIR@/system/lib/pkgconfig:@BUILD_ROOT@/tools/host-wayland-scanner/lib/pkgconfig'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      
+
