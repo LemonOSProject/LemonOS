@@ -104,7 +104,7 @@ public:
     }
 
     // Copying a FastList is asking for trouble
-    FastList(FastList& other) = delete;
+    FastList(const FastList& other) = delete;
     ALWAYS_INLINE FastList<T>& operator=(const FastList<T>& other) = delete;
 
     ~FastList() {}

@@ -214,7 +214,6 @@ BITS 64
   cli
   hlt
 
-
 fb_addr:
   dd 0
 fb_pitch:
@@ -293,6 +292,9 @@ entry64:
   hlt
   
 entryst2:
+  cli
+  cld
+
   lgdt [GDT64Pointer64]
 
   mov rbx, rdi ; Save RDI as it contains bootloader information
@@ -303,9 +305,10 @@ entryst2:
   xor rax, rax
   rep stosb
 
+  mov rsp, stack_top
+
   mov rdi, rbx ; Restore RDI
 
-  mov rsp, stack_top
   mov rbp, rsp
 
   push 0x10

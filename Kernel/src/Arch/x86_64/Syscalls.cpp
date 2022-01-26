@@ -3535,6 +3535,7 @@ long SysSignalReturn(RegisterContext* r) {
     uint64_t* threadStack = reinterpret_cast<uint64_t*>(r->rsp);
 
     threadStack++;                     // Discard signal handler address
+    threadStack++;                     // Discard padding
     th->signalMask = *(threadStack++); // Get the old signal mask
     // Do not allow the thread to modify CS or SS
     memcpy(r, threadStack, offsetof(RegisterContext, cs));

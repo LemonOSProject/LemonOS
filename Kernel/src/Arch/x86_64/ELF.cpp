@@ -53,13 +53,14 @@ elf_info_t LoadELFSegments(Process* proc, void* _elf, uintptr_t base) {
     for (int i = 0; i < elfHdr.phNum; i++) {
         elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
 
+        assert(elfPHdr.fileSize <= elfPHdr.memSize);
+
         if (elfPHdr.type == PT_LOAD && elfPHdr.memSize > 0) {
-            asm("cli");
-            asm volatile("mov %%rax, %%cr3" ::"a"(proc->GetPageMap()->pml4Phys));
+            asm volatile("cli; mov %%rax, %%cr3" ::"a"(proc->GetPageMap()->pml4Phys) : "memory");
+            Log::Info("dst: %x", base + elfPHdr.vaddr);
             memset((void*)(base + elfPHdr.vaddr + elfPHdr.fileSize), 0, (elfPHdr.memSize - elfPHdr.fileSize));
             memcpy((void*)(base + elfPHdr.vaddr), (void*)(elf + elfPHdr.offset), elfPHdr.fileSize);
-            asm volatile("mov %%rax, %%cr3" ::"a"(pml4Phys));
-            asm("sti");
+            asm volatile("mov %%rax, %%cr3; sti" ::"a"(pml4Phys) : "memory");
         } else if (elfPHdr.type == PT_PHDR) {
             elfInfo.pHdrSegment = base + elfPHdr.vaddr;
         } else if (elfPHdr.type == PT_INTERP) {

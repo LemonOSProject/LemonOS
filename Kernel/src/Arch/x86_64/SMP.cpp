@@ -24,7 +24,7 @@ static inline void wait(uint64_t ms) {
 extern void* _binary_SMPTrampoline_bin_start;
 extern void* _binary_SMPTrampoline_bin_size;
 
-volatile uint16_t* smpMagic = (uint16_t*)SMP_MAGIC;
+volatile uint16_t* smpMagic = (uint16_t*)SMP_TRAMPOLINE_DATA_START_FLAG;
 volatile uint16_t* smpID = (uint16_t*)SMP_TRAMPOLINE_CPU_ID;
 gdt_ptr_t* smpGDT = (gdt_ptr_t*)SMP_TRAMPOLINE_GDT_PTR;
 volatile uint64_t* smpCR3 = (uint64_t*)SMP_TRAMPOLINE_CR3;
@@ -58,7 +58,6 @@ void SMPEntry(uint16_t id) {
     asm volatile("lidt %0" ::"m"(cpu->idtPtr));
 
     TSS::InitializeTSS(&cpu->tss, cpu->gdt);
-
     APIC::Local::Enable();
 
     cpu->runQueue = new FastList<Thread*>();
@@ -66,7 +65,7 @@ void SMPEntry(uint16_t id) {
     doneInit = true;
 
     asm("sti");
-
+    
     for (;;)
         ;
 }
@@ -84,29 +83,30 @@ void InitializeCPU(uint16_t id) {
     *smpMagic = 0;                                          // Set magic to 0
     *smpID = id;                                            // Set ID to our CPU's ID
     *smpEntry2 = (uint64_t)SMPEntry;                        // Our second entry point
-    *smpStack = (uint64_t)Memory::KernelAllocate4KPages(1); // 4K stack
-    Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), *smpStack, 1);
-    *smpStack += PAGE_SIZE_4K;
+    *smpStack = (uint64_t)kmalloc(8192);
+    *smpStack += 8192;
     *smpGDT = GDT64Pointer64;
 
     asm volatile("mov %%cr3, %%rax" : "=a"(*smpCR3));
 
     APIC::Local::SendIPI(id, ICR_DSH_DEST, ICR_MESSAGE_TYPE_INIT, 0);
+    wait(50);
 
-    wait(20);
+    APIC::Local::SendIPI(id, ICR_DSH_DEST, ICR_MESSAGE_TYPE_STARTUP, (SMP_TRAMPOLINE_ENTRY >> 12));
+    wait(50);
 
     if ((*smpMagic) != 0xB33F) { // Check if the trampoline code set the flag to let us know it has started
         APIC::Local::SendIPI(id, ICR_DSH_DEST, ICR_MESSAGE_TYPE_STARTUP, (SMP_TRAMPOLINE_ENTRY >> 12));
 
-        wait(80);
-    }
-
-    if ((*smpMagic) != 0xB33F) {
         wait(100);
     }
 
     if ((*smpMagic) != 0xB33F) {
-        Log::Error("[SMP] Failed to start CPU #%d", id);
+        wait(200);
+    }
+
+    if ((*smpMagic) != 0xB33F) {
+        Log::Error("[SMP] Failed to start CPU #%d, magic: %x", id, *smpMagic);
         return;
     }
 

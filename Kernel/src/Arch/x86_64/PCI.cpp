@@ -9,11 +9,12 @@
 #include <Vector.h>
 
 namespace PCI {
-Vector<PCIInfo>* devices;
-PCIInfo* unknownDevice;
-PCIMCFG* mcfgTable;
+lock_t devicesLock = 0;
+Vector<PCIInfo>* devices = nullptr;
+PCIInfo* unknownDevice = nullptr;
+PCIMCFG* mcfgTable = nullptr;
 PCIConfigurationAccessMode configMode = PCIConfigurationAccessMode::Legacy;
-Vector<PCIMCFGBaseAddress>* enhancedBaseAddresses; // Base addresses for enhanced (PCI Express) configuration mechanism
+Vector<PCIMCFGBaseAddress>* enhancedBaseAddresses = nullptr; // Base addresses for enhanced (PCI Express) configuration mechanism
 
 uint32_t ConfigReadDword(uint8_t bus, uint8_t slot, uint8_t func, uint8_t offset) {
     uint32_t address = (uint32_t)((bus << 16) | (slot << 11) | (func << 8) | (offset & 0xfc) | 0x80000000);
@@ -102,6 +103,8 @@ bool CheckDevice(uint8_t bus, uint8_t device, uint8_t func) {
 }
 
 bool FindDevice(uint16_t deviceID, uint16_t vendorID) {
+    ScopedSpinLock lockDevs(devicesLock);
+
     for (unsigned i = 0; i < devices->get_length(); i++) {
         if (devices->get_at(i).deviceID == deviceID && devices->get_at(i).vendorID == vendorID) {
             return true;
@@ -112,6 +115,8 @@ bool FindDevice(uint16_t deviceID, uint16_t vendorID) {
 }
 
 bool FindGenericDevice(uint16_t classCode, uint16_t subclass) {
+    ScopedSpinLock lockDevs(devicesLock);
+
     for (unsigned i = 0; i < devices->get_length(); i++) {
         if (devices->get_at(i).classCode == classCode && devices->get_at(i).subclass == subclass) {
             return true;
@@ -122,6 +127,8 @@ bool FindGenericDevice(uint16_t classCode, uint16_t subclass) {
 }
 
 const PCIInfo& GetPCIDevice(uint16_t deviceID, uint16_t vendorID) {
+    ScopedSpinLock lockDevs(devicesLock);
+
     for (PCIInfo& dev : *devices) {
         if (dev.deviceID == deviceID && dev.vendorID == vendorID) {
             return dev;
@@ -133,6 +140,9 @@ const PCIInfo& GetPCIDevice(uint16_t deviceID, uint16_t vendorID) {
 }
 
 const PCIInfo& GetGenericPCIDevice(uint8_t classCode, uint8_t subclass) {
+    assert(devices);
+    ScopedSpinLock lockDevs(devicesLock);
+
     for (PCIInfo& dev : *devices) {
         if (dev.classCode == classCode && dev.subclass == subclass) {
             return dev;
@@ -144,6 +154,8 @@ const PCIInfo& GetGenericPCIDevice(uint8_t classCode, uint8_t subclass) {
 }
 
 void EnumeratePCIDevices(uint16_t deviceID, uint16_t vendorID, void (*func)(const PCIInfo&)) {
+    ScopedSpinLock lockDevs(devicesLock);
+
     for (PCIInfo& dev : *devices) {
         if (dev.deviceID == deviceID && dev.vendorID == vendorID) {
             func(dev);
@@ -152,6 +164,8 @@ void EnumeratePCIDevices(uint16_t deviceID, uint16_t vendorID, void (*func)(cons
 }
 
 void EnumerateGenericPCIDevices(uint8_t classCode, uint8_t subclass, void (*func)(const PCIInfo&)) {
+    ScopedSpinLock lockDevs(devicesLock);
+
     for (PCIInfo& dev : *devices) {
         if (dev.classCode == classCode && dev.subclass == subclass) {
             func(dev);
@@ -160,6 +174,8 @@ void EnumerateGenericPCIDevices(uint8_t classCode, uint8_t subclass, void (*func
 }
 
 int AddDevice(int bus, int slot, int func) {
+    ScopedSpinLock lockDevs(devicesLock);
+    
     PCIInfo device;
 
     device.vendorID = GetVendor(bus, slot, func);

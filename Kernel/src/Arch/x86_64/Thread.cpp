@@ -48,13 +48,13 @@ Thread::Thread(Process* _parent, pid_t _tid)
     ((fx_state_t*)fxState)->mxcsrMask = 0xffbf;
     ((fx_state_t*)fxState)->fcw = 0x33f; // Default FPU Control Word State
 
-    kernelStack = Memory::KernelAllocate4KPages(32); // Allocate Memory For Kernel Stack (128KB)
-    for (int i = 0; i < 32; i++) {
+    kernelStack = Memory::KernelAllocate4KPages(64); // Allocate Memory For Kernel Stack (256KB)
+    for (int i = 0; i < 64; i++) {
         Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),
                                          reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * i, 1);
     }
-    memset(kernelStack, 0, PAGE_SIZE_4K * 32);
-    kernelStack = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * 32);
+    memset(kernelStack, 0, PAGE_SIZE_4K * 64);
+    kernelStack = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * 64);
 }
 
 void Thread::Signal(int signal) {
@@ -166,6 +166,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
     uint64_t* stack = reinterpret_cast<uint64_t*>((regs->rsp & (~0xfULL)) - sizeof(RegisterContext));
     *reinterpret_cast<RegisterContext*>(stack) = *regs;
 
+    *(--stack) = 0; // Pad out the stack
     *(--stack) = oldSignalMask;
     // This could probably be placed in a register but it makes our stack nice and aligned
     *(--stack) = reinterpret_cast<uintptr_t>(handler.userHandler);

@@ -2,6 +2,7 @@
 .cache
 Build
 serial.log
+mlibc
 Kernel/subprojects/*
 !Kernel/subprojects/*.wrap
 Initrd/*
