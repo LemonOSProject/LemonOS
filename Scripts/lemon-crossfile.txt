@@ -1,9 +1,16 @@
 [binaries]
-c = 'lemon-clang'
-cpp = 'lemon-clang++'
-ar = 'x86_64-lemon-ar'
-strip = 'x86_64-lemon-strip'
+c = 'clang'
+cpp = 'clang++'
+strip = '86_64-lemon-strip'
 ld = 'x86_64-lemon-ld'
+pkgconfig = 'pkg-config'
+
+[properties]
+
+cmake_toolchain_file = 'CMake/lemon-cmake-options.cmake'
+cmake_defaults = false
+
+[cmake]
 
 [host_machine]
 system = 'lemon'
@@ -11,5 +18,5 @@ cpu_family = 'x86_64'
 cpu = 'x86_64'
 endian = 'little'
 
-[built-in options]
-prefix = '~/.local/share/lemon/sysroot/system'
+[paths]
+prefix = '/system'

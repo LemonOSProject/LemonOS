@@ -8,6 +8,5 @@ lemonwm_src = [
  
 executable('lemonwm.lef', lemonwm_src,
     cpp_args: system_args,
-    dependencies: [system_dependencies, libgui_dep],
-    link_args : ['-lfreetype', '-lz', '-lpng'],
+    link_args : ['-llemon', '-llemongui'],
     install_dir : 'lemon/', install : true)

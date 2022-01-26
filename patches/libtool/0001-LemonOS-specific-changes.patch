@@ -1,0 +1,60 @@
+From 0792982d4e40c890555f82b883c9a40ffbe1be08 Mon Sep 17 00:00:00 2001
+From: JJ <fidojj@hotmail.com>
+Date: Fri, 21 Jan 2022 20:55:45 +1100
+Subject: [PATCH] LemonOS specific changes
+
+---
+ build-aux/ltmain.in |  2 +-
+ m4/libtool.m4       | 16 ++++++++++++++++
+ 2 files changed, 17 insertions(+), 1 deletion(-)
+
+diff --git a/build-aux/ltmain.in b/build-aux/ltmain.in
+index d5cf07a..ce97a5f 100644
+--- a/build-aux/ltmain.in
++++ b/build-aux/ltmain.in
+@@ -6449,7 +6449,7 @@ func_mode_link ()
+ 	      fi
+ 	    else
+ 	      # We cannot seem to hardcode it, guess we'll fake it.
+-	      add_dir=-L$libdir
++	      add_dir=-L$lt_sysroot$libdir
+ 	      # Try looking first in the location we're being installed to.
+ 	      if test -n "$inst_prefix_dir"; then
+ 		case $libdir in
+diff --git a/m4/libtool.m4 b/m4/libtool.m4
+index a3bc337..8fd342d 100644
+--- a/m4/libtool.m4
++++ b/m4/libtool.m4
+@@ -2700,6 +2700,18 @@ freebsd* | dragonfly*)
+   esac
+   ;;
+ 
++lemon*)
++  version_type=linux
++  need_lib_prefix=no
++  need_version=no
++  library_names_spec='$libname$release$shared_ext$versuffix $libname$release$shared_ext$major $libname$shared_ext'
++  soname_spec='$libname$release$shared_ext$major'
++  shlibpath_var=LD_LIBRARY_PATH
++  shlibpath_overrides_runpath=no
++  sys_lib_dlsearch_path_spec='/system/lib /lib'
++  hardcode_into_libs=yes
++  ;;
++
+ haiku*)
+   version_type=linux # correct to gnu/linux during the next big refactor
+   need_lib_prefix=no
+@@ -3504,6 +3516,10 @@ freebsd* | dragonfly*)
+   fi
+   ;;
+ 
++lemon*)
++  lt_cv_deplibs_check_method=pass_all
++  ;;
++
+ haiku*)
+   lt_cv_deplibs_check_method=pass_all
+   ;;
+-- 
+2.34.1
+

@@ -1,0 +1,54 @@
+packages:
+  - name: nyancat
+    source:
+      git: 'https://github.com/klange/nyancat/'
+      subdir: 'Ports'
+    tools_required:
+      - host-llvm
+    pkgs_required:
+      - mlibc
+    build:
+      - args: ['make']
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/system/bin']
+      - args: ['cp', 'bin/nyancat', '@THIS_COLLECT_DIR@/system/bin/']
+  - name: curl
+    source:
+      url: 'https://curl.se/download/curl-7.77.0.tar.gz'
+      format: 'tar.gz'
+      subdir: 'Ports'
+      extract_path: 'curl-7.77.0'
+      tools_required:
+        - host-automake
+        - host-autoconf-v2.69
+        - host-libtool
+      regenerate:
+        - args: ['autoreconf', '-fi']
+    tools_required:
+      - host-llvm
+      - host-pkgconfig
+    pkgs_required:
+      - mlibc
+      - libressl
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-lemon'
+        - '--prefix=/system'
+        - '--with-openssl'
+        - '--disable-ipv6'
+        - '--disable-unix-sockets'
+        - '--disable-threaded-resolver'
+        environ:
+          curl_disallow_alarm: 'yes'
+          curl_disallow_getpeername: 'yes'
+          curl_disallow_getsockname: 'yes'
+          CC: 'clang'
+          CXX: 'clang++'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'

@@ -1,5 +1,20 @@
+project('lemon-kernel',
+    default_options : ['warning_level=2', 'cpp_std=c++2a', 'optimization=0', 'werror=true'])
 add_languages('c', 'cpp')
 
+
+# TODO: Change to -march=x86_64-v2 when LLVM is updated
+add_global_arguments(['-mpopcnt', '-mcx16', '-msahf'], language: ['c', 'cpp'])
+
+nasm = find_program('nasm')
+asmg = generator(nasm,
+    output : '@BASENAME@.asm.o',
+    arguments : [
+        '-f', 'elf64',
+        '-g', '-F', 'dwarf', '-w+gnu-elf-extensions',
+        '@INPUT@',
+        '-o', '@OUTPUT@'])
+        
 bintoelf = find_program('bintoelf.sh', './bintoelf.sh')
 bing = generator(bintoelf,
 output : '@BASENAME@.bin.o',
@@ -104,7 +119,6 @@ kernel_cpp_files_x86_64 = [
     'src/Arch/x86_64/ELF.cpp',
     'src/Arch/x86_64/HAL.cpp',
     'src/Arch/x86_64/IDT.cpp',
-    'src/Arch/x86_64/IOPorts.cpp',
     'src/Arch/x86_64/PS2.cpp',
     'src/Arch/x86_64/Modules.cpp',
     'src/Arch/x86_64/Paging.cpp',
@@ -145,4 +159,5 @@ kernel_link_args += kernel_c_args
 kernel = executable('kernel.sys',
     [asmg.process(kernel_asm_files_x86_64), bing.process(kernel_asm_bin_files_x86_64), kernel_cpp_files, kernel_cpp_files_x86_64, lai.get_variable('sources')],
     include_directories : [kernel_include_dirs], 
-    c_args : kernel_c_args, cpp_args : [kernel_c_args, kernel_cpp_args], link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld')
+    c_args : kernel_c_args, cpp_args : [kernel_c_args, kernel_cpp_args], link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld',
+    install_dir : 'lemon/', install : true)

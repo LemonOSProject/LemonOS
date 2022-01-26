@@ -1,0 +1,539 @@
+general:
+    patch_author: LemonOS Project
+    patch_email: computerfido@gmail.com
+
+directories:
+    system_root: 'sysroot'
+
+# LLVM link jobs use an extremely large amount of memory
+declare_options:
+  - name: llvm_linkcount
+    default: '2'
+
+imports:
+  - file: Ports/packages.yml
+
+sources:
+  - name: binutils
+    subdir: 'Toolchain'
+    git: 'git://sourceware.org/git/binutils-gdb.git'
+    tag: 'binutils-2_32'
+    version: '2.32'
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake
+    regenerate:
+      - args: ['autoreconf']
+        workdir: '@THIS_SOURCE_DIR@/ld'
+
+  - name: lemon-llvm
+    subdir: 'Toolchain'
+    git: 'https://github.com/LemonOSProject/llvm-project'
+    branch: 'master'
+
+  - name: automake
+    subdir: 'Toolchain'
+    git: 'https://git.savannah.gnu.org/git/automake.git'
+    tag: 'v1.16.5'
+    version: '1.16.5'
+    tools_required:
+      - host-autoconf-v2.69
+    regenerate:
+      - args: ['./bootstrap']
+
+  - name: mlibc
+    git: 'https://github.com/managarm/mlibc.git'
+    branch: 'master'
+
+tools:
+  - name: host-automake
+    from_source: automake
+    configure:
+      - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=@PREFIX@']
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+      - args: ['ln', '-sf', '@PREFIX@/share/aclocal-1.16', '@PREFIX@/share/aclocal']
+  
+  - name: host-autoconf-v2.69 # Some things e.g. binutils want exactly this version, painnnnnn
+    source:
+      name: host-autoconf-v2.69
+      subdir: 'Toolchain'
+      url: 'https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz'
+      format: 'tar.gz' # Only ~600K larger than .xz
+      extract_path: 'autoconf-2.69'
+      version: '2.69'
+    configure:
+      - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=@PREFIX@']
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+  
+  - name: host-binutils
+    from_source: binutils
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake
+    configure:
+      - args:
+          - '@THIS_SOURCE_DIR@/configure'
+          - '--target=x86_64-lemon'
+          - '--prefix=@PREFIX@'
+          - '--with-sysroot=@SYSROOT_DIR@'
+          - '--disable-werror'
+          - '--enable-targets=x86_64-elf'
+          - 'CFLAGS=-O2'
+    compile:
+      - args: ['make', '-j@PARALLELISM@', 'all-binutils', 'all-gas', 'all-ld']
+    install:
+      - args: ['make', 'install-binutils', 'install-gas', 'install-ld']
+      - args:
+        - 'ln'
+        - '-sf'
+        - 'x86_64-lemon-ld'
+        - '@PREFIX@/bin/x86_64-unknown-lemon-ld'
+      - args:
+        - 'ln'
+        - '-sf'
+        - 'x86_64-lemon-as'
+        - '@PREFIX@/bin/x86_64-unknown-lemon-as'
+
+  - name: host-llvm
+    from_source: lemon-llvm
+    tools_required:
+      - tool: host-binutils
+        recursive: true
+    configure:
+      - args:
+        - 'cmake'
+        - '@THIS_SOURCE_DIR@/llvm'
+        - '-GNinja'
+        - '-DCMAKE_INSTALL_PREFIX=@PREFIX@'
+        - '-DDEFAULT_SYSROOT=@SYSROOT_DIR@'
+        - '-DLLVM_PARALLEL_LINK_JOBS=@OPTION:llvm_linkcount@'
+        - '-C@THIS_SOURCE_DIR@/clang/cmake/caches/Lemon.cmake'
+    stages:
+      - name: compiler
+        pkgs_required:
+          - mlibc-headers
+        compile:
+          - args: ['ninja', 'clang']
+        install:
+          - args: ['ninja', 'install-clang', 'install-clang-resource-headers']
+      - name: everything-else
+        pkgs_required:
+          - mlibc
+        tools_required:
+          - tool: host-llvm
+            stage_dependencies: [compiler]
+        compile:
+          - args: ['ninja']
+        install:
+          - args: ['ninja', 'install']
+          - args:
+             - 'ln'
+             - '-sf'
+             - 'clang'
+             - '@PREFIX@/bin/lemon-clang'
+          - args:
+             - 'ln'
+             - '-sf'
+             - 'clang++'
+             - '@PREFIX@/bin/lemon-clang++'
+          - args:
+             - 'ln'
+             - '-sf'
+             - 'clang'
+             - '@PREFIX@/bin/cc'
+          - args:
+             - 'ln'
+             - '-sf'
+             - 'clang++'
+             - '@PREFIX@/bin/c++'
+          - args: ['cp', '-r', '@PREFIX@/lib/x86_64-unknown-lemon/.', '@SYSROOT_DIR@/system/lib']
+
+  - name: host-libtool
+    exports_aclocal: true
+    source:
+      name: libtool
+      subdir: 'Toolchain'
+      git: 'https://git.savannah.gnu.org/git/libtool.git'
+      tag: 'v2.4.6'
+      version: '2.4.6'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake
+      regenerate:
+        - args: ['./bootstrap']
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake
+    configure:
+      - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=@PREFIX@']
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+
+  - name: host-pkgconfig
+    exports_aclocal: true
+    source:
+      name: 'pkg-config'
+      subdir: 'Toolchain'
+      git: 'https://gitlab.freedesktop.org/pkg-config/pkg-config.git'
+      tag: 'pkg-config-0.29.2'
+      version: '0.29.2'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake
+        - host-libtool
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            'NOCONFIGURE': 'yes'
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=@PREFIX@'
+        - '--with-internal-glib'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+
+packages:
+  - name: mlibc-headers
+    from_source: mlibc
+    configure:
+      - args:
+        - 'meson'
+        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
+        - '-Dheaders_only=True'
+        - '--prefix=/system'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: mlibc
+    from_source: mlibc
+    pkgs_required:
+      - mlibc-headers
+    tools_required:
+      - tool: host-llvm
+        stage_dependencies: [compiler]
+      - host-binutils
+    configure:
+      - args:
+        - 'meson'
+        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
+        - '-Dmlibc_no_headers=true'
+        - '--prefix=/system'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: lemon-kernel
+    metadata:
+      summary: Lemon Kernel
+      website: 'https://lemonos.org'
+    source:
+      name: 'Kernel'
+    tools_required:
+      - host-llvm
+    configure:
+      - args:
+        - 'meson'
+        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
+        - '--prefix=/system'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+        
+  - name: lemon-interface-headers
+    source:
+      name: 'Services'
+    build:
+        - args: ['@SOURCE_ROOT@/Scripts/buildinterfaces.sh', '@SOURCE_ROOT@', '@SYSROOT_DIR@']
+
+  - name: zlib
+    pkgs_required:
+      - mlibc
+    tools_required:
+      - host-llvm
+    source:
+      subdir: 'Ports'
+      url: 'https://zlib.net/zlib-1.2.11.tar.gz'
+      format: 'tar.gz'
+      extract_path: 'zlib-1.2.11'
+      version: '1.2.11'
+    configure:
+      - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=/system']
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libpng
+    pkgs_required:
+      - mlibc
+      - zlib
+    tools_required:
+      - host-llvm
+      - host-automake
+      - host-libtool
+    source:
+      subdir: 'Ports'
+      url: 'https://download.sourceforge.net/libpng/libpng-1.6.37.tar.gz'
+      format: 'tar.gz'
+      extract_path: 'libpng-1.6.37'
+      patch-path-strip: 1
+    configure:
+      - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=/system', '--host=x86_64-lemon', '--enable-shared']
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: freetype
+    pkgs_required:
+      - mlibc
+      - libpng
+    tools_required:
+      - host-llvm
+    source:
+      subdir: 'Ports'
+      git: 'git://git.sv.nongnu.org/freetype/freetype2.git'
+      tag: 'VER-2-11-1'
+      version: '2.11.1'
+      tools_required:
+        - host-automake
+        - host-autoconf-v2.69
+        - host-libtool
+        - host-pkgconfig
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: '1'
+        - args: ['cp', '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub', '@THIS_SOURCE_DIR@/builds/unix/']
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=/system'
+        - '--host=x86_64-lemon'
+        - '--disable-static'
+        - '--disable-mmap'
+        - '--with-harfbuzz=no'
+        - '--with-zlib=no'
+        - '--with-png=no'
+        - '--with-sysroot=@SYSROOT_DIR@'
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: libressl
+    source:
+      subdir: 'Ports'
+      url: 'https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-3.3.1.tar.gz'
+      format: 'tar.gz'
+      extract_path: libressl-3.3.1
+      patch-path-strip: 1
+    tools_required:
+      - host-llvm
+    configure:
+      - args:
+        - 'cmake'
+        - '-GNinja'
+        - '@THIS_SOURCE_DIR@' 
+        - '-DCMAKE_CROSSCOMPILING=True'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_INSTALL_PREFIX=/system'
+        - '-DBUILD_SHARED_LIBS=ON'
+        - '-DLIBRESSL_APPS=OFF'
+        - '-DHAVE_TIMEGM=OFF'
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+    build:
+      - args: ['ninja']
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      - args: ['mkdir', '@THIS_COLLECT_DIR@/system/lib/crypto']
+      - args: ['ln', '-s', '../libcrypto.so', '@THIS_COLLECT_DIR@/system/lib/crypto/libcrypto.so']
+
+  - name: liblemon
+    pkgs_required:
+      - mlibc
+      - zlib
+      - libpng
+      - freetype
+      - lemon-interface-headers
+    tools_required:
+      - host-pkgconfig
+      - host-llvm
+    source:
+      name: 'LibLemon'
+    configure:
+      - args:
+        - 'meson'
+        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
+        - '--prefix=/system'
+        - '@THIS_SOURCE_DIR@'
+        environ:
+          PKG_CONFIG_LIBDIR: '@SYSROOT_DIR@/system/lib/pkgconfig'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: liblemongui
+    tools_required:
+      - host-llvm
+    pkgs_required:
+      - mlibc
+      - liblemon
+    source:
+      name: 'LibGUI'
+    configure:
+      - args:
+        - 'meson'
+        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
+        - '--prefix=/system'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: lemon-system
+    tools_required:
+      - host-llvm
+    pkgs_required:
+      - mlibc
+      - liblemon
+      - liblemongui
+      - lemon-interface-headers
+    source:
+      name: 'System'
+    configure:
+      - args:
+        - 'meson'
+        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
+        - '--prefix=/system'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: lemon-apps
+    tools_required:
+      - host-llvm
+    pkgs_required:
+     - mlibc
+     - liblemon
+     - liblemongui
+     - libressl
+    source:
+      name: 'Applications'
+    configure:
+      - args:
+        - 'meson'
+        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
+        - '--prefix=/system'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: lemon-utils
+    tools_required:
+      - host-llvm
+    pkgs_required:
+      - mlibc
+      - liblemon
+    source:
+      name: 'Utilities'
+    configure:
+      - args:
+        - 'meson'
+        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
+        - '--prefix=/system'
+        - '@THIS_SOURCE_DIR@'
+    build:
+      - args: ['ninja']
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: lemon-base
+    metadata:
+      summary: LemonOS base system
+      description: Metapackage containing the kernel, libraries, services and core applications for Lemon OS.
+      website: 'https://lemonos.org'
+    pkgs_required:
+      - lemon-apps
+      - lemon-kernel
+      - lemon-system
+      - lemon-utils
+    source:
+      name: 'Base'
+    build:
+      - args: ['sh', '-c', 'mkdir -p @THIS_COLLECT_DIR@/system; cp -ru Base/* @THIS_COLLECT_DIR@/system']
+        workdir: '@SOURCE_ROOT@'
+
+tasks:
+  - name: build-initrd
+    pkgs_required:
+      - lemon-kernel
+      - lemon-apps
+      - lemon-system
+      - lemon-utils
+    args:
+      - '@SOURCE_ROOT@/Scripts/buildinitrd.sh'
+    
+  - name: build-disk
+    tasks_required:
+      - build-initrd
+    pkgs_required:
+      - lemon-base
+    artifact_files:
+      - name: Lemon.img
+        path: '@SOURCE_ROOT@/Disks'
+    args:
+      - '@SOURCE_ROOT@/Scripts/builddisk.sh'
