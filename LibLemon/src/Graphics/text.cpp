@@ -1,6 +1,7 @@
 #include <Lemon/Graphics/Font.h>
 #include <Lemon/Graphics/Graphics.h>
 #include <Lemon/Graphics/Text.h>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -39,11 +40,13 @@ int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surf
 
     uint32_t colour_i = 0xFF000000 | (r << 16) | (g << 8) | b;
     uint32_t* buffer = (uint32_t*)surface->buffer;
-    if (int err = FT_Load_Char(font->face, character, FT_LOAD_RENDER)) {
+
+    FT_Face face = (FT_Face)font->face;
+    if (int err = FT_Load_Char(face, character, FT_LOAD_RENDER)) {
         return 0;
     }
 
-    int maxHeight = font->lineHeight - (font->height - font->face->glyph->bitmap_top);
+    int maxHeight = font->lineHeight - (font->height - face->glyph->bitmap_top);
 
     if (y + maxHeight >= limits.y + limits.height) {
         maxHeight = limits.y + limits.height - y;
@@ -62,27 +65,27 @@ int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surf
         i = -y;
     }
 
-    if (y + (font->height - font->face->glyph->bitmap_top) < limits.y) {
-        i = limits.y - (y + (font->height - font->face->glyph->bitmap_top));
+    if (y + (font->height - face->glyph->bitmap_top) < limits.y) {
+        i = limits.y - (y + (font->height - face->glyph->bitmap_top));
     }
 
-    for (; i < static_cast<int>(font->face->glyph->bitmap.rows) && i < maxHeight; i++) {
+    for (; i < static_cast<int>(face->glyph->bitmap.rows) && i < maxHeight; i++) {
         if (y + i < 0)
             continue;
 
-        uint32_t yOffset = (i + y + (font->height - font->face->glyph->bitmap_top)) * (surface->width);
-        for (unsigned int j = 0; j < font->face->glyph->bitmap.width && static_cast<long>(j) + x < surface->width;
+        uint32_t yOffset = (i + y + (font->height - face->glyph->bitmap_top)) * (surface->width);
+        for (unsigned int j = 0; j < face->glyph->bitmap.width && static_cast<long>(j) + x < surface->width;
              j++) {
             if (x + static_cast<long>(j) < 0)
                 continue;
-            if (font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] == 255)
+            if (face->glyph->bitmap.buffer[i * face->glyph->bitmap.width + j] == 255)
                 buffer[yOffset + (j + x)] = colour_i;
-            else if (font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] > 0) {
-                buffer[yOffset + (j + x)] = AlphaBlendInt(buffer[yOffset + (j + x)], RGBAColour::ToARGB({r, g, b, font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j]}));
+            else if (face->glyph->bitmap.buffer[i * face->glyph->bitmap.width + j] > 0) {
+                buffer[yOffset + (j + x)] = AlphaBlendInt(buffer[yOffset + (j + x)], RGBAColour::ToARGB({r, g, b, face->glyph->bitmap.buffer[i * face->glyph->bitmap.width + j]}));
             }
         }
     }
-    return font->face->glyph->advance.x >> 6;
+    return face->glyph->advance.x >> 6;
 }
 
 int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font) {
@@ -128,6 +131,8 @@ int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, s
         maxHeight = surface->height - y;
     }
 
+    FT_Face face = (FT_Face)font->face;
+
     unsigned int lastGlyph = 0;
     int xOffset = x;
     while (*str != 0) {
@@ -138,22 +143,22 @@ int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, s
             continue;
         }
 
-        unsigned int glyph = FT_Get_Char_Index(font->face, *str);
-        if (FT_HAS_KERNING(font->face) && lastGlyph) {
+        unsigned int glyph = FT_Get_Char_Index(face, *str);
+        if (FT_HAS_KERNING(face) && lastGlyph) {
             FT_Vector delta;
 
-            FT_Get_Kerning(font->face, lastGlyph, glyph, FT_KERNING_DEFAULT, &delta);
+            FT_Get_Kerning(face, lastGlyph, glyph, FT_KERNING_DEFAULT, &delta);
             xOffset += delta.x >> 6;
         }
         lastGlyph = glyph;
 
-        if (int err = FT_Load_Glyph(font->face, glyph, FT_LOAD_RENDER)) {
+        if (int err = FT_Load_Glyph(face, glyph, FT_LOAD_RENDER)) {
             str++;
             continue;
         }
 
-        if (xOffset + (font->face->glyph->advance.x >> 6) < limits.x) {
-            xOffset += font->face->glyph->advance.x >> 6;
+        if (xOffset + (face->glyph->advance.x >> 6) < limits.x) {
+            xOffset += face->glyph->advance.x >> 6;
             str++;
             continue;
         }
@@ -163,13 +168,13 @@ int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, s
             i = -y;
         }
 
-        if (y + (font->height - font->face->glyph->bitmap_top) < limits.y) {
-            i = limits.y - (y + (font->height - font->face->glyph->bitmap_top));
+        if (y + (font->height - face->glyph->bitmap_top) < limits.y) {
+            i = limits.y - (y + (font->height - face->glyph->bitmap_top));
         }
 
-        for (; i < font->face->glyph->bitmap.rows && i + (font->height - font->face->glyph->bitmap_top) < maxHeight;
+        for (; i < face->glyph->bitmap.rows && i + (font->height - face->glyph->bitmap_top) < maxHeight;
              i++) {
-            uint32_t yOffset = (i + y + (font->height - font->face->glyph->bitmap_top)) * (surface->width);
+            uint32_t yOffset = (i + y + (font->height - face->glyph->bitmap_top)) * (surface->width);
 
             unsigned j = 0;
             if (xOffset < 0) {
@@ -180,17 +185,17 @@ int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, s
                 j = limits.x - xOffset;
             }
 
-            for (; j < font->face->glyph->bitmap.width && (xOffset + static_cast<long>(j)) < surface->width; j++) {
+            for (; j < face->glyph->bitmap.width && (xOffset + static_cast<long>(j)) < surface->width; j++) {
                 unsigned off = yOffset + (j + xOffset);
-                if (font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j] == 255)
+                if (face->glyph->bitmap.buffer[i * face->glyph->bitmap.width + j] == 255)
                     buffer[off] = colour_i;
-                else if (font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j]) {
-                    buffer[off] = AlphaBlendInt(buffer[off], RGBAColour::ToARGB({r, g, b, font->face->glyph->bitmap.buffer[i * font->face->glyph->bitmap.width + j]}));
+                else if (face->glyph->bitmap.buffer[i * face->glyph->bitmap.width + j]) {
+                    buffer[off] = AlphaBlendInt(buffer[off], RGBAColour::ToARGB({r, g, b, face->glyph->bitmap.buffer[i * face->glyph->bitmap.width + j]}));
                 }
             }
         }
 
-        xOffset += font->face->glyph->advance.x >> 6;
+        xOffset += face->glyph->advance.x >> 6;
         str++;
     }
     return xOffset - x;
@@ -224,11 +229,12 @@ int GetCharWidth(char c, Font* font) {
         return 0;
     }
 
-    if (int err = FT_Load_Char(font->face, c, FT_LOAD_ADVANCE_ONLY)) {
+    FT_Face face = (FT_Face)font->face;
+    if (int err = FT_Load_Char(face, c, FT_LOAD_ADVANCE_ONLY)) {
         return 0;
     }
 
-    return font->face->glyph->advance.x >> 6;
+    return face->glyph->advance.x >> 6;
 }
 
 int GetCharWidth(char c) { return GetCharWidth(c, mainFont); }
@@ -239,6 +245,8 @@ int GetTextLength(const char* str, size_t n, Font* font) {
     if (fontState == -1) {
         return strlen(str) * 8;
     }
+
+    FT_Face face = (FT_Face)font->face;
 
     size_t len = 0;
     size_t i = 0;
@@ -258,12 +266,12 @@ int GetTextLength(const char* str, size_t n, Font* font) {
             continue;
         }
 
-        if (int err = FT_Load_Char(font->face, *str, FT_LOAD_ADVANCE_ONLY)) {
+        if (int err = FT_Load_Char(face, *str, FT_LOAD_ADVANCE_ONLY)) {
             str++;
             continue;
         }
 
-        len += font->face->glyph->advance.x >> 6;
+        len += face->glyph->advance.x >> 6;
         str++;
     }
 

@@ -31,38 +31,23 @@ trap 'cleanup2' 1
 mkdir -p /mnt/LemonEFI/EFI/BOOT
 if [ ! -z "$USE_GRUB_EFI" ]; then
     grub-install --target=x86_64-efi --boot-directory=/mnt/Lemon/lemon/boot --efi-directory=/mnt/LemonEFI "${LOOPBACK_DEVICE}" --removable
-    echo ".\EFI\BOOT\BOOTX64.EFI" > /mnt/LemonEFI/startup.nsh
-elif [ -e "$HOME/.local/share/lemon/share/limine/BOOTX64.EFI" ]; then
-    cp "$HOME/.local/share/lemon/share/limine/BOOTX64.EFI" /mnt/LemonEFI/EFI/BOOT/
-    cp "$HOME/.local/share/lemon/share/limine/limine.sys" /mnt/Lemon/
-elif [ -e "Toolchain/limine-2.0-bin/BOOTX64.EFI" ]; then
-    cp Toolchain/limine-2.0-bin/BOOTX64.EFI /mnt/LemonEFI/EFI/BOOT
-    cp Toolchain/limine-2.0-bin/limine.sys /mnt/Lemon/
+elif [ -e "Build/tools/host-limine/share/limine/BOOTX64.EFI" ]; then
+    cp "Build/tools/host-limine/share/limine/BOOTX64.EFI" /mnt/LemonEFI/EFI/BOOT/
+    cp "Build/tools/host-limine/share/limine/limine.sys" /mnt/Lemon/
 else
     echo "Failed to find limine BOOTX64.EFI or limine.sys"
     cleanup2
     exit 1
 fi
 
+echo ".\EFI\BOOT\BOOTX64.EFI" > /mnt/LemonEFI/startup.nsh
+
 mkdir -p /mnt/Lemon/lemon/boot
 
 umount /mnt/Lemon
 umount /mnt/LemonEFI
 
-if [ -x "$(command -v limine-install)" ]; then
-    limine-install "${LOOPBACK_DEVICE}" 1
-else
-    export PATH=$PATH:$HOME/.local/share/lemon/bin
-    
-    if [ -x "$(command -v limine-install)" ]; then
-        limine-install "${LOOPBACK_DEVICE}" 1
-    elif [ -e "Toolchain/limine-2.0-bin/limine-install" ]; then
-        Toolchain/limine-2.0-bin/limine-install "${LOOPBACK_DEVICE}" 1
-    else
-        echo "Failed to find limine-install!"
-        exit 1
-    fi
-fi
+limine-install "Disks/Lemon.img" 1
 
 losetup -d "${LOOPBACK_DEVICE}"
 

@@ -1,10 +1,13 @@
 #include <Lemon/Graphics/Font.h>
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <map>
+#include <unordered_map>
 #include <string>
 
 namespace Lemon::Graphics {
@@ -17,7 +20,7 @@ int fontState = 0;
 Font* mainFont = nullptr;
 
 static FT_Library library;
-static std::map<std::string, Font*>* fonts =
+static std::unordered_map<std::string, Font*>* fonts =
     nullptr; // Clang appears to call InitializeFonts before the constructor for the map
 
 void RefreshFonts() {
@@ -27,7 +30,6 @@ void RefreshFonts() {
 }
 
 __attribute__((constructor)) void InitializeFonts() {
-
     fontState = -1;
 
     if (FT_Init_FreeType(&library)) {
@@ -35,46 +37,27 @@ __attribute__((constructor)) void InitializeFonts() {
         return;
     }
 
-    mainFont = new Font;
+    fonts = new std::unordered_map<std::string, Font*>{};
 
-    if (int err = FT_New_Face(library, "/system/lemon/resources/fonts/notosans.ttf", 0, &mainFont->face)) {
-        printf("Freetype Error (%d) loading font /system/lemon/resources/fonts/notosans.ttf\n", err);
-        if (int err = FT_New_Face(library, "/initrd/notosans.ttf", 0, &mainFont->face)) {
-            printf("Freetype Error (%d) loading font /system/lemon/resources/fonts/notosans.ttf\n", err);
-            return;
-        }
-    }
-
-    mainFont->height = 10;
-
-    if (int err = FT_Set_Pixel_Sizes(mainFont->face, 0, mainFont->height / 72.f * 96)) {
-        printf("Freetype Error (%d) Setting Font Size\n", err);
+    mainFont = LoadFont("/system/lemon/resources/fonts/notosans.ttf", "default", 10);
+    if(!mainFont) {
         return;
     }
-
-    mainFont->pixelHeight = mainFont->height / 72.f * 96; // pt to px
-    mainFont->height = mainFont->pixelHeight;
-    mainFont->lineHeight = mainFont->face->size->metrics.height / 64;
-    mainFont->id = new char[strlen("default") + 1];
-    mainFont->width = 8;
-    mainFont->tabWidth = 4;
-    strcpy(mainFont->id, "default");
-
-    fonts = new std::map<std::string, Font*>{{"default", mainFont}};
 
     fontState = 1;
 }
 
 Font* LoadFont(const char* path, const char* id, int sz) {
     Font* font = new Font;
+    FT_Face face;
 
-    if (int err = FT_New_Face(library, path, 0, &font->face)) {
+    if (int err = FT_New_Face(library, path, 0, &face)) {
         // Freetype Error loading custom font from memory
         throw FontException(FontException::FontLoadError, err);
         return nullptr;
     }
 
-    if (int err = FT_Set_Pixel_Sizes(font->face, 0, sz / 72.f * 96)) {
+    if (int err = FT_Set_Pixel_Sizes(face, 0, sz / 72.f * 96)) {
         // Freetype Error Setting Font Size
         throw FontException(FontException::FontSizeError, err);
         return nullptr;
@@ -82,7 +65,7 @@ Font* LoadFont(const char* path, const char* id, int sz) {
 
     if (!id) {
         char buf[32];
-        sprintf(buf, "%s", path);
+        snprintf(buf, 32, "%s", path);
         font->id = new char[strlen(buf) + 1];
         strcpy(font->id, buf);
     } else {
@@ -92,15 +75,15 @@ Font* LoadFont(const char* path, const char* id, int sz) {
 
     font->pixelHeight = sz / 72.f * 96; // pt to px
     font->height = font->pixelHeight;
-    font->lineHeight = font->face->size->metrics.height / 64;
-    font->monospace = FT_IS_FIXED_WIDTH(font->face);
+    font->lineHeight = face->size->metrics.height / 64;
+    font->monospace = FT_IS_FIXED_WIDTH(face);
     font->width = 8;
     font->tabWidth = 4;
 
+    font->face = face;
+
     assert(fonts);
     fonts->insert({font->id, font});
-
-    fontState = 1;
 
     return font;
 }

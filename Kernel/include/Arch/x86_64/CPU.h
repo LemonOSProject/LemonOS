@@ -138,12 +138,13 @@ typedef struct {
     uint8_t xmm[16][16]; // XMM Registers
 } __attribute__((packed)) fx_state_t;
 
-static inline int CheckInterrupts() {
-    unsigned long flags;
+ALWAYS_INLINE static bool CheckInterrupts() {
+    volatile unsigned long flags;
     asm volatile("pushf;"
-                 "pop %%rax;"
-                 : "=a"(flags)::"cc");
-    return (flags & 0x200);
+                 "pop %0;"
+                 "andq $0x200, %0;"
+                 : "=rm"(flags)::"memory", "cc");
+    return flags != 0;
 }
 
 cpuid_info_t CPUID();
@@ -155,14 +156,14 @@ ALWAYS_INLINE uintptr_t GetRBP() {
     return val;
 }
 
-ALWAYS_INLINE  uintptr_t GetCR3() {
+ALWAYS_INLINE uintptr_t GetCR3() {
     volatile uintptr_t val;
 
     asm volatile("mov %%cr3, %0" : "=r"(val));
     return val;
 }
 
-static ALWAYS_INLINE  void SetCPULocal(CPU* val) {
+static ALWAYS_INLINE void SetCPULocal(CPU* val) {
     val->self = val;
     asm volatile("wrmsr" ::"a"((uintptr_t)val & 0xFFFFFFFF) /*Value low*/,
                  "d"(((uintptr_t)val >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000102) /*Set Kernel GS Base*/);
@@ -170,7 +171,7 @@ static ALWAYS_INLINE  void SetCPULocal(CPU* val) {
                  "d"(((uintptr_t)val >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000101) /*Set Kernel GS Base*/);
 }
 
-static ALWAYS_INLINE  CPU* GetCPULocal() {
+static ALWAYS_INLINE CPU* GetCPULocal() {
     CPU* ret;
     int intEnable = CheckInterrupts();
     asm("cli");

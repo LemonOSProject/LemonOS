@@ -1,3 +1,7 @@
+project('liblemongui',
+    default_options : ['warning_level=2', 'cpp_std=c++2a', 'optimization=g', 'werror=true'])
+add_languages('c', 'cpp')
+
 libgui_include_dirs = [
     include_directories('include')
 ]
@@ -22,14 +26,8 @@ libgui_cpp_files = [
 prefix = get_option('prefix')
 install_subdir('include', install_dir: prefix)
 
-libgui = static_library('lemongui', [libgui_cpp_files],
+libgui = library('lemongui', [libgui_cpp_files],
     include_directories : libgui_include_dirs,
     cpp_args: libgui_cpp_args,
-    dependencies: [ liblemon_dep ],
-    link_args: ['-lfreetype', '-lz', '-lpng'],
+    link_args: ['-lfreetype', '-lz', '-lpng', '-llemon'],
     install: true)
-
-libgui_dep = declare_dependency(
-    link_with: libgui,
-    include_directories: libgui_include_dirs,
-)

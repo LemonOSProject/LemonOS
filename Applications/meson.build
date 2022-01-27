@@ -1,9 +1,6 @@
+project('lemon-apps',
+    default_options : ['warning_level=2', 'cpp_std=c++2a', 'optimization=0', 'werror=true'])
 add_languages('c', 'cpp')
-
-application_dependencies = [
-    liblemon_dep,
-    libgui_dep
-]
 
 fileman_src = [
     'FileManager/main.cpp',
@@ -84,81 +81,85 @@ tests_src = [
     'Tests/Main.cpp'
 ]
 
+app_libraries = [
+    '-llemon',
+    '-llemongui'
+]
+
 app_fileman = executable('fileman.lef', fileman_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_lsh = executable('lsh', lsh_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
+    link_args: app_libraries,
     install : true)
 app_shell = executable('shell.lef', shell_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_snake = executable('snake.lef', snake_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_terminal = executable('terminal.lef', terminal_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_textedit = executable('textedit.lef', textedit_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_imgview = executable('imgview.lef', imgview_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_sysinfo = executable('sysinfo.lef', sysinfo_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_graphicstest = executable('gfxtest.lef', graphicstest_src,
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_guitest = executable('guitest.lef', guitest_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_run = executable('run.lef', run_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_lemonmonitor = executable('lemonmonitor.lef', lemonmonitor_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_jsondump = executable('jsondump.lef', jsondump_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
+    link_args: ['-llemon'],
     install : true)
 app_minesweeper = executable('minesweeper.lef', minesweeper_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
+    link_args: app_libraries,
+    install : true)
 app_steal = executable('steal', steal_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lssl', '-lcrypto'], install : true)
+    link_args : ['-lssl', '-lcrypto', '-llemon'], install : true)
 app_devmgr = executable('devmgr.lef', devicemanager_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
-    link_args : ['-lfreetype', '-lz', '-lpng'], install : true)
-
+    link_args: app_libraries,
+    install : true)
 
 app_ipctest = executable('ipctest.lef', ipctest_src, 
     cpp_args : application_cpp_args,
-    dependencies: application_dependencies,
+    link_args : ['-llemon'],
     install : true)
 
 app_sigtest = executable('sigtest.lef', 'SignalTest/main.c', 
     install : true)
 
 app_tests = executable('tests.lef', tests_src, 
+    link_args : ['-llemon'],
     install : true)
 
 application_targets = [

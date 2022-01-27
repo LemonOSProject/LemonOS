@@ -156,6 +156,8 @@ void Handler(void*, RegisterContext* r) {
 void Initialize(uint32_t freq) {
     IDT::RegisterInterruptHandler(IRQ0, Handler);
 
+    new (&sleeping) FastList<TimerEvent*>();
+
     frequency = freq;
     uint32_t divisor = 1193182 / freq;
 

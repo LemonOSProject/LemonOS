@@ -1,3 +1,5 @@
+project('lemon-uitls',
+    default_options : ['warning_level=2', 'cpp_std=c++2a', 'optimization=g', 'werror=true'])
 add_languages('c', 'cpp')
 
 cat_src = [
@@ -41,11 +43,11 @@ executable('cat', cat_src, cpp_args : utils_cpp_args, install : true)
 executable('echo', echo_src, cpp_args : utils_cpp_args, install : true)
 executable('rm', rm_src, cpp_args : utils_cpp_args, install : true)
 executable('lemonfetch', lemonfetch_src, cpp_args : utils_cpp_args,
-    dependencies: [liblemon_dep, libgui_dep],
+    link_args : ['-llemon', '-llemongui'],
     install : true)
 executable('ls', ls_src, cpp_args : utils_cpp_args, install : true)
 executable('uname', uname_src, cpp_args : utils_cpp_args, install : true)
 executable('hexdump', hexdump_src, cpp_args : utils_cpp_args, install : true)
 executable('ps', ps_src, cpp_args : utils_cpp_args,
-    dependencies: liblemon_dep,
+    link_args : ['-llemon'],
     install : true)

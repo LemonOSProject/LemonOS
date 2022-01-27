@@ -40,23 +40,18 @@ void InitMultiboot2(multiboot2_info_header_t* mbInfo);
 void InitStivale2(stivale2_info_header_t* st2Info);
 
 void InitCore() { // ALWAYS call this first
+    asm volatile("cli");
     Serial::Initialize();
-    Log::Info("Initializing Lemon...\r\n");
-
-    asm("cli");
+    Serial::Write("Initializing Lemon...\r\n");
+    
+    // Initialize Paging/Virtual Memory Manager
+    Memory::InitializeVirtualMemory();
 
     // Initialize IDT
     IDT::Initialize();
 
-    // Initialize Paging/Virtual Memory Manager
-    Memory::InitializeVirtualMemory();
-
     // Initialize Physical Memory Allocator
     Memory::InitializePhysicalAllocator(&mem_info);
-
-    Log::Info("Initializing System Timer...");
-    Timer::Initialize(1600);
-    Log::Write("OK");
 }
 
 void InitVideo() {
@@ -94,6 +89,10 @@ void InitExtra() {
 
     Log::Info("Initializing PCI...");
     PCI::Init();
+    Log::Write("OK");
+
+    Log::Info("Initializing System Timer...");
+    Timer::Initialize(1600);
     Log::Write("OK");
 
     Log::Info("Initializing Local and I/O APIC...");
@@ -258,10 +257,9 @@ void InitMultiboot2(multiboot2_info_header_t* mbInfo) {
 }
 
 void InitStivale2(stivale2_info_header_t* st2Info) {
-    uintptr_t tagPhys = st2Info->tags;
-
     InitCore();
 
+    uintptr_t tagPhys = st2Info->tags;
     char* cmdLine = nullptr;
 
     while (tagPhys) {

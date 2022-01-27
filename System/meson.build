@@ -1,8 +1,6 @@
+project('lemon-kernel',
+    default_options : ['warning_level=2', 'cpp_std=c++2a', 'optimization=0', 'werror=true'])
 add_languages('c', 'cpp')
-
-system_dependencies = [
-    liblemon_dep
-]
 
 system_args = ['-Wno-write-strings', '-Wno-unused-parameter', '-Wno-missing-braces', '-Wno-missing-field-initializers']
 
@@ -31,24 +29,22 @@ kmod_src = [
 
 system_init = executable('init.lef', lemond_src,
     cpp_args: system_args,
-    dependencies: system_dependencies,
+    link_args: ['-llemon'],
     install_dir : 'lemon/', install : true)
 system_netgov = executable('netgov.lef', netgov_src,
     cpp_args: system_args,
     install_dir : 'lemon/', install : true)
 system_login = executable('login.lef', login_src,
     cpp_args: system_args,
-    dependencies: [ system_dependencies, libgui_dep ],
-    link_args : ['-lfreetype'],
+    link_args: ['-llemon', '-llemongui'],
     install_dir : 'lemon/', install : true)
 system_fterm = executable('fterm.lef', fterm_src,
     cpp_args: system_args,
-    dependencies: system_dependencies,
-    link_args : ['-lfreetype'],
+    link_args: ['-llemon'],
     install_dir : meson.current_source_dir() + '/../Initrd', install : true)
 system_kmod = executable('kmod.lef', kmod_src,
     cpp_args: system_args,
-    dependencies: system_dependencies,
+    link_args: ['-llemon'],
     install_dir : 'lemon/', install : true)
 
 system_targets = [
