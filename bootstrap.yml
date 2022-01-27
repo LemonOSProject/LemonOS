@@ -59,6 +59,8 @@ sources:
     tag: 'release-69-1'
     version: '69.1'
     patch-path-strip: 1
+    tools_required:
+      - host-automake
     regenerate:
       - args: ['cp',
           '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub',
@@ -68,7 +70,7 @@ tools:
   - name: host-automake
     from_source: automake
     configure:
-      - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=@PREFIX@']
+      - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=@PREFIX@', 'MAKEINFO=/bin/true']
     compile:
       - args: ['make', '-j@PARALLELISM@']
     install:
