@@ -1,7 +1,7 @@
 [binaries]
 c = 'clang'
 cpp = 'clang++'
-strip = '86_64-lemon-strip'
+strip = 'x86_64-lemon-strip'
 ld = 'x86_64-lemon-ld'
 pkgconfig = 'pkg-config'
 

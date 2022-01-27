@@ -132,6 +132,10 @@ tools:
         - '-DCMAKE_INSTALL_PREFIX=@PREFIX@'
         - '-DDEFAULT_SYSROOT=@SYSROOT_DIR@'
         - '-DLLVM_PARALLEL_LINK_JOBS=@OPTION:llvm_linkcount@'
+        - '-DCLANG_BUILD_TOOLS=OFF'
+        - '-DCLANG_ENABLE_ARCMT=OFF'
+        - '-DCLANG_ENABLE_STATIC_ANALYZER=OFF'
+        - '-DLLVM_INCLUDE_TESTS=OFF'
         - '-C@THIS_SOURCE_DIR@/clang/cmake/caches/Lemon.cmake'
     stages:
       - name: compiler
