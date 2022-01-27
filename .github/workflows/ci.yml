@@ -30,7 +30,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential autoconf python3 python3-pip ninja-build qemu-utils nasm
-          sudo python3 -m pip install meson
+          sudo python3 -m pip install meson xbstrap
 
       - name: Initialize and Update submodules
         run: git submodule update --init
@@ -45,25 +45,31 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            **/Toolchain/
-            !**/Toolchain/*.sh
-            !**/Toolchain/*.patch
-          key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('**/Toolchain/buildtoolchain.sh') }}-${{ hashFiles('llvm-hash.txt') }}-${{ hashFiles('**/Toolchain/lemon-binutils-2.32.patch') }}
+            **/Build/tool-builds
+          key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
           restore-keys: |
-            ${{ runner.os }}-lemon-toolchain-${{ hashFiles('**/Toolchain/buildtoolchain.sh') }}-${{ hashFiles('llvm-hash.txt') }}-${{ hashFiles('**/Toolchain/lemon-binutils-2.32.patch') }}
+            ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
+
+      - name: Init xbstrap
+        run: |
+          mkdir Build
+          cd Build
+          xbstrap init ..
 
       - name: Build the toolchain
-        run: Toolchain/buildtoolchain.sh build
-
-      - name: Configure dependencies
-        run: Scripts/configure.sh
+        run: |
+          cd Build
+          xbstrap install-tool --all
         
       - name: Building system
-        run: ninja -C Build install
+        run: |
+          cd Build
+          xbstrap install lemon-base
 
       - name: Building disk image
         run: |
-          ninja -C Build disk
+          cd Build
+          xbstrap run build-disk
   full-system:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
@@ -95,55 +101,31 @@ jobs:
         uses: actions/cache@v2
         with:
           path: |
-            **/Toolchain/
-            !**/Toolchain/*.sh
-            !**/Toolchain/*.patch
-          key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('**/Toolchain/buildtoolchain.sh') }}-${{ hashFiles('llvm-hash.txt') }}-${{ hashFiles('**/Toolchain/lemon-binutils-2.32.patch') }}
+            **/Build/tool-builds
+          key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
           restore-keys: |
-            ${{ runner.os }}-lemon-toolchain-${{ hashFiles('**/Toolchain/buildtoolchain.sh') }}-${{ hashFiles('llvm-hash.txt') }}-${{ hashFiles('**/Toolchain/lemon-binutils-2.32.patch') }}
-            
-      - name: Build the toolchain
-        run: Toolchain/buildtoolchain.sh build
+            ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
 
-      - name: Configure dependencies
-        run: Scripts/configure.sh
-
-      - name: Cache the LLVM port
-        uses: actions/cache@v2
-        with:
-          path: |
-            **/Ports/llvm-project
-          key: ${{ runner.os }}-lemon-llvm-${{ hashFiles('~/llvm-hash.txt') }}-${{ hashFiles('**/Ports/llvm.sh') }}
-          restore-keys: |
-            ${{ runner.os }}-lemon-llvm-
-            ${{ runner.os }}-lemon-llvm-${{ hashFiles('~/llvm-hash.txt') }}-
-            ${{ runner.os }}-lemon-llvm-${{ hashFiles('~/llvm-hash.txt') }}-${{ hashFiles('**/Ports/llvm.sh') }}
-
-      - name: Cache the Python port
-        uses: actions/cache@v2
-        with:
-          path: |
-            **/Ports/Python*
-          key: ${{ runner.os }}-lemon-python-${{ hashFiles('**/Ports/lemon-Python*.patch') }}-${{ hashFiles('**/Ports/python.sh') }}
-          restore-keys: |
-            ${{ runner.os }}-lemon-python-${{ hashFiles('**/Ports/lemon-Python*.patch') }}-${{ hashFiles('**/Ports/python.sh') }}
-
-      - name: Building system
-        run: ninja -C Build install
-
-      - name: Build extra ports
+      - name: Init xbstrap
         run: |
-          Ports/buildport.sh doom
-          Ports/buildport.sh nyancat
-          Ports/buildport.sh nasm
-          Ports/buildport.sh lemon-binutils
-          Ports/buildport.sh llvm
-          Ports/buildport.sh python
-          Ports/buildport.sh curl
-          Ports/buildport.sh busybox
+          mkdir Build
+          cd Build
+          xbstrap init ..
+
+      - name: Build the toolchain
+        run: |
+          cd Build
+          xbstrap install-tool --all
+        
+      - name: Building system
+        run: |
+          cd Build
+          xbstrap install lemon-base nyancat curl busybox binutils lemondoom
 
       - name: Building disk image
-        run: ninja -C Build disk
+        run: |
+          cd Build
+          xbstrap run build-disk
       
       - name: Uploading image as artefact
         uses: actions/upload-artifact@v2

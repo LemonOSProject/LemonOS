@@ -1,7 +1,0 @@
-#!/bin/sh
-
-export PKG_CONFIG_SYSROOT_DIR=$HOME/.local/share/lemon/sysroot
-export PKG_CONFIG_LIBDIR=$HOME/.local/share/lemon/sysroot/system/lib/pkgconfig
-export PKG_CONFIG_PATH=$PKG_CONFIG_LIBDIR
-
-exec pkg-config "$@"
