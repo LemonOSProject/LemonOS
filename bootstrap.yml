@@ -251,6 +251,28 @@ tools:
     install:
       - args: ['make', 'install']
 
+  - name: host-limine
+    source:
+      subdir: 'Toolchain'
+      git: 'https://github.com/limine-bootloader/limine.git'
+      tag: 'v2.79.1'
+      version: '2.79.1'
+      tools_required:
+        - host-autoconf-v2.69
+        - host-automake
+      regenerate:
+        - args: ['./autogen.sh']
+          environ:
+            NOCONFIGURE: 'yes'
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=@PREFIX@'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
+
 packages:
   - name: mlibc-headers
     from_source: mlibc
@@ -578,6 +600,8 @@ tasks:
   - name: build-disk
     tasks_required:
       - build-initrd
+    tools_required:
+      - host-limine
     pkgs_required:
       - lemon-base
     artifact_files:
