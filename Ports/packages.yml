@@ -63,6 +63,10 @@ packages:
       subdir: 'Ports'
     tools_required:
       - host-llvm
+    pkgs_required:
+      - liblemon
+      - liblemongui
+      - mlibc
     configure:
       - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
     build:

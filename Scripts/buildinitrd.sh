@@ -8,8 +8,9 @@ cd "$LEMOND"
 
 set -e
 
-cp Resources/* Initrd/
-cp -L ~/.local/share/lemon/sysroot/system/lib/libc.so* ~/.local/share/lemon/sysroot/system/lib/libc++*.so* ~/.local/share/lemon/sysroot/system/lib/libunwind.so* ~/.local/share/lemon/sysroot/system/lib/ld.so* ~/.local/share/lemon/sysroot/system/lib/libfreetype.so* ~/.local/share/lemon/sysroot/system/lib/libpthread.so* ~/.local/share/lemon/sysroot/system/lib/librt.so* ~/.local/share/lemon/sysroot/system/lib/libdl.so* Initrd/ # Only copy crucial libraries
+mkdir -p Initrd/
+cp -ru Resources/* Initrd/
+cp -L Build//sysroot/system/lib/libc.so* Build//sysroot/system/lib/libc++*.so* Build//sysroot/system/lib/libunwind.so* Build//sysroot/system/lib/ld.so* Build//sysroot/system/lib/libfreetype.so* Build//sysroot/system/lib/libpthread.so* Build//sysroot/system/lib/librt.so* Build//sysroot/system/lib/libdl.so* Initrd/ # Only copy crucial libraries
 cp Build/sysroot/system/bin/lsh Initrd/ # Create a backup of LSh on the ramdisk for FTerm
 cp Build/packages/lemon-utils/system/bin/* Initrd/ # Create a backup of LemonUtils on the ramdisk for FTerm
 
