@@ -4,13 +4,17 @@
 #include <RefPtr.h>
 #include <Compiler.h>
 
-typedef long long handle_id_t;
+typedef int handle_id_t;
 
 struct Handle {
     handle_id_t id = 0;
     FancyRefPtr<KernelObject> ko;
 
     ALWAYS_INLINE operator bool(){
-        return id && ko.get();
+        return (id > 0) && ko.get();
     }
+
+    bool closeOnExec : 1; // O_CLOEXEC POSIX flag
 };
+
+#define HANDLE_NULL ((Handle){-1, nullptr});

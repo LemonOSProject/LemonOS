@@ -30,19 +30,9 @@
 #include <Video/Video.h>
 
 #include <ABI/Process.h>
-#include <ABI/Syscall.h>
 
 #include <abi-bits/vm-flags.h>
 #include <sys/ioctl.h>
-
-#define SC_ARG0(r) ((r)->rdi)
-#define SC_ARG1(r) ((r)->rsi)
-#define SC_ARG2(r) ((r)->rdx)
-#define SC_ARG3(r) ((r)->r10)
-#define SC_ARG4(r) ((r)->r9)
-#define SC_ARG5(r) ((r)->r8)
-
-#define NUM_SYSCALLS 111
 
 #define EXEC_CHILD 1
 
@@ -52,18 +42,6 @@
 #define WEXITED 8
 #define WNOWAIT 16
 #define WSTOPPED 32
-
-#define TRY_STORE_UMODE_VALUE(ptrObject, value)                                                                        \
-    if (ptrObject.StoreValue(value)) {                                                                                 \
-        return -EFAULT;                                                                                                \
-    }
-
-#define TRY_GET_UMODE_VALUE(ptrObject, value)                                                                          \
-    if (ptrObject.GetValue(value)) {                                                                                   \
-        return -EFAULT;                                                                                                \
-    }
-
-typedef long (*syscall_t)(RegisterContext*);
 
 long SysExit(RegisterContext* r) {
     int code = SC_ARG0(r);
@@ -165,9 +143,13 @@ long SysExec(RegisterContext* r) {
     if (flags & EXEC_CHILD) {
         currentProcess->RegisterChildProcess(proc);
 
-        proc->ReplaceFileDescriptor(0, new UNIXFileDescriptor(*Scheduler::GetCurrentProcess()->GetFileDescriptor(0)));
-        proc->ReplaceFileDescriptor(1, new UNIXFileDescriptor(*Scheduler::GetCurrentProcess()->GetFileDescriptor(1)));
-        proc->ReplaceFileDescriptor(2, new UNIXFileDescriptor(*Scheduler::GetCurrentProcess()->GetFileDescriptor(2)));
+        // Copy handles
+        proc->m_handles = currentProcess->m_handles;
+        for(Handle& h : proc->m_handles) {
+            if(h.closeOnExec) {
+                proc->DestroyHandle(h.id);
+            }
+        }
     }
 
     proc->Start();
@@ -297,10 +279,10 @@ open:
     return proc->AllocateFileDescriptor(handle);
 }
 
-long SysClose(RegisterContext* r) {
+long SysCloseHandle(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
 
-    int err = currentProcess->DestroyFileDescriptor(SC_ARG0(r));
+    int err = currentProcess->DestroyHandle(SC_ARG0(r));
     if (err) {
         return -EBADF;
     }

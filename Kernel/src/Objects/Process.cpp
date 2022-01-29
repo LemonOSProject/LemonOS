@@ -406,21 +406,7 @@ void Process::Die() {
     }
     asm("sti");
 
-    Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Closing fds...", m_pid);
-    for (auto& fd : m_fileDescriptors) {
-        // Deferences the file descriptor
-        fd = nullptr;
-    }
-    m_fileDescriptors.clear();
-
     Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Closing handles...", m_pid);
-    for (auto& handle : m_handles) {
-        if(handle.ko.get()){
-            handle.ko->Destroy();
-        }
-        // Deferences the handle
-        handle.ko = nullptr;
-    }
     m_handles.clear();
 
     Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Signaling watchers...", m_pid);
@@ -503,19 +489,15 @@ FancyRefPtr<Process> Process::Fork() {
     newProcess->euid = egid;
     newProcess->gid = gid;
 
-    newProcess->m_fileDescriptors.resize(m_fileDescriptors.size());
-    for(unsigned i = 0; i < m_fileDescriptors.size(); i++){
-        UNIXFileDescriptor* source = m_fileDescriptors[i].get();
-        if(!source || !source->node){
+    newProcess->m_handles.resize(m_handles.size());
+    for(unsigned i = 0; i < m_handles.size(); i++){
+        Handle& src = m_handles[i];
+        if(!src || src.closeOnExec){
+            newProcess->m_handles[i] = HANDLE_NULL;
             continue;
         }
 
-        UNIXFileDescriptor* dest = fs::Open(source->node);
-
-        dest->mode = source->mode;
-        dest->pos = source->pos;
-
-        newProcess->m_fileDescriptors[i] = dest;
+        newProcess->m_handles[i] = src;
     }
 
     m_children.add_back(newProcess);
@@ -543,21 +525,6 @@ pid_t Process::CreateChildThread(uintptr_t entry, uintptr_t stack, uint64_t cs, 
 
     Scheduler::InsertNewThreadIntoQueue(&thread);
     return threadID;
-}
-
-int Process::AllocateFileDescriptor(FancyRefPtr<UNIXFileDescriptor> fd){
-    ScopedSpinLock lockFDs(m_fileDescriptorLock);
-
-    int i = 0;
-    for(; i < static_cast<int>(m_fileDescriptors.get_length()); i++){
-        if(m_fileDescriptors[i] == nullptr){
-            m_fileDescriptors[i] = std::move(fd);
-            return i;
-        }
-    }
-
-    m_fileDescriptors.add_back(std::move(fd));
-    return i;
 }
 
 FancyRefPtr<Thread> Process::GetThreadFromTID_Unlocked(pid_t tid) {

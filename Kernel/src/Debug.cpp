@@ -21,7 +21,7 @@ const int debugLevelInterrupts = 0;
 
 const int debugLevelMessageEndpoint = 0;
 
-const int debugLevelSyscalls = 0;
+const int debugLevelSyscalls = DebugLevelVerbose;
 const int debugLevelUsermodeMM = 0;
 
 const int debugLevelNetwork = 0;

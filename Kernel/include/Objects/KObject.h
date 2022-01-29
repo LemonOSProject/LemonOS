@@ -15,7 +15,7 @@ typedef long kobject_id_t;
 #define KOBJECT_ID_MESSAGE_ENDPOINT 1
 #define KOBJECT_ID_INTERFACE 2
 #define KOBJECT_ID_SERVICE 3
-#define KOBJECT_ID_UNIX_FILE_DESCRIPTOR 4
+#define KOBJECT_ID_UNIX_OPEN_FILE 4
 #define KOBJECT_ID_PROCESS 5
 
 class KernelObjectWatcher;

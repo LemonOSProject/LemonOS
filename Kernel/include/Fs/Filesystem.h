@@ -114,8 +114,6 @@ typedef struct {
 
 class FsNode;
 
-struct UNIXFileDescriptor;
-
 struct pollfd {
     int fd;
     short events;
@@ -227,12 +225,16 @@ public:
     FilesystemLock nodeLock; // Lock on FsNode info
 };
 
-typedef struct UNIXFileDescriptor {
+typedef struct UNIXOpenFile : public KernelObject {
+    lock_t dataLock = 0;
+
     FsNode* node = nullptr;
     off_t pos = 0;
     mode_t mode = 0;
 
-    ~UNIXFileDescriptor();
+    kobject_id_t InstanceTypeID() const override;
+
+    ~UNIXOpenFile();
 } fs_fd_t;
 
 class DirectoryEntry {
@@ -495,4 +497,4 @@ int Ioctl(const FancyRefPtr<UNIXFileDescriptor>& handle, uint64_t cmd, uint64_t 
 int Rename(FsNode* olddir, char* oldpath, FsNode* newdir, char* newpath);
 } // namespace fs
 
-ALWAYS_INLINE UNIXFileDescriptor::~UNIXFileDescriptor() { fs::Close(this); }
+ALWAYS_INLINE UNIXOpenFile::~UNIXOpenFile() { fs::Close(this); }

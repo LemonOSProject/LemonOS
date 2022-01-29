@@ -156,99 +156,88 @@ public:
     ALWAYS_INLINE PageMap* GetPageMap() { return addressSpace->GetPageMap(); }
 
     /////////////////////////////
-    /// \brief Allocate UNIX file descriptor
+    /// \brief Get size of handle vector
     ///
-    /// \param fd Reference pointer to valid UNIXFileDescriptor
+    /// Includes invalid/closed handles
+    /////////////////////////////
+    ALWAYS_INLINE unsigned HandleCount() const { return m_fileDescriptors.size(); }
+
+    /////////////////////////////
+    /// \brief Allocate Handle
+    ///
+    /// \param fd Reference pointer to valid KernelObject
     /// \return ID of new file descriptor
     /////////////////////////////
-    int AllocateFileDescriptor(FancyRefPtr<UNIXFileDescriptor> fd);
-    /////////////////////////////
-    /// \brief Retrieves pointer corresponding to fd
-    ///
-    /// \return Reference pointer to file descriptor on success
-    /// \return nullptr when \a fd is invalid
-    /////////////////////////////
-    ALWAYS_INLINE FancyRefPtr<UNIXFileDescriptor> GetFileDescriptor(int fd) {
-        ScopedSpinLock lockFds(m_fileDescriptorLock);
-        if (fd >= m_fileDescriptors.size()) {
-            return nullptr; // No such file descriptor
-        }
-
-        return m_fileDescriptors[fd];
-    }
-    /////////////////////////////
-    /// \brief Destroy UNIX file descriptor
-    ///
-    /// Note other threads may still hold a reference to the file descriptor
-    ///
-    /// \param fd File descriptor to destroy
-    /// \return 0 on success, EBADF when fd is out of range
-    /////////////////////////////
-    ALWAYS_INLINE int DestroyFileDescriptor(int fd) {
-        ScopedSpinLock lockFds(m_fileDescriptorLock);
-        if (fd >= m_fileDescriptors.size()) {
-            return EBADF; // No such file descriptor
-        }
-
-        // Deferences the UNIXFileDescriptor
-        m_fileDescriptors[fd] = nullptr;
-        return 0;
-    }
-    /////////////////////////////
-    /// \brief Destroy UNIX file descriptor
-    ///
-    /// Note other threads may still hold a reference to the file descriptor
-    ///
-    /// \param fd File descriptor to destroy
-    /// \return 0 on success, EBADF when fd is out of range
-    /////////////////////////////
-    ALWAYS_INLINE int ReplaceFileDescriptor(int fd, FancyRefPtr<UNIXFileDescriptor> newFd) {
-        ScopedSpinLock lockFds(m_fileDescriptorLock);
-        assert(fd < m_fileDescriptors.size());
-
-        m_fileDescriptors.at(fd) = newFd;
-
-        return 0;
-    }
-    /////////////////////////////
-    /// \brief Get size of file descriptor vector
-    ///
-    /// Includes invalid/closed file descriptors
-    /////////////////////////////
-    ALWAYS_INLINE unsigned FileDescriptorCount() const { return m_fileDescriptors.size(); }
-
     ALWAYS_INLINE Handle AllocateHandle(FancyRefPtr<KernelObject> ko) {
         ScopedSpinLock lockHandles(m_handleLock);
 
         Handle h;
         h.ko = std::move(ko);
-        h.id = m_handles.get_length() + 1;
+
+        int i = 0;
+        for(; i < static_cast<int>(m_handles.get_length()); i++){
+            if(m_handles[i] == nullptr){
+                m_handles[i] = std::move(h);
+                return h;
+            }
+        }
+        
+        h.id = i;
         m_handles.add_back(h);
 
         return h;
     }
-    ALWAYS_INLINE Handle FindHandle(handle_id_t id) {
-        ScopedSpinLock lockFds(m_handleLock);
+
+    /////////////////////////////
+    /// \brief Retrieves Handle object corresponding to id
+    ///
+    /// \return Handle object on success
+    /// \return null handle when \a id is invalid
+    /////////////////////////////
+    ALWAYS_INLINE Handle GetHandle(handle_id_t id) {
+        ScopedSpinLock lockHandles(m_handleLock);
         if (id < 1 || id > m_handles.size()) {
             return {0, nullptr}; // No such handle
         }
 
         return m_handles[id - 1];
     }
+
+    /////////////////////////////
+    /// \brief Replace handle
+    /////////////////////////////
+    ALWAYS_INLINE int ReplaceHandle(handle_id_t id, Handle newHandle) {
+        ScopedSpinLock lockHandles(m_handleLock);
+        assert(id < m_handles.size());
+
+        newHandle.id = id;
+        m_handles.at(id) = newHandle;
+
+        return 0;
+    }
+
+    /////////////////////////////
+    /// \brief Destroy handle
+    ///
+    /// Note other threads may still hold a reference to the KernelObject
+    ///
+    /// \param id Handle to destroy
+    /// \return 0 on success, EBADF when fd is out of range
+    /////////////////////////////
     ALWAYS_INLINE int DestroyHandle(handle_id_t id) {
-        ScopedSpinLock lockFds(m_handleLock);
+        ScopedSpinLock lockHandles(m_handleLock);
         if (id > m_handles.size()) {
             return EBADF; // No such handle
         }
 
         // Deferences the KernelObject
-        m_handles[id - 1] = {0, nullptr};
+        m_handles[id - 1] = {-1, nullptr};
         return 0;
     }
 
-    ALWAYS_INLINE FancyRefPtr<UNIXFileDescriptor> stdin() { return m_fileDescriptors[0]; };
-    ALWAYS_INLINE FancyRefPtr<UNIXFileDescriptor> stdout() { return m_fileDescriptors[1]; };
-    ALWAYS_INLINE FancyRefPtr<UNIXFileDescriptor> stderr() { return m_fileDescriptors[2]; };
+    ALWAYS_INLINE Handle stdin() { return m_handles[0]; };
+    ALWAYS_INLINE Handle stdout() { return m_handles[1]; };
+    ALWAYS_INLINE Handle stderr() { return m_handles[2]; };
 
     ALWAYS_INLINE void RegisterChildProcess(const FancyRefPtr<Process>& child) {
         ScopedSpinLock lock(m_processLock);
@@ -392,6 +381,9 @@ public:
 
     int exitCode = 0;
 
+    // Handle table
+    Vector<Handle> m_handles;
+
 private:
     Process(pid_t pid, const char* name, const char* workingDir, Process* parent);
 
@@ -430,16 +422,6 @@ private:
     // The process may choose not to take the process handle.
     // This facilitates both Lemon-specific and standard UNIX handling
     // of processes
-
-    // Lemon OS Handles
-    Vector<Handle> m_handles;
-
-    // UNIX File Descriptors
-    Vector<FancyRefPtr<UNIXFileDescriptor>> m_fileDescriptors;
-
-    // File descriptors can be invalid for two reasons
-    // 1. Out of range of m_fileDescriptors
-    // 2. Corresponding entry in m_fileDescriptors is nullptr
 
     // Watcher objects watching the process
     List<KernelObjectWatcher*> m_watching;
