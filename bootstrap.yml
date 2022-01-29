@@ -572,6 +572,7 @@ packages:
     pkgs_required:
       - mlibc
       - liblemon
+      - lemon-system
     source:
       name: 'Utilities'
     configure:
