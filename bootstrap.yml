@@ -614,6 +614,7 @@ tasks:
       - '@SOURCE_ROOT@/Scripts/buildinitrd.sh'
     
   - name: build-disk
+    containerless: true
     tasks_required:
       - build-initrd
     tools_required:

@@ -1,15 +1,23 @@
 FROM alpine:3.12
 
-RUN apk add --no-cache nasm python3 ninja make cmake automake autoconf libtool make gcc g++ musl-dev git curl patch e2fsprogs dosfstools
+RUN apk add --no-cache nasm python3 python3-dev ninja make cmake automake autoconf libtool make gcc g++ musl-dev git curl patch zstd coreutils \ 
+    # automake needs GNU gzip
+    gzip \
+    # libtool
+    help2man xz \
+    # wayland-scanner
+    expat-dev \  
+    # used by binutils
+    texinfo bison flex \
+    # limine, disk image
+    mtools dosfstools e2fsprogs
 
-RUN cd /root && curl https://raw.githubusercontent.com/fido2020/Lemon-OS/master/Toolchain/buildtoolchain.sh -o buildtoolchain.sh && curl https://raw.githubusercontent.com/fido2020/Lemon-OS/master/Toolchain/lemon-binutils-2.32.patch -o lemon-binutils-2.32.patch && chmod 755 /root/buildtoolchain.sh
+RUN python3 -m ensurepip; python3 -m pip install meson xbstrap
 
-RUN /root/buildtoolchain.sh prepare
-RUN /root/buildtoolchain.sh binutils
-RUN /root/buildtoolchain.sh llvm CC=gcc CXX=g++
-RUN /root/buildtoolchain.sh limine
-RUN if [ ! -f "/root/.local/share/lemon/bin/clang" ]; then ninja -C /root/llvm-project/build install; fi && ln -sf /root/.local/share/lemon/bin/clang /root/.local/share/lemon/bin/lemon-clang && ln -sf /root/.local/share/lemon/bin/clang++ /root/.local/share/lemon/bin/lemon-clang++ && ln -sf ../../include/c++ /root/.local/share/lemon/sysroot/system/include/c++ \
-    && cd /root/.local/share/lemon/bin && rm clang-repl clang-scan-deps clang-check clang-refactor clang-rename clang-extdef-mapping diagtool \
-    && /root/buildtoolchain.sh clean && python3 -m ensurepip --default-pip && python3 -m pip install meson && chmod -R a+rx /root
-
-ENV PATH=$PATH:/root/.local/share/lemon/bin:/root/.local/share/lemon/x86_64-lemon/bin/
+WORKDIR /var
+RUN set -e; git clone https://github.com/LemonOSProject/LemonOS --depth 1; find LemonOS/ -maxdepth 1 -mindepth 1 -type d \
+    -not -name patches -not -name Ports -not -name Scripts -exec rm -rf {} +
+RUN cd LemonOS; mkdir Build; cd Build; xbstrap init ..
+RUN cd LemonOS/Build; xbstrap compile-tool --all;
+RUN mkdir -p /var/lemon-tools/Build; mv /var/LemonOS/Toolchain /var/lemon-tools; mv /var/LemonOS/Build/tool-builds /var/lemon-tools/Build/tool-builds; \
+    tar -cvf - lemon-tools | zstd - -o lemon-tools.tar.zst; rm -rf LemonOS lemon-tools; chmod 644 /var/lemon-tools.tar.zst

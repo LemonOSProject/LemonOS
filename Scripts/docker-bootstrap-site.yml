@@ -1,0 +1,5 @@
+container:
+    runtime: docker
+    image: lemontoolchain
+    src_mount: /var/LemonOS
+    build_mount: /var/LemonOS/Build

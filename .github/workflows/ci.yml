@@ -47,6 +47,7 @@ jobs:
           path: |
             **/Build/tool-builds
             **/Toolchain
+            **/mlibc
           key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
           restore-keys: |
             ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
@@ -105,6 +106,7 @@ jobs:
           path: |
             **/Build/tool-builds
             **/Toolchain
+            **/mlibc
           key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
           restore-keys: |
             ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}

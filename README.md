@@ -9,12 +9,9 @@ Lemon OS includes its own [modular kernel](Kernel) with SMP and networking, [win
 
 If you have any questions or concerns feel free to open a GitHub issue, join our [Discord server](https://discord.gg/NAYp6AUYWM) or email me at computerfido@gmail.com.
 
-[Website](https://lemonos.org) \
-[Discord Server](https://discord.gg/NAYp6AUYWM)
-
-## Building
-- [Building Lemon OS (Requires building toolchain)](Documentation/Build/Building-Lemon-OS.md)
-- [Building Lemon OS with Docker](Documentation/Build/Building-Lemon-OS-with-Docker.md)
+## [Website](https://lemonos.org)
+## [Discord Server](https://discord.gg/NAYp6AUYWM)
+## [Building Lemon OS](Documentation/Build/Building-Lemon-OS.md)
 
 ## Prebuilt Image
 [Nightly Images](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml?query=is%3Asuccess+branch%3Amaster) - Go to latest job, `Lemon.img` located under Artifacts\
