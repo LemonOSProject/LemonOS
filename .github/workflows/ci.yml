@@ -46,19 +46,21 @@ jobs:
         with:
           path: |
             **/Build/tool-builds
+            **/Toolchain
           key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
           restore-keys: |
             ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
 
       - name: Init xbstrap
         run: |
-          mkdir Build
+          mkdir -p Build
           cd Build
           xbstrap init ..
 
       - name: Build the toolchain
         run: |
           cd Build
+          xbstrap regenerate lemon-llvm binutils --recursive
           xbstrap install-tool --all
         
       - name: Building system
@@ -102,19 +104,21 @@ jobs:
         with:
           path: |
             **/Build/tool-builds
+            **/Toolchain
           key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
           restore-keys: |
             ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
 
       - name: Init xbstrap
         run: |
-          mkdir Build
+          mkdir -p Build
           cd Build
           xbstrap init ..
 
       - name: Build the toolchain
         run: |
           cd Build
+          xbstrap regenerate lemon-llvm binutils --recursive
           xbstrap install-tool --all
         
       - name: Building system
