@@ -41,16 +41,22 @@ jobs:
           echo "Commit Hash:"
           cat llvm-hash.txt
 
-      - name: Cache the toolchain and sysroot
+      - name: Cache the toolchain
         uses: actions/cache@v2
         with:
+          key: ${{ runner.os }}-lemon-toolchain
           path: |
             **/Build/tool-builds
             **/Toolchain
             **/mlibc
-          key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
+
+      - name: Cache packages
+        uses: actions/cache@v2
+        with:
+          key: ${{ runner.os }}-lemon-pkgs
+          path: |
+            **/Build/pkg-builds
+            **/Ports
 
       - name: Init xbstrap
         run: |
@@ -61,13 +67,12 @@ jobs:
       - name: Build the toolchain
         run: |
           cd Build
-          xbstrap regenerate lemon-llvm binutils --recursive
-          xbstrap install-tool --all
+          xbstrap install-tool -u --all
         
       - name: Building system
         run: |
           cd Build
-          xbstrap install lemon-base
+          xbstrap install -u --recursive lemon-base
 
       - name: Building disk image
         run: |
@@ -100,16 +105,22 @@ jobs:
           echo "Commit Hash:"
           cat llvm-hash.txt
 
-      - name: Cache the toolchain and sysroot
+      - name: Cache the toolchain
         uses: actions/cache@v2
         with:
+          key: ${{ runner.os }}-lemon-toolchain
           path: |
             **/Build/tool-builds
             **/Toolchain
             **/mlibc
-          key: ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-lemon-toolchain-${{ hashFiles('llvm-hash.txt') }}
+
+      - name: Cache packages
+        uses: actions/cache@v2
+        with:
+          key: ${{ runner.os }}-lemon-pkgs
+          path: |
+            **/Build/pkg-builds
+            **/Ports
 
       - name: Init xbstrap
         run: |
@@ -120,13 +131,12 @@ jobs:
       - name: Build the toolchain
         run: |
           cd Build
-          xbstrap regenerate lemon-llvm binutils --recursive
-          xbstrap install-tool --all
+          xbstrap install-tool -u --all
         
       - name: Building system
         run: |
           cd Build
-          xbstrap install lemon-base nyancat curl busybox binutils lemondoom
+          xbstrap install -u --recursive lemon-base nyancat curl busybox binutils lemondoom
 
       - name: Building disk image
         run: |

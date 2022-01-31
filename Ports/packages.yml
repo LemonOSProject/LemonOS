@@ -271,5 +271,38 @@ packages:
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
-      
 
+  - name: python
+    from_source: python
+    tools_required:
+      - host-llvm
+      - host-pkgconfig
+    pkgs_required:
+      - mlibc
+      - libexpat
+      - libffi
+      - libressl
+      - zlib
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-lemon'
+        - '--build=x86_64'
+        - '--prefix=/system'
+        - '--enable-shared'
+        - '--disable-ipv6'
+        - '--without-ensurepip'
+        - '--with-sysroot=@SYSROOT_DIR@'
+        - '--with-system-ffi'
+        - '--with-system-expat'
+        environ:
+          ac_cv_file__dev_ptmx: 'yes'
+          ac_cv_file__dev_ptc: 'no'
+          CC: 'clang'
+          CXX: 'clang++'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+        
