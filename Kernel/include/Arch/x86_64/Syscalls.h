@@ -1,5 +1,7 @@
 #pragma once
 
+#include <CPU.h>
+
 #include <ABI/Syscall.h>
 #define NUM_SYSCALLS 111
 

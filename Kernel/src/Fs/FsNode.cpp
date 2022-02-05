@@ -17,8 +17,8 @@ ssize_t FsNode::Write(size_t, size_t, uint8_t *){
     return -ENOSYS;
 }
 
-fs_fd_t* FsNode::Open(size_t flags){
-    fs_fd_t* fDesc = new fs_fd_t;
+ErrorOr<UNIXOpenFile*> FsNode::Open(size_t flags){
+    UNIXOpenFile* fDesc = new UNIXOpenFile;
 
     fDesc->pos = 0;
     fDesc->mode = flags;

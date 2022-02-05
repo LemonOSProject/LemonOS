@@ -360,12 +360,13 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
 
 ModuleLoadStatus LoadModule(const char* path) {
     FsNode* node = fs::ResolvePath(path);
-    fs_fd_t* handle = nullptr;
-
     if (!node) { // Check if module exists
         Log::Error("Module '%s' not found!", path);
         return {.status = ModuleLoadStatus::ModuleNotFound, .code = 0};
-    } else if (!(handle = fs::Open(node))) { // Make sure we open a handle so the node stays in memory
+    }
+
+    ErrorOr<UNIXOpenFile*> handle = nullptr;
+    if (!(handle = fs::Open(node))) { // Make sure we open a handle so the node stays in memory
         Log::Error("Failed to open handle for module '%s'", path);
         return {.status = ModuleLoadStatus::ModuleNotFound, .code = 0};
     }
@@ -385,7 +386,7 @@ ModuleLoadStatus LoadModule(const char* path) {
     }
 
     modules.insert(module->Name(), module);
-    fs::Close(handle);
+    delete handle.Value();
 
     int status = module->init();
     if (status) {

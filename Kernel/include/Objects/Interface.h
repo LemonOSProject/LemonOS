@@ -6,6 +6,7 @@
 #include <List.h>
 
 class MessageInterface final : public KernelObject{
+    DECLARE_KOBJECT(MessageInterface);
 protected:
     bool active = true;
 
@@ -44,16 +45,13 @@ public:
     /////////////////////////////
     FancyRefPtr<MessageEndpoint> Connect();
 
-    void Watch(KernelObjectWatcher& watcher, int events){
+    void Watch(KernelObjectWatcher& watcher, int events) override {
         acquireLock(&waitingLock);
         waiting.add_back(&watcher);
         releaseLock(&waitingLock)
     }
 
-    virtual void Unwatch(KernelObjectWatcher& watcher){
+    virtual void Unwatch(KernelObjectWatcher& watcher) override {
         waiting.remove(&watcher);
     }
-    
-    inline static constexpr kobject_id_t TypeID() { return KOBJECT_ID_INTERFACE; }
-    kobject_id_t InstanceTypeID() const { return TypeID(); }
 };

@@ -5,6 +5,7 @@
 #include <CPU.h>
 #include <Compiler.h>
 #include <ELF.h>
+#include <Error.h>
 #include <Errno.h>
 #include <Fs/Filesystem.h>
 #include <Hash.h>
@@ -18,6 +19,8 @@
 #include <Vector.h>
 
 class Process : public KernelObject {
+    DECLARE_KOBJECT(Process);
+
     friend struct Thread;
     friend void KernelProcess();
     friend long SysExecve(RegisterContext* r);
@@ -52,7 +55,7 @@ public:
     /// Will send SIGKILL to process if it is not already dead/dying.
     /// Also removes Process object from parent, such as happens when calling waitpid()
     /////////////////////////////
-    void Destroy() override;
+    void Destroy();
 
     /////////////////////////////
     /// \brief Kills the process
@@ -67,11 +70,6 @@ public:
     void Die();
 
     void Start();
-
-    /////////////////////////////
-    /// \brief Retrieve KernelObject type ID
-    /////////////////////////////
-    kobject_id_t InstanceTypeID() const override { return KOBJECT_ID_PROCESS; }
 
     /////////////////////////////
     /// \brief Watch process with watcher
@@ -160,7 +158,7 @@ public:
     ///
     /// Includes invalid/closed handles
     /////////////////////////////
-    ALWAYS_INLINE unsigned HandleCount() const { return m_fileDescriptors.size(); }
+    ALWAYS_INLINE unsigned HandleCount() const { return m_handles.size(); }
 
     /////////////////////////////
     /// \brief Allocate Handle
@@ -168,24 +166,31 @@ public:
     /// \param fd Reference pointer to valid KernelObject
     /// \return ID of new file descriptor
     /////////////////////////////
-    ALWAYS_INLINE Handle AllocateHandle(FancyRefPtr<KernelObject> ko) {
+    ALWAYS_INLINE handle_id_t AllocateHandle(FancyRefPtr<KernelObject> ko, bool closeOnExec = false) {
         ScopedSpinLock lockHandles(m_handleLock);
 
         Handle h;
         h.ko = std::move(ko);
+        h.closeOnExec = closeOnExec;
 
         int i = 0;
         for(; i < static_cast<int>(m_handles.get_length()); i++){
-            if(m_handles[i] == nullptr){
+            if(!m_handles[i].IsValid()){
+                h.id = i;
                 m_handles[i] = std::move(h);
-                return h;
+                return i;
             }
         }
         
         h.id = i;
         m_handles.add_back(h);
 
-        return h;
+        return i;
+    }
+
+    template<KernelObjectDerived T> 
+    ALWAYS_INLINE handle_id_t AllocateHandle(FancyRefPtr<T> ko) {
+        return AllocateHandle(static_pointer_cast<KernelObject>(std::move(ko)));
     }
 
     /////////////////////////////
@@ -196,22 +201,40 @@ public:
     /////////////////////////////
     ALWAYS_INLINE Handle GetHandle(handle_id_t id) {
         ScopedSpinLock lockHandles(m_handleLock);
-        if (id < 1 || id > m_handles.size()) {
-            return {0, nullptr}; // No such handle
+        if (id < 0 || id > m_handles.size()) {
+            return HANDLE_NULL; // No such handle
         }
 
-        return m_handles[id - 1];
+        return m_handles[id];
     }
+
+    template<typename T>
+    ALWAYS_INLINE ErrorOr<FancyRefPtr<T>> GetHandleAs(handle_id_t id) {
+        Handle h = GetHandle(id);
+        if(!h.IsValid()) {
+            return Error{EBADF};
+        }
+
+        if(h.ko->IsType(T::TypeID())) {
+            return static_pointer_cast<T>(h.ko);
+        }
+
+        return Error{EINVAL};
+    } 
 
     /////////////////////////////
     /// \brief Replace handle
     /////////////////////////////
     ALWAYS_INLINE int ReplaceHandle(handle_id_t id, Handle newHandle) {
+        if(id < 0) {
+            return -EBADF;
+        }
+        
         ScopedSpinLock lockHandles(m_handleLock);
         assert(id < m_handles.size());
 
         newHandle.id = id;
-        m_handles.at(id) = newHandle;
+        m_handles.at(id) = std::move(newHandle);
 
         return 0;
     }
@@ -231,7 +254,7 @@ public:
         }
 
         // Deferences the KernelObject
-        m_handles[id - 1] = {-1, nullptr};
+        m_handles[id] = {-1, nullptr};
         return 0;
     }
 

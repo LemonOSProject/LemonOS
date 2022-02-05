@@ -43,6 +43,8 @@
 #define WNOWAIT 16
 #define WSTOPPED 32
 
+#define SC_TRY_OR_ERROR(func) ({auto result = func; if (!result) { return -result.err.code; } std::move(result.Value());})
+
 long SysExit(RegisterContext* r) {
     int code = SC_ARG0(r);
 
@@ -144,10 +146,12 @@ long SysExec(RegisterContext* r) {
         currentProcess->RegisterChildProcess(proc);
 
         // Copy handles
-        proc->m_handles = currentProcess->m_handles;
-        for(Handle& h : proc->m_handles) {
-            if(h.closeOnExec) {
-                proc->DestroyHandle(h.id);
+        proc->m_handles.resize(currentProcess->HandleCount());
+        for(unsigned i = 0; i < proc->m_handles.size(); i++) {
+            if(!currentProcess->m_handles[i].closeOnExec) {
+                proc->m_handles[i] = currentProcess->m_handles[i];
+            } else {
+                proc->m_handles[i] = HANDLE_NULL;
             }
         }
     }
@@ -159,8 +163,8 @@ long SysExec(RegisterContext* r) {
 long SysRead(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
 
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
-    if (!handle.get() || !handle->node) {
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
+    if (!handle) {
         Log::Warning("SysRead: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
     }
@@ -180,7 +184,7 @@ long SysRead(RegisterContext* r) {
 long SysWrite(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
 
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysWrite: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -218,7 +222,7 @@ long SysOpen(RegisterContext* r) {
     IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, { Log::Info("Opening: %s (flags: %u)", filepath, flags); });
 
     if (strcmp(filepath, "/") == 0) {
-        return proc->AllocateFileDescriptor(fs::Open(root, 0));
+        return proc->AllocateHandle(fs::Open(root, 0).Value());
     }
 
 open:
@@ -265,18 +269,13 @@ open:
         node->Truncate(0);
     }
 
-    FancyRefPtr<UNIXFileDescriptor> handle = fs::Open(node, SC_ARG1(r));
-
-    if (!handle) {
-        Log::Warning("SysOpen: Error retrieving file handle for node. Dangling symlink?");
-        return -ENOENT;
-    }
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(fs::Open(node, SC_ARG1(r)));
 
     if (flags & O_APPEND) {
         handle->pos = handle->node->size;
     }
 
-    return proc->AllocateFileDescriptor(handle);
+    return proc->AllocateHandle(std::move(handle));
 }
 
 long SysCloseHandle(RegisterContext* r) {
@@ -481,12 +480,10 @@ long SysExecve(RegisterContext* r) {
     // Restore default FPU state
     asm volatile("fxrstor64 (%0)" ::"r"((uintptr_t)currentThread->fxState) : "memory");
 
-    ScopedSpinLock lockProcessFds(currentProcess->m_fileDescriptorLock);
-    for (FancyRefPtr<UNIXFileDescriptor>& fd : currentProcess->m_fileDescriptors) {
-        if (fd.get()) {
-            if (fd->mode & O_CLOEXEC) {
-                fd = nullptr;
-            }
+    ScopedSpinLock lockProcessFds(currentProcess->m_handleLock);
+    for (Handle& fd : currentProcess->m_handles) {
+        if (fd.closeOnExec) {
+            fd = HANDLE_NULL;
         }
     }
 
@@ -585,7 +582,7 @@ long SysFStat(RegisterContext* r) {
     Process* process = Scheduler::GetCurrentProcess();
 
     stat_t* stat = (stat_t*)SC_ARG0(r);
-    FancyRefPtr<UNIXFileDescriptor> handle = process->GetFileDescriptor(SC_ARG1(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(process->GetHandleAs<UNIXOpenFile>(SC_ARG1(r)));
     if (!handle) {
         Log::Warning("sys_fstat: Invalid File Descriptor, %d", SC_ARG1(r));
         return -EBADF;
@@ -674,7 +671,7 @@ long SysStat(RegisterContext* r) {
 long SysLSeek(RegisterContext* r) {
     Process* process = Scheduler::GetCurrentProcess();
 
-    FancyRefPtr<UNIXFileDescriptor> handle = process->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(process->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysLSeek: Invalid File Descriptor, %d", SC_ARG0(r));
         return -EBADF;
@@ -813,7 +810,7 @@ long SysYield(RegisterContext* r) {
 long SysReadDirNext(RegisterContext* r) {
     Process* process = Scheduler::GetCurrentProcess();
 
-    FancyRefPtr<UNIXFileDescriptor> handle = process->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(process->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         return -EBADF;
     }
@@ -899,7 +896,7 @@ long SysUName(RegisterContext* r) {
 long SysReadDir(RegisterContext* r) {
     Process* process = Scheduler::GetCurrentProcess();
 
-    FancyRefPtr<UNIXFileDescriptor> handle = process->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(process->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         return -EBADF;
     }
@@ -1069,7 +1066,7 @@ long SysNanoSleep(RegisterContext* r) {
 long SysPRead(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
 
-    FancyRefPtr<UNIXFileDescriptor> handle = currentProcess->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(currentProcess->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysPRead: Invalid file descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -1088,7 +1085,7 @@ long SysPRead(RegisterContext* r) {
 long SysPWrite(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
 
-    FancyRefPtr<UNIXFileDescriptor> handle = currentProcess->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(currentProcess->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysPRead: Invalid file descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -1120,7 +1117,7 @@ long SysIoctl(RegisterContext* r) {
         return -EFAULT;
     }
 
-    FancyRefPtr<UNIXFileDescriptor> handle = process->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(process->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysIoctl: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -1286,12 +1283,12 @@ long SysSocket(RegisterContext* r) {
         return e;
     assert(sock);
 
-    UNIXFileDescriptor* fDesc = fs::Open(sock, 0);
+    UNIXOpenFile* fDesc = SC_TRY_OR_ERROR(fs::Open(sock, 0));
 
     if (type & SOCK_NONBLOCK)
         fDesc->mode |= O_NONBLOCK;
 
-    return Scheduler::GetCurrentProcess()->AllocateFileDescriptor(fDesc);
+    return Scheduler::GetCurrentProcess()->AllocateHandle(fDesc);
 }
 
 /*
@@ -1306,7 +1303,7 @@ long SysSocket(RegisterContext* r) {
 long SysBind(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
 
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysBind: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -1339,7 +1336,7 @@ long SysBind(RegisterContext* r) {
  */
 long SysListen(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysListen: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -1364,7 +1361,7 @@ long SysListen(RegisterContext* r) {
 /////////////////////////////
 long SysAccept(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysAccept: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -1394,8 +1391,8 @@ long SysAccept(RegisterContext* r) {
         return -EAGAIN;
     }
 
-    UNIXFileDescriptor* newHandle = fs::Open(newSock);
-    return proc->AllocateFileDescriptor(newHandle);
+    UNIXOpenFile* newHandle = SC_TRY_OR_ERROR(fs::Open(newSock));
+    return proc->AllocateHandle(newHandle);
 }
 
 /////////////////////////////
@@ -1408,7 +1405,7 @@ long SysAccept(RegisterContext* r) {
 /////////////////////////////
 long SysConnect(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysConnect: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -1443,7 +1440,7 @@ long SysConnect(RegisterContext* r) {
  */
 long SysSend(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysSend: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -1480,7 +1477,7 @@ long SysSend(RegisterContext* r) {
  */
 long SysSendTo(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysSendTo: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -1520,7 +1517,7 @@ long SysSendTo(RegisterContext* r) {
  */
 long SysReceive(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysReceive: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -1557,7 +1554,7 @@ long SysReceive(RegisterContext* r) {
  */
 long SysReceiveFrom(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         Log::Warning("SysReceiveFrom: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
@@ -1648,7 +1645,7 @@ long SysPoll(RegisterContext* r) {
         return -EFAULT;
     }
 
-    FancyRefPtr<UNIXFileDescriptor> files[nfds];
+    FancyRefPtr<UNIXOpenFile> files[nfds];
 
     unsigned eventCount = 0; // Amount of fds with events
     for (unsigned i = 0; i < nfds; i++) {
@@ -1661,8 +1658,8 @@ long SysPoll(RegisterContext* r) {
             continue;
         }
 
-        FancyRefPtr<UNIXFileDescriptor> handle = Scheduler::GetCurrentProcess()->GetFileDescriptor(fds[i].fd);
-        if (!handle || !handle->node) {
+        auto result = Scheduler::GetCurrentProcess()->GetHandleAs<UNIXOpenFile>(fds[i].fd);
+        if (result.HasError()) {
             Log::Warning("SysPoll: Invalid File Descriptor: %d", fds[i].fd);
             files[i] = nullptr;
             fds[i].revents |= POLLNVAL;
@@ -1670,7 +1667,7 @@ long SysPoll(RegisterContext* r) {
             continue;
         }
 
-        files[i] = std::move(handle);
+        files[i] = std::move(result.Value());
 
         bool hasEvent = 0;
 
@@ -1787,7 +1784,7 @@ long SysPoll(RegisterContext* r) {
 long SysSendMsg(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
 
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal,
                  { Log::Warning("SysSendMsg: Invalid File Descriptor: %d", SC_ARG0(r)); });
@@ -1864,7 +1861,7 @@ long SysSendMsg(RegisterContext* r) {
 long SysRecvMsg(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
 
-    FancyRefPtr<UNIXFileDescriptor> handle = proc->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal,
                  { Log::Warning("SysRecvMsg: Invalid File Descriptor: %d", SC_ARG0(r)); });
@@ -2198,11 +2195,11 @@ long SysFutexWait(RegisterContext* r) {
 }
 
 /////////////////////////////
-/// \brief SysDup(fd, flags, newfd) Duplicate a file descriptor
+/// \brief SysDup(fd, flags, newfd) Duplicate a handle
 ///
-/// \param fd (int) file descriptor to duplicate
+/// \param fd (int) handle to duplicate
 ///
-/// \return new file descriptor (int) on success, negative error code on failure
+/// \return new handle (int) on success, negative error code on failure
 /////////////////////////////
 long SysDup(RegisterContext* r) {
     int fd = static_cast<int>(SC_ARG0(r));
@@ -2215,35 +2212,31 @@ long SysDup(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
     long flags = SC_ARG1(r);
 
-    FancyRefPtr<UNIXFileDescriptor> handle = currentProcess->GetFileDescriptor(fd);
+    Handle handle = currentProcess->GetHandle(fd);
     if (!handle) {
-        Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysDup: Invalid file descriptor %d", fd);
+        Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysDup: Invalid handle %d", fd);
         return -EBADF;
     }
 
-    UNIXFileDescriptor* newHandle = fs::Open(handle->node);
-    newHandle->mode = handle->mode;
-    newHandle->pos = handle->pos;
-
     if (flags & O_CLOEXEC) {
-        newHandle->mode |= O_CLOEXEC;
+        handle.closeOnExec = true;
     }
 
     if (requestedFd >= 0) {
-        if (static_cast<unsigned>(requestedFd) >= currentProcess->FileDescriptorCount()) {
+        if (static_cast<unsigned>(requestedFd) >= currentProcess->HandleCount()) {
             Log::Error("SysDup: We do not support (yet) requesting unallocated fds."); // TODO: Requested file
                                                                                        // descriptors out of range
             return -ENOSYS;
         }
 
-        currentProcess->DestroyFileDescriptor(requestedFd); // If it exists destroy existing fd
+        currentProcess->DestroyHandle(requestedFd); // If it exists destroy existing fd
 
-        if (currentProcess->ReplaceFileDescriptor(requestedFd, newHandle)) {
+        if (currentProcess->ReplaceHandle(requestedFd, std::move(handle))) {
             return -EBADF;
         }
         return requestedFd;
     } else {
-        return currentProcess->AllocateFileDescriptor(newHandle);
+        return currentProcess->AllocateHandle(std::move(handle.ko), handle.closeOnExec);
     }
 }
 
@@ -2256,7 +2249,7 @@ long SysDup(RegisterContext* r) {
 /////////////////////////////
 long SysGetFileStatusFlags(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
-    FancyRefPtr<UNIXFileDescriptor> handle = currentProcess->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(currentProcess->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         return -EBADF;
     }
@@ -2276,7 +2269,7 @@ long SysSetFileStatusFlags(RegisterContext* r) {
     int nFlags = static_cast<int>(SC_ARG1(r));
 
     Process* currentProcess = Scheduler::GetCurrentProcess();
-    FancyRefPtr<UNIXFileDescriptor> handle = currentProcess->GetFileDescriptor(SC_ARG0(r));
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(currentProcess->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
     if (!handle) {
         return -EBADF;
     }
@@ -2316,13 +2309,9 @@ long SysSelect(RegisterContext* r) {
         return -EFAULT; // Only return EFAULT if read/write/exceptfds is not null
     }
 
-    List<Pair<FancyRefPtr<UNIXFileDescriptor>, int>> readfds;
-    List<Pair<FancyRefPtr<UNIXFileDescriptor>, int>> writefds;
-    List<Pair<FancyRefPtr<UNIXFileDescriptor>, int>> exceptfds;
-
-    auto getHandleSafe = [&](int fd) -> FancyRefPtr<UNIXFileDescriptor> {
-        return currentProcess->GetFileDescriptor(fd);
-    };
+    List<Pair<FancyRefPtr<UNIXOpenFile>, int>> readfds;
+    List<Pair<FancyRefPtr<UNIXOpenFile>, int>> writefds;
+    List<Pair<FancyRefPtr<UNIXOpenFile>, int>> exceptfds;
 
     for (int i = 0; i < 128 && i * 8 < nfds; i++) {
         char read = 0, write = 0, except = 0;
@@ -2343,30 +2332,30 @@ long SysSelect(RegisterContext* r) {
 
         for (int j = 0; j < 8 && (i * 8 + j) < nfds; j++) {
             if ((read >> j) & 0x1) {
-                FancyRefPtr<UNIXFileDescriptor> h = getHandleSafe(i * 8 + j);
+                FancyRefPtr<UNIXOpenFile> h = SC_TRY_OR_ERROR(currentProcess->GetHandleAs<UNIXOpenFile>(i * 8 + j));
                 if (!h) {
                     return -EBADF;
                 }
 
-                readfds.add_back(Pair<FancyRefPtr<UNIXFileDescriptor>, int>(std::move(h), i * 8 + j));
+                readfds.add_back(Pair<FancyRefPtr<UNIXOpenFile>, int>(std::move(h), i * 8 + j));
             }
 
             if ((write >> j) & 0x1) {
-                FancyRefPtr<UNIXFileDescriptor> h = getHandleSafe(i * 8 + j);
+                FancyRefPtr<UNIXOpenFile> h = SC_TRY_OR_ERROR(currentProcess->GetHandleAs<UNIXOpenFile>(i * 8 + j));
                 if (!h) {
                     return -EBADF;
                 }
 
-                writefds.add_back(Pair<FancyRefPtr<UNIXFileDescriptor>, int>(std::move(h), i * 8 + j));
+                writefds.add_back(Pair<FancyRefPtr<UNIXOpenFile>, int>(std::move(h), i * 8 + j));
             }
 
             if ((except >> j) & 0x1) {
-                FancyRefPtr<UNIXFileDescriptor> h = getHandleSafe(i * 8 + j);
+                FancyRefPtr<UNIXOpenFile> h = SC_TRY_OR_ERROR(currentProcess->GetHandleAs<UNIXOpenFile>(i * 8 + j));
                 if (!h) {
                     return -EBADF;
                 }
 
-                exceptfds.add_back(Pair<FancyRefPtr<UNIXFileDescriptor>, int>(std::move(h), i * 8 + j));
+                exceptfds.add_back(Pair<FancyRefPtr<UNIXOpenFile>, int>(std::move(h), i * 8 + j));
             }
         }
     }
@@ -2430,7 +2419,7 @@ long SysSelect(RegisterContext* r) {
         }
     }
 
-    // for(UNIXFileDescriptor* handle : exceptfds);
+    // for(UNIXOpenFile* handle : exceptfds);
 
     return evCount;
 }
@@ -2465,8 +2454,7 @@ long SysCreateService(RegisterContext* r) {
     }
 
     FancyRefPtr<Service> svc = ServiceFS::Instance()->CreateService(name);
-    Handle handle = currentProcess->AllocateHandle(static_pointer_cast<KernelObject, Service>(svc));
-    return handle.id;
+    return currentProcess->AllocateHandle(static_pointer_cast<KernelObject, Service>(svc));
 }
 
 /////////////////////////////
@@ -2484,9 +2472,9 @@ long SysCreateInterface(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
 
     Handle svcHandle;
-    if (!(svcHandle = currentProcess->FindHandle(SC_ARG0(r)))) {
+    if (!(svcHandle = currentProcess->GetHandle(SC_ARG0(r)))) {
         Log::Warning("SysCreateInterface: Invalid handle ID %d", SC_ARG0(r));
-        return -EINVAL;
+        return -EBADF;
     }
 
     if (!svcHandle.ko->IsType(Service::TypeID())) {
@@ -2512,8 +2500,7 @@ long SysCreateInterface(RegisterContext* r) {
         return ret;
     }
 
-    Handle handle = currentProcess->AllocateHandle(static_pointer_cast<KernelObject, MessageInterface>(interface));
-    return handle.id;
+    return currentProcess->AllocateHandle(static_pointer_cast<KernelObject, MessageInterface>(interface));
 }
 
 /////////////////////////////
@@ -2529,9 +2516,9 @@ long SysInterfaceAccept(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
 
     Handle ifHandle;
-    if (!(ifHandle = currentProcess->FindHandle(SC_ARG0(r)))) {
+    if (!(ifHandle = currentProcess->GetHandle(SC_ARG0(r)))) {
         Log::Warning("SysInterfaceAccept: Invalid handle ID %d", SC_ARG0(r));
-        return -EINVAL;
+        return -EBADF;
     }
 
     if (!ifHandle.ko->IsType(MessageInterface::TypeID())) {
@@ -2545,9 +2532,7 @@ long SysInterfaceAccept(RegisterContext* r) {
         return ret;
     }
 
-    Handle handle = currentProcess->AllocateHandle(static_pointer_cast<KernelObject, MessageEndpoint>(endp));
-
-    return handle.id;
+    return currentProcess->AllocateHandle(static_pointer_cast<KernelObject, MessageEndpoint>(endp));
 }
 
 /////////////////////////////
@@ -2596,8 +2581,7 @@ long SysInterfaceConnect(RegisterContext* r) {
         return -EINVAL; // Some error connecting, interface destroyed?
     }
 
-    Handle handle = currentProcess->AllocateHandle(static_pointer_cast<KernelObject>(endp));
-    return handle.id;
+    return currentProcess->AllocateHandle(static_pointer_cast<KernelObject>(endp));
 }
 
 /////////////////////////////
@@ -2616,13 +2600,13 @@ long SysEndpointQueue(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
 
     Handle endpHandle;
-    if (!(endpHandle = currentProcess->FindHandle(SC_ARG0(r)))) {
+    if (!(endpHandle = currentProcess->GetHandle(SC_ARG0(r)))) {
         IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, {
             Log::Warning("(%s): SysEndpointQueue: Invalid handle ID %d", currentProcess->name, SC_ARG0(r));
             Log::Info("%x", r->rip);
             UserPrintStackTrace(r->rbp, Scheduler::GetCurrentProcess()->addressSpace);
         });
-        return -EINVAL;
+        return -EBADF;
     }
 
     if (!endpHandle.ko->IsType(MessageEndpoint::TypeID())) {
@@ -2661,7 +2645,7 @@ long SysEndpointDequeue(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
 
     Handle endpHandle;
-    if (!(endpHandle = currentProcess->FindHandle(SC_ARG0(r)))) {
+    if (!(endpHandle = currentProcess->GetHandle(SC_ARG0(r)))) {
         Log::Warning("(%s): SysEndpointDequeue: Invalid handle ID %d", currentProcess->name, SC_ARG0(r));
         return -EINVAL;
     }
@@ -2723,7 +2707,7 @@ long SysEndpointCall(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
 
     Handle endpHandle;
-    if (!(endpHandle = currentProcess->FindHandle(SC_ARG0(r)))) {
+    if (!(endpHandle = currentProcess->GetHandle(SC_ARG0(r)))) {
         Log::Warning("(%s): SysEndpointCall: Invalid handle ID %d", currentProcess->name, SC_ARG0(r));
         return -EINVAL;
     }
@@ -2763,7 +2747,7 @@ long SysEndpointInfo(RegisterContext* r) {
     }
 
     Handle endpHandle;
-    if (!(endpHandle = currentProcess->FindHandle(SC_ARG0(r)))) {
+    if (!(endpHandle = currentProcess->GetHandle(SC_ARG0(r)))) {
         Log::Warning("(%s): SysEndpointInfo: Invalid handle ID %d", currentProcess->name, SC_ARG0(r));
         return -EINVAL;
     }
@@ -2793,7 +2777,7 @@ long SysKernelObjectWaitOne(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
 
     Handle handle;
-    if (!(handle = currentProcess->FindHandle(SC_ARG0(r)))) {
+    if (!(handle = currentProcess->GetHandle(SC_ARG0(r)))) {
         Log::Warning("SysKernelObjectWaitOne: Invalid handle ID %d", SC_ARG0(r));
         return -EINVAL;
     }
@@ -2841,7 +2825,7 @@ long SysKernelObjectWait(RegisterContext* r) {
 
     KernelObjectWatcher watcher;
     for (unsigned i = 0; i < count; i++) {
-        if (!(handles[i] = currentProcess->FindHandle(reinterpret_cast<handle_id_t*>(SC_ARG0(r))[i]))) {
+        if (!(handles[i] = currentProcess->GetHandle(reinterpret_cast<handle_id_t*>(SC_ARG0(r))[i]))) {
             IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal,
                      { Log::Warning("SysKernelObjectWait: Invalid handle ID %d", SC_ARG0(r)); });
             return -EINVAL;
@@ -2876,7 +2860,7 @@ long SysKernelObjectDestroy(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
 
     Handle h;
-    if (!(h = currentProcess->FindHandle(SC_ARG0(r)))) {
+    if (!(h = currentProcess->GetHandle(SC_ARG0(r)))) {
         Log::Warning("SysKernelObjectDestroy: Invalid handle ID %d", SC_ARG0(r));
 
         IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, {
@@ -2884,7 +2868,7 @@ long SysKernelObjectDestroy(RegisterContext* r) {
             Log::Info("%x", r->rip);
             UserPrintStackTrace(r->rbp, currentProcess->addressSpace);
         });
-        return -EINVAL;
+        return -EBADF;
     }
 
     Log::Warning("SysKernelObjectDestroy: destrying ko %d (type %d)", SC_ARG0(r), h.ko->InstanceTypeID());
@@ -2892,8 +2876,6 @@ long SysKernelObjectDestroy(RegisterContext* r) {
     Log::Info("Process %s (PID: %d), Stack Trace:", currentProcess->name, currentProcess->PID());
     Log::Info("%x", r->rip);
     UserPrintStackTrace(r->rbp, currentProcess->addressSpace);
-
-    h.ko->Destroy();
 
     currentProcess->DestroyHandle(SC_ARG0(r));
     return 0;
@@ -2920,7 +2902,7 @@ long SysSetSocketOptions(RegisterContext* r) {
     socklen_t optLen = SC_ARG4(r);
 
     Process* currentProcess = Scheduler::GetCurrentProcess();
-    FancyRefPtr<UNIXFileDescriptor> handle = currentProcess->GetFileDescriptor(fd);
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(currentProcess->GetHandleAs<UNIXOpenFile>(fd));
     if (!handle) {
         return -EBADF;
     }
@@ -2958,7 +2940,7 @@ long SysGetSocketOptions(RegisterContext* r) {
     socklen_t* optLen = reinterpret_cast<socklen_t*>(SC_ARG4(r));
 
     Process* currentProcess = Scheduler::GetCurrentProcess();
-    FancyRefPtr<UNIXFileDescriptor> handle = currentProcess->GetFileDescriptor(fd);
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(currentProcess->GetHandleAs<UNIXOpenFile>(fd));
     if (!handle) {
         return -EBADF;
     }
@@ -3244,14 +3226,14 @@ long SysPipe(RegisterContext* r) {
 
     UNIXPipe::CreatePipe(read, write);
 
-    UNIXFileDescriptor* readHandle = fs::Open(read);
-    UNIXFileDescriptor* writeHandle = fs::Open(write);
+    UNIXOpenFile* readHandle = SC_TRY_OR_ERROR(fs::Open(read));
+    UNIXOpenFile* writeHandle = SC_TRY_OR_ERROR(fs::Open(write));
 
     readHandle->mode = flags;
     writeHandle->mode = flags;
 
-    fds[0] = process->AllocateFileDescriptor(readHandle);
-    fds[1] = process->AllocateFileDescriptor(writeHandle);
+    fds[0] = process->AllocateHandle(readHandle);
+    fds[1] = process->AllocateHandle(writeHandle);
 
     return 0;
 }
@@ -3331,14 +3313,14 @@ long SysSocketPair(RegisterContext* r) {
     LocalSocket* s1 = new LocalSocket(type, protocol);
     LocalSocket* s2 = LocalSocket::CreatePairedSocket(s1);
 
-    UNIXFileDescriptor* s1Handle = fs::Open(s1);
-    UNIXFileDescriptor* s2Handle = fs::Open(s2);
+    UNIXOpenFile* s1Handle = SC_TRY_OR_ERROR(fs::Open(s1));
+    UNIXOpenFile* s2Handle = SC_TRY_OR_ERROR(fs::Open(s2));
 
     s1Handle->mode = nonBlock * O_NONBLOCK;
     s2Handle->mode = s1Handle->mode;
 
-    sv[0] = process->AllocateFileDescriptor(s1Handle);
-    sv[1] = process->AllocateFileDescriptor(s2Handle);
+    sv[0] = process->AllocateHandle(s1Handle);
+    sv[1] = process->AllocateHandle(s2Handle);
 
     assert(s1->IsConnected() && s2->IsConnected());
     return 0;
@@ -3559,14 +3541,14 @@ long SysEpollCreate(RegisterContext* r) {
     }
 
     fs::EPoll* ep = new fs::EPoll();
-    FancyRefPtr<UNIXFileDescriptor> handle = new UNIXFileDescriptor;
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(ep->Open(0));
     handle->node = ep;
     handle->mode = 0;
     if (flags & EPOLL_CLOEXEC) {
         handle->mode |= O_CLOEXEC;
     }
 
-    int fd = proc->AllocateFileDescriptor(handle);
+    int fd = proc->AllocateHandle(handle);
     return fd;
 }
 
@@ -3578,8 +3560,8 @@ long SysEPollCtl(RegisterContext* r) {
     int fd = SC_ARG2(r);
     UserPointer<struct epoll_event> event = SC_ARG3(r);
 
-    auto epHandle = proc->GetFileDescriptor(epfd);
-    auto handle = proc->GetFileDescriptor(fd);
+    auto epHandle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(epfd));
+    auto handle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(fd));
 
     if (!(handle && epHandle)) {
         return -EBADF; // epfd or fd is invalid
@@ -3666,7 +3648,7 @@ long SysEpollWait(RegisterContext* r) {
     int maxevents = SC_ARG2(r);
     long timeout = SC_ARG3(r) * 1000;
 
-    auto epHandle = proc->GetFileDescriptor(epfd);
+    auto epHandle = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(epfd));
     if (!epHandle) {
         return -EBADF;
     } else if (!epHandle->node->IsEPoll()) {
@@ -3697,7 +3679,7 @@ long SysEpollWait(RegisterContext* r) {
     ScopedSpinLock lockEp(epoll->epLock);
 
     Vector<int> removeFds; // Fds to unwatch
-    auto getEvents = [removeFds](FancyRefPtr<UNIXFileDescriptor>& handle, uint32_t requested, int& evCount) -> uint32_t {
+    auto getEvents = [removeFds](FancyRefPtr<UNIXOpenFile>& handle, uint32_t requested, int& evCount) -> uint32_t {
         uint32_t ev = 0;
         if (requested & EPOLLIN) {
             if (handle->node->CanRead()) {
@@ -3758,7 +3740,7 @@ long SysEpollWait(RegisterContext* r) {
     };
 
     struct EPollFD {
-        FancyRefPtr<UNIXFileDescriptor> handle;
+        FancyRefPtr<UNIXOpenFile> handle;
         int fd;
         struct epoll_event ev;
     };
@@ -3766,10 +3748,12 @@ long SysEpollWait(RegisterContext* r) {
     Vector<EPollFD> files;
     int evCount = 0; // Amount of fds with events
     for (const auto& pair : epoll->fds) {
-        auto handle = proc->GetFileDescriptor(pair.item1);
-        if (!handle) {
+        auto result = proc->GetHandleAs<UNIXOpenFile>(pair.item1);
+        if (result.HasError()) {
             continue; // Ignore closed fds
         }
+
+        auto handle = std::move(result.Value());
 
         if (uint32_t ev = getEvents(handle, pair.item2.events, evCount); ev) {
             if (events.StoreValue(evCount - 1, {
@@ -3857,7 +3841,7 @@ syscall_t syscalls[NUM_SYSCALLS]{
     SysRead,
     SysWrite,
     SysOpen, // 5
-    SysClose,
+    SysCloseHandle,
     SysSleep,
     SysCreate,
     SysLink,
@@ -4001,6 +3985,11 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
     }
 
     regs->rax = syscalls[regs->rax](regs); // Call syscall
+
+    IF_DEBUG((debugLevelSyscalls >= DebugLevelVerbose), {
+        if(regs->rax < 0)
+            Log::Info("Syscall %d exiting with value %d", thread->lastSyscall.rax, regs->rax);
+    });
 
     if (__builtin_expect(thread->pendingSignals & (~thread->EffectiveSignalMask()), 0)) {
         thread->HandlePendingSignal(regs);

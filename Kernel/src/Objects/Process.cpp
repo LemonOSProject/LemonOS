@@ -90,14 +90,14 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
     FsNode* logDev = fs::ResolvePath("/dev/kernellog");
 
     if (nullDev) {
-        proc->m_fileDescriptors[0] = (fs::Open(nullDev)); // stdin
+        proc->m_handles[0] = MakeHandle(0, fs::Open(nullDev).Value()); // stdin
     } else {
         Log::Warning("Failed to find /dev/null");
     }
 
     if (logDev) {
-        proc->m_fileDescriptors[1] = (fs::Open(logDev)); // stdout
-        proc->m_fileDescriptors[2] = (fs::Open(logDev)); // stderr
+        proc->m_handles[1] = MakeHandle(1, fs::Open(logDev).Value()); // stdout
+        proc->m_handles[2] = MakeHandle(2, fs::Open(logDev).Value()); // stderr
     } else {
         Log::Warning("Failed to find /dev/kernellog");
     }
@@ -136,9 +136,9 @@ Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process*
 
     assert(m_mainThread->parent == this);
 
-    m_fileDescriptors.add_back(nullptr); // stdin
-    m_fileDescriptors.add_back(nullptr); // stdout
-    m_fileDescriptors.add_back(nullptr); // stderr
+    m_handles.add_back(HANDLE_NULL); // stdin
+    m_handles.add_back(HANDLE_NULL); // stdout
+    m_handles.add_back(HANDLE_NULL); // stderr
 }
 
 uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Vector<String>& argv, const Vector<String>& envp, const char* execPath) {
@@ -491,13 +491,7 @@ FancyRefPtr<Process> Process::Fork() {
 
     newProcess->m_handles.resize(m_handles.size());
     for(unsigned i = 0; i < m_handles.size(); i++){
-        Handle& src = m_handles[i];
-        if(!src || src.closeOnExec){
-            newProcess->m_handles[i] = HANDLE_NULL;
-            continue;
-        }
-
-        newProcess->m_handles[i] = src;
+        newProcess->m_handles[i] = m_handles[i];
     }
 
     m_children.add_back(newProcess);

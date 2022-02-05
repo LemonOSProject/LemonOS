@@ -438,7 +438,7 @@ ssize_t Write(FsNode* node, size_t offset, size_t size, void* buffer) {
     return node->Write(offset, size, reinterpret_cast<uint8_t*>(buffer));
 }
 
-fs_fd_t* Open(FsNode* node, uint32_t flags) { return node->Open(flags); }
+ErrorOr<UNIXOpenFile*> Open(FsNode* node, uint32_t flags) { return node->Open(flags); }
 
 int Link(FsNode* dir, FsNode* link, DirectoryEntry* ent) {
     assert(dir);
@@ -456,7 +456,7 @@ int Unlink(FsNode* dir, DirectoryEntry* ent, bool unlinkDirectories) {
 
 void Close(FsNode* node) { return node->Close(); }
 
-void Close(fs_fd_t* fd) {
+void Close(UNIXOpenFile* fd) {
     if (!fd)
         return;
 
@@ -482,6 +482,8 @@ FsNode* FindDir(FsNode* node, const char* name) {
 
 ssize_t Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, uint8_t* buffer) {
     assert(handle->node);
+
+    ScopedSpinLock lockOpenFile(handle->dataLock);
     ssize_t ret = Read(handle->node, handle->pos, size, buffer);
 
     if (ret > 0) {
@@ -493,6 +495,7 @@ ssize_t Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, uint8_t* buff
 
 ssize_t Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, uint8_t* buffer) {
     assert(handle->node);
+    ScopedSpinLock lockOpenFile(handle->dataLock);
     off_t ret = Write(handle->node, handle->pos, size, buffer);
 
     if (ret >= 0) {

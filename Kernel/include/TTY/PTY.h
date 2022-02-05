@@ -37,7 +37,7 @@ public:
     static void Initialize();
     static inline PTMultiplexor& Instance() { return *m_instance; }
 
-    UNIXFileDescriptor* Open(size_t flags) override;
+    ErrorOr<UNIXOpenFile*> Open(size_t flags) override;
     void DestroyPTY(PTY* pt);
 
 private:

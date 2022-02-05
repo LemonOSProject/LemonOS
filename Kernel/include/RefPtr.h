@@ -119,7 +119,7 @@ public:
         return obj;
     }
 
-    ALWAYS_INLINE operator bool() { return obj; }
+    ALWAYS_INLINE operator bool() const { return obj; }
 
 protected:
     ALWAYS_INLINE void Dereference() {

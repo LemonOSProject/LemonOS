@@ -48,7 +48,7 @@ namespace fs::Temp{
         int Link(FsNode*, DirectoryEntry*); // Link
         int Unlink(DirectoryEntry*, bool unlinkDirectories = false); // Unlink
 
-        fs_fd_t* Open(size_t flags);
+        ErrorOr<UNIXOpenFile*> Open(size_t flags);
         void Close();
     };
 
