@@ -58,6 +58,7 @@ pid_t GetNextPID();
 FancyRefPtr<Process> FindProcessByPID(pid_t pid);
 pid_t GetNextProcessPID(pid_t pid);
 void InsertNewThreadIntoQueue(Thread* thread);
+void BalanceRunQueues();
 
 void Initialize();
 void Tick(RegisterContext* r);

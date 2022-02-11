@@ -35,6 +35,8 @@ public:
 };
 
 class Service final : public KernelObject{
+    DECLARE_KOBJECT(Service);
+
 protected:
     char* name;
     List<FancyRefPtr<MessageInterface>> interfaces;
@@ -49,7 +51,4 @@ public:
     long ResolveInterface(FancyRefPtr<MessageInterface>& interface, const char* name);
 
     const char* GetName() { return name; };
-
-    inline static constexpr kobject_id_t TypeID() { return KOBJECT_ID_SERVICE; }
-    kobject_id_t InstanceTypeID() const { return TypeID(); }
 };

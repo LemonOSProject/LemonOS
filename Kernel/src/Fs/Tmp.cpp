@@ -351,8 +351,8 @@ namespace fs::Temp{
         return 0;
     }
 
-    fs_fd_t* TempNode::Open(size_t flags){
-        fs_fd_t* fDesc = new fs_fd_t;
+    ErrorOr<UNIXOpenFile*> TempNode::Open(size_t flags){
+        UNIXOpenFile* fDesc = new UNIXOpenFile;
 
         fDesc->pos = 0;
         fDesc->mode = flags;

@@ -321,14 +321,6 @@ ssize_t Fat32Node::Read(size_t offset, size_t size, uint8_t* buffer) { return vo
 
 ssize_t Fat32Node::Write(size_t offset, size_t size, uint8_t* buffer) { return vol->Write(this, offset, size, buffer); }
 
-/*fs_fd_t* Fat32Node::Open(uint32_t flags){
-    vol->Open(this, flags);
-}
-
-void Fat32Node::Close(){
-    vol->Close(this);
-}*/
-
 int Fat32Node::ReadDir(DirectoryEntry* dirent, uint32_t index) { return vol->ReadDir(this, dirent, index); }
 
 FsNode* Fat32Node::FindDir(const char* name) { return vol->FindDir(this, name); }

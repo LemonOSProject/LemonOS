@@ -58,7 +58,7 @@ PTMultiplexor::PTMultiplexor()
     SetDeviceName("UNIX PTY Multiplexor");
 }
 
-UNIXFileDescriptor* PTMultiplexor::Open(size_t flags){
+ErrorOr<UNIXOpenFile*> PTMultiplexor::Open(size_t flags){
     PTY* pty = new PTY(m_nextPT++);
 
     ScopedSpinLock lock(m_ptmxLock);

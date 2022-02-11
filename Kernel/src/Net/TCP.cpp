@@ -656,7 +656,7 @@ namespace Network {
 
             Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] Connecting to %hd.%hd.%hd.%hd:%hd", peerAddress.data[0], peerAddress.data[1], peerAddress.data[2], peerAddress.data[3], (uint16_t)destinationPort);
 
-            m_sequenceNumber = (Timer::GetSystemUptime() % 512) * (rand() % 255) + Timer::GetTicks() + 1;
+            m_sequenceNumber = (Timer::GetSystemUptime() % 512) * (rand() % 255) + (Timer::UsecondsSinceBoot() % 255) + 1;
             Synchronize(m_sequenceNumber - 1); // The peer should acknowledge the sent sequence number + 1, so just send (sequenceNumber - 1)
 
             long retryPeriod = TCP_RETRY_MIN;

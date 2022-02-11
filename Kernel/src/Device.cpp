@@ -44,7 +44,7 @@ public:
         SetDeviceName("Process Terminal");
     }
 
-    UNIXFileDescriptor* Open(size_t flags) override;
+    ErrorOr<UNIXOpenFile*> Open(size_t flags) override;
 };
 
 int Device::nextUnnamedDeviceNumber = 0;
@@ -130,14 +130,11 @@ ssize_t URandom::Read(size_t offset, size_t size, uint8_t* buffer) {
 
 ssize_t URandom::Write(size_t offset, size_t size, uint8_t* buffer) { return size; }
 
-UNIXFileDescriptor* TTY::Open(size_t flags){
-    auto stdout = Scheduler::GetCurrentProcess()->GetFileDescriptor(1);
+ErrorOr<UNIXOpenFile*> TTY::Open(size_t flags){
+    auto stdout = TRY_OR_ERROR(Process::Current()->GetHandleAs<UNIXOpenFile>(1));
 
-    if(stdout && stdout->node){
-        return stdout->node->Open(flags);
-    }
-
-    return nullptr;
+    assert(stdout->node);
+    return stdout->node->Open(flags);
 }
 
 Null null = Null("null");

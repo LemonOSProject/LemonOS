@@ -438,7 +438,7 @@ ssize_t Write(FsNode* node, size_t offset, size_t size, void* buffer) {
     return node->Write(offset, size, reinterpret_cast<uint8_t*>(buffer));
 }
 
-fs_fd_t* Open(FsNode* node, uint32_t flags) { return node->Open(flags); }
+ErrorOr<UNIXOpenFile*> Open(FsNode* node, uint32_t flags) { return node->Open(flags); }
 
 int Link(FsNode* dir, FsNode* link, DirectoryEntry* ent) {
     assert(dir);
@@ -456,9 +456,11 @@ int Unlink(FsNode* dir, DirectoryEntry* ent, bool unlinkDirectories) {
 
 void Close(FsNode* node) { return node->Close(); }
 
-void Close(fs_fd_t* fd) {
+void Close(UNIXOpenFile* fd) {
     if (!fd)
         return;
+
+    ScopedSpinLock lockOpenFileData(fd->dataLock);
 
     assert(fd->node);
 
@@ -478,8 +480,10 @@ FsNode* FindDir(FsNode* node, const char* name) {
     return node->FindDir(name);
 }
 
-ssize_t Read(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_t* buffer) {
+ssize_t Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, uint8_t* buffer) {
     assert(handle->node);
+
+    ScopedSpinLock lockOpenFile(handle->dataLock);
     ssize_t ret = Read(handle->node, handle->pos, size, buffer);
 
     if (ret > 0) {
@@ -489,8 +493,9 @@ ssize_t Read(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_t
     return ret;
 }
 
-ssize_t Write(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_t* buffer) {
+ssize_t Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, uint8_t* buffer) {
     assert(handle->node);
+    ScopedSpinLock lockOpenFile(handle->dataLock);
     off_t ret = Write(handle->node, handle->pos, size, buffer);
 
     if (ret >= 0) {
@@ -500,19 +505,19 @@ ssize_t Write(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_
     return ret;
 }
 
-int ReadDir(const FancyRefPtr<UNIXFileDescriptor>& handle, DirectoryEntry* dirent, uint32_t index) {
+int ReadDir(const FancyRefPtr<UNIXOpenFile>& handle, DirectoryEntry* dirent, uint32_t index) {
     assert(handle->node);
 
     return ReadDir(handle->node, dirent, index);
 }
 
-FsNode* FindDir(const FancyRefPtr<UNIXFileDescriptor>& handle, const char* name) {
+FsNode* FindDir(const FancyRefPtr<UNIXOpenFile>& handle, const char* name) {
     assert(handle->node);
 
     return FindDir(handle->node, name);
 }
 
-int Ioctl(const FancyRefPtr<UNIXFileDescriptor>& handle, uint64_t cmd, uint64_t arg) {
+int Ioctl(const FancyRefPtr<UNIXOpenFile>& handle, uint64_t cmd, uint64_t arg) {
     assert(handle->node);
 
     return handle->node->Ioctl(cmd, arg);

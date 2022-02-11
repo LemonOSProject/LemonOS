@@ -21,6 +21,7 @@ output : '@BASENAME@.bin.o',
 arguments : ['@INPUT@','@OUTPUT@', meson.current_source_dir() + '/src/Arch/x86_64/', '@BASENAME@'])
 
 kernel_c_args = [
+    '-g',
     '-Wno-write-strings', '-Wno-unused-parameter', '-Wno-sign-compare',
     '-DLemon64',
     '-ffreestanding', '-nostdlib',

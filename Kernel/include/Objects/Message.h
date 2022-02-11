@@ -15,6 +15,8 @@ struct MessageEndpointInfo{
 };
 
 class MessageEndpoint final : public KernelObject{
+    DECLARE_KOBJECT(MessageEndpoint);
+
 public:
     static const uint16_t maxMessageSizeLimit = UINT16_MAX;
     
@@ -29,7 +31,7 @@ public:
     }
 
     MessageEndpoint(uint16_t maxSize);
-    ~MessageEndpoint();
+    ~MessageEndpoint() override;
     
     void Destroy();
 
@@ -79,7 +81,7 @@ public:
     /////////////////////////////
     int64_t Write(uint64_t id, uint16_t size, uint64_t data);
 
-    void Watch(KernelObjectWatcher& watcher, int events){
+    void Watch(KernelObjectWatcher& watcher, int events) override {
         acquireLock(&waitingLock);
         if(queue.Empty()){
             waiting.add_back(&watcher);
@@ -89,14 +91,11 @@ public:
         releaseLock(&waitingLock)
     }
 
-    virtual void Unwatch(KernelObjectWatcher& watcher){
+    virtual void Unwatch(KernelObjectWatcher& watcher) override {
         waiting.remove(&watcher);
     }
 
     inline uint16_t GetMaxMessageSize() const { return maxMessageSize; }
-
-    inline static constexpr kobject_id_t TypeID() { return KOBJECT_ID_MESSAGE_ENDPOINT; }
-    inline kobject_id_t InstanceTypeID() const { return TypeID(); }
 
 private:
     struct Response{

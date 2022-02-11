@@ -78,3 +78,13 @@ public:
 private:
     T* m_ptr;
 };
+
+#define TRY_STORE_UMODE_VALUE(ptrObject, value)                                                                        \
+    if (ptrObject.StoreValue(value)) {                                                                                 \
+        return -EFAULT;                                                                                                \
+    }
+
+#define TRY_GET_UMODE_VALUE(ptrObject, value)                                                                          \
+    if (ptrObject.GetValue(value)) {                                                                                   \
+        return -EFAULT;                                                                                                \
+    }

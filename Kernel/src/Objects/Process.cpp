@@ -90,14 +90,14 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
     FsNode* logDev = fs::ResolvePath("/dev/kernellog");
 
     if (nullDev) {
-        proc->m_fileDescriptors[0] = (fs::Open(nullDev)); // stdin
+        proc->m_handles[0] = MakeHandle(0, fs::Open(nullDev).Value()); // stdin
     } else {
         Log::Warning("Failed to find /dev/null");
     }
 
     if (logDev) {
-        proc->m_fileDescriptors[1] = (fs::Open(logDev)); // stdout
-        proc->m_fileDescriptors[2] = (fs::Open(logDev)); // stderr
+        proc->m_handles[1] = MakeHandle(1, fs::Open(logDev).Value()); // stdout
+        proc->m_handles[2] = MakeHandle(2, fs::Open(logDev).Value()); // stderr
     } else {
         Log::Warning("Failed to find /dev/kernellog");
     }
@@ -136,9 +136,9 @@ Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process*
 
     assert(m_mainThread->parent == this);
 
-    m_fileDescriptors.add_back(nullptr); // stdin
-    m_fileDescriptors.add_back(nullptr); // stdout
-    m_fileDescriptors.add_back(nullptr); // stderr
+    m_handles.add_back(HANDLE_NULL); // stdin
+    m_handles.add_back(HANDLE_NULL); // stdout
+    m_handles.add_back(HANDLE_NULL); // stderr
 }
 
 uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Vector<String>& argv, const Vector<String>& envp, const char* execPath) {
@@ -363,6 +363,8 @@ void Process::Die() {
 
     assert(!runningThreads.get_length());
 
+    APIC::Local::SendIPI(cpu->id, ICR_DSH_OTHER, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
+
     acquireLock(&m_processLock);
     acquireLock(&cpu->runQueueLock);
     asm("cli");
@@ -406,21 +408,7 @@ void Process::Die() {
     }
     asm("sti");
 
-    Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Closing fds...", m_pid);
-    for (auto& fd : m_fileDescriptors) {
-        // Deferences the file descriptor
-        fd = nullptr;
-    }
-    m_fileDescriptors.clear();
-
     Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Closing handles...", m_pid);
-    for (auto& handle : m_handles) {
-        if(handle.ko.get()){
-            handle.ko->Destroy();
-        }
-        // Deferences the handle
-        handle.ko = nullptr;
-    }
     m_handles.clear();
 
     Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Signaling watchers...", m_pid);
@@ -503,19 +491,9 @@ FancyRefPtr<Process> Process::Fork() {
     newProcess->euid = egid;
     newProcess->gid = gid;
 
-    newProcess->m_fileDescriptors.resize(m_fileDescriptors.size());
-    for(unsigned i = 0; i < m_fileDescriptors.size(); i++){
-        UNIXFileDescriptor* source = m_fileDescriptors[i].get();
-        if(!source || !source->node){
-            continue;
-        }
-
-        UNIXFileDescriptor* dest = fs::Open(source->node);
-
-        dest->mode = source->mode;
-        dest->pos = source->pos;
-
-        newProcess->m_fileDescriptors[i] = dest;
+    newProcess->m_handles.resize(m_handles.size());
+    for(unsigned i = 0; i < m_handles.size(); i++){
+        newProcess->m_handles[i] = m_handles[i];
     }
 
     m_children.add_back(newProcess);
@@ -543,21 +521,6 @@ pid_t Process::CreateChildThread(uintptr_t entry, uintptr_t stack, uint64_t cs, 
 
     Scheduler::InsertNewThreadIntoQueue(&thread);
     return threadID;
-}
-
-int Process::AllocateFileDescriptor(FancyRefPtr<UNIXFileDescriptor> fd){
-    ScopedSpinLock lockFDs(m_fileDescriptorLock);
-
-    int i = 0;
-    for(; i < static_cast<int>(m_fileDescriptors.get_length()); i++){
-        if(m_fileDescriptors[i] == nullptr){
-            m_fileDescriptors[i] = std::move(fd);
-            return i;
-        }
-    }
-
-    m_fileDescriptors.add_back(std::move(fd));
-    return i;
 }
 
 FancyRefPtr<Thread> Process::GetThreadFromTID_Unlocked(pid_t tid) {

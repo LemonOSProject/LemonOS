@@ -37,27 +37,28 @@ List<FancyRefPtr<Process>>* destroyedProcesses;
 unsigned processTableSize = 512;
 pid_t nextPID = 1;
 
+// When the run queue was last balanced
+uint64_t nextBalanceDue = 0;
+
 void Schedule(void*, RegisterContext* r);
-
-inline void InsertThreadIntoQueue(Thread* thread) { GetCPULocal()->runQueue->add_back(thread); }
-
-inline void RemoveThreadFromQueue(Thread* thread) { GetCPULocal()->runQueue->remove(thread); }
 
 void InsertNewThreadIntoQueue(Thread* thread) {
     CPU* cpu = SMP::cpus[0];
     for (unsigned i = 1; i < SMP::processorCount; i++) {
-        if (SMP::cpus[i]->runQueue->get_length() < cpu->runQueue->get_length()) {
+        // Pick the CPU with the most idle time since run queue balance
+        if (SMP::cpus[i]->idleProcess->GetMainThread()->ticksSinceBalance >
+            cpu->idleProcess->GetMainThread()->ticksSinceBalance) {
             cpu = SMP::cpus[i];
         }
 
+        // Pick a CPU with an empty run queue no matter what
         if (!cpu->runQueue->get_length()) {
             break;
         }
     }
 
     asm("sti");
-    acquireLock(&cpu->runQueueLock);
-    asm("cli");
+    acquireLockIntDisable(&cpu->runQueueLock);
     cpu->runQueue->add_back(thread);
     releaseLock(&cpu->runQueueLock);
     asm("sti");
@@ -152,19 +153,131 @@ void Tick(RegisterContext* r) {
     Schedule(nullptr, r);
 }
 
+void BalanceRunQueues() {
+    assert(processesLock);
+    assert(!CheckInterrupts());
+
+    if(Timer::UsecondsSinceBoot() - nextBalanceDue > 1000000) {
+        Log::Warning("Exceeded run balance due time by %d", Timer::UsecondsSinceBoot() - nextBalanceDue);
+    }
+
+    long avgUtilization[SMP::processorCount];
+    long leastActive = 0;
+
+    FastList<Thread*> threadsToDistribute;
+
+    // Lock ALL run queues
+    for (unsigned i = 0; i < SMP::processorCount; i++) {
+        CPU* cpu = SMP::cpus[i];
+        acquireLock(&cpu->runQueueLock);
+
+        if (!cpu->currentThread || cpu->currentThread == cpu->idleThread) {
+            avgUtilization[i] = 0;
+        } else {
+            // TODO: Move the thread even if the CPU was using it
+            // TODO: Consider leaving high utilization processes on the CPU
+            // as they have likely populated the CPU cache
+            if (cpu->currentThread->ticksGivenSinceBalance) {
+                avgUtilization[i] =
+                    cpu->currentThread->ticksSinceBalance * 100 / cpu->currentThread->ticksGivenSinceBalance;
+            } else {
+                avgUtilization[i] = 0;
+            }
+        }
+
+        if (cpu->runQueue->get_length()) {
+        retry:
+            Thread* it = cpu->runQueue->get_front();
+            do {
+                if (!it) {
+                    break;
+                }
+
+                if (it != cpu->currentThread) {
+                    // Save next thread as it will be overwritten by
+                    // intrusive list
+                    cpu->runQueue->remove(it);
+                    threadsToDistribute.add_back(it);
+
+                    goto retry; // The front may have changed
+                } else {
+                    it = it->next;
+                }
+            } while (it != cpu->runQueue->get_front());
+        }
+    }
+
+    Thread* nextThread;
+    while ((nextThread = threadsToDistribute.get_front())) {
+        CPU* cpu = SMP::cpus[leastActive];
+
+        threadsToDistribute.remove(nextThread);
+        cpu->runQueue->add_back(nextThread);
+
+        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Gave %s to CPU %d", nextThread->parent->name, leastActive);
+
+        if (nextThread->ticksGivenSinceBalance > 0) {
+            avgUtilization[leastActive] += nextThread->ticksSinceBalance * 100 / nextThread->ticksGivenSinceBalance;
+        }
+
+        if (!threadsToDistribute.get_front()) {
+            break; // Done distributing threads
+        }
+
+        for (unsigned i = 0; i < SMP::processorCount; i++) {
+            Log::Debug(debugLevelScheduler, DebugLevelVerbose, "util: %d, %d", i, avgUtilization[i]);
+
+            if (avgUtilization[i] < avgUtilization[leastActive]) {
+                leastActive = i;
+            }
+        }
+    }
+
+    // Unlock ALL run queues
+    for (unsigned i = 0; i < SMP::processorCount; i++) {
+        Thread* thread = SMP::cpus[i]->runQueue->get_front();
+        if (thread) {
+            do {
+                thread->ticksSinceBalance = 0;
+                thread->ticksGivenSinceBalance = 0;
+
+                Log::Debug(debugLevelScheduler, DebugLevelVerbose, "%d: resetting %s (pid %d tid %d)", i,
+                           thread->parent->name, thread->parent->PID(), thread->tid);
+                thread = thread->next;
+            } while (thread != SMP::cpus[i]->runQueue->get_front());
+        }
+
+        SMP::cpus[i]->idleThread->ticksSinceBalance = 0;
+
+        releaseLock(&SMP::cpus[i]->runQueueLock);
+    }
+
+    nextBalanceDue = Timer::UsecondsSinceBoot() + 500000;
+}
+
 void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
     CPU* cpu = GetCPULocal();
+
+    if (Timer::UsecondsSinceBoot() > nextBalanceDue) {
+        if(!__builtin_expect(acquireTestLock(&processesLock), 0)) {
+            if (Timer::UsecondsSinceBoot() > nextBalanceDue) {
+                BalanceRunQueues();
+            }
+            releaseLock(&processesLock);
+        }
+    }
 
     if (cpu->currentThread) {
         cpu->currentThread->parent->activeTicks++;
         if (cpu->currentThread->timeSlice > 0) {
+            cpu->currentThread->ticksSinceBalance++;
             cpu->currentThread->timeSlice--;
             return;
         }
     }
 
     while (__builtin_expect(acquireTestLock(&cpu->runQueueLock), 0)) {
-        return;
+        asm volatile("pause");
     }
 
     if (__builtin_expect(cpu->runQueue->get_length() <= 0 || !cpu->currentThread, 0)) {
@@ -175,6 +288,7 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
             cpu->currentThread = cpu->idleThread;
         } else if (__builtin_expect(cpu->currentThread->parent != cpu->idleProcess, 1)) {
             cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
+            cpu->currentThread->ticksGivenSinceBalance += cpu->currentThread->timeSliceDefault;
 
             asm volatile("fxsave64 (%0)" ::"r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 
@@ -243,8 +357,8 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
         mov %%rax, %%cr3
         pop %%rax
         addq $8, %%rsp
-        iretq)"
-    :: "r"(&cpu->currentThread->registers), "r"(cpu->currentThread->parent->GetPageMap()->pml4Phys));
+        iretq)" ::"r"(&cpu->currentThread->registers),
+        "r"(cpu->currentThread->parent->GetPageMap()->pml4Phys));
 }
 
 } // namespace Scheduler

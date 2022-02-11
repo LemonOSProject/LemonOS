@@ -121,8 +121,8 @@ int Socket::SetSocketOptions(int level, int opt, const void* optValue, socklen_t
     return -ENOPROTOOPT;
 }
 
-fs_fd_t* Socket::Open(size_t flags) {
-    fs_fd_t* fDesc = (fs_fd_t*)kmalloc(sizeof(fs_fd_t));
+ErrorOr<UNIXOpenFile*> Socket::Open(size_t flags) {
+    UNIXOpenFile* fDesc = new UNIXOpenFile();
 
     fDesc->pos = 0;
     fDesc->mode = flags;
@@ -422,8 +422,8 @@ int64_t LocalSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr*
     return written;
 }
 
-fs_fd_t* LocalSocket::Open(size_t flags) {
-    fs_fd_t* fDesc = (fs_fd_t*)kmalloc(sizeof(fs_fd_t));
+ErrorOr<UNIXOpenFile*> LocalSocket::Open(size_t flags) {
+    UNIXOpenFile* fDesc = new UNIXOpenFile;
 
     fDesc->pos = 0;
     fDesc->mode = flags;

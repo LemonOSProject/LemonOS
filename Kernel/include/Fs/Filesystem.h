@@ -4,10 +4,12 @@
 #include <stdint.h>
 
 #include <List.h>
+#include <Error.h>
 #include <Lock.h>
 #include <RefPtr.h>
 #include <String.h>
 #include <Types.h>
+#include <Objects/KObject.h>
 
 #include <abi-bits/abi.h>
 #include <abi-bits/fcntl.h>
@@ -114,8 +116,6 @@ typedef struct {
 
 class FsNode;
 
-struct UNIXFileDescriptor;
-
 struct pollfd {
     int fd;
     short events;
@@ -142,6 +142,18 @@ static inline void FD_SET(int fd, fd_set_t* fds) {
 
 class FilesystemWatcher;
 class DirectoryEntry;
+
+class UNIXOpenFile : public KernelObject {
+    DECLARE_KOBJECT(UNIXOpenFile);
+public:
+    ~UNIXOpenFile();
+
+    lock_t dataLock = 0;
+
+    class FsNode* node = nullptr;
+    off_t pos = 0;
+    mode_t mode = 0;
+};
 
 class FsNode {
     friend class FilesystemBlocker;
@@ -187,7 +199,7 @@ public:
     /////////////////////////////
     virtual ssize_t Write(size_t off, size_t size, uint8_t* buffer); // Write Data
 
-    virtual UNIXFileDescriptor* Open(size_t flags); // Open
+    virtual ErrorOr<UNIXOpenFile*> Open(size_t flags); // Open
     virtual void Close();                           // Close
 
     virtual int ReadDir(DirectoryEntry*, uint32_t); // Read Directory
@@ -226,14 +238,6 @@ public:
 
     FilesystemLock nodeLock; // Lock on FsNode info
 };
-
-typedef struct UNIXFileDescriptor {
-    FsNode* node = nullptr;
-    off_t pos = 0;
-    mode_t mode = 0;
-
-    ~UNIXFileDescriptor();
-} fs_fd_t;
 
 class DirectoryEntry {
 public:
@@ -280,18 +284,19 @@ public:
 // A thread can wait on it like any semaphore,
 // and when a file is ready it will signal and waiting thread(s) will get woken
 class FilesystemWatcher : public Semaphore {
-    List<UNIXFileDescriptor*> watching;
+    List<UNIXOpenFile*> watching;
 
 public:
     FilesystemWatcher() : Semaphore(0) {}
 
     inline void WatchNode(FsNode* node, int events) {
-        UNIXFileDescriptor* desc = node->Open(0);
-        assert(desc);
+        ErrorOr<UNIXOpenFile*> desc = node->Open(0);
+        assert(!desc.HasError() && desc.Value());
 
-        desc->node->Watch(*this, events);
+        UNIXOpenFile* f = desc.Value();
+        f->node->Watch(*this, events);
 
-        watching.add_back(desc);
+        watching.add_back(f);
     }
 
     ~FilesystemWatcher() {
@@ -476,23 +481,23 @@ ssize_t Read(FsNode* node, size_t offset, size_t size, void* buffer);
 /// \return Bytes written or if negative an error code
 /////////////////////////////
 ssize_t Write(FsNode* node, size_t offset, size_t size, void* buffer);
-UNIXFileDescriptor* Open(FsNode* node, uint32_t flags = 0);
+ErrorOr<UNIXOpenFile*> Open(FsNode* node, uint32_t flags = 0);
 void Close(FsNode* node);
-void Close(UNIXFileDescriptor* handle);
+void Close(UNIXOpenFile* openFile);
 int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index);
 FsNode* FindDir(FsNode* node, const char* name);
 
-ssize_t Read(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_t* buffer);
-ssize_t Write(const FancyRefPtr<UNIXFileDescriptor>& handle, size_t size, uint8_t* buffer);
-int ReadDir(const FancyRefPtr<UNIXFileDescriptor>& handle, DirectoryEntry* dirent, uint32_t index);
-FsNode* FindDir(const FancyRefPtr<UNIXFileDescriptor>& handle, const char* name);
+ssize_t Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, uint8_t* buffer);
+ssize_t Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, uint8_t* buffer);
+int ReadDir(const FancyRefPtr<UNIXOpenFile>& handle, DirectoryEntry* dirent, uint32_t index);
+FsNode* FindDir(const FancyRefPtr<UNIXOpenFile>& handle, const char* name);
 
 int Link(FsNode*, FsNode*, DirectoryEntry*);
 int Unlink(FsNode*, DirectoryEntry*, bool unlinkDirectories = false);
 
-int Ioctl(const FancyRefPtr<UNIXFileDescriptor>& handle, uint64_t cmd, uint64_t arg);
+int Ioctl(const FancyRefPtr<UNIXOpenFile>& handle, uint64_t cmd, uint64_t arg);
 
 int Rename(FsNode* olddir, char* oldpath, FsNode* newdir, char* newpath);
 } // namespace fs
 
-ALWAYS_INLINE UNIXFileDescriptor::~UNIXFileDescriptor() { fs::Close(this); }
+ALWAYS_INLINE UNIXOpenFile::~UNIXOpenFile() { fs::Close(this); }

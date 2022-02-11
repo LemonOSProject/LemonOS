@@ -202,7 +202,13 @@ public:
 
     void clear() {
         acquireLock(&lock);
+
         if (data) {
+            if constexpr (!TTraits<T>::is_trivial()) {
+                for(unsigned i = 0; i < count; i++) {
+                    data[i].~T();
+                }
+            }
             kfree(data);
         }
 
