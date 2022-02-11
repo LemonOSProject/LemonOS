@@ -7,6 +7,7 @@
 #include <Spinlock.h>
 #include <Timer.h>
 
+#include <stdint.h>
 #include <abi-bits/pid_t.h>
 
 #define THREAD_TIMESLICE_DEFAULT 10
@@ -61,6 +62,8 @@ struct Thread {
     void* kernelStack = nullptr; // Kernel Stack
     uint32_t timeSlice = THREAD_TIMESLICE_DEFAULT;
     uint32_t timeSliceDefault = THREAD_TIMESLICE_DEFAULT;
+    uint32_t ticksSinceBalance = 0; // Ticks since run queue rebalance
+    uint32_t ticksGivenSinceBalance = 0;
     RegisterContext registers;   // Registers
     RegisterContext lastSyscall; // Last system call
     void* fxState;               // State of the extended registers

@@ -14,7 +14,7 @@ static inline bool operator<(timeval l, timeval r){
 
 namespace Timer{
     uint64_t GetSystemUptime();
-    uint32_t GetTicks();
+    uint64_t UsecondsSinceBoot();
     uint32_t GetFrequency();
 
     timeval GetSystemUptimeStruct();

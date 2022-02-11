@@ -14,11 +14,7 @@
 #include "smpdefines.inc"
 
 static inline void wait(uint64_t ms) {
-    uint64_t ticksPerMs = (Timer::GetFrequency() / 1000);
-    uint64_t timeMs = Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * ticksPerMs);
-
-    while ((Timer::GetSystemUptime() * 1000 + (Timer::GetTicks() * ticksPerMs)) - timeMs <= ms)
-        ;
+    Timer::Wait(ms);
 }
 
 extern void* _binary_SMPTrampoline_bin_start;

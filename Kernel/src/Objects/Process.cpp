@@ -363,6 +363,8 @@ void Process::Die() {
 
     assert(!runningThreads.get_length());
 
+    APIC::Local::SendIPI(cpu->id, ICR_DSH_OTHER, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
+
     acquireLock(&m_processLock);
     acquireLock(&cpu->runQueueLock);
     asm("cli");

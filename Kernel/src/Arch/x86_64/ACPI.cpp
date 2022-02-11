@@ -266,18 +266,7 @@ uint16_t laihost_inw(uint16_t port) { return inportw(port); }
 uint32_t laihost_ind(uint16_t port) { return inportd(port); }
 
 void laihost_sleep(uint64_t ms) {
-    uint64_t freq = Timer::GetFrequency();
-    uint64_t delayInTicks = (freq / 1000) * ms;
-    uint64_t seconds = Timer::GetSystemUptime();
-    uint64_t ticks = Timer::GetTicks();
-    uint64_t totalTicks = seconds * freq + ticks;
-
-    for (;;) {
-        uint64_t totalTicksNew = Timer::GetSystemUptime() * freq + Timer::GetTicks();
-        if (totalTicksNew - totalTicks == delayInTicks) {
-            break;
-        }
-    }
+    Timer::Wait(ms);
 }
 
 void laihost_pci_writew(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset, uint16_t val) {

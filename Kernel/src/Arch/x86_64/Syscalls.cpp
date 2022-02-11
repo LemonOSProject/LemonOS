@@ -858,7 +858,7 @@ long SysUptime(RegisterContext* r) {
         *seconds = Timer::GetSystemUptime();
     }
     if (milliseconds) {
-        *milliseconds = Timer::GetTicks() * 1000 / Timer::GetFrequency();
+        *milliseconds = Timer::UsecondsSinceBoot() / 1000;
     }
     return 0;
 }
@@ -3260,7 +3260,7 @@ long SysGetEntropy(RegisterContext* r) {
     }
 
     while (length >= 8) {
-        uint64_t value = Hash<uint64_t>(rand() % 65535 * Timer::GetTicks());
+        uint64_t value = Hash<uint64_t>(rand() % 65535 * (Timer::UsecondsSinceBoot() % 65535));
 
         *(reinterpret_cast<uint64_t*>(buffer)) = value;
         buffer += 8;
@@ -3268,7 +3268,7 @@ long SysGetEntropy(RegisterContext* r) {
     }
 
     if (length > 0) {
-        uint64_t value = Hash<uint64_t>(rand() % 65535 * Timer::GetTicks());
+        uint64_t value = Hash<uint64_t>(rand() % 65535 * (Timer::UsecondsSinceBoot() % 65535));
         memcpy(buffer, &value, length);
     }
 
