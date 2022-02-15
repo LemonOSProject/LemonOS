@@ -2822,10 +2822,16 @@ long SysKernelObjectWait(RegisterContext* r) {
     }
 
     Handle handles[count];
+    UserBuffer<handle_id_t> handleIDs(SC_ARG0(r));
 
     KernelObjectWatcher watcher;
     for (unsigned i = 0; i < count; i++) {
-        if (!(handles[i] = currentProcess->GetHandle(reinterpret_cast<handle_id_t*>(SC_ARG0(r))[i]))) {
+        handle_id_t id;
+        if(handleIDs.GetValue(i, id)) {
+            return -EFAULT;
+        }
+
+        if (!(handles[i] = currentProcess->GetHandle(id))) {
             IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal,
                      { Log::Warning("SysKernelObjectWait: Invalid handle ID %d", SC_ARG0(r)); });
             return -EINVAL;

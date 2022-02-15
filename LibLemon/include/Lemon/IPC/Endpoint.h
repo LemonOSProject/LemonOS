@@ -74,7 +74,7 @@ public:
         handle_t handle = InterfaceConnect(path);
 
         if (handle <= 0) {
-            printf("[LibLemon] Error %ld connecting to interface %s!\n", handle, path);
+            printf("[LibLemon] Error %d connecting to interface %s!\n", handle, path);
             throw new EndpointException(EndpointException::EndpointInterfacePathResolutionError);
         }
 

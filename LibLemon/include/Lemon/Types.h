@@ -1,3 +1,3 @@
 #pragma once
 
-typedef long handle_t;
+typedef int handle_t;
