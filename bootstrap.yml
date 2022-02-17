@@ -42,7 +42,7 @@ sources:
       - args: ['./bootstrap']
 
   - name: mlibc
-    git: 'https://github.com/fido2020/mlibc.git'
+    git: 'https://github.com/managarm/mlibc.git'
     branch: 'master'
 
   - name: wayland

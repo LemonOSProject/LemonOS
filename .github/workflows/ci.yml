@@ -48,12 +48,11 @@ jobs:
           path: |
             **/Build/tool-builds
             **/Toolchain
-            **/mlibc
 
       - name: Cache packages
         uses: actions/cache@v2
         with:
-          key: ${{ runner.os }}-lemon-pkgs
+          key: ${{ runner.os }}-${{ hashFiles('**/bootstrap.yml') }}-lemon-pkgs
           path: |
             **/Build/pkg-builds
             **/Ports
@@ -67,6 +66,7 @@ jobs:
       - name: Build the toolchain
         run: |
           cd Build
+          xbstrap fetch --hard-reset mlibc
           xbstrap install-tool -u --all
         
       - name: Building system
@@ -112,12 +112,11 @@ jobs:
           path: |
             **/Build/tool-builds
             **/Toolchain
-            **/mlibc
 
       - name: Cache packages
         uses: actions/cache@v2
         with:
-          key: ${{ runner.os }}-lemon-pkgs
+          key: ${{ runner.os }}-${{ hashFiles('**/bootstrap.yml') }}-lemon-pkgs
           path: |
             **/Build/pkg-builds
             **/Ports
@@ -131,6 +130,7 @@ jobs:
       - name: Build the toolchain
         run: |
           cd Build
+          xbstrap fetch --hard-reset mlibc
           xbstrap install-tool -u --all
         
       - name: Building system
