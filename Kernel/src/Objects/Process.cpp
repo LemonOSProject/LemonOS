@@ -111,10 +111,21 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
 Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process* parent)
     : m_pid(pid), m_parent(parent) {
     if(_workingDir){
-        strncpy(workingDir, _workingDir, PATH_MAX);
+        strncpy(workingDirPath, _workingDir, PATH_MAX);
     } else {
-        strcpy(workingDir, "/");
+        strcpy(workingDirPath, "/");
     }
+
+    FsNode* wdNode = fs::ResolvePath(workingDirPath);
+    assert(wdNode);
+    assert(wdNode->IsDirectory());
+
+    if(auto openFile = wdNode->Open(0); !openFile.HasError()) {
+        workingDir = std::move(openFile.Value());
+    } else {
+        assert(!openFile.HasError());
+    }
+
     strncpy(name, _name, NAME_MAX);
 
     addressSpace = new AddressSpace(Memory::CreatePageMap());
@@ -482,7 +493,7 @@ void Process::Unwatch(KernelObjectWatcher& watcher) {
 FancyRefPtr<Process> Process::Fork() {
     ScopedSpinLock lock(m_processLock);
 
-    FancyRefPtr<Process> newProcess = new Process(Scheduler::GetNextPID(), name, workingDir, this);
+    FancyRefPtr<Process> newProcess = new Process(Scheduler::GetNextPID(), name, workingDirPath, this);
     delete newProcess->addressSpace; // TODO: Do not create address space in first place
     newProcess->addressSpace = addressSpace->Fork();
 

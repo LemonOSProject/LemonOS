@@ -43,7 +43,7 @@ sources:
 
   - name: mlibc
     git: 'https://github.com/fido2020/mlibc.git'
-    branch: 'temp-frigg-fix'
+    branch: 'master'
 
   - name: wayland
     subdir: 'Ports'

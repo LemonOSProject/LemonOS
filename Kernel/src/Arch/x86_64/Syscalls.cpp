@@ -80,7 +80,7 @@ long SysExec(RegisterContext* r) {
     uint64_t flags = SC_ARG3(r);
     char** envp = (char**)SC_ARG4(r);
 
-    FsNode* node = fs::ResolvePath(filepath, currentProcess->workingDir, true /* Follow Symlinks */);
+    FsNode* node = fs::ResolvePath(filepath, currentProcess->workingDir->node, true /* Follow Symlinks */);
     if (!node) {
         return -ENOENT;
     }
@@ -140,7 +140,8 @@ long SysExec(RegisterContext* r) {
         return -EIO; // Failed to create process
     }
 
-    strncpy(proc->workingDir, Scheduler::GetCurrentProcess()->workingDir, PATH_MAX);
+    proc->workingDir = currentProcess->workingDir;
+    strncpy(proc->workingDirPath, currentProcess->workingDirPath, PATH_MAX);
 
     if (flags & EXEC_CHILD) {
         currentProcess->RegisterChildProcess(proc);
@@ -226,12 +227,12 @@ long SysOpen(RegisterContext* r) {
     }
 
 open:
-    Log::Debug(debugLevelSyscalls, DebugLevelVerbose, "Working dir: %s", proc->workingDir);
-    FsNode* node = fs::ResolvePath(filepath, proc->workingDir, !(flags & O_NOFOLLOW));
+    Log::Debug(debugLevelSyscalls, DebugLevelVerbose, "Working dir: %s", proc->workingDirPath);
+    FsNode* node = fs::ResolvePath(filepath, proc->workingDir->node, !(flags & O_NOFOLLOW));
 
     if (!node) {
         if (flags & O_CREAT) {
-            FsNode* parent = fs::ResolveParent(filepath, proc->workingDir);
+            FsNode* parent = fs::ResolveParent(filepath, proc->workingDir->node);
             char* basename = fs::BaseName(filepath);
 
             if (!parent) {
@@ -314,7 +315,7 @@ long SysLink(RegisterContext* r) {
         return -ENOENT;
     }
 
-    FsNode* parentDirectory = fs::ResolveParent(newpath, proc->workingDir);
+    FsNode* parentDirectory = fs::ResolveParent(newpath, proc->workingDir->node);
     char* linkName = fs::BaseName(newpath);
 
     Log::Info("SysLink: Attempting to create link %s at path %s", linkName, newpath);
@@ -335,31 +336,48 @@ long SysLink(RegisterContext* r) {
 }
 
 long SysUnlink(RegisterContext* r) {
-    const char* path = (const char*)SC_ARG0(r);
+    int fd = SC_ARG0(r);
+    const char* path = (const char*)SC_ARG1(r);
+    int flag = SC_ARG2(r);
+
+    if(flag & AT_REMOVEDIR) {
+        Log::Warning("SysUnlink: AT_REMOVEDIR unsupported!");
+        return -EINVAL;
+    }
+
+    if(flag & ~(AT_REMOVEDIR)) {
+        return -EINVAL;
+    }
 
     Process* proc = Scheduler::GetCurrentProcess();
 
     if (!Memory::CheckUsermodePointer(SC_ARG0(r), 1, proc->addressSpace)) {
-        Log::Warning("sys_unlink: Invalid path pointer");
+        Log::Warning("SysUnlink: Invalid path pointer");
         return -EFAULT;
     }
 
-    FsNode* parentDirectory = fs::ResolveParent(path, proc->workingDir);
+    FsNode* workingDir;
+    if(fd == AT_FDCWD) {
+        workingDir = proc->workingDir->node;
+    } else {
+        workingDir = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(fd))->node;
+    }
+
     char* linkName = fs::BaseName(path);
 
-    if (!parentDirectory) {
-        Log::Warning("sys_unlink: Could not resolve path: %s", path);
+    if (!workingDir) {
+        Log::Warning("SysUnlink: Could not resolve path: %s", path);
         return -EINVAL;
     }
 
-    if ((parentDirectory->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
-        Log::Warning("sys_unlink: Could not resolve path: Not a directory: %s", path);
+    if (!workingDir->IsDirectory()) {
+        Log::Warning("SysUnlink: Could not resolve path: Not a directory: %s", path);
         return -ENOTDIR;
     }
 
     DirectoryEntry entry;
     strcpy(entry.name, linkName);
-    return parentDirectory->Unlink(&entry);
+    return workingDir->Unlink(&entry);
 }
 
 long SysExecve(RegisterContext* r) {
@@ -379,7 +397,7 @@ long SysExecve(RegisterContext* r) {
     char** argv = (char**)SC_ARG1(r);
     char** envp = (char**)SC_ARG2(r);
 
-    FsNode* node = fs::ResolvePath(filepath, currentProcess->workingDir, true /* Follow Symlinks */);
+    FsNode* node = fs::ResolvePath(filepath, currentProcess->workingDir->node, true /* Follow Symlinks */);
     if (!node) {
         return -ENOENT;
     }
@@ -491,16 +509,18 @@ long SysExecve(RegisterContext* r) {
 }
 
 long SysChdir(RegisterContext* r) {
+    Process* proc = Process::Current();
     if (SC_ARG0(r)) {
-        char* path = fs::CanonicalizePath((char*)SC_ARG0(r), Scheduler::GetCurrentProcess()->workingDir);
+        char* path = fs::CanonicalizePath((char*)SC_ARG0(r), proc->workingDirPath);
         FsNode* n = fs::ResolvePath(path);
         if (!n) {
             Log::Warning("chdir: Could not find %s", path);
             return -ENOENT;
-        } else if (n->flags != FS_NODE_DIRECTORY) {
+        } else if (!n->IsDirectory()) {
             return -ENOTDIR;
         }
-        strcpy(Scheduler::GetCurrentProcess()->workingDir, path);
+
+        proc->workingDir = SC_TRY_OR_ERROR(n->Open(0));
     } else
         Log::Warning("chdir: Invalid path string");
     return 0;
@@ -566,7 +586,7 @@ long SysChmod(RegisterContext* r) {
     char tempPath[pathLen + 1];
     strcpy(tempPath, path);
 
-    FsNode* file = fs::ResolvePath(tempPath, proc->workingDir);
+    FsNode* file = fs::ResolvePath(tempPath, proc->workingDir->node);
     if (!file) {
         return -ENOENT;
     }
@@ -633,7 +653,7 @@ long SysStat(RegisterContext* r) {
     }
 
     bool followSymlinks = !(flags & AT_SYMLINK_NOFOLLOW);
-    FsNode* node = fs::ResolvePath(filepath, proc->workingDir, followSymlinks);
+    FsNode* node = fs::ResolvePath(filepath, proc->workingDir->node, followSymlinks);
 
     if (!node) {
         Log::Debug(debugLevelSyscalls, DebugLevelVerbose, "SysStat: Invalid filepath %s", filepath);
@@ -713,7 +733,7 @@ long SysMkdir(RegisterContext* r) {
         return -EFAULT;
     }
 
-    FsNode* parentDirectory = fs::ResolveParent(path, proc->workingDir);
+    FsNode* parentDirectory = fs::ResolveParent(path, proc->workingDir->node);
     char* dirPath = fs::BaseName(path);
 
     Log::Info("sys_mkdir: Attempting to create %s at path %s", dirPath, path);
@@ -742,7 +762,7 @@ long SysRmdir(RegisterContext* r) {
     }
 
     char* path = reinterpret_cast<char*>(SC_ARG0(r));
-    FsNode* node = fs::ResolvePath(path, proc->workingDir);
+    FsNode* node = fs::ResolvePath(path, proc->workingDir->node);
     if (!node) {
         return -ENOENT;
     }
@@ -780,8 +800,8 @@ long SysRename(RegisterContext* r) {
         return -EFAULT;
     }
 
-    FsNode* olddir = fs::ResolveParent(oldpath, proc->workingDir);
-    FsNode* newdir = fs::ResolveParent(newpath, proc->workingDir);
+    FsNode* olddir = fs::ResolveParent(oldpath, proc->workingDir->node);
+    FsNode* newdir = fs::ResolveParent(newpath, proc->workingDir->node);
 
     if (!(olddir && newdir)) {
         return -ENOENT;
@@ -976,7 +996,7 @@ long SysGetCWD(RegisterContext* r) {
     char* buf = (char*)SC_ARG0(r);
     size_t sz = SC_ARG1(r);
 
-    char* workingDir = Scheduler::GetCurrentProcess()->workingDir;
+    char* workingDir = Scheduler::GetCurrentProcess()->workingDirPath;
     if (strlen(workingDir) > sz) {
         return 1;
     } else {

@@ -383,7 +383,9 @@ public:
     }
 
     char name[NAME_MAX + 1];
-    char workingDir[PATH_MAX + 1];
+
+    FancyRefPtr<UNIXOpenFile> workingDir;
+    char workingDirPath[PATH_MAX + 1];
 
     // POSIX permissions
     int32_t euid = 0; // Effective UID

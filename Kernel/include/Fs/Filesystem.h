@@ -446,11 +446,11 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks 
 /// \brief Resolve parent directory of path.
 ///
 /// \param path Path of child for parent to resolve
-/// \param workingDir Path of working directory
+/// \param workingDir Node of working directory
 ///
 /// \return FsNode of parent, nullptr on failure
 /////////////////////////////
-FsNode* ResolveParent(const char* path, const char* workingDir = nullptr);
+FsNode* ResolveParent(const char* path, FsNode* workingDir = nullptr);
 char* CanonicalizePath(const char* path, char* workingDir);
 char* BaseName(const char* path);
 
