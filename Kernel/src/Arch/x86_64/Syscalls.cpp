@@ -520,6 +520,7 @@ long SysChdir(RegisterContext* r) {
             return -ENOTDIR;
         }
 
+        strcpy(proc->workingDirPath, path);
         proc->workingDir = SC_TRY_OR_ERROR(n->Open(0));
     } else
         Log::Warning("chdir: Invalid path string");
@@ -665,17 +666,17 @@ long SysStat(RegisterContext* r) {
     stat->st_mode = 0;
 
     if ((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY)
-        stat->st_mode |= S_IFDIR;
+        stat->st_mode = S_IFDIR;
     if ((node->flags & FS_NODE_TYPE) == FS_NODE_FILE)
-        stat->st_mode |= S_IFREG;
+        stat->st_mode = S_IFREG;
     if ((node->flags & FS_NODE_TYPE) == FS_NODE_BLKDEVICE)
-        stat->st_mode |= S_IFBLK;
+        stat->st_mode = S_IFBLK;
     if ((node->flags & FS_NODE_TYPE) == FS_NODE_CHARDEVICE)
-        stat->st_mode |= S_IFCHR;
+        stat->st_mode = S_IFCHR;
     if ((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)
-        stat->st_mode |= S_IFLNK;
+        stat->st_mode = S_IFLNK;
     if ((node->flags & FS_NODE_TYPE) == FS_NODE_SOCKET)
-        stat->st_mode |= S_IFSOCK;
+        stat->st_mode = S_IFSOCK;
 
     stat->st_nlink = 0;
     stat->st_uid = node->uid;
@@ -850,6 +851,7 @@ long SysReadDirNext(RegisterContext* r) {
 
     strcpy(direntPointer->name, tempent.name);
     direntPointer->type = tempent.flags;
+    direntPointer->inode = tempent.inode;
 
     return ret;
 }
@@ -4003,7 +4005,6 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
         thread->lastSyscall = *regs;
     }
 #endif
-
     if (__builtin_expect(acquireTestLock(&thread->lock), 0)) {
         Log::Info("Thread hanging!");
         for (;;)

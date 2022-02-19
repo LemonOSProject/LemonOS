@@ -84,29 +84,34 @@ packages:
             curl -Lo "@THIS_COLLECT_DIR@/system/doom/doom1.wad" "http://distro.ibiblio.org/pub/linux/distributions/slitaz/sources/packages/d/doom1.wad";
           fi;'
     
-  - name: busybox
+  - name: coreutils
     source:
       subdir: 'Ports'
-      url: 'https://www.busybox.net/downloads/busybox-1.33.1.tar.bz2'
-      format: 'tar.bz2'
-      extract_path: 'busybox-1.33.1'
-      patch-path-strip: 1
+      git: 'git://git.sv.gnu.org/coreutils'
+      tag: 'v9.0'
+      tools_required:
+        - host-automake
+        - host-autoconf-v2.69
+      regenerate:
+        - args: ['./bootstrap']
+        - args: ['cp', '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub',
+          '@THIS_SOURCE_DIR@/build-aux']
     tools_required:
       - host-llvm
     configure:
-      - args: ['cp', '-ra', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
-      - args: ['cp', '@THIS_BUILD_DIR@/configs/lemon_defconfig', '@THIS_BUILD_DIR@/.config']
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-lemon'
+        - '--prefix=/system'
+        environ:
+          CFLAGS: '-Wno-error -DSLOW_BUT_NO_HACKS'
+          CC: 'clang'
+          CXX: 'clang++'
     build:
       - args: ['make', '-j@PARALLELISM@']
-        environ:
-          CC: 'clang'
-          CXX: 'clang++'
       - args: ['make', 'install']
         environ:
-          CC: 'clang'
-          CXX: 'clang++'
           DESTDIR: '@THIS_COLLECT_DIR@'
-      - args: ['cp', '-ar', '@THIS_BUILD_DIR@/_install/.', '@THIS_COLLECT_DIR@/system']
   - name: binutils
     from_source: binutils
     tools_required:

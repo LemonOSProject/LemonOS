@@ -10,7 +10,9 @@ RUN apk add --no-cache nasm python3 python3-dev ninja make cmake automake autoco
     # used by binutils
     texinfo bison flex \
     # limine, disk image
-    mtools dosfstools e2fsprogs
+    mtools dosfstools e2fsprogs \
+    # coreutils
+    gperf
 
 RUN python3 -m ensurepip; python3 -m pip install meson xbstrap
 

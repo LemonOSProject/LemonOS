@@ -39,6 +39,8 @@ elf_info_t LoadELFSegments(Process* proc, void* _elf, uintptr_t base) {
         if (elfPHdr.memSize == 0 || elfPHdr.type != PT_LOAD)
             continue;
 
+        assert(base + elfPHdr.vaddr);
+
         proc->usedMemoryBlocks += (elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) >> 12;
         proc->addressSpace->MapVMO(new ProcessImageVMObject((base + elfPHdr.vaddr) & ~0xFFFUL,
                                                             ((elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) &

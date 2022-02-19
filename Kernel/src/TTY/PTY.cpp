@@ -190,13 +190,15 @@ PTY::PTY(int id) : m_id(id) {
 
     strcpy(slaveDirent.name, to_string(id).c_str());
     slaveDirent.flags = DT_CHR;
-    slaveDirent.inode = id;
+    slaveDirent.inode = m_id;
 
     masterFile.pty = this;
     masterFile.device = PTYMasterDevice;
+    masterFile.inode = m_id;
 
     slaveFile.pty = this;
     slaveFile.device = PTYSlaveDevice;
+    slaveFile.inode = m_id;
 
     for (int i = 0; i < NCCS; i++)
         tios.c_cc[i] = c_cc_default[i];
