@@ -5,6 +5,7 @@ enum {
     Control_Backspace = '\b', // Backspaces one column, however not past the beginning of the line
     Control_LineFeed = '\n', // Line feed, by default will also carriage return
     Control_CarriageReturn = '\r', // Carriage return
+    Control_Tab = '\t',
 };
 
 #define ESC_SAVE_CURSOR '7'

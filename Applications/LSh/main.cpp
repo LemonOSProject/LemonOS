@@ -1,15 +1,17 @@
 #include <Lemon/System/Spawn.h>
+#include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <list>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
 #include <string>
 #include <sys/wait.h>
 #include <termios.h>
 #include <unistd.h>
+#include <stack>
 #include <vector>
 
 termios execAttributes; // Set before executing
@@ -18,7 +20,7 @@ termios readAttributes; // Set on ReadLine
 std::string ln;
 int lnPos = 0;
 
-typedef void (*builtin_call_t)(int, char**);
+typedef int (*builtin_call_t)(int, char**);
 
 typedef struct {
     const char* name;
@@ -33,36 +35,46 @@ std::list<builtin_t> builtins;
 
 std::vector<std::string> history;
 
-void LShBuiltin_Cd(int argc, char** argv) {
+int LShBuiltin_Cd(int argc, char** argv) {
     if (argc > 3) {
         printf("cd: Too many arguments");
+        return 1;
     } else if (argc == 2) {
         if (chdir(argv[1])) {
             printf("cd: Error changing working directory to %s\n", argv[1]);
         }
+
+        return 1;
     } else
         chdir("/");
 
     getcwd(currentDir, PATH_MAX);
+    return 0;
 }
 
-void LShBuiltin_Pwd(int argc, char** argv) {
+int LShBuiltin_Pwd(int argc, char** argv) {
     getcwd(currentDir, PATH_MAX);
     printf("%s\n", currentDir);
+
+    return 0;
 }
 
-void LShBuiltin_Export(int argc, char** argv) {
+int LShBuiltin_Export(int argc, char** argv) {
     for (int i = 1; i < argc; i++) {
         putenv(argv[i]);
     }
+
+    return 0;
 }
 
-void LShBuiltin_Clear(int argc, char** argv) {
+int LShBuiltin_Clear(int argc, char** argv) {
     printf("\033c");
     fflush(stdout);
+
+    return 0;
 }
 
-void LShBuiltin_Exit(int argc, char** argv) { exit(0); }
+[[noreturn]] int LShBuiltin_Exit(int argc, char** argv) { exit(0); }
 
 builtin_t builtinCd = {.name = "cd", .func = LShBuiltin_Cd};
 builtin_t builtinPwd = {.name = "pwd", .func = LShBuiltin_Pwd};
@@ -72,8 +84,10 @@ builtin_t builtinExit = {.name = "exit", .func = LShBuiltin_Exit};
 
 pid_t job = -1;
 
-void InterruptSignalHandler(int sig){
-    if(job > 0){
+int commandResult = 0; // Return code of last command
+
+void InterruptSignalHandler(int sig) {
+    if (job > 0) {
         // If we have a current job, send signal to child.
         kill(job, sig);
     }
@@ -85,7 +99,7 @@ void ReadLine() {
     bool esc = false; // Escape sequence
     bool csi = false; // Control sequence indicator
 
-    lnPos = 0;         // Line cursor position
+    lnPos = 0;             // Line cursor position
     int historyIndex = -1; // History index
     ln.clear();
 
@@ -183,33 +197,121 @@ void ReadLine() {
 }
 
 void ParseLine() {
-    if (!ln.length()) {
+    if (ln.empty()) {
         return;
     }
+
+    enum {
+        ParseNormal,
+        ParseSingleQuotes,
+        ParseDoubleQuotes,
+        ParseEnv,
+        ParseEscape,
+    };
+
+    std::stack<int> state;
+    state.push(ParseNormal);
 
     history.push_back(ln);
+    ln.push_back('\n'); // Insert a '\n' at the end
 
-    int argc = 0;
     std::vector<char*> argv;
 
-    char* lnC = strdup(ln.c_str());
+    std::string lineBuf;
+    std::string envBuf;
 
-    if (!lnC) {
-        return;
+    auto pushArg = [&]() -> void {
+        if(lineBuf.empty()) {
+            return;
+        }
+
+        assert(lineBuf.c_str());
+
+        argv.push_back(strdup(lineBuf.c_str()));
+        lineBuf.clear();
+    };
+
+    auto pushEnv = [&](std::string val) -> void {
+        lineBuf += std::move(val);
+        envBuf.clear();
+    };
+
+    auto isLineSeperator = [](char c) -> bool { return c == ' ' || c == '\n'; };
+
+    for (auto it = ln.begin(); it != ln.end(); it++) {
+        char c = *it;
+        switch (state.top()) {
+        case ParseNormal:
+            if (c == '\'') {
+                state.push(ParseSingleQuotes);
+                break;
+            } else if (c == '\"') {
+                state.push(ParseDoubleQuotes);
+                break;
+            } else if (isLineSeperator(c)) {
+                pushArg();
+                break;
+            }
+
+            [[fallthrough]];
+        case ParseDoubleQuotes:
+            if (c == '\"') {
+                // The fallthrough will not matter as
+                // this case is already tested for ParseNormal
+                state.pop();
+                break;
+            }
+
+            if (c == '\\') {
+                state.push(ParseEscape);
+            } else if (c == '$') {
+                state.push(ParseEnv);
+            } else {
+                lineBuf += c;
+            }
+            break;
+        case ParseSingleQuotes:
+            if (c == '\'') { // End single quotes
+                state.pop();
+            } else {
+                lineBuf += c;
+            }
+            break;
+        case ParseEnv:
+            if (envBuf.empty()) {
+                if (c == '$') { // Shell Process ID
+                    pushEnv(std::to_string(getpid()));
+                    state.pop();
+                } else if (c == '?') { // Return value of last command
+                    pushEnv(std::to_string(commandResult));
+                    state.pop();
+                }
+            }
+
+            if (isalnum(c)) {
+                envBuf += c;
+            } else if (isLineSeperator(c) || c == '\\' || c == '\'' || c == '\"') {
+                pushEnv(getenv(envBuf.c_str()));
+                state.pop();
+                it--; // The previous state deals with the separator
+            }
+            break;
+        case ParseEscape:
+            lineBuf += c;
+            state.pop();
+            break;
+        }
     }
 
-    char* tok = strtok(lnC, " \t\n");
-    argv.push_back(tok);
-    argc++;
+    assert(lineBuf.empty());
 
-    while ((tok = strtok(NULL, " \t\n"))) {
-        argv.push_back(tok);
-        argc++;
+    if(!argv.size()) {
+        return;
     }
 
     for (builtin_t builtin : builtins) {
         if (strcmp(builtin.name, argv[0]) == 0) {
-            builtin.func(argc, argv.data());
+            commandResult = builtin.func(argv.size(), argv.data());
             return;
         }
     }
@@ -217,12 +319,14 @@ void ParseLine() {
     errno = 0;
 
     if (strchr(argv[0], '/')) {
-        job = lemon_spawn(argv[0], argc, argv.data(), 1);
+        job = lemon_spawn(argv[0], argv.size(), argv.data(), 1);
         if (job > 0) {
             int status = 0;
             int ret = 0;
-            while((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == EINTR))
+            while ((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == EINTR))
                 ;
+
+            commandResult = WEXITSTATUS(status);
 
             job = -1;
         } else if (errno == ENOENT) {
@@ -231,18 +335,19 @@ void ParseLine() {
             perror("Error spawning process");
         }
 
-        if (lnC)
-            free(lnC);
-
         return;
     } else
         for (std::string path : path) {
-            job = lemon_spawn((path + "/" + argv[0]).c_str(), argc, argv.data(), 1);
+            assert(!path.empty());
+
+            job = lemon_spawn((path + "/" + argv[0]).c_str(), argv.size(), argv.data(), 1);
             if (job > 0) {
                 int status = 0;
                 int ret = 0;
-                while((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == EINTR))
+                while ((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == EINTR))
                     ;
+
+                commandResult = WEXITSTATUS(status);
 
                 job = -1;
                 return;
@@ -256,9 +361,6 @@ void ParseLine() {
 
     printf("\nUnknown Command: %s\n", argv[0]);
 
-    if (lnC)
-        free(lnC);
-
     return;
 }
 
@@ -268,6 +370,8 @@ int main() {
     if (const char* h = getenv("HOME"); h) {
         chdir(h);
     }
+
+    setenv("SHELL", "/system/bin/lsh", 1);
 
     getcwd(currentDir, PATH_MAX);
     tcgetattr(STDOUT_FILENO, &execAttributes);
@@ -281,12 +385,12 @@ int main() {
     sigemptyset(&action.sa_mask);
 
     // Send both SIGINT and SIGWINCH to child
-    if(sigaction(SIGINT, &action, nullptr)){
+    if (sigaction(SIGINT, &action, nullptr)) {
         perror("sigaction");
         return 99;
     }
 
-    if(sigaction(SIGWINCH, &action, nullptr)){
+    if (sigaction(SIGWINCH, &action, nullptr)) {
         perror("sigaction");
         return 99;
     }
@@ -298,9 +402,9 @@ int main() {
     builtins.push_back(builtinExit);
 
     std::string pathEnv = getenv("PATH");
-    std::string temp;
+    std::string temp = "";
     for (char c : pathEnv) {
-        if (c == ':' && temp.length()) {
+        if (c == ':' && !temp.empty()) {
             path.push_back(temp);
             temp.clear();
         } else {

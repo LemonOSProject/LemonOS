@@ -148,6 +148,8 @@ void ParseChar(char ch) {
     if (parseState == State_Normal) {
         if (isprint(ch) || ch == ' ') {
             PrintChar(ch);
+        } else if(ch == Control_Tab) {
+            cursorPosition.x = std::min(cursorPosition.x + 8, terminalSize.x);
         } else if (ch == Control_Escape) {
             escapeBuffer.clear();
             parseState = State_Escape;
@@ -448,6 +450,7 @@ int main(int argc, char** argv) {
     int ptySlaveFd = -1;
 
     setenv("TERM", "xterm-256color", 1);
+    setenv("COLORTERM", "truecolor", 1);
 
     struct sigaction action = {
         .sa_handler = SIGCHLDHandler,
