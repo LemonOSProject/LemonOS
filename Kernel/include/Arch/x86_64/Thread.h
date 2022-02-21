@@ -13,10 +13,10 @@
 #define THREAD_TIMESLICE_DEFAULT 10
 
 enum {
-    ThreadStateRunning, // Thread is running
-    ThreadStateBlocked, // Thread is blocked, do not schedule
-    ThreadStateZombie,  // Waiting on thread to close a resource/exit a syscall
-    ThreadStateDying,   // Thread is actively being killed
+    ThreadStateRunning = 0, // Thread is running
+    ThreadStateBlocked = 1, // Thread is blocked, do not schedule
+    ThreadStateZombie  = 2,  // Waiting on thread to close a resource/exit a syscall
+    ThreadStateDying   = 3,   // Thread is actively being killed
 };
 
 class Process;
@@ -142,5 +142,5 @@ struct Thread {
     ///
     /// \return Bytes written or if negative an error code
     /////////////////////////////
-    void Unblock();
+    void Unblock(bool zombify = false);
 };

@@ -308,9 +308,11 @@ void Thread::Sleep(long us) {
     }
 }
 
-void Thread::Unblock() {
+void Thread::Unblock(bool zombify) {
     timeSlice = timeSliceDefault;
 
-    if (state != ThreadStateZombie)
+    if (zombify || state == ThreadStateZombie)
+        state = ThreadStateZombie;
+    else
         state = ThreadStateRunning;
 }

@@ -269,7 +269,7 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
 
     if (cpu->currentThread) {
         cpu->currentThread->parent->activeTicks++;
-        if (cpu->currentThread->timeSlice > 0) {
+        if (cpu->currentThread->timeSlice > 0 && !(cpu->currentThread->state & ThreadStateBlocked)) {
             cpu->currentThread->ticksSinceBalance++;
             cpu->currentThread->timeSlice--;
             return;
@@ -299,14 +299,14 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
             cpu->currentThread = cpu->runQueue->front;
         }
 
-        if (cpu->currentThread->state == ThreadStateBlocked) {
+        if (cpu->currentThread->state & ThreadStateBlocked) {
             Thread* first = cpu->currentThread;
 
             do {
                 cpu->currentThread = cpu->currentThread->next;
-            } while (cpu->currentThread->state == ThreadStateBlocked && cpu->currentThread != first);
+            } while ((cpu->currentThread->state & ThreadStateBlocked) && cpu->currentThread != first);
 
-            if (cpu->currentThread->state == ThreadStateBlocked) {
+            if (cpu->currentThread->state & ThreadStateBlocked) {
                 cpu->currentThread = cpu->idleThread;
             }
         }
@@ -327,7 +327,7 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
     // If true, invoke the signal handler
     if ((cpu->currentThread->registers.cs & 0x3) &&
         (cpu->currentThread->pendingSignals & ~cpu->currentThread->EffectiveSignalMask())) {
-        if (cpu->currentThread->parent->State() == ThreadStateRunning) {
+        if (cpu->currentThread->parent->State() == Process::Process_Running) {
             int ret = acquireTestLock(&cpu->currentThread->lock);
             assert(!ret);
 

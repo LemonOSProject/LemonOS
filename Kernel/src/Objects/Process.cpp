@@ -321,19 +321,27 @@ void Process::Die() {
             }
             thread->state = ThreadStateZombie;
 
-            if (acquireTestLock(&thread->lock)) {
-                asm("sti");
-                runningThreads.add_back(thread); // Thread lock could not be acquired
-                asm("cli");
-            } else {
+            if (!acquireTestLock(&thread->lock)) {
                 thread->state =
-                    ThreadStateBlocked; // We have acquired the lock so prevent the thread from getting scheduled
+                    ThreadStateDying; // We have acquired the lock so prevent the thread from getting scheduled
                 thread->timeSlice = thread->timeSliceDefault = 0;
             }
         }
     }
 
     asm("sti");
+    for(auto& thread : m_threads) {
+        if(thread == cpu->currentThread) {
+            continue;
+        }
+
+        assert(thread->state != ThreadStateBlocked);
+        
+        if(thread->state != ThreadStateDying) {
+            runningThreads.add_back(thread);
+        }
+    }
+
     while (m_children.get_length()) {
         FancyRefPtr<Process> child = m_children.get_front();
         if (child->State() == Process_Running) {
@@ -360,10 +368,12 @@ void Process::Die() {
         while (it != runningThreads.end()) {
             FancyRefPtr<Thread> thread = *it;
             if (!acquireTestLock(&thread->lock)) { // Loop through all of the threads so we can acquire their locks
-                runningThreads.remove(*(it++));
+                runningThreads.remove(it);
 
-                thread->state = ThreadStateBlocked;
+                thread->state = ThreadStateDying;
                 thread->timeSlice = thread->timeSliceDefault = 0;
+
+                it = runningThreads.begin();
             } else {
                 it++;
             }
@@ -374,6 +384,11 @@ void Process::Die() {
 
     assert(!runningThreads.get_length());
 
+    for(auto& t : m_threads) {
+        assert(t->parent == this);
+        assert(t->state == ThreadStateDying || t == cpu->currentThread);
+    }
+
     APIC::Local::SendIPI(cpu->id, ICR_DSH_OTHER, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
 
     acquireLock(&m_processLock);
@@ -383,6 +398,7 @@ void Process::Die() {
     for (unsigned j = 0; j < cpu->runQueue->get_length(); j++) {
         if (Thread* thread = cpu->runQueue->get_at(j); thread != cpu->currentThread && thread->parent == this) {
             cpu->runQueue->remove_at(j);
+            j = 0;
         }
     }
 
@@ -407,6 +423,7 @@ void Process::Die() {
 
             if (thread->parent == this) {
                 other->runQueue->remove(thread);
+                j = 0;
             }
         }
 
@@ -419,31 +436,35 @@ void Process::Die() {
     }
     asm("sti");
 
-    Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Closing handles...", m_pid);
+    Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Closing handles...", m_pid);
     m_handles.clear();
 
-    Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Signaling watchers...", m_pid);
-    for(auto* watcher : m_watching){
-        watcher->Signal();
+    Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Signaling watchers...", m_pid);
+    {
+        ScopedSpinLock lockWatchers(m_watchingLock);
 
+        // All threads have ceased, set state to dead
+        m_state = Process_Dead;
+
+        for(auto* watcher : m_watching){
+            watcher->Signal();
+
+        }
+        m_watching.clear();
     }
-    m_watching.clear();
-
-    // All threads have ceased, set state to dead
-    m_state = Process_Dead;
 
     if(m_parent && (m_parent->State() == Process_Running)){
-        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Sending SIGCHILD to %s...", m_pid, m_parent->name);
+        Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Sending SIGCHILD to %s...", m_pid, m_parent->name);
         m_parent->GetMainThread()->Signal(SIGCHLD);
     }
 
     // Add to destroyed processes so the reaper thread can safely destroy any last resources
-    Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Marking process for destruction...", m_pid);
+    Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Marking process for destruction...", m_pid);
     Scheduler::MarkProcessForDestruction(this);
 
     bool isDyingProcess = (cpu->currentThread->parent == this);
     if(isDyingProcess){
-        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Rescheduling...", m_pid);
+        Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Rescheduling...", m_pid);
 
         asm("cli");
 

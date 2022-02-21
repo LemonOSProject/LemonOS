@@ -2127,18 +2127,18 @@ long SysSpawnThread(RegisterContext* r) {
 ///
 /// \return Undefined, always succeeds
 /////////////////////////////
-[[noreturn]] long SysExitThread(RegisterContext* r) {
+long SysExitThread(RegisterContext* r) {
     Log::Warning("SysExitThread is unimplemented! Hanging!");
 
+    GetCPULocal()->currentThread->blocker = nullptr;
     releaseLock(&GetCPULocal()->currentThread->lock);
 
-    GetCPULocal()->currentThread->blocker = nullptr;
-    GetCPULocal()->currentThread->state = ThreadStateBlocked;
-
-    for (;;) {
+    if(GetCPULocal()->currentThread->state == ThreadStateRunning) {
         GetCPULocal()->currentThread->state = ThreadStateBlocked;
-        Scheduler::Yield();
     }
+
+    GetCPULocal()->currentThread->state = ThreadStateZombie;
+    return 0;
 }
 
 /////////////////////////////
@@ -2632,7 +2632,7 @@ long SysEndpointQueue(RegisterContext* r) {
     }
 
     if (!endpHandle.ko->IsType(MessageEndpoint::TypeID())) {
-        Log::Warning("(%s): SysEndpointQueue: Invalid handle type (ID %d)", SC_ARG0(r));
+        Log::Warning("SysEndpointQueue: Invalid handle type (ID %d)", SC_ARG0(r));
         return -EINVAL;
     }
 

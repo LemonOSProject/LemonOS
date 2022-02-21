@@ -201,7 +201,7 @@ public:
     /////////////////////////////
     ALWAYS_INLINE Handle GetHandle(handle_id_t id) {
         ScopedSpinLock lockHandles(m_handleLock);
-        if (id < 0 || id > m_handles.size()) {
+        if (id < 0 || id >= m_handles.size()) {
             return HANDLE_NULL; // No such handle
         }
 
@@ -249,7 +249,7 @@ public:
     /////////////////////////////
     ALWAYS_INLINE int DestroyHandle(handle_id_t id) {
         ScopedSpinLock lockHandles(m_handleLock);
-        if (id > m_handles.size()) {
+        if (id >= m_handles.size()) {
             return EBADF; // No such handle
         }
 
