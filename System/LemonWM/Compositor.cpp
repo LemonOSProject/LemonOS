@@ -35,19 +35,17 @@ void Compositor::Render() {
         clock_gettime(CLOCK_BOOTTIME, &cTime);
 
         unsigned long renderTime =
-            (cTime.tv_nsec - m_lastRender.tv_nsec) + (cTime.tv_sec - m_lastRender.tv_sec) * 1000000000;
-
-        m_avgFrametime += renderTime;
-
-        if (m_avgFrametime > 1000000000 && m_fCount) {
-            if (m_avgFrametime)
-                m_fRate = 1000000000 / (m_avgFrametime / m_fCount);
-            m_fCount = 0;
-            m_avgFrametime = renderTime;
-        }
-
+            (cTime.tv_nsec - m_lastRender.tv_nsec) + (cTime.tv_sec - m_lastRender.tv_sec) * 1000000000L;
         m_fCount++;
-        m_lastRender = cTime;
+        
+        if (renderTime > 1000000000 && m_fCount) {
+
+            if (renderTime)
+                m_fRate = 1000000000 / (renderTime / m_fCount);
+            m_fCount = 0;
+            renderTime = 0;
+            m_lastRender = cTime;
+        }
     }
 
     if (m_wallpaperThread.joinable() && m_wallpaperStatus) {

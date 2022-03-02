@@ -30,7 +30,7 @@ std::multimap<std::string, Service> waitingServices;
 std::list<Service> services;
 
 void StartService(Service& srv){
-	char* const argv[] = { (char*) srv.target.c_str() };
+	char* const argv[] = { (char*) srv.name.c_str() };
 	pid_t pid = lemon_spawn(srv.target.c_str(), 1, argv, 1);
 	if(pid <= 0){
 		printf("[lemond] Error: Failed to start '%s'!\n", srv.name.c_str());

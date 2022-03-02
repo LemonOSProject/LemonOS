@@ -26,6 +26,7 @@ class ProcessStateThreadBlocker;
 }
 
 namespace Scheduler {
+extern lock_t processesLock;
 extern lock_t destroyedProcessesLock;
 extern List<FancyRefPtr<Process>>* destroyedProcesses;
 

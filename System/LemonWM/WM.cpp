@@ -43,10 +43,10 @@ void WM::Run() {
         timespec timeSinceBoot;
         clock_gettime(CLOCK_BOOTTIME, &timeSinceBoot);
 
-        long timeDiff = (timeSinceBoot.tv_sec - m_lastUpdate.tv_sec) * 1000000 +
-                        (timeSinceBoot.tv_nsec - m_lastUpdate.tv_nsec) / 1000;
-        if (timeDiff < m_targetFrameIntervalThreshold) {
-            usleep(m_targetFrameInterval - timeDiff); // Sleep the remaining time
+        long timeDiff = (timeSinceBoot.tv_sec - m_lastUpdate.tv_sec) * 1000000000UL +
+                        (timeSinceBoot.tv_nsec - m_lastUpdate.tv_nsec);
+        if (timeDiff && timeDiff < m_targetFrameIntervalThreshold) {
+            usleep((m_targetFrameInterval - timeDiff) / 1000); // Sleep the remaining time
         }
     }
 }

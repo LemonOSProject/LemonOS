@@ -131,8 +131,8 @@ private:
 
     // Used for framerate counter
     timespec m_lastRender;
-    int m_avgFrametime = 0;
-    int m_fCount = 0;
+    long m_avgFrametime = 0;
+    long m_fCount = 0;
     int m_fRate = 0;
 
     Surface m_renderSurface;  // Backbuffer to render to
