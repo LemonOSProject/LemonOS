@@ -200,18 +200,30 @@ bool Thread::Block(ThreadBlocker* newBlocker) {
     assert(CheckInterrupts());
 
     acquireLock(&newBlocker->lock);
+    acquireLock(&stateLock);
+
+    assert(state != ThreadStateDying);
 
     asm("cli");
     newBlocker->thread = this;
     if (!newBlocker->ShouldBlock()) {
         releaseLock(&newBlocker->lock); // We were unblocked before the thread was actually blocked
+        releaseLock(&stateLock);
         asm("sti");
 
         return false;
     }
 
+    if(state == ThreadStateZombie) {
+        releaseLock(&newBlocker->lock); // Pending thread destruction, don't block
+        releaseLock(&stateLock);
+        asm("sti");
+        return true;
+    }
+
     if (pendingSignals & (~EffectiveSignalMask())) {
         releaseLock(&newBlocker->lock); // Pending signals, don't block
+        releaseLock(&stateLock);
         asm("sti");
 
         return true; // We were interrupted by a signal
@@ -220,12 +232,16 @@ bool Thread::Block(ThreadBlocker* newBlocker) {
     blocker = newBlocker;
 
     releaseLock(&newBlocker->lock);
+    
     state = ThreadStateBlocked;
+    releaseLock(&stateLock);
     asm("sti");
 
     Scheduler::Yield();
 
+    acquireLock(&stateLock);
     blocker = nullptr;
+    releaseLock(&stateLock);
 
     return newBlocker->WasInterrupted();
 }
@@ -239,23 +255,44 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout) {
     };
 
     acquireLock(&newBlocker->lock);
+    acquireLock(&stateLock);
+
+    asm("cli");
+    newBlocker->thread = this;
     if (!newBlocker->ShouldBlock()) {
         releaseLock(&newBlocker->lock); // We were unblocked before the thread was actually blocked
+        releaseLock(&stateLock);
+        asm("sti");
 
         return false;
+    }
+
+    if(state == ThreadStateZombie) {
+        releaseLock(&newBlocker->lock); // Pending thread destruction, don't block
+        releaseLock(&stateLock);
+        asm("sti");
+        return true;
+    }
+
+    if (pendingSignals & (~EffectiveSignalMask())) {
+        releaseLock(&newBlocker->lock); // Pending signals, don't block
+        releaseLock(&stateLock);
+        asm("sti");
+
+        return true; // We were interrupted by a signal
     }
 
     blockTimedOut = false;
     blocker = newBlocker;
 
-    blocker->thread = this;
-
     {
+        asm("sti");
         Timer::TimerEvent ev(usTimeout, timerCallback, this);
-
         asm("cli");
+
         releaseLock(&newBlocker->lock);
         state = ThreadStateBlocked;
+        releaseLock(&stateLock);
 
         // Now that the thread state has been set blocked, check if we timed out before setting to blocked
         if (!blockTimedOut) {
@@ -263,7 +300,7 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout) {
 
             Scheduler::Yield();
         } else {
-            state = ThreadStateRunning;
+            Unblock();
 
             asm("sti");
 
@@ -292,8 +329,14 @@ void Thread::Sleep(long us) {
     {
         Timer::TimerEvent ev(us, timerCallback, this);
 
-        asm("cli");
-        state = ThreadStateBlocked;
+        acquireLockIntDisable(&stateLock);
+        assert(state != ThreadStateDying);
+        if(state == ThreadStateZombie) {
+            blockTimedOut = true;
+        } else {
+            state = ThreadStateBlocked;
+        }
+        releaseLock(&stateLock);
 
         // Now that the thread state has been set blocked, check if we timed out before setting to blocked
         if (!blockTimedOut) {
@@ -301,18 +344,17 @@ void Thread::Sleep(long us) {
 
             Scheduler::Yield();
         } else {
-            state = ThreadStateRunning;
+            Unblock();
 
             asm("sti");
         }
     }
 }
 
-void Thread::Unblock(bool zombify) {
+void Thread::Unblock() {
+    assert(state != ThreadStateDying);
     timeSlice = timeSliceDefault;
 
-    if (zombify || state == ThreadStateZombie)
-        state = ThreadStateZombie;
-    else
+    if (state != ThreadStateZombie)
         state = ThreadStateRunning;
 }

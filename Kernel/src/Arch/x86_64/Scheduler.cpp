@@ -60,6 +60,7 @@ void InsertNewThreadIntoQueue(Thread* thread) {
     asm("sti");
     acquireLockIntDisable(&cpu->runQueueLock);
     cpu->runQueue->add_back(thread);
+    thread->cpu = cpu->id;
     releaseLock(&cpu->runQueueLock);
     asm("sti");
 }
@@ -197,6 +198,7 @@ void BalanceRunQueues() {
                     // Save next thread as it will be overwritten by
                     // intrusive list
                     cpu->runQueue->remove(it);
+                    it->cpu = -1;
                     threadsToDistribute.add_back(it);
 
                     goto retry; // The front may have changed
@@ -213,6 +215,7 @@ void BalanceRunQueues() {
 
         threadsToDistribute.remove(nextThread);
         cpu->runQueue->add_back(nextThread);
+        nextThread->cpu = cpu->id;
 
         Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Gave %s to CPU %d", nextThread->parent->name, leastActive);
 
@@ -285,6 +288,7 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
     } else {
         if (__builtin_expect(cpu->currentThread->state == ThreadStateDying, 0)) {
             cpu->runQueue->remove(cpu->currentThread);
+            cpu->currentThread->cpu = -1;
             cpu->currentThread = cpu->idleThread;
         } else if (__builtin_expect(cpu->currentThread->parent != cpu->idleProcess, 1)) {
             cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
@@ -328,11 +332,11 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
     if ((cpu->currentThread->registers.cs & 0x3) &&
         (cpu->currentThread->pendingSignals & ~cpu->currentThread->EffectiveSignalMask())) {
         if (cpu->currentThread->parent->State() == Process::Process_Running) {
-            int ret = acquireTestLock(&cpu->currentThread->lock);
+            int ret = acquireTestLock(&cpu->currentThread->kernelLock);
             assert(!ret);
 
             cpu->currentThread->HandlePendingSignal(&cpu->currentThread->registers);
-            releaseLock(&cpu->currentThread->lock);
+            releaseLock(&cpu->currentThread->kernelLock);
         }
     }
 

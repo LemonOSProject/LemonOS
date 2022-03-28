@@ -47,7 +47,7 @@ public:
     inline void SetTargetFramerate(long fps) {
         m_targetFramerate = fps;
         if (fps > 0) {
-            m_targetFrameInterval = 1000000 / fps;
+            m_targetFrameInterval = 1000000000 / fps;
             m_targetFrameIntervalThreshold = m_targetFrameInterval / 3 * 2;
         }
     }

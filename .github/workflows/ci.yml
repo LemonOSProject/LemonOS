@@ -136,7 +136,7 @@ jobs:
       - name: Building system
         run: |
           cd Build
-          xbstrap install -u --recursive lemon-base nyancat curl busybox binutils lemondoom
+          xbstrap install -u --recursive lemon-base nyancat curl coreutils binutils lemondoom
 
       - name: Building disk image
         run: |

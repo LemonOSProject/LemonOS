@@ -51,8 +51,8 @@ public:
 using FutexThreadBlocker = GenericThreadBlocker;
 
 struct Thread {
-    lock_t lock = 0;      // Thread lock
-    lock_t stateLock = 0; // Thread state lock
+    lock_t stateLock = 0; // Thread lock
+    lock_t kernelLock = 0; // Indicates whether the thread is executing kernel code
 
     Process* parent; // Parent Process
     pid_t tid = 1;
@@ -67,6 +67,8 @@ struct Thread {
     RegisterContext registers;   // Registers
     RegisterContext lastSyscall; // Last system call
     void* fxState;               // State of the extended registers
+
+    int cpu = -1; // CPU the thread is scheduled on
 
     Thread* next = nullptr; // Next thread in queue
     Thread* prev = nullptr; // Previous thread in queue
@@ -142,5 +144,5 @@ struct Thread {
     ///
     /// \return Bytes written or if negative an error code
     /////////////////////////////
-    void Unblock(bool zombify = false);
+    void Unblock();
 };

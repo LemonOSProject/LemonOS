@@ -1,6 +1,6 @@
 container:
     runtime: docker
-    image: lemontoolchain
+    image: computerfido/lemontoolchain
     allow_containerless: true
     src_mount: /var/LemonOS
     build_mount: /var/LemonOS/Build

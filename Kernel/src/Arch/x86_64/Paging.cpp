@@ -749,7 +749,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
     };
 
     if ((regs->cs & 0x3)) {                                              // Make sure we acquired the lock
-        int res = acquireTestLock(&Scheduler::GetCurrentThread()->lock); // Prevent the thread from being killed, etc.
+        int res = acquireTestLock(&Scheduler::GetCurrentThread()->kernelLock); // Prevent the thread from being killed, etc.
         if (res) {
             Log::Info("Process %s (PID: %x) page fault.", process->name, process->PID());
             dumpFaultInformation();
@@ -785,7 +785,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
 
                     faultRegion->lock.ReleaseRead();
                     if ((regs->cs & 0x3)) {
-                        releaseLock(&Scheduler::GetCurrentThread()->lock);
+                        releaseLock(&Scheduler::GetCurrentThread()->kernelLock);
                     }
                     return;
                 } else {
@@ -803,7 +803,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
                     faultRegion->lock.ReleaseRead();
 
                     if ((regs->cs & 0x3)) {
-                        releaseLock(&Scheduler::GetCurrentThread()->lock);
+                        releaseLock(&Scheduler::GetCurrentThread()->kernelLock);
                     }
                     return;
                 }
@@ -816,7 +816,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
 
             if (!status) {
                 if ((regs->cs & 0x3)) {
-                    releaseLock(&Scheduler::GetCurrentThread()->lock);
+                    releaseLock(&Scheduler::GetCurrentThread()->kernelLock);
                 }
                 return; // Success!
             }

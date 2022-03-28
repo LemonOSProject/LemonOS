@@ -874,13 +874,9 @@ long SysReceiveMessage(RegisterContext* r) {
 }
 
 long SysUptime(RegisterContext* r) {
-    uint64_t* seconds = (uint64_t*)SC_ARG0(r);
-    uint64_t* milliseconds = (uint64_t*)SC_ARG1(r);
-    if (seconds) {
-        *seconds = Timer::GetSystemUptime();
-    }
-    if (milliseconds) {
-        *milliseconds = Timer::UsecondsSinceBoot() / 1000;
+    uint64_t* ns = (uint64_t*)SC_ARG0(r);
+    if (ns) {
+        *ns = Timer::UsecondsSinceBoot() * 1000;
     }
     return 0;
 }
@@ -1079,6 +1075,9 @@ long SysWaitPID(RegisterContext* r) {
 
 long SysNanoSleep(RegisterContext* r) {
     uint64_t nanoseconds = SC_ARG0(r);
+    if(!nanoseconds) {
+        return 0;
+    }
 
     Scheduler::GetCurrentThread()->Sleep(nanoseconds / 1000);
 
@@ -2128,16 +2127,14 @@ long SysSpawnThread(RegisterContext* r) {
 /// \return Undefined, always succeeds
 /////////////////////////////
 long SysExitThread(RegisterContext* r) {
-    Log::Warning("SysExitThread is unimplemented! Hanging!");
-
     GetCPULocal()->currentThread->blocker = nullptr;
-    releaseLock(&GetCPULocal()->currentThread->lock);
+    releaseLock(&GetCPULocal()->currentThread->kernelLock);
 
     if(GetCPULocal()->currentThread->state == ThreadStateRunning) {
         GetCPULocal()->currentThread->state = ThreadStateBlocked;
     }
 
-    GetCPULocal()->currentThread->state = ThreadStateZombie;
+    GetCPULocal()->currentThread->state = ThreadStateDying;
     return 0;
 }
 
@@ -3188,7 +3185,7 @@ long SysFork(RegisterContext* r) {
     thread->parent = newProcess.get();
     thread->registers = *r;
 
-    thread->lock = 0;
+    thread->kernelLock = 0;
     thread->stateLock = 0;
 
     thread->tid = 1;
@@ -4005,7 +4002,7 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
         thread->lastSyscall = *regs;
     }
 #endif
-    if (__builtin_expect(acquireTestLock(&thread->lock), 0)) {
+    if (__builtin_expect(acquireTestLock(&thread->kernelLock), 0)) {
         Log::Info("Thread hanging!");
         for (;;)
             ;
@@ -4021,5 +4018,9 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
     if (__builtin_expect(thread->pendingSignals & (~thread->EffectiveSignalMask()), 0)) {
         thread->HandlePendingSignal(regs);
     }
-    releaseLock(&thread->lock);
+    releaseLock(&thread->kernelLock);
+
+    while(thread->state == ThreadStateDying) {
+        Scheduler::Yield();
+    }
 }
