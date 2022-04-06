@@ -93,7 +93,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential autoconf libtool python3 python3-pip ninja-build qemu-utils nasm help2man
+          sudo apt-get install -y build-essential autoconf libtool python3 python3-pip ninja-build qemu-utils nasm help2man gettext autopoint gperf
           sudo python3 -m pip install meson xbstrap
 
       - name: Initialize and Update submodules
