@@ -92,13 +92,23 @@ packages:
       tools_required:
         - host-automake
         - host-autoconf-v2.69
+        - host-gettext
+      sources_required: ['gnulib']
       regenerate:
+        - args: ['rm', '-rf', 'gnulib']
+        - args: ['cp', '-r', '@SOURCE_ROOT@/Ports/gnulib', './']
         - args: ['./bootstrap']
         - args: ['cp', '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub',
           '@THIS_SOURCE_DIR@/build-aux']
     tools_required:
       - host-llvm
     configure:
+      # Sometimes coreutils does not use host compiler to build make-prime-list
+      - args: |
+          @THIS_SOURCE_DIR@/configure
+          make src/make-prime-list
+          ./src/make-prime-list 5000 > "@THIS_SOURCE_DIR@/src/primes.h"
+          make distclean
       - args:
         - '@THIS_SOURCE_DIR@/configure'
         - '--host=x86_64-lemon'
