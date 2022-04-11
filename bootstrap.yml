@@ -335,10 +335,10 @@ tools:
       - args:
         - '@THIS_SOURCE_DIR@/configure'
         - '--prefix=@PREFIX@'
-    compile:
-      - args: ['make', '-j@PARALLELISM@']
+    compile: # using parallel builds can result in errors
+      - args: ['make']
     install:
-      - args: ['make', 'install']
+      - args: ['make', 'install-strip']
 
 packages:
   - name: mlibc-headers
