@@ -45,14 +45,6 @@ sources:
     git: 'https://github.com/managarm/mlibc.git'
     branch: 'master'
 
-  - name: wayland
-    subdir: 'Ports'
-    git: 'https://gitlab.freedesktop.org/wayland/wayland.git'
-    tag: '1.19.93'
-    version: '1.19.93'
-    tools_required:
-      - host-pkgconfig
-
   - name: icu
     subdir: 'Ports'
     git: 'https://github.com/unicode-org/icu.git'
@@ -276,24 +268,6 @@ tools:
     install:
       - args: ['make', 'install']
 
-  - name: host-wayland-scanner
-    from_source: wayland
-    tools_required:
-      - host-libtool
-    configure:
-      - args:
-        - 'meson'
-        - '--prefix=@PREFIX@'
-        - '-Dlibraries=false'
-        - '-Dtests=false'
-        - '-Ddocumentation=false'
-        - '-Ddtd_validation=false'
-        - '@THIS_SOURCE_DIR@'
-    compile:
-      - args: ['ninja']
-    install:
-      - args: ['ninja', 'install']
-
   - name: host-icu
     from_source: icu
     configure:
@@ -410,10 +384,10 @@ packages:
       - host-llvm
     source:
       subdir: 'Ports'
-      url: 'https://zlib.net/zlib-1.2.11.tar.gz'
+      url: 'https://zlib.net/zlib-1.2.12.tar.gz'
       format: 'tar.gz'
-      extract_path: 'zlib-1.2.11'
-      version: '1.2.11'
+      extract_path: 'zlib-1.2.12'
+      version: '1.2.12'
     configure:
       - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=/system']
         environ:
