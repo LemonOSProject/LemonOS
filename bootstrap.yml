@@ -30,7 +30,7 @@ sources:
     subdir: 'Toolchain'
     git: 'https://github.com/LemonOSProject/llvm-project'
     branch: 'master'
-    
+
   - name: automake
     subdir: 'Toolchain'
     git: 'https://git.savannah.gnu.org/git/automake.git'
@@ -150,8 +150,7 @@ tools:
   - name: host-llvm
     from_source: lemon-llvm
     tools_required:
-      - tool: host-binutils
-        recursive: true
+      - host-binutils
     configure:
       - args:
         - 'cmake'
@@ -213,6 +212,15 @@ tools:
              - 'clang++'
              - '@PREFIX@/bin/c++'
           - args: ['cp', '-r', '@PREFIX@/lib/x86_64-unknown-lemon/.', '@SYSROOT_DIR@/system/lib']
+
+  - name: host-compiler
+    tools_required:
+      - tool: host-binutils
+        recursive: true
+      - tool: host-llvm
+        recursive: true
+    source:
+      name: 'Toolchain'
 
   - name: host-libtool
     exports_aclocal: true
@@ -358,7 +366,7 @@ packages:
     source:
       name: 'Kernel'
     tools_required:
-      - host-llvm
+      - host-compiler
     configure:
       - args:
         - 'meson'
@@ -381,7 +389,7 @@ packages:
     pkgs_required:
       - mlibc
     tools_required:
-      - host-llvm
+      - host-compiler
     source:
       subdir: 'Ports'
       url: 'https://zlib.net/zlib-1.2.12.tar.gz'
@@ -393,6 +401,7 @@ packages:
         environ:
           CC: 'clang'
           CXX: 'clang++'
+          CHOST: 'x86_64-unknown-lemon'
     build:
       - args: ['make', '-j@PARALLELISM@']
         environ:
@@ -407,7 +416,7 @@ packages:
       - mlibc
       - zlib
     tools_required:
-      - host-llvm
+      - host-compiler
       - host-automake
       - host-libtool
     source:
@@ -432,7 +441,7 @@ packages:
       - mlibc
       - libpng
     tools_required:
-      - host-llvm
+      - host-compiler
     source:
       subdir: 'Ports'
       git: 'git://git.sv.nongnu.org/freetype/freetype2.git'
@@ -479,7 +488,7 @@ packages:
       extract_path: libressl-3.3.1
       patch-path-strip: 1
     tools_required:
-      - host-llvm
+      - host-compiler
     configure:
       - args:
         - 'cmake'
@@ -514,7 +523,7 @@ packages:
       - lemon-interface-headers
     tools_required:
       - host-pkgconfig
-      - host-llvm
+      - host-compiler
     source:
       name: 'LibLemon'
     configure:
@@ -533,7 +542,7 @@ packages:
 
   - name: liblemongui
     tools_required:
-      - host-llvm
+      - host-compiler
     pkgs_required:
       - mlibc
       - liblemon
@@ -553,7 +562,7 @@ packages:
 
   - name: lemon-system
     tools_required:
-      - host-llvm
+      - host-compiler
     pkgs_required:
       - mlibc
       - liblemon
@@ -575,7 +584,7 @@ packages:
 
   - name: lemon-apps
     tools_required:
-      - host-llvm
+      - host-compiler
     pkgs_required:
      - mlibc
      - liblemon
@@ -597,7 +606,7 @@ packages:
 
   - name: lemon-utils
     tools_required:
-      - host-llvm
+      - host-compiler
     pkgs_required:
       - mlibc
       - liblemon

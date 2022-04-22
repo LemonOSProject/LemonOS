@@ -5,7 +5,7 @@ packages:
       branch: 'master'
       subdir: 'Ports'
     tools_required:
-      - host-llvm
+      - host-compiler
     pkgs_required:
       - mlibc
     configure:
@@ -31,7 +31,7 @@ packages:
       regenerate:
         - args: ['autoreconf', '-fi']
     tools_required:
-      - host-llvm
+      - host-compiler
       - host-pkgconfig
     pkgs_required:
       - mlibc
@@ -62,7 +62,7 @@ packages:
       branch: 'master'
       subdir: 'Ports'
     tools_required:
-      - host-llvm
+      - host-compiler
     pkgs_required:
       - liblemon
       - liblemongui
@@ -99,7 +99,7 @@ packages:
         - args: ['cp', '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub',
           '@THIS_SOURCE_DIR@/build-aux']
     tools_required:
-      - host-llvm
+      - host-compiler
     configure:
       # Sometimes coreutils does not use host compiler to build make-prime-list
       - args: |
@@ -124,7 +124,7 @@ packages:
   - name: binutils
     from_source: binutils
     tools_required:
-      - host-llvm
+      - host-compiler
     configure:
       - args:
         - '@THIS_SOURCE_DIR@/configure'
@@ -162,7 +162,7 @@ packages:
       - mlibc
     tools_required:
       - host-libtool
-      - host-llvm
+      - host-compiler
     configure:
       - args: ['@THIS_SOURCE_DIR@/configure', '--host=x86_64-lemon', '--prefix=/system', '--with-pic']
         environ:
@@ -192,7 +192,7 @@ packages:
     pkgs_required:
       - mlibc
     tools_required:
-      - host-llvm
+      - host-compiler
     build:
       - args: ['ninja']
         environ:
@@ -206,7 +206,7 @@ packages:
     pkgs_required:
       - mlibc
     tools_required:
-      - host-llvm
+      - host-compiler
       - host-pkgconfig
       - host-libtool
       - host-icu
@@ -232,7 +232,7 @@ packages:
       - mlibc
       - icu
     tools_required:
-      - host-llvm
+      - host-compiler
       - host-pkgconfig
     configure:
       - args:
@@ -260,7 +260,7 @@ packages:
   - name: python
     from_source: python
     tools_required:
-      - host-llvm
+      - host-compiler
       - host-pkgconfig
     pkgs_required:
       - mlibc

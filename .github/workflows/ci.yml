@@ -67,12 +67,12 @@ jobs:
         run: |
           cd Build
           xbstrap fetch --hard-reset mlibc
-          xbstrap install-tool -u --all
+          xbstrap install-tool --all
         
       - name: Building system
         run: |
           cd Build
-          xbstrap install -u --recursive lemon-base
+          xbstrap install --recursive lemon-base
 
       - name: Building disk image
         run: |
@@ -136,7 +136,7 @@ jobs:
       - name: Building system
         run: |
           cd Build
-          xbstrap install -u --recursive lemon-base nyancat curl coreutils binutils lemondoom
+          xbstrap install --recursive lemon-base nyancat curl coreutils binutils lemondoom
 
       - name: Building disk image
         run: |
