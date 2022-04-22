@@ -30,6 +30,8 @@ sources:
     subdir: 'Toolchain'
     git: 'https://github.com/LemonOSProject/llvm-project'
     branch: 'master'
+    rolling_version: true
+    version: '@ROLLING_ID@'
 
   - name: automake
     subdir: 'Toolchain'
@@ -281,8 +283,8 @@ tools:
     source:
       subdir: 'Toolchain'
       git: 'https://github.com/limine-bootloader/limine.git'
-      tag: 'v2.79.1'
-      version: '2.79.1'
+      tag: 'v3.4.1'
+      version: '3.4.1'
       tools_required:
         - host-autoconf-v2.69
         - host-automake
@@ -395,6 +397,9 @@ packages:
           CXX: 'clang++'
     build:
       - args: ['make', '-j@PARALLELISM@']
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
       - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'

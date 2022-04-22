@@ -256,35 +256,6 @@ packages:
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
-    
-  - name: wayland
-    from_source: wayland
-    pkgs_required:
-      - mlibc
-      - libffi
-      - libexpat
-      - libxml2
-    tools_required:
-      - host-llvm
-      - host-wayland-scanner
-      - host-pkgconfig
-    configure:
-      - args:
-        - 'meson'
-        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
-        - '--prefix=/system'
-        - '-Ddocumentation=false'
-        - '-Ddtd_validation=false'
-        - '-Dscanner=false'
-        - '@THIS_SOURCE_DIR@'
-        environ:
-          PKG_CONFIG_SYSROOT_DIR: '@SYSROOT_DIR@'
-          PKG_CONFIG_LIBDIR: '@SYSROOT_DIR@/system/lib/pkgconfig:@BUILD_ROOT@/tools/host-wayland-scanner/lib/pkgconfig'
-    build:
-      - args: ['ninja']
-      - args: ['ninja', 'install']
-        environ:
-          DESTDIR: '@THIS_COLLECT_DIR@'
 
   - name: python
     from_source: python
