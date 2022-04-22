@@ -30,9 +30,7 @@ sources:
     subdir: 'Toolchain'
     git: 'https://github.com/LemonOSProject/llvm-project'
     branch: 'master'
-    rolling_version: true
-    version: '@ROLLING_ID@'
-
+    
   - name: automake
     subdir: 'Toolchain'
     git: 'https://git.savannah.gnu.org/git/automake.git'

@@ -12,7 +12,7 @@ RUN apk add --no-cache nasm python3 python3-dev ninja make cmake automake autoco
     # limine, disk image
     mtools dosfstools e2fsprogs \
     # coreutils
-    gperf
+    gperf gettext
 
 RUN python3 -m ensurepip; python3 -m pip install meson xbstrap
 
