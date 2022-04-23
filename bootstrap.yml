@@ -392,21 +392,18 @@ packages:
       - host-compiler
     source:
       subdir: 'Ports'
-      url: 'https://zlib.net/zlib-1.2.12.tar.gz'
-      format: 'tar.gz'
-      extract_path: 'zlib-1.2.12'
+      git: 'https://github.com/madler/zlib.git'
+      tag: 'v1.2.12'
       version: '1.2.12'
     configure:
       - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=/system']
         environ:
           CC: 'clang'
           CXX: 'clang++'
+          CFLAGS: '-fPIC'
           CHOST: 'x86_64-unknown-lemon'
     build:
       - args: ['make', '-j@PARALLELISM@']
-        environ:
-          CC: 'clang'
-          CXX: 'clang++'
       - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
