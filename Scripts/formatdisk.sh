@@ -47,7 +47,7 @@ mkdir -p /mnt/Lemon/lemon/boot
 umount /mnt/Lemon
 umount /mnt/LemonEFI
 
-limine-install "Disks/Lemon.img" 1
+#limine-deploy "Disks/Lemon.img" 1
 
 losetup -d "${LOOPBACK_DEVICE}"
 

@@ -647,13 +647,28 @@ tasks:
       - lemon-utils
     args:
       - '@SOURCE_ROOT@/Scripts/buildinitrd.sh'
-    
+
   - name: build-disk
-    containerless: true
-    tasks_required:
-      - build-initrd
     tools_required:
       - host-limine
+    tasks_required:
+      - create-disk
+    pkgs_required:
+      - lemon-base
+    artifact_files:
+      - name: Lemon.img
+        path: '@SOURCE_ROOT@/Disks'
+    args:
+      - 'limine-deploy'
+      - '@SOURCE_ROOT@/Disks/Lemon.img'
+      - '1'
+
+  - name: create-disk
+    containerless: true
+    tools_required:
+      - host-limine
+    tasks_required:
+      - build-initrd
     pkgs_required:
       - lemon-base
     artifact_files:
