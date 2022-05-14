@@ -31,12 +31,14 @@ sources:
     git: 'https://git.savannah.gnu.org/git/bison.git'
     tag: 'v3.6.2'
     version: '3.6.2'
-    sources_required: ['gnulib']
     tools_required:
       - host-autoconf-v2.69
       - host-automake
       - host-libtool
+    sources_required: ['gnulib']
     regenerate:
+      - args: ['rm', '-rf', 'gnulib']
+      - args: ['cp', '-r', '@SOURCE_ROOT@/Ports/gnulib', './']
       - args: ['git', 'submodule', 'update', '--init']
       - args: ['./bootstrap']
 
@@ -142,6 +144,7 @@ tools:
     tools_required:
       - host-autoconf-v2.69
       - host-automake
+      - host-bison
     configure:
       - args:
           - '@THIS_SOURCE_DIR@/configure'

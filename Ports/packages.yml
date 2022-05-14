@@ -125,6 +125,7 @@ packages:
     from_source: binutils
     tools_required:
       - host-compiler
+      - host-bison
     configure:
       - args:
         - '@THIS_SOURCE_DIR@/configure'
