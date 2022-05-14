@@ -26,6 +26,20 @@ sources:
       - args: ['autoreconf']
         workdir: '@THIS_SOURCE_DIR@/ld'
 
+  - name: bison
+    subdir: 'Toolchain'
+    git: 'https://git.savannah.gnu.org/git/bison.git'
+    tag: 'v3.6.2'
+    version: '3.6.2'
+    sources_required: ['gnulib']
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake
+      - host-libtool
+    regenerate:
+      - args: ['git', 'submodule', 'update', '--init']
+      - args: ['./bootstrap']
+
   - name: lemon-llvm
     subdir: 'Toolchain'
     git: 'https://github.com/LemonOSProject/llvm-project'
@@ -117,7 +131,7 @@ tools:
       - args: ['make', '-j@PARALLELISM@']
     install:
       - args: ['make', 'install']
-  
+
   - name: host-binutils
     from_source: binutils
     tools_required:
@@ -307,12 +321,27 @@ tools:
     install:
       - args: ['make', 'install']
 
+  - name: host-bison
+    from_source: bison
+    tools_required:
+      - host-autoconf-v2.69
+      - host-automake
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--prefix=@PREFIX@'
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install-strip']
+
   - name: host-gettext
     from_source: gettext
     exports_aclocal: true
     tools_required:
       - host-autoconf-v2.69
       - host-automake
+      - host-bison
     configure:
       - args:
         - '@THIS_SOURCE_DIR@/configure'
