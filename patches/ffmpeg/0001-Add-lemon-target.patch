@@ -1,0 +1,25 @@
+From e51a0b22d5bec742704852a79f297480a30dcc10 Mon Sep 17 00:00:00 2001
+From: JJ <computerfido@gmail.com>
+Date: Sun, 15 May 2022 21:51:55 +1000
+Subject: [PATCH] Add lemon target
+
+---
+ configure | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/configure b/configure
+index 7a62f0c..d30030f 100755
+--- a/configure
++++ b/configure
+@@ -5510,6 +5510,8 @@ case $target_os in
+         ;;
+     freebsd)
+         ;;
++    lemon)
++        ;;
+     bsd/os)
+         add_extralibs -lpoll -lgnugetopt
+         strip="strip -d"
+-- 
+2.36.0
+

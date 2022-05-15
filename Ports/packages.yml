@@ -332,5 +332,45 @@ packages:
       - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+  
+  - name: ffmpeg
+    source:
+      git: 'https://github.com/FFmpeg/FFmpeg'
+      tag: 'n5.0.1'
+      version: '5.0.1'
+      subdir: 'Ports'
+    pkgs_required:
+      - libmp3lame
+      - mlibc
+    tools_required:
+      - host-compiler
+      - host-libtool
+      - host-pkgconfig
+    configure:
+    - args:
+      - '@THIS_SOURCE_DIR@/configure'
+      - '--target-os=lemon'
+      - '--arch=x86_64'
+      - '--cc=clang'
+      - '--enable-cross-compile'
+      - '--sysroot=@SYSROOT_DIR@'
+      - '--prefix=/system'
+      - '--enable-shared'
+      - '--disable-ffplay'
+      - '--disable-ffprobe'
+      - '--disable-doc'
+      - '--enable-libmp3lame'
+      - '--disable-avdevice'
+      - '--disable-avformat'
+      - '--disable-mmx'
+      environ:
+        CC: 'clang'
+        CXX: 'clang++'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
 
 
