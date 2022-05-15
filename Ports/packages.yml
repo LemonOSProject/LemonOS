@@ -323,6 +323,7 @@ packages:
         - '--disable-gtktest'
         - '--prefix=/system'
         - '--disable-frontend'
+        - '--enable-shared'
         environ:
           CC: 'clang'
           CXX: 'clang++'
