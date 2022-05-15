@@ -44,7 +44,7 @@ jobs:
       - name: Cache the toolchain
         uses: actions/cache@v2
         with:
-          key: ${{ runner.os }}-lemon-toolchain
+          key: ${{ runner.os }}-${{ hashFiles('**/bootstrap.yml') }}-lemon-toolchain
           path: |
             **/Build/tool-builds
             **/Toolchain
@@ -67,6 +67,8 @@ jobs:
         run: |
           cd Build
           xbstrap fetch --hard-reset mlibc
+          xbstrap regenerate icu gettext
+          xbstrap install-tool host-icu --reconfigure
           xbstrap install-tool --all
         
       - name: Building system
@@ -108,7 +110,7 @@ jobs:
       - name: Cache the toolchain
         uses: actions/cache@v2
         with:
-          key: ${{ runner.os }}-lemon-toolchain
+          key: ${{ runner.os }}-${{ hashFiles('**/bootstrap.yml') }}-lemon-toolchain
           path: |
             **/Build/tool-builds
             **/Toolchain
@@ -123,6 +125,8 @@ jobs:
         run: |
           cd Build
           xbstrap fetch --hard-reset mlibc
+          xbstrap regenerate icu gettext
+          xbstrap install-tool host-icu --reconfigure
           xbstrap install-tool --all
         
       - name: Building system
