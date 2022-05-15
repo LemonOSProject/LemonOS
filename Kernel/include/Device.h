@@ -41,6 +41,7 @@ enum DeviceType {
     DeviceTypeLegacyHID,
     DeviceTypeUSBHID,
     DeviceTypeAudioController,
+    DeviceTypeAudioOutput,
 };
 
 enum DeviceBus {

@@ -42,10 +42,11 @@ int Init() {
 
     ahciHBA = (hba_mem_t*)ahciVirtualAddress;
 
-    uint8_t irq = controllerPCIDevice->AllocateVector(PCIVectors::PCIVectorAny);
+    /*uint8_t irq = controllerPCIDevice->AllocateVector(PCIVectors::PCIVectorAny);
     if (irq == 0xFF) {
         Log::Warning("[AHCI] Failed to allocate vector!");
     }
+    //IDT::RegisterInterruptHandler(irq, InterruptHandler);*/
 
     uint32_t pi = ahciHBA->pi;
 
@@ -53,10 +54,10 @@ int Init() {
         ahciHBA->ghc |= AHCI_GHC_ENABLE;
         Timer::Wait(1);
     }
-    ahciHBA->ghc |= AHCI_GHC_IE;
+    ahciHBA->ghc &= ~AHCI_GHC_IE;
 
     if (debugLevelAHCI >= DebugLevelNormal) {
-        Log::Info("[AHCI] Interrupt Vector: %x, Base Address: %x, Virtual Base Address: %x", irq, ahciBaseAddress,
+        Log::Info("[AHCI] Interrupt Vector: %x, Base Address: %x, Virtual Base Address: %x", -1, ahciBaseAddress,
                   ahciVirtualAddress);
         Log::Info("[AHCI] (Cap: %x, Cap2: %x) Enabled? %Y, BOHC? %Y, 64-bit addressing? %Y, Staggered Spin-up? %Y, "
                   "Slumber State Capable? %Y, Partial State Capable? %Y, FIS-based switching? %Y",
@@ -65,7 +66,6 @@ int Init() {
                   ahciHBA->cap & AHCI_CAP_PSC, ahciHBA->cap & AHCI_CAP_FBSS);
     }
 
-    IDT::RegisterInterruptHandler(irq, InterruptHandler);
     ahciHBA->is = 0xffffffff;
 
     for (int i = 0; i < 32; i++) {

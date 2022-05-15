@@ -1,7 +1,9 @@
 #pragma once
 
 #include <stddef.h>
+
 #include <Memory.h>
+#include <Pair.h>
 #include <Spinlock.h>
 
 template<typename T = uint8_t>

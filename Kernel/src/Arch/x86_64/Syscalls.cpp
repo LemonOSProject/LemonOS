@@ -1153,6 +1153,7 @@ long SysIoctl(RegisterContext* r) {
 
     if (result && ret > 0) {
         *result = ret;
+        return 0;
     }
 
     return ret;

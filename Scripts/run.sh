@@ -5,7 +5,7 @@ if [ -z $LEMOND ]; then
 fi
 
 qemu(){
-	qemu-system-x86_64 --enable-kvm -cpu host $LEMOND/Disks/Lemon.img -no-reboot -no-shutdown -m 1024M -device qemu-xhci -M q35 -smp 2 -serial stdio -netdev user,id=net0 -device e1000,netdev=net0,mac=DE:AD:69:BE:EF:42 -device intel-hda -device ac97
+	qemu-system-x86_64 --enable-kvm -cpu host $LEMOND/Disks/Lemon.img -no-reboot -no-shutdown -m 1024M -M q35 -smp 2 -serial stdio -netdev user,id=net0 -device e1000,netdev=net0,mac=DE:AD:69:BE:EF:42 -device ac97
 }
 
 qemuefi(){

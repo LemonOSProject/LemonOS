@@ -35,31 +35,31 @@ const char* GetProgramName(){
 }
 
 void Log(short arg){
-    std::cout << arg;
+    std::cerr << arg;
 }
 
 void Log(int arg){
-    std::cout << arg;
+    std::cerr << arg;
 }
 
 void Log(long arg){
-    std::cout << arg;
+    std::cerr << arg;
 }
 
 void Log(unsigned short arg){
-    std::cout << arg;
+    std::cerr << arg;
 }
 
 void Log(unsigned int arg){
-    std::cout << arg;
+    std::cerr << arg;
 }
 
 void Log(unsigned long arg){
-    std::cout << arg;
+    std::cerr << arg;
 }
 
 void Log(float arg){
-    std::cout << arg;
+    std::cerr << arg;
 }
 
 } // namespace Logger

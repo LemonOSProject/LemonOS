@@ -11,6 +11,8 @@ struct Error {
     int code;
 };
 
+static const Error ErrorNone = Error{0};
+
 template<typename T>
 struct ErrorOr final {
     ErrorOr(ErrorOr&& other) {

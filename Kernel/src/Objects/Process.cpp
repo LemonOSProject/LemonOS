@@ -303,6 +303,7 @@ void Process::Die() {
 
     CPU* cpu = GetCPULocal();
 
+    assert(m_state != Process_Dying);
     m_state = Process_Dying;
     Log::Debug(debugLevelScheduler, DebugLevelNormal, "Killing Process %s (PID %d)", name, m_pid);
 

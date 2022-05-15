@@ -5,12 +5,14 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "Audio.h"
 #include "Pipe.h"
 #include "Terminal.h"
 
 const std::unordered_map<std::string, Test> tests = {
     {"pipe", pipeTest},
     {"terminal", termTest},
+    {"audio", audioTest}
 };
 
 void ExecuteTest(const Test& test) {

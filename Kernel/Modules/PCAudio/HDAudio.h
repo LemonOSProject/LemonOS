@@ -2,11 +2,13 @@
 
 // Intel HD Audio Driver for Lemon OS
 
+#include "Audio.h"
+
 #include <Device.h>
 #include <PCI.h>
 
 namespace Audio {
-	class IntelHDAudioController : public Device, private PCIDevice {
+	class IntelHDAudioController : public AudioController, PCIDevice {
 	public:
 		IntelHDAudioController(const PCIInfo& info);
 	private:

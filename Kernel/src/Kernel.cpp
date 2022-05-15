@@ -1,3 +1,4 @@
+#include <Audio/Audio.h>
 #include <CPU.h>
 #include <Fs/TAR.h>
 #include <Fs/Tmp.h>
@@ -48,6 +49,7 @@ void KernelProcess() {
     ServiceFS::Initialize();
 
     Network::InitializeConnections();
+    Audio::InitializeSystem();
 
     if (FsNode* node = fs::ResolvePath("/initrd/modules.cfg")) {
         char* buffer = new char[node->size + 1];

@@ -67,6 +67,8 @@ kernel_cpp_files = [
     'src/Streams.cpp',
     'src/String.cpp',
 
+    'src/Audio/Audio.cpp',
+
     'src/Video/Video.cpp',
     'src/Video/VideoConsole.cpp',
 
