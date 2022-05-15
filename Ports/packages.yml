@@ -96,8 +96,7 @@ packages:
       sources_required: ['gnulib']
       regenerate:
         - args: ['./bootstrap', '--gnulib-srcdir=@SOURCE_ROOT@/Ports/gnulib', '--skip-po', '--no-git']
-        - args: ['cp', '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub',
-          '@THIS_SOURCE_DIR@/build-aux']
+        - args: ['cp', '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub', '@THIS_SOURCE_DIR@/build-aux']
     tools_required:
       - host-compiler
     configure:
@@ -291,4 +290,46 @@ packages:
       - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
-        
+  
+  - name: libmp3lame
+    source:
+      url: 'https://downloads.sourceforge.net/lame/lame-3.100.tar.gz'
+      format: 'tar.gz'
+      subdir: 'Ports'
+      extract_path: 'lame-3.100'
+      version: '3.100'
+      tools_required:
+        - host-automake
+        - host-autoconf-v2.69
+        - host-gettext
+        - host-libtool
+        - host-pkgconfig
+      regenerate:
+        - args: ['autoreconf', '-fi']
+    tools_required:
+      - host-compiler
+      - host-automake
+      - host-autoconf-v2.69
+      - host-gettext
+      - host-libtool
+      - host-pkgconfig
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-lemon'
+        - '--enable-nasm'
+        - '--disable-gtktest'
+        - '--prefix=/system'
+        - '--disable-frontend'
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+
