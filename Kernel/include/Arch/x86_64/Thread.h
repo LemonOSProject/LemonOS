@@ -105,6 +105,10 @@ struct Thread {
         return signalMask & (~UNMASKABLE_SIGNALS);
     }
 
+    ALWAYS_INLINE bool HasPendingSignals() {
+        return (~EffectiveSignalMask()) & pendingSignals;
+    }
+
     /////////////////////////////
     /// \brief Block a thread
     ///

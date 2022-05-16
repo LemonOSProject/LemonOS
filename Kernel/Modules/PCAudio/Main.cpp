@@ -97,7 +97,6 @@ AC97Controller::AC97Controller(const PCIInfo& info) : PCIDevice(info) {
     memset(bufferDescriptorList, 0, PAGE_SIZE_4K);
 
     assert(OutputNumberOfChannels(nullptr) == 2);
-    assert(OutputGetEncoding(nullptr) == SoundEncoding::PCMS16LE);
 
     m_pcmSampleSize = 2;
     if (m_pcmEncoding == SoundEncoding::PCMS20LE) {
@@ -157,7 +156,7 @@ int AC97Controller::OutputGetVolume(void* output) const {
     return (inportw(m_ioPort + NAMPCMVolume) & AC97_MIXER_VOLUME_RIGHT_MASK) * 100 / AC97_VOLUME_MIN;
 }
 
-SoundEncoding AC97Controller::OutputGetEncoding(void* output) const { return SoundEncoding::PCMS16LE; }
+SoundEncoding AC97Controller::OutputGetEncoding(void* output) const { return m_pcmEncoding; }
 
 int AC97Controller::OutputNumberOfChannels(void* output) const { return 2; }
 
@@ -170,7 +169,8 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size) {
     // currently if two threads attempt to play audio directly
     // they will deadlock
 
-    if(size & m_pcmSampleSize * m_pcmNumChannels) {
+    if(size % (m_pcmSampleSize * m_pcmNumChannels)) {
+        Log::Info("[AC97] invalid write: not an exact frame");
         return -EINVAL; // Must be writing exact frame
     }
 
@@ -207,7 +207,6 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size) {
             int count = MIN(buffersToWrite, AC97_BDL_ENTRIES);
             while(count--) {
                 size_t written = MIN(PAGE_SIZE_4K, size);
-                Log::Info("Writing %d/%d bytes", written, size);
                 memcpy(sampleBuffers[lastValidEntry], buffer, written);
                 bufferDescriptorList[lastValidEntry].flags = 0;
 
@@ -228,15 +227,20 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size) {
             StartDMA();
         }
 
-        timer = 400;
+        timer = 800;
         while(timer--) {
             uint8_t isDMARunning = !(inportw(m_nabmPort + PO_TransferStatus) & NBDMAStatus);
             if(!isDMARunning) {
                 break;
             }
 
-            // Sleep for 10ms
-            Thread::Current()->Sleep(10000);
+            if(Thread::Current()->HasPendingSignals()) {
+                return -EINTR;
+                
+            }
+
+            // Sleep for 5ms
+            Thread::Current()->Sleep(5000);
         }
 
         if(timer <= 0) {
@@ -245,6 +249,8 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size) {
             return -EIO;
         }
     }
+
+    //Log::Debug("%d samples written in %d ms", samplesToWrite / 2, (Timer::UsecondsSinceBoot() - start) / 1000);
 
     return samplesToWrite;
 }

@@ -19,6 +19,9 @@ enum AudioOutputIoCtl {
     IoCtlOutputGetNumberOfChannels = 0x1005,
 };
 
-static const char* const encodingNames[] = {
+#define LEMON_ABI_AUDIO_ENCODING_COUNT 2
+
+static const char* const lemonABIAudioEncodingNames[] = {
     "PCM signed 16-bit little endian",
+    "PCM signed 20-bit little endian",
 };

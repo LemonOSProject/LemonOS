@@ -1417,29 +1417,38 @@ void Ext2::Ext2Volume::SyncNode(Ext2Node* node) {
 
 int Ext2::Ext2Volume::Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode) {
     if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY)
-        return -ENOTDIR;
+        return -ENOTDIR; // Ensure the directory node is actually a directory
 
+    // Make sure the filename does not already exist under the directory
     if (FindDir(node, ent->name)) {
         Log::Info("[Ext2] Create: Entry %s already exists!", ent->name);
         return -EEXIST;
     }
 
+    // Create new inode in the VFS for the new file
     Ext2Node* file = CreateNode();
 
     if (!file) {
         return -EIO;
     }
 
+    // Regular file
     file->e2inode.mode = EXT2_S_IFREG;
     file->flags = FS_NODE_FILE;
+    // File is only references by one directory
     file->nlink = 1;
     file->e2inode.linkCount = 1;
     inodeCache.insert(file->inode, file);
+
+    // Update the directory entry with the inode
     ent->node = file;
     ent->inode = file->inode;
     ent->flags = EXT2_FT_REG_FILE;
 
+    // Sync inode to disk
     SyncNode(file);
+
+    // Add the new entry in the given directory
     return InsertDir(node, *ent);
 }
 
