@@ -1,7 +1,7 @@
-From e51a0b22d5bec742704852a79f297480a30dcc10 Mon Sep 17 00:00:00 2001
+From c9e824de3a2e418062f5b6859df21d3dfad79fde Mon Sep 17 00:00:00 2001
 From: JJ <computerfido@gmail.com>
 Date: Sun, 15 May 2022 21:51:55 +1000
-Subject: [PATCH] Add lemon target
+Subject: [PATCH 1/2] Add lemon target
 
 ---
  configure | 2 ++

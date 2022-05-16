@@ -1,0 +1,32 @@
+From 2f8c1bd15fe5709ef31df68bc2adf5d2d21eea2b Mon Sep 17 00:00:00 2001
+From: JJ <fidojj@hotmail.com>
+Date: Tue, 17 May 2022 09:47:32 +1000
+Subject: [PATCH 2/2] Default to 1 CPU
+
+---
+ libavutil/cpu.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/libavutil/cpu.c b/libavutil/cpu.c
+index 1368502..d15f62d 100644
+--- a/libavutil/cpu.c
++++ b/libavutil/cpu.c
+@@ -194,6 +194,7 @@ int av_cpu_count(void)
+ 
+     int nb_cpus = 1;
+     int count   = 0;
++#ifndef __lemon__
+ #if HAVE_WINRT
+     SYSTEM_INFO sysinfo;
+ #endif
+@@ -227,6 +228,7 @@ int av_cpu_count(void)
+ #elif HAVE_WINRT
+     GetNativeSystemInfo(&sysinfo);
+     nb_cpus = sysinfo.dwNumberOfProcessors;
++#endif
+ #endif
+ 
+     if (!atomic_exchange_explicit(&printed, 1, memory_order_relaxed))
+-- 
+2.36.0
+

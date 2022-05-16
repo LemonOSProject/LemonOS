@@ -361,8 +361,10 @@ packages:
       - '--disable-doc'
       - '--enable-libmp3lame'
       - '--disable-avdevice'
-      - '--disable-avformat'
+      - '--disable-avfilter'
       - '--disable-mmx'
+      - '--disable-network'
+      - '--disable-demuxer=nistsphere'
       environ:
         CC: 'clang'
         CXX: 'clang++'
