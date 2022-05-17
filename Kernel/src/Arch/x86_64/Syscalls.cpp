@@ -1151,7 +1151,7 @@ long SysIoctl(RegisterContext* r) {
 
     int ret = fs::Ioctl(handle, request, arg);
 
-    if (result && ret > 0) {
+    if (result && ret >= 0) {
         *result = ret;
         return 0;
     }
