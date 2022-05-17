@@ -34,6 +34,10 @@ ps_src = [
     'ps.cpp',
 ]
 
+playaudio_src = [
+    'playaudio.cpp',
+]
+
 utils_cpp_args = [
     '-Wno-unused-parameter',
     '-Wno-missing-braces'
@@ -50,4 +54,7 @@ executable('uname', uname_src, cpp_args : utils_cpp_args, install : true)
 executable('hexdump', hexdump_src, cpp_args : utils_cpp_args, install : true)
 executable('ps', ps_src, cpp_args : utils_cpp_args,
     link_args : ['-llemon'],
+    install : true)
+executable('playaudio', playaudio_src, cpp_args : utils_cpp_args,
+    link_args : ['-llemon', '-lavcodec', '-lavutil', '-lavformat', '-lswresample'],
     install : true)

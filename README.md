@@ -43,7 +43,8 @@ See [System Requirements](#system-requirements)
 
 ## Third Party
 
-Lemon OS depends on mlibc, Freetype, zlib, libressl and libpng.
+Lemon OS depends on:
+[mlibc](https://github.com/managarm/mlibc), [Freetype](https://freetype.org/), [zlib](https://z-lib.org/), [libressl](https://www.libressl.org/), [ffmpeg](https://ffmpeg.org/) and [libpng](http://www.libpng.org/pub/png/libpng.html).
 
 [Optional ports](Ports/) include LLVM/Clang, DOOM, Binutils and Python 3.8
 

@@ -1,8 +1,8 @@
 #pragma once
 
 enum SoundEncoding {
-    PCMS16LE, // PCM signed 16-bit little endian
-    PCMS20LE,
+    PCMS16LE = 0, // PCM signed 16-bit little endian
+    PCMS20LE = 1,
 };
 
 enum AudioMixerIoCtl {

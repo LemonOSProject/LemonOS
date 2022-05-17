@@ -78,8 +78,6 @@ AC97Controller::AC97Controller(const PCIInfo& info) : PCIDevice(info) {
     outportw(m_ioPort + NAMMasterVolume, AC97_MIXER_VOLUME(AC97_VOLUME_MAX, AC97_VOLUME_MAX, 0));
     outportw(m_ioPort + NAMPCMVolume, AC97_MIXER_VOLUME(AC97_VOLUME_MAX, AC97_VOLUME_MAX, 0));
 
-    m_pcmEncoding = SoundEncoding::PCMS16LE;
-
     uint16_t nabmTransferControl = m_nabmPort + PO_TransferControl;
 
     // Reset PCM out
@@ -98,6 +96,17 @@ AC97Controller::AC97Controller(const PCIInfo& info) : PCIDevice(info) {
 
     assert(OutputNumberOfChannels(nullptr) == 2);
 
+    uint32_t globalControl = inportl(m_nabmPort + NBGlobalControl);
+    globalControl = AC97_CONTROL_PCM_OUT_MODE_16BIT(globalControl);
+    globalControl = AC97_CONTROL_PCM_OUT_2_CHANNELS(globalControl);
+    globalControl |= NBGlobalInterruptEnable;
+
+    // QEMU does not support 20-bit audio
+    //uint32_t globalStatus = inportl(m_nabmPort + NBGlobalStatus);
+    //assert(AC97_STATUS_SAMPLE_FORMATS(globalStatus) == 1);
+
+    m_pcmEncoding = SoundEncoding::PCMS16LE;
+    
     m_pcmSampleSize = 2;
     if (m_pcmEncoding == SoundEncoding::PCMS20LE) {
         m_pcmSampleSize = 4; // 20-bit samples take up a dword
@@ -120,11 +129,6 @@ AC97Controller::AC97Controller(const PCIInfo& info) : PCIDevice(info) {
     
     uint8_t irq = AllocateVector(PCIVectorAny);
     IDT::RegisterInterruptHandler(irq, AC97IRQHandler, this);
-
-    uint32_t globalControl = inportl(m_nabmPort + NBGlobalControl);
-    globalControl = AC97_CONTROL_PCM_OUT_MODE_16BIT(globalControl);
-    globalControl = AC97_CONTROL_PCM_OUT_2_CHANNELS(globalControl);
-    globalControl |= NBGlobalInterruptEnable;
 
     outportl(m_nabmPort + NBGlobalControl, globalControl);
 

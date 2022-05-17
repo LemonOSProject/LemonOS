@@ -19,6 +19,9 @@
 #define AC97_CONTROL_PCM_OUT_MODE_MASK ((0x3U) << 22)
 // 16 bit samples is 0, 20 is 1
 #define AC97_CONTROL_PCM_OUT_MODE_16BIT(val) (val & ~AC97_CONTROL_PCM_OUT_MODE_MASK)
+#define AC97_CONTROL_PCM_OUT_MODE_20BIT(val) ((val & ~AC97_CONTROL_PCM_OUT_MODE_MASK) | (1U << 22))
+
+#define AC97_STATUS_SAMPLE_FORMATS(val) ((val >> 22) & 0x3)
 
 // amount of buffer descriptor list entries
 #define AC97_BDL_ENTRIES 32
