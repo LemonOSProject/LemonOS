@@ -647,6 +647,7 @@ packages:
       - mlibc
       - liblemon
       - lemon-system
+      - ffmpeg
     source:
       name: 'Utilities'
     configure:
