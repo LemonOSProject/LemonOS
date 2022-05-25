@@ -314,7 +314,7 @@ public:
         acquireLock(&lock);
 
         ListNode<T>* node = front;
-        while (node && node->next) {
+        while (node) {
             ListNode<T>* n = node->next;
 
             DestroyNode(node);
@@ -563,12 +563,7 @@ public:
         if (current->prev)
             current->prev->next = current->next;
 
-        current->obj.~T();
-        if (cache.get_length() >= maxCache) {
-            kfree(current);
-        } else {
-            cache.add_back(current);
-        }
+        DestroyNode(current);
 
         if (!num)
             front = back = nullptr;
