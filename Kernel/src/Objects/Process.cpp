@@ -303,7 +303,12 @@ void Process::Die() {
 
     CPU* cpu = GetCPULocal();
 
-    assert(m_state != Process_Dying);
+    if(m_state == Process_Dying) {
+        // Process is already dying, we might be another thread
+        releaseLock(&Thread::Current()->kernelLock);
+        for(;;) Scheduler::Yield();
+    }
+
     m_state = Process_Dying;
     Log::Debug(debugLevelScheduler, DebugLevelNormal, "Killing Process %s (PID %d)", name, m_pid);
 
