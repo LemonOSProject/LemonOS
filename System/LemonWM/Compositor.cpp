@@ -224,7 +224,7 @@ void Compositor::SetWallpaper(const std::string& path) {
 
         if (Graphics::LoadImage(path.c_str(), 0, 0, m_displaySurface.width, m_displaySurface.height, &m_wallpaper,
                                 true)) {
-            Logger::Error("Failed to load wallpaper '", path, "'");
+            Logger::Error("Failed to load wallpaper '{}'", path);
         }
 
         m_renderMutex.lock();

@@ -46,7 +46,7 @@ void PlayAudio(AudioContext* ctx) {
 #endif
 
         if(write(fd, buffer.data, buffer.samples * channels * sampleSize) < 0) {
-            Lemon::Logger::Warning("/snd/dev/pcm: Error writing samples: ", strerror(errno));
+            Lemon::Logger::Warning("/snd/dev/pcm: Error writing samples: {}", strerror(errno));
         }
 
 #ifdef AUDIOCONTEXT_TIME_PLAYBACK
@@ -178,6 +178,8 @@ void DecodeAudio(AudioContext* ctx) {
                                                 (const uint8_t**)frame->extended_data, frame->nb_samples);
 
             buffer->samples += samplesWritten;
+            buffer->timestamp = frame->best_effort_timestamp / ctx->m_currentStream->time_base.den;
+
             av_frame_unref(frame);
         }
 
@@ -192,21 +194,21 @@ AudioContext::AudioContext() {
     // Open the PCM output device
     m_pcmOut = open("/dev/snd/pcm", O_WRONLY);
     if (m_pcmOut < 0) {
-        Lemon::Logger::Error("Failed to open PCM output '/dev/snd/pcm': ", strerror(errno));
+        Lemon::Logger::Error("Failed to open PCM output '/dev/snd/pcm': {}", strerror(errno));
         exit(1);
     }
 
     // Get output information
     m_pcmChannels = ioctl(m_pcmOut, IoCtlOutputGetNumberOfChannels);
     if (m_pcmChannels <= 0) {
-        Lemon::Logger::Error("/dev/snd/pcm IoCtlOutputGetNumberOfChannels:", strerror(errno));
+        Lemon::Logger::Error("/dev/snd/pcm IoCtlOutputGetNumberOfChannels: {}", strerror(errno));
         exit(1);
     }
     assert(m_pcmChannels == 1 || m_pcmChannels == 2);
 
     int outputEncoding = ioctl(m_pcmOut, IoCtlOutputGetEncoding);
     if (outputEncoding < 0) {
-        Lemon::Logger::Error("/dev/snd/pcm IoCtlOutputGetEncoding:", strerror(errno));
+        Lemon::Logger::Error("/dev/snd/pcm IoCtlOutputGetEncoding: {}", strerror(errno));
         exit(1);
     }
 
@@ -220,12 +222,12 @@ AudioContext::AudioContext() {
 
     m_pcmSampleRate = ioctl(m_pcmOut, IoCtlOutputGetSampleRate);
     if (m_pcmSampleRate < 0) {
-        Lemon::Logger::Error("/dev/snd/pcm IoCtlOutputGetSampleRate:", strerror(errno));
+        Lemon::Logger::Error("/dev/snd/pcm IoCtlOutputGetSampleRate: {}", strerror(errno));
         exit(1);
     }
 
     if (m_pcmBitDepth != 16) {
-        Lemon::Logger::Error("/dev/snd/pcm Unsupported PCM sample depth of ", m_pcmBitDepth);
+        Lemon::Logger::Error("/dev/snd/pcm Unsupported PCM sample depth of {}", m_pcmBitDepth);
         exit(1);
     }
 
@@ -235,6 +237,14 @@ AudioContext::AudioContext() {
         sampleBuffers[i].data = new uint8_t[samplesPerBuffer * m_pcmChannels * (m_pcmBitDepth / 8)];
         sampleBuffers[i].samples = 0;
     }
+}
+
+float AudioContext::PlaybackProgress() const {
+    if(!m_isDecoderRunning) {
+        return 0;
+    }
+
+    return sampleBuffers[currentSampleBuffer].timestamp;
 }
 
 void AudioContext::PlaybackStop() {
@@ -270,8 +280,8 @@ int AudioContext::PlayTrack(std::string filepath) {
 
     av_dump_format(m_avfmt, 0, filepath.c_str(), 0);
 
-    AVStream* stream = m_avfmt->streams[streamIndex];
-    const AVCodec* decoder = avcodec_find_decoder(stream->codecpar->codec_id);
+    m_currentStream = m_avfmt->streams[streamIndex];
+    const AVCodec* decoder = avcodec_find_decoder(m_currentStream->codecpar->codec_id);
     if (!decoder) {
         Lemon::Logger::Error("Failed to find codec for '", filepath, "'.");
         return 1;
@@ -280,7 +290,7 @@ int AudioContext::PlayTrack(std::string filepath) {
     m_avcodec = avcodec_alloc_context3(decoder);
     assert(decoder);
 
-    if (avcodec_parameters_to_context(m_avcodec, stream->codecpar)) {
+    if (avcodec_parameters_to_context(m_avcodec, m_currentStream->codecpar)) {
         Lemon::Logger::Error("Failed to initialie codec context.");
         return 1;
     }
@@ -305,6 +315,9 @@ int AudioContext::LoadTrack(std::string filepath, TrackInfo& info) {
         avformat_free_context(fmt);
         return r;
     }
+
+    int durationSeconds = fmt->duration / 1000000;
+    info.durationString = std::to_string(durationSeconds / 60) + ":" + std::to_string(durationSeconds % 60);
 
     // Get file metadata
     AVDictionaryEntry* tag = nullptr;

@@ -56,6 +56,7 @@ void WMWindow::DrawDecorationClip(const Rect& clip, Surface* surface) {
 }
 
 void WMWindow::DrawClip(const Rect& clip, Surface* surface) {
+    m_buffer->drawing = 1;
     m_windowSurface.buffer = m_buffer->currentBuffer ? (m_buffer2) : (m_buffer1);
 
     Rect clipCopy = clip;
@@ -66,6 +67,8 @@ void WMWindow::DrawClip(const Rect& clip, Surface* surface) {
     } else {
         surface->Blit(&m_windowSurface, clip.pos, clipCopy);
     }
+
+    m_buffer->drawing = 0;
 }
 
 int WMWindow::GetResizePoint(Vector2i absolutePosition) const {

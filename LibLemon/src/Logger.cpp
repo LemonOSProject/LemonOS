@@ -34,33 +34,5 @@ const char* GetProgramName(){
     return programName;
 }
 
-void Log(short arg){
-    std::cerr << arg;
-}
-
-void Log(int arg){
-    std::cerr << arg;
-}
-
-void Log(long arg){
-    std::cerr << arg;
-}
-
-void Log(unsigned short arg){
-    std::cerr << arg;
-}
-
-void Log(unsigned int arg){
-    std::cerr << arg;
-}
-
-void Log(unsigned long arg){
-    std::cerr << arg;
-}
-
-void Log(float arg){
-    std::cerr << arg;
-}
-
 } // namespace Logger
 } // namespace Lemon

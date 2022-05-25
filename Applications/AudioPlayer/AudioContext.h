@@ -14,11 +14,16 @@ public:
     struct SampleBuffer {
         uint8_t* data;
         int samples;
+
+        // Timestamp in seconds of last frame in buffer
+        float timestamp;
     };
 
     AudioContext();
 
     inline bool IsAudioPlaying() const { return m_isDecoderRunning; }
+
+    inline float PlaybackProgress() const;
 
     void PlaybackStart();
     void PlaybackPause();

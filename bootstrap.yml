@@ -398,6 +398,33 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: libfmt
+    source:
+      name: 'fmt'
+    tools_required:
+      - host-compiler
+    configure:
+      - args:
+        - 'cmake'
+        - '-GNinja'
+        - '@THIS_SOURCE_DIR@' 
+        - '-DCMAKE_CROSSCOMPILING=True'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_INSTALL_PREFIX=/system'
+        - '-DBUILD_SHARED_LIBS=ON'
+        - '-DFMT_TEST=OFF'
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+    build:
+      - args: ['ninja']
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   - name: lemon-kernel
     metadata:
       summary: Lemon Kernel
@@ -557,6 +584,7 @@ packages:
       - libpng
       - freetype
       - lemon-interface-headers
+      - libfmt
     tools_required:
       - host-pkgconfig
       - host-compiler
@@ -582,6 +610,7 @@ packages:
     pkgs_required:
       - mlibc
       - liblemon
+      - libfmt
     source:
       name: 'LibGUI'
     configure:

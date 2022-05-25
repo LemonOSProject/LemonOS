@@ -4,6 +4,7 @@
 
 struct TrackInfo {
     std::string filepath;
+    std::string durationString;
     struct {
         std::string title;
         std::string artist;

@@ -37,7 +37,7 @@ void ConfigManager::LoadJSONConfig(const std::string& path) {
 
     auto root = parser.Parse();
     if(!root.IsObject()){
-        Logger::Warning("[ConfigManager] Failed to laod JSON config at ", path);
+        Logger::Warning("[ConfigManager] Failed to laod JSON config at {}", path);
         return;
     }
 

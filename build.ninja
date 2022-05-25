@@ -1,0 +1,44 @@
+rule run_cmd
+    command = $cmd
+    pool = console
+
+rule run_xbstrap
+    command = cd Build; xbstrap $cmd
+    pool = console
+
+build init: run_cmd
+    cmd = mkdir -p Build; cd Build; xbstrap init ..
+
+build toolchain: run_xbstrap
+    cmd = install-tool --all
+
+build kernel: run_xbstrap
+    cmd = install lemon-kernel --rebuild
+
+build system-libs: run_xbstrap
+    cmd = install liblemon liblemongui --rebuild
+
+build system: run_xbstrap
+    cmd = install lemon-system lemon-utils lemon-interface-headers --rebuild
+
+build apps: run_xbstrap
+    cmd = install lemon-apps --rebuild
+
+build lemon-base: run_xbstrap kernel system-libs system apps
+    cmd = install lemon-base --rebuild
+
+build install-all-packages: run_xbstrap
+    cmd = install --all
+
+build disk: run_xbstrap
+    cmd = run build-disk
+
+build run: phony run-qemu
+build run-qemu: run_cmd
+    cmd = Scripts/run.sh
+
+build run-qemu-efi: run_cmd
+    cmd = Scripts/run.sh qemuefi
+
+build run-vbox: run_cmd
+    cmd = Scripts/run.sh vbox

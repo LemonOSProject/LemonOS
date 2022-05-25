@@ -196,7 +196,7 @@ public:
         } else if (column == 1) {
             return track.metadata.artist + " - " + track.metadata.title;
         } else if (column == 2) {
-            return track.metadata.year;
+            return track.durationString;
         }
 
         return 0;
