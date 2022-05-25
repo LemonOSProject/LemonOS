@@ -22,8 +22,8 @@ public:
         return devices.size();
     }
 
-    const std::string& ColumnName(int column) const {
-        return columns.at(column).Name();
+    const char* ColumnName(int column) const {
+        return columns.at(column).Name().c_str();
     }
 
 	Lemon::GUI::Variant GetData(int row, int column){

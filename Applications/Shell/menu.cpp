@@ -147,7 +147,7 @@ public:
 
     int ColumnCount() const override { return 3; }
     int RowCount() const override { return filter.ItemCount(); }
-    const std::string& ColumnName(int) const override { return m_colName; } // We dont display columns
+    const char* ColumnName(int) const override { return m_colName.c_str(); } // We dont display columns
 
     Lemon::GUI::Variant GetData(int row, int column) override {
         switch(column){
