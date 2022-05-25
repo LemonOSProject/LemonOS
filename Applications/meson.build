@@ -2,6 +2,11 @@ project('lemon-apps',
     default_options : ['warning_level=2', 'cpp_std=c++2a', 'optimization=0', 'werror=true'])
 add_languages('c', 'cpp')
 
+application_cpp_args = [
+    '-Wno-unused-parameter', '-Wno-missing-braces',
+    '-g'
+]
+
 fileman_src = [
     'FileManager/main.cpp',
 ]
@@ -41,10 +46,6 @@ run_src = [
     'Run/main.cpp',
 ]
 
-application_cpp_args = [
-    '-Wno-unused-parameter', '-Wno-missing-braces'
-]
-
 graphicstest_src = [
     'GraphicsTest/main.cpp',
 ]
@@ -79,6 +80,11 @@ devicemanager_src = [
 
 tests_src = [
     'Tests/Main.cpp'
+]
+
+audioplayer_src = [
+    'AudioPlayer/AudioContext.cpp',
+    'AudioPlayer/Main.cpp'
 ]
 
 app_libraries = [
@@ -148,6 +154,10 @@ app_steal = executable('steal', steal_src,
 app_devmgr = executable('devmgr.lef', devicemanager_src, 
     cpp_args : application_cpp_args,
     link_args: app_libraries,
+    install : true)
+app_audioplayer = executable('audioplayer.lef', audioplayer_src,
+    cpp_args : application_cpp_args,
+    link_args : [app_libraries, '-lavcodec', '-lavformat', '-lavutil', '-lswresample'],
     install : true)
 
 app_ipctest = executable('ipctest.lef', ipctest_src, 
