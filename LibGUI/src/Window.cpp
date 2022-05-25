@@ -1,5 +1,6 @@
 #include <Lemon/Core/JSON.h>
 #include <Lemon/Core/SharedMemory.h>
+#include <Lemon/Core/Logger.h>
 #include <Lemon/GUI/Window.h>
 
 #include <Lemon/GUI/WindowServer.h>
@@ -12,11 +13,18 @@
 namespace Lemon::GUI {
 Window::Window(const char* title, vector2i_t size, uint32_t flags, int type, vector2i_t pos)
     : rootContainer({{0, 0}, size}), m_flags(flags), m_windowType(type) {
-    rootContainer.SetWindow(this);
-
     WindowServer* server = WindowServer::Instance();
-    rootContainer.background = Theme::Current().ColourBackground();
+    if(!server) {
+        Logger::Error("Failed to connect to lemonwm!");
+        exit(1);
+    }
 
+    if(m_windowType == WindowType::GUI) {
+        rootContainer.SetWindow(this);
+        rootContainer.background = Theme::Current().ColourBackground();
+    }
+
+    assert(server);
     auto response = server->CreateWindow(pos.x, pos.y, size.x, size.y, flags, title);
 
     m_windowBufferKey = response.bufferKey;
@@ -56,13 +64,15 @@ void Window::Relocate(vector2i_t pos) { WindowServer::Instance()->Relocate(m_win
 void Window::Resize(vector2i_t size) {
     Lemon::UnmapSharedMemory(m_windowBufferInfo, m_windowBufferKey);
 
-    if (menuBar) {
-        rootContainer.SetBounds({{0, WINDOW_MENUBAR_HEIGHT}, {size.x, size.y - WINDOW_MENUBAR_HEIGHT}});
-    } else {
-        rootContainer.SetBounds({{0, 0}, size});
-    }
+    if(m_windowType == WindowType::GUI) {
+        if (menuBar) {
+            rootContainer.SetBounds({{0, WINDOW_MENUBAR_HEIGHT}, {size.x, size.y - WINDOW_MENUBAR_HEIGHT}});
+        } else {
+            rootContainer.SetBounds({{0, 0}, size});
+        }
 
-    rootContainer.UpdateFixedBounds();
+        rootContainer.UpdateFixedBounds();
+    }
 
     m_windowBufferKey = WindowServer::Instance()->Resize(m_windowID, size.x, size.y).bufferKey;
     if (m_windowBufferKey <= 0) {
@@ -93,8 +103,8 @@ void Window::UpdateFlags(uint32_t flags) {
 }
 
 void Window::SwapBuffers() {
-    if (m_windowBufferInfo->drawing)
-        return;
+    while (m_windowBufferInfo->drawing)
+        ; // WM is currently drawing the other buffer
 
     if (surface.buffer == m_buffer1) {
         m_windowBufferInfo->currentBuffer = 0;
@@ -137,13 +147,13 @@ bool Window::PollEvent(LemonEvent& ev) {
 
 void Window::GUIPollEvents() {
     LemonEvent ev;
-    while (PollEvent(ev)) {
+    while (!closed && PollEvent(ev)) {
         // If the handler returns true, the event is not processed.
         auto handler = m_eventHandlers.find(ev.event);
         if (handler != m_eventHandlers.end() && handler->second(ev)) {
             continue;
         }
-
+        
         GUIHandleEvent(ev);
     }
 

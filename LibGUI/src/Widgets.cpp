@@ -20,11 +20,18 @@ Widget::Widget(rect_t bounds, LayoutSize newSizeX, LayoutSize newSizeY) {
 
     sizeX = newSizeX;
     sizeY = newSizeY;
-
-    UpdateFixedBounds();
 }
 
 Widget::~Widget() {}
+
+void Widget::SetLayout(LayoutSize newSizeX, LayoutSize newSizeY, WidgetAlignment newAlign,
+                        WidgetAlignment newAlignVert) {
+    sizeX = newSizeX;
+    sizeY = newSizeY;
+    align = newAlign;
+    verticalAlign = newAlignVert;
+    UpdateFixedBounds();
+};
 
 void Widget::Paint(__attribute__((unused)) surface_t* surface) {}
 
@@ -258,7 +265,7 @@ void Container::UpdateFixedBounds() {
 //////////////////////////
 // LayoutContainer
 //////////////////////////
-LayoutContainer::LayoutContainer(rect_t bounds, vector2i_t itemSize) : Container(bounds) { this->itemSize = itemSize; }
+LayoutContainer::LayoutContainer(rect_t bounds, vector2i_t minItemSize) : Container(bounds) { this->itemSize = minItemSize; }
 
 void LayoutContainer::AddWidget(Widget* w) {
     Container::AddWidget(w);
@@ -275,20 +282,33 @@ void LayoutContainer::RemoveWidget(Widget* w) {
 void LayoutContainer::UpdateFixedBounds() {
     Widget::UpdateFixedBounds();
 
+    if(!children.size()) {
+        return;
+    }
+
     vector2i_t pos = {xPadding, yPadding};
     isOverflowing = false;
 
+    int itemWidth = itemSize.x;
+    int itemHeight = itemSize.y;
+    int itemsPerRow = (fixedBounds.width - xPadding) / (itemSize.x + xPadding);
+
+    // Fill the width of the container if requested
+    if(xFill && itemsPerRow >= (int)children.size()) {
+        itemWidth = ((fixedBounds.width - xPadding) / children.size()) - xPadding;
+    }
+
     for (Widget* w : children) {
-        w->SetBounds({pos, itemSize});
+        w->SetBounds({pos, {itemWidth, itemHeight}});
         w->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WidgetAlignment::WAlignLeft);
 
         w->UpdateFixedBounds();
 
-        pos.x += itemSize.x + xPadding;
+        pos.x += itemWidth + xPadding;
 
-        if (pos.x + itemSize.x > fixedBounds.width) {
+        if (pos.x + itemWidth > fixedBounds.width) {
             pos.x = xPadding;
-            pos.y += itemSize.y + yPadding;
+            pos.y += itemHeight + yPadding;
         }
     }
 
@@ -300,6 +320,11 @@ void LayoutContainer::UpdateFixedBounds() {
 // Button
 //////////////////////////
 Button::Button(const char* _label, rect_t _bounds) : Widget(_bounds) {
+    label = _label;
+    labelLength = Graphics::GetTextLength(label.c_str());
+}
+
+void Button::SetLabel(const char* _label) {
     label = _label;
     labelLength = Graphics::GetTextLength(label.c_str());
 }
@@ -814,7 +839,7 @@ void ListView::Paint(surface_t* surface) {
     int xPos = fixedBounds.x;
     for (int i = 0; i < model->ColumnCount(); i++) {
         if (displayColumnNames) {
-            Graphics::DrawString(model->ColumnName(i).c_str(), xPos + 4, fixedBounds.y + 4, textColour.r, textColour.g,
+            Graphics::DrawString(model->ColumnName(i), xPos + 4, fixedBounds.y + 4, textColour.r, textColour.g,
                                  textColour.b, surface);
 
             Graphics::DrawRect(xPos, fixedBounds.y + 1, 1, columnDisplayHeight - 2, textColour, surface); // Divider

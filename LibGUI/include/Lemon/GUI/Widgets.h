@@ -47,13 +47,7 @@ public:
     inline Widget* GetParent() { return parent; }
 
     virtual void SetLayout(LayoutSize newSizeX, LayoutSize newSizeY, WidgetAlignment newAlign = WAlignLeft,
-                           WidgetAlignment newAlignVert = WAlignTop) {
-        sizeX = newSizeX;
-        sizeY = newSizeY;
-        align = newAlign;
-        verticalAlign = newAlignVert;
-        UpdateFixedBounds();
-    };
+                           WidgetAlignment newAlignVert = WAlignTop);
 
     virtual void Paint(surface_t* surface);
 
@@ -90,9 +84,6 @@ public:
 protected:
     Widget* parent = nullptr;
     Window* window = nullptr;
-
-    short layoutSizeX = LayoutSize::Fixed;
-    short layoutSizeY = LayoutSize::Fixed;
 
     rect_t bounds;
     rect_t fixedBounds;
@@ -144,6 +135,10 @@ protected:
 public:
     int xPadding = 2;
     int yPadding = 2;
+
+    // Whether or not the LayoutContainer should expand the Widgets
+    // to fill the width of the container
+    bool xFill = false;
 
     LayoutContainer(rect_t bounds, vector2i_t itemSize);
 
@@ -217,6 +212,8 @@ public:
     bool state = false;
 
     Button(const char* _label, rect_t _bounds);
+
+    void SetLabel(const char* _label);
 
     virtual void Paint(surface_t* surface);
     virtual void OnMouseDown(vector2i_t mousePos);

@@ -52,7 +52,7 @@ class DataModel {
     ///
     /// \return Column name
     /////////////////////////////
-    virtual const std::string& ColumnName(int column) const = 0;
+    virtual const char* ColumnName(int column) const = 0;
 
     /////////////////////////////
     /// \brief Sort by specified column (optional)
