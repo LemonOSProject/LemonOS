@@ -255,7 +255,7 @@ void BalanceRunQueues() {
         releaseLock(&SMP::cpus[i]->runQueueLock);
     }
 
-    nextBalanceDue = Timer::UsecondsSinceBoot() + 500000;
+    nextBalanceDue = Timer::UsecondsSinceBoot() + 1000000;
 }
 
 void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
@@ -285,12 +285,12 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
 
     if (__builtin_expect(cpu->runQueue->get_length() <= 0 || !cpu->currentThread, 0)) {
         cpu->currentThread = cpu->idleThread;
+    } else if (__builtin_expect(cpu->currentThread->state == ThreadStateDying, 0)) {
+        cpu->runQueue->remove(cpu->currentThread);
+        cpu->currentThread->cpu = -1;
+        cpu->currentThread = cpu->idleThread;
     } else {
-        if (__builtin_expect(cpu->currentThread->state == ThreadStateDying, 0)) {
-            cpu->runQueue->remove(cpu->currentThread);
-            cpu->currentThread->cpu = -1;
-            cpu->currentThread = cpu->idleThread;
-        } else if (__builtin_expect(cpu->currentThread->parent != cpu->idleProcess, 1)) {
+        if (__builtin_expect(cpu->currentThread->parent != cpu->idleProcess, 1)) {
             cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
             cpu->currentThread->ticksGivenSinceBalance += cpu->currentThread->timeSliceDefault;
 
@@ -303,16 +303,48 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
             cpu->currentThread = cpu->runQueue->front;
         }
 
+        // Get the next thread that isnt blocked
         if (cpu->currentThread->state & ThreadStateBlocked) {
             Thread* first = cpu->currentThread;
 
             do {
                 cpu->currentThread = cpu->currentThread->next;
             } while ((cpu->currentThread->state & ThreadStateBlocked) && cpu->currentThread != first);
+        }
 
-            if (cpu->currentThread->state & ThreadStateBlocked) {
+        // Check if we could find an unblocked thread
+        if (cpu->currentThread->state & ThreadStateBlocked) {
                 cpu->currentThread = cpu->idleThread;
-            }
+        } else {
+            // See if we can find a better thread
+            // where better is the thread w/ least CPU time
+            Thread* leastHungry = cpu->currentThread->next;
+            Thread* first = cpu->currentThread;
+            do {
+                if (leastHungry->state & ThreadStateBlocked) {
+                    Thread* first = leastHungry;
+
+                    do {
+                        leastHungry = leastHungry->next;
+                    } while ((leastHungry->state & ThreadStateBlocked) && leastHungry != first);
+
+                    if (leastHungry->state & ThreadStateBlocked) {
+                        cpu->currentThread = cpu->idleThread;
+                        break;
+                    }
+                }
+
+                if(leastHungry == first) {
+                    break;
+                }
+
+                if(leastHungry->ticksSinceBalance < cpu->currentThread->ticksSinceBalance) {
+                    cpu->currentThread = leastHungry;
+                }
+
+                leastHungry = leastHungry->next;
+                //Log::Info("pid %d (c: %d)", leastHungry->parent->PID(), cpu->currentThread->parent->PID());
+            } while(leastHungry != first);
         }
     }
 
