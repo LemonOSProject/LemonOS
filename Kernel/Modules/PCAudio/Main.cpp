@@ -124,8 +124,8 @@ AC97Controller::AC97Controller(const PCIInfo& info) : PCIDevice(info) {
 
     outportl(m_nabmPort + PO_BufferDescriptorList, bufferDescriptorListPhys);
     
-    uint8_t irq = AllocateVector(PCIVectorAny);
-    IDT::RegisterInterruptHandler(irq, AC97IRQHandler, this);
+    //uint8_t irq = AllocateVector(PCIVectorAny);
+    //IDT::RegisterInterruptHandler(irq, AC97IRQHandler, this);
 
     outportl(m_nabmPort + NBGlobalControl, globalControl);
 
@@ -190,11 +190,11 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size, boo
                 remainingBuffers += AC97_BDL_ENTRIES;
             }
 
-            // Wait for the buffers to finish processing, give 5ms
-            Thread::Current()->Sleep((remainingBuffers * m_samplesPerBuffer) * 1000000 / AC97_SAMPLE_RATE - 5000);
+            // Wait for the buffers to finish processing, give one extra buffer leeway
+            Thread::Current()->Sleep(((remainingBuffers - 1) * m_samplesPerBuffer) * 1000000 / AC97_SAMPLE_RATE);
         }
 
-        int timer = 50;
+        int timer = 55;
         while(timer > 0) {
             isDMARunning = !(inportw(m_nabmPort + PO_TransferStatus) & NBDMAStatus);
             if(!isDMARunning)
@@ -203,21 +203,22 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size, boo
             Timer::Wait(1);
             timer--;
         }
-        if(timer <= 0) {
-            Log::Warning("AC97 DMA still running after 50ms, stopping");
-            StopDMA();
-            // Move the last valid entry back to the current entry as we have
-            // stoped the DMA
-            outportb(m_nabmPort + PO_LastValidEntry, inportb(m_nabmPort + PO_CurrentEntry));
-        }
-
-        assert(inportw(m_nabmPort + PO_TransferStatus) & NBDMAStatus);
 
         int samplesWritten = 0;
         {
             // Disable interrupts in case IRQ fires,
             // interrupts are already disabled
             ScopedSpinLock<true> lockController(m_lock);
+        
+            if(timer <= 0) {
+                Log::Warning("AC97 DMA still running after 55ms, stopping");
+                StopDMA();
+                // Move the last valid entry back to the current entry as we have
+                // stoped the DMA
+                outportb(m_nabmPort + PO_LastValidEntry, inportb(m_nabmPort + PO_CurrentEntry));
+            }
+
+            assert(inportw(m_nabmPort + PO_TransferStatus) & NBDMAStatus);
         
             uint8_t currentBuffer = inportb(m_nabmPort + PO_CurrentEntry);
             uint8_t lastValidEntry = inportb(m_nabmPort + PO_LastValidEntry);
@@ -235,6 +236,9 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size, boo
                 buffer += written;
                 size -= written;
 
+                // Make sure we update this value in case the buffer isnt full
+                // to make sure the AC97 doesn't play old audio
+                bufferDescriptorList[lastValidEntry].sampleCount = written / m_pcmSampleSize;
                 buffersToWrite--;
 
                 // Stop on the last entry
@@ -243,7 +247,7 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size, boo
                 }
             }
 
-            bufferDescriptorList[lastValidEntry].flags |= BDLastEntry | BDInterruptOnCompletion;
+            bufferDescriptorList[lastValidEntry].flags |= BDLastEntry;
 
             outportb(m_nabmPort + PO_LastValidEntry, lastValidEntry);
             StartDMA();
