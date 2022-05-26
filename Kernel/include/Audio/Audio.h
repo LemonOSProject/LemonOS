@@ -29,7 +29,7 @@ public:
     virtual int OutputSampleRate(void* output) const = 0;
     virtual int OutputSetNumberOfChannels(int channels) = 0;
 
-    virtual int WriteSamples(void* output, uint8_t* buffer, size_t size) = 0;
+    virtual int WriteSamples(void* output, uint8_t* buffer, size_t size, bool async) = 0;
 private:
 
 };

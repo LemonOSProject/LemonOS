@@ -26,6 +26,8 @@
 // amount of buffer descriptor list entries
 #define AC97_BDL_ENTRIES 32
 
+#define AC97_SAMPLE_RATE 48000
+
 namespace Audio {
 
 class AC97Controller : public AudioController, public PCIDevice {
@@ -45,7 +47,7 @@ public:
     int OutputSampleRate(void* output) const override;
     int OutputSetNumberOfChannels(int channels) override;
 
-    int WriteSamples(void* output, uint8_t* buffer, size_t size) override;
+    int WriteSamples(void* output, uint8_t* buffer, size_t size, bool async) override;
 
     void OnIRQ();
 
@@ -164,6 +166,8 @@ private:
     // For now use two buffer entries
     uintptr_t sampleBuffersPhys[32];
     uint16_t* sampleBuffers[32];
+    // Amount of samples per channel in each buffer
+    int m_samplesPerBuffer;
 };
 
 }

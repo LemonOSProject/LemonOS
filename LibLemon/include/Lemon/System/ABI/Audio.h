@@ -17,6 +17,7 @@ enum AudioOutputIoCtl {
     IoCtlOutputGetSampleRate = 0x1003,
     IoCtlOutputSetNumberOfChannels = 0x1004,
     IoCtlOutputGetNumberOfChannels = 0x1005,
+    IoCtlOutputSetAsync = 0x1006,
 };
 
 #define LEMON_ABI_AUDIO_ENCODING_COUNT 2

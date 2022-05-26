@@ -51,6 +51,9 @@ public:
             return c->OutputSampleRate(out);
         case IoCtlOutputGetNumberOfChannels:
             return c->OutputNumberOfChannels(out);
+        case IoCtlOutputSetAsync:
+            m_async = (bool)arg;
+            return 0;
         case IoCtlOutputSetNumberOfChannels:
         default:
             return -EINVAL;
@@ -66,8 +69,10 @@ public:
         }
 
         AudioController* c = currentOutput->c;
-        return c->WriteSamples(currentOutput->output, buffer, size);
+        return c->WriteSamples(currentOutput->output, buffer, size, m_async);
     }
+private:
+    bool m_async = false;
 };
 
 class SoundFS
