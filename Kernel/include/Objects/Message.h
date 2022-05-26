@@ -24,8 +24,8 @@ public:
         FancyRefPtr<MessageEndpoint> endpoint1 = FancyRefPtr<MessageEndpoint>(new MessageEndpoint(msgSize));
         FancyRefPtr<MessageEndpoint> endpoint2 = FancyRefPtr<MessageEndpoint>(new MessageEndpoint(msgSize));
 
-        endpoint1->peer = endpoint2;
-        endpoint2->peer = endpoint1;
+        endpoint1->peer = endpoint2.get();
+        endpoint2->peer = endpoint1.get();
 
         return {endpoint1, endpoint2};
     }
@@ -126,7 +126,7 @@ private:
     RingBuffer<Message*> queue;
     RingBuffer<Message*> cache;
 
-    FancyRefPtr<MessageEndpoint> peer;
+    MessageEndpoint* peer;
 
     List<KernelObjectWatcher*> waiting;
     List<Pair<Semaphore*, Response>> waitingResponse;

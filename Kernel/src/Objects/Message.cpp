@@ -24,7 +24,8 @@ MessageEndpoint::~MessageEndpoint(){
 }
 
 void MessageEndpoint::Destroy(){
-    if(peer.get()){
+    // TODO: peer race condition
+    if(peer){
         peer->peer = nullptr;
     }
 }
@@ -35,7 +36,7 @@ int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint8_t* data){
     assert(data);
 
     if(queue.Empty()){
-        if(!peer.get()){
+        if(!peer){
             return -ENOTCONN;
         }
         
@@ -67,7 +68,7 @@ int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint8_t* data){
 }
 
 int64_t MessageEndpoint::Call(uint64_t id, uint16_t size, uint64_t data, uint64_t rID, uint16_t* rSize, uint8_t* rData, int64_t timeout){
-    if(!peer.get()){
+    if(!peer){
         return -ENOTCONN;
     }
 
@@ -108,7 +109,7 @@ int64_t MessageEndpoint::Call(uint64_t id, uint16_t size, uint64_t data, uint64_
 }
 
 int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
-    if(!peer.get()){
+    if(!peer){
         return -ENOTCONN;
     }
 

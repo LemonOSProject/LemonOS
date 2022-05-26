@@ -198,6 +198,11 @@ AudioContext::AudioContext() {
         exit(1);
     }
 
+    if(ioctl(m_pcmOut, IoCtlOutputSetAsync, 1)) {
+        Lemon::Logger::Error("/dev/snd/pcm IoCtlOutputSetAsync: {}", strerror(errno));
+        exit(1);
+    }
+
     // Get output information
     m_pcmChannels = ioctl(m_pcmOut, IoCtlOutputGetNumberOfChannels);
     if (m_pcmChannels <= 0) {

@@ -80,8 +80,8 @@ protected:
 
     bool isRootDevice = true;
 
-    String instanceName;
-    String deviceName;
+    String instanceName = "";
+    String deviceName = "Unknown Device";
 
     DeviceType type = DeviceTypeUnknown;
 
