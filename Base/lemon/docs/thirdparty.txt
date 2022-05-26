@@ -11,4 +11,6 @@ Licensed under zlib license
 [FFMpeg](https://ffmpeg.org/)
 This software uses libraries from the FFmpeg project under the LGPLv2.1
 
+[libfmt](https://fmt.dev)
+
 [libpng](http://www.libpng.org/pub/png/libpng.html)
