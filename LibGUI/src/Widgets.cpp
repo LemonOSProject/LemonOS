@@ -521,14 +521,15 @@ TextBox::TextBox(rect_t bounds, bool multiline) : Widget(bounds) {
 }
 
 void TextBox::Paint(surface_t* surface) {
-    Graphics::DrawRect(fixedBounds.pos.x + 1, fixedBounds.pos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2,
-                       Theme::Current().ColourContentBackground(), surface);
-
     if (IsActive() || Graphics::PointInRect(fixedBounds, window->lastMousePos)) {
-        Graphics::DrawRectOutline(fixedBounds, Theme::Current().ColourForeground(), surface);
+        Graphics::DrawRoundedRect(fixedBounds, Theme::Current().ColourForeground(), 3, 3, 3, 3, surface);
     } else {
-        Graphics::DrawRectOutline(fixedBounds, Theme::Current().ColourBorder(), surface);
+        Graphics::DrawRoundedRect(fixedBounds, Theme::Current().ColourBorder(), 3, 3, 3, 3, surface);
     }
+
+    Graphics::DrawRoundedRect({fixedBounds.pos.x + 1, fixedBounds.pos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2},
+                       Theme::Current().ColourContentBackground(), 3, 3, 3, 3, surface);
+
     int xpos = 2;
     int ypos = 2;
     int cursorY = 0;

@@ -46,6 +46,8 @@ void Theme::Update(const std::string& path){
     m_colours[Colour_Border] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.border");
     m_colours[Colour_TextLight] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.textLight");
     m_colours[Colour_TextDark] = m_config.GetSerializedConfigProperty<RGBAColour>("colours.textDark");
+
+    m_windowCornerRadius = m_config.GetConfigProperty<long>("wm.windowCornerRadius");
 }
 
 }

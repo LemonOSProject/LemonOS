@@ -53,14 +53,14 @@ public:
     const Colour& ColourForegroundAlternate() const { return m_colours[Colour_ForegroundAlternate]; }
     const Colour& ColourBorder() const { return m_colours[Colour_Border]; }
 
+    int WindowCornerRaidus() const { return m_windowCornerRadius; }
+
 private:
     Theme() noexcept;
 
     std::vector<Colour> m_colours;
-
-    //int m_titlebarHeight = 24;
-    //int m_cornerRadius = 10;
-    //int m_borderWidth = 1;
+    
+    int m_windowCornerRadius = 0;
 
     std::mutex m_writeLock;
     ConfigManager m_config;
