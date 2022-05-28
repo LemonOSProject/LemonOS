@@ -19,6 +19,8 @@ WM::WM(const Surface& displaySurface)
     if (Graphics::LoadImage("/system/lemon/resources/winbuttons.png", &WMWindow::theme.windowButtons)) {
         Logger::Error("Failed to load window buttons!");
     }
+
+    GUI::Theme::Current().Update(m_systemTheme);
 }
 
 void WM::Run() {
@@ -331,7 +333,7 @@ void WM::BroadcastDestroyedWindow(WMWindow* win) {
 
 void WM::OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32_t width, int32_t height,
                         uint32_t flags, const std::string& title) {
-    Lemon::Logger::Debug("Creating window: '", title, "' ", width, "x", height, " at ", x, "x", y);
+    Lemon::Logger::Debug("Creating window: '{}' {}x{} at {}x{}", title, width, height, x, y);
 
     WMWindow* win = new WMWindow(client, NextWindowID(), title, Vector2i{x, y}, Vector2i{width, height}, flags);
 
@@ -343,6 +345,7 @@ void WM::OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32
 
 void WM::OnDestroyWindow(const Lemon::Handle& client, int64_t windowID) {
     WMWindow* win = GetWindowFromID(windowID);
+
     if (!win) {
         Lemon::Logger::Warning("OnDestroyWindow: Invalid Window ID: {}", windowID);
         return;
@@ -470,9 +473,12 @@ void WM::OnGetSystemTheme(const Lemon::Handle& client){
 }
  
 void WM::OnPeerDisconnect(const Lemon::Handle& client) {
+    Lemon::Logger::Debug("Disconnected from {}", (long)client.get());
+
     std::list<WMWindow*> windowsToDestroy;
     for (WMWindow* win : m_windows) {
         if (win->GetHandle() == client) {
+            Lemon::Logger::Debug("Destroyed window: {}", win->GetTitle());
             windowsToDestroy.push_back(win);
         }
     }
