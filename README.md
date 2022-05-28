@@ -60,7 +60,7 @@ Lemon OS depends on:
 - ATA, NVMe or AHCI disk (AHCI *strongly* recommended)
 
 For QEMU run with: \
-```qemu-system-x86_64 Lemon.img --enable-kvm -cpu host -M q35 -smp 2 -m 1G -netdev user,id=net0 -device e1000,netdev=net0``` \
+```qemu-system-x86_64 Lemon.img --enable-kvm -cpu host -M q35 -smp 2 -m 1G -netdev user,id=net0 -device e1000,netdev=net0 -device ac97``` \
 **KVM is strongly recommended**
 
 ## Repo Structure
