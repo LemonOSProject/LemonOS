@@ -320,7 +320,7 @@ void TextObject::Update() {
     }
 
     // Check if we need to reallocate the surface
-    if(m_surface.width < m_textSize.x || m_surface.height < m_textSize.y) {
+    if(!m_surface.buffer || m_surface.width < m_textSize.x || m_surface.height < m_textSize.y) {
         if(m_surface.buffer){
             delete[] m_surface.buffer;
         }

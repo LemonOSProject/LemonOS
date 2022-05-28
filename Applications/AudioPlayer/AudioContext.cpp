@@ -29,7 +29,6 @@ void PlayAudio(AudioContext* ctx) {
     int sampleSize = ctx->m_pcmBitDepth / 8;
 
     AudioContext::SampleBuffer* buffers = ctx->sampleBuffers;
-
     while (ctx->m_isDecoderRunning) {
         if (!ctx->numValidBuffers) {
             Lemon::Logger::Warning("Decoder running behind!");
@@ -39,21 +38,10 @@ void PlayAudio(AudioContext* ctx) {
         ctx->currentSampleBuffer = (ctx->currentSampleBuffer + 1) % AUDIOCONTEXT_NUM_SAMPLE_BUFFERS;
 
         auto& buffer = buffers[ctx->currentSampleBuffer];
-
-#ifdef AUDIOCONTEXT_TIME_PLAYBACK
-        timespec t1;
-        clock_gettime(CLOCK_BOOTTIME, &t1);
-#endif
-
-        if(write(fd, buffer.data, buffer.samples * channels * sampleSize) < 0) {
+        int ret = write(fd, buffer.data, buffer.samples * channels * sampleSize);
+        if(ret < 0) {
             Lemon::Logger::Warning("/snd/dev/pcm: Error writing samples: {}", strerror(errno));
         }
-
-#ifdef AUDIOCONTEXT_TIME_PLAYBACK
-        timespec t2;
-        clock_gettime(CLOCK_BOOTTIME, &t2);
-        printf("%ld us\n", (t2.tv_sec - t1.tv_sec) * 1000000 + (t2.tv_nsec - t1.tv_nsec) / 1000);
-#endif
 
         buffer.samples = 0;
         ctx->numValidBuffers--;
@@ -106,9 +94,7 @@ void DecodeAudio(AudioContext* ctx) {
         ctx->m_avfmt = nullptr;
 
         // Wait for playerThread to finish
-        printf("Waiting for playback to stop...\n");
         playerThread.join();
-        printf("dome\n");
 
         ctx->m_isDecoderRunning = false;
         ctx->m_decoderLock.unlock();
@@ -123,7 +109,8 @@ void DecodeAudio(AudioContext* ctx) {
 
     AVPacket* packet = av_packet_alloc();
     AVFrame* frame = av_frame_alloc();
-    while (ctx->m_isDecoderRunning && av_read_frame(ctx->m_avfmt, packet) >= 0) {
+
+    while(ctx->m_isDecoderRunning && av_read_frame(ctx->m_avfmt, packet) >= 0) {
         if (avcodec_send_packet(ctx->m_avcodec, packet)) {
             Lemon::Logger::Error("Could not send packet for decoding");
             cleanup();
@@ -158,7 +145,7 @@ void DecodeAudio(AudioContext* ctx) {
             auto* buffer = &ctx->sampleBuffers[nextValidBuffer];
             int samplesToWrite = av_rescale_rnd(swr_get_delay(resampler, ctx->m_avcodec->sample_rate) + frame->nb_samples,
                                                 ctx->m_pcmSampleRate, ctx->m_avcodec->sample_rate, AV_ROUND_UP);
-            
+
             // Increment lastSampleBuffer if the buffer after is full
             while(samplesToWrite + buffer->samples > ctx->samplesPerBuffer) {
                 ctx->lastSampleBuffer++;
@@ -174,10 +161,10 @@ void DecodeAudio(AudioContext* ctx) {
             }
 
             uint8_t* outputData = buffer->data + (buffer->samples * outputSampleSize) * 2;
-            ssize_t samplesWritten = swr_convert(resampler, &outputData, (int)(ctx->samplesPerBuffer - buffer->samples),
+            int samplesWritten = swr_convert(resampler, &outputData, (int)(ctx->samplesPerBuffer - buffer->samples),
                                                 (const uint8_t**)frame->extended_data, frame->nb_samples);
-
             buffer->samples += samplesWritten;
+
             buffer->timestamp = frame->best_effort_timestamp / ctx->m_currentStream->time_base.den;
 
             av_frame_unref(frame);
@@ -236,8 +223,8 @@ AudioContext::AudioContext() {
         exit(1);
     }
 
-    // 0.5 seconds of audio per buffer
-    samplesPerBuffer = m_pcmSampleRate / 2;
+    // ~0.25 seconds of audio per buffer
+    samplesPerBuffer = m_pcmSampleRate / 4;
     for(int i = 0; i < AUDIOCONTEXT_NUM_SAMPLE_BUFFERS; i++) {
         sampleBuffers[i].data = new uint8_t[samplesPerBuffer * m_pcmChannels * (m_pcmBitDepth / 8)];
         sampleBuffers[i].samples = 0;
@@ -255,21 +242,22 @@ float AudioContext::PlaybackProgress() const {
 void AudioContext::PlaybackStop() {
     m_isDecoderRunning = false;
     m_decoderThread.join();
+
+    // Only change here as m_currentTrack is only used by the GUI thread
+    m_currentTrack = nullptr;
 }
 
-int AudioContext::PlayTrack(std::string filepath) {
+int AudioContext::PlayTrack(TrackInfo* info) {
     if(m_isDecoderRunning) {
-        printf("waiting for playback to stop\n");
         PlaybackStop();
     }
-    printf("playing...\n");
 
     std::lock_guard lockDecoder(m_decoderLock);
 
     assert(!m_avfmt);
     m_avfmt = avformat_alloc_context();
-    if (int r = avformat_open_input(&m_avfmt, filepath.c_str(), NULL, NULL); r) {
-        Lemon::Logger::Error("Failed to open ", filepath);
+    if (int r = avformat_open_input(&m_avfmt, info->filepath.c_str(), NULL, NULL); r) {
+        Lemon::Logger::Error("Failed to open ", info->filepath);
         return r;
     }
 
@@ -277,18 +265,21 @@ int AudioContext::PlayTrack(std::string filepath) {
         return r;
     }
 
+    // Update track metadata in case the file has changed
+    GetTrackInfo(m_avfmt, info);
+
     int streamIndex = av_find_best_stream(m_avfmt, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
     if (streamIndex < 0) {
-        Lemon::Logger::Error("Failed to get audio stream for ", filepath);
+        Lemon::Logger::Error("Failed to get audio stream for ", info->filepath);
         return streamIndex;
     }
 
-    av_dump_format(m_avfmt, 0, filepath.c_str(), 0);
+    av_dump_format(m_avfmt, 0, info->filepath.c_str(), 0);
 
     m_currentStream = m_avfmt->streams[streamIndex];
     const AVCodec* decoder = avcodec_find_decoder(m_currentStream->codecpar->codec_id);
     if (!decoder) {
-        Lemon::Logger::Error("Failed to find codec for '", filepath, "'.");
+        Lemon::Logger::Error("Failed to find codec for '", info->filepath, "'.");
         return 1;
     }
 
@@ -304,12 +295,14 @@ int AudioContext::PlayTrack(std::string filepath) {
         Lemon::Logger::Error("Failed to open codec!");
     }
 
+    m_currentTrack = info;
+
     m_isDecoderRunning = true;
     m_decoderThread = std::thread(DecodeAudio, this);
     return 0;
 }
 
-int AudioContext::LoadTrack(std::string filepath, TrackInfo& info) {
+int AudioContext::LoadTrack(std::string filepath, TrackInfo* info) {
     AVFormatContext* fmt = avformat_alloc_context();
     if (int r = avformat_open_input(&fmt, filepath.c_str(), NULL, NULL); r) {
         Lemon::Logger::Error("Failed to open ", filepath);
@@ -321,36 +314,40 @@ int AudioContext::LoadTrack(std::string filepath, TrackInfo& info) {
         return r;
     }
 
-    int durationSeconds = fmt->duration / 1000000;
-    info.durationString = std::to_string(durationSeconds / 60) + ":" + std::to_string(durationSeconds % 60);
+    info->filepath = filepath;
+    GetTrackInfo(fmt, info);
+
+    avformat_free_context(fmt);
+    return 0;
+}
+
+void AudioContext::GetTrackInfo(struct AVFormatContext* fmt, TrackInfo* info) {
+    float durationSeconds = fmt->duration / 1000000.f;
+    info->duration = durationSeconds;
+    info->durationString = fmt::format("{:02}:{:02}", (int)durationSeconds / 60, (int)durationSeconds % 60);
 
     // Get file metadata
     AVDictionaryEntry* tag = nullptr;
     tag = av_dict_get(fmt->metadata, "title", tag, AV_DICT_IGNORE_SUFFIX);
     if (tag) {
-        info.metadata.title = tag->value;
+        info->metadata.title = tag->value;
     } else {
-        info.metadata.title = "Unknown";
+        info->metadata.title = "Unknown";
     }
 
     tag = av_dict_get(fmt->metadata, "artist", tag, AV_DICT_IGNORE_SUFFIX);
     if (tag) {
-        info.metadata.artist = tag->value;
+        info->metadata.artist = tag->value;
     }
 
     tag = av_dict_get(fmt->metadata, "album", tag, AV_DICT_IGNORE_SUFFIX);
     if (tag) {
-        info.metadata.album = tag->value;
+        info->metadata.album = tag->value;
     }
 
     tag = av_dict_get(fmt->metadata, "date", tag, AV_DICT_IGNORE_SUFFIX);
     if (tag) {
         // First 4 digits are year
-        info.metadata.year = std::string(tag->value).substr(4);
+        info->metadata.year = std::string(tag->value).substr(4);
     }
-
-    info.filepath = filepath;
-
-    avformat_free_context(fmt);
-    return 0;
 }

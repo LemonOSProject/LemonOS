@@ -1,14 +1,18 @@
 #include <Lemon/GUI/Window.h>
 
-#include <Lemon/GUI/Model.h>
-#include <Lemon/GUI/Messagebox.h>
 #include <Lemon/GUI/FileDialog.h>
+#include <Lemon/GUI/Messagebox.h>
+#include <Lemon/GUI/Model.h>
 #include <Lemon/GUI/Widgets.h>
 #include <Lemon/Graphics/Graphics.h>
 #include <Lemon/Graphics/Text.h>
 
+#include <Lemon/Core/Format.h>
+
 #include "AudioContext.h"
 #include "AudioTrack.h"
+
+#include <unordered_map>
 
 using namespace Lemon;
 using namespace Lemon::GUI;
@@ -17,8 +21,7 @@ using namespace Lemon::GUI;
 
 class PlayButton : public Button {
 public:
-    PlayButton(AudioContext* ctx)
-        : Button("", {0, 0, 0, 0}), m_ctx(ctx) {
+    PlayButton(AudioContext* ctx) : Button("", {0, 0, 0, 0}), m_ctx(ctx) {
         // Get the length of the labels in pixels
         // using the font
         playLabelTextLength = Graphics::GetTextLength(playLabel.c_str());
@@ -26,13 +29,13 @@ public:
     }
 
     void OnMouseDown(vector2i_t mousePos) override {
-        // Call the parent function to handle 
+        // Call the parent function to handle
         // visual feedback for button presses
         Button::OnMouseDown(mousePos);
     }
 
     void Paint(surface_t* surface) override {
-        if(m_ctx->IsAudioPlaying()) {
+        if (m_ctx->IsAudioPlaying()) {
             label = pauseLabel;
             labelLength = pauseLabelTextLength;
         } else {
@@ -42,7 +45,7 @@ public:
 
         Button::Paint(surface);
     }
-    
+
 private:
     AudioContext* m_ctx;
 
@@ -54,23 +57,18 @@ private:
 
 class StopButton : public Button {
 public:
-    StopButton(AudioContext* ctx)
-        : Button("Stop", {0, 0, 0, 0}), m_ctx(ctx) {
-
-    }
+    StopButton(AudioContext* ctx) : Button("Stop", {0, 0, 0, 0}), m_ctx(ctx) {}
 
     void OnMouseDown(vector2i_t mousePos) override {
-        // Call the parent function to handle 
+        // Call the parent function to handle
         // visual feedback for button presses
         Button::OnMouseDown(mousePos);
 
         m_ctx->PlaybackStop();
     }
 
-    void Paint(surface_t* surface) override {
-        Button::Paint(surface);
-    }
-    
+    void Paint(surface_t* surface) override { Button::Paint(surface); }
+
 private:
     AudioContext* m_ctx;
 };
@@ -98,10 +96,36 @@ public:
         m_playerControls->AddWidget(m_stop);
         m_playerControls->AddWidget(m_nextTrack);
 
-        (void)m_ctx;
+        m_duration.SetColour(Theme::Current().ColourText());
     }
 
-    void Paint(Surface* surface) override { Container::Paint(surface); }
+    void Paint(Surface* surface) override {
+        Container::Paint(surface);
+
+        int totalDuration = 0;
+        int songProgress = m_ctx->PlaybackProgress();
+        if(m_ctx->IsAudioPlaying()) {
+            totalDuration = m_ctx->CurrentTrack()->duration;
+        }
+
+        auto duration = fmt::format("{:02}:{:02}/{:02}:{:02}", songProgress / 60, songProgress % 60, totalDuration / 60,
+                                    totalDuration % 60);
+        m_duration.SetText(duration);
+        m_duration.BlitTo(surface);
+
+        int progressBarWidth = fixedBounds.width - 10;
+        Lemon::Graphics::DrawRoundedRect(Rect{fixedBounds.x + 5,
+                                              fixedBounds.y + m_play->GetFixedBounds().y - 5 - 10,
+                                              progressBarWidth, 10},
+                                         Theme::Current().ColourContainerBackground(), 5, 5, 5, 5, surface);
+        if (totalDuration > 0) {
+            float progress = m_ctx->PlaybackProgress() / totalDuration;
+            Lemon::Graphics::DrawRoundedRect(Rect{fixedBounds.x + 5,
+                                                fixedBounds.y + m_play->GetFixedBounds().y - 5 - 10,
+                                                static_cast<int>(progressBarWidth * progress), 10},
+                                            Theme::Current().ColourForeground(), 5, 0, 0, 5, surface);
+        }
+    }
 
     void UpdateFixedBounds() override {
         // Make sure UpdateFixedBounds has not been called before the constructor
@@ -110,6 +134,7 @@ public:
         assert(m_previousTrack && m_play && m_nextTrack);
 
         Container::UpdateFixedBounds();
+        m_duration.SetPos(fixedBounds.pos + Vector2i{5, m_play->GetFixedBounds().y - 5 - 15 - m_duration.Size().y});
     }
 
     ~PlayerWidget() {
@@ -163,24 +188,38 @@ public:
 
     int LoadTrack(std::string filepath) {
         TrackInfo track;
-        if(int r = m_ctx->LoadTrack(filepath, track); r) {
+        if (int r = m_ctx->LoadTrack(filepath, &track); r) {
             return r;
         }
 
-        m_tracks.push_back(track);
+        m_tracks[filepath] = std::move(track);
+        m_trackList.push_back(&m_tracks.at(filepath));
         return 0;
     }
 
     int PlayTrack(int index) {
-        if(!m_tracks.size()) {
+        if (!m_trackList.size()) {
             return 0;
         }
 
-        return m_ctx->PlayTrack(m_tracks.at(index).filepath);
+        return m_ctx->PlayTrack(m_trackList.at(index));
+    }
+
+    int RemoveTrack(int index) {
+        if (!m_trackList.size()) {
+            return 0;
+        }
+
+        TrackInfo* track = m_trackList.at(index);
+        // Check we actually removed a track
+        assert(m_tracks.erase(track->filepath) > 0);
+        m_trackList.erase(m_trackList.begin() + index);
+
+        return 0;
     }
 
     int ColumnCount() const override { return s_numFields; }
-    int RowCount() const override { return (int)m_tracks.size(); }
+    int RowCount() const override { return (int)m_trackList.size(); }
 
     const char* ColumnName(int column) const override {
         assert(column < s_numFields);
@@ -188,9 +227,9 @@ public:
     }
 
     Variant GetData(int row, int column) override {
-        assert(row < (int)m_tracks.size());
+        assert(row < (int)m_trackList.size());
 
-        TrackInfo& track = m_tracks.at(row);
+        TrackInfo& track = *m_trackList.at(row);
         if (column == 0) {
             return track.filepath;
         } else if (column == 1) {
@@ -217,7 +256,8 @@ private:
     ListView* m_listView;
     Button* m_openTrack;
 
-    std::vector<TrackInfo> m_tracks;
+    std::unordered_map<std::string, TrackInfo> m_tracks;
+    std::vector<TrackInfo*> m_trackList;
 };
 
 void OnOpenTrack(Button* button) {
@@ -225,11 +265,11 @@ void OnOpenTrack(Button* button) {
     assert(tracks);
 
     char* filepath = FileDialog(".", FILE_DIALOG_DIRECTORIES);
-    if(!filepath) {
+    if (!filepath) {
         return;
     }
 
-    if(tracks->LoadTrack(filepath)) {
+    if (tracks->LoadTrack(filepath)) {
         std::string message = std::string("Failed to load '") + filepath + '\'';
         DisplayMessageBox("Error load file", message.c_str());
     }
@@ -240,7 +280,7 @@ void OnSubmitTrack(int row, ListView* lv) {
     TrackSelection* tracks = (TrackSelection*)lv->GetParent();
     assert(tracks);
 
-    if(tracks->PlayTrack(row)) {
+    if (tracks->PlayTrack(row)) {
         return;
     }
 
@@ -263,7 +303,7 @@ int main(int argc, char** argv) {
         window->GUIPollEvents();
         window->Paint();
 
-        Lemon::WindowServer::Instance()->Wait();
+        Lemon::WindowServer::Instance()->Wait(500000);
     }
 
     delete window;

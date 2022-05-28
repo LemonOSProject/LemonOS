@@ -23,14 +23,16 @@ public:
 
     inline bool IsAudioPlaying() const { return m_isDecoderRunning; }
 
-    inline float PlaybackProgress() const;
+    float PlaybackProgress() const;
+    const TrackInfo* CurrentTrack() const { return m_currentTrack; }
 
     void PlaybackStart();
     void PlaybackPause();
     void PlaybackStop();
+    void PlaybackSeek(float timestamp);
 
-    int PlayTrack(std::string filepath);
-    int LoadTrack(std::string filepath, TrackInfo& info);
+    int PlayTrack(TrackInfo* info);
+    int LoadTrack(std::string filepath, TrackInfo* info);
 
     SampleBuffer sampleBuffers[AUDIOCONTEXT_NUM_SAMPLE_BUFFERS];
     ssize_t samplesPerBuffer;
@@ -42,11 +44,15 @@ public:
     std::atomic<int> numValidBuffers;
 
 private:
+    void GetTrackInfo(struct AVFormatContext* fmt, TrackInfo* info);
+
     // File descriptor for pcm output
     int m_pcmOut;
     int m_pcmSampleRate;
     int m_pcmChannels;
     int m_pcmBitDepth;
+
+    TrackInfo* m_currentTrack;
 
     // Thread which writes PCM samples to the audio driver,
     // reduces audio lag and prevents blocking the main thread
@@ -57,7 +63,9 @@ private:
     std::thread m_decoderThread;
     // Held by the decoderThread whilst it is running
     std::mutex m_decoderLock;
+
     bool m_isDecoderRunning = false;
+    bool m_isAudioPlaying = false;
 
     struct AVFormatContext* m_avfmt = nullptr;
     struct AVCodecContext* m_avcodec = nullptr;

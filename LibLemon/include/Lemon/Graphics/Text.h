@@ -29,7 +29,7 @@ public:
     ///
     /// \param surface Surface to render to
     /////////////////////////////
-    void BlitTo(Surface* dest) { if(m_textDirty) Update(); dest->AlphaBlit(&m_surface, m_pos); }
+    inline void BlitTo(Surface* dest) { if(m_textDirty) Update(); dest->AlphaBlit(&m_surface, m_pos); }
 
     /////////////////////////////
     /// \brief Set TextObject font
@@ -122,7 +122,7 @@ protected:
     vector2i_t m_pos;
 
     bool m_textDirty = true;
-    vector2i_t m_textSize;
+    vector2i_t m_textSize = {0, 0};
 
     int m_renderMode = RenderNormal;
     rgba_colour_t m_colour = {0, 0, 0, 255};

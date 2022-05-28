@@ -3,11 +3,7 @@
 #include <iostream>
 #include <mutex>
 
-#define FMT_EXCEPTIONS 0
-#define FMT_HEADER_ONLY 1
-
-#include <fmt/core.h>
-#include <fmt/format.h>
+#include <Lemon/Core/Format.h>
 
 namespace Lemon {
 namespace Logger {
