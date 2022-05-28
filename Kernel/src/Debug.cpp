@@ -2,7 +2,7 @@
 
 const int debugLevelHAL = 0;
 const int debugLevelMisc = 0;
-const int debugLevelScheduler = 0;
+const int debugLevelScheduler = DebugLevelNormal;
 const int debugLevelModules = 0;
 const int debugLevelSymbols = 0;
 

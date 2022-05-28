@@ -28,7 +28,7 @@ kernel_c_args = [
     '-mcmodel=large', '-mno-red-zone', '-fno-pic',
     '-mno-mmx', '-mno-sse', '-mno-sse2',
     '-fno-stack-protector', '-fno-builtin',
-    '-finline-functions',
+    '-finline-functions'
 ]
 
 kernel_cpp_args = [

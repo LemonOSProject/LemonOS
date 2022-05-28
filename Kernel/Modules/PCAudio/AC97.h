@@ -60,6 +60,10 @@ private:
         outportb(m_nabmPort + PO_TransferControl, inportb(m_nabmPort + PO_TransferControl) & ~NBTransferDMAControl);
     }
 
+    inline uint8_t IsDMARunning() const {
+        return !(inportw(m_nabmPort + PO_TransferStatus) & NBDMAStatus);
+    }
+
     // Native Audio Bus Master Registers
     struct NABMBufferDescriptor {
         uint32_t pAddr; // Physical addr of buffer

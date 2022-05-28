@@ -133,6 +133,10 @@ namespace fs::Temp{
             return -EISDIR;
         }
 
+        if(writeSize == 0) {
+            return 0;
+        }
+
         bufferLock.AcquireWrite();
         if(!buffer || off + writeSize > size){
             size_t old = size;

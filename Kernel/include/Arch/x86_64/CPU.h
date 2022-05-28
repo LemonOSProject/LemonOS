@@ -182,6 +182,14 @@ static ALWAYS_INLINE CPU* GetCPULocal() {
     return ret;
 }
 
+static ALWAYS_INLINE void DisableInterrupts() {
+    asm volatile("cli");
+}
+
+static ALWAYS_INLINE void EnableInterrupts() {
+    asm volatile("sti");
+}
+
 class InterruptDisabler {
 public:
     ALWAYS_INLINE InterruptDisabler() : m_intsWereEnabled(CheckInterrupts()) { asm volatile("cli"); }

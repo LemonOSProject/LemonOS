@@ -63,11 +63,7 @@ void SMPEntry(uint16_t id) {
     asm("sti");
     
     for (;;)
-        ;
-}
-
-void PrepareTrampoline() {
-    memcpy((void*)SMP_TRAMPOLINE_ENTRY, &_binary_SMPTrampoline_bin_start, ((uint64_t)&_binary_SMPTrampoline_bin_size));
+        asm volatile("pause");
 }
 
 void InitializeCPU(uint16_t id) {
@@ -131,11 +127,13 @@ void Initialize() {
 
     processorCount = ACPI::processorCount;
 
-    PrepareTrampoline();
+    memcpy((void*)SMP_TRAMPOLINE_ENTRY, &_binary_SMPTrampoline_bin_start, ((uint64_t)&_binary_SMPTrampoline_bin_size));
 
     for (int i = 0; i < processorCount; i++) {
-        if (ACPI::processors[i] != 0)
+        if (ACPI::processors[i] != 0) {
+            Log::Info("starting cpu %d", i);
             InitializeCPU(ACPI::processors[i]);
+        }
     }
 
     TSS::InitializeTSS(&cpus[0]->tss, cpus[0]->gdt);

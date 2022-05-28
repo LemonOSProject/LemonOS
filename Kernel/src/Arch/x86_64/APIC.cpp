@@ -9,10 +9,14 @@
 
 #include <Debug.h>
 
+#define APIC_READ(off) *((volatile uint32_t*)(virtualBase + off))
+#define APIC_WRITE(off, val) (*((volatile uint32_t*)(virtualBase + off)) = val)
+
+volatile uintptr_t virtualBase;
+
 namespace APIC {
 namespace Local {
 uintptr_t base;
-volatile uintptr_t virtualBase;
 
 void SpuriousInterruptHandler(void*, RegisterContext* r) { Log::Warning("[APIC] Spurious Interrupt"); }
 
@@ -33,7 +37,7 @@ void WriteBase(uint64_t val) {
 void Enable() {
     WriteBase(ReadBase() | (1UL << 11));
 
-    Write(LOCAL_APIC_SIVR, Read(LOCAL_APIC_SIVR) | 0x1FF /* Enable APIC, Vector 255*/);
+    APIC_WRITE(LOCAL_APIC_SIVR, APIC_READ(LOCAL_APIC_SIVR) | 0x1FF /* Enable APIC, Vector 255*/);
 }
 
 int Initialize() {
@@ -51,16 +55,12 @@ int Initialize() {
     return 0;
 }
 
-uint32_t Read(uint32_t off) { return *((volatile uint32_t*)(virtualBase + off)); }
-
-void Write(uint32_t off, uint32_t val) { *((volatile uint32_t*)(virtualBase + off)) = val; }
-
 void SendIPI(uint8_t destination, uint32_t dsh /* Destination Shorthand*/, uint32_t type, uint8_t vector) {
     uint32_t high = ((uint32_t)destination) << 24;
     uint32_t low = dsh | type | ICR_VECTOR(vector);
 
-    Write(LOCAL_APIC_ICR_HIGH, high);
-    Write(LOCAL_APIC_ICR_LOW, low);
+    APIC_WRITE(LOCAL_APIC_ICR_HIGH, high);
+    APIC_WRITE(LOCAL_APIC_ICR_LOW, low);
 }
 } // namespace Local
 
@@ -168,4 +168,4 @@ int Initialize() {
 }
 } // namespace APIC
 
-extern "C" void LocalAPICEOI() { APIC::Local::Write(LOCAL_APIC_EOI, 0); }
+extern "C" void LocalAPICEOI() { APIC_WRITE(LOCAL_APIC_EOI, 0); }

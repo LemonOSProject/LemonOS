@@ -174,34 +174,36 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size, boo
         return -EINVAL; // Must be writing exact frame
     }
 
-    unsigned samplesToWrite = size / m_pcmSampleSize;
-    unsigned buffersToWrite = ((size + PAGE_SIZE_4K - 1) >> PAGE_SHIFT_4K);
+    int totalSamplesWritten = 0;
+    int buffersToWrite = (((int)size + PAGE_SIZE_4K - 1) >> PAGE_SHIFT_4K);
     
     while (size > 0)
     {
         uint8_t isDMARunning = !(inportw(m_nabmPort + PO_TransferStatus) & NBDMAStatus);
         if(isDMARunning) {
-            int currentBuffer = inportb(m_nabmPort + PO_CurrentEntry);
-            int lastValidEntry = inportb(m_nabmPort + PO_LastValidEntry);
+            int remainingBuffers = 0;
+            do {
+                int currentBuffer = inportb(m_nabmPort + PO_CurrentEntry);
+                int lastValidEntry = inportb(m_nabmPort + PO_LastValidEntry);
 
-            // Get the remaining buffers to be processed
-            long remainingBuffers = lastValidEntry - currentBuffer;
-            if(remainingBuffers < 0) {
-                remainingBuffers += AC97_BDL_ENTRIES;
-            }
+                // Get the remaining buffers to be processed
+                remainingBuffers = lastValidEntry - currentBuffer;
+                if(remainingBuffers < 0) {
+                    remainingBuffers += AC97_BDL_ENTRIES;
+                }
+                remainingBuffers += 1;
 
-            // Wait for the buffers to finish processing, give one extra buffer leeway
-            Thread::Current()->Sleep(((remainingBuffers - 1) * m_samplesPerBuffer) * 1000000 / AC97_SAMPLE_RATE);
-        }
+                if(remainingBuffers >= AC97_BDL_ENTRIES - 1) {
+                    // We can not fit any buffers,
+                    // Wait for the samples to finish processing, give 10ms leeway
+                    long samples = bufferDescriptorList[(currentBuffer + 1) % AC97_BDL_ENTRIES].sampleCount / m_pcmNumChannels;
 
-        int timer = 55;
-        while(timer > 0) {
-            isDMARunning = !(inportw(m_nabmPort + PO_TransferStatus) & NBDMAStatus);
-            if(!isDMARunning)
-                break;
-
-            Timer::Wait(1);
-            timer--;
+                    // Sleep whilst the next buffer gets processed
+                    if(samples > 0) {
+                        Thread::Current()->Sleep(samples * 1000000 / AC97_SAMPLE_RATE);
+                    }
+                }
+            } while(remainingBuffers >= AC97_BDL_ENTRIES - 1 && IsDMARunning());
         }
 
         int samplesWritten = 0;
@@ -209,83 +211,51 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size, boo
             // Disable interrupts in case IRQ fires,
             // interrupts are already disabled
             ScopedSpinLock<true> lockController(m_lock);
-        
-            if(timer <= 0) {
-                Log::Warning("AC97 DMA still running after 55ms, stopping");
-                StopDMA();
-                // Move the last valid entry back to the current entry as we have
-                // stoped the DMA
-                outportb(m_nabmPort + PO_LastValidEntry, inportb(m_nabmPort + PO_CurrentEntry));
+
+            int currentBuffer = inportb(m_nabmPort + PO_CurrentEntry);
+            int lastValidEntry = inportb(m_nabmPort + PO_LastValidEntry);
+
+            int nextBuffer = lastValidEntry % AC97_BDL_ENTRIES;
+            isDMARunning = !(inportw(m_nabmPort + PO_TransferStatus) & NBDMAStatus);
+            if(isDMARunning) {
+                nextBuffer = (lastValidEntry + 1) % AC97_BDL_ENTRIES;
+                if(nextBuffer == currentBuffer) {
+                    continue;
+                }
             }
 
-            assert(inportw(m_nabmPort + PO_TransferStatus) & NBDMAStatus);
-        
-            uint8_t currentBuffer = inportb(m_nabmPort + PO_CurrentEntry);
-            uint8_t lastValidEntry = inportb(m_nabmPort + PO_LastValidEntry);
-
-            assert("DMA has stopped," && currentBuffer == lastValidEntry);
-
-            int count = MIN(buffersToWrite, AC97_BDL_ENTRIES);
-            while(count--) {
-                size_t written = MIN(PAGE_SIZE_4K, size);
-                memcpy(sampleBuffers[lastValidEntry], buffer, written);
-                bufferDescriptorList[lastValidEntry].flags = 0;
+            do {
+                int written = MIN(PAGE_SIZE_4K, size);
+                // Copy audio data to our mapped buffers which will be sent
+                // to the hardware
+                memcpy(sampleBuffers[nextBuffer], buffer, written);
+                bufferDescriptorList[nextBuffer].flags = 0;
 
                 samplesWritten += written / m_pcmSampleSize / m_pcmNumChannels;
 
+                // Increment the source buffer
                 buffer += written;
                 size -= written;
 
                 // Make sure we update this value in case the buffer isnt full
                 // to make sure the AC97 doesn't play old audio
-                bufferDescriptorList[lastValidEntry].sampleCount = written / m_pcmSampleSize;
+                bufferDescriptorList[nextBuffer].sampleCount = written / m_pcmSampleSize;
                 buffersToWrite--;
 
-                // Stop on the last entry
-                if(count) {
-                    lastValidEntry = (lastValidEntry + 1) % AC97_BDL_ENTRIES;
-                }
-            }
+                nextBuffer = (nextBuffer + 1) % AC97_BDL_ENTRIES;
+            } while(buffersToWrite-- && nextBuffer != currentBuffer);
+            
+            outportb(m_nabmPort + PO_LastValidEntry, nextBuffer - 1);
 
-            bufferDescriptorList[lastValidEntry].flags |= BDLastEntry;
-
-            outportb(m_nabmPort + PO_LastValidEntry, lastValidEntry);
-            StartDMA();
-        }
-
-        // Unless async is specified,
-        // wait for the playback to finish
-        if(!async) {
-            // Estimate the amount of time to sleep for (minus 5ms)
-            timer = samplesWritten * 1000 / AC97_SAMPLE_RATE - 5;
-            Thread::Current()->Sleep(timer * 1000);
-
-            // Sleep an extra 20ms
-            timer = 10;
-            while(timer--) {
-                uint8_t isDMARunning = !(inportw(m_nabmPort + PO_TransferStatus) & NBDMAStatus);
-                if(!isDMARunning) {
-                    break;
-                }
-
-                if(Thread::Current()->HasPendingSignals()) {
-                    return -EINTR;
-                    
-                }
-
-                // Sleep for 1ms
-                Thread::Current()->Sleep(1000);
-            }
-
-            if(timer <= 0) {
-                Log::Warning("AC97 DMA still running, stopping");
-                StopDMA();
-                return -EIO;
+            isDMARunning = !(inportw(m_nabmPort + PO_TransferStatus) & NBDMAStatus);
+            if(!isDMARunning) {
+                StartDMA(); // Ensure DMA is running
             }
         }
+        totalSamplesWritten += samplesWritten;
     }
 
-    return samplesToWrite;
+    return totalSamplesWritten;
 }
 
 void AC97Controller::OnIRQ() {

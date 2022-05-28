@@ -14,7 +14,7 @@ typedef volatile int lock_t;
         unsigned i = 0;                                                                                                \
         while (__sync_lock_test_and_set(lock, 1) && ++i < 0xFFFFFFF)                                                   \
             asm("pause");                                                                                              \
-        if (i >= 0xFFFFFFF) {                                                                                          \
+        if (i >= 0x2FFFFFFF) {                                                                                          \
             assert(!"Deadlock!");                                                                                      \
         }                                                                                                              \
     })
@@ -26,7 +26,7 @@ typedef volatile int lock_t;
         asm volatile("cli");                                                                                           \
         while (__sync_lock_test_and_set(lock, 1) && ++i < 0xFFFFFFF)                                                   \
             asm("sti; pause; cli");                                                                                    \
-        if (i >= 0xFFFFFFF) {                                                                                          \
+        if (i >= 0x2FFFFFFF) {                                                                                          \
             assert(!"Deadlock!");                                                                                      \
         }                                                                                                              \
     })

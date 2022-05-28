@@ -34,7 +34,10 @@ ssize_t CharacterBuffer::Write(char* _buffer, size_t size) {
         buffer = (char*)kmalloc(bufferPos + size + 128);
         memcpy(buffer, oldBuf, bufferSize);
         bufferSize = bufferPos + size + 128;
-        kfree(oldBuf);
+
+        if(oldBuf) {
+            kfree(oldBuf);
+        }
     }
 
     ssize_t written = 0;

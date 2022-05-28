@@ -90,6 +90,9 @@ bool ReadKey(uint8_t* key) {
 
 // Interrupt handler
 void KBHandler(void*, RegisterContext* r) {
+    if(!(inportb(0x64) & 1))
+        return; // Wait for buffer
+    
     // Read from the keyboard's data buffer
     uint8_t key = inportb(0x60);
 
@@ -280,7 +283,9 @@ void Initialize() {
     WaitSignal();
     outportb(0x64, 0xA7);
 
-    inportb(0x60); // Discard any data
+    while(inportb(0x64) & 1) {
+        inportb(0x60); // Discard any data
+    }
 
     WaitSignal();
     outportb(0x64, 0x20);

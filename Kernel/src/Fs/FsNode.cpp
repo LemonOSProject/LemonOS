@@ -106,7 +106,6 @@ void FsNode::Unwatch(FilesystemWatcher& watcher){
     Log::Warning("FsNode::Unwatch base called");
 }
 
-
 void FsNode::Sync(){
     
 }

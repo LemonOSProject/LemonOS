@@ -1119,7 +1119,7 @@ long SysPWrite(RegisterContext* r) {
     uint8_t* buffer = (uint8_t*)SC_ARG1(r);
     uint64_t count = SC_ARG2(r);
     uint64_t off = SC_ARG4(r);
-    return fs::Read(handle->node, off, count, buffer);
+    return fs::Write(handle->node, off, count, buffer);
 }
 
 long SysIoctl(RegisterContext* r) {
@@ -2600,6 +2600,7 @@ long SysInterfaceConnect(RegisterContext* r) {
         Log::Warning("SysInterfaceConnect: Failed to connect!");
         return -EINVAL; // Some error connecting, interface destroyed?
     }
+
 
     return currentProcess->AllocateHandle(static_pointer_cast<KernelObject>(endp));
 }

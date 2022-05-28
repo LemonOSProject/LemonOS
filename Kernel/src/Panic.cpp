@@ -6,7 +6,7 @@
 #include <Logging.h>
 
 void KernelPanic(const char** reasons, int reasonCount) {
-    asm("cli");
+    asm volatile("cli");
 
     APIC::Local::SendIPI(0, ICR_DSH_OTHER, ICR_MESSAGE_TYPE_FIXED, IPI_HALT);
 
@@ -25,8 +25,7 @@ void KernelPanic(const char** reasons, int reasonCount) {
         Log::console->Update();
     }
 
-    asm("hlt");
-    for(;;);
+    asm volatile("hlt");
 }
 
 void PrintReason(const video_mode_t& v, int& pos, const char* reason) {
