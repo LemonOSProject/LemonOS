@@ -16,12 +16,12 @@ _NOTE: Building on WSL2 is doable, however I strongly recommend an actual UNIX s
 
 ### Arch Linux
 ```sh
-sudo pacman -S base-devel git cmake autoconf python3 ninja wget python-pip nasm help2man gettext gperf flex
+sudo pacman -S base-devel git cmake autoconf python3 ninja wget python-pip nasm help2man gettext gperf flex rsync git-lfs
 ```
 
 ### Debian, Ubuntu, etc.
 ```sh
-sudo apt install build-essential git cmake curl autoconf libtool python3 python3-pip ninja-build nasm help2man gettext autopoint gperf texinfo wget flex
+sudo apt install build-essential git cmake curl autoconf libtool python3 python3-pip ninja-build nasm help2man gettext autopoint gperf texinfo wget flex rsync git-lfs
 ```
 
 ## Install pip packages
