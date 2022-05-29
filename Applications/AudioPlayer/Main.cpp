@@ -132,20 +132,27 @@ public:
     void OnMouseDown(Vector2i pos) override {
         Rect pRect = ProgressbarRect();
         if(m_ctx->IsAudioPlaying() && Lemon::Graphics::PointInRect(pRect, pos)) {
-            float percentage = ((float)(pos.x - pRect.x)) / pRect.width;
-
-            m_ctx->PlaybackSeek(percentage * m_ctx->CurrentTrack()->duration);
+            m_isSeeking = true;
         }
 
         Container::OnMouseDown(pos);
     }
 
     void OnMouseUp(Vector2i pos) override {
-        Container::OnMouseDown(pos);
+        Container::OnMouseUp(pos);
+        
+        m_isSeeking = false;
     }
 
     void OnMouseMove(Vector2i pos) override {
-        Container::OnMouseDown(pos);
+        if(m_isSeeking && m_ctx->IsAudioPlaying()) {
+            Rect pRect = ProgressbarRect();
+            float percentage = std::clamp((float)(pos.x - pRect.x) / pRect.width, 0.f, 1.f);
+
+            m_ctx->PlaybackSeek(percentage * m_ctx->CurrentTrack()->duration);
+        }
+
+        Container::OnMouseMove(pos);
     }
 
     void UpdateFixedBounds() override {
@@ -186,6 +193,10 @@ private:
     Button* m_previousTrack = nullptr;
     StopButton* m_stop = nullptr;
     Button* m_nextTrack = nullptr;
+
+    // If the the mouse was pressed in the progress bar,
+    // move the seek circle thingy to the mouse x coords
+    bool m_isSeeking;
 };
 
 class InfoWidget : public Container {};

@@ -37,6 +37,8 @@ void PlayAudio(AudioContext* ctx) {
         ctx->currentSampleBuffer = (ctx->currentSampleBuffer + 1) % AUDIOCONTEXT_NUM_SAMPLE_BUFFERS;
 
         auto& buffer = buffers[ctx->currentSampleBuffer];
+        ctx->m_lastTimestamp = buffer.timestamp;
+
         int ret = write(fd, buffer.data, buffer.samples * channels * sampleSize);
         if (ret < 0) {
             Lemon::Logger::Warning("/snd/dev/pcm: Error writing samples: {}", strerror(errno));
@@ -98,11 +100,11 @@ void DecodeAudio(AudioContext* ctx) {
 
         avformat_free_context(ctx->m_avfmt);
         ctx->m_avfmt = nullptr;
+        ctx->m_isDecoderRunning = false;
 
         // Wait for playerThread to finish
         playerThread.join();
 
-        ctx->m_isDecoderRunning = false;
         ctx->m_decoderLock.unlock();
     };
 
@@ -193,11 +195,12 @@ void DecodeAudio(AudioContext* ctx) {
             ctx->FlushSampleBuffers();
 
             float timestamp = ctx->m_seekTimestamp;
-            Lemon::Logger::Debug("ts {} ({})", timestamp, (long)(timestamp / av_q2d(ctx->m_currentStream->time_base)));
             av_seek_frame(ctx->m_avfmt, 0, (long)(timestamp / av_q2d(ctx->m_currentStream->time_base)), 0);
 
             avcodec_flush_buffers(ctx->m_avcodec);
             swr_convert(resampler, NULL, 0, NULL, 0);
+
+            ctx->m_lastTimestamp = ctx->m_seekTimestamp;
             ctx->m_requestSeek = false;
         }
     }
@@ -252,8 +255,8 @@ AudioContext::AudioContext() {
         exit(1);
     }
 
-    // ~0.2 seconds of audio per buffer
-    samplesPerBuffer = m_pcmSampleRate / 5;
+    // ~100ms of audio per buffer
+    samplesPerBuffer = m_pcmSampleRate / 10;
     for (int i = 0; i < AUDIOCONTEXT_NUM_SAMPLE_BUFFERS; i++) {
         sampleBuffers[i].data = new uint8_t[samplesPerBuffer * m_pcmChannels * (m_pcmBitDepth / 8)];
         sampleBuffers[i].samples = 0;
@@ -265,7 +268,7 @@ float AudioContext::PlaybackProgress() const {
         return 0;
     }
 
-    return sampleBuffers[currentSampleBuffer].timestamp;
+    return m_lastTimestamp;
 }
 
 void AudioContext::PlaybackStop() {

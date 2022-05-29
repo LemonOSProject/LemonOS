@@ -82,6 +82,8 @@ private:
     bool m_requestSeek = false;
     // Timestamp in seconds of where to seek to
     float m_seekTimestamp;
+    // Last timestamp played by the playback thread
+    float m_lastTimestamp;
 
     struct AVFormatContext* m_avfmt = nullptr;
     struct AVCodecContext* m_avcodec = nullptr;
