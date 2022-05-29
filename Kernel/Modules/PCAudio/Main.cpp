@@ -133,13 +133,17 @@ AC97Controller::AC97Controller(const PCIInfo& info) : PCIDevice(info) {
     transferControl |= NBLastEntryInterrupt | NBInterruptOnCompletion | NBFIFOErrorInterrupt;
     outportb(nabmTransferControl, transferControl);
 
+    // Not really a percentage of audio volume (yet)
+    // as volume is in deibels
+    OutputSetVolume(nullptr, 85);
+
     RegisterPCMOut(m_pcm);
     StopDMA();
 }
 
 int AC97Controller::SetMasterVolume(int percentage) {
     int volume = AC97_VOLUME_MIN - (AC97_VOLUME_MIN * percentage / 100);
-    outportw(m_ioPort + NAMMasterVolume, AC97_MIXER_VOLUME(volume, AC97_VOLUME_MAX, 0));
+    outportw(m_ioPort + NAMMasterVolume, AC97_MIXER_VOLUME(volume, volume, 0));
     return 0;
 }
 
@@ -148,8 +152,9 @@ int AC97Controller::GetMasterVolume() const {
 }
 
 int AC97Controller::OutputSetVolume(void* output, int percentage) {
+    // Not really a percentage because volume is in db
     int volume = AC97_VOLUME_MIN - (AC97_VOLUME_MIN * percentage / 100);
-    outportw(m_ioPort + NAMPCMVolume, AC97_MIXER_VOLUME(volume, AC97_VOLUME_MAX, 0));
+    outportw(m_ioPort + NAMPCMVolume, AC97_MIXER_VOLUME(volume, volume, 0));
     return 0;
 }
 

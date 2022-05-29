@@ -9,7 +9,7 @@
 #define AC97_VOLUME_MAX 0
 #define AC97_VOLUME_MIN 63
 
-#define AC97_MIXER_VOLUME(right, left, mute) ((uint16_t)((right & 0x3f) | (left & 0x3f << 8) | (mute & 1 << 15)))
+#define AC97_MIXER_VOLUME(right, left, mute) ((uint16_t)((right & 0x3f) | ((left & 0x3f) << 8) | (mute & 1 << 15)))
 #define AC97_MIXER_VOLUME_RIGHT_MASK 0x3f
 
 #define AC97_CONTROL_PCM_OUT_CHANNELS_MASK ((0x3U) << 20)
