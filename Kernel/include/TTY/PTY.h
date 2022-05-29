@@ -45,7 +45,7 @@ private:
 
     PTMultiplexor();
 
-    lock_t m_ptmxLock;
+    lock_t m_ptmxLock = 0;
     int m_nextPT = 0; // PTYs are named /dev/pts/0, 1, 2, ... 
 
     PTS m_pts;

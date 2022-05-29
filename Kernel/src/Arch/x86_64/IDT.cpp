@@ -259,7 +259,12 @@ extern "C" void isr_handler(int intNum, RegisterContext* regs) {
             ;
     } else {
         int res = acquireTestLock(&Scheduler::GetCurrentThread()->kernelLock);
-        assert(!res); // Make sure we acquired the lock
+        if(res) { // Make sure we acquired the lock
+            assert(Process::Current()->State() != Process::Process_Running);
+            for(;;) {
+                Scheduler::Yield();
+            }
+        }
 
         Process* current = Process::Current();
 

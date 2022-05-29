@@ -683,6 +683,7 @@ void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t 
             CreatePageTable(pdptIndex, pageDirIndex,
                             pageMap); // If we don't have a page table at this address, create one.
 
+        assert(pageMap->pageTables[pdptIndex][pageDirIndex]);
         pageMap->pageTables[pdptIndex][pageDirIndex][pageIndex] = flags;
         SetPageFrame(&(pageMap->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
 

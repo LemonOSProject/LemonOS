@@ -303,9 +303,19 @@ void Process::Die() {
 
     CPU* cpu = GetCPULocal();
 
-    if(m_state == Process_Dying) {
-        // Process is already dying, we might be another thread
-        releaseLock(&Thread::Current()->kernelLock);
+    // Check if we are main thread
+    if(cpu->currentThread != cpu->currentThread->parent->GetMainThread().get()) {
+        acquireLock(&m_processLock);
+        if(m_state != Process_Dying) {
+            // Kill the main thread
+            cpu->currentThread->parent->GetMainThread()->Signal(SIGKILL);
+        }
+
+        asm volatile("cli");
+        releaseLock(&m_processLock);
+        releaseLock(&cpu->currentThread->kernelLock);
+        cpu->currentThread->state = ThreadStateDying;
+        asm volatile("sti");
         for(;;) Scheduler::Yield();
     }
 
