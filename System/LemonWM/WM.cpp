@@ -63,6 +63,7 @@ void WM::OnMouseDown(bool isRightButton) {
     for (auto it = m_windows.rbegin(); it != m_windows.rend(); ++it) {
         WMWindow* win = *it;
         if ((m_resizePoint = win->GetResizePoint(m_input.mouse.pos))) {
+            SetActiveWindow(win);
             return;
         } else if (win->GetRect().Contains(m_input.mouse.pos)) {
             if (win->IsMinimized()) {
