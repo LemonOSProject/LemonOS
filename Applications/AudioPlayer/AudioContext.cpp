@@ -119,12 +119,18 @@ void DecodeAudio(AudioContext* ctx) {
     AVFrame* frame = av_frame_alloc();
 
     while (ctx->m_isDecoderRunning && av_read_frame(ctx->m_avfmt, packet) >= 0) {
-        if (avcodec_send_packet(ctx->m_avcodec, packet)) {
+        if(packet->stream_index != ctx->m_currentStreamIndex) {
+            // May be a video stream such as album art, drop it
+            av_packet_unref(packet);
+            continue;
+        }
+
+        if (int ret = avcodec_send_packet(ctx->m_avcodec, packet); ret) {
             Lemon::Logger::Error("Could not send packet for decoding");
             cleanup();
             return;
         }
-
+        
         auto isPacketInvalid = [ctx]() -> bool {
             return ctx->m_requestSeek || !ctx->m_isDecoderRunning;
         };
@@ -195,7 +201,7 @@ void DecodeAudio(AudioContext* ctx) {
             ctx->FlushSampleBuffers();
 
             float timestamp = ctx->m_seekTimestamp;
-            av_seek_frame(ctx->m_avfmt, 0, (long)(timestamp / av_q2d(ctx->m_currentStream->time_base)), 0);
+            av_seek_frame(ctx->m_avfmt, ctx->m_currentStreamIndex, (long)(timestamp / av_q2d(ctx->m_currentStream->time_base)), 0);
 
             avcodec_flush_buffers(ctx->m_avcodec);
             swr_convert(resampler, NULL, 0, NULL, 0);
@@ -323,9 +329,8 @@ int AudioContext::PlayTrack(TrackInfo* info) {
         return streamIndex;
     }
 
-    av_dump_format(m_avfmt, 0, info->filepath.c_str(), 0);
-
     m_currentStream = m_avfmt->streams[streamIndex];
+    m_currentStreamIndex = streamIndex;
     const AVCodec* decoder = avcodec_find_decoder(m_currentStream->codecpar->codec_id);
     if (!decoder) {
         Lemon::Logger::Error("Failed to find codec for '{}'", info->filepath);
@@ -343,6 +348,8 @@ int AudioContext::PlayTrack(TrackInfo* info) {
     if (avcodec_open2(m_avcodec, decoder, NULL) < 0) {
         Lemon::Logger::Error("Failed to open codec!");
     }
+
+    av_dump_format(m_avfmt, 0, info->filepath.c_str(), 0);
 
     m_currentTrack = info;
 

@@ -89,4 +89,5 @@ private:
     struct AVCodecContext* m_avcodec = nullptr;
 
     struct AVStream* m_currentStream = nullptr;
+    int m_currentStreamIndex = 0;
 };

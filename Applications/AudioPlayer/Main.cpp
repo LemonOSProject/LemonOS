@@ -9,6 +9,9 @@
 
 #include <Lemon/Core/Format.h>
 
+#include <dirent.h>
+#include <sys/stat.h>
+
 #include "AudioContext.h"
 #include "AudioTrack.h"
 
@@ -227,7 +230,7 @@ public:
         m_listView->OnSubmit = OnSubmitTrack;
     }
 
-    int LoadTrack(std::string filepath) {
+    int LoadTrack(const std::string& filepath) {
         TrackInfo track;
         if (int r = m_ctx->LoadTrack(filepath, &track); r) {
             return r;
@@ -238,6 +241,37 @@ public:
         return 0;
     }
 
+    int LoadDirectory(const std::string& filepath) {
+        errno = 0;
+
+        DIR* dir;
+        if(dir = opendir(filepath.c_str()); dir) {
+            return 1;
+        }
+
+        struct dirent* ent;
+        while((ent = readdir(dir))) {
+            LoadFilepath(ent->d_name);
+        }
+
+        return 0;
+    }
+    
+    int LoadFilepath(std::string path) {
+        struct stat s;
+        if(stat(path.c_str(), &s)) {
+            DisplayMessageBox(path.c_str(), fmt::format("{} attempting to read {}", strerror(errno), path).c_str());
+        }
+
+        if(S_ISDIR(s.st_mode)) {
+            LoadDirectory(path);
+        } else if (int e = LoadTrack(path); e) {
+            DisplayMessageBox("Error load file", fmt::format("Failed to load {}", path).c_str());
+            return e;
+        }
+
+        return 0;
+    }
     int PlayTrack(int index) {
         if (!m_trackList.size()) {
             return 0;
@@ -310,10 +344,7 @@ void OnOpenTrack(Button* button) {
         return;
     }
 
-    if (tracks->LoadTrack(filepath)) {
-        std::string message = std::string("Failed to load '") + filepath + '\'';
-        DisplayMessageBox("Error load file", message.c_str());
-    }
+    tracks->LoadFilepath(filepath);
     delete filepath;
 }
 
