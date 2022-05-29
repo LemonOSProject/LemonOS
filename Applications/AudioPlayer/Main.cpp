@@ -242,16 +242,20 @@ public:
     }
 
     int LoadDirectory(const std::string& filepath) {
-        errno = 0;
-
         DIR* dir;
-        if(dir = opendir(filepath.c_str()); dir) {
+        if(dir = opendir(filepath.c_str()); !dir) {
             return 1;
         }
 
         struct dirent* ent;
         while((ent = readdir(dir))) {
-            LoadFilepath(ent->d_name);
+            if(ent->d_name[0] == '.') {
+                // Ignore hidden files including . and ..
+                continue;
+            }
+
+            std::string newPath = filepath + "/" + ent->d_name;
+            LoadFilepath(newPath);
         }
 
         return 0;
