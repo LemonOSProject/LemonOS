@@ -8,11 +8,13 @@
 #include "Audio.h"
 #include "Pipe.h"
 #include "Terminal.h"
+#include "Syscall.h"
 
 const std::unordered_map<std::string, Test> tests = {
     {"pipe", pipeTest},
     {"terminal", termTest},
-    {"audio", audioTest}
+    {"audio", audioTest},
+    {"syscall", syscallTest},
 };
 
 void ExecuteTest(const Test& test) {

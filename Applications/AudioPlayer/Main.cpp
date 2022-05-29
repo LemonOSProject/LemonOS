@@ -104,7 +104,7 @@ public:
 
         int totalDuration = 0;
         int songProgress = m_ctx->PlaybackProgress();
-        if(m_ctx->IsAudioPlaying()) {
+        if (m_ctx->IsAudioPlaying()) {
             totalDuration = m_ctx->CurrentTrack()->duration;
         }
 
@@ -113,18 +113,39 @@ public:
         m_duration.SetText(duration);
         m_duration.BlitTo(surface);
 
+        int progressBarY = fixedBounds.y + m_play->GetFixedBounds().y - 5 - 10;
         int progressBarWidth = fixedBounds.width - 10;
-        Lemon::Graphics::DrawRoundedRect(Rect{fixedBounds.x + 5,
-                                              fixedBounds.y + m_play->GetFixedBounds().y - 5 - 10,
-                                              progressBarWidth, 10},
+        Lemon::Graphics::DrawRoundedRect(ProgressbarRect(),
                                          Theme::Current().ColourContainerBackground(), 5, 5, 5, 5, surface);
         if (totalDuration > 0) {
-            float progress = m_ctx->PlaybackProgress() / totalDuration;
-            Lemon::Graphics::DrawRoundedRect(Rect{fixedBounds.x + 5,
-                                                fixedBounds.y + m_play->GetFixedBounds().y - 5 - 10,
-                                                static_cast<int>(progressBarWidth * progress), 10},
-                                            Theme::Current().ColourForeground(), 5, 0, 0, 5, surface);
+            float progress = std::clamp(m_ctx->PlaybackProgress() / totalDuration, 0.f, 1.f);
+            Lemon::Graphics::DrawRoundedRect(
+                Rect{fixedBounds.x + 5, progressBarY, static_cast<int>(progressBarWidth * progress), 10},
+                Theme::Current().ColourForeground(), 5, 0, 0, 5, surface);
+
+            Lemon::Graphics::DrawRoundedRect(
+                Rect{fixedBounds.x + 5 + static_cast<int>(progressBarWidth * progress) - 6, progressBarY - 1, 12, 12},
+                Theme::Current().ColourText(), 6, 6, 6, 6, surface);
         }
+    }
+
+    void OnMouseDown(Vector2i pos) override {
+        Rect pRect = ProgressbarRect();
+        if(m_ctx->IsAudioPlaying() && Lemon::Graphics::PointInRect(pRect, pos)) {
+            float percentage = ((float)(pos.x - pRect.x)) / pRect.width;
+
+            m_ctx->PlaybackSeek(percentage * m_ctx->CurrentTrack()->duration);
+        }
+
+        Container::OnMouseDown(pos);
+    }
+
+    void OnMouseUp(Vector2i pos) override {
+        Container::OnMouseDown(pos);
+    }
+
+    void OnMouseMove(Vector2i pos) override {
+        Container::OnMouseDown(pos);
     }
 
     void UpdateFixedBounds() override {
@@ -147,6 +168,15 @@ public:
     inline AudioContext* Context() { return m_ctx; }
 
 private:
+    inline Rect ProgressbarRect() const {
+        return {
+            fixedBounds.x + 5,
+            fixedBounds.y + m_play->GetFixedBounds().y - 5 - 10,
+            fixedBounds.width - 10,
+            10
+        };
+    }
+
     AudioContext* m_ctx;
 
     Graphics::TextObject m_duration;

@@ -75,6 +75,10 @@ void OnPaint(Surface* surf) {
             Lemon::Graphics::DrawRect(Rect{screenPos, characterSize}, c.background, surf);
             Lemon::Graphics::DrawChar(c.ch, screenPos.x, screenPos.y, c.foreground, surf, terminalFont);
             screenPos.x += characterSize.x;
+
+            if(screenPos.x >= surf->width) {
+                break;
+            }
         }
         screenPos.y += characterSize.y;
     }

@@ -1,15 +1,17 @@
 #pragma once
 
-#include <thread>
+#include <condition_variable>
 #include <mutex>
+#include <thread>
 
 #include "AudioTrack.h"
 
-#define AUDIOCONTEXT_NUM_SAMPLE_BUFFERS 32
+#define AUDIOCONTEXT_NUM_SAMPLE_BUFFERS 16
 
 class AudioContext {
     friend void DecodeAudio(AudioContext*);
     friend void PlayAudio(AudioContext*);
+
 public:
     struct SampleBuffer {
         uint8_t* data;
@@ -41,10 +43,21 @@ public:
     int lastSampleBuffer;
     // The currently processed sample buffer
     int currentSampleBuffer;
-    std::atomic<int> numValidBuffers;
+    std::mutex sampleBuffersLock;
+    // Decoder waits for a buffer to be processed
+    std::condition_variable decoderWaitCondition;
+    int numValidBuffers;
 
 private:
     void GetTrackInfo(struct AVFormatContext* fmt, TrackInfo* info);
+
+    inline int DecoderNextBuffer() const {return (lastSampleBuffer + 1) % AUDIOCONTEXT_NUM_SAMPLE_BUFFERS; }
+    inline void FlushSampleBuffers() {
+        for (int i = 0; i < AUDIOCONTEXT_NUM_SAMPLE_BUFFERS; i++) {
+            sampleBuffers[i].samples = 0;
+            sampleBuffers[i].timestamp = 0;
+        }
+    }
 
     // File descriptor for pcm output
     int m_pcmOut;
@@ -65,10 +78,13 @@ private:
     std::mutex m_decoderLock;
 
     bool m_isDecoderRunning = false;
-    bool m_isAudioPlaying = false;
+    
+    bool m_requestSeek = false;
+    // Timestamp in seconds of where to seek to
+    float m_seekTimestamp;
 
     struct AVFormatContext* m_avfmt = nullptr;
     struct AVCodecContext* m_avcodec = nullptr;
-    
+
     struct AVStream* m_currentStream = nullptr;
 };

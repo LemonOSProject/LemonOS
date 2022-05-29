@@ -419,6 +419,7 @@ int main() {
     fflush(stdin);
 
     for (;;) {
+        getcwd(currentDir, PATH_MAX);
         printf("\n\e[33mLemon \e[91m%s\e[m$ ", currentDir);
         fflush(stdout);
 
