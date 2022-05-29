@@ -108,15 +108,23 @@ void InitializeCPU(uint16_t id) {
     doneInit = false;
 }
 
-void Initialize() {
-    cpus[0] = new CPU; // Initialize CPU 0
+bool didInitializeCPU0 = false;
+CPU cpu0;
+void InitializeCPU0Context() {
+    didInitializeCPU0 = true;
+    cpus[0] = &cpu0;
     cpus[0]->id = 0;
     cpus[0]->gdt = (void*)GDT64Pointer64.base;
     cpus[0]->gdtPtr = GDT64Pointer64;
     cpus[0]->currentThread = nullptr;
     cpus[0]->runQueueLock = 0;
-    cpus[0]->runQueue = new FastList<Thread*>();
     SetCPULocal(cpus[0]);
+}
+
+void Initialize() {
+    assert(didInitializeCPU0);
+    // Initialize rest of CPU 0
+    cpus[0]->runQueue = new FastList<Thread*>();
 
     if (HAL::disableSMP) {
         TSS::InitializeTSS(&cpus[0]->tss, cpus[0]->gdt);

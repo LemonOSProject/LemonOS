@@ -85,7 +85,7 @@ ssize_t PTYDevice::Write(size_t offset, size_t size, uint8_t* buffer) {
         // Buffer must be full so just keep trying
         buffer += written;
         while (written < size) {
-            size_t ret = pty->SlaveWrite((char*)buffer, size - written);
+            size_t ret = pty->MasterWrite((char*)buffer, size - written);
 
             if (ret < 0) {
                 return ret; // Error

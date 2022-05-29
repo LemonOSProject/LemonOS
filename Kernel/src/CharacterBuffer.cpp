@@ -6,7 +6,7 @@
 #include <MM/KMalloc.h>
 
 CharacterBuffer::CharacterBuffer() {
-    buffer = (char*)kmalloc(bufferSize);
+    buffer = new char[bufferSize];
     bufferPos = 0;
     lock = 0;
     lines = 0;
@@ -27,7 +27,7 @@ ssize_t CharacterBuffer::Write(char* _buffer, size_t size) {
         return 0;
     }
 
-    acquireLock(&(this->lock));
+    ScopedSpinLock lock{this->lock};
 
     if ((bufferPos + size) > bufferSize) {
         char* oldBuf = buffer;
@@ -58,51 +58,42 @@ ssize_t CharacterBuffer::Write(char* _buffer, size_t size) {
             lines++;
     }
 
-    releaseLock(&(this->lock));
-
     return written;
 }
 
 ssize_t CharacterBuffer::Read(char* _buffer, size_t count) {
-    acquireLock(&(this->lock));
-
-    if (count > bufferPos) {
-        count = bufferPos;
-    }
-
+    ScopedSpinLock lock{this->lock};
     if (count <= 0) {
-        releaseLock(&(this->lock));
         return 0;
     }
 
-    for (unsigned i = 0; i < count; i++) {
-        if (buffer[i] == '\0') {
+    int i = 0;
+    int readPos = 0;
+    for (; readPos < bufferPos && i < count; readPos++) {
+        if (buffer[readPos] == '\0') {
             lines--;
             continue;
         }
 
-        _buffer[i] = buffer[i];
+        _buffer[i] = buffer[readPos];
+        i++;
 
-        if (buffer[i] == '\n')
+        if (buffer[readPos] == '\n')
             lines--;
     }
 
-    for (unsigned i = 0; i < bufferSize - count; i++) {
-        buffer[i] = buffer[count + i];
+    for (unsigned j = 0; j < bufferSize - readPos; j++) {
+        buffer[j] = buffer[readPos + j];
     }
 
-    bufferPos -= count;
+    bufferPos -= readPos;
 
-    releaseLock(&(this->lock));
-
-    return count;
+    return i;
 }
 
 void CharacterBuffer::Flush() {
-    acquireLock(&(this->lock));
+    ScopedSpinLock lock{this->lock};
 
     bufferPos = 0;
     lines = 0;
-
-    releaseLock(&(this->lock));
 }

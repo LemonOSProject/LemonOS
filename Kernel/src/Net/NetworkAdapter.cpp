@@ -26,6 +26,7 @@ namespace Network {
     }
 
     NetworkPacket* NetworkAdapter::Dequeue() { 
+        ScopedSpinLock lock{queueLock};
         if(queue.get_length()) {
             packetSemaphore.SetValue(queue.get_length() - 1);
             return queue.remove_at(0); 
@@ -38,7 +39,8 @@ namespace Network {
         if(packetSemaphore.Wait()){
             return nullptr; // We were interrupted
         }
-
+        
+        ScopedSpinLock lock{queueLock};
         if(queue.get_length()){
             return queue.remove_at(0); 
         } else {

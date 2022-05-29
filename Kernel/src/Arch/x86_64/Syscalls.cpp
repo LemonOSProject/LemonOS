@@ -3861,6 +3861,16 @@ done:
     return evCount;
 }
 
+long SysFChdir(RegisterContext* r) {
+    Process* process = Process::Current();
+    int fd = SC_ARG0(r);
+
+    auto dirHandle = SC_TRY_OR_ERROR(process->GetHandleAs<UNIXOpenFile>(fd));
+    process->workingDir = dirHandle;
+
+    return 0;
+}
+
 syscall_t syscalls[NUM_SYSCALLS]{
     SysDebug,
     SysExit, // 1
@@ -3973,6 +3983,7 @@ syscall_t syscalls[NUM_SYSCALLS]{
     SysEpollCreate,
     SysEPollCtl,
     SysEpollWait,   // 110
+    SysFChdir
 };
 
 void DumpLastSyscall(Thread* t) {

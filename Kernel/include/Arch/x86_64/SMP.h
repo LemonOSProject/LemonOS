@@ -7,5 +7,6 @@ namespace SMP{
     extern unsigned processorCount;
 
     void InitializeCPU(uint16_t id);
+    void InitializeCPU0Context();
     void Initialize();
 }

@@ -301,6 +301,7 @@ void Process::Destroy() {
 void Process::Die() {
     asm volatile("sti");
 
+    assert(Scheduler::GetCurrentProcess() == this);
     CPU* cpu = GetCPULocal();
 
     // Check if we are main thread
@@ -314,7 +315,6 @@ void Process::Die() {
         asm volatile("cli");
         releaseLock(&m_processLock);
         releaseLock(&cpu->currentThread->kernelLock);
-        cpu->currentThread->state = ThreadStateDying;
         asm volatile("sti");
         for(;;) Scheduler::Yield();
     }

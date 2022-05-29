@@ -10,7 +10,7 @@ public:
     size_t bufferSize = CHARBUFFER_START_SIZE;
     size_t maxBufferSize = 2097152;
     size_t bufferPos = 0;
-    int lines;
+    int lines = 0;
     char* buffer = nullptr;
     bool ignoreBackspace = false;
 

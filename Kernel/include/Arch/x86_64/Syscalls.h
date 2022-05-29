@@ -3,7 +3,7 @@
 #include <CPU.h>
 
 #include <ABI/Syscall.h>
-#define NUM_SYSCALLS 111
+#define NUM_SYSCALLS 112
 
 #define SC_ARG0(r) ((r)->rdi)
 #define SC_ARG1(r) ((r)->rsi)

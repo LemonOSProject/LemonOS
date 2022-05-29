@@ -43,7 +43,7 @@ void InitCore() { // ALWAYS call this first
     asm volatile("cli");
     Serial::Initialize();
     Serial::Write("Initializing Lemon...\r\n");
-    
+
     // Initialize Paging/Virtual Memory Manager
     Memory::InitializeVirtualMemory();
 
@@ -52,6 +52,8 @@ void InitCore() { // ALWAYS call this first
 
     // Initialize Physical Memory Allocator
     Memory::InitializePhysicalAllocator(&mem_info);
+
+    SMP::InitializeCPU0Context();
 }
 
 void InitVideo() {
@@ -106,8 +108,10 @@ void InitExtra() {
     Memory::LateInitializeVirtualMemory();
 }
 
-void InitMultiboot2(multiboot2_info_header_t* mbInfo) {
+void InitMultiboot2(uintptr_t _mbInfo) {
     InitCore();
+
+    multiboot2_info_header_t* mbInfo = (multiboot2_info_header_t*)Memory::GetIOMapping(_mbInfo);
 
     multiboot2_tag_t* tag = reinterpret_cast<multiboot2_tag_t*>(mbInfo->tags);
 
@@ -199,7 +203,8 @@ void InitMultiboot2(multiboot2_info_header_t* mbInfo) {
             auto rsdp = &(reinterpret_cast<multiboot2_acpi2_rsdp_t*>(tag)->rsdp);
             ACPI::SetRSDP(new acpi_xsdp_t{*rsdp});
 
-            Log::Debug(debugLevelHAL, DebugLevelVerbose, "Found MB2 ACPI 2 RSDP at %x, revision: %d", rsdp, rsdp->revision);
+            Log::Debug(debugLevelHAL, DebugLevelVerbose, "Found MB2 ACPI 2 RSDP at %x, revision: %d", rsdp,
+                       rsdp->revision);
             break;
         }
         default: {
@@ -256,10 +261,10 @@ void InitMultiboot2(multiboot2_info_header_t* mbInfo) {
     InitExtra();
 }
 
-void InitStivale2(stivale2_info_header_t* st2Info) {
+void InitStivale2(uintptr_t st2Info) {
     InitCore();
 
-    uintptr_t tagPhys = st2Info->tags;
+    uintptr_t tagPhys = ((stivale2_info_header_t*)Memory::GetIOMapping(st2Info))->tags;
     char* cmdLine = nullptr;
 
     while (tagPhys) {
@@ -384,13 +389,13 @@ void InitStivale2(stivale2_info_header_t* st2Info) {
 
 extern "C" [[noreturn]] void kmain();
 
-extern "C" [[noreturn]] void kinit_multiboot2(multiboot2_info_header_t* mbInfo) {
+extern "C" [[noreturn]] void kinit_multiboot2(uintptr_t mbInfo) {
     HAL::InitMultiboot2(mbInfo);
 
     kmain();
 }
 
-extern "C" [[noreturn]] void kinit_stivale2(stivale2_info_header_t* st2Info) {
+extern "C" [[noreturn]] void kinit_stivale2(uintptr_t st2Info) {
     HAL::InitStivale2(st2Info);
 
     kmain();

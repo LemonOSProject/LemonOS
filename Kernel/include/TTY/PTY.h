@@ -54,7 +54,7 @@ private:
 
 class PTYDevice : public FsNode {
 public:
-    PTY* pty;
+    PTY* pty = nullptr;
     int device;
 
     PTYDevice();
