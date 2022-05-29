@@ -340,7 +340,6 @@ packages:
       version: '5.0.1'
       subdir: 'Ports'
     pkgs_required:
-      - libmp3lame
       - mlibc
     tools_required:
       - host-compiler
@@ -356,12 +355,8 @@ packages:
       - '--sysroot=@SYSROOT_DIR@'
       - '--prefix=/system'
       - '--enable-shared'
-      - '--disable-ffplay'
-      - '--disable-ffprobe'
       - '--disable-doc'
-      - '--enable-libmp3lame'
       - '--disable-avdevice'
-      - '--disable-avfilter'
       - '--disable-mmx'
       - '--disable-network'
       - '--disable-demuxer=nistsphere'
@@ -373,6 +368,37 @@ packages:
       - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
-
+  - name: libarchive
+    source:
+      git: 'https://github.com/libarchive/libarchive.git'
+      tag: 'v3.6.1'
+      version: '3.6.1'
+      subdir: 'Ports'
+    pkgs_required:
+      - mlibc
+      - zlib
+      - libressl
+    tools_required:
+      - host-compiler
+      - host-pkgconfig
+    configure:
+      - args:
+        - 'cmake'
+        - '-GNinja'
+        - '@THIS_SOURCE_DIR@' 
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_INSTALL_PREFIX=/system'
+        - '-DHAVE_OPENAT=OFF'
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+    build:
+      - args: ['ninja']
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
 
 

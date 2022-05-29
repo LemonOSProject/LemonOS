@@ -1,0 +1,25 @@
+From 1bc530686b0aa696b9c791960e7a35c42737ef1e Mon Sep 17 00:00:00 2001
+From: JJ <computerfido@gmail.com>
+Date: Sun, 29 May 2022 20:22:47 +1000
+Subject: [PATCH 2/3] Remove unsupported format string
+
+---
+ libavfilter/src_movie.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libavfilter/src_movie.c b/libavfilter/src_movie.c
+index b89a680..240549e 100644
+--- a/libavfilter/src_movie.c
++++ b/libavfilter/src_movie.c
+@@ -605,7 +605,7 @@ static int process_command(AVFilterContext *ctx, const char *cmd, const char *ar
+         int64_t ts;
+         char tail[2];
+ 
+-        if (sscanf(args, "%i|%"SCNi64"|%i %1s", &idx, &ts, &flags, tail) != 3)
++        if (sscanf(args, "%i||%i %1s", &idx, &ts, &flags, tail) != 3)
+             return AVERROR(EINVAL);
+ 
+         ret = av_seek_frame(movie->format_ctx, idx, ts, flags);
+-- 
+2.36.1
+
