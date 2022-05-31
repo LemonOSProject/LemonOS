@@ -62,7 +62,15 @@ void DecodeAudio(AudioContext* ctx) {
     ctx->m_decoderLock.lock();
     SwrContext* resampler = swr_alloc();
 
-    av_opt_set_int(resampler, "in_channel_layout", AV_CH_LAYOUT_STEREO, 0);
+    if(ctx->m_avcodec->channels == 1) {
+        av_opt_set_int(resampler, "in_channel_layout", AV_CH_LAYOUT_MONO, 0);
+    } else {
+        if(ctx->m_avcodec->channels != 2) {
+            Lemon::Logger::Warning("Unsupported number of audio channels {}.", ctx->m_avcodec->channels);
+        }
+
+        av_opt_set_int(resampler, "in_channel_layout", AV_CH_LAYOUT_STEREO, 0);
+    }
     av_opt_set_int(resampler, "in_sample_rate", ctx->m_avcodec->sample_rate, 0);
     av_opt_set_sample_fmt(resampler, "in_sample_fmt", ctx->m_avcodec->sample_fmt, 0);
 
