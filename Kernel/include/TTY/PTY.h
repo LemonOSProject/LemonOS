@@ -101,6 +101,8 @@ public:
     ssize_t MasterWrite(char* buffer, size_t count);
     ssize_t SlaveWrite(char* buffer, size_t count);
 
+    void Close();
+
     void WatchMaster(FilesystemWatcher& watcher, int events);
     void WatchSlave(FilesystemWatcher& watcher, int events);
     void UnwatchMaster(FilesystemWatcher& watcher);

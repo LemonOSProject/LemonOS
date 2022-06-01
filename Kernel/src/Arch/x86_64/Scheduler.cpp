@@ -291,7 +291,6 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
         cpu->currentThread = cpu->idleThread;
     } else {
         if (__builtin_expect(cpu->currentThread->parent != cpu->idleProcess, 1)) {
-            cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
             cpu->currentThread->ticksGivenSinceBalance += cpu->currentThread->timeSliceDefault;
 
             asm volatile("fxsave64 (%0)" ::"r"((uintptr_t)cpu->currentThread->fxState) : "memory");
@@ -318,8 +317,8 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
         } else {
             // See if we can find a better thread
             // where better is the thread w/ least CPU time
-            Thread* leastHungry = cpu->currentThread->next;
             Thread* first = cpu->currentThread;
+            Thread* leastHungry = cpu->currentThread->next;
             do {
                 if (leastHungry->state & ThreadStateBlocked) {
                     Thread* first = leastHungry;
@@ -356,6 +355,8 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
                  "d"((cpu->currentThread->fsBase >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
 
     TSS::SetKernelStack(&cpu->tss, (uintptr_t)cpu->currentThread->kernelStack);
+
+    cpu->currentThread->timeSlice = cpu->currentThread->timeSliceDefault;
 
     // Check for a few things
     // - Process is in usermode

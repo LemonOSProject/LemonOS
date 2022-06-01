@@ -312,6 +312,8 @@ void Process::Die() {
             cpu->currentThread->parent->GetMainThread()->Signal(SIGKILL);
         }
 
+        assert(cpu->currentThread->parent == this);
+
         asm volatile("cli");
         releaseLock(&m_processLock);
         releaseLock(&cpu->currentThread->kernelLock);
@@ -361,11 +363,17 @@ void Process::Die() {
         }
     }
 
+    Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Killing child processes...", m_pid);
     while (m_children.get_length()) {
+        // Ensure we release this at least momentarily in case threads are waiting on said lock
+        releaseLock(&m_processLock);
+
         FancyRefPtr<Process> child = m_children.get_front();
+        Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Killing %d (%s)...", PID(), child->PID(), child->name);
         if (child->State() == Process_Running) {
             child->GetMainThread()->Signal(SIGKILL); // Kill it, burn it with fire
-            while(child->State() != Process_Dead); // Wait for it to die
+            while(child->State() != Process_Dead)
+                Scheduler::Yield(); // Wait for it to die
         } else if (child->State() == Process_Dying) {
             KernelObjectWatcher w;
             child->Watch(w, 0);
@@ -377,6 +385,7 @@ void Process::Die() {
         }
 
         child->m_parent = nullptr;
+        acquireLock(&m_processLock);
         m_children.remove(child); // Remove from child list
     }
 
@@ -384,6 +393,7 @@ void Process::Die() {
     releaseLock(&m_processLock);
 
     asm("sti");
+    Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Killing threads...", m_pid);
     while (runningThreads.get_length()) {
         auto it = runningThreads.begin();
         while (it != runningThreads.end()) {
@@ -414,8 +424,7 @@ void Process::Die() {
         assert(t->state == ThreadStateDying || t == cpu->currentThread);
     }
 
-    acquireLock(&cpu->runQueueLock);
-    asm("cli");
+    acquireLockIntDisable(&cpu->runQueueLock);
 
     for (unsigned j = 0; j < cpu->runQueue->get_length(); j++) {
         if (Thread* thread = cpu->runQueue->get_at(j); thread != cpu->currentThread && thread->parent == this) {
@@ -433,8 +442,7 @@ void Process::Die() {
 
         CPU* other = SMP::cpus[i];
         asm("sti");
-        acquireLock(&other->runQueueLock);
-        asm("cli");
+        acquireLockIntDisable(&other->runQueueLock);
 
         assert(!(other->currentThread && other->currentThread->parent == this)); // The thread state should be blocked
 
@@ -487,7 +495,7 @@ void Process::Die() {
 
     bool isDyingProcess = (cpu->currentThread->parent == this);
     if(isDyingProcess){
-        asm("cli");
+        acquireLockIntDisable(&cpu->runQueueLock);
         Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Rescheduling...", m_pid);
 
         asm volatile("mov %%rax, %%cr3" ::"a"(((uint64_t)Memory::kernelPML4) - KERNEL_VIRTUAL_BASE));
@@ -496,6 +504,7 @@ void Process::Die() {
         cpu->currentThread->timeSlice = 0;
 
         releaseLock(&m_processLock);
+        releaseLock(&cpu->runQueueLock);
 
         asm volatile("sti; int $0xFD"); // IPI_SCHEDULE
         assert(!"We should not be here");

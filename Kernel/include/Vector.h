@@ -68,6 +68,18 @@ public:
         }
     }
 
+    Vector(Vector<T>&& x) {
+        ScopedSpinLock lock{x.lock};
+
+        data = x.data;
+        count = x.count;
+        capacity = x.capacity;
+
+        x.data = nullptr;
+        x.count = 0;
+        x.capacity = 0;
+    }
+
     template <typename... D> Vector(D... data) { (add_back(data), ...); }
 
     ALWAYS_INLINE T& at(size_t pos) {

@@ -27,14 +27,6 @@ PTYDevice::PTYDevice() {
 
 }
 
-void PTYDevice::Close() {
-    handleCount--;
-
-    if(handleCount == 0 && device == PTYMasterDevice){
-        PTMultiplexor::Instance().DestroyPTY(pty);
-    }
-}
-
 ssize_t PTYDevice::Read(size_t offset, size_t size, uint8_t* buffer) {
     assert(pty);
     assert(device == PTYSlaveDevice || device == PTYMasterDevice);
@@ -178,6 +170,14 @@ bool PTYDevice::CanRead() {
     }
 }
 
+void PTYDevice::Close() {
+    handleCount--;
+
+    if(handleCount == 0 && device == PTYMasterDevice){
+        pty->Close();
+    }
+}
+
 PTY::PTY(int id) : m_id(id) {
     slaveFile.flags = FS_NODE_CHARDEVICE;
     masterFile.flags = FS_NODE_CHARDEVICE;
@@ -211,6 +211,14 @@ PTY::~PTY(){
 
     while (m_watchingMaster.get_length()) {
         m_watchingMaster.remove_at(0)->Signal(); // Signal all watching
+    }
+}
+
+void PTY::Close() {
+    // Only close this PTY if there are 0 open handles across both
+    // the slave and master files
+    if(masterFile.handleCount + slaveFile.handleCount == 0) {
+        PTMultiplexor::Instance().DestroyPTY(this);
     }
 }
 

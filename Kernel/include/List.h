@@ -624,7 +624,7 @@ public:
         while (current && current != back && current->obj != val)
             current = current->next;
 
-        if (current) {
+        if (current && current->obj == val) {
             if (current->prev)
                 current->prev->next = current->next;
             if (current->next)
