@@ -1,5 +1,10 @@
 #include <Lemon/Core/JSON.h>
 
+#include <Lemon/Core/Format.h>
+#include <Lemon/Core/Logger.h>
+
+#include <stdio.h>
+
 //#define LIBLEMON_DEBUG_JSON 1
 
 namespace Lemon {
@@ -228,7 +233,7 @@ JSONValue JSONParser::ParseObject() {
             return JSONValue(); // Error parsing value
         }
 
-        values[key] = v;
+        values[key] = std::move(v);
 
         EatWhitespace();
 
@@ -251,7 +256,7 @@ JSONValue JSONParser::ParseObject() {
         return JSONValue();
     }
 
-    return JSONValue(values);
+    return JSONValue(std::move(values));
 }
 
 JSONValue JSONParser::ParseArray() {
@@ -271,7 +276,7 @@ JSONValue JSONParser::ParseArray() {
             return JSONValue(); // Error parsing value
         }
 
-        values.push_back(v);
+        values.push_back(std::move(v));
 
         EatWhitespace();
 
@@ -291,6 +296,95 @@ JSONValue JSONParser::ParseArray() {
         return JSONValue();
     }
 
-    return JSONValue(values);
+    return JSONValue(std::move(values));
+}
+
+
+static void IndentLine(FILE* f, int indent) {
+    while(indent--) {
+        fputs("    ", f);
+    }
+};
+
+static int EmitValue(FILE* file, JSONValue* val, int indent);
+static int EmitArray(FILE* file, JSONValue* array, int indent) {
+    fputs("[\n", file);
+
+    auto& v = *array->data.array;
+    for(unsigned i = 0; i < v.size(); i++) {
+        IndentLine(file, indent + 1);
+        EmitValue(file, &v.at(i), indent + 1);
+
+        if(i != v.size() - 1) {
+            // Place a comma if not last value in array
+            fputc(',', file);
+        }
+        fputc('\n', file);
+    }
+
+    IndentLine(file, indent);
+    fputc(']', file);
+
+    return 0;
+}
+
+static int EmitObject(FILE* file, JSONValue* object, int indent) {
+    fputs("{\n", file);
+
+    for(std::pair<const JSONKey, JSONValue>& v : *object->data.object) {
+        IndentLine(file, indent + 1);
+        fmt::print(file, "\"{}\" : ", v.first);
+        EmitValue(file, object, indent + 1);
+        fputs(",\n", file);
+    }
+
+    fputc('}', file);
+    return 0;
+};
+
+static int EmitValue(FILE* file, JSONValue* val, int indent) {
+    if(val->IsNull()) {
+        fputs("null", file);
+    } else if(val->IsNumber()) {
+        if(val->IsFloat()) {
+            fmt::print(file, "{}", val->AsFloat());
+        } else if(val->IsSigned()) {
+            fmt::print(file, "{}", val->AsSignedNumber());
+        } else {
+            fmt::print(file, "{}", val->AsUnsignedNumber());
+        }
+    } else if(val->IsBool()) {
+        if(val->AsBool()) {
+            fputs("true", file);
+        } else {
+            fputs("false", file);
+        }
+    } else if(val->IsString()) {
+        fmt::print(file, "{}", val->AsString());
+    } else if(val->IsArray()) {
+        EmitArray(file, val, indent);
+    } else if(val->IsObject()) {
+        EmitObject(file, val, indent);
+    } else {
+        Logger::Error("Invalid JSON type {}!", val->type);
+        return 1;
+    }
+
+    return 0;
+};
+
+int WriteJSON(const char* filepath, JSONValue& object) {
+    assert(object.IsObject());
+
+    // Truncate the file
+    FILE* file = fopen(filepath, "w+");
+    if(!file) {
+        Logger::Error("WriteJSON: Failed to open {} for writing.", filepath);
+        return 1;
+    }
+
+    int r = EmitObject(file, &object, 0);
+    fclose(file);
+    return r;
 }
 } // namespace Lemon

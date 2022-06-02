@@ -1,6 +1,7 @@
 #include <Lemon/Core/JSON.h>
 
 #include <iostream>
+#include <fstream>
 #include <sstream>
 
 using JSONValue = Lemon::JSONValue;
@@ -9,12 +10,12 @@ void PrintObject(JSONValue& json);
 
 void PrintArray(JSONValue& json){
     std::cout << "Array[ ";
-    for(auto& v : *json.array){
+    for(auto& v : *json.data.array){
         if(v.IsObject()){
             PrintObject(v);
         } else if(v.IsArray()){
             PrintArray(v);
-        } else if(v.isFloatingPoint){
+        } else if(v.IsFloat()){
             std::cout << v.AsFloat();
         } else if(v.IsString()){
             std::cout << v.AsString();
@@ -32,13 +33,13 @@ void PrintArray(JSONValue& json){
 
 void PrintObject(JSONValue& json){
     std::cout << "Object{ ";
-    for(auto& v : *json.object){
+    for(auto& v : *json.data.object){
         std::cout << "key: \"" << v.first << "\", value: ";
         if(v.second.IsObject()){
             PrintObject(v.second);
         } else if(v.second.IsArray()){
             PrintArray(v.second);
-        } else if(v.second.isFloatingPoint){
+        } else if(v.second.IsFloat()){
             std::cout << v.second.AsFloat();
         } else if(v.second.IsString()){
             std::cout << v.second.AsString();

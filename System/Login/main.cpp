@@ -65,13 +65,13 @@ int main(int argc, char** argv){
 
 	auto json = cfgParser.Parse();
 	if(json.IsObject()){
-        std::map<Lemon::JSONKey, Lemon::JSONValue>& root = *json.object;
+        std::map<Lemon::JSONKey, Lemon::JSONValue>& root = *json.data.object;
 
 		if(auto it = root.find("users"); it != root.end() && it->second.IsArray()){
-			for(Lemon::JSONValue& v : *it->second.array){
+			for(Lemon::JSONValue& v : *it->second.data.array){
 				if(v.IsObject()){
 					User u;
-					std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *v.object;
+					std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *v.data.object;
 
 					if(auto it = values.find("name"); it != values.end() && it->second.IsString()){
 						u.username = it->second.AsString();

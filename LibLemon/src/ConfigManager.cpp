@@ -13,7 +13,7 @@ void ConfigManager::LoadJSONConfig(const std::string& path) {
     std::function<void(const std::string&, JSONValue&)> readObject;
     readObject = [this, &readObject](const std::string& configPrefix, JSONValue& object) -> void {
         assert(object.IsObject());
-        auto& obj = *object.object;
+        auto& obj = *object.data.object;
         for (auto& val : obj) {
             if (val.second.IsObject()) {
                 // We add the key to the prefix.

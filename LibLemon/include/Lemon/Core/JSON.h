@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cassert>
-#include <fstream>
 #include <map>
 #include <string>
 #include <vector>
@@ -22,8 +21,11 @@ struct JSONValue {
     };
 
     int type;
-    bool isFloatingPoint = false;
-    bool isSigned = true;
+
+    struct {
+        bool isFloatingPoint = false;
+        bool isSigned = true;
+    } traits;
 
     union {
         std::string* str = nullptr;
@@ -34,82 +36,120 @@ struct JSONValue {
         float fl;
         double dbl;
         bool boolean;
-    };
+    } data;
 
     JSONValue() { type = TypeNull; }
+
+    JSONValue(const JSONValue& v) = delete;
+    JSONValue(JSONValue&& v) {
+        type = v.type;
+        traits = v.traits;
+        
+        data = v.data;
+
+        v.type = TypeNull;
+        v.data.uLong = 0;
+    }
 
     JSONValue(const std::string& s) {
         type = TypeString;
 
-        str = new std::string(s);
+        data.str = new std::string(s);
     }
 
     JSONValue(std::string&& s) {
         type = TypeString;
 
-        str = new std::string(s);
-    }
-
-    JSONValue(const std::vector<JSONValue>& v) {
-        type = TypeArray;
-
-        array = new std::vector<JSONValue>(v);
+        data.str = new std::string(s);
     }
 
     JSONValue(std::vector<JSONValue>&& v) {
         type = TypeArray;
 
-        array = new std::vector<JSONValue>(v);
-    }
-
-    JSONValue(const std::map<JSONKey, JSONValue>& o) {
-        type = TypeObject;
-
-        object = new std::map<JSONKey, JSONValue>(o);
+        data.array = new std::vector<JSONValue>(std::move(v));
     }
 
     JSONValue(std::map<JSONKey, JSONValue>&& o) {
         type = TypeObject;
 
-        object = new std::map<JSONKey, JSONValue>(o);
+        data.object = new std::map<JSONKey, JSONValue>(std::move(o));
+    }
+
+    static JSONValue NewObject() {
+        JSONValue v;
+        v.type = TypeObject;
+        v.data.object = new std::map<JSONKey, JSONValue>();
+
+        return v;
     }
 
     JSONValue(unsigned long ul) {
         type = TypeNumber;
 
-        uLong = ul;
-        isSigned = false;
+        data.uLong = ul;
+        traits.isSigned = false;
+        traits.isFloatingPoint = false;
     }
 
     JSONValue(long l) {
         type = TypeNumber;
 
-        sLong = l;
-        isSigned = true;
+        data.sLong = l;
+        traits.isSigned = true;
+        traits.isFloatingPoint = false;
     }
 
-    JSONValue(float f) {
+    JSONValue(double f) {
         type = TypeNumber;
 
-        fl = f;
-        isFloatingPoint = true;
+        data.dbl = f;
+        traits.isFloatingPoint = true;
     }
 
     JSONValue(bool b) {
         type = TypeBoolean;
 
-        boolean = b;
+        data.boolean = b;
     }
 
-    inline const JSONValue& operator[](const std::string& s) {
-        assert(type == TypeObject && object);
+    ~JSONValue() {
+        ReleaseData();
+    }
 
-        return object->at(s);
+    JSONValue& operator=(JSONValue&& other) {
+        ReleaseData();
+
+        type = other.type;
+        traits = other.traits;
+        data = other.data;
+
+        other.type = TypeNull;
+        other.data.uLong = 0;
+
+        return *this;
+    }
+
+    void ReleaseData() {
+        if(type == TypeString) {
+            delete data.str;
+        } else if(type == TypeArray) {
+            delete data.array;
+        } else if(type == TypeObject) {
+            delete data.object;
+        }
+    }
+
+    inline JSONValue& operator[](const std::string& s) {
+        assert(type == TypeObject && data.object);
+
+        return data.object->at(s);
     }
 
     inline bool IsString() { return type == TypeString; }
 
     inline bool IsNumber() { return type == TypeNumber; }
+    inline bool IsFloat() { return traits.isFloatingPoint; }
+    inline bool IsSigned() { return traits.isSigned; }
 
     inline bool IsBool() { return type == TypeBoolean; }
 
@@ -119,15 +159,23 @@ struct JSONValue {
 
     inline bool IsNull() { return type == TypeNull; }
 
-    std::string AsString() { return *str; }
+    std::string AsString() { return *data.str; }
 
-    template <typename I = long> inline I AsSignedNumber() { return static_cast<I>(sLong); }
+    template <typename I = long> inline I AsSignedNumber() { 
+        assert(!IsFloat());
+        return static_cast<I>(data.sLong); }
 
-    template <typename I = unsigned long> inline I AsUnsignedNumber() { return static_cast<I>(uLong); }
+    template <typename I = unsigned long> inline I AsUnsignedNumber() { return static_cast<I>(data.uLong); }
 
-    template <typename I = float> inline I AsFloat() { return static_cast<I>(fl); }
+    template <typename I = double> inline I AsFloat() {
+        if(traits.isFloatingPoint) {
+            return static_cast<I>(data.dbl);
+        } else {
+            return static_cast<I>(data.sLong);
+        }
+    }
 
-    inline bool AsBool() { return boolean; }
+    inline bool AsBool() { return data.boolean; }
 };
 
 class JSONParser : protected BasicLexer {
@@ -147,4 +195,7 @@ class JSONParser : protected BasicLexer {
 
     JSONValue Parse();
 };
+
+int WriteJSON(const char* file, JSONValue& object);
+
 } // namespace Lemon

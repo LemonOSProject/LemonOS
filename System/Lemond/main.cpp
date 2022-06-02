@@ -53,10 +53,10 @@ int main(int argc, char** argv){
 	Lemon::JSONParser confParser = Lemon::JSONParser("/system/lemon/lemond.json");
 	auto json = confParser.Parse();
     if(json.IsObject()){
-        std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *json.object;
+        std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *json.data.object;
 
 		if(auto it = values.find("environment"); it != values.end() && it->second.IsArray()){
-			std::vector<Lemon::JSONValue>& env = *it->second.array;
+			std::vector<Lemon::JSONValue>& env = *it->second.data.array;
 
 			for(auto& v : env){
 				std::string str;
@@ -112,7 +112,7 @@ int main(int argc, char** argv){
 
 		auto root = json.Parse();
 		if(root.IsObject()){
-			auto& values = *root.object;
+			auto& values = *root.data.object;
 
 			std::string name;
 			std::string target;

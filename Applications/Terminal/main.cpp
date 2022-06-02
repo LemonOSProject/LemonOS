@@ -604,6 +604,7 @@ int main(int argc, char** argv) {
         Lemon::WindowServer::Instance()->Wait();
     }
 
+    ptyThread.join();
     delete terminalWindow;
     return 0;
 }

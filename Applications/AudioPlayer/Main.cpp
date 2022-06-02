@@ -8,6 +8,7 @@
 #include <Lemon/Graphics/Text.h>
 
 #include <Lemon/Core/Format.h>
+#include <Lemon/Core/JSON.h>
 
 #include <dirent.h>
 #include <sys/stat.h>
@@ -276,6 +277,15 @@ public:
 
         return 0;
     }
+
+    int LoadPlaylist(std::string path) {
+        return 0;
+    }
+
+    int SavePlaylist(std::string path) {
+        return 0;
+    }
+
     int PlayTrack(int index) {
         if (!m_trackList.size()) {
             return 0;

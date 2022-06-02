@@ -93,6 +93,7 @@ packages:
         - host-automake
         - host-autoconf-v2.69
         - host-gettext
+        - host-bison
       sources_required: ['gnulib']
       regenerate:
         - args: ['./bootstrap', '--gnulib-srcdir=@SOURCE_ROOT@/Ports/gnulib', '--skip-po', '--no-git']

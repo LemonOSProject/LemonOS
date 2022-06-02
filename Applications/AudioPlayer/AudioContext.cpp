@@ -22,7 +22,9 @@ extern "C" {
 
 //#define AUDIOCONTEXT_TIME_PLAYBACK
 
+// Repsonible for sending samples to the audio driver
 void PlayAudio(AudioContext* ctx) {
+    // The audio file to be played
     int fd = ctx->m_pcmOut;
 
     int channels = ctx->m_pcmChannels;
@@ -30,10 +32,13 @@ void PlayAudio(AudioContext* ctx) {
 
     AudioContext::SampleBuffer* buffers = ctx->sampleBuffers;
     while (ctx->m_isDecoderRunning) {
+        // If there aren't any valid audio buffers,
+        // wait for the decoder 
         if (!ctx->numValidBuffers) {
             Lemon::Logger::Warning("Decoder running behind!");
             continue;
         };
+
         ctx->currentSampleBuffer = (ctx->currentSampleBuffer + 1) % AUDIOCONTEXT_NUM_SAMPLE_BUFFERS;
 
         auto& buffer = buffers[ctx->currentSampleBuffer];
@@ -44,10 +49,13 @@ void PlayAudio(AudioContext* ctx) {
             Lemon::Logger::Warning("/snd/dev/pcm: Error writing samples: {}", strerror(errno));
         }
 
+        // Now that the buffer has been processed by the audio buffer,
+        // set the number of samples in the buffer
         buffer.samples = 0;
 
         std::unique_lock lock{ctx->sampleBuffersLock};
         // If the packet became invalid, numValidBuffers will become 0
+        // the packet will become in
         if (ctx->numValidBuffers > 0) {
             ctx->numValidBuffers--;
         }
