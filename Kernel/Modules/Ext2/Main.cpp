@@ -467,7 +467,7 @@ int Ext2::Ext2Volume::WriteBlock(uint32_t block, void* buffer) {
 
 int Ext2::Ext2Volume::ReadBlockCached(uint32_t block, void* buffer) {
     if (block > super.blockCount)
-        return 1;
+        return -EINVAL;
 
 #ifndef EXT2_NO_CACHE
     ScopedSpinLock lockBlockCache(m_blocksLock);
@@ -498,7 +498,7 @@ int Ext2::Ext2Volume::ReadBlockCached(uint32_t block, void* buffer) {
 
 int Ext2::Ext2Volume::WriteBlockCached(uint32_t block, void* buffer) {
     if (block > super.blockCount)
-        return -1;
+        return -EINVAL;
 
 #ifndef EXT2_NO_CACHE
     ScopedSpinLock lockBlockCache(m_blocksLock);
@@ -1033,6 +1033,9 @@ int Ext2::Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t i
         e2dirent = (ext2_directory_entry_t*)(buffer + blockOffset);
     }
 
+    // Insert the retrived directory entry into the cache 
+    node->directoryCache.insert(e2dirent->name, e2dirent->inode);
+
     strncpy(dirent->name, e2dirent->name, e2dirent->nameLength);
     dirent->name[e2dirent->nameLength] = 0; // Null terminate
     dirent->flags = e2dirent->fileType;
@@ -1074,95 +1077,102 @@ FsNode* Ext2::Ext2Volume::FindDir(Ext2Node* node, const char* name) {
         return nullptr;
     }
 
-    ext2_inode_t& ino = node->e2inode;
+    uint32_t inode;
+    // Check if we have the inode number cached
+    if(!node->directoryCache.get(name, inode)) {
+        ext2_inode_t& ino = node->e2inode;
 
-    uint8_t buffer[blocksize];
-    uint32_t currentBlockIndex = 0;
-    uint32_t blockOffset = 0;
-    uint32_t totalOffset = 0;
+        uint8_t buffer[blocksize];
+        uint32_t currentBlockIndex = 0;
+        uint32_t blockOffset = 0;
+        uint32_t totalOffset = 0;
 
-    ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
+        ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
 
-    if (ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)) {
-        Log::Info("[Ext2] Failed to read block %d", GetInodeBlock(currentBlockIndex, ino));
-        return nullptr;
-    }
-
-    while (currentBlockIndex < ino.blockCount / (blocksize / 512)) {
-        if (e2dirent->recordLength < 8) {
-            IF_DEBUG(debugLevelExt2 >= DebugLevelNormal, {
-                Log::Warning("[Ext2] Error (inode: %d) record length of directory entry is invalid (value: %d)!",
-                             node->inode, e2dirent->recordLength);
-            });
-            break;
+        if (ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)) {
+            Log::Info("[Ext2] Failed to read block %d", GetInodeBlock(currentBlockIndex, ino));
+            return nullptr;
         }
 
-        if (e2dirent->inode > 0) {
-            IF_DEBUG(debugLevelExt2 >= DebugLevelVerbose, {
-                char buf[e2dirent->nameLength + 1];
-                strncpy(buf, e2dirent->name, e2dirent->nameLength);
-                buf[e2dirent->nameLength] = 0;
-                Log::Info("Checking name '%s' (name len %d), inode %d, len %d (parent inode: %d)", buf,
-                          e2dirent->nameLength, e2dirent->inode, e2dirent->recordLength, node->inode);
-            });
-
-            if (strlen(name) == e2dirent->nameLength && strncmp(name, e2dirent->name, e2dirent->nameLength) == 0) {
-                Log::Debug(debugLevelExt2, DebugLevelVerbose, "Found '%s'!", name);
+        while (currentBlockIndex < ino.blockCount / (blocksize / 512)) {
+            if (e2dirent->recordLength < 8) {
+                IF_DEBUG(debugLevelExt2 >= DebugLevelNormal, {
+                    Log::Warning("[Ext2] Error (inode: %d) record length of directory entry is invalid (value: %d)!",
+                                node->inode, e2dirent->recordLength);
+                });
                 break;
             }
+
+            if (e2dirent->inode > 0) {
+                IF_DEBUG(debugLevelExt2 >= DebugLevelVerbose, {
+                    char buf[e2dirent->nameLength + 1];
+                    strncpy(buf, e2dirent->name, e2dirent->nameLength);
+                    buf[e2dirent->nameLength] = 0;
+                    Log::Info("Checking name '%s' (name len %d), inode %d, len %d (parent inode: %d)", buf,
+                            e2dirent->nameLength, e2dirent->inode, e2dirent->recordLength, node->inode);
+                });
+
+                if (strlen(name) == e2dirent->nameLength && strncmp(name, e2dirent->name, e2dirent->nameLength) == 0) {
+                    Log::Debug(debugLevelExt2, DebugLevelVerbose, "Found '%s'!", name);
+                    break;
+                }
+            }
+
+            blockOffset += e2dirent->recordLength;
+            totalOffset += e2dirent->recordLength;
+
+            if (totalOffset > ino.size)
+                return nullptr;
+
+            if (blockOffset >= blocksize) {
+                currentBlockIndex++;
+
+                if (currentBlockIndex >= ino.blockCount / (blocksize / 512)) {
+                    // End of dir
+                    return nullptr;
+                }
+
+                blockOffset = 0;
+
+                if (ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)) {
+                    Log::Error("[Ext2] Failed to read block");
+                    return nullptr;
+                }
+            }
+
+            e2dirent = (ext2_directory_entry_t*)(buffer + blockOffset);
         }
 
-        blockOffset += e2dirent->recordLength;
-        totalOffset += e2dirent->recordLength;
-
-        if (totalOffset > ino.size)
+        if (strlen(name) != e2dirent->nameLength || strncmp(e2dirent->name, name, e2dirent->nameLength) != 0) {
+            // Not found
             return nullptr;
-
-        if (blockOffset >= blocksize) {
-            currentBlockIndex++;
-
-            if (currentBlockIndex >= ino.blockCount / (blocksize / 512)) {
-                // End of dir
-                return nullptr;
-            }
-
-            blockOffset = 0;
-
-            if (ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)) {
-                Log::Error("[Ext2] Failed to read block");
-                return nullptr;
-            }
         }
 
-        e2dirent = (ext2_directory_entry_t*)(buffer + blockOffset);
-    }
+        if (!e2dirent->inode || e2dirent->inode > super.inodeCount) {
+            Log::Error("[Ext2] Directory Entry %s contains invalid inode %d", name, e2dirent->inode);
+            return nullptr;
+        }
 
-    if (strlen(name) != e2dirent->nameLength || strncmp(e2dirent->name, name, e2dirent->nameLength) != 0) {
-        // Not found
-        return nullptr;
-    }
-
-    if (!e2dirent->inode || e2dirent->inode > super.inodeCount) {
-        Log::Error("[Ext2] Directory Entry %s contains invalid inode %d", name, e2dirent->inode);
-        return nullptr;
+        inode = e2dirent->inode;
+        // Insert inode number into dcache
+        node->directoryCache.insert(name, inode);
     }
 
     Ext2Node* returnNode = nullptr;
-
     ScopedSpinLock lockInodes(m_inodesLock);
-    if (!inodeCache.get(e2dirent->inode, returnNode) || !returnNode) { // Could not locate inode in cache
+    if (!inodeCache.get(inode, returnNode) || !returnNode) { // Could not locate inode in cache
         ext2_inode_t direntInode;
-        if (ReadInode(e2dirent->inode, direntInode)) {
-            Log::Error("[Ext2] Failed to read inode of directory (inode %d) entry %s", node->inode, e2dirent->name);
+        if (ReadInode(inode, direntInode)) {
+            Log::Error("[Ext2] Failed to read inode of directory (inode %d) entry %s", node->inode, name);
             return nullptr; // Could not read inode
         }
 
         IF_DEBUG(debugLevelExt2 >= DebugLevelNormal,
-                 { Log::Info("[Ext2] FindDir: Opening inode %d, size: %d", e2dirent->inode, direntInode.size); });
+                 { Log::Info("[Ext2] FindDir: Opening inode %d, size: %d", inode, direntInode.size); });
 
-        returnNode = new Ext2Node(this, direntInode, e2dirent->inode);
+        returnNode = new Ext2Node(this, direntInode, inode);
 
-        inodeCache.insert(e2dirent->inode, returnNode);
+        inodeCache.insert(inode, returnNode);
     }
 
     assert(returnNode);
@@ -1203,11 +1213,9 @@ ssize_t Ext2::Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8
 
         if (offset && offset % blocksize) {
             if (int e = ReadBlockCached(block, blockBuffer); e) {
-                if (int e = ReadBlockCached(block, blockBuffer); e) { // Try again
-                    Log::Info("[Ext2] Error %i reading block %u", e, block);
-                    error = DiskReadError;
-                    break;
-                }
+                Log::Info("[Ext2] Error %i reading block %u", e, block);
+                error = DiskReadError;
+                return e;
             }
 
             size_t readSize = blocksize - (offset % blocksize);
@@ -1573,6 +1581,9 @@ int Ext2::Ext2Volume::Unlink(Ext2Node* node, DirectoryEntry* ent, bool unlinkDir
         Log::Error("[Ext2] Unlink: Error listing directory!", ent->inode);
         return e;
     }
+
+    // Remove from cache if cached
+    node->directoryCache.remove(ent->name);
 
     for (unsigned i = 0; i < entries.get_length(); i++) {
         if (strcmp(entries[i].name, ent->name) == 0) {

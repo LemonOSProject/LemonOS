@@ -3,6 +3,7 @@
 #include <Fs/FsVolume.h>
 #include <Hash.h>
 #include <Lock.h>
+#include <String.h>
 #include <Vector.h>
 
 #include <stdint.h>
@@ -209,6 +210,9 @@ public:
         FilesystemLock flock; // Lock on file data
 
         friend class Ext2Volume;
+
+        // Cache directory entries
+        HashMap<String, uint32_t> directoryCache;
 
     public:
         Ext2Node(Ext2Volume* vol, ext2_inode_t& ino, ino_t inode);
