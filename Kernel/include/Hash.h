@@ -109,7 +109,8 @@ public:
 	}
 
 	void insert(K key, const T& value){
-		auto& bucket = buckets[Hash(key) % bucketCount];
+		unsigned keyHash = Hash(key);
+		auto& bucket = buckets[keyHash % bucketCount];
 
 		acquireLock(&lock);
 		for(KeyValuePair& v : bucket){

@@ -333,7 +333,6 @@ void Process::Die() {
     for (auto& thread : m_threads) {
         asm("cli");
         if (thread != cpu->currentThread && thread) {
-            // TODO: Race condition?
             asm("sti");
             acquireLockIntDisable(&thread->stateLock);
             if (thread->blocker && thread->state == ThreadStateBlocked) {
@@ -350,7 +349,7 @@ void Process::Die() {
         }
     }
 
-    asm("sti");
+    asm volatile("sti");
     for(auto& thread : m_threads) {
         if(thread == cpu->currentThread) {
             continue;
@@ -358,9 +357,12 @@ void Process::Die() {
 
         assert(thread->state != ThreadStateBlocked);
         
+        acquireLockIntDisable(&thread->stateLock);
         if(thread->state != ThreadStateDying) {
             runningThreads.add_back(thread);
         }
+        releaseLock(&thread->stateLock);
+        asm volatile("sti");
     }
 
     Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Killing child processes...", m_pid);
@@ -399,10 +401,10 @@ void Process::Die() {
         while (it != runningThreads.end()) {
             FancyRefPtr<Thread> thread = *it;
             if (!acquireTestLock(&thread->kernelLock)) { // Loop through all of the threads so we can acquire their locks
-                runningThreads.remove(it);
-
                 thread->state = ThreadStateDying;
                 thread->timeSlice = thread->timeSliceDefault = 0;
+
+                runningThreads.remove(it);
 
                 it = runningThreads.begin();
             } else {

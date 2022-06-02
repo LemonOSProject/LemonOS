@@ -2129,13 +2129,18 @@ long SysSpawnThread(RegisterContext* r) {
 /////////////////////////////
 long SysExitThread(RegisterContext* r) {
     GetCPULocal()->currentThread->blocker = nullptr;
-    releaseLock(&GetCPULocal()->currentThread->kernelLock);
+    acquireLockIntDisable(&GetCPULocal()->currentThread->stateLock);
 
     if(GetCPULocal()->currentThread->state == ThreadStateRunning) {
         GetCPULocal()->currentThread->state = ThreadStateBlocked;
     }
 
     GetCPULocal()->currentThread->state = ThreadStateDying;
+
+    releaseLock(&GetCPULocal()->currentThread->stateLock);
+    releaseLock(&GetCPULocal()->currentThread->kernelLock);
+    asm volatile("sti");
+
     return 0;
 }
 

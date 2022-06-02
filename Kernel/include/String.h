@@ -114,6 +114,10 @@ public:
         return *this;
     }
 
+    ALWAYS_INLINE bool operator==(const BasicString& r) const {
+        return !Compare(r);
+    }
+
     T& operator[](unsigned pos) { return m_buffer[pos]; }
 
     const T& operator[](unsigned pos) const { return m_buffer[pos]; }

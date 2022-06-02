@@ -311,7 +311,7 @@ int Port::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
 
 int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) {
     if (portLock.Wait()) {
-        return EINTR;
+        return -EINTR;
     }
 
     registers->ie = 0xffffffff;
@@ -323,7 +323,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
         Log::Warning("[SATA] Could not find command slot!");
 
         portLock.Signal();
-        return 2;
+        return -EIO;
     }
 
     registers->serr = registers->tfd = 0;
@@ -384,7 +384,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
         Log::Warning("[SATA] Port Hung");
 
         portLock.Signal();
-        return 3;
+        return -EIO;
     }
 
     registers->ie = registers->is = 0xffffffff;
@@ -402,7 +402,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
 
             stopCMD(registers);
             portLock.Signal();
-            return 1;
+            return -EIO;
         }
     }
 
@@ -417,7 +417,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
         Log::Warning("[SATA] Port Hung");
 
         portLock.Signal();
-        return 3;
+        return -EIO;
     }
 
     // Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot,
@@ -427,7 +427,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
         Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
 
         portLock.Signal();
-        return 1;
+        return -EIO;
     }
 
     portLock.Signal();

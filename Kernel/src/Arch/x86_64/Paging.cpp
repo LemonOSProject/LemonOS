@@ -88,7 +88,8 @@ page_table_t AllocatePageTable() {
     for (int i = 0; i < PAGES_PER_TABLE; i++) {
         ((page_t*)virt)[i] = 0;
     }
-
+    assert(pTable.virt);
+    
     return pTable;
 }
 
@@ -238,7 +239,7 @@ PageMap* ClonePageMap(PageMap* pageMap) {
             page_t* originalPageTable = pageMap->pageTables[i][j];
 
             if (originalPageTable) {
-                page_table_t pgTable = CreatePageTable(i, j, pageMap);
+                page_table_t pgTable = CreatePageTable(i, j, clone);
 
                 memcpy(pgTable.virt, originalPageTable,
                        sizeof(uintptr_t) * PAGES_PER_TABLE); // Copy the pages in the page table
