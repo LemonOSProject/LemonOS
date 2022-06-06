@@ -44,33 +44,40 @@
 #define SIOCSIFHWBROADCAST 0x8937
 #define SIOCGIFCOUNT 0x8938
 
+#include <abi-bits/socket.h>
+
+#define IF_NAMESIZE 16
+#define IFNAMSIZ IF_NAMESIZE
+
 typedef struct sockaddr {
     sa_family_t family;
     char data[14];
 } sockaddr_t;
 
-struct ifreq {
-    char ifr_name[IF_NAMESIZE]; /* Interface name */
-    union {
-        struct sockaddr ifr_addr;
-        struct sockaddr ifr_dstaddr;
-        struct sockaddr ifr_broadaddr;
-        struct sockaddr ifr_netmask;
-        struct sockaddr ifr_hwaddr;
-        short           ifr_flags;
-        int             ifr_ifindex;
-        int             ifr_metric;
-        int             ifr_mtu;
-        char            ifr_slave[IF_NAMESIZE];
-        char            ifr_newname[IF_NAMESIZE];
-        char           *ifr_data;
-    };
+struct ifmap {
+	unsigned long mem_start;
+	unsigned long mem_end;
+	unsigned short base_addr;
+	unsigned char irq;
+	unsigned char dma;
+	unsigned char port;
 };
 
-struct ifconf {
-    int                 ifc_len; /* size of buffer */
-    union {
-        char           *ifc_buf; /* buffer address */
-        struct ifreq   *ifc_req; /* array of structures */
-    };
+struct ifreq {
+	char ifr_name[IFNAMSIZ];
+	union {
+		struct sockaddr ifr_addr;
+		struct sockaddr ifr_dstaddr;
+		struct sockaddr ifr_broadaddr;
+		struct sockaddr ifr_netmask;
+		struct sockaddr ifr_hwaddr;
+		short ifr_flags;
+		int ifr_ifindex;
+		int ifr_metric;
+		int ifr_mtu;
+		struct ifmap ifr_map;
+		char ifr_slave[IFNAMSIZ];
+		char ifr_newname[IFNAMSIZ];
+		char *ifr_data;
+	};
 };
