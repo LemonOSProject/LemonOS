@@ -85,7 +85,6 @@ unsigned UTF8Strlen(const std::string& utf8String) {
         // Check amount of bytes in code point
         if((c & 0xF8) == 0xF0) {
             i += 3;
-            continue;
         } else if((c & 0xF0) == 0xE0) {
             // 1110xxxx
             // 3 bytes
@@ -98,6 +97,36 @@ unsigned UTF8Strlen(const std::string& utf8String) {
     }
 
     return length;
+}
+
+unsigned UTF8SkipCodepoints(const std::string& utf8String, long n) {
+    if(n < 0) {
+        n = UTF8Strlen(utf8String) - n;
+    }
+
+    unsigned i = 0;
+    for(; i < utf8String.length() && n > 0; i++, n--) {
+        int c = utf8String[i];
+        
+        // Check amount of bytes in code point
+        if((c & 0xF8) == 0xF0) {
+            i += 3;
+        } else if((c & 0xF0) == 0xE0) {
+            // 1110xxxx
+            // 3 bytes
+            i += 2;
+        } else if((c & 0xE0) == 0xC0) {
+            // 110xxxxx
+            // 2 bytes
+            i += 1;
+        }
+    }
+
+    if(i > utf8String.length()) {
+        i = utf8String.length();
+    }
+
+    return i;
 }
 
 };

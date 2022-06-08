@@ -5,6 +5,7 @@
 #include <Lemon/Graphics/Surface.h>
 
 #include <Lemon/Core/Keyboard.h>
+#include <Lemon/Core/Unicode.h>
 
 #include <algorithm>
 #include <assert.h>
@@ -1148,21 +1149,21 @@ void GridView::Paint(surface_t* surface) {
         std::string str = item.name;
         int len = Graphics::GetTextLength(str.c_str());
         if (static_cast<int>(idx) != selected && len > itemSize.x - 2) {
-            int l = str.length() - 1;
+            int l = UTF8Strlen(str) - 1;
             while (l) {
-                str = str.substr(0, l);
+                str = str.substr(0, UTF8SkipCodepoints(str, l));
                 len = Graphics::GetTextLength(str.c_str());
 
                 if (len < itemSize.x + 2) {
                     if (l > 2) {
-                        str.erase(str.end() - 1); // Omit last character
+                        str.erase(str.begin() + UTF8SkipCodepoints(str, -1)); // Omit last character
                         str.append(
                             "..."); // We have a variable width font should we should only have to omit 1 character
                     }
                     break;
                 }
 
-                l = str.length() - 1;
+                l = UTF8Strlen(str) - 1;
             }
         }
 
