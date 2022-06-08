@@ -44,6 +44,7 @@ liblemon_cpp_files = [
     'src/json.cpp',
     'src/Serializable.cpp',
     'src/sha.cpp',
+    'src/Unicode.cpp',
     'src/url.cpp',
 ]
 

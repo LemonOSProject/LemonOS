@@ -2,6 +2,8 @@
 #include <Lemon/Graphics/Graphics.h>
 #include <Lemon/Graphics/Text.h>
 
+#include <Lemon/Core/Unicode.h>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -13,7 +15,7 @@ namespace Lemon::Graphics {
 extern int fontState;
 extern Font* mainFont;
 
-int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits,
+int DrawChar(int character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits,
              Font* font) {
     if (!isprint(character)) {
         return 0;
@@ -88,11 +90,11 @@ int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surf
     return face->glyph->advance.x >> 6;
 }
 
-int DrawChar(char character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font) {
+int DrawChar(int character, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font) {
     return DrawChar(character, x, y, r, g, b, surface, {0, 0, surface->width, surface->height}, font);
 }
 
-int DrawChar(char character, int x, int y, rgba_colour_t col, surface_t* surface, Font* font) {
+int DrawChar(int character, int x, int y, rgba_colour_t col, surface_t* surface, Font* font) {
     return DrawChar(character, x, y, col.r, col.g, col.b, surface, font);
 }
 
@@ -135,15 +137,20 @@ int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, s
 
     unsigned int lastGlyph = 0;
     int xOffset = x;
-    while (*str != 0) {
-        if (*str == '\n') {
-            break;
-        } else if (!isprint(*str)) {
-            str++;
-            continue;
+
+    auto codepoints = UTF8ToUTF32(str);
+    for(int cp : codepoints) {
+        if(cp < 0x80) {
+            // Make sure the codepoint is ASCII,
+            // if so check for newlines and control chars
+            if (cp == '\n') {
+                break;
+            } else if (!isprint(cp)) {
+                continue;
+            }
         }
 
-        unsigned int glyph = FT_Get_Char_Index(face, *str);
+        unsigned int glyph = FT_Get_Char_Index(face, cp);
         if (FT_HAS_KERNING(face) && lastGlyph) {
             FT_Vector delta;
 
@@ -153,13 +160,11 @@ int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, s
         lastGlyph = glyph;
 
         if (int err = FT_Load_Glyph(face, glyph, FT_LOAD_RENDER)) {
-            str++;
             continue;
         }
 
         if (xOffset + (face->glyph->advance.x >> 6) < limits.x) {
             xOffset += face->glyph->advance.x >> 6;
-            str++;
             continue;
         }
 
@@ -196,7 +201,6 @@ int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, s
         }
 
         xOffset += face->glyph->advance.x >> 6;
-        str++;
     }
     return xOffset - x;
 }
@@ -213,7 +217,7 @@ int DrawString(const char* str, int x, int y, rgba_colour_t col, surface_t* surf
     return DrawString(str, x, y, col.r, col.g, col.b, surface, font);
 }
 
-int GetCharWidth(char c, Font* font) {
+int GetCharWidth(int c, Font* font) {
     if (fontState == -1) {
         return 8;
     } else if (fontState != 1 || !font->face)
@@ -250,29 +254,31 @@ int GetTextLength(const char* str, size_t n, Font* font) {
 
     size_t len = 0;
     size_t i = 0;
-    while (*str && i++ < n) {
-        if (*str == '\n') {
+
+    auto codepoints = UTF8ToUTF32(str);
+    for(int cp : codepoints) {
+        if(i++ >= n) {
             break;
-        } else if (*str == ' ') {
+        }
+        
+        if (cp == '\n') {
+            break;
+        } else if (cp == ' ') {
             len += font->width;
-            str++;
             continue;
-        } else if (*str == '\t') {
+        } else if (cp == '\t') {
             len += font->tabWidth * font->width;
-            str++;
             continue;
-        } else if (!isprint(*str)) {
-            str++;
+        } else if (!isprint(cp)) {
             continue;
         }
 
-        if (int err = FT_Load_Char(face, *str, FT_LOAD_ADVANCE_ONLY)) {
+        if (int err = FT_Load_Char(face, cp, FT_LOAD_ADVANCE_ONLY)) {
             str++;
             continue;
         }
 
         len += face->glyph->advance.x >> 6;
-        str++;
     }
 
     return len;

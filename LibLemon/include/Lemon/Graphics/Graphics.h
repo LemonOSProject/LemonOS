@@ -223,10 +223,10 @@ inline void DrawRectOutline(rect_t rect, rgba_colour_t colour, surface_t* surfac
     DrawRectOutline(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, colour, surface, mask);
 }
 
-int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits,
+int DrawChar(int c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits,
              Font* font = DefaultFont());
-int DrawChar(char c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font = DefaultFont());
-int DrawChar(char c, int x, int y, rgba_colour_t col, surface_t* surface, Font* font = DefaultFont());
+int DrawChar(int c, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, Font* font = DefaultFont());
+int DrawChar(int c, int x, int y, rgba_colour_t col, surface_t* surface, Font* font = DefaultFont());
 int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface, rect_t limits,
                Font* font = DefaultFont());
 int DrawString(const char* str, int x, int y, uint8_t r, uint8_t g, uint8_t b, surface_t* surface,
@@ -238,8 +238,8 @@ int GetTextLength(const char* str, Font* font);
 int GetTextLength(const char* str, size_t n, Font* font);
 int GetTextLength(const char* str);
 int GetTextLength(const char* str, size_t n);
-int GetCharWidth(char c, Font* font);
-int GetCharWidth(char c);
+int GetCharWidth(int c, Font* font);
+int GetCharWidth(int c);
 
 uint32_t Interpolate(double q11, double q21, double q12, double q22, double x, double y);
 

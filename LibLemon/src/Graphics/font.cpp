@@ -39,7 +39,7 @@ __attribute__((constructor)) void InitializeFonts() {
 
     fonts = new std::unordered_map<std::string, Font*>{};
 
-    mainFont = LoadFont("/system/lemon/resources/fonts/notosans.ttf", "default", 10);
+    mainFont = LoadFont("/system/lemon/resources/fonts/notosans.otf", "default", 10);
     if(!mainFont) {
         return;
     }
@@ -60,6 +60,11 @@ Font* LoadFont(const char* path, const char* id, int sz) {
     if (int err = FT_Set_Pixel_Sizes(face, 0, sz / 72.f * 96)) {
         // Freetype Error Setting Font Size
         throw FontException(FontException::FontSizeError, err);
+        return nullptr;
+    }
+
+    if (int err = FT_Select_Charmap(face, FT_ENCODING_UNICODE)) {
+        throw FontException(FontException::FontLoadError, err);
         return nullptr;
     }
 
