@@ -261,16 +261,18 @@ int GetTextLength(const char* str, size_t n, Font* font) {
             break;
         }
         
-        if (cp == '\n') {
-            break;
-        } else if (cp == ' ') {
-            len += font->width;
-            continue;
-        } else if (cp == '\t') {
-            len += font->tabWidth * font->width;
-            continue;
-        } else if (!isprint(cp)) {
-            continue;
+        if(cp < 0x80) {
+            if (cp == '\n') {
+                break;
+            } else if (cp == ' ') {
+                len += font->width;
+                continue;
+            } else if (cp == '\t') {
+                len += font->tabWidth * font->width;
+                continue;
+            } else if (!isprint(cp)) {
+                continue;
+            }
         }
 
         if (int err = FT_Load_Char(face, cp, FT_LOAD_ADVANCE_ONLY)) {

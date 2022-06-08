@@ -8,5 +8,6 @@
 namespace Lemon {
     
 std::vector<int32_t> UTF8ToUTF32(const std::string& utf8String);
+unsigned UTF8Strlen(const std::string& utf8String);
 
 };

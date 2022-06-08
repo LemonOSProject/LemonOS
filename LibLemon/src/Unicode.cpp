@@ -77,4 +77,27 @@ std::vector<int32_t> UTF8ToUTF32(const std::string& utf8String) {
     return codepoints;
 }
 
+unsigned UTF8Strlen(const std::string& utf8String) {
+    unsigned length = 0;
+    for(unsigned i = 0; i < utf8String.length(); i++, length++) {
+        int c = utf8String[i];
+        
+        // Check amount of bytes in code point
+        if((c & 0xF8) == 0xF0) {
+            i += 3;
+            continue;
+        } else if((c & 0xF0) == 0xE0) {
+            // 1110xxxx
+            // 3 bytes
+            i += 2;
+        } else if((c & 0xE0) == 0xC0) {
+            // 110xxxxx
+            // 2 bytes
+            i += 1;
+        }
+    }
+
+    return length;
+}
+
 };
