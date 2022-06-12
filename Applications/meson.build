@@ -87,6 +87,10 @@ audioplayer_src = [
     'AudioPlayer/Main.cpp'
 ]
 
+welcome_src = [
+    'Welcome/Main.cpp'
+]
+
 app_libraries = [
     '-llemon',
     '-llemongui'
@@ -159,6 +163,10 @@ app_audioplayer = executable('audioplayer.lef', audioplayer_src,
     cpp_args : application_cpp_args,
     link_args : [app_libraries, '-lavcodec', '-lavformat', '-lavutil', '-lswresample'],
     install : true)
+app_welcome = executable('welcome.lef', welcome_src, 
+    cpp_args : application_cpp_args,
+    link_args: app_libraries,
+    install : true)
 
 app_ipctest = executable('ipctest.lef', ipctest_src, 
     cpp_args : application_cpp_args,
@@ -188,6 +196,7 @@ application_targets = [
     app_minesweeper,
     app_steal,
     app_devmgr,
+    app_welcome,
 
     app_ipctest,
     app_sigtest,

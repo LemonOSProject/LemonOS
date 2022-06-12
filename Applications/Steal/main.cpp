@@ -130,7 +130,7 @@ public:
 void UpdateProgress(size_t recievedData, size_t dataLeft){
     if(outFile){
         size_t total = recievedData + dataLeft;
-        printf("\033[1K %lu / %lu KB [", recievedData / 1024, total / 1024);
+        printf("\033[1K\r %lu / %lu KB [", recievedData / 1024, total / 1024);
 
         if(total){
             size_t pBarCount = ((recievedData * 40) / total);

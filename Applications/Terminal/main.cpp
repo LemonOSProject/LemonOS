@@ -294,7 +294,7 @@ void ParseChar(char ch) {
                     cursorPosition = {1, 1};
                     break;
                 case 1: // Clear from cursor to beginning of line
-                    ln.erase(ln.begin(), ln.begin() + cursorPosition.x);
+                    ln.erase(ln.begin(), ln.begin() + (cursorPosition.x - 1));
                     ln.insert(ln.begin(), cursorPosition.x, TerminalChar(0));
                     break;
                 case 0: // Clear from cursor to end of line
@@ -303,6 +303,9 @@ void ParseChar(char ch) {
                     ln.insert(ln.end(), terminalSize.x - (cursorPosition.x - 1), TerminalChar(0));
                     break;
                 }
+
+                if (ln.size() != static_cast<unsigned>(terminalSize.x))
+                    ln.resize(terminalSize.x);
                 break;
             }
             case ANSI_CSI_IL: // Insert blank lines
