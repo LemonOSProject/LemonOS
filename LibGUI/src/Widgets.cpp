@@ -570,7 +570,11 @@ void TextBox::Paint(surface_t* surface) {
                 break;
         }
 
-        sBar.Paint(surface, {fixedBounds.pos.x + fixedBounds.size.x - 16, fixedBounds.pos.y});
+        // Check if all lines can be displayed on screen
+        // if not, draw the scrollbar
+        if(static_cast<int>(contents.size()) * (font->lineHeight + 2) >= fixedBounds.size.y) {
+            sBar.Paint(surface, {fixedBounds.pos.x + fixedBounds.size.x - 16, fixedBounds.pos.y});
+        }
     } else {
         ypos = fixedBounds.height / 2 - font->height / 2;
         cursorY = ypos;
@@ -603,7 +607,7 @@ void TextBox::Paint(surface_t* surface) {
         }
     }
 
-    if (parent->active == this) { // Only draw cursor if active
+    if (editable && parent->active == this) { // Only draw cursor if active
         timespec t;
         clock_gettime(CLOCK_BOOTTIME, &t);
 
@@ -660,6 +664,9 @@ void TextBox::OnMouseDown(vector2i_t mousePos) {
         sBar.OnMouseDownRelative({mousePos.x + fixedBounds.size.x - 16, mousePos.y});
         return;
     }
+
+    if (!editable)
+        return;
 
     if (multiline) {
         cursorPos.y = (sBar.scrollPos + mousePos.y) / (font->lineHeight);

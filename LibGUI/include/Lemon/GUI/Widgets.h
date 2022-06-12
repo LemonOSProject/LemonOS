@@ -282,7 +282,7 @@ public:
     vector2i_t cursorPos = {0, 0};
     Graphics::Font* font = Graphics::DefaultFont();
 
-    TextBox(rect_t bounds, bool multiline);
+    TextBox(rect_t bounds, bool multiline = false);
 
     void Paint(surface_t* surface);
     void LoadText(const char* text);
