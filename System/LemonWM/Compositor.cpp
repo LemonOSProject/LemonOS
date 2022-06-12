@@ -37,7 +37,7 @@ void Compositor::Render() {
         unsigned long renderTime =
             (cTime.tv_nsec - m_lastRender.tv_nsec) + (cTime.tv_sec - m_lastRender.tv_sec) * 1000000000L;
         m_fCount++;
-        
+
         if (renderTime > 1000000000 && m_fCount) {
 
             if (renderTime)
@@ -48,16 +48,16 @@ void Compositor::Render() {
         }
     }
 
-    if (m_wallpaperThread.joinable() && m_wallpaperStatus) {
-        m_wallpaperThread.join();
+    Vector2i mousePos = WM::Instance().Input().mouse.pos;
+    if (mousePos != m_lastMousePos) {
+        Invalidate({m_lastMousePos, m_cursorCurrent->width, m_cursorCurrent->height});
+        m_lastMousePos = mousePos;
     }
 
     m_renderMutex.lock();
 
-    Vector2i mousePos = WM::Instance().Input().mouse.pos;
-    if(mousePos != m_lastMousePos){
-        Invalidate({m_lastMousePos, m_cursorCurrent->width, m_cursorCurrent->height});
-        m_lastMousePos = mousePos;
+    if (m_wallpaperThread.joinable() && m_wallpaperStatus) {
+        m_wallpaperThread.join();
     }
 
     if (m_invalidateAll) {
@@ -72,13 +72,11 @@ void Compositor::Render() {
 #endif
 
         if (m_wallpaper.buffer) {
+            m_renderSurface.Blit(&m_wallpaper);
             for (BackgroundClipRect& rect : m_backgroundRects) {
-                m_renderSurface.Blit(&m_wallpaper, rect.rect.pos, rect.rect);
-
 #ifdef COMPOSITOR_DEBUG
                 Lemon::Graphics::DrawRectOutline(rect.rect, {255, 255, 0, 255}, &m_renderSurface);
 #endif
-
                 rect.invalid = false;
             }
         }
@@ -110,7 +108,7 @@ void Compositor::Render() {
         WMWindow* win = it->win;
 
         if (m_invalidateAll || it->invalid) { // Window buffer not dirty, only draw invalid clips
-            if(it->type == WindowClipRect::TypeWindowDecoration){
+            if (it->type == WindowClipRect::TypeWindowDecoration) {
                 win->DrawDecorationClip(it->rect, &m_renderSurface);
             } else {
                 win->DrawClip(it->rect, &m_renderSurface);
@@ -184,7 +182,7 @@ void Compositor::Invalidate(const Rect& rect) {
         }
 
         for (auto& wRect : m_windowClipRects) {
-            if(wRect.rect.Intersects(bgRect.rect)){
+            if (wRect.rect.Intersects(bgRect.rect)) {
                 wRect.invalid = true;
             }
         }
@@ -229,8 +227,8 @@ void Compositor::SetWallpaper(const std::string& path) {
 
         m_renderMutex.lock();
         InvalidateAll();
-        m_renderMutex.unlock();
         m_wallpaperStatus++;
+        m_renderMutex.unlock();
     });
 
     m_wallpaperThread = std::move(wallpaperThread);
@@ -265,8 +263,9 @@ void Compositor::RecalculateWindowClipping() {
             }
         }
 
-        if(win->ShouldDrawDecoration()){
-            auto decorationRects = WindowClipRect{win->GetRect(), win, WindowClipRect::TypeWindowDecoration}.Split(win->GetContentRect());
+        if (win->ShouldDrawDecoration()) {
+            auto decorationRects =
+                WindowClipRect{win->GetRect(), win, WindowClipRect::TypeWindowDecoration}.Split(win->GetContentRect());
 
             for (auto& rect : decorationRects) {
                 for (auto it = m_windowClipRects.begin(); it != m_windowClipRects.end(); it++) {

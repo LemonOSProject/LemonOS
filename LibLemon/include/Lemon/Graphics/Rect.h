@@ -21,9 +21,9 @@ typedef struct Rect {
     };
 
     __attribute__((always_inline)) inline int left() const { return x; }
-    __attribute__((always_inline)) inline int right() const { return x + width; }
+    __attribute__((always_inline)) inline int right() const { return x + width - 1; }
     __attribute__((always_inline)) inline int top() const { return y; }
-    __attribute__((always_inline)) inline int bottom() const { return y + height; }
+    __attribute__((always_inline)) inline int bottom() const { return y + height - 1; }
 
     __attribute__((always_inline)) inline int left(int newLeft) {
         width += x - newLeft;
@@ -31,7 +31,7 @@ typedef struct Rect {
         return x;
     }
     __attribute__((always_inline)) inline int right(int newRight) {
-        width = newRight - x;
+        width = newRight - x + 1;
         return x + width;
     }
     __attribute__((always_inline)) inline int top(int newTop) {
@@ -40,7 +40,7 @@ typedef struct Rect {
         return y;
     }
     __attribute__((always_inline)) inline int bottom(int newBottom) {
-        height = newBottom - y;
+        height = newBottom - y + 1;
         return y + height;
     }
 
@@ -53,7 +53,7 @@ typedef struct Rect {
             clip.top(victim.top());
             clip.left(victim.left());
             clip.bottom(victim.bottom());
-            clip.right(cut.left()); // Left of cutting rect's left edge
+            clip.right(cut.left() - 1); // Left of cutting rect's left edge
 
             victim.left(cut.left());
 
@@ -64,7 +64,7 @@ typedef struct Rect {
             Rect clip;
             clip.top(victim.top());
             clip.left(victim.left());
-            clip.bottom(cut.top()); // Above cutting rect's top edge
+            clip.bottom(cut.top() - 1); // Above cutting rect's top edge
             clip.right(victim.right());
 
             victim.top(cut.top());
@@ -75,7 +75,7 @@ typedef struct Rect {
         if (cut.right() >= victim.left() && cut.right() <= victim.right()) { // Clip right edge
             Rect clip;
             clip.top(victim.top());
-            clip.left(cut.right());
+            clip.left(cut.right() + 1);
             clip.bottom(victim.bottom());
             clip.right(victim.right());
 
@@ -86,7 +86,7 @@ typedef struct Rect {
 
         if (cut.bottom() >= victim.top() && cut.bottom() <= victim.bottom()) { // Clip bottom edge
             Rect clip;
-            clip.top(cut.bottom());
+            clip.top(cut.bottom() + 1);
             clip.left(victim.left());
             clip.bottom(victim.bottom());
             clip.right(victim.right());

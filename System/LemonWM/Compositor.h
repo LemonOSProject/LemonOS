@@ -16,12 +16,12 @@ template <typename T, class... D> std::list<T> SplitModify(Rect& victim, const R
         clip.top(victim.top());
         clip.left(victim.left());
         clip.bottom(victim.bottom());
-        clip.right(cut.left()); // Left of cutting rect's left edge
+        clip.right(cut.left() - 1); // Left of cutting rect's left edge
 
         victim.left(cut.left());
 
         if (clip.width > 0) {
-            clips.push_back({clip, extraData...});
+            clips.push_back(T{clip, extraData...});
         }
     }
 
@@ -29,13 +29,13 @@ template <typename T, class... D> std::list<T> SplitModify(Rect& victim, const R
         Rect clip;
         clip.top(victim.top());
         clip.left(victim.left());
-        clip.bottom(cut.top()); // Above cutting rect's top edge
+        clip.bottom(cut.top() - 1); // Above cutting rect's top edge
         clip.right(victim.right());
 
         victim.top(cut.top());
 
         if (clip.height > 0) {
-            clips.push_back({clip, extraData...});
+            clips.push_back(T{clip, extraData...});
         }
     }
 
@@ -44,18 +44,18 @@ template <typename T, class... D> std::list<T> SplitModify(Rect& victim, const R
         clip.top(victim.top());
         clip.left(cut.right());
         clip.bottom(victim.bottom());
-        clip.right(victim.right());
+        clip.right(victim.right() + 1);
 
         victim.right(cut.right());
 
         if (clip.width > 0) {
-            clips.push_back({clip, extraData...});
+            clips.push_back(T{clip, extraData...});
         }
     }
 
     if (cut.bottom() >= victim.top() && cut.bottom() <= victim.bottom()) { // Clip bottom edge
         Rect clip;
-        clip.top(cut.bottom());
+        clip.top(cut.bottom() + 1);
         clip.left(victim.left());
         clip.bottom(victim.bottom());
         clip.right(victim.right());
@@ -63,7 +63,7 @@ template <typename T, class... D> std::list<T> SplitModify(Rect& victim, const R
         victim.bottom(cut.bottom());
 
         if (clip.height > 0) {
-            clips.push_back({clip, extraData...});
+            clips.push_back(T{clip, extraData...});
         }
     }
 
