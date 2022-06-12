@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:22.04
 
 RUN apt-get update && apt-get install -y \ 
     build-essential autoconf libtool python3 python3-pip ninja-build qemu-utils nasm help2man gettext autopoint gperf git cmake curl texinfo wget flex
@@ -15,7 +15,7 @@ RUN apt-get install zstd; mkdir -p /var/lemon-tools/Build; mv /var/LemonOS/Toolc
 
 FROM ubuntu:latest
 RUN apt-get update && apt-get install -y \ 
-    build-essential autoconf libtool python3 python3-pip ninja-build qemu-utils nasm help2man gettext autopoint gperf git cmake curl texinfo wget flex \
+    build-essential autoconf libtool python3 python3-pip ninja-build qemu-utils nasm help2man gettext autopoint gperf git cmake curl texinfo wget flex unzip rsync \
     e2fsprogs dosfstools zstd; \
     python3 -m ensurepip; python3 -m pip install meson xbstrap
 
