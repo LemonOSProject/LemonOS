@@ -451,7 +451,15 @@ long SysExecve(RegisterContext* r) {
     Thread* currentThread = Scheduler::GetCurrentThread();
     ScopedSpinLock lockProcess(currentProcess->m_processLock);
 
-    currentProcess->addressSpace->UnmapAll();
+    // Create a fresh AddressSpace for the new process image
+    AddressSpace* newSpace = new AddressSpace(Memory::CreatePageMap());
+    AddressSpace* oldSpace = currentProcess->addressSpace;
+
+    asm volatile("cli");
+    currentProcess->addressSpace = newSpace;
+    asm volatile("mov %%rax, %%cr3; sti" :: "a"(newSpace->GetPageMap()->pml4Phys));
+
+    delete oldSpace;
     currentProcess->usedMemoryBlocks = 0;
 
     currentProcess->MapSignalTrampoline();

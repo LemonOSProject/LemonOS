@@ -238,20 +238,6 @@ retry:
     return 0;
 }
 
-void AddressSpace::UnmapAll() {
-    ScopedSpinLock acq(m_lock);
-
-    for (MappedRegion& r : m_regions) {
-        Memory::MapVirtualMemory4K(0, r.Base(), PAGE_COUNT_4K(r.Size()), 0, m_pageMap);
-
-        if (r.vmObject.get()) {
-            r.vmObject->refCount--;
-        }
-    }
-
-    m_regions.clear();
-}
-
 size_t AddressSpace::UsedPhysicalMemory() const {
     size_t mem = 0;
 

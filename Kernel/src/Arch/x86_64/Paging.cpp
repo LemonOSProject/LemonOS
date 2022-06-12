@@ -635,37 +635,6 @@ void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount) {
     KernelMapVirtualMemory4K(phys, virt, amount, PAGE_WRITABLE | PAGE_PRESENT);
 }
 
-void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, PageMap* pageMap) {
-    uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
-
-    // phys &= ~(PAGE_SIZE_4K-1);
-    // virt &= ~(PAGE_SIZE_4K-1);
-
-    while (amount--) {
-        pml4Index = PML4_GET_INDEX(virt);
-        pdptIndex = PDPT_GET_INDEX(virt);
-        pageDirIndex = PAGE_DIR_GET_INDEX(virt);
-        pageIndex = PAGE_TABLE_GET_INDEX(virt);
-
-        const char* panic[1] = {"Process address space cannot be >512GB"};
-        if (pdptIndex > MAX_PDPT_INDEX || pml4Index)
-            KernelPanic(panic, 1);
-
-        assert(pageMap->pageDirs[pdptIndex]);
-        if (!(pageMap->pageDirs[pdptIndex][pageDirIndex] & 0x1))
-            CreatePageTable(pdptIndex, pageDirIndex,
-                            pageMap); // If we don't have a page table at this address, create one.
-
-        pageMap->pageTables[pdptIndex][pageDirIndex][pageIndex] = PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER;
-        SetPageFrame(&(pageMap->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
-
-        invlpg(virt);
-
-        phys += PAGE_SIZE_4K;
-        virt += PAGE_SIZE_4K; /* Go to next page */
-    }
-}
-
 void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags, PageMap* pageMap) {
     uint64_t pml4Index, pdptIndex, pageDirIndex, pageIndex;
 
@@ -693,6 +662,10 @@ void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t 
         phys += PAGE_SIZE_4K;
         virt += PAGE_SIZE_4K; /* Go to next page */
     }
+}
+
+void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, PageMap* pageMap) {
+    MapVirtualMemory4K(phys, virt, amount, PAGE_PRESENT | PAGE_WRITABLE | PAGE_USER, pageMap);
 }
 
 uintptr_t GetIOMapping(uintptr_t addr) {

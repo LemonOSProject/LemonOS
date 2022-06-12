@@ -42,16 +42,19 @@ elf_info_t LoadELFSegments(Process* proc, void* _elf, uintptr_t base) {
         assert(base + elfPHdr.vaddr);
 
         proc->usedMemoryBlocks += (elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) >> 12;
-        proc->addressSpace->MapVMO(new ProcessImageVMObject((base + elfPHdr.vaddr) & ~0xFFFUL,
-                                                            ((elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) &
-                                                             ~static_cast<uintptr_t>(PAGE_SIZE_4K - 1)),
-                                                            true),
-                                   (elfPHdr.vaddr + base) & ~0xFFFUL, true);
+        if (!proc->addressSpace->MapVMO(new ProcessImageVMObject((base + elfPHdr.vaddr) & ~0xFFFUL,
+                                                                ((elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) &
+                                                                 ~static_cast<uintptr_t>(PAGE_SIZE_4K - 1)),
+                                                                true),
+                                       (elfPHdr.vaddr + base) & ~0xFFFUL, true)) {
+            Log::Error("Failed to map process image memory");
+            memset(&elfInfo, 0, sizeof(elfInfo));
+            return elfInfo;
+        }
     }
 
     char* linkPath = nullptr;
     uintptr_t pml4Phys = Scheduler::GetCurrentProcess()->GetPageMap()->pml4Phys;
-
     for (int i = 0; i < elfHdr.phNum; i++) {
         elf64_program_header_t elfPHdr = *((elf64_program_header_t*)(elf + elfHdr.phOff + i * elfHdr.phEntrySize));
 
@@ -59,7 +62,6 @@ elf_info_t LoadELFSegments(Process* proc, void* _elf, uintptr_t base) {
 
         if (elfPHdr.type == PT_LOAD && elfPHdr.memSize > 0) {
             asm volatile("cli; mov %%rax, %%cr3" ::"a"(proc->GetPageMap()->pml4Phys) : "memory");
-            Log::Info("dst: %x", base + elfPHdr.vaddr);
             memset((void*)(base + elfPHdr.vaddr + elfPHdr.fileSize), 0, (elfPHdr.memSize - elfPHdr.fileSize));
             memcpy((void*)(base + elfPHdr.vaddr), (void*)(elf + elfPHdr.offset), elfPHdr.fileSize);
             asm volatile("mov %%rax, %%cr3; sti" ::"a"(pml4Phys) : "memory");

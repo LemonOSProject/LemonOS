@@ -164,7 +164,6 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
         }
 
         void* linkerElf = kmalloc(node->size);
-
         fs::Read(node, 0, node->size, (uint8_t*)linkerElf); // Load Dynamic Linker
 
         if (!VerifyELF(linkerElf)) {
@@ -173,7 +172,6 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
         }
 
         elf_info_t linkerELFInfo = LoadELFSegments(this, linkerElf, linkerBaseAddress);
-
         rip = linkerELFInfo.entry;
 
         kfree(linkerElf);

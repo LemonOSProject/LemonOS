@@ -59,12 +59,11 @@ public:
     /////////////////////////////
     long UnmapRegion(MappedRegion* region);
 
-    MappedRegion* MapVMO(FancyRefPtr<VMObject> obj, uintptr_t base, bool fixed);
+    [[nodiscard]] MappedRegion* MapVMO(FancyRefPtr<VMObject> obj, uintptr_t base, bool fixed);
     MappedRegion* AllocateAnonymousVMObject(size_t size, uintptr_t base, bool fixed);
     AddressSpace* Fork();
 
     long UnmapMemory(uintptr_t base, size_t size);
-    void UnmapAll();
 
     size_t UsedPhysicalMemory() const;
     void DumpRegions();
