@@ -45,7 +45,7 @@ public:
     ~MenuItem() = default;
 
     void Open() {
-        // MinimizeMenu(true);
+        MinimizeMenu(true);
         if (!m_args.size()) {
             return;
         }

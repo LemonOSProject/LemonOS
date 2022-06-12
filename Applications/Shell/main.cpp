@@ -30,7 +30,7 @@ Lemon::GUI::Window* taskbar;
 ShellInstance* shell;
 surface_t menuButton;
 
-bool showMenu = true;
+bool showMenu = false;
 
 char versionString[80];
 
@@ -230,6 +230,8 @@ int main() {
     Lemon::GUI::Window* menuWindow = InitializeMenu();
     shell->SetMenu(menuWindow);
 
+    MinimizeMenu(true);
+
     Lemon::Waiter waiter;
     waiter.WaitOnAll(&shell->GetInterface());
     waiter.WaitOn(Lemon::WindowServer::Instance());
@@ -243,8 +245,9 @@ int main() {
         return false;
     });
 
-    std::thread cpuUsageThread(CPUUsageThread);
+    shell->OnOpen(Lemon::Handle(), "/system/bin/welcome.lef");
 
+    std::thread cpuUsageThread(CPUUsageThread);
     for (;;) {
         Lemon::WindowServer::Instance()->Poll();
         shell->Poll();
