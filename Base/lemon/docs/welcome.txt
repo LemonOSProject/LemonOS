@@ -1,0 +1,5 @@
+Press the lemon in the corner to access the launch
+menu, search for applications in the top box.
+
+Notable applications include AudioPlayer,
+Text Editor and Terminal.
