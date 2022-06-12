@@ -89,17 +89,17 @@ void Texture::UpdateSurface() {
                 long g =
                     Interpolate(srcBuffer[((int)floor(_yval) * source.width + (int)floor(_xval)) * 4 + 1],
                                 srcBuffer[((int)floor(_yval) * source.width + (int)ceil(_xval)) * 4 + 1],
-                                srcBuffer[((int)floor(_yval) * source.width + (int)ceil(_xval)) * 4 + 1],
+                                srcBuffer[((int)ceil(_yval) * source.width + (int)floor(_xval)) * 4 + 1],
                                 srcBuffer[((int)ceil(_yval) * source.width + (int)ceil(_xval)) * 4 + 1], _xval, _yval);
                 long r =
                     Interpolate(srcBuffer[((int)floor(_yval) * source.width + (int)floor(_xval)) * 4 + 2],
                                 srcBuffer[((int)floor(_yval) * source.width + (int)ceil(_xval)) * 4 + 2],
-                                srcBuffer[((int)floor(_yval) * source.width + (int)ceil(_xval)) * 4 + 2],
+                                srcBuffer[((int)ceil(_yval) * source.width + (int)floor(_xval)) * 4 + 2],
                                 srcBuffer[((int)ceil(_yval) * source.width + (int)ceil(_xval)) * 4 + 2], _xval, _yval);
                 long a =
                     Interpolate(srcBuffer[((int)floor(_yval) * source.width + (int)floor(_xval)) * 4 + 3],
                                 srcBuffer[((int)floor(_yval) * source.width + (int)ceil(_xval)) * 4 + 3],
-                                srcBuffer[((int)floor(_yval) * source.width + (int)ceil(_xval)) * 4 + 3],
+                                srcBuffer[((int)ceil(_yval) * source.width + (int)floor(_xval)) * 4 + 3],
                                 srcBuffer[((int)ceil(_yval) * source.width + (int)ceil(_xval)) * 4 + 3], _xval, _yval);
 
                 reinterpret_cast<uint32_t*>(surface.buffer)[offset] = (a << 24) | (r << 16) | (g << 8) | b;

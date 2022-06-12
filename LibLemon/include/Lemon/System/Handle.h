@@ -9,7 +9,7 @@ namespace Lemon {
 /////////////////////////////
 class Handle final {
   public:
-    inline Handle() : m_refCount(0), m_handle(0) {}
+    inline Handle() : m_refCount(0), m_handle(-1) {}
     explicit inline Handle(handle_t handle) : m_handle(handle) {
         if (m_handle) {
             m_refCount = new unsigned(1);
@@ -18,7 +18,7 @@ class Handle final {
     inline Handle(const Handle& handle) : m_refCount(handle.m_refCount), m_handle(handle.m_handle) { (*m_refCount)++; }
     inline Handle(Handle&& handle) : m_refCount(handle.m_refCount), m_handle(handle.m_handle) {
         handle.m_refCount = nullptr;
-        handle.m_handle = 0;
+        handle.m_handle = -1;
     }
 
     inline ~Handle() { Dereference(); }
@@ -41,7 +41,7 @@ class Handle final {
         m_handle = handle.m_handle;
 
         handle.m_refCount = nullptr;
-        handle.m_handle = 0;
+        handle.m_handle = -1;
 
         return *this;
     }
@@ -51,13 +51,13 @@ class Handle final {
 
   private:
     inline void Dereference() {
-        if (m_handle) {
+        if (m_handle > 0) {
             if (!(m_refCount && --(*m_refCount))) { // Check that either refCount doesn't exist or is 0
                 DestroyKObject(m_handle);
             }
         }
 
-        m_handle = 0;
+        m_handle = -1;
         m_refCount = nullptr;
     }
 

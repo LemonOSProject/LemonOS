@@ -6,10 +6,13 @@
 #include <Lemon/System/Waitable.h>
 #include <Lemon/Types.h>
 
+#include <Lemon/Core/Logger.h>
+
 #include <Lemon/IPC/Message.h>
 
 #include <assert.h>
 #include <stdint.h>
+#include <fcntl.h>
 
 namespace Lemon {
 class EndpointException : public std::exception {
@@ -74,7 +77,7 @@ public:
         handle_t handle = InterfaceConnect(path);
 
         if (handle <= 0) {
-            printf("[LibLemon] Error %d connecting to interface %s!\n", handle, path);
+            Logger::Error("[LibLemon] {}, error connecting to interface {}\n", handle, path);
             throw new EndpointException(EndpointException::EndpointInterfacePathResolutionError);
         }
 
@@ -86,6 +89,12 @@ public:
                 throw new EndpointException(EndpointException::EndpointUnknownError);
             }
         }
+
+        if (fcntl(handle, F_SETFD, FD_CLOEXEC)) {
+            Logger::Error("Failed to set endpoint O_CLOEXEC: {}", strerror(errno));
+            throw new EndpointException(EndpointException::EndpointUnknownError);
+        }
+
         m_handle = Handle(handle);
         m_msgSize = endpInfo.msgSize;
     }

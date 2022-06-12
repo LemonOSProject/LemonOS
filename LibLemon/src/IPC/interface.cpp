@@ -1,8 +1,11 @@
 #include <Lemon/IPC/Endpoint.h>
 #include <Lemon/IPC/Interface.h>
 
+#include <Lemon/Core/Logger.h>
+
 #include <Lemon/System/IPC.h>
 #include <errno.h>
+#include <fcntl.h>
 
 namespace Lemon {
 const char* const EndpointException::errorStrings[] = {
@@ -31,6 +34,11 @@ Interface::Interface(const Handle& service, const char* name, uint16_t msgSize) 
         } else {
             throw InterfaceException(InterfaceException::InterfaceCreateOther);
         }
+    }
+
+    if (fcntl(handle, F_SETFD, FD_CLOEXEC)) {
+        Logger::Error("Failed to set interface O_CLOEXEC");
+        throw InterfaceException(InterfaceException::InterfaceCreateOther);
     }
 
     m_interfaceHandle = Handle(handle);

@@ -19,9 +19,11 @@ URL::URL(const char* url) {
         if (pState == Scheme) {
             std::string_view scheme = lex.EatWhile(isalnum);
 
+            // Got to the end without a scheme
             if (lex.End()) {
-                host = scheme;
-                break;
+                pState = ParseState::Authority;
+                lex.Restart();
+                continue;
             }
 
             char c = lex.Eat();
@@ -38,8 +40,12 @@ URL::URL(const char* url) {
                 }
             case '@':
             case '.':
-            case '/':
                 pState = Authority;
+
+                lex.Restart();
+                continue;
+            case '/':
+                pState = Path;
 
                 lex.Restart();
                 continue;
