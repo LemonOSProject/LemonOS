@@ -308,6 +308,7 @@ void ParseLine() {
     if(!argv.size()) {
         return;
     }
+    argv.push_back(nullptr);
 
     for (builtin_t builtin : builtins) {
         if (strcmp(builtin.name, argv[0]) == 0) {
@@ -319,8 +320,10 @@ void ParseLine() {
     errno = 0;
 
     if (strchr(argv[0], '/')) {
-        job = lemon_spawn(argv[0], argv.size(), argv.data(), 1);
-        if (job > 0) {
+        job = fork();
+        if(job == 0) {
+            exit(execv(argv[0], argv.data()));
+        } else if (job > 0) {
             int status = 0;
             int ret = 0;
             while ((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == EINTR))
@@ -330,7 +333,7 @@ void ParseLine() {
 
             job = -1;
         } else if (errno == ENOENT) {
-            printf("\nNo such file or directory: %s\n", argv[0]);
+            printf("\nCommand not found: %s\n", argv[0]);
         } else {
             perror("Error spawning process");
         }
@@ -351,10 +354,8 @@ void ParseLine() {
 
                 job = -1;
                 return;
-            } else if (errno == ENOENT) {
-                continue;
             } else {
-                perror("Error spawning process");
+                perror("Error spawning child process");
                 break;
             }
         }
