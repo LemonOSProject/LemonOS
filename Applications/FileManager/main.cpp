@@ -1,3 +1,4 @@
+#include <Lemon/Core/Shell.h>
 #include <Lemon/GUI/Window.h>
 #include <Lemon/GUI/Widgets.h>
 #include <Lemon/GUI/Messagebox.h>
@@ -9,22 +10,7 @@
 #include <unistd.h>
 
 void OnFileOpened(const char* path, Lemon::GUI::FileView* fv){
-	char* pathCopy = strdup(path);
-
-	if(strncmp(path + strlen(path) - 4, ".lef", 4) == 0){
-		lemon_spawn(path, 1, &pathCopy);
-	} else if(strncmp(path + strlen(path) - 4, ".txt", 4) == 0 || strncmp(path + strlen(path) - 4, ".cfg", 4) == 0 || strncmp(path + strlen(path) - 4, ".asm", 4) == 0 || strncmp(path + strlen(path) - 3, ".py", 3) == 0 || strncmp(path + strlen(path) - 5, ".json", 5) == 0 || strncmp(path + strlen(path) - 2, ".c", 2) == 0){
-		char* const argv[] = {const_cast<char*>("/system/bin/textedit.lef"), pathCopy};
-		lemon_spawn("/system/bin/textedit.lef", 2, argv);
-	} else if(strncmp(path + strlen(path) - 4, ".png", 4) == 0 || strncmp(path + strlen(path) - 4, ".bmp", 4) == 0){
-		char* const argv[] = {const_cast<char*>("/system/bin/imgview.lef"), pathCopy};
-		lemon_spawn("/system/bin/imgview.lef", 2, argv);
-	} else if(strncmp(path + strlen(path) - 4, ".mp3", 4) == 0 || strncmp(path + strlen(path) - 5, ".flac", 5) == 0){
-		char* const argv[] = {const_cast<char*>("/system/bin/audioplayer.lef"), pathCopy};
-		lemon_spawn("/system/bin/audioplayer.lef", 2, argv);
-	}
-
-	free(pathCopy);
+	Lemon::Shell::Open(path);
 }
 
 extern "C"
