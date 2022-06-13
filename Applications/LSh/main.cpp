@@ -19,6 +19,7 @@ termios readAttributes; // Set on ReadLine
 
 std::string ln;
 int lnPos = 0;
+int historyIndex = -1;
 
 typedef int (*builtin_call_t)(int, char**);
 
@@ -90,6 +91,11 @@ void InterruptSignalHandler(int sig) {
     if (job > 0) {
         // If we have a current job, send signal to child.
         kill(job, sig);
+    } else if(sig == SIGINT) {
+        // Clear the line on Ctrl+C
+        lnPos = 0;
+        historyIndex = -1;
+        ln.clear();
     }
 }
 
@@ -100,7 +106,7 @@ void ReadLine() {
     bool csi = false; // Control sequence indicator
 
     lnPos = 0;             // Line cursor position
-    int historyIndex = -1; // History index
+    historyIndex = -1; // History index
     ln.clear();
 
     for (int i = 0;; i++) {
@@ -319,48 +325,46 @@ void ParseLine() {
 
     errno = 0;
 
-    if (strchr(argv[0], '/')) {
-        job = fork();
-        if(job == 0) {
-            exit(execv(argv[0], argv.data()));
-        } else if (job > 0) {
-            int status = 0;
-            int ret = 0;
-            while ((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == EINTR))
-                ;
-
-            commandResult = WEXITSTATUS(status);
-
-            job = -1;
-        } else if (errno == ENOENT) {
-            printf("\nCommand not found: %s\n", argv[0]);
-        } else {
-            perror("Error spawning process");
-        }
-
-        return;
-    } else
-        for (std::string path : path) {
-            assert(!path.empty());
-
-            job = lemon_spawn((path + "/" + argv[0]).c_str(), argv.size(), argv.data(), 1);
-            if (job > 0) {
-                int status = 0;
-                int ret = 0;
-                while ((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == EINTR))
-                    ;
-
-                commandResult = WEXITSTATUS(status);
-
-                job = -1;
-                return;
+    job = fork();
+    if(job == 0) {
+        if (strchr(argv[0], '/')) {
+            execv(argv[0], argv.data());
+            if(errno == ENOENT) {
+                printf("Command not found: %s\n", argv[0]);
             } else {
-                perror("Error spawning child process");
-                break;
+                printf("%s: %s\n", strerror(errno), argv[0]);
             }
-        }
+            
+            exit(errno);
+        } else {
+            for (std::string path : path) {
+                assert(!path.empty());
 
-    printf("\nUnknown Command: %s\n", argv[0]);
+                errno = execv((path + "/" + argv[0]).c_str(), argv.data());
+            }
+
+            if(errno == ENOENT) {
+                printf("Command not found: %s\n", argv[0]);
+            } else {
+                printf("%s: %s\n", strerror(errno), argv[0]);
+            }
+            
+            exit(errno);
+        }
+    } else if (job > 0) {
+        int status = 0;
+        int ret = 0;
+        while ((ret = waitpid(job, &status, 0)) == 0 || (ret < 0 && errno == EINTR))
+            ;
+
+        commandResult = WEXITSTATUS(status);
+
+        job = -1;
+    } else {
+        perror("Error spawning process");
+    }
+
+    job = -1;
 
     return;
 }
