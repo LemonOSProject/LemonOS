@@ -6,9 +6,9 @@ ld = 'x86_64-lemon-ld'
 pkgconfig = 'pkg-config'
 
 [properties]
-
 cmake_toolchain_file = 'CMake/lemon-cmake-options.cmake'
 cmake_defaults = false
+skip_sanity_check = true
 
 [cmake]
 

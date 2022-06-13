@@ -163,7 +163,8 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
     //ucontext_t* ucontext = reinterpret_cast<ucontext_t*>(stack);
 
     // Ensure stack alignment
-    uint64_t* stack = reinterpret_cast<uint64_t*>((regs->rsp & (~0xfULL)) - sizeof(RegisterContext));
+    // Make sure to subtract the 128-byte redzone
+    uint64_t* stack = reinterpret_cast<uint64_t*>((regs->rsp & (~0xfULL)) - 128 - sizeof(RegisterContext));
     *reinterpret_cast<RegisterContext*>(stack) = *regs;
 
     *(--stack) = 0; // Pad out the stack
