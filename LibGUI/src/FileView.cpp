@@ -66,10 +66,10 @@ public:
     }
 };
 
-void OnFileButtonPress(Button* b) {
+void OnFileButtonPress(FileButton* b) {
     FileView* fv = ((FileView*)b->GetParent());
     fv->currentPath = "/";
-    fv->currentPath.append(((FileButton*)b)->file);
+    fv->currentPath.append(b->file);
 
     fv->Refresh();
 }
@@ -131,7 +131,7 @@ FileView::FileView(rect_t bounds, const char* path, void (*_OnFileOpened)(const 
         FileButton* fb = new FileButton(str, (rect_t){bounds.pos + (vector2i_t){2, ypos}, {sidepanelWidth - 4, 20}});
         fb->file = ent->d_name;
         fb->icon = icon;
-        fb->OnPress = OnFileButtonPress;
+        fb->e.onPress.Set(OnFileButtonPress, fb);
 
         AddWidget(fb);
 

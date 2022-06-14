@@ -227,6 +227,8 @@ void DecodeAudio(AudioContext* ctx) {
         }
     }
 
+    // We finished playing
+    ctx->m_shouldPlayNextTrack = true;
     cleanup();
     return;
 }
@@ -369,6 +371,11 @@ int AudioContext::PlayTrack(TrackInfo* info) {
 
     m_currentTrack = info;
 
+    m_shouldPlayNextTrack = false;
+
+    if(m_decoderThread.joinable()) {
+        m_decoderThread.join();
+    }
     m_isDecoderRunning = true;
     m_decoderThread = std::thread(DecodeAudio, this);
     return 0;

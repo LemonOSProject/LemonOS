@@ -8,11 +8,11 @@
 
 using namespace Lemon;
 
-void OnAboutLemon(GUI::Button*) {
+void OnAboutLemon(void*) {
     Lemon::Shell::Open("/system/bin/sysinfo.lef");
 }
 
-void OnThirdParty(GUI::Button*) {
+void OnThirdParty(void*) {
     Lemon::Shell::Open("/system/lemon/docs/thirdparty.txt");
 }
 
@@ -30,9 +30,9 @@ int main(int, char**) {
     buttonContainer->xFill = true;
 
     GUI::Button* about = new GUI::Button("About Lemon OS...", {});
-    about->OnPress = OnAboutLemon;
+    about->e.onPress.Set(OnAboutLemon);
     GUI::Button* thirdparty = new GUI::Button("Third Party...", {});
-    thirdparty->OnPress = OnThirdParty;
+    thirdparty->e.onPress.Set(OnThirdParty);
 
     buttonContainer->AddWidget(about);
     buttonContainer->AddWidget(thirdparty);

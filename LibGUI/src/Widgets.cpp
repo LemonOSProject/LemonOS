@@ -364,8 +364,8 @@ void Button::Paint(surface_t* surface) {
 void Button::OnMouseDown(__attribute__((unused)) vector2i_t mousePos) { pressed = true; }
 
 void Button::OnMouseUp(vector2i_t mousePos) {
-    if (Graphics::PointInRect(fixedBounds, mousePos) && OnPress)
-        OnPress(this);
+    if (Graphics::PointInRect(fixedBounds, mousePos) && e.onPress.handler)
+        e.onPress();
 
     pressed = false;
 }

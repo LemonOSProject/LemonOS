@@ -6,14 +6,14 @@
 
 namespace Lemon::GUI {
 int pressed = 1;
-void OnMessageBoxOKPressed(Lemon::GUI::Button* b) {
+void OnMessageBoxOKPressed(Lemon::GUI::Window* b) {
     pressed = 1;
-    b->GetWindow()->closed = true;
+    b->closed = true;
 }
 
-void OnMessageBoxCancelPressed(Lemon::GUI::Button* b) {
+void OnMessageBoxCancelPressed(Lemon::GUI::Window* b) {
     pressed = 0;
-    b->GetWindow()->closed = true;
+    b->closed = true;
 }
 
 int DisplayMessageBox(const char* title, const char* message, MsgBoxButtons buttons) {
@@ -30,17 +30,17 @@ int DisplayMessageBox(const char* title, const char* message, MsgBoxButtons butt
         Button* okBtn = new Button("OK", {-52, 2, 100, 24});
         win->AddWidget(okBtn);
         okBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignCentre, WAlignBottom);
-        okBtn->OnPress = OnMessageBoxOKPressed;
+        okBtn->e.onPress.Set(OnMessageBoxOKPressed, win);
 
         Button* cancelBtn = new Button("Cancel", {52, 2, 100, 24});
         win->AddWidget(cancelBtn);
         cancelBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignCentre, WAlignBottom);
-        cancelBtn->OnPress = OnMessageBoxCancelPressed;
+        cancelBtn->e.onPress.Set(OnMessageBoxCancelPressed, win);
     } else {
         Button* okBtn = new Button("OK", {0, 5, 100, 24});
         win->AddWidget(okBtn);
         okBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignCentre, WAlignBottom);
-        okBtn->OnPress = OnMessageBoxOKPressed;
+        okBtn->e.onPress.Set(OnMessageBoxOKPressed, win);
     }
 
     while (!win->closed) {

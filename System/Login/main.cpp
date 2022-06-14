@@ -28,7 +28,7 @@ struct User{
 
 std::map<std::string, User> users;
 
-void OnOKPress(__attribute__((unused)) Lemon::GUI::Button* b){
+void OnOKPress(void*){
 	if(users.find(usernameBox->contents.front()) != users.end()){
 		User& user = users.at(usernameBox->contents.front());
 
@@ -124,7 +124,7 @@ int main(int argc, char** argv){
 
 	okButton = new Lemon::GUI::Button("OK", {0, 10, 100, 24});
 	okButton->SetLayout(Lemon::GUI::Fixed, Lemon::GUI::Fixed, Lemon::GUI::WAlignCentre, Lemon::GUI::WAlignBottom);
-	okButton->OnPress = OnOKPress;
+	okButton->e.onPress.Set(OnOKPress);
 	
 	window = new Lemon::GUI::Window("Login", {400, 120}, 0, Lemon::GUI::WindowType::GUI);
 

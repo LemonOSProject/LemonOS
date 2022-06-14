@@ -1,6 +1,9 @@
 #pragma once
 
+#include <Lemon/Core/Util.h>
 #include <Lemon/Graphics/Graphics.h>
+
+#include <assert.h>
 
 namespace Lemon {
 enum Event {
@@ -37,4 +40,29 @@ struct LemonEvent {
         uint64_t data;
     };
 };
+
+struct EventHandler {
+    void* data;
+    void(*handler)(void*) = nullptr;
+
+    template<typename T>
+    void Set(void(*newHandler)(T*), T* newData = nullptr) {
+        data = newData;
+        handler = (void(*)(void*))newHandler;
+    }
+
+    void Set(std::nullptr_t) {
+        handler = nullptr;
+    }
+
+    ALWAYS_INLINE void Run() {
+        assert(handler);
+        handler(data);
+    }
+
+    ALWAYS_INLINE void operator()() {
+        return Run();
+    }
+};
+
 } // namespace Lemon

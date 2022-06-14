@@ -29,8 +29,8 @@ void FileDialogOnFileSelected(std::string& path, __attribute__((unused)) FileVie
     dialogFileBox->contents.front() = path;
 }
 
-void FileDialogOnCancelPress(Lemon::GUI::Button* btn) {
-    btn->GetWindow()->closed = true; // Tell FileDialog() that we want to close the window
+void FileDialogOnCancelPress(Lemon::GUI::Window* window) {
+    window->closed = true; // Tell FileDialog() that we want to close the window
 }
 
 void FileDialogOnFileBoxSubmit(Lemon::GUI::TextBox* box) {
@@ -67,7 +67,7 @@ void FileDialogOnFileBoxSubmit(Lemon::GUI::TextBox* box) {
     }
 }
 
-void FileDialogOnOKPress(__attribute__((unused)) Lemon::GUI::Button* btn) { FileDialogOnFileBoxSubmit(dialogFileBox); }
+void FileDialogOnOKPress(void*) { FileDialogOnFileBoxSubmit(dialogFileBox); }
 
 char* FileDialog(const char* path, int flags) {
     dflags = flags;
@@ -92,12 +92,12 @@ char* FileDialog(const char* path, int flags) {
     Button* okBtn = new Button("OK", {5, 34, 100, 24});
     win->AddWidget(okBtn);
     okBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignRight, WAlignBottom);
-    okBtn->OnPress = FileDialogOnOKPress;
+    okBtn->e.onPress.Set(FileDialogOnOKPress);
 
     Button* cancelBtn = new Button("Cancel", {5, 5, 100, 24});
     win->AddWidget(cancelBtn);
     cancelBtn->SetLayout(LayoutSize::Fixed, LayoutSize::Fixed, WAlignRight, WAlignBottom);
-    cancelBtn->OnPress = FileDialogOnCancelPress;
+    cancelBtn->e.onPress.Set(FileDialogOnCancelPress, win);
 
     TextBox* fileBox = new TextBox({fv->SidepanelWidth(), 34, 110, 24}, false);
     win->AddWidget(fileBox);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Lemon/GUI/ContextMenu.h>
+#include <Lemon/GUI/Event.h>
 #include <Lemon/GUI/Theme.h>
 #include <Lemon/Graphics/Graphics.h>
 #include <Lemon/Graphics/Surface.h>
@@ -219,7 +220,9 @@ public:
     virtual void OnMouseDown(vector2i_t mousePos);
     virtual void OnMouseUp(vector2i_t mousePos);
 
-    void (*OnPress)(Button*) = nullptr;
+    struct {
+        EventHandler onPress;
+    } e;
 };
 
 class Bitmap : public Widget {

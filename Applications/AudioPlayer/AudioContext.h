@@ -24,6 +24,7 @@ public:
     AudioContext();
 
     inline bool IsAudioPlaying() const { return m_isDecoderRunning; }
+    inline bool ShouldPlayNextTrack() const { return m_shouldPlayNextTrack; }
 
     float PlaybackProgress() const;
     const TrackInfo* CurrentTrack() const { return m_currentTrack; }
@@ -78,6 +79,7 @@ private:
     std::mutex m_decoderLock;
 
     bool m_isDecoderRunning = false;
+    bool m_shouldPlayNextTrack = false;
     
     bool m_requestSeek = false;
     // Timestamp in seconds of where to seek to

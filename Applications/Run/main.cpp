@@ -91,7 +91,7 @@ int main(int argc, char** argv){
     textbox->OnSubmit = OnSubmit;
 
     okButton = new Lemon::GUI::Button("OK", {10, 44, 100, 24});
-    okButton->OnPress = OnPress;
+    okButton->e.onPress.Set(OnPress);
 
     window->AddWidget(textbox);
     window->AddWidget(okButton);
