@@ -37,7 +37,7 @@ std::list<builtin_t> builtins;
 std::vector<std::string> history;
 
 int LShBuiltin_Cd(int argc, char** argv) {
-    if (argc > 3) {
+    if (argc >= 3) {
         printf("cd: Too many arguments");
         return 1;
     } else if (argc == 2) {
@@ -318,7 +318,7 @@ void ParseLine() {
 
     for (builtin_t builtin : builtins) {
         if (strcmp(builtin.name, argv[0]) == 0) {
-            commandResult = builtin.func(argv.size(), argv.data());
+            commandResult = builtin.func(argv.size() - 1, argv.data());
             return;
         }
     }
