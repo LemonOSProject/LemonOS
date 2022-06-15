@@ -11,7 +11,7 @@
 template <typename T, class... D> std::list<T> SplitModify(Rect& victim, const Rect& cut, D... extraData) {
     std::list<T> clips;
 
-    if (cut.left() >= victim.left() && cut.left() <= victim.right()) { // Clip left edge
+    if (cut.left() > victim.left() && cut.left() <= victim.right()) { // Clip left edge
         Rect clip;
         clip.top(victim.top());
         clip.left(victim.left());
@@ -25,7 +25,7 @@ template <typename T, class... D> std::list<T> SplitModify(Rect& victim, const R
         }
     }
 
-    if (cut.top() >= victim.top() && cut.top() <= victim.bottom()) { // Clip top edge
+    if (cut.top() > victim.top() && cut.top() <= victim.bottom()) { // Clip top edge
         Rect clip;
         clip.top(victim.top());
         clip.left(victim.left());
@@ -39,12 +39,12 @@ template <typename T, class... D> std::list<T> SplitModify(Rect& victim, const R
         }
     }
 
-    if (cut.right() >= victim.left() && cut.right() <= victim.right()) { // Clip right edge
+    if (cut.right() >= victim.left() && cut.right() < victim.right()) { // Clip right edge
         Rect clip;
         clip.top(victim.top());
-        clip.left(cut.right());
+        clip.left(cut.right() + 1);
         clip.bottom(victim.bottom());
-        clip.right(victim.right() + 1);
+        clip.right(victim.right());
 
         victim.right(cut.right());
 
@@ -53,7 +53,7 @@ template <typename T, class... D> std::list<T> SplitModify(Rect& victim, const R
         }
     }
 
-    if (cut.bottom() >= victim.top() && cut.bottom() <= victim.bottom()) { // Clip bottom edge
+    if (cut.bottom() >= victim.top() && cut.bottom() < victim.bottom()) { // Clip bottom edge
         Rect clip;
         clip.top(cut.bottom() + 1);
         clip.left(victim.left());
@@ -82,9 +82,10 @@ struct WindowClipRect {
         TypeWindowDecoration,
     } type = TypeWindow;
     bool invalid = true;
+    bool occluded = false;
 
-    std::list<WindowClipRect> SplitModify(const Rect& cut) { return ::SplitModify<WindowClipRect>(rect, cut, win, type, true); }
-    std::list<WindowClipRect> Split(const Rect& cut) { return ::Split<WindowClipRect>(rect, cut, win, type, true); }
+    std::list<WindowClipRect> SplitModify(const Rect& cut) { return ::SplitModify<WindowClipRect>(rect, cut, win, type, true, occluded); }
+    std::list<WindowClipRect> Split(const Rect& cut) { return ::Split<WindowClipRect>(rect, cut, win, type, true, occluded); }
 };
 
 struct BackgroundClipRect {
@@ -116,6 +117,7 @@ public:
 private:
     void RecalculateWindowClipping();
     void RecalculateBackgroundClipping();
+    void RecalculateRenderClipping();
 
     void InvalidateBackgroundRect(BackgroundClipRect& bgRect);
     void InvalidateWindowRect(WindowClipRect& wRect);
@@ -146,5 +148,7 @@ private:
 
     std::list<BackgroundClipRect> m_backgroundRects;
     std::list<WindowClipRect> m_windowClipRects;
-    std::list<WindowClipRect> m_windowDecorationClipRects;
+    // Clip rects used when determining which parts of the screen
+    // to copy to the framebuffer
+    std::list<BackgroundClipRect> m_renderClipRects;
 };

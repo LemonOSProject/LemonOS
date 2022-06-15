@@ -32,7 +32,7 @@ typedef struct Rect {
     }
     __attribute__((always_inline)) inline int right(int newRight) {
         width = newRight - x + 1;
-        return x + width;
+        return x + width - 1;
     }
     __attribute__((always_inline)) inline int top(int newTop) {
         height += y - newTop;
@@ -41,14 +41,14 @@ typedef struct Rect {
     }
     __attribute__((always_inline)) inline int bottom(int newBottom) {
         height = newBottom - y + 1;
-        return y + height;
+        return y + height - 1;
     }
 
     std::list<Rect> Split(const Rect& cut) const {
         std::list<Rect> clips;
         Rect victim = *this;
 
-        if (cut.left() >= victim.left() && cut.left() <= victim.right()) { // Clip left edge
+        if (cut.left() > victim.left() && cut.left() <= victim.right()) { // Clip left edge
             Rect clip;
             clip.top(victim.top());
             clip.left(victim.left());
@@ -60,7 +60,7 @@ typedef struct Rect {
             clips.push_back(clip);
         }
 
-        if (cut.top() >= victim.top() && cut.top() <= victim.bottom()) { // Clip top edge
+        if (cut.top() > victim.top() && cut.top() <= victim.bottom()) { // Clip top edge
             Rect clip;
             clip.top(victim.top());
             clip.left(victim.left());
@@ -72,7 +72,7 @@ typedef struct Rect {
             clips.push_back(clip);
         }
 
-        if (cut.right() >= victim.left() && cut.right() <= victim.right()) { // Clip right edge
+        if (cut.right() >= victim.left() && cut.right() < victim.right()) { // Clip right edge
             Rect clip;
             clip.top(victim.top());
             clip.left(cut.right() + 1);
@@ -84,7 +84,7 @@ typedef struct Rect {
             clips.push_back(clip);
         }
 
-        if (cut.bottom() >= victim.top() && cut.bottom() <= victim.bottom()) { // Clip bottom edge
+        if (cut.bottom() >= victim.top() && cut.bottom() < victim.bottom()) { // Clip bottom edge
             Rect clip;
             clip.top(cut.bottom() + 1);
             clip.left(victim.left());

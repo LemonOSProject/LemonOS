@@ -31,7 +31,7 @@ void WMWindow::DrawDecorationClip(const Rect& clip, Surface* surface) {
                              {0xff, 0xff, 0xff, 0xff}, surface, clip);
     }
     Graphics::DrawRectOutline(
-        {Vector2i{m_rect.x, m_titlebarRect.bottom() + 1}, Vector2i{m_rect.width, m_contentRect.height + theme.borderWidth}},
+        {Vector2i{m_rect.x, m_titlebarRect.bottom() + 1}, Vector2i{m_rect.width, m_contentRect.height + theme.borderWidth * 2}},
         theme.titlebarColour, surface, clip);
 
     Rect closeButtonSourceRect = {0, 0, theme.windowButtons.width / 2, theme.windowButtons.height / 2};
@@ -163,7 +163,7 @@ void WMWindow::UpdateWindowRects() {
 
         m_rect.size = {m_size.x + theme.borderWidth * 2, m_size.y + theme.titlebarHeight + theme.borderWidth * 2};
 
-        m_titlebarRect = {m_rect.x, m_rect.y, m_rect.size.x, theme.titlebarHeight + theme.borderWidth};
+        m_titlebarRect = {m_rect.x, m_rect.y, m_rect.size.x, theme.titlebarHeight};
 
         m_borderRects[0] = {m_rect.pos - Vector2i{0, 3}, m_rect.size.x + 6, RESIZE_HANDLE_SIZE}; // Top
         m_borderRects[1] = {m_rect.pos.x + m_rect.size.x + 3 - RESIZE_HANDLE_SIZE, m_rect.pos.y, RESIZE_HANDLE_SIZE,

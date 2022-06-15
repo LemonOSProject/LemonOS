@@ -63,6 +63,7 @@ void Compositor::Render() {
     if (m_invalidateAll) {
         RecalculateBackgroundClipping();
         RecalculateWindowClipping();
+        RecalculateRenderClipping();
 
         // We fill the areas of the screen being redrawn in debug mode
         // This happens before the render surface is blitted to the display surface
@@ -114,31 +115,19 @@ void Compositor::Render() {
                 win->DrawClip(it->rect, &m_renderSurface);
             }
 
-            it->invalid = false;
-            it++;
-
 #ifdef COMPOSITOR_DEBUG
             Lemon::Graphics::DrawRect(it->rect, {255, 0, 0, 255}, &m_displaySurface);
-            Lemon::Graphics::DrawRectOutline(it->rect, {0, 0, 255, 255}, &m_renderSurface);
+            if(it->type == WindowClipRect::TypeWindowDecoration)
+                Lemon::Graphics::DrawRectOutline(it->rect, {128, 128, 255, 255}, &m_renderSurface);
+            else
+                Lemon::Graphics::DrawRectOutline(it->rect, {0, 0, 255, 255}, &m_renderSurface);
 #endif
+
+            it->invalid = false;
+            it++;
         } else {
             it++;
         }
-    }
-
-    for (WindowClipRect& rect : m_windowDecorationClipRects) {
-        if (!(m_invalidateAll || rect.invalid)) {
-            continue;
-        }
-
-        rect.win->DrawDecorationClip(rect.rect, &m_renderSurface);
-
-#ifdef COMPOSITOR_DEBUG
-        Lemon::Graphics::DrawRect(rect.rect, {0, 255, 0, 255}, &m_displaySurface);
-        Lemon::Graphics::DrawRectOutline(rect.rect, {0, 255, 0, 255}, &m_renderSurface);
-#endif
-
-        rect.invalid = false;
     }
 
     if (WM::Instance().m_showContextMenu) {
@@ -158,9 +147,17 @@ void Compositor::Render() {
         Lemon::Graphics::DrawString(std::to_string(m_fRate).c_str(), 0, 0, 255, 255, 255, &m_renderSurface);
     }
 
-    // Copy the render surface to the display surface
-    m_displaySurface.Blit(&m_renderSurface);
-    m_invalidateAll = false;
+    if(m_invalidateAll) {
+        // Copy the render surface to the display surface
+        m_displaySurface.Blit(&m_renderSurface);
+        m_invalidateAll = false;
+    } else for(auto& rect : m_renderClipRects) {
+        // Only copy invalid rects to the framebuffer
+        if(rect.invalid) {
+            m_displaySurface.Blit(&m_renderSurface, rect.rect.pos, rect.rect);
+            rect.invalid = false;
+        }
+    }
 
     m_renderMutex.unlock();
 }
@@ -209,6 +206,12 @@ void Compositor::Invalidate(const Rect& rect) {
             for (auto* oRect : wRect.win->occludedWindowRects) {
                 oRect->invalid = true;
             }
+        }
+    }
+
+    for(auto& rRect : m_renderClipRects) {
+        if(rRect.rect.Intersects(rect)) {
+            rRect.invalid = true;
         }
     }
 }
@@ -265,17 +268,20 @@ void Compositor::RecalculateWindowClipping() {
 
         if (win->ShouldDrawDecoration()) {
             auto decorationRects =
-                WindowClipRect{win->GetRect(), win, WindowClipRect::TypeWindowDecoration}.Split(win->GetContentRect());
+                WindowClipRect{win->GetRect(), win, WindowClipRect::TypeWindowDecoration, true}.Split(win->GetContentRect());
 
             for (auto& rect : decorationRects) {
                 for (auto it = m_windowClipRects.begin(); it != m_windowClipRects.end(); it++) {
                     // Decoration rects are treated as transparent
                     if (rect.rect.Contains(it->rect)) {
+                        rect.occluded = true;
                         continue;
                     }
 
                     if (it->rect.Intersects(rect.rect)) {
                         auto result = it->SplitModify(rect.rect);
+                        // Instead of removing the clip, mark it as occluded
+                        it->occluded = true;
 
                         m_windowClipRects.splice(m_windowClipRects.end(), std::move(result));
                         goto retry;
@@ -346,6 +352,20 @@ void Compositor::RecalculateBackgroundClipping() {
                 m_backgroundRects.splice(m_backgroundRects.end(), std::move(result));
                 goto retry;
             }
+        }
+    }
+}
+
+void Compositor::RecalculateRenderClipping() {
+    m_renderClipRects.clear();
+    for(auto& rect : m_backgroundRects) {
+        m_renderClipRects.push_back({rect.rect, true});
+    }
+
+    for(auto& rect : m_windowClipRects) {
+        // Ignore transparent clip rects
+        if(rect.type == WindowClipRect::TypeWindow && !rect.win->IsTransparent()) {
+            m_renderClipRects.push_back({rect.rect, true});
         }
     }
 }
