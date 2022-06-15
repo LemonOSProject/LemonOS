@@ -95,9 +95,6 @@ GDT64:                           ; Global Descriptor Table (64-bit).
 GDT64Pointer:                    ; The GDT-pointer.
     dw $ - GDT64 - 1             ; Limit.
     dq GDT64                     ; Base.
-GDT64Pointer64:                    ; The GDT-pointer.
-    dw GDT64Pointer - GDT64 - 1             ; Limit.
-    dq GDT64 + KERNEL_VIRTUAL_BASE; Base.
 
 MAGIC       equ 0xE85250D6
 ARCH        equ 0 ; x86
@@ -246,6 +243,11 @@ extern _bss
 extern _bss_end
 
 BITS 64
+section .data
+GDT64Pointer64:                    ; The GDT-pointer.
+    dw GDT64Pointer - GDT64 - 1             ; Limit.
+    dq GDT64 + KERNEL_VIRTUAL_BASE; Base.
+
 section .text
 entry64:
   lgdt [GDT64Pointer64]
@@ -285,7 +287,6 @@ entry64:
 
   xor rbp, rbp
   mov rdi, qword[mb_addr] ; Pass multiboot info struct
-  add rdi, KERNEL_VIRTUAL_BASE
   call kinit_multiboot2
 
   cli
