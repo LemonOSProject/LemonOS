@@ -84,7 +84,7 @@ void OnSubmitTrack(int, ListView*);
 
 class TrackSelection : public Container, public DataModel {
 public:
-    TrackSelection(AudioContext* ctx) : Container({0, 200, 0, 40}), m_ctx(ctx) {
+    TrackSelection(AudioContext* ctx) : Container({0, 200, 0, 0}), m_ctx(ctx) {
         // Fill the parent container
         SetLayout(LayoutSize::Stretch, LayoutSize::Stretch);
 
@@ -455,6 +455,16 @@ int main(int argc, char** argv) {
 
     window->AddWidget(player);
     window->AddWidget(tracks);
+
+    if(argc > 1) {
+        int argi = 1;
+        while(argc > 1) {
+            tracks->LoadTrack(argv[argi++]);
+            argc--;
+        }
+
+        tracks->PlayTrack(0);
+    }
 
     while (!window->closed) {
         if(audio->ShouldPlayNextTrack()) {
