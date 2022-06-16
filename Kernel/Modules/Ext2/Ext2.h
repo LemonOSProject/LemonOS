@@ -45,6 +45,9 @@
 #define EXT2_DOUBLY_INDIRECT_INDEX 13
 #define EXT2_TRIPLY_INDIRECT_INDEX 14
 
+// When block cache reaches 96MB, use existing cached blocks
+#define EXT2_BLOCKCACHE_LIMIT 96 * 1024 * 1024
+
 //#define EXT2_NO_CACHE
 
 namespace fs {
@@ -259,9 +262,30 @@ public:
         lock_t m_inodesLock = 0;
         lock_t m_blocksLock = 0;
         HashMap<uint32_t, Ext2Node*> inodeCache;
-        HashMap<uint32_t, uint8_t*> blockCache = HashMap<uint32_t, uint8_t*>(1024);
+
+        struct CachedBlock {
+            // When last accessed
+            uint64_t timestamp = 0;
+            uint32_t block = 0;
+
+            CachedBlock* prev = nullptr;
+            CachedBlock* next = nullptr;
+
+            // Block data
+            uint8_t data[];
+        };
+
+        CachedBlock* AllocateCachedBlock() {
+            CachedBlock* cb = (CachedBlock*)kmalloc(sizeof(CachedBlock) + blocksize);
+            
+            new (cb) CachedBlock();
+            return cb;
+        }
+
+        HashMap<uint32_t, CachedBlock*> blockCache = HashMap<uint32_t, CachedBlock*>(1024);
+        FastList<CachedBlock*> cachedBlockList;
         HashMap<uint32_t, uint8_t*> bitmapCache = HashMap<uint32_t, uint8_t*>(256);
-        unsigned blockCacheMemoryUsage;
+        unsigned blockCacheMemoryUsage = 0;
 
         inline uint32_t LocationToBlock(uint64_t l) { return (l >> super.logBlockSize) >> 10; }
         inline uint32_t BlockToLocation(uint64_t b) { return (b << super.logBlockSize) << 10; }

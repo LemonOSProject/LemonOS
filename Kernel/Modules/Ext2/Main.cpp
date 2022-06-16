@@ -472,20 +472,44 @@ int Ext2::Ext2Volume::ReadBlockCached(uint32_t block, void* buffer) {
 #ifndef EXT2_NO_CACHE
     ScopedSpinLock lockBlockCache(m_blocksLock);
 
-    uint8_t* cachedBlock;
+    CachedBlock* cachedBlock;
     if (blockCache.get(block, cachedBlock)) {
-        memcpy(buffer, cachedBlock, blocksize);
+        cachedBlock->timestamp = Timer::UsecondsSinceBoot();
+        memcpy(buffer, cachedBlock->data, blocksize);
+
+        // Move block to the end of the list
+        cachedBlockList.remove(cachedBlock);
+        cachedBlockList.add_back(cachedBlock);
     } else {
-        cachedBlock = (uint8_t*)kmalloc(blocksize);
-        if (int e = fs::Read(m_device, BlockToLocation(block), blocksize, cachedBlock); e != blocksize) {
+        if(blockCacheMemoryUsage >= EXT2_BLOCKCACHE_LIMIT) {
+            // Remove cached blocks until we are at the trim value
+            cachedBlock = cachedBlockList.remove_at(0);
+
+            assert(blockCache.find(cachedBlock->block));
+            blockCache.remove(cachedBlock->block);
+        } else {
+            cachedBlock = AllocateCachedBlock();
+
+            blockCacheMemoryUsage += blocksize;
+            Ext2::Instance().totalBlockCacheMemoryUsage += blocksize;
+        }
+
+        cachedBlock->block = block;
+        cachedBlock->timestamp = Timer::UsecondsSinceBoot();
+
+        if (int e = fs::Read(m_device, BlockToLocation(block), blocksize, cachedBlock->data); e != blocksize) {
             Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", e, block, blocksize);
+            
+            // Since we didnt end up using this block, place it at the front of the list
+            // so it gets reused first
+            cachedBlockList.add_front(cachedBlock);
             return e;
         }
+        
+        cachedBlockList.add_back(cachedBlock);
         blockCache.insert(block, cachedBlock);
-        blockCacheMemoryUsage += blocksize;
-        Ext2::Instance().totalBlockCacheMemoryUsage += blocksize;
 
-        memcpy(buffer, cachedBlock, blocksize);
+        memcpy(buffer, cachedBlock->data, blocksize);
     }
 #else
     if (int e = fs::Read(m_device, BlockToLocation(block), blocksize, buffer); e != blocksize) {
@@ -503,9 +527,10 @@ int Ext2::Ext2Volume::WriteBlockCached(uint32_t block, void* buffer) {
 #ifndef EXT2_NO_CACHE
     ScopedSpinLock lockBlockCache(m_blocksLock);
     
-    uint8_t* cachedBlock = nullptr;
+    CachedBlock* cachedBlock;
     if ((blockCache.get(block, cachedBlock))) {
-        memcpy(cachedBlock, buffer, blocksize);
+        memcpy(cachedBlock->data, buffer, blocksize);
+        cachedBlock->timestamp = Timer::UsecondsSinceBoot();
     }
 #endif
 
