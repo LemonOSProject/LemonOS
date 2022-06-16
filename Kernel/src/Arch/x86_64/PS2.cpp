@@ -1,5 +1,7 @@
 #include <PS2.h>
 
+#include <ABI/Keyboard.h>
+
 #include <APIC.h>
 #include <CString.h>
 #include <Device.h>
@@ -12,6 +14,9 @@
 #include "PS2.h"
 
 #define PACKET_QUEUE_SIZE 64
+
+#define PS2_DATA 0x60
+#define PS2_CMD 0x64
 
 #define PS2_RESET 0xFF
 #define PS2_ACK 0xFA
@@ -33,6 +38,12 @@
 
 uint8_t keyQueue[KEY_QUEUE_SIZE];
 
+extern const uint8_t scancode2Keymap[];
+extern const uint8_t scancode2KeymapExtended[];
+
+// Set true when a 0xe0 byte is received (indicating extended scancode)
+bool keyIsExtended = false;
+bool keyWasReleased = false;
 unsigned short keyQueueEnd = 0;
 unsigned short keyQueueStart = 0;
 unsigned short keyCount = 0;
@@ -40,14 +51,14 @@ unsigned short keyCount = 0;
 template <bool isMouse> inline void WaitData() {
     int timeout = 10000;
     while (timeout--)
-        if ((inportb(0x64) & 0x21) == (isMouse ? 0x21 : 0x1))
+        if ((inportb(PS2_CMD) & 0x21) == (isMouse ? 0x21 : 0x1))
             return;
 }
 
 inline void WaitSignal() {
     int timeout = 10000;
     while (timeout--)
-        if ((inportb(0x64) & 0x2) != 0x2)
+        if ((inportb(PS2_CMD) & 0x2) != 0x2)
             return;
 }
 
@@ -58,14 +69,14 @@ template <bool isMouse> int SendCommand(uint8_t cmd) {
     while (r == PS2_RESEND && tries--) {
         if constexpr (isMouse) {
             WaitSignal();
-            outportb(0x64, 0xD4);
+            outportb(PS2_CMD, 0xD4);
         }
 
         WaitSignal();
-        outportb(0x60, cmd);
+        outportb(PS2_DATA, cmd);
 
         WaitData<isMouse>();
-        r = inportb(0x60);
+        r = inportb(PS2_DATA);
     }
 
     return r;
@@ -90,17 +101,45 @@ bool ReadKey(uint8_t* key) {
 
 // Interrupt handler
 void KBHandler(void*, RegisterContext* r) {
-    if(!(inportb(0x64) & 1))
+    if (!(inportb(PS2_CMD) & 1))
         return; // Wait for buffer
-    
+
     // Read from the keyboard's data buffer
-    uint8_t key = inportb(0x60);
+    uint8_t key = inportb(PS2_DATA);
+
+    if(key == 0xe0) {
+        keyIsExtended = true;
+        return;
+    } else if(key == 0xf0) {
+        keyWasReleased = true;
+        return;
+    }
+
+    int keyCode = 0;
+    if(keyIsExtended) {
+        keyCode = scancode2KeymapExtended[key];
+    }
+    
+    // If not an extended key OR
+    // the corresponding extended entry is 0,
+    // use the normal keymap
+    if(keyCode == 0) {
+        keyCode = scancode2Keymap[key];
+    }
+
+    if(keyWasReleased) {
+        // Set high bit if key was released
+        keyCode |= 0x80;
+    }
+    
+    keyIsExtended = false;
+    keyWasReleased = false;
 
     if (keyCount >= KEY_QUEUE_SIZE)
         return; // Drop key
 
     // Add key to queue
-    keyQueue[keyQueueEnd] = key;
+    keyQueue[keyQueueEnd] = keyCode;
 
     keyQueueEnd++;
 
@@ -131,7 +170,7 @@ bool hasScrollWheel = false;
 void MouseHandler(void*, RegisterContext* regs) {
     switch (mouseCycle) {
     case 0:
-        mouseData[0] = inportb(0x60);
+        mouseData[0] = inportb(PS2_DATA);
 
         if (!(mouseData[0] & 0x8))
             break;
@@ -139,11 +178,11 @@ void MouseHandler(void*, RegisterContext* regs) {
         mouseCycle++;
         break;
     case 1:
-        mouseData[1] = inportb(0x60);
+        mouseData[1] = inportb(PS2_DATA);
         mouseCycle++;
         break;
     case 2:
-        mouseData[2] = inportb(0x60);
+        mouseData[2] = inportb(PS2_DATA);
 
         if (hasScrollWheel) {
             mouseCycle++;
@@ -151,7 +190,7 @@ void MouseHandler(void*, RegisterContext* regs) {
         }
     case 3: {
         if (hasScrollWheel) {
-            mouseData[3] = inportb(0x60);
+            mouseData[3] = inportb(PS2_DATA);
         }
         mouseCycle = 0;
 
@@ -279,36 +318,39 @@ MouseDevice mouseDev("mouse0");
 void Initialize() {
     // Start by disabling both ports
     WaitSignal();
-    outportb(0x64, 0xAD);
+    outportb(PS2_CMD, 0xAD);
     WaitSignal();
-    outportb(0x64, 0xA7);
+    outportb(PS2_CMD, 0xA7);
 
-    while(inportb(0x64) & 1) {
-        inportb(0x60); // Discard any data
+    while (inportb(PS2_CMD) & 1) {
+        inportb(PS2_DATA); // Discard any data
     }
 
     WaitSignal();
-    outportb(0x64, 0x20);
+    outportb(PS2_CMD, 0x20);
     WaitData<false>();
     uint8_t status = inportb(0x20);
 
-    WaitSignal();
-    outportb(0x64, 0xAE);
-    WaitSignal();
-    outportb(0x64, PS2_ENABLE_AUX_INPUT);
-
     // Enable interrupts, enable keyboard and mouse clock
-    status = ((status & ~0x30) | 3);
+    // disable scancode translation
+    status = ((status & ~0x70) | 3);
     WaitSignal();
-    outportb(0x64, 0x60);
+    outportb(PS2_CMD, 0x60);
     WaitSignal();
-    outportb(0x60, status);
+    outportb(PS2_DATA, status);
     WaitData<false>();
-    inportb(0x60);
+    inportb(PS2_DATA);
 
     Timer::Wait(500);
 
+    // Renable both ports
+    WaitSignal();
+    outportb(PS2_CMD, 0xAE);
+    WaitSignal();
+    outportb(PS2_CMD, PS2_ENABLE_AUX_INPUT);
+
     SendCommand<true>(0xF6);
+    // Enable mouse packets
     SendCommand<true>(0xF4);
 
     // Set the sample rate a bunch of times
@@ -322,7 +364,7 @@ void Initialize() {
     // Get MouseID
     SendCommand<true>(0xF2);
     WaitData<true>();
-    int id = inportb(0x60);
+    int id = inportb(PS2_DATA);
     Log::Info("[PS/2] MouseID: %d", id);
     if (id >= 3) {
         hasScrollWheel = true;
@@ -340,9 +382,9 @@ void Initialize() {
     SendCommand<true>(0xE8);
     SendCommand<true>(1);
 
-    // Set keyboard scancode set 1
+    // Set keyboard scancode set 2
     SendCommand<false>(0xF0);
-    SendCommand<false>(1);
+    SendCommand<false>(2);
 
     IDT::RegisterInterruptHandler(IRQ0 + 12, MouseHandler);
     APIC::IO::MapLegacyIRQ(12);
@@ -351,3 +393,152 @@ void Initialize() {
     APIC::IO::MapLegacyIRQ(1);
 }
 } // namespace PS2
+
+// clang-format off
+constexpr uint8_t scancode2Keymap[256] = {
+    0,
+    KEY_F9,
+    0,
+    KEY_F5,
+    KEY_F3,
+    KEY_F1,
+    KEY_F2,
+    KEY_F12,
+    0,
+    KEY_F10,
+    KEY_F8,
+    KEY_F6,
+    KEY_F4,
+    KEY_TAB,
+    KEY_BACKTICK,
+    0,
+    0,
+    KEY_LALT,
+    KEY_LSHIFT,
+    0,
+    KEY_LCTRL,
+    KEY_Q,
+    KEY_1,
+    0,
+    0,
+    0,
+    KEY_Z,
+    KEY_S,
+    KEY_A,
+    KEY_W,
+    KEY_2,
+    0,
+    0,
+    KEY_C,
+    KEY_X,
+    KEY_D,
+    KEY_E,
+    KEY_4,
+    KEY_3,
+    0,
+    0,
+    KEY_SPACE,
+    KEY_V,
+    KEY_F,
+    KEY_T,
+    KEY_R,
+    KEY_5,
+    0,
+    0,
+    KEY_N,
+    KEY_B,
+    KEY_H,
+    KEY_G,
+    KEY_Y,
+    KEY_6,
+    0,
+    0,
+    0,
+    KEY_M,
+    KEY_J,
+    KEY_U,
+    KEY_7,
+    KEY_8,
+    0,
+    0,
+    KEY_COMMA,
+    KEY_K,
+    KEY_I,
+    KEY_O,
+    KEY_0,
+    KEY_9,
+    0,
+    0,
+    KEY_DOT,
+    KEY_SLASH,
+    KEY_L,
+    KEY_SEMICOLON,
+    KEY_P,
+    KEY_MINUS,
+    0,
+    0,
+    0,
+    KEY_APOSTROPHE,
+    0,
+    KEY_LBRACE,
+    KEY_EQUAL,
+    0,
+    0,
+    KEY_CAPS,
+    KEY_RSHIFT,
+    KEY_ENTER,
+    KEY_RBRACE,
+    0,
+    KEY_BACKSLASH,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    KEY_BACKSPACE,
+    0,
+    0,
+    KEY_KP_1,
+    0,
+    KEY_KP_4,
+    KEY_KP_7,
+    0,
+    0,
+    0,
+    KEY_KP_0,
+    KEY_KP_DOT,
+    KEY_KP_2,
+    KEY_KP_5,
+    KEY_KP_6,
+    KEY_KP_8,
+    KEY_ESC,
+    KEY_NUMLOCK,
+    KEY_F11,
+    KEY_KP_PLUS,
+    KEY_KP_3,
+    KEY_KP_MINUS,
+    KEY_KP_ASTERISK,
+    KEY_KP_9,
+    KEY_SCLOCK,
+    0,
+    0,
+    0,
+    0,
+    KEY_F7
+};
+
+constexpr uint8_t scancode2KeymapExtended[256] = {
+    0,
+    KEY_RALT,
+    0,
+    0,
+    KEY_RCTRL,
+    0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0,
+    KEY_GUI
+};
+// clang-format on

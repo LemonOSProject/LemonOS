@@ -40,7 +40,8 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
     ELF64Section* symTab = nullptr;    // Symbol table
 
     for (unsigned i = 0; i < shNum; i++) {
-        fs::Read(file, shOff + i * shEntSize, sizeof(ELF64Section), &sections[i]);
+        ssize_t r = fs::Read(file, shOff + i * shEntSize, sizeof(ELF64Section), &sections[i]);
+        assert(r == sizeof(ELF64Section));
 
         if (sections[i].type == SHT_STRTAB) {
             if (i == shStrIndex) {
@@ -66,6 +67,7 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
     char* sectionStringTable = new char[shStrTab->size + 1];
     {
         long len = fs::Read(file, shStrTab->off, shStrTab->size, sectionStringTable);
+        assert(len == shStrTab->size);
         sectionStringTable[len] = 0;
     }
 
@@ -92,6 +94,7 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
     char* symStringTable = new char[symStrTab->size + 1];
     {
         long len = fs::Read(file, symStrTab->off, symStrTab->size, symStringTable);
+        assert(len == symStrTab->size);
         symStringTable[len] = 0;
     }
 
@@ -254,7 +257,7 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
             size_t offset = 0;
             while (offset < section.size) {
                 ssize_t read = fs::Read(file, section.off + offset, sizeof(ELF64RelocationA), &relocation);
-                assert(read > 0);
+                assert(read == sizeof(ELF64RelocationA));
 
                 offset += read;
 
