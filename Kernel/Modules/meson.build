@@ -9,7 +9,7 @@ module_include_dirs = kernel_include_dirs
 executable('ext2fs.sys', ['Ext2/Main.cpp'],
     c_args: module_c_args, cpp_args: [ module_c_args, module_cpp_args ],
     include_directories : module_include_dirs, link_args : [ '-r', module_c_args ])
-executable('pcaudio.sys', ['PCAudio/Main.cpp'],
+executable('pcaudio.sys', ['PCAudio/Main.cpp', 'PCAudio/AC97.cpp', 'PCAudio/HDAudio.cpp'],
     c_args: module_c_args, cpp_args: [ module_c_args, module_cpp_args ],
     include_directories : module_include_dirs, link_args : [ '-r', module_c_args ])
 executable('e1k.sys', ['Intel8254x/Main.cpp'],
