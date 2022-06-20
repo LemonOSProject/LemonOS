@@ -14,7 +14,6 @@ Namespace::Namespace(Controller* controller, uint32_t nsID, const NamespaceIdent
     uint8_t lbaFormat = id.fmtLBASize & 0xf; // Low 4 bits are LBA format
     uint8_t lbaSize = id.lbaFormats[lbaFormat].lbaDataSize;
     if (lbaSize < 9) {
-        Log::Error("[NVme] Unsupported LBA Format %d and/or Size %u (%u bytes)", lbaFormat, lbaSize, 1 << lbaSize);
         nsStatus = NamespaceStatus::Error;
         return; // LBA Size must be at least 9 (512 bytes)
     }

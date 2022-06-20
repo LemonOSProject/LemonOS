@@ -84,7 +84,6 @@ section .text
         pushaq
         mov rdi, %1
         mov rsi, rsp
-        xor rdx, rdx
         xor rbp, rbp
         call ipi_handler
         ISR_COMMON_EXIT

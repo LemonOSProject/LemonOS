@@ -175,7 +175,7 @@ void Initialize() {
 }
 
 void RegisterInterruptHandler(uint8_t interrupt, isr_t handler, void* data) {
-    if(interruptHandlers[interrupt].handler) {
+    if(interruptHandlers[interrupt].handler && interruptHandlers[interrupt].handler != InvalidInterruptHandler) {
         Log::Warning("[IDT] Handler already registered for interrupt %d", (int)interrupt);
     } else {
         Log::Info("[IDT] Registered handler for interrupt %d", interrupt);
@@ -186,7 +186,7 @@ void RegisterInterruptHandler(uint8_t interrupt, isr_t handler, void* data) {
 uint8_t ReserveUnusedInterrupt() {
     uint8_t interrupt = 0xFF;
     for (unsigned i = IRQ0 + 16 /* Ignore all legacy IRQs and exceptions */;
-         i < 255 /* Ignore 0xFF */ && interrupt == 0xFF; i++) {
+         i < 100 /* Ignore >100 */ && interrupt == 0xFF; i++) {
         if (!interruptHandlers[i].handler) {
             interruptHandlers[i].handler = InvalidInterruptHandler;
             interrupt = i;

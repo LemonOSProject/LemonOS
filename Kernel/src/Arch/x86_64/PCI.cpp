@@ -220,6 +220,7 @@ void Init() {
             if (CheckDevice(i, j, 0)) {
                 int index = AddDevice(i, j, 0);
                 auto& d = devices->get_at(index);
+
                 if (GetHeaderType(d.bus, d.slot, d.func) & 0x80) {
                     for (int k = 1; k < 8; k++) { // Func
                         if (CheckDevice(i, j, k)) {
@@ -254,8 +255,10 @@ PCIDevice::PCIDevice(uint8_t _bus, uint8_t _slot, uint8_t _func) : bus(_bus), sl
                 msiCap.register2 = PCI::ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t) * 2);
 
                 if (msiCap.msiControl & PCI_CAP_MSI_CONTROL_64) { // 64-bit capable
-                    msiCap.data64 = PCI::ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t) * 3);
+                    msiCap.register3 = PCI::ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t) * 3);
                 }
+
+                msiCap.register4 = PCI::ConfigReadDword(bus, slot, func, ptr + sizeof(uint32_t) * 3);
             }
 
             ptr = (cap >> 8);
@@ -277,6 +280,8 @@ uint8_t PCIDevice::AllocateVector(PCIVectors type) {
                 return interrupt;
             }
 
+            assert(msiCap.capID == PCICapMSI);
+
             msiCap.msiControl =
                 (msiCap.msiControl & ~(PCI_CAP_MSI_CONTROL_MME_MASK | PCI_CAP_MSI_CONTROL_VECTOR_MASKING)) |
                 PCI_CAP_MSI_CONTROL_SET_MME(0); // We only support one message at the moment, disable masking
@@ -284,15 +289,17 @@ uint8_t PCIDevice::AllocateVector(PCIVectors type) {
 
             msiCap.SetData(ICR_VECTOR(interrupt) | ICR_MESSAGE_TYPE_FIXED);
 
-            msiCap.SetAddress(GetCPULocal()->id);
+            Log::Info("(64: %Y) Ctrl %x, Data %x", msiCap.msiControl & PCI_CAP_MSI_CONTROL_64, msiCap.register0, msiCap.GetData());
+
+            msiCap.SetAddress(0); // Send it to CPU 0
+
+            PCI::ConfigWriteDword(bus, slot, func, msiPtr, msiCap.register0);
+            PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t), msiCap.register1);
+            PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t) * 2, msiCap.register2);
 
             if (msiCap.msiControl & PCI_CAP_MSI_CONTROL_64) {
                 PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t) * 3, msiCap.register3);
             }
-            PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t) * 2, msiCap.register2);
-            PCI::ConfigWriteDword(bus, slot, func, msiPtr + sizeof(uint32_t), msiCap.register1);
-
-            PCI::ConfigWriteWord(bus, slot, func, msiPtr + sizeof(uint16_t), msiCap.msiControl);
 
             return interrupt;
         }

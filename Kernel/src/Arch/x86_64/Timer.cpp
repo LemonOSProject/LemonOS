@@ -115,7 +115,7 @@ void Wait(long ms) {
 
     ms = ms * 1000 + uptimeUs;
     while (uptimeUs <= static_cast<unsigned long>(ms))
-        ;
+        asm volatile("pause");
 }
 
 // Timer handler

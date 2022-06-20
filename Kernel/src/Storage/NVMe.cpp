@@ -261,7 +261,12 @@ Controller::Controller(const PCIInfo& dev) : PCIDevice(dev) {
 
         Log::Info("[NVMe] Found namespace! NSID: %u", i + 1);
 
-        namespaces.add_back(new Namespace(this, i + 1, *namespaceIdentity));
+        auto* ns = new Namespace(this, i + 1, *namespaceIdentity);
+        if(ns->nsStatus == Namespace::NamespaceStatus::Active) {
+            namespaces.add_back(ns);
+        } else {
+            delete ns;
+        }
 
         Memory::FreePhysicalMemoryBlock(namespaceIdentityPhys);
         Memory::KernelFree4KPages(namespaceIdentity, 1);

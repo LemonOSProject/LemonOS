@@ -138,6 +138,7 @@ struct PCIMSICapability{
 		uint32_t data64; // MSI data when 64-bit capable
 		uint32_t register3;
 	};
+	uint32_t register4; // Mask
 
 	inline void SetData(uint32_t d){
 		if(msiControl & PCI_CAP_MSI_CONTROL_64){
