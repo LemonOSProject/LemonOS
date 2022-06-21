@@ -37,14 +37,14 @@ Vector2i cursorPosition = {1, 1}; // The position of the cursor in characters
 pid_t shellPID = -1;
 
 struct TerminalChar {
-    char ch;
+    uint32_t ch;
     RGBAColour background;
     RGBAColour foreground;
 
     TerminalChar() = default;
-    TerminalChar(char ch) : ch(ch), background(currentBackgroundColour), foreground(currentForegroundColour) {}
+    TerminalChar(uint32_t ch) : ch(ch), background(currentBackgroundColour), foreground(currentForegroundColour) {}
 
-    inline operator char() { return ch; }
+    inline operator uint32_t() { return ch; }
 };
 
 using TerminalLine = std::vector<TerminalChar>;
@@ -117,8 +117,8 @@ void AdvanceCursorX() {
 }
 
 // Place char at the cursor position
-void PutChar(char ch) {
-    assert(isprint(ch));
+void PutChar(uint32_t ch) {
+    assert(isprint(ch) || ch > 0x7F);
 
     if (cursorPosition.x > terminalSize.x) {
         cursorPosition.x = 1;
@@ -130,7 +130,7 @@ void PutChar(char ch) {
 }
 
 // Print a char on screen and advance the cursor
-void PrintChar(char ch) {
+void PrintChar(uint32_t ch) {
     PutChar(ch);
     AdvanceCursorX();
 }
@@ -141,16 +141,45 @@ enum TerminalParseState {
     State_CSI,
     State_OSC,
     State_SGR,
+    State_UTF8
 };
 TerminalParseState parseState = State_Normal;
 std::string escapeBuffer = "";
+int codepointLength;
+uint32_t codepoint;
 
 Vector2i savedCursorPosition; // Cursor for save/restore
 
 // Parse input character
 void ParseChar(char ch) {
     if (parseState == State_Normal) {
-        if (isprint(ch) || ch == ' ') {
+        if (ch & 0x80) {
+            if((ch & 0xF8) == 0xF0) {
+                // 11110xxx
+                // 4 bytes
+
+                // codepointLength indicates remaining bytes
+                // in codepoint
+                codepointLength = 3;
+                codepoint = (ch & 0x7U) << 18;
+            } else if((ch & 0xF0) == 0xE0) {
+                // 1110xxxx
+                // 3 bytes
+
+                codepointLength = 2;
+                codepoint = (ch & 0xfU) << 12;
+            } else if((ch & 0xE0) == 0xC0) {
+                // 110xxxxx
+                // 2 bytes
+
+                codepointLength = 1;
+                codepoint = (ch & 0x1fU) << 6;
+            } else {
+                // Invalid codepoint
+                return;
+            }
+            parseState = State_UTF8;
+        } else if (isprint(ch) || ch == ' ') {
             PrintChar(ch);
         } else if(ch == Control_Tab) {
             cursorPosition.x = std::min(cursorPosition.x + 8, terminalSize.x);
@@ -169,6 +198,16 @@ void ParseChar(char ch) {
             cursorPosition.x = 1;
         } else if (ch == Control_CarriageReturn) {
             cursorPosition.x = 1;
+        }
+    } else if(parseState == State_UTF8) {
+        if(codepointLength--) {
+            codepoint |= (ch & 0x3fU) << (6 * codepointLength);
+        }
+
+        if(codepointLength <= 0) {
+            // We are done processing codepoint
+            PrintChar(codepoint);
+            parseState = State_Normal;
         }
     } else if (parseState == State_Escape) {
         switch (ch) {
