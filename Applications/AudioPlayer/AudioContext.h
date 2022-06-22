@@ -22,19 +22,30 @@ public:
     };
 
     AudioContext();
+    ~AudioContext();
 
     inline bool IsAudioPlaying() const { return m_isDecoderRunning; }
     inline bool ShouldPlayNextTrack() const { return m_shouldPlayNextTrack; }
 
+    // Gets progress into song in seconds
     float PlaybackProgress() const;
+    // Returns the TrackInfo for the currently playing track
+    // returns nullptr if nothing is playing
     const TrackInfo* CurrentTrack() const { return m_currentTrack; }
 
     void PlaybackStart();
     void PlaybackPause();
+    // Stop playing audio and unload the file
     void PlaybackStop();
+    // Seek to a new position in the song
     void PlaybackSeek(float timestamp);
 
+    // Play the track given in info
+    // returns 0 on success
     int PlayTrack(TrackInfo* info);
+    
+    // Get TrackInfo struct for the given file
+    // returns 0 on success
     int LoadTrack(std::string filepath, TrackInfo* info);
 
     SampleBuffer sampleBuffers[AUDIOCONTEXT_NUM_SAMPLE_BUFFERS];
