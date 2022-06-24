@@ -24,7 +24,8 @@ public:
     AudioContext();
     ~AudioContext();
 
-    inline bool IsAudioPlaying() const { return m_isDecoderRunning; }
+    inline bool HasLoadedAudio() const { return m_isDecoderRunning; }
+    inline bool IsAudioPlaying() const { return m_shouldPlayAudio; }
     inline bool ShouldPlayNextTrack() const { return m_shouldPlayNextTrack; }
 
     // Gets progress into song in seconds

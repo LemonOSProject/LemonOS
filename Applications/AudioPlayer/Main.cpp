@@ -307,6 +307,12 @@ public:
         // Call the parent function to handle
         // visual feedback for button presses
         Button::OnMouseDown(mousePos);
+
+        if(m_ctx->IsAudioPlaying()) {
+            m_ctx->PlaybackPause();
+        } else {
+            m_ctx->PlaybackStart();
+        }
     }
 
     void Paint(surface_t* surface) override {
@@ -470,7 +476,7 @@ public:
         Rect pRect = ProgressbarRect();
         // Check we clicked on the progressbar,
         // if so, start seeking
-        if (m_ctx->IsAudioPlaying() && Lemon::Graphics::PointInRect(pRect, pos)) {
+        if (m_ctx->HasLoadedAudio() && Lemon::Graphics::PointInRect(pRect, pos)) {
             m_isSeeking = true;
         }
 
@@ -489,7 +495,7 @@ public:
         // If we are currently seeking (user held mouse down on progress bar)
         // and there is audio playing,
         // seek accordingly
-        if (m_isSeeking && m_ctx->IsAudioPlaying()) {
+        if (m_isSeeking && m_ctx->HasLoadedAudio()) {
             // Get the mouse position on the progress bar
             // as a percentage of the total width.
             // Clamp between 0 and 1 incase the mouse is left or right of the progress abr

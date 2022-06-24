@@ -175,11 +175,7 @@ void DecodeAudio(AudioContext* ctx) {
         }
 
         // Get the player thread to start playing audio
-        {
-            std::unique_lock lockStatus{ctx->m_playerStatusLock};
-            ctx->m_shouldPlayAudio = true;
-            ctx->playerShouldRunCondition.notify_all();
-        }
+        ctx->PlaybackStart();
 
         AVPacket* packet = av_packet_alloc();
         AVFrame* frame = av_frame_alloc();
@@ -401,6 +397,17 @@ float AudioContext::PlaybackProgress() const {
 
     // Return timestamp of last played buffer
     return m_lastTimestamp;
+}
+
+void AudioContext::PlaybackStart() {
+    std::unique_lock lockStatus{m_playerStatusLock};
+    m_shouldPlayAudio = true;
+    playerShouldRunCondition.notify_all();
+}
+
+void AudioContext::PlaybackPause() {
+    std::unique_lock lockStatus{m_playerStatusLock};
+    m_shouldPlayAudio = false;
 }
 
 void AudioContext::PlaybackStop() {
