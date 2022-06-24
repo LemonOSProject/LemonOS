@@ -30,8 +30,7 @@ const Surface* FileView::folderIconSml = nullptr;
 void FileViewOnListSelect(GridItem& item, GridView* lv) {
     FileView* fv = (FileView*)lv->GetParent();
 
-    if (fv->OnFileSelected)
-        fv->OnFileSelected(item.name, fv);
+    fv->onFileSelected(item.name);
 }
 
 class FileButton : public Button {
@@ -74,7 +73,7 @@ void OnFileButtonPress(FileButton* b) {
     fv->Refresh();
 }
 
-FileView::FileView(rect_t bounds, const char* path, void (*_OnFileOpened)(const char*, FileView*)) : Container(bounds) {
+FileView::FileView(rect_t bounds, const char* path) : Container(bounds) {
     if (!diskIcon) {
         diskIcon = IconManager::Instance()->GetIcon("disk", IconManager::IconSize64x64);
         folderIcon = IconManager::Instance()->GetIcon("folder", IconManager::IconSize64x64);
@@ -86,7 +85,6 @@ FileView::FileView(rect_t bounds, const char* path, void (*_OnFileOpened)(const 
         folderIconSml = IconManager::Instance()->GetIcon("folder", IconManager::IconSize16x16);
     }
 
-    OnFileOpened = _OnFileOpened;
     currentPath = path;
 
     fileList = new GridView({sidepanelWidth, pathBoxHeight + pathBoxPadding.y * 2, 0, 0});
@@ -155,6 +153,8 @@ void FileView::Refresh() {
         currentPath.append("/");
 
     pathBox->LoadText(currentPath.c_str());
+
+    onPathChanged(currentPath);
 
     fileList->ClearItems();
 
@@ -239,11 +239,11 @@ void FileView::OnSubmit(std::string& path) {
     }
 
     if (S_ISDIR(statResult.st_mode)) {
-        currentPath = absPath;
+        currentPath = std::move(absPath);
 
         Refresh();
-    } else if (OnFileOpened) {
-        OnFileOpened(absPath.c_str(), this);
+    } else {
+        onFileOpened(absPath);
     }
 }
 

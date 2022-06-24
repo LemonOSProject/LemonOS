@@ -98,7 +98,8 @@ protected:
 
 class Container : public Widget {
 public:
-    rgba_colour_t background = Theme::Current().ColourBackground();
+    // No background/fully transparent by default
+    rgba_colour_t background = {0, 0, 0, 0};
 
     Container(rect_t bounds);
     virtual ~Container();
@@ -221,7 +222,7 @@ public:
     virtual void OnMouseUp(vector2i_t mousePos);
 
     struct {
-        EventHandler onPress;
+        EventHandler<> onPress;
     } e;
 };
 
@@ -321,6 +322,8 @@ public:
     ~ListView();
 
     void SetModel(DataModel* model);
+    // Should be called to refresh data displayed
+    void UpdateData();
 
     void Paint(surface_t* surface);
 
@@ -352,8 +355,16 @@ public:
     bool drawBackground = true;
 
 protected:
+    struct RowCache {
+        std::vector<Graphics::TextObject> text;
+    };
+
     DataModel* model = nullptr;
     std::vector<int> columnDisplayWidths;
+
+    bool cacheDirty = false;
+    std::vector<RowCache> cachedRows;
+    int rowsToDisplay;
 
     int selectedCol = 0;
     short itemHeight = 20;
@@ -366,6 +377,7 @@ protected:
     Graphics::Font* font;
 
     void ResetScrollBar();
+    void RepopulateCache();
 
     class ListEditTextbox : public TextBox {
     public:
@@ -445,21 +457,6 @@ protected:
 };
 
 class FileView : public Container {
-protected:
-    vector2i_t pathBoxPadding = {6, 6};
-    int pathBoxHeight = 24;
-    int sidepanelWidth = 132;
-    char** filePointer;
-
-    void (*OnFileOpened)(const char*, FileView*) = nullptr;
-
-    GridView* fileList;
-    TextBox* pathBox;
-
-    Widget* active;
-
-    ListColumn nameCol, sizeCol;
-
 public:
     static const Surface* diskIcon;
     static const Surface* folderIcon;
@@ -471,7 +468,7 @@ public:
     static const Surface* folderIconSml;
 
     std::string currentPath;
-    FileView(rect_t bounds, const char* path, void (*_OnFileOpened)(const char*, FileView*) = nullptr);
+    FileView(rect_t bounds, const char* path);
 
     void Refresh();
 
@@ -481,7 +478,22 @@ public:
 
     inline int SidepanelWidth() { return sidepanelWidth; }
 
-    void (*OnFileSelected)(std::string& file, FileView* fv) = nullptr;
+    EventHandler<std::string> onFileOpened;
+    EventHandler<std::string> onFileSelected;
+    EventHandler<std::string> onPathChanged;
+
+protected:
+    vector2i_t pathBoxPadding = {6, 6};
+    int pathBoxHeight = 24;
+    int sidepanelWidth = 132;
+    char** filePointer;
+
+    GridView* fileList;
+    TextBox* pathBox;
+
+    Widget* active;
+
+    ListColumn nameCol, sizeCol;
 };
 
 class ScrollView : public Container {

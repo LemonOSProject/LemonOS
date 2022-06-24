@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-void OnFileOpened(const char* path, Lemon::GUI::FileView* fv){
+void OnFileOpened(void*, std::string path){
 	Lemon::Shell::Open(path);
 }
 
@@ -19,9 +19,11 @@ int main(int argc, char** argv){
 
 	window = new Lemon::GUI::Window("File Manager", {600, 348}, WINDOW_FLAGS_RESIZABLE, Lemon::GUI::WindowType::GUI);
 	
-	Lemon::GUI::FileView* fv = new Lemon::GUI::FileView({{0,0},{0,0}}, "/", OnFileOpened);
-	window->AddWidget(fv);
+	Lemon::GUI::FileView* fv = new Lemon::GUI::FileView({{0,0},{0,0}}, "/");
 	fv->SetLayout(Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::LayoutSize::Stretch, Lemon::GUI::WidgetAlignment::WAlignLeft);
+	fv->onFileOpened.Set(OnFileOpened);
+
+	window->AddWidget(fv);
 
 	while(!window->closed){
 		Lemon::WindowServer::Instance()->Poll();

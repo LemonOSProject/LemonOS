@@ -41,7 +41,34 @@ struct LemonEvent {
     };
 };
 
+template<typename... Args>
 struct EventHandler {
+    void* data;
+    void(*handler)(void*, Args...) = nullptr;
+
+    template<typename T>
+    void Set(void(*newHandler)(T*, Args...), T* newData = nullptr) {
+        data = newData;
+        handler = (void(*)(void*, Args...))newHandler;
+    }
+
+    void Set(std::nullptr_t) {
+        handler = nullptr;
+    }
+
+    ALWAYS_INLINE void Run(Args... args) {
+        if(handler) {
+            handler(data, args...);
+        }
+    }
+
+    ALWAYS_INLINE void operator()(Args... args) {
+        return Run(args...);
+    }
+};
+
+template<>
+struct EventHandler<> {
     void* data;
     void(*handler)(void*) = nullptr;
 
@@ -56,8 +83,9 @@ struct EventHandler {
     }
 
     ALWAYS_INLINE void Run() {
-        assert(handler);
-        handler(data);
+        if(handler) {
+            handler(data);
+        }
     }
 
     ALWAYS_INLINE void operator()() {

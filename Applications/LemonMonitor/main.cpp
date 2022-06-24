@@ -130,6 +130,7 @@ int main(int argc, char** argv){
 
         if((cTime.tv_sec * 1000 + cTime.tv_nsec / 1000000) - (lastTime.tv_sec * 1000 + lastTime.tv_nsec / 1000000) >= 800){
             model.Refresh();
+            listView->UpdateData();
 
             lastTime = cTime;
         }

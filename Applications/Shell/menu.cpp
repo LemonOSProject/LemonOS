@@ -109,16 +109,15 @@ public:
             for (auto& item : menuItems) {
                 m_filteredItems.push_back(&item);
             }
-            return;
-        }
-
-        for (auto& item : menuItems) {
+        } else for (auto& item : menuItems) {
             if (StringContainsCaseInsenstive(item.name, m_filter)) {
                 m_filteredItems.push_back(&item);
             } else if (StringContainsCaseInsenstive(item.category, m_filter)) {
                 m_filteredItems.push_back(&item);
             }
         }
+
+        listView->UpdateData();
     }
 
     void OnSubmit(int selected) {

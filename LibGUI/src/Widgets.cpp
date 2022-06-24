@@ -26,7 +26,7 @@ Widget::Widget(rect_t bounds, LayoutSize newSizeX, LayoutSize newSizeY) {
 Widget::~Widget() {}
 
 void Widget::SetLayout(LayoutSize newSizeX, LayoutSize newSizeY, WidgetAlignment newAlign,
-                        WidgetAlignment newAlignVert) {
+                       WidgetAlignment newAlignVert) {
     sizeX = newSizeX;
     sizeY = newSizeY;
     align = newAlign;
@@ -149,8 +149,9 @@ void Container::RemoveWidget(Widget* w) {
 }
 
 void Container::Paint(surface_t* surface) {
-    if (background.a == 255)
+    if (background.a == 255) {
         Graphics::DrawRect(fixedBounds, background, surface);
+    }
 
     for (Widget* w : children) {
         w->Paint(surface);
@@ -266,7 +267,9 @@ void Container::UpdateFixedBounds() {
 //////////////////////////
 // LayoutContainer
 //////////////////////////
-LayoutContainer::LayoutContainer(rect_t bounds, vector2i_t minItemSize) : Container(bounds) { this->itemSize = minItemSize; }
+LayoutContainer::LayoutContainer(rect_t bounds, vector2i_t minItemSize) : Container(bounds) {
+    this->itemSize = minItemSize;
+}
 
 void LayoutContainer::AddWidget(Widget* w) {
     Container::AddWidget(w);
@@ -283,7 +286,7 @@ void LayoutContainer::RemoveWidget(Widget* w) {
 void LayoutContainer::UpdateFixedBounds() {
     Widget::UpdateFixedBounds();
 
-    if(!children.size()) {
+    if (!children.size()) {
         return;
     }
 
@@ -295,7 +298,7 @@ void LayoutContainer::UpdateFixedBounds() {
     int itemsPerRow = (fixedBounds.width - xPadding) / (itemSize.x + xPadding);
 
     // Fill the width of the container if requested
-    if(xFill && itemsPerRow >= (int)children.size()) {
+    if (xFill && itemsPerRow >= (int)children.size()) {
         itemWidth = ((fixedBounds.width - xPadding) / children.size()) - xPadding;
     }
 
@@ -340,18 +343,19 @@ void Button::DrawButtonLabel(surface_t* surface) {
         Graphics::DrawString(label.c_str(), btnPos.x + (fixedBounds.size.x / 2) - (labelLength / 2),
                              btnPos.y + (fixedBounds.size.y / 2 - 6 - 2), colour.r, colour.g, colour.b, surface);
     } else {
-        Graphics::DrawString(label.c_str(), btnPos.x + 3, btnPos.y + (fixedBounds.size.y / 2 - 6 - 2), colour.r, colour.g,
-                             colour.b, surface);
+        Graphics::DrawString(label.c_str(), btnPos.x + 3, btnPos.y + (fixedBounds.size.y / 2 - 6 - 2), colour.r,
+                             colour.g, colour.b, surface);
     }
 }
 
 void Button::Paint(surface_t* surface) {
-    if(pressed){
+    if (pressed) {
         Lemon::Graphics::DrawRoundedRect(fixedBounds, Theme::Current().ColourBorder(), 5, 5, 5, 5, surface);
     } else {
-        Rect innerRect = {fixedBounds.pos + Vector2i{1, 1}, fixedBounds.size - Vector2i{2, 3}};;
+        Rect innerRect = {fixedBounds.pos + Vector2i{1, 1}, fixedBounds.size - Vector2i{2, 3}};
+        ;
         Lemon::Graphics::DrawRoundedRect(fixedBounds, Theme::Current().ColourBorder(), 5, 5, 5, 5, surface);
-        if(fixedBounds.Contains(window->lastMousePos)) {
+        if (fixedBounds.Contains(window->lastMousePos)) {
             Lemon::Graphics::DrawRoundedRect(innerRect, Theme::Current().ColourForeground(), 5, 5, 5, 5, surface);
         } else {
             Lemon::Graphics::DrawRoundedRect(innerRect, Theme::Current().ColourButton(), 5, 5, 5, 5, surface);
@@ -417,10 +421,11 @@ void ScrollBar::ScrollTo(int pos) {
 void ScrollBar::Paint(surface_t* surface, vector2i_t offset, int width) {
     Graphics::DrawRect(offset.x, offset.y, width, height, 128, 128, 128, surface);
     if (pressed)
-        Graphics::DrawRect(offset.x, offset.y + scrollBar.pos.y, width, scrollBar.size.y, Theme::Current().ColourBorder(), surface);
+        Graphics::DrawRect(offset.x, offset.y + scrollBar.pos.y, width, scrollBar.size.y,
+                           Theme::Current().ColourBorder(), surface);
     else
         Graphics::DrawRect(offset.x, offset.y + scrollBar.pos.y, width, scrollBar.size.y,
-                                       Theme::Current().ColourButton(), surface);
+                           Theme::Current().ColourButton(), surface);
 }
 
 void ScrollBar::OnMouseDownRelative(vector2i_t mousePos) {
@@ -528,8 +533,9 @@ void TextBox::Paint(surface_t* surface) {
         Graphics::DrawRoundedRect(fixedBounds, Theme::Current().ColourBorder(), 3, 3, 3, 3, surface);
     }
 
-    Graphics::DrawRoundedRect({fixedBounds.pos.x + 1, fixedBounds.pos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2},
-                       Theme::Current().ColourContentBackground(), 3, 3, 3, 3, surface);
+    Graphics::DrawRoundedRect(
+        {fixedBounds.pos.x + 1, fixedBounds.pos.y + 1, fixedBounds.size.x - 2, fixedBounds.size.y - 2},
+        Theme::Current().ColourContentBackground(), 3, 3, 3, 3, surface);
 
     int xpos = 2;
     int ypos = 2;
@@ -572,7 +578,7 @@ void TextBox::Paint(surface_t* surface) {
 
         // Check if all lines can be displayed on screen
         // if not, draw the scrollbar
-        if(static_cast<int>(contents.size()) * (font->lineHeight + 2) >= fixedBounds.size.y) {
+        if (static_cast<int>(contents.size()) * (font->lineHeight + 2) >= fixedBounds.size.y) {
             sBar.Paint(surface, {fixedBounds.pos.x + fixedBounds.size.x - 16, fixedBounds.pos.y});
         }
     } else {
@@ -822,12 +828,11 @@ void ListView::SetModel(DataModel* model) {
     this->model = model;
 
     model->Refresh();
+    cacheDirty = true;
+}
 
-    columnDisplayWidths.clear();
-
-    for (int i = 0; i < model->ColumnCount(); i++) {
-        columnDisplayWidths.push_back(model->SizeHint(i));
-    }
+void ListView::UpdateData() {
+    cacheDirty = true;
 }
 
 void ListView::Paint(surface_t* surface) {
@@ -835,11 +840,17 @@ void ListView::Paint(surface_t* surface) {
         Graphics::DrawRect(fixedBounds.x, fixedBounds.y, fixedBounds.width, columnDisplayHeight,
                            Theme::Current().ColourBackground(), surface);
         Graphics::DrawRect(fixedBounds.x, fixedBounds.y + columnDisplayHeight, fixedBounds.width,
-                           fixedBounds.height - 20, Theme::Current().ColourContentBackground(), surface);
+                           fixedBounds.height - columnDisplayHeight, Theme::Current().ColourContentBackground(),
+                           surface);
     }
 
     if (!model) {
         return; // If there is no model there is no data to display
+    }
+
+    if(cacheDirty) {
+        RepopulateCache();
+        cacheDirty = false;
     }
 
     rgba_colour_t textColour = Theme::Current().ColourText();
@@ -871,9 +882,9 @@ void ListView::Paint(surface_t* surface) {
 
     if (showScrollBar)
         index = sBar.scrollPos / itemHeight;
-    int maxItem = index + fixedBounds.height / itemHeight;
+    int maxItem = std::min(index + rowsToDisplay, model->RowCount());
 
-    for (; index < model->RowCount() && index < maxItem; index++) {
+    for (int row = 0; index < maxItem; index++, row++) {
         xPos = fixedBounds.x;
 
         if (index == selected) {
@@ -888,43 +899,11 @@ void ListView::Paint(surface_t* surface) {
             std::string str = "";
 
             Variant value = model->GetData(index, i);
-            if (std::holds_alternative<std::string>(value)) {
-                str = std::get<std::string>(value);
-            } else if (std::holds_alternative<int>(value)) {
-                str = std::to_string(std::get<int>(value));
-            } else if (std::holds_alternative<const Surface*>(value)) {
+            if (std::holds_alternative<const Surface*>(value)) {
                 const Surface* src = std::get<const Surface*>(value);
                 Graphics::surfacecpyTransparent(surface, src, {xPos + 2, yPos + itemHeight / 2 - src->height / 2});
-            } else {
-                assert(!"GUI::ListView: Unsupported type!");
-            }
-
-            int textLen = Graphics::GetTextLength(str.c_str());
-            if (textLen > columnDisplayWidths[i] - 2) {
-                int l = str.length() - 1;
-                while (l) {
-                    str = str.substr(0, l);
-
-                    textLen = Graphics::GetTextLength(str.c_str());
-                    if (textLen < columnDisplayWidths[i] + 2) {
-                        if (l > 2) {
-                            str.erase(str.end() - 1); // Omit last character
-                            str.append(
-                                "..."); // We have a variable width font should we should only have to omit 1 character
-                        }
-                        break;
-                    }
-
-                    l = str.length() - 1;
-                }
-            }
-
-            vector2i_t textPos = {xPos + 2, yPos + itemHeight / 2 - font->height / 2};
-            if (index == selected) {
-                Graphics::DrawString(str.c_str(), textPos.x, textPos.y, Theme::Current().ColourTextDark(), surface,
-                                     fixedBounds);
-            } else {
-                Graphics::DrawString(str.c_str(), textPos.x, textPos.y, textColour, surface, fixedBounds);
+            } else if (i < (int)cachedRows.at(i).text.size()) {
+                cachedRows.at(row).text[i].BlitTo(surface);
             }
 
             xPos += columnDisplayWidths[i] + 2;
@@ -959,6 +938,8 @@ void ListView::OnMouseDown(vector2i_t mousePos) {
     if (showScrollBar && mousePos.x > fixedBounds.pos.x + fixedBounds.size.x - 12) {
         sBar.OnMouseDownRelative({mousePos.x - fixedBounds.pos.x + fixedBounds.size.x - 12,
                                   mousePos.y - columnDisplayHeight - fixedBounds.pos.y});
+
+        cacheDirty = true;
         return;
     }
 
@@ -1082,9 +1063,77 @@ void ListView::ResetScrollBar() {
     sBar.ResetScrollBar(fixedBounds.size.y - columnDisplayHeight, model->RowCount() * itemHeight);
 }
 
+void ListView::RepopulateCache() {
+    columnDisplayWidths.clear();
+
+    for (int i = 0; i < model->ColumnCount(); i++) {
+        columnDisplayWidths.push_back(model->SizeHint(i));
+    }
+
+    int index = 0;
+    if (showScrollBar)
+        index = sBar.scrollPos / itemHeight;
+    int xPos = 0;
+    int yPos = fixedBounds.y + (columnDisplayHeight *
+                                displayColumnNames); // Offset by column display height only if we display the columns
+
+    rowsToDisplay = fixedBounds.height / itemHeight;
+    cachedRows.resize(rowsToDisplay);
+
+    for (int row = 0; row < rowsToDisplay && row + index < model->RowCount(); row++) {
+        xPos = fixedBounds.x;
+        cachedRows[row].text.resize(model->ColumnCount());
+
+        for (int i = 0; i < model->ColumnCount(); i++) {
+            std::string str = "";
+
+            Variant value = model->GetData(index + row, i);
+            if (std::holds_alternative<std::string>(value)) {
+                str = std::get<std::string>(value);
+            } else if (std::holds_alternative<int>(value)) {
+                str = std::to_string(std::get<int>(value));
+            } else if (std::holds_alternative<const Surface*>(value)) {
+                xPos += columnDisplayWidths[i] + 2;
+                continue;
+            } else {
+                assert(!"GUI::ListView: Unsupported type!");
+            }
+
+            int textLen = Graphics::GetTextLength(str.c_str());
+            if (textLen > columnDisplayWidths[i] - 2) {
+                int l = str.length() - 1;
+                while (l) {
+                    str = str.substr(0, l);
+
+                    textLen = Graphics::GetTextLength(str.c_str());
+                    if (textLen < columnDisplayWidths[i] + 2) {
+                        if (l > 2) {
+                            str.erase(str.end() - 1); // Omit last character
+                            str.append(
+                                "..."); // We have a variable width font should we should only have to omit 1 character
+                        }
+                        break;
+                    }
+
+                    l = str.length() - 1;
+                }
+            }
+
+            vector2i_t textPos = {xPos + 2, yPos + itemHeight / 2 - font->height / 2};
+            cachedRows[row].text[i].SetPos(textPos);
+            cachedRows[row].text[i].SetText(str);
+            cachedRows[row].text[i].SetColour(Theme::Current().ColourTextDark());
+
+            xPos += columnDisplayWidths[i] + 2;
+        }
+        yPos += itemHeight;
+    }
+}
+
 void ListView::UpdateFixedBounds() {
     Widget::UpdateFixedBounds();
 
+    cacheDirty = true;
     ResetScrollBar();
 }
 

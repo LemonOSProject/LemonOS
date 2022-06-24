@@ -12,8 +12,8 @@ __thread FileView* dialogFileView = nullptr;
 __thread TextBox* dialogFileBox = nullptr;
 __thread int dflags = 0;
 
-void FileDialogOnFileOpened(const char* path, __attribute__((unused)) FileView* fv) {
-    if (!(dflags & FILE_DIALOG_CREATE) || access(path, W_OK) ||
+void FileDialogOnFileOpened(FileView*, std::string path) {
+    if (!(dflags & FILE_DIALOG_CREATE) || access(path.c_str(), W_OK) ||
         DisplayMessageBox(
             "Open...", "File already exists! Overwrite?",
             MsgButtonsOKCancel)) { // Only open if create flag not specified OR user responds ok to message
@@ -21,12 +21,16 @@ void FileDialogOnFileOpened(const char* path, __attribute__((unused)) FileView* 
             free(selectedPth);
         }
 
-        selectedPth = strdup(path);
+        selectedPth = realpath(path.c_str(), NULL);
     }
 }
 
-void FileDialogOnFileSelected(std::string& path, __attribute__((unused)) FileView* fv) {
-    dialogFileBox->contents.front() = path;
+void FileDialogOnFileSelected(void*, std::string path) {
+    dialogFileBox->contents.front() = std::move(path);
+}
+
+void FileDialogOnPathChanged(void*, std::string) {
+    dialogFileBox->contents.front().clear();
 }
 
 void FileDialogOnCancelPress(Lemon::GUI::Window* window) {
@@ -34,19 +38,23 @@ void FileDialogOnCancelPress(Lemon::GUI::Window* window) {
 }
 
 void FileDialogOnFileBoxSubmit(Lemon::GUI::TextBox* box) {
-    if (box->contents.front().find('/') != std::string::npos && box->contents.size() > NAME_MAX) {
+    if (box->contents.size() > NAME_MAX) {
         DisplayMessageBox("Open...", "Filename is invalid!", MsgButtonsOK);
         return;
     }
 
-    std::string path = dialogFileView->currentPath;
+    // Check for a leading slash
+    std::string path;
+    if(box->contents.front().front() != '/') {
+        path = dialogFileView->currentPath;
+    }
     path += box->contents.front();
 
     struct stat sResult;
 
     int e = stat(path.c_str(), &sResult);
     if (e && dflags & FILE_DIALOG_CREATE && errno == ENOENT) {
-        FileDialogOnFileOpened(path.c_str(), dialogFileView);
+        FileDialogOnFileOpened(dialogFileView, path);
         return;
     } else if (e && errno == ENOENT) {
         char buf[512];
@@ -63,7 +71,7 @@ void FileDialogOnFileBoxSubmit(Lemon::GUI::TextBox* box) {
         dialogFileView->OnSubmit(path);
         return;
     } else {
-        FileDialogOnFileOpened(path.c_str(), dialogFileView);
+        FileDialogOnFileOpened(dialogFileView, path);
     }
 }
 
@@ -80,12 +88,14 @@ char* FileDialog(const char* path, int flags) {
     dialogFileView = nullptr;
     dialogFileBox = nullptr;
 
-    Window* win = new Window("Open...", {504, 300}, WINDOW_FLAGS_RESIZABLE, WindowType::GUI);
+    Window* win = new Window("Open...", {540, 420}, WINDOW_FLAGS_RESIZABLE, WindowType::GUI);
 
-    FileView* fv = new FileView({0, 0, 0, 62}, path, FileDialogOnFileOpened);
+    FileView* fv = new FileView({0, 0, 0, 62}, path);
     win->AddWidget(fv);
     fv->SetLayout(LayoutSize::Stretch, LayoutSize::Stretch, WAlignLeft);
-    fv->OnFileSelected = FileDialogOnFileSelected;
+    fv->onFileSelected.Set(FileDialogOnFileSelected);
+    fv->onFileOpened.Set(FileDialogOnFileOpened);
+    fv->onPathChanged.Set(FileDialogOnPathChanged);
 
     dialogFileView = fv;
 
