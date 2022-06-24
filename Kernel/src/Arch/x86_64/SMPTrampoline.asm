@@ -54,6 +54,7 @@ smpentry64:
 
     xor rbp, rbp
     mov rdi, [SMP_TRAMPOLINE_CPU_ID]
+
     call [SMP_TRAMPOLINE_ENTRY2]
 
     cli

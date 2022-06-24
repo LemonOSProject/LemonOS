@@ -2598,12 +2598,10 @@ long SysInterfaceConnect(RegisterContext* r) {
     {
         FancyRefPtr<Service> svc;
         if (ServiceFS::Instance()->ResolveServiceName(svc, path)) {
-            Log::Warning("SysInterfaceConnect: No such service '%s'!", path);
             return -ENOENT; // No such service
         }
 
         if (svc->ResolveInterface(interface, strchr(path, '/') + 1)) {
-            Log::Warning("SysInterfaceConnect: No such interface '%s'!", path);
             return -ENOENT; // No such interface
         }
     }

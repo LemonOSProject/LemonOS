@@ -49,17 +49,29 @@ unsigned short keyQueueStart = 0;
 unsigned short keyCount = 0;
 
 template <bool isMouse> inline void WaitData() {
-    int timeout = 10000;
-    while (timeout--)
-        if ((inportb(PS2_CMD) & 0x21) == (isMouse ? 0x21 : 0x1))
-            return;
+    int timeout = 500;
+    while (timeout--) {
+        if constexpr(isMouse) {
+            if ((inportb(PS2_CMD) & 0x21) == 0x20)
+                return;
+        } else {
+            if (inportb(PS2_CMD) & 0x1)
+                return;
+        }
+
+        Timer::Wait(1);
+    }
+
+    Log::Warning("[PS2] Timed out waiting for data");
 }
 
 inline void WaitSignal() {
-    int timeout = 10000;
-    while (timeout--)
+    int timeout = 500;
+    while (timeout--) {
         if ((inportb(PS2_CMD) & 0x2) != 0x2)
             return;
+        Timer::Wait(1);
+    }
 }
 
 template <bool isMouse> int SendCommand(uint8_t cmd) {
@@ -75,7 +87,7 @@ template <bool isMouse> int SendCommand(uint8_t cmd) {
         WaitSignal();
         outportb(PS2_DATA, cmd);
 
-        WaitData<isMouse>();
+        WaitData<false>();
         r = inportb(PS2_DATA);
     }
 
@@ -331,17 +343,15 @@ void Initialize() {
     WaitData<false>();
     uint8_t status = inportb(0x20);
 
-    // Enable interrupts, enable keyboard and mouse clock
+    // Disable interrupts, enable keyboard and mouse clock
     // disable scancode translation
-    status = ((status & ~0x70) | 3);
+    status = ((status & ~0x73));
     WaitSignal();
     outportb(PS2_CMD, 0x60);
     WaitSignal();
     outportb(PS2_DATA, status);
-    WaitData<false>();
-    inportb(PS2_DATA);
 
-    Timer::Wait(500);
+    Timer::Wait(50);
 
     // Renable both ports
     WaitSignal();
@@ -385,6 +395,15 @@ void Initialize() {
     // Set keyboard scancode set 2
     SendCommand<false>(0xF0);
     SendCommand<false>(2);
+
+    // Enable interrupts for kb and mouse
+    status = inportb(0x20) | 3;
+    WaitSignal();
+    outportb(PS2_CMD, 0x60);
+    WaitSignal();
+    outportb(PS2_DATA, status);
+    WaitData<false>();
+    inportb(PS2_DATA);
 
     IDT::RegisterInterruptHandler(IRQ0 + 12, MouseHandler);
     APIC::IO::MapLegacyIRQ(12);

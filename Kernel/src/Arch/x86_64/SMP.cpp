@@ -75,8 +75,8 @@ void InitializeCPU(uint16_t id) {
     *smpMagic = 0;                                          // Set magic to 0
     *smpID = id;                                            // Set ID to our CPU's ID
     *smpEntry2 = (uint64_t)SMPEntry;                        // Our second entry point
-    *smpStack = (uint64_t)kmalloc(8192);
-    *smpStack += 8192;
+    *smpStack = (uint64_t)kmalloc(16384);
+    *smpStack += 16384;
     *smpGDT = GDT64Pointer64;
 
     asm volatile("mov %%cr3, %%rax" : "=a"(*smpCR3));
@@ -103,7 +103,7 @@ void InitializeCPU(uint16_t id) {
     }
 
     while (!doneInit)
-        ;
+        asm("pause");
 
     doneInit = false;
 }
@@ -139,13 +139,12 @@ void Initialize() {
 
     for (int i = 0; i < processorCount; i++) {
         if (ACPI::processors[i] != 0) {
-            Log::Info("starting cpu %d", i);
+            assert(!cpus[ACPI::processors[i]]);
+
             InitializeCPU(ACPI::processors[i]);
         }
     }
 
     TSS::InitializeTSS(&cpus[0]->tss, cpus[0]->gdt);
-
-    Log::Info("[SMP] %u processors initialized!", processorCount);
 }
 } // namespace SMP

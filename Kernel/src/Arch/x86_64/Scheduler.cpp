@@ -170,7 +170,9 @@ void BalanceRunQueues() {
     // Lock ALL run queues
     for (unsigned i = 0; i < SMP::processorCount; i++) {
         CPU* cpu = SMP::cpus[i];
-        acquireLock(&cpu->runQueueLock);
+        if(cpu != GetCPULocal()) {
+            acquireLock(&cpu->runQueueLock);
+        }
 
         if (!cpu->currentThread || cpu->currentThread == cpu->idleThread) {
             avgUtilization[i] = 0;
@@ -252,7 +254,9 @@ void BalanceRunQueues() {
 
         SMP::cpus[i]->idleThread->ticksSinceBalance = 0;
 
-        releaseLock(&SMP::cpus[i]->runQueueLock);
+        if(SMP::cpus[i] != GetCPULocal()) {
+            releaseLock(&SMP::cpus[i]->runQueueLock);
+        }
     }
 
     nextBalanceDue = Timer::UsecondsSinceBoot() + 1000000;
@@ -260,15 +264,6 @@ void BalanceRunQueues() {
 
 void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
     CPU* cpu = GetCPULocal();
-
-    if (Timer::UsecondsSinceBoot() > nextBalanceDue) {
-        if(!__builtin_expect(acquireTestLock(&processesLock), 0)) {
-            if (Timer::UsecondsSinceBoot() > nextBalanceDue) {
-                BalanceRunQueues();
-            }
-            releaseLock(&processesLock);
-        }
-    }
 
     if (cpu->currentThread) {
         cpu->currentThread->parent->activeTicks++;
@@ -279,8 +274,17 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
         }
     }
 
-    while (__builtin_expect(acquireTestLock(&cpu->runQueueLock), 0)) {
-        asm volatile("pause");
+    if(__builtin_expect(acquireTestLock(&cpu->runQueueLock), 0)) {
+        return;
+    }
+
+    if (SMP::processorCount > 1 && Timer::UsecondsSinceBoot() > nextBalanceDue) {
+        if(!__builtin_expect(acquireTestLock(&processesLock), 0)) {
+            if (Timer::UsecondsSinceBoot() > nextBalanceDue) {
+                BalanceRunQueues();
+            }
+            releaseLock(&processesLock);
+        }
     }
 
     if (__builtin_expect(cpu->runQueue->get_length() <= 0 || !cpu->currentThread, 0)) {
@@ -299,6 +303,8 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
 
             cpu->currentThread = cpu->currentThread->next;
         } else {
+            cpu->currentThread->ticksGivenSinceBalance += cpu->currentThread->timeSliceDefault;
+            cpu->currentThread->registers = *r;
             cpu->currentThread = cpu->runQueue->front;
         }
 
@@ -314,14 +320,16 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
         // Check if we could find an unblocked thread
         if (cpu->currentThread->state & ThreadStateBlocked) {
                 cpu->currentThread = cpu->idleThread;
-        } else {
+        } /* else {
             // See if we can find a better thread
             // where better is the thread w/ least CPU time
             Thread* first = cpu->currentThread;
             Thread* leastHungry = cpu->currentThread->next;
-            do {
+
+            cpu->currentThread = leastHungry;
+            //do {
                 if (leastHungry->state & ThreadStateBlocked) {
-                    Thread* first = leastHungry;
+                    //Thread* first = leastHungry;
 
                     do {
                         leastHungry = leastHungry->next;
@@ -329,7 +337,7 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
 
                     if (leastHungry->state & ThreadStateBlocked) {
                         cpu->currentThread = cpu->idleThread;
-                        break;
+                        //break;
                     }
                 }
 
@@ -344,7 +352,7 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
                 leastHungry = leastHungry->next;
                 //Log::Info("pid %d (c: %d)", leastHungry->parent->PID(), cpu->currentThread->parent->PID());
             } while(leastHungry != first);
-        }
+        } */
     }
 
     releaseLock(&cpu->runQueueLock);
