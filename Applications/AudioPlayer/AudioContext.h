@@ -58,6 +58,10 @@ public:
     std::mutex sampleBuffersLock;
     // Decoder waits for a buffer to be processed
     std::condition_variable decoderWaitCondition;
+    // Decoder thread will block whilst it is not decoding an audio file
+    std::condition_variable decoderShouldRunCondition;
+    // Player thread will block whilst it is not playing audio samples
+    std::condition_variable playerShouldRunCondition;
     int numValidBuffers;
 
 private:
@@ -88,9 +92,16 @@ private:
     std::thread m_decoderThread;
     // Held by the decoderThread whilst it is running
     std::mutex m_decoderLock;
+    // Lock for m_shouldPlayAudio
+    std::mutex m_playerStatusLock;
+    // Lock for m_isDecoderRunning
+    std::mutex m_decoderStatusLock;
 
+    bool m_shouldThreadsDie = false;
     bool m_isDecoderRunning = false;
     bool m_shouldPlayNextTrack = false;
+    // Indicates to the player thread whether to not to play the audio
+    bool m_shouldPlayAudio = true;
     
     bool m_requestSeek = false;
     // Timestamp in seconds of where to seek to

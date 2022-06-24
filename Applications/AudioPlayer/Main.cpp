@@ -67,7 +67,7 @@ public:
         // Attempts to load the metadata of the specified
         // audio file.
         // If it was successfully read, add to the tracklist
-        
+
         TrackInfo track;
         if (int r = m_ctx->LoadTrack(filepath, &track); r) {
             return r;
@@ -75,6 +75,8 @@ public:
 
         m_tracks[filepath] = std::move(track);
         m_trackList.push_back(&m_tracks.at(filepath));
+
+        m_listView->UpdateData();
         return 0;
     }
 
@@ -103,7 +105,7 @@ public:
 
     int LoadFilepath(std::string path) {
         // Attempts to load a file,
-        // detects if it is a directory and if so recursively opens 
+        // detects if it is a directory and if so recursively opens
         // each file in the directory.
 
         struct stat s;
@@ -145,6 +147,8 @@ public:
         assert(m_tracks.erase(track->filepath) > 0);
         m_trackList.erase(m_trackList.begin() + index);
 
+        m_listView->UpdateData();
+        
         ResetQueue();
 
         return 0;
@@ -169,7 +173,7 @@ public:
 
         TrackInfo& track = *m_trackList.at(row);
         if (column == 0) {
-            return track.filepath;
+            return track.filename;
         } else if (column == 1) {
             return track.metadata.artist + " - " + track.metadata.title;
         } else if (column == 2) {
@@ -196,23 +200,28 @@ public:
                 }
 
                 // If m_trackIndex is valid, add it to the previous queue
+                // When the 'Prev' button is pressed and PrevTrack() is called,
+                // the previous track can be popped from the queue
                 if (m_trackIndex > 0) {
                     m_trackQueuePrevious.push_back(m_trackIndex);
                 }
 
                 int newTrack = m_trackIndex;
                 // Check if there is more than 1 track
-                if(m_trackList.size() > 1) {
+                if (m_trackList.size() > 1) {
                     // Keep generating a new track index
                     // until we get a different track
-                    while(newTrack == m_trackIndex)
+                    while (newTrack == m_trackIndex)
                         newTrack = rand() % m_trackList.size();
                 }
 
                 PlayTrack(newTrack);
             } else {
+                // Go to the next track in queue sequentially
                 m_trackIndex++;
                 if (m_trackIndex >= (int)m_trackList.size()) {
+                    // If we are at the end of the track list, just stop playback for now.
+                    // If NextTrack is called again, trackIndex will become 0 and the first song will be played.
                     m_trackIndex = -1;
                 } else {
                     PlayTrack(m_trackIndex);
@@ -410,17 +419,13 @@ public:
         Container::Paint(surface);
 
         int totalDuration = 0;
-        int songProgress = m_ctx->PlaybackProgress();
-        if (m_ctx->IsAudioPlaying()) {
-            const TrackInfo* info = m_ctx->CurrentTrack();
-
-            totalDuration = info->duration;
-        }
-
         // Check if there is a track loaded
         if (const TrackInfo* info = m_ctx->CurrentTrack(); info) {
-            // Update the filepath text to display the current filepath
-            m_filepathText.SetText(info->filepath);
+            int songProgress = m_ctx->PlaybackProgress();
+            totalDuration = info->duration;
+
+            // Update the filepath text to display the current file name
+            m_filepathText.SetText(info->filename);
             // Display the current song as Song: <title> - <artist>
             m_songText.SetText(fmt::format("Song: {} - {}", info->metadata.title, info->metadata.album));
             m_albumText.SetText(fmt::format("Album: {}", info->metadata.album));
@@ -429,13 +434,16 @@ public:
             m_filepathText.BlitTo(surface);
             m_songText.BlitTo(surface);
             m_albumText.BlitTo(surface);
+
+            // Use a format string to make the duraiton text
+            // xx:xx/yy:yy where xx:xx is playback progress, yy:yy is total duration
+            auto duration = fmt::format("{:02}:{:02}/{:02}:{:02}", songProgress / 60, songProgress % 60, totalDuration / 60,
+                                        totalDuration % 60);
+            m_duration.SetText(duration);
+        } else {
+            m_duration.SetText("00:00/00:00");
         }
 
-        // Use a format string to make the duraiton text
-        // xx:xx/yy:yy where xx:xx is playback progress, yy:yy is total duration 
-        auto duration = fmt::format("{:02}:{:02}/{:02}:{:02}", songProgress / 60, songProgress % 60, totalDuration / 60,
-                                    totalDuration % 60);
-        m_duration.SetText(duration);
         m_duration.BlitTo(surface);
 
         int progressBarY = ProgressbarRect().y;
@@ -526,7 +534,8 @@ public:
 
 private:
     inline Rect ProgressbarRect() const {
-        return {fixedBounds.x + CONTAINER_PADDING, fixedBounds.y + m_play->GetFixedBounds().y - CONTAINER_PADDING - 10, fixedBounds.width - 10, 10};
+        return {fixedBounds.x + CONTAINER_PADDING, fixedBounds.y + m_play->GetFixedBounds().y - CONTAINER_PADDING - 10,
+                fixedBounds.width - 10, 10};
     }
 
     AudioContext* m_ctx;
@@ -559,6 +568,9 @@ int main(int argc, char** argv) {
     window->AddWidget(player);
     window->AddWidget(tracks);
 
+    // If arguments are given to AudioPlayer,
+    // (such as when opening a file in FileManager or running in Terminal)
+    // then treat each argument as a file to be opened
     if (argc > 1) {
         int argi = 1;
         while (argc > 1) {
@@ -579,7 +591,9 @@ int main(int argc, char** argv) {
         window->GUIPollEvents();
         window->Paint();
 
-        Lemon::WindowServer::Instance()->Wait(500000);
+        // Repaint every 200ms regardless of GUI events
+        // to update the playback info
+        Lemon::WindowServer::Instance()->Wait(200000);
     }
 
     delete window;
