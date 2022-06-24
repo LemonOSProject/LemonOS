@@ -74,7 +74,7 @@ jobs:
       - name: Building system
         run: |
           cd Build
-          xbstrap install --recursive lemon-base
+          xbstrap install -u --recursive lemon-base
 
       - name: Building disk image
         run: |
