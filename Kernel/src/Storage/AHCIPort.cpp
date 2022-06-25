@@ -4,6 +4,7 @@
 #include <Logging.h>
 #include <Paging.h>
 #include <PhysicalAllocator.h>
+#include <Scheduler.h>
 #include <Storage/ATA.h>
 #include <Storage/GPT.h>
 #include <Timer.h>
@@ -21,7 +22,7 @@ Port::Port(int num, hba_port_t* portStructure, hba_mem_t* hbaMem) {
 
     SetDeviceName("SATA Hard Disk");
 
-    stopCMD(registers);
+    StopCMD(registers);
 
     uintptr_t phys;
 
@@ -271,7 +272,6 @@ int Port::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
         count -= size;
     }
     ReleaseBuffer(buf);
-
     return 0;
 }
 
@@ -310,6 +310,8 @@ int Port::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
 }
 
 int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) {
+    assert(CheckInterrupts());
+
     if (portLock.Wait()) {
         return -EINTR;
     }
@@ -375,9 +377,13 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
 
     cmdfis->control = 0x8;
 
-    spin = 100;
-    while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin--) {
-        Timer::Wait(1);
+    spin = Timer::UsecondsSinceBoot() + 100000;
+    while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin) {
+        if (Timer::UsecondsSinceBoot() >= spin) {
+            spin = 0;
+        }
+
+        Scheduler::Yield();
     }
 
     if (spin <= 0) {
@@ -389,29 +395,34 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
 
     registers->ie = registers->is = 0xffffffff;
 
-    startCMD(registers);
+    StartCMD(registers);
     registers->ci |= 1 << slot;
 
     // Log::Info("SERR: %x, Slot: %x, PxCMD: %x, Int status: %x, Ci: %x, TFD: %x", registers->serr, slot,
     // registers->cmd, registers->is, registers->ci, registers->tfd);
 
-    while (registers->ci & (1 << slot)) {
+    spin = Timer::UsecondsSinceBoot() + 200000;
+    while ((registers->ci & (1 << slot)) && Timer::UsecondsSinceBoot() < spin) {
         if (registers->is & HBA_PxIS_TFES) // Task file error
         {
             Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
 
-            stopCMD(registers);
+            StopCMD(registers);
             portLock.Signal();
             return -EIO;
         }
     }
 
-    spin = 100;
-    while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin--) {
-        Timer::Wait(1);
+    spin = Timer::UsecondsSinceBoot() + 100000;
+    while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin) {
+        if (Timer::UsecondsSinceBoot() >= spin) {
+            spin = 0;
+        }
+
+        Scheduler::Yield();
     }
 
-    stopCMD(registers);
+    StopCMD(registers);
 
     if (spin <= 0) {
         Log::Warning("[SATA] Port Hung");
@@ -502,7 +513,7 @@ void Port::Identify() {
 
     registers->ie = registers->is = 0xffffffff;
 
-    startCMD(registers);
+    StartCMD(registers);
     registers->sact |= 1 << slot;
     registers->ci |= 1 << slot;
 
@@ -513,12 +524,12 @@ void Port::Identify() {
         if (registers->is & HBA_PxIS_TFES) // Task file error
         {
             Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
-            stopCMD(registers);
+            StopCMD(registers);
             return;
         }
     }
 
-    stopCMD(registers);
+    StopCMD(registers);
 
     spin = 100;
     while ((registers->tfd & (ATA_DEV_BUSY | ATA_DEV_DRQ)) && spin--) {
@@ -530,7 +541,7 @@ void Port::Identify() {
 
     if (registers->is & HBA_PxIS_TFES) {
         Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
-        stopCMD(registers);
+        StopCMD(registers);
         return;
     }
     return;
@@ -547,4 +558,47 @@ int Port::FindCmdSlot() {
 
     return -1;
 }
+
+void StopCMD(hba_port_t* port) {
+    // Clear ST (bit0)
+    port->cmd &= ~HBA_PxCMD_ST;
+
+    int spin = Timer::UsecondsSinceBoot() + 100000;
+
+    // Wait until FR (bit14), CR (bit15) are cleared
+    while ((port->cmd & HBA_PxCMD_CR) && spin) {
+        if (Timer::UsecondsSinceBoot() >= spin) {
+            spin = 0;
+        }
+    }
+
+    if (spin <= 0) {
+        Log::Warning("[SATA] StopCMD Hung");
+    }
+
+    // Clear FRE (bit4)
+    port->cmd &= ~HBA_PxCMD_FRE;
+}
+
+void StartCMD(hba_port_t *port) {
+    port->cmd &= ~HBA_PxCMD_ST;
+
+    int spin = Timer::UsecondsSinceBoot() + 100000;
+
+    // Wait until CR (bit15) is cleared
+    while ((port->cmd & HBA_PxCMD_CR) && spin) {
+        if (Timer::UsecondsSinceBoot() >= spin) {
+            spin = 0;
+        }
+    }
+
+    if (spin <= 0) {
+        Log::Warning("[SATA] StartCMD Hung");
+    }
+
+    // Set FRE (bit4) and ST (bit0)
+    port->cmd |= HBA_PxCMD_FRE;
+    port->cmd |= HBA_PxCMD_ST; 
+}
+
 } // namespace AHCI

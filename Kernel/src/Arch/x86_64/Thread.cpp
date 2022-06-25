@@ -201,11 +201,10 @@ bool Thread::Block(ThreadBlocker* newBlocker) {
     assert(CheckInterrupts());
 
     acquireLock(&newBlocker->lock);
-    acquireLock(&stateLock);
+    acquireLockIntDisable(&stateLock);
 
     assert(state != ThreadStateDying);
 
-    asm("cli");
     newBlocker->thread = this;
     if (!newBlocker->ShouldBlock()) {
         releaseLock(&newBlocker->lock); // We were unblocked before the thread was actually blocked
@@ -240,9 +239,10 @@ bool Thread::Block(ThreadBlocker* newBlocker) {
 
     Scheduler::Yield();
 
-    acquireLock(&stateLock);
+    acquireLockIntDisable(&stateLock);
     blocker = nullptr;
     releaseLock(&stateLock);
+    asm("sti");
 
     return newBlocker->WasInterrupted();
 }
@@ -256,9 +256,8 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout) {
     };
 
     acquireLock(&newBlocker->lock);
-    acquireLock(&stateLock);
+    acquireLockIntDisable(&stateLock);
 
-    asm("cli");
     newBlocker->thread = this;
     if (!newBlocker->ShouldBlock()) {
         releaseLock(&newBlocker->lock); // We were unblocked before the thread was actually blocked
@@ -320,6 +319,10 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout) {
 void Thread::Sleep(long us) {
     assert(CheckInterrupts());
 
+    long t = Timer::UsecondsSinceBoot() + us;
+    while(Timer::UsecondsSinceBoot() < t) asm("pause");
+    return;
+
     blockTimedOut = false;
 
     Timer::TimerCallback timerCallback = [](void* t) -> void {
@@ -354,8 +357,15 @@ void Thread::Sleep(long us) {
 
 void Thread::Unblock() {
     assert(state != ThreadStateDying);
+    if(CheckInterrupts())
+        acquireLockIntDisable(&stateLock);
+    else
+        acquireLock(&stateLock);
     timeSlice = timeSliceDefault;
 
     if (state != ThreadStateZombie)
         state = ThreadStateRunning;
+
+    releaseLock(&stateLock);
+    asm volatile("sti");
 }

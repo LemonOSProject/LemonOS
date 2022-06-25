@@ -379,33 +379,8 @@ namespace AHCI{
 
 	int Init();
 
-	inline void startCMD(hba_port_t *port)
-	{
-    	port->cmd &= ~HBA_PxCMD_ST;
-
-		// Wait until CR (bit15) is cleared
-		while (port->cmd & HBA_PxCMD_CR);
-
-		// Set FRE (bit4) and ST (bit0)
-		port->cmd |= HBA_PxCMD_FRE;
-		port->cmd |= HBA_PxCMD_ST; 
-	}
+	void StartCMD(hba_port_t *port);
 	
 	// Stop command engine
-	inline void stopCMD(hba_port_t *port)
-	{
-		// Clear ST (bit0)
-		port->cmd &= ~HBA_PxCMD_ST;
-	
-		// Wait until FR (bit14), CR (bit15) are cleared
-		while(1)
-		{
-			if (port->cmd & HBA_PxCMD_CR)
-				continue;
-			break;
-		}
-	
-		// Clear FRE (bit4)
-		port->cmd &= ~HBA_PxCMD_FRE;
-	}
+	void StopCMD(hba_port_t *port);
 }
