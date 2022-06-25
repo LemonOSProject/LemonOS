@@ -35,7 +35,7 @@ void PlayAudio(AudioContext* ctx) {
     AudioContext::SampleBuffer* buffers = ctx->sampleBuffers;
 
     while (!ctx->m_shouldThreadsDie) {
-        {
+        if(!ctx->m_shouldPlayAudio) {
             std::unique_lock lockStatus{ctx->m_playerStatusLock};
             ctx->playerShouldRunCondition.wait(lockStatus,
                                                 [ctx]() -> bool { return ctx->m_shouldPlayAudio; });
@@ -415,6 +415,7 @@ void AudioContext::PlaybackStop() {
         // Mark the decoder as not running
         std::unique_lock lockDecoderStatus{m_decoderStatusLock};
         m_isDecoderRunning = false;
+        m_shouldPlayAudio = false;
         // Make the decoder stop waiting for a free sample buffer
         decoderWaitCondition.notify_all();
     }
