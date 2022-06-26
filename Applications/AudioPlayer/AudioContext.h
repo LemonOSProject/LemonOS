@@ -9,7 +9,6 @@
 #define AUDIOCONTEXT_NUM_SAMPLE_BUFFERS 16
 
 class AudioContext {
-    friend void DecodeAudio(AudioContext*);
     friend void PlayAudio(AudioContext*);
 
 public:
@@ -66,9 +65,30 @@ public:
     int numValidBuffers;
 
 private:
+    // Audio decoder loop
+    void DecodeAudio();
+    // Decodes a frame of audio and fills the next available buffer
+    void DecoderDecodeFrame(struct AVFrame* frame);
+    // Perform the requested seek to m_seekTimestamp
+    void DecoderDoSeek();
+
+    // Audio playeer loop.
+    // Reads buffers from sampleBuffers and sends them to the audio device
+    void PlayAudio();
+    
+    // Get the next buffer that can hold samplesToWrite number of samples
+    // if the buffer after the write pointer is too full,
+    // increments the write pointer and returns the buffer after.
+    int DecoderGetNextSampleBufferOrWait(int samplesToWrite);
+
+    // A packet is considered invalid if we need to seek
+    // or the decoder is not marked as running
+    inline bool IsDecoderPacketInvalid() {
+        return m_requestSeek || !m_isDecoderRunning;
+    }
+
     void GetTrackInfo(struct AVFormatContext* fmt, TrackInfo* info);
 
-    inline int DecoderNextBuffer() const {return (lastSampleBuffer + 1) % AUDIOCONTEXT_NUM_SAMPLE_BUFFERS; }
     inline void FlushSampleBuffers() {
         for (int i = 0; i < AUDIOCONTEXT_NUM_SAMPLE_BUFFERS; i++) {
             sampleBuffers[i].samples = 0;
@@ -112,6 +132,7 @@ private:
 
     struct AVFormatContext* m_avfmt = nullptr;
     struct AVCodecContext* m_avcodec = nullptr;
+    struct SwrContext* m_resampler = nullptr;
 
     struct AVStream* m_currentStream = nullptr;
     int m_currentStreamIndex = 0;

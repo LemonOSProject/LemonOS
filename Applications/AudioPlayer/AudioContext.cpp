@@ -12,6 +12,8 @@
 
 #include <sys/ioctl.h>
 
+// The libav* libraries do not add extern "C" when using C++,
+// so specify here that all functions are C functions and do not have mangled names
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
@@ -20,44 +22,63 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
+// The default audio output device is a file at '/dev/snd/pcm'
+//
+// open() is called to get a handle to the device
+//
+// ioctl() is used to get the device configuration including:
+//  - Number of channels
+//  - Audio sample format
+//  - Audio sample rate
+//
+// For example, to get the sample rate:
+// int pcmSampleRate = ioctl(pcmOut, IoCtlOutputGetSampleRate);
+//
+// Where pcmOut is the file descriptor/handle pointing to the device.
+//
+// To actually play the audio, a call to write() is used.
+// Samples are written using write() to the device file
+// which passes sample data to the audio driver.
+//
+// Audio samples are read sequentially, in a FIFO (first-in first-out) manner
+
 // Repsonible for sending samples to the audio driver
-void PlayAudio(AudioContext* ctx) {
+void AudioContext::PlayAudio() {
     // The audio file to be played
-    int fd = ctx->m_pcmOut;
+    int fd = m_pcmOut;
 
     // The amount of channels supported by the audio device
     // Generally will be stereo audio (2 channel)
-    int channels = ctx->m_pcmChannels;
+    int channels = m_pcmChannels;
     // The size of one audio sample in bytes
     // In this case bit depth / 8
-    int sampleSize = ctx->m_pcmBitDepth / 8;
+    int sampleSize = m_pcmBitDepth / 8;
 
-    AudioContext::SampleBuffer* buffers = ctx->sampleBuffers;
+    AudioContext::SampleBuffer* buffers = sampleBuffers;
 
-    while (!ctx->m_shouldThreadsDie) {
-        if(!ctx->m_shouldPlayAudio) {
-            std::unique_lock lockStatus{ctx->m_playerStatusLock};
-            ctx->playerShouldRunCondition.wait(lockStatus,
-                                                [ctx]() -> bool { return ctx->m_shouldPlayAudio; });
+    while (!m_shouldThreadsDie) {
+        if (!m_shouldPlayAudio) {
+            std::unique_lock lockStatus{m_playerStatusLock};
+            playerShouldRunCondition.wait(lockStatus, [this]() -> bool { return m_shouldPlayAudio; });
         }
 
         // If the decoder has stopped, exit this loop
-        while (ctx->m_shouldPlayAudio && ctx->m_isDecoderRunning) {
+        while (m_shouldPlayAudio && m_isDecoderRunning) {
             // If there aren't any valid audio buffers,
             // wait for the decoder to catch up
-            if (!ctx->numValidBuffers) {
-                // Instead of busy waiting just sleep 10ms
+            if (!numValidBuffers) {
+                // Instead of busy waiting just sleep 5ms
                 // as not to chew through CPU time
-                usleep(100);
+                usleep(5000);
                 continue;
             };
 
             // Get the next sample buffer,
             // wrap around at the end (at AUDIOCONTEXT_NUM_SAMPLE_BUFFERS)
-            ctx->currentSampleBuffer = (ctx->currentSampleBuffer + 1) % AUDIOCONTEXT_NUM_SAMPLE_BUFFERS;
+            currentSampleBuffer = (currentSampleBuffer + 1) % AUDIOCONTEXT_NUM_SAMPLE_BUFFERS;
 
-            auto& buffer = buffers[ctx->currentSampleBuffer];
-            ctx->m_lastTimestamp = buffer.timestamp;
+            auto& buffer = buffers[currentSampleBuffer];
+            m_lastTimestamp = buffer.timestamp;
 
             // Write the buffer to the device file
             // If the buffer queue is full,
@@ -74,244 +95,18 @@ void PlayAudio(AudioContext* ctx) {
             buffer.samples = 0;
 
             // Make sure the decoder thread does not interfere
-            std::unique_lock lock{ctx->sampleBuffersLock};
+            std::unique_lock lock{sampleBuffersLock};
             // If the packet became invalid, numValidBuffers will become 0
             // the packet will become in
-            if (ctx->numValidBuffers > 0) {
-                ctx->numValidBuffers--;
+            if (numValidBuffers > 0) {
+                numValidBuffers--;
             }
             lock.unlock();
 
             // Let the decoder know that we have processed a buffer
-            ctx->decoderWaitCondition.notify_all();
+            decoderWaitCondition.notify_all();
         }
     }
-}
-
-// Turns encoded audio data (such as MPEG-2 or FLAC) into raw audio samples
-void DecodeAudio(AudioContext* ctx) {
-    // Start the player thread
-    // The player thread sends audio to the driver
-    // whilst this thread decodes the audio data
-    std::thread playerThread(PlayAudio, ctx);
-
-    while (!ctx->m_shouldThreadsDie) {
-        {
-            std::unique_lock lockStatus{ctx->m_decoderStatusLock};
-            ctx->decoderShouldRunCondition.wait(lockStatus,
-                                                [ctx]() -> bool { return ctx->m_isDecoderRunning; });
-        }
-
-        ctx->m_decoderLock.lock();
-        SwrContext* resampler = swr_alloc();
-
-        // Check how many channels are in the audio file
-        if (ctx->m_avcodec->channels == 1) {
-            av_opt_set_int(resampler, "in_channel_layout", AV_CH_LAYOUT_MONO, 0);
-        } else {
-            if (ctx->m_avcodec->channels != 2) {
-                Lemon::Logger::Warning("Unsupported number of audio channels {}, taking first 2 and playing as stereo.",
-                                       ctx->m_avcodec->channels);
-            }
-
-            av_opt_set_int(resampler, "in_channel_layout", AV_CH_LAYOUT_STEREO, 0);
-        }
-        av_opt_set_int(resampler, "in_sample_rate", ctx->m_avcodec->sample_rate, 0);
-        av_opt_set_sample_fmt(resampler, "in_sample_fmt", ctx->m_avcodec->sample_fmt, 0);
-
-        // Check the channel count of the audio device,
-        // probably stereo (2 channel)
-        if (ctx->m_pcmChannels == 1) {
-            av_opt_set_int(resampler, "out_channel_layout", AV_CH_LAYOUT_MONO, 0);
-        } else {
-            av_opt_set_int(resampler, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
-        }
-
-        // Get the sample rate of the audio device
-        // (amount of audio samples processed in one second)
-        // For the AC97 audio hardware this will be 48000 Hz
-        av_opt_set_int(resampler, "out_sample_rate", ctx->m_pcmSampleRate, 0);
-
-        // Output is signed 16-bit PCM packed
-        av_opt_set_sample_fmt(resampler, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
-        assert(ctx->m_pcmBitDepth == 16);
-        int outputSampleSize = 16 / 8;
-
-        // Reset the sample buffer read and write indexes
-        ctx->lastSampleBuffer = 0;
-        ctx->currentSampleBuffer = 0;
-        ctx->numValidBuffers = 0;
-
-        // Reset all sample buffers,
-        // some may still contain old audio data
-        ctx->FlushSampleBuffers();
-
-        // Called on every return path
-        auto cleanup = [&]() {
-            // Set the decoder as not running
-            std::unique_lock lockStatus{ctx->m_decoderStatusLock};
-            ctx->m_isDecoderRunning = false;
-            ctx->numValidBuffers = 0;
-
-            // Free the resampler
-            swr_free(&resampler);
-
-            // Free the codec and format contexts
-            avcodec_free_context(&ctx->m_avcodec);
-
-            avformat_free_context(ctx->m_avfmt);
-            ctx->m_avfmt = nullptr;
-
-            // Unlock the decoder lock letting the other threads
-            // know this thread is almost done
-            ctx->m_decoderLock.unlock();
-        };
-
-        if (swr_init(resampler)) {
-            fprintf(stderr, "Could not initialize software resampler\n");
-
-            cleanup();
-            continue;
-        }
-
-        // Get the player thread to start playing audio
-        ctx->PlaybackStart();
-
-        AVPacket* packet = av_packet_alloc();
-        AVFrame* frame = av_frame_alloc();
-
-        int frameResult = 0;
-        while (ctx->m_isDecoderRunning && (frameResult = av_read_frame(ctx->m_avfmt, packet)) >= 0) {
-            if (packet->stream_index != ctx->m_currentStreamIndex) {
-                // May be a video stream such as album art, drop it
-                av_packet_unref(packet);
-                continue;
-            }
-
-            // Send the packet to the decoder
-            if (int ret = avcodec_send_packet(ctx->m_avcodec, packet); ret) {
-                Lemon::Logger::Error("Could not send packet for decoding");
-                break;
-            }
-
-            // A packet is considered invalid if we need to seek
-            // or the decoder is not marked as running
-            auto isPacketInvalid = [ctx]() -> bool { return ctx->m_requestSeek || !ctx->m_isDecoderRunning; };
-
-            ssize_t ret = 0;
-            while (!isPacketInvalid() && ret >= 0) {
-                // Decodes the audio
-                ret = avcodec_receive_frame(ctx->m_avcodec, frame);
-                if (ret == AVERROR_EOF || ret == AVERROR(EAGAIN)) {
-                    // Get the next packet and retry
-                    break;
-                } else if (ret) {
-                    Lemon::Logger::Error("Could not decode frame", ret);
-                    // Stop decoding audio
-                    ctx->m_isDecoderRunning = false;
-                    break;
-                }
-
-                int nextValidBuffer;
-                auto hasBuffer = [&]() -> bool {
-                    return nextValidBuffer != ctx->currentSampleBuffer || !ctx->m_isDecoderRunning ||
-                           ctx->numValidBuffers == 0 || isPacketInvalid();
-                };
-
-                nextValidBuffer = ctx->DecoderNextBuffer();
-
-                // Prevent the player thread from taking another buffer until the new audio data
-                // is added
-                std::unique_lock lock{ctx->sampleBuffersLock};
-                ctx->decoderWaitCondition.wait(lock, hasBuffer);
-
-                // If a seek has been requested or m_decoderIsRunning has been set to false
-                // the current packet is no longer valid
-                if (isPacketInvalid()) {
-                    av_frame_unref(frame);
-                    break;
-                }
-
-                auto* buffer = &ctx->sampleBuffers[nextValidBuffer];
-                // Get the amount of audio samples which will be produced by the audio sampler
-                // as the sample rate of the output device likely does not match
-                // the source audio.
-                int samplesToWrite =
-                    av_rescale_rnd(swr_get_delay(resampler, ctx->m_avcodec->sample_rate) + frame->nb_samples,
-                                   ctx->m_pcmSampleRate, ctx->m_avcodec->sample_rate, AV_ROUND_UP);
-
-                // Check if we can fit our samples in the current sample buffer
-                // Increment lastSampleBuffer if the buffer is full
-                while (samplesToWrite + buffer->samples > ctx->samplesPerBuffer) {
-                    ctx->lastSampleBuffer = nextValidBuffer;
-                    ctx->numValidBuffers++;
-
-                    nextValidBuffer = ctx->DecoderNextBuffer();
-                    // hasBuffer checks if there is a free sample buffer to take.
-                    // Otherwise, release the lock until hasBuffer returns true
-                    // so the player thread can process the existing audio in the buffers
-                    ctx->decoderWaitCondition.wait(lock, hasBuffer);
-                    if (isPacketInvalid()) {
-                        av_frame_unref(frame);
-                        break;
-                    }
-
-                    buffer = &ctx->sampleBuffers[nextValidBuffer];
-                }
-                // We have found a buffer, let the player thread continue
-                lock.unlock();
-
-                // Get the position in the buffer
-                uint8_t* outputData = buffer->data + (buffer->samples * outputSampleSize) * 2;
-                // Resample the audio to match the output device
-                int samplesWritten = swr_convert(resampler, &outputData, (int)(ctx->samplesPerBuffer - buffer->samples),
-                                                 (const uint8_t**)frame->extended_data, frame->nb_samples);
-                buffer->samples += samplesWritten;
-
-                // Set the timestamp for the buffer
-                buffer->timestamp = frame->best_effort_timestamp / ctx->m_currentStream->time_base.den;
-                av_frame_unref(frame);
-            }
-
-            av_packet_unref(packet);
-
-            // If the decoder should still run
-            // and m_requestSeek is true, seek to a new point in the audio
-            if (ctx->m_isDecoderRunning && ctx->m_requestSeek) {
-                // Since all buffers need to be reset to prevent playing old audio,
-                // lock the sample buffers so the player thread does not interfere
-                std::scoped_lock lock{ctx->sampleBuffersLock};
-                ctx->numValidBuffers = 0;
-                ctx->lastSampleBuffer = ctx->currentSampleBuffer;
-                // Set the amount of samples in each buffer to zero
-                ctx->FlushSampleBuffers();
-
-                // Flush the decoder and resampler buffers
-                avcodec_flush_buffers(ctx->m_avcodec);
-                swr_convert(resampler, NULL, 0, NULL, 0);
-
-                // Seek to the new timestamp
-                float timestamp = ctx->m_seekTimestamp;
-                av_seek_frame(ctx->m_avfmt, ctx->m_currentStreamIndex,
-                              (long)(timestamp / av_q2d(ctx->m_currentStream->time_base)), 0);
-
-                ctx->m_lastTimestamp = ctx->m_seekTimestamp;
-                // Set m_requestSeek to false indicating that seeking has finished
-                ctx->m_requestSeek = false;
-            }
-        }
-
-        // If we got to the end of file (did not encounter errors)
-        // let the main thread know to play the next track
-        if (frameResult == AVERROR_EOF) {
-            // We finished playing
-            ctx->m_shouldPlayNextTrack = true;
-        }
-        cleanup();
-    }
-
-    // Wait for playerThread to finish
-    playerThread.join();
 }
 
 AudioContext::AudioContext() {
@@ -380,7 +175,7 @@ AudioContext::AudioContext() {
         sampleBuffers[i].samples = 0;
     }
 
-    m_decoderThread = std::thread(DecodeAudio, this);
+    m_decoderThread = std::thread(&AudioContext::DecodeAudio, this);
 }
 
 AudioContext::~AudioContext() {
@@ -388,6 +183,270 @@ AudioContext::~AudioContext() {
 
     // Wait for playback to stop before exiting
     PlaybackStop();
+}
+
+// Turns encoded audio data (such as MPEG-2 or FLAC) into raw audio samples
+void AudioContext::DecodeAudio() {
+    // Start the player thread
+    // The player thread sends audio to the driver
+    // whilst this thread decodes the audio data
+    std::thread playerThread(&AudioContext::PlayAudio, this);
+
+    while (!m_shouldThreadsDie) {
+        {
+            std::unique_lock lockStatus{m_decoderStatusLock};
+            decoderShouldRunCondition.wait(lockStatus, [this]() -> bool { return m_isDecoderRunning; });
+        }
+
+        m_decoderLock.lock();
+        m_resampler = swr_alloc();
+
+        // Check how many channels are in the audio file
+        if (m_avcodec->channels == 1) {
+            av_opt_set_int(m_resampler, "in_channel_layout", AV_CH_LAYOUT_MONO, 0);
+        } else {
+            if (m_avcodec->channels != 2) {
+                Lemon::Logger::Warning("Unsupported number of audio channels {}, taking first 2 and playing as stereo.",
+                                       m_avcodec->channels);
+            }
+
+            av_opt_set_int(m_resampler, "in_channel_layout", AV_CH_LAYOUT_STEREO, 0);
+        }
+        av_opt_set_int(m_resampler, "in_sample_rate", m_avcodec->sample_rate, 0);
+        av_opt_set_sample_fmt(m_resampler, "in_sample_fmt", m_avcodec->sample_fmt, 0);
+
+        // Check the channel count of the audio device,
+        // probably stereo (2 channel)
+        if (m_pcmChannels == 1) {
+            av_opt_set_int(m_resampler, "out_channel_layout", AV_CH_LAYOUT_MONO, 0);
+        } else {
+            av_opt_set_int(m_resampler, "out_channel_layout", AV_CH_LAYOUT_STEREO, 0);
+        }
+
+        // Get the sample rate of the audio device
+        // (amount of audio samples processed in one second)
+        // For the AC97 audio hardware this will be 48000 Hz
+        av_opt_set_int(m_resampler, "out_sample_rate", m_pcmSampleRate, 0);
+
+        // Output is signed 16-bit PCM packed
+        av_opt_set_sample_fmt(m_resampler, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+        assert(m_pcmBitDepth == 16);
+
+        // Reset the sample buffer read and write indexes
+        lastSampleBuffer = 0;
+        currentSampleBuffer = 0;
+        numValidBuffers = 0;
+
+        // Reset all sample buffers,
+        // some may still contain old audio data
+        FlushSampleBuffers();
+
+        if (swr_init(m_resampler)) {
+            // If we failed to initialize the resampler,
+            // set decoder as not running, preventing any audio from being decoded
+            Lemon::Logger::Error("Could not initialize software resampler");
+            
+            std::unique_lock lockStatus{m_decoderStatusLock};
+            m_isDecoderRunning = false;
+        } else {
+            // Get the player thread to start playing audio
+            PlaybackStart();
+        }
+
+        AVPacket* packet = av_packet_alloc();
+        AVFrame* frame = av_frame_alloc();
+
+        int frameResult = 0;
+        while (m_isDecoderRunning && (frameResult = av_read_frame(m_avfmt, packet)) >= 0) {
+            if (packet->stream_index != m_currentStreamIndex) {
+                // May be a video stream such as album art, drop it
+                av_packet_unref(packet);
+                continue;
+            }
+
+            // Send the packet to the decoder
+            if (int ret = avcodec_send_packet(m_avcodec, packet); ret) {
+                Lemon::Logger::Error("Could not send packet for decoding");
+                break;
+            }
+
+            ssize_t ret = 0;
+            while (!IsDecoderPacketInvalid() && ret >= 0) {
+                // Decodes the audio
+                ret = avcodec_receive_frame(m_avcodec, frame);
+                if (ret == AVERROR_EOF || ret == AVERROR(EAGAIN)) {
+                    // Get the next packet and retry
+                    break;
+                } else if (ret) {
+                    Lemon::Logger::Error("Could not decode frame: {}", ret);
+                    // Stop decoding audio
+                    m_isDecoderRunning = false;
+                    break;
+                }
+
+                DecoderDecodeFrame(frame);
+                
+                av_frame_unref(frame);
+            }
+
+            av_packet_unref(packet);
+
+            // If the decoder should still run
+            // and m_requestSeek is true, seek to a new point in the audio
+            if (m_isDecoderRunning && m_requestSeek) {
+                DecoderDoSeek();
+            }
+        }
+
+        // If we got to the end of file (did not encounter errors)
+        // let the main thread know to play the next track
+        if (frameResult == AVERROR_EOF) {
+            // We finished playing
+            m_shouldPlayNextTrack = true;
+        }
+
+        // Clean up after ourselves
+        // Set the decoder as not running
+        std::unique_lock lockStatus{m_decoderStatusLock};
+        m_isDecoderRunning = false;
+        numValidBuffers = 0;
+
+        // Free the resampler
+        swr_free(&m_resampler);
+        m_resampler = nullptr;
+
+        // Free the codec and format contexts
+        avcodec_free_context(&m_avcodec);
+
+        avformat_free_context(m_avfmt);
+        m_avfmt = nullptr;
+
+        // Unlock the decoder lock letting the other threads
+        // know this thread is almost done
+        m_decoderLock.unlock();
+    }
+
+    // Wait for playerThread to finish
+    playerThread.join();
+}
+
+void AudioContext::DecoderDecodeFrame(AVFrame* frame) {
+    // Bytes per audio sample
+    int outputSampleSize = (m_pcmBitDepth / 8);
+
+    // If a seek has been requested or m_decoderIsRunning has been set to false
+    // the current packet is no longer valid
+    if (IsDecoderPacketInvalid()) {
+        return;
+    }
+
+    // Get the amount of audio samples which will be produced by the audio sampler
+    // as the sample rate of the output device likely does not match
+    // the source audio.
+    int samplesToWrite =
+        av_rescale_rnd(swr_get_delay(m_resampler, m_avcodec->sample_rate) + frame->nb_samples,
+                        m_pcmSampleRate, m_avcodec->sample_rate, AV_ROUND_UP);
+
+    int bufferIndex = DecoderGetNextSampleBufferOrWait(samplesToWrite);
+    if(bufferIndex < 0) {
+        // DecoderGetNextSampleBufferOrWait will return a value < 0
+        // if the packet is invalid, so just return
+        return;
+    }
+
+    auto* buffer = &sampleBuffers[bufferIndex];
+
+    // Get the position in the buffer:
+    // samples * outputSampleSize * pcmChannels
+    // Where samples is the number of samples per channel,
+    // outputSampleSize is the size of each sample in bytes
+    // and pcmChannels is the number of channels for the audio output
+    uint8_t* outputData = buffer->data + (buffer->samples * outputSampleSize) * m_pcmChannels;
+
+    // Resample the audio to match the output device
+    int samplesWritten = swr_convert(m_resampler, &outputData, (int)(samplesPerBuffer - buffer->samples),
+                                        (const uint8_t**)frame->extended_data, frame->nb_samples);
+    buffer->samples += samplesWritten;
+
+    // Set the timestamp for the buffer
+    buffer->timestamp = frame->best_effort_timestamp / m_currentStream->time_base.den;
+}
+
+int AudioContext::DecoderGetNextSampleBufferOrWait(int samplesToWrite) {
+    // Sample buffers are in a ring buffer, which is circular queue of buffers.
+    // This means that when the end of the queue is reached, 
+    // we wrap around to the beginning.
+    int nextValidBuffer = (lastSampleBuffer + 1) % AUDIOCONTEXT_NUM_SAMPLE_BUFFERS;
+
+    // Checks whether or not to keep waiting for a buffer.
+    // Checks for three cases.
+    //
+    // 1. Checks if the next valid buffer (buffer after lastSampleBuffer) is
+    // not ahead of PlayAudio, meaning the buffers are not full.
+    // 2. numValidBuffers is 0 meaning that there is no audio data at all in the buffers
+    // 3. The current packet is invalid
+    auto hasBuffer = [&]() -> bool {
+        return nextValidBuffer != currentSampleBuffer || numValidBuffers == 0 || IsDecoderPacketInvalid();
+    };
+
+    // Prevent the player thread from taking another buffer until the new audio data
+    // is added
+    std::unique_lock lock{sampleBuffersLock};
+    // Lock the sample buffers, check if hasBuffer() is true, if it is false release the lock
+    // and wait.
+    decoderWaitCondition.wait(lock, hasBuffer);
+
+    // If a seek has been requested or m_decoderIsRunning has been set to false
+    // the current packet is no longer valid
+    if (IsDecoderPacketInvalid()) {
+        return -1;
+    }
+
+    auto* buffer = &sampleBuffers[nextValidBuffer];
+
+    // Check if we can fit our samples in the current sample buffer
+    // Increment lastSampleBuffer if the buffer is full
+    if (samplesToWrite + buffer->samples > samplesPerBuffer) {
+        lastSampleBuffer = nextValidBuffer;
+        numValidBuffers++;
+
+        nextValidBuffer = (lastSampleBuffer + 1) % AUDIOCONTEXT_NUM_SAMPLE_BUFFERS;
+        // hasBuffer checks if nextValidBuffer is a free sample buffer to take.
+        // Otherwise, release the lock until hasBuffer returns true
+        // so the player thread can process the existing audio in the buffers
+        decoderWaitCondition.wait(lock, hasBuffer);
+        if (IsDecoderPacketInvalid()) {
+            return -1;
+        }
+    }
+
+    // We have found a buffer, let the player thread continue
+    return nextValidBuffer;
+}
+
+void AudioContext::DecoderDoSeek() {
+    assert(m_requestSeek);
+
+    // Since all buffers need to be reset to prevent playing old audio,
+    // lock the sample buffers so the player thread does not interfere
+    std::scoped_lock lock{sampleBuffersLock};
+    numValidBuffers = 0;
+    lastSampleBuffer = currentSampleBuffer;
+    // Set the amount of samples in each buffer to zero
+    FlushSampleBuffers();
+
+    // Flush the decoder and resampler buffers
+    avcodec_flush_buffers(m_avcodec);
+    swr_convert(m_resampler, NULL, 0, NULL, 0);
+
+    // Seek to the new timestamp
+    float timestamp = m_seekTimestamp;
+    av_seek_frame(m_avfmt, m_currentStreamIndex,
+                    (long)(timestamp / av_q2d(m_currentStream->time_base)), 0);
+
+    m_lastTimestamp = m_seekTimestamp;
+    // Set m_requestSeek to false indicating that seeking has finished
+    m_requestSeek = false;
 }
 
 float AudioContext::PlaybackProgress() const {
