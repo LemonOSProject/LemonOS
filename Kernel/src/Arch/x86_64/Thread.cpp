@@ -319,10 +319,6 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout) {
 void Thread::Sleep(long us) {
     assert(CheckInterrupts());
 
-    long t = Timer::UsecondsSinceBoot() + us;
-    while(Timer::UsecondsSinceBoot() < t) asm("pause");
-    return;
-
     blockTimedOut = false;
 
     Timer::TimerCallback timerCallback = [](void* t) -> void {
@@ -357,7 +353,8 @@ void Thread::Sleep(long us) {
 
 void Thread::Unblock() {
     assert(state != ThreadStateDying);
-    if(CheckInterrupts())
+    bool intsWereEnabled = CheckInterrupts();
+    if(intsWereEnabled)
         acquireLockIntDisable(&stateLock);
     else
         acquireLock(&stateLock);
@@ -367,5 +364,6 @@ void Thread::Unblock() {
         state = ThreadStateRunning;
 
     releaseLock(&stateLock);
-    asm volatile("sti");
+    if(intsWereEnabled)
+        asm volatile("sti");
 }
