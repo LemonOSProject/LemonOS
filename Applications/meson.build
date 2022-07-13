@@ -87,6 +87,11 @@ audioplayer_src = [
     'AudioPlayer/Main.cpp'
 ]
 
+videoplayer_src = [
+    'VideoPlayer/StreamContext.cpp',
+    'VideoPlayer/Main.cpp'
+]
+
 welcome_src = [
     'Welcome/Main.cpp'
 ]
@@ -162,6 +167,10 @@ app_devmgr = executable('devmgr.lef', devicemanager_src,
 app_audioplayer = executable('audioplayer.lef', audioplayer_src,
     cpp_args : application_cpp_args,
     link_args : [app_libraries, '-lavcodec', '-lavformat', '-lavutil', '-lswresample'],
+    install : true)
+videoplayer = executable('videoplayer.lef', videoplayer_src,
+    cpp_args : application_cpp_args,
+    link_args : [app_libraries, '-lavcodec', '-lavformat', '-lavutil', '-lswresample', '-lswscale'],
     install : true)
 app_welcome = executable('welcome.lef', welcome_src, 
     cpp_args : application_cpp_args,

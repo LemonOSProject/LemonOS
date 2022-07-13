@@ -213,6 +213,8 @@ public:
                     // until we get a different track
                     while (newTrack == m_trackIndex)
                         newTrack = rand() % m_trackList.size();
+                } else {
+                    newTrack = 0;
                 }
 
                 PlayTrack(newTrack);

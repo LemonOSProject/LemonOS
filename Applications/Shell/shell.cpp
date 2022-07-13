@@ -22,6 +22,7 @@ std::unordered_map<std::string, std::string> fileAssociations = {
     {"flac", "/system/bin/audioplayer.lef"},
     {"png", "/system/bin/imgview.lef"},
     {"bmp", "/system/bin/imgview.lef"},
+    {"mkv", "/system/bin/videoplayer.lef"},
 };
 
 ShellInstance::ShellInstance(const Lemon::Handle& svc, const char* name) : shellSrv(svc, name, 512) {
