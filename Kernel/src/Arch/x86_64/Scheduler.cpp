@@ -294,10 +294,10 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
         cpu->currentThread->cpu = -1;
         cpu->currentThread = cpu->idleThread;
     } else {
+        asm volatile("fxsave64 (%0)" ::"r"((uintptr_t)cpu->currentThread->fxState) : "memory");
+
         if (__builtin_expect(cpu->currentThread->parent != cpu->idleProcess, 1)) {
             cpu->currentThread->ticksGivenSinceBalance += cpu->currentThread->timeSliceDefault;
-
-            asm volatile("fxsave64 (%0)" ::"r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 
             cpu->currentThread->registers = *r;
 
@@ -320,16 +320,16 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
         // Check if we could find an unblocked thread
         if (cpu->currentThread->state & ThreadStateBlocked) {
                 cpu->currentThread = cpu->idleThread;
-        } /* else {
+        } /*else if(SMP::processorCount > 1) {
             // See if we can find a better thread
             // where better is the thread w/ least CPU time
             Thread* first = cpu->currentThread;
             Thread* leastHungry = cpu->currentThread->next;
 
             cpu->currentThread = leastHungry;
-            //do {
+            do {
                 if (leastHungry->state & ThreadStateBlocked) {
-                    //Thread* first = leastHungry;
+                    Thread* first = leastHungry;
 
                     do {
                         leastHungry = leastHungry->next;
@@ -337,7 +337,7 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
 
                     if (leastHungry->state & ThreadStateBlocked) {
                         cpu->currentThread = cpu->idleThread;
-                        //break;
+                        break;
                     }
                 }
 
@@ -350,9 +350,8 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
                 }
 
                 leastHungry = leastHungry->next;
-                //Log::Info("pid %d (c: %d)", leastHungry->parent->PID(), cpu->currentThread->parent->PID());
             } while(leastHungry != first);
-        } */
+        }*/
     }
 
     releaseLock(&cpu->runQueueLock);

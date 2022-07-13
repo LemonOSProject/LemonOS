@@ -3539,14 +3539,16 @@ long SysSignalReturn(RegisterContext* r) {
     threadStack++;                     // Discard signal handler address
     threadStack++;                     // Discard padding
     th->signalMask = *(threadStack++); // Get the old signal mask
+
+    asm volatile("fxrstor64 (%0)" ::"r"((uintptr_t)threadStack) : "memory");
+    threadStack += 512 / sizeof(uint64_t);
+
     // Do not allow the thread to modify CS or SS
     memcpy(r, threadStack, offsetof(RegisterContext, cs));
     r->rsp = reinterpret_cast<RegisterContext*>(threadStack)->rsp;
     // Only allow the following to be changed:
     // Carry, parity, aux carry, zero, sign, direction, overflow
     r->rflags = reinterpret_cast<RegisterContext*>(threadStack)->rflags & 0xcd5;
-
-    // TODO: Signal FPU state save and restore
 
     return r->rax; // Ensure we keep the RAX value from before
 }

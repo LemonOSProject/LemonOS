@@ -44,6 +44,7 @@ Thread::Thread(Process* _parent, pid_t _tid)
     fxState = Memory::KernelAllocate4KPages(1); // Allocate Memory for the FPU/Extended Register State
     Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(), (uintptr_t)fxState, 1);
 
+    memset(fxState, 0, 4096);
     ((fx_state_t*)fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
     ((fx_state_t*)fxState)->mxcsrMask = 0xffbf;
     ((fx_state_t*)fxState)->fcw = 0x33f; // Default FPU Control Word State
@@ -166,6 +167,10 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
     // Make sure to subtract the 128-byte redzone
     uint64_t* stack = reinterpret_cast<uint64_t*>((regs->rsp & (~0xfULL)) - 128 - sizeof(RegisterContext));
     *reinterpret_cast<RegisterContext*>(stack) = *regs;
+
+    // Save FP regs
+    stack -= 512 / sizeof(uint64_t);
+    asm volatile("fxsave64 (%0)" ::"r"((uintptr_t)stack) : "memory");
 
     *(--stack) = 0; // Pad out the stack
     *(--stack) = oldSignalMask;

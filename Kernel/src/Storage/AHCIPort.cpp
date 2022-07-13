@@ -321,7 +321,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
     int spin = 0;
 
     int slot = FindCmdSlot();
-    if (slot == 1) {
+    if (slot == -1) {
         Log::Warning("[SATA] Could not find command slot!");
 
         portLock.Signal();
