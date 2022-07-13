@@ -5,6 +5,8 @@
 #include <Lemon/Core/Logger.h>
 #include <Lemon/Graphics/Graphics.h>
 
+//#define COMPOSITOR_DEBUG
+
 using namespace Lemon;
 
 Compositor::Compositor(const Surface& displaySurface) : m_displaySurface(displaySurface) {
@@ -147,17 +149,10 @@ void Compositor::Render() {
         Lemon::Graphics::DrawString(std::to_string(m_fRate).c_str(), 0, 0, 255, 255, 255, &m_renderSurface);
     }
 
-    if(m_invalidateAll) {
-        // Copy the render surface to the display surface
-        m_displaySurface.Blit(&m_renderSurface);
-        m_invalidateAll = false;
-    } else for(auto& rect : m_renderClipRects) {
-        // Only copy invalid rects to the framebuffer
-        if(rect.invalid) {
-            m_displaySurface.Blit(&m_renderSurface, rect.rect.pos, rect.rect);
-            rect.invalid = false;
-        }
-    }
+    // Copy the render surface to the display surface
+    // Generally actually faster than copying each individual clip region
+    m_displaySurface.Blit(&m_renderSurface);
+    m_invalidateAll = false;
 
     m_renderMutex.unlock();
 }
