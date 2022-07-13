@@ -24,12 +24,14 @@ int XHCIController::Initialize() {
         return 1;
     }
 
-    PCI::EnumerateGenericPCIDevices(xhciClassCode, xhciSubclass, [](const PCIInfo& dev) -> void {
+    return 0;
+
+    /*PCI::EnumerateGenericPCIDevices(xhciClassCode, xhciSubclass, [](const PCIInfo& dev) -> void {
         if (dev.progIf == xhciProgIF) {
             xhciControllers.add_back(new XHCIController(dev));
         }
     });
-    return 0;
+    return 0;*/
 }
 
 XHCIController::XHCIController(const PCIInfo& dev) : PCIDevice(dev) {

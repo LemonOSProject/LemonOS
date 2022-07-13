@@ -17,6 +17,8 @@ private:
     lock_t m_lock = 0;
 };
 
+lock_t allocatorInstanceLock = 0;
+
 struct KernelAllocator {
     uintptr_t map(size_t len) {
         size_t pageCount = (len + PAGE_SIZE_4K - 1) / PAGE_SIZE_4K;
@@ -54,6 +56,8 @@ struct KernelAllocator {
 KernelAllocator* allocator = nullptr;
 
 frg::slab_allocator<KernelAllocator, Lock>& Allocator() {
+    acquireLock(&allocatorInstanceLock);
+
     // This is a hack to get around the allocator not being initialized
     if (!allocator) {
         size_t pageCount = (sizeof(KernelAllocator) + PAGE_SIZE_4K - 1) / PAGE_SIZE_4K;
@@ -67,6 +71,8 @@ frg::slab_allocator<KernelAllocator, Lock>& Allocator() {
 
         new (allocator) KernelAllocator;
     }
+
+    releaseLock(&allocatorInstanceLock);
 
     return allocator->slabAllocator;
 }

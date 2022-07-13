@@ -5,7 +5,6 @@
 #include <Math.h>
 
 namespace Audio {
-void AC97IRQHandler(void* ctx, RegisterContext*) { ((AC97Controller*)ctx)->OnIRQ(); }
 
 AC97Controller::AC97Controller(const PCIInfo& info) : PCIDevice(info) {
     SetDeviceName("AC97 Audio Controller");
@@ -77,10 +76,6 @@ AC97Controller::AC97Controller(const PCIInfo& info) : PCIDevice(info) {
     m_samplesPerBuffer = PAGE_SIZE_4K / m_pcmSampleSize / m_pcmNumChannels;
 
     outportl(m_nabmPort + PO_BufferDescriptorList, bufferDescriptorListPhys);
-
-    // uint8_t irq = AllocateVector(PCIVectorAny);
-    // IDT::RegisterInterruptHandler(irq, AC97IRQHandler, this);
-
     outportl(m_nabmPort + NBGlobalControl, globalControl);
 
     uint8_t transferControl = inportb(nabmTransferControl);
@@ -167,9 +162,7 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size, boo
 
         int samplesWritten = 0;
         {
-            // Disable interrupts in case IRQ fires,
-            // interrupts are already disabled
-            ScopedSpinLock<true> lockController(m_lock);
+            ScopedSpinLock lockController(m_lock);
 
             int currentBuffer = inportb(m_nabmPort + PO_CurrentEntry);
             int lastValidEntry = inportb(m_nabmPort + PO_LastValidEntry);

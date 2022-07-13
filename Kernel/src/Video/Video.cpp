@@ -203,13 +203,24 @@ void DrawRect(unsigned int x, unsigned int y, unsigned int width, unsigned int h
     }
 }
 
-void DrawChar(char c, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b) {
-    uint32_t colour = r << 16 | g << 8 | b;
-    for (unsigned i = 0; i < 8; i++) {
-        int row = defaultFont[(int)c][i];
-        for (unsigned j = 0; j < 8; j++) {
-            if ((row & (1 << j)) >> j) {
-                ((uint32_t*)videoMemory)[((y + i) * screenWidth) + x + j] = colour;
+void DrawChar(char c, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, int vscale, int hscale) {
+    if(vscale <= 1 && hscale <= 1) {
+        uint32_t colour = r << 16 | g << 8 | b;
+        for (unsigned i = 0; i < 8; i++) {
+            int row = defaultFont[(int)c][i];
+            for (unsigned j = 0; j < 8; j++) {
+                if ((row & (1 << j)) >> j) {
+                    ((uint32_t*)videoMemory)[((y + i) * screenWidth) + x + j] = colour;
+                }
+            }
+        }
+    } else {
+        for (unsigned i = 0; i < 8; i ++) {
+            int row = defaultFont[(int)c][i];
+            for (unsigned j = 0; j < 8; j++) {
+                if ((row & (1 << j)) >> j) {
+                    DrawRect(x + j * hscale, y + i * vscale, hscale, vscale, r, g, b);
+                }
             }
         }
     }
@@ -238,11 +249,12 @@ void DrawBitmapImage(unsigned int x, unsigned int y, unsigned int w, unsigned in
     }
 }
 
-void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b) {
+void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, int vscale, int hscale) {
     int xOffset = 0;
+    int step = 8 * hscale;
     while (*str != 0) {
-        Video::DrawChar(*str, x + xOffset, y, r, g, b);
-        xOffset += 8;
+        Video::DrawChar(*str, x + xOffset, y, r, g, b, vscale, hscale);
+        xOffset += step;
         str++;
     }
 }
