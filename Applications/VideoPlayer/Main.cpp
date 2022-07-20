@@ -20,8 +20,12 @@ int main(int argc, char** argv) {
 
     StreamContext* ctx = new StreamContext();
 
-    window = new Window("Video Player", {1280, 720}, 0, WindowType::Basic);
-    ctx->SetDisplaySurface(&window->surface);
+    window = new Window("Video Player", {1280, 720}, WINDOW_FLAGS_RESIZABLE, WindowType::Basic);
+    
+    ctx->surfaceLock.lock();
+    ctx->SetDisplaySurface(&window->surface, window->GetRect());
+    ctx->surfaceLock.unlock();
+    
     ctx->FlipBuffers = FlipBuffers;
 
     if(int e = ctx->PlayTrack(argv[1]); e) {
@@ -44,6 +48,11 @@ int main(int argc, char** argv) {
                 } else {
                     ctx->PlaybackStart();
                 }
+            } else if(ev.event == EventWindowResize) {
+                ctx->surfaceLock.lock();
+                window->Resize(ev.resizeBounds);
+                ctx->SetDisplaySurface(&window->surface, window->GetRect());
+                ctx->surfaceLock.unlock();
             }
         }
     }

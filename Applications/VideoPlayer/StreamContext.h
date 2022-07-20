@@ -4,6 +4,8 @@
 #include <mutex>
 #include <thread>
 
+#include <Lemon/Graphics/Rect.h>
+
 #define StreamContext_NUM_SAMPLE_BUFFERS 16
 
 class StreamContext {
@@ -21,7 +23,7 @@ public:
     StreamContext();
     ~StreamContext();
 
-    void SetDisplaySurface(struct Surface* surf);
+    void SetDisplaySurface(struct Surface* surf, Rect blitRect);
 
     inline bool HasLoadedAudio() const { return m_isDecoderRunning; }
     inline bool IsAudioPlaying() const { return m_shouldPlayAudio; }
@@ -56,6 +58,9 @@ public:
     std::condition_variable playerShouldRunCondition;
     int numValidBuffers;
 
+    // Lock when using/changing m_surface
+    std::mutex surfaceLock;
+
     void(*FlipBuffers)();
 
 private:
@@ -89,6 +94,8 @@ private:
             sampleBuffers[i].timestamp = 0;
         }
     }
+
+    void InitializeRescaler();
 
     // File descriptor for pcm output
     int m_pcmOut;
@@ -134,4 +141,6 @@ private:
     int m_audioStreamIndex = 0;
 
     struct Surface* m_surface;
+    // Where on the surface to blit to
+    Rect m_surfaceBlitRegion;
 };

@@ -1,8 +1,8 @@
 #include "StreamContext.h"
 
 #include <Lemon/Core/Logger.h>
-#include <Lemon/System/ABI/Audio.h>
 #include <Lemon/Graphics/Surface.h>
+#include <Lemon/System/ABI/Audio.h>
 
 #include <assert.h>
 #include <errno.h>
@@ -187,8 +187,15 @@ StreamContext::~StreamContext() {
     PlaybackStop();
 }
 
-void StreamContext::SetDisplaySurface(Surface* s) {
+void StreamContext::SetDisplaySurface(Surface* s, Rect blitRect) {
+    std::unique_lock lockStatus{m_decoderStatusLock};
+
     m_surface = s;
+    m_surfaceBlitRegion = blitRect;
+
+    if (m_isDecoderRunning) {
+        InitializeRescaler();
+    }
 }
 
 void StreamContext::DecodeVideo(AVPacket* packet) {
@@ -214,11 +221,15 @@ void StreamContext::DecodeVideo(AVPacket* packet) {
             break;
         }
 
+        std::unique_lock lockSurface{surfaceLock};
+
         // Decode video frame
         int stride = 4 * m_surface->width;
-        sws_scale(m_rescaler, frame->data, frame->linesize, 0, m_vcodec->height, &m_surface->buffer, &stride);
+        uint8_t* buffer = m_surface->buffer + m_surfaceBlitRegion.y * stride + m_surfaceBlitRegion.x * 4;
+
+        sws_scale(m_rescaler, frame->data, frame->linesize, 0, m_vcodec->height, &buffer, &stride);
         FlipBuffers();
-        
+
         av_frame_unref(frame);
     }
 
@@ -250,7 +261,7 @@ void StreamContext::DecodeAudio(AVPacket* packet) {
         }
 
         DecoderDecodeFrame(frame);
-        
+
         av_frame_unref(frame);
     }
 
@@ -277,8 +288,10 @@ void StreamContext::Decode() {
 
         m_decoderLock.lock();
         m_resampler = swr_alloc();
-        m_rescaler = sws_getContext(m_vcodec->width, m_vcodec->height, m_vcodec->pix_fmt, m_surface->width,
-            m_surface->height, AV_PIX_FMT_RGB32, SWS_BILINEAR, NULL, NULL, NULL);
+
+        surfaceLock.lock();
+        InitializeRescaler();
+        surfaceLock.unlock();
 
         // Check how many channels are in the audio file
         if (m_acodec->channels == 1) {
@@ -324,7 +337,7 @@ void StreamContext::Decode() {
             // If we failed to initialize the resampler,
             // set decoder as not running, preventing any audio from being decoded
             Lemon::Logger::Error("Could not initialize software resampler");
-            
+
             std::unique_lock lockStatus{m_decoderStatusLock};
             m_isDecoderRunning = false;
         } else {
@@ -391,12 +404,11 @@ void StreamContext::DecoderDecodeFrame(AVFrame* frame) {
     // Get the amount of audio samples which will be produced by the audio sampler
     // as the sample rate of the output device likely does not match
     // the source audio.
-    int samplesToWrite =
-        av_rescale_rnd(swr_get_delay(m_resampler, m_acodec->sample_rate) + frame->nb_samples,
-                        m_pcmSampleRate, m_acodec->sample_rate, AV_ROUND_UP);
+    int samplesToWrite = av_rescale_rnd(swr_get_delay(m_resampler, m_acodec->sample_rate) + frame->nb_samples,
+                                        m_pcmSampleRate, m_acodec->sample_rate, AV_ROUND_UP);
 
     int bufferIndex = DecoderGetNextSampleBufferOrWait(samplesToWrite);
-    if(bufferIndex < 0) {
+    if (bufferIndex < 0) {
         // DecoderGetNextSampleBufferOrWait will return a value < 0
         // if the packet is invalid, so just return
         return;
@@ -413,7 +425,7 @@ void StreamContext::DecoderDecodeFrame(AVFrame* frame) {
 
     // Resample the audio to match the output device
     int samplesWritten = swr_convert(m_resampler, &outputData, (int)(samplesPerBuffer - buffer->samples),
-                                        (const uint8_t**)frame->extended_data, frame->nb_samples);
+                                     (const uint8_t**)frame->extended_data, frame->nb_samples);
     buffer->samples += samplesWritten;
 
     // Set the timestamp for the buffer
@@ -422,7 +434,7 @@ void StreamContext::DecoderDecodeFrame(AVFrame* frame) {
 
 int StreamContext::DecoderGetNextSampleBufferOrWait(int samplesToWrite) {
     // Sample buffers are in a ring buffer, which is circular queue of buffers.
-    // This means that when the end of the queue is reached, 
+    // This means that when the end of the queue is reached,
     // we wrap around to the beginning.
     int nextValidBuffer = (lastSampleBuffer + 1) % StreamContext_NUM_SAMPLE_BUFFERS;
 
@@ -489,12 +501,22 @@ void StreamContext::DecoderDoSeek() {
 
     // Seek to the new timestamp
     float timestamp = m_seekTimestamp;
-    av_seek_frame(m_avfmt, m_audioStreamIndex,
-                    (long)(timestamp / av_q2d(m_audioStream->time_base)), 0);
+    av_seek_frame(m_avfmt, m_audioStreamIndex, (long)(timestamp / av_q2d(m_audioStream->time_base)), 0);
 
     m_lastTimestamp = m_seekTimestamp;
     // Set m_requestSeek to false indicating that seeking has finished
     m_requestSeek = false;
+}
+
+void StreamContext::InitializeRescaler() {
+    assert(m_isDecoderRunning && m_vcodec);
+
+    if (m_rescaler) {
+        sws_freeContext(m_rescaler);
+    }
+
+    m_rescaler = sws_getContext(m_vcodec->width, m_vcodec->height, m_vcodec->pix_fmt, m_surface->width,
+                                m_surface->height, AV_PIX_FMT_RGB32, SWS_BILINEAR, NULL, NULL, NULL);
 }
 
 float StreamContext::PlaybackProgress() const {
@@ -565,7 +587,7 @@ int StreamContext::PlayTrack(std::string file) {
     }
 
     // Update track metadata in case the file has changed
-    //GetTrackInfo(m_avfmt, info);
+    // GetTrackInfo(m_avfmt, info);
 
     // Data is organised into 'streams'
     // Search for the 'best' audio stream
