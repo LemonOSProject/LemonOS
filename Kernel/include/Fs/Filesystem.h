@@ -11,7 +11,6 @@
 #include <Types.h>
 #include <Objects/KObject.h>
 
-#include <abi-bits/abi.h>
 #include <abi-bits/fcntl.h>
 #include <abi-bits/uid_t.h>
 
@@ -63,19 +62,6 @@
 #define O_RDWR 3
 #define O_SEARCH 4
 #define O_WRONLY 5
-
-#define O_APPEND __MLIBC_O_APPEND
-#define O_CREAT __MLIBC_O_CREAT
-#define O_DIRECTORY __MLIBC_O_DIRECTORY
-#define O_EXCL __MLIBC_O_EXCL
-#define O_NOCTTY __MLIBC_O_NOCTTY
-#define O_NOFOLLOW __MLIBC_O_NOFOLLOW
-#define O_TRUNC __MLIBC_O_TRUNC
-#define O_NONBLOCK __MLIBC_O_NONBLOCK
-#define O_DSYNC __MLIBC_O_DSYNC
-#define O_RSYNC __MLIBC_O_RSYNC
-#define O_SYNC __MLIBC_O_SYNC
-#define O_CLOEXEC __MLIBC_O_CLOEXEC
 
 #define POLLIN 0x01
 #define POLLOUT 0x02
