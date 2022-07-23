@@ -6,11 +6,11 @@ cleanup1(){
 }
 trap 'cleanup1' 1
 
-echo "Formatting ${LOOKBACK_DEVICE}p2 as ext2"
-mkfs.ext2 -b 4096 "${LOOPBACK_DEVICE}"p2
+echo "Formatting ${LOOKBACK_DEVICE}p2 as FAT32"
+mkfs.vfat -F 32 "${LOOPBACK_DEVICE}"p2
 
-echo "Formatting ${LOOKBACK_DEVICE}p3 as FAT32"
-mkfs.vfat -F 32 "${LOOPBACK_DEVICE}"p3
+echo "Formatting ${LOOKBACK_DEVICE}p3 as ext2"
+mkfs.ext2 -b 4096 "${LOOPBACK_DEVICE}"p3
 
 mkdir -p /mnt/Lemon
 mkdir -p /mnt/LemonEFI

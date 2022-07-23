@@ -13,7 +13,7 @@ if [ -z $1 ]; then
 	fi
 
 	LOOPBACK_DEVICE=$(sudo mkdir -p /mnt/Lemon; sudo losetup --find --partscan --show "$LEMOND/Disks/Lemon.img")
-	DEVICE="${LOOPBACK_DEVICE}"p2
+	DEVICE="${LOOPBACK_DEVICE}"p3
 else
 	DEVICE=$1
 	sudo mkdir -p /mnt/Lemon
