@@ -402,4 +402,56 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: llvm
+    from_source: lemon-llvm
+    pkgs_required:
+      - mlibc
+    tools_required:
+      - host-compiler
+      - host-pkgconfig
+    configure:
+      - args:
+        - 'cmake'
+        - '-GNinja'
+        - '-DLLVM_ENABLE_PROJECTS=clang'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DLLVM_TARGETS_TO_BUILD=X86'
+        - '-DLLVM_PARALLEL_LINK_JOBS=@OPTION:llvm_linkcount@'
+        - '-DCMAKE_CROSSCOMPILING=ON'
+        - '-DLLVM_ENABLE_LIBXML2=False'
+        - '-DLLVM_DEFAULT_TARGET_TRIPLE=x86_64-unkown-lemon'
+        - '-DLLVM_INSTALL_TOOLCHAIN_ONLY=ON'
+        - '-DLLVM_ENABLE_TERMINFO=OFF'
+        - '-DLLVM_ENABLE_THREADS=OFF'
+        - '-DCLANG_ENABLE_OBJC_REWRITER=OFF'
+        - '-DCLANG_TOOL_CLANG_DIFF_BUILD=OFF'
+        - '-DCLANG_TOOL_CLANG_REPL_BUILD=OFF'
+        - '-DCLANG_TOOL_CLANG_FORMAT_BUILD=OFF'
+        - '-DCLANG_TOOL_CLANG_FORMAT_VS_BUILD=OFF'
+        - '-DCLANG_TOOL_CLANG_SCAN_DEPS_BUILD=OFF'
+        - '-DCLANG_TOOL_CLANG_FUZZER_BUILD=OFF'
+        - '-DCLANG_TOOL_CLANG_IMPORT_TEST_BUILD=OFF'
+        - '-DCLANG_TOOL_CLANG_OFFLOAD_BUNDLER_BUILD=OFF'
+        - '-DCLANG_TOOL_CLANG_OFFLOAD_WRAPPER_BUILD=OFF'
+        - '-DCLANG_BUILD_EXAMPLES=OFF'
+        - '-DCLANG_ENABLE_ARCMT=OFF'
+        - '-DCLANG_ENABLE_STATIC_ANALYZER=OFF'
+        - '-DLLVM_INCLUDE_TESTS=OFF'
+        - '-DLLVM_TABLEGEN=@BUILD_ROOT@/tool-builds/host-llvm/bin/llvm-tblgen'
+        - '-DCLANG_TABLEGEN=@BUILD_ROOT@/tool-builds/host-llvm/bin/clang-tblgen'
+        - '-DCMAKE_INSTALL_PREFIX=/system'
+        - '@THIS_SOURCE_DIR@/llvm'
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+    build:
+      - args: ['ninja']
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
+      - args: ['ninja', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+      - args: ['ln', '-s', 'clang', '@THIS_COLLECT_DIR@/system/bin/cc']
+
 
