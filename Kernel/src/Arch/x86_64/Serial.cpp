@@ -34,17 +34,20 @@ void Write(const char* s) { Write(s, strlen(s)); }
 
 void Write(const char* s, unsigned n) {
     if (CheckInterrupts()) {
-        acquireLock(&lock); // Make the serial output readable
-    }
+        acquireLockIntDisable(&lock); // Make the serial output readable
 
-    while (n--) {
+        while (n--) {
+            while (!(inportb(PORT + 5) & 0x20))
+                ; // Make sure we are not transmitting data
+            outportb(PORT, *s++);
+        }
+
+        releaseLock(&lock);
+        asm("sti");
+    } else while (n--) {
         while (!(inportb(PORT + 5) & 0x20))
             ; // Make sure we are not transmitting data
         outportb(PORT, *s++);
-    }
-
-    if (CheckInterrupts()) {
-        releaseLock(&lock);
     }
 }
 } // namespace Serial

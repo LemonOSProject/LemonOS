@@ -13,6 +13,7 @@
 
 #include <abi-bits/in.h>
 #include <abi-bits/socket.h>
+#include <abi-bits/fcntl.h>
 #include <bits/posix/socklen_t.h>
 
 #define CONNECTION_BACKLOG 128

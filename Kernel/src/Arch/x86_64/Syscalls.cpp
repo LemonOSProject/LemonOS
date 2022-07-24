@@ -890,7 +890,14 @@ long SysUptime(RegisterContext* r) {
 }
 
 long SysDebug(RegisterContext* r) {
-    Log::Info("(%s): %s, %d", Scheduler::GetCurrentProcess()->name, (char*)SC_ARG0(r), SC_ARG1(r));
+    Process* proc = Scheduler::GetCurrentProcess();
+
+    size_t sLen;
+    if(strlenSafe((char*)SC_ARG0(r), sLen,  proc->addressSpace)) {
+        return -EFAULT;
+    }
+
+    Log::Info("(%s): %s, %d", proc->name, (char*)SC_ARG0(r), SC_ARG1(r));
     return 0;
 }
 
@@ -950,7 +957,7 @@ long SysReadDir(RegisterContext* r) {
 long SysSetFsBase(RegisterContext* r) {
     asm volatile("wrmsr" ::"a"(SC_ARG0(r) & 0xFFFFFFFF) /*Value low*/,
                  "d"((SC_ARG0(r) >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
-    GetCPULocal()->currentThread->fsBase = SC_ARG0(r);
+    Thread::Current()->fsBase = SC_ARG0(r);
     return 0;
 }
 
@@ -1658,7 +1665,7 @@ long SysPoll(RegisterContext* r) {
     unsigned nfds = SC_ARG1(r);
     long timeout = SC_ARG2(r);
 
-    Thread* thread = GetCPULocal()->currentThread;
+    Thread* thread = Thread::Current();
     Process* proc = Scheduler::GetCurrentProcess();
 
     if (!nfds) {
@@ -2136,17 +2143,18 @@ long SysSpawnThread(RegisterContext* r) {
 /// \return Undefined, always succeeds
 /////////////////////////////
 long SysExitThread(RegisterContext* r) {
-    GetCPULocal()->currentThread->blocker = nullptr;
-    acquireLockIntDisable(&GetCPULocal()->currentThread->stateLock);
+    Thread* thread = Thread::Current();
+    thread->blocker = nullptr;
+    acquireLockIntDisable(&thread->stateLock);
 
-    if(GetCPULocal()->currentThread->state == ThreadStateRunning) {
-        GetCPULocal()->currentThread->state = ThreadStateBlocked;
+    if(thread->state == ThreadStateRunning) {
+        thread->state = ThreadStateBlocked;
     }
 
-    GetCPULocal()->currentThread->state = ThreadStateDying;
+    thread->state = ThreadStateDying;
 
-    releaseLock(&GetCPULocal()->currentThread->stateLock);
-    releaseLock(&GetCPULocal()->currentThread->kernelLock);
+    releaseLock(&thread->stateLock);
+    releaseLock(&thread->kernelLock);
     asm volatile("sti");
 
     return 0;
@@ -2195,20 +2203,18 @@ long SysFutexWake(RegisterContext* r) {
 long SysFutexWait(RegisterContext* r) {
     int* futex = reinterpret_cast<int*>(SC_ARG0(r));
 
-    if (!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(int), Scheduler::GetCurrentProcess()->addressSpace)) {
+    Process* currentProcess = Scheduler::GetCurrentProcess();
+    Thread* currentThread = Scheduler::GetCurrentThread();
+
+    if (!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(int), currentProcess->addressSpace)) {
         return EFAULT;
     }
 
     int expected = static_cast<int>(SC_ARG1(r));
 
-    if (*futex != expected) {
-        return 0;
-    }
-
-    Process* currentProcess = Scheduler::GetCurrentProcess();
-    Thread* currentThread = Scheduler::GetCurrentThread();
-
     List<FutexThreadBlocker*>* blocked;
+
+    acquireLock(&currentProcess->m_futexLock);
     if (!currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex), blocked)) {
         blocked = new List<FutexThreadBlocker*>();
 
@@ -2218,11 +2224,17 @@ long SysFutexWait(RegisterContext* r) {
     FutexThreadBlocker blocker;
     blocked->add_back(&blocker);
 
-    if (currentThread->Block(&blocker)) {
-        blocked->remove(&blocker);
+    releaseLock(&currentProcess->m_futexLock);
 
-        return -EINTR; // We were interrupted
+    while (*futex == expected) {
+        if (currentThread->Block(&blocker)) {
+            blocked->remove(&blocker);
+
+            return -EINTR; // We were interrupted
+        }
     }
+
+    blocked->remove(&blocker);
 
     return 0;
 }
@@ -3537,11 +3549,12 @@ long SysSignalReturn(RegisterContext* r) {
     uint64_t* threadStack = reinterpret_cast<uint64_t*>(r->rsp);
 
     threadStack++;                     // Discard signal handler address
-    threadStack++;                     // Discard padding
     th->signalMask = *(threadStack++); // Get the old signal mask
 
     asm volatile("fxrstor64 (%0)" ::"r"((uintptr_t)threadStack) : "memory");
     threadStack += 512 / sizeof(uint64_t);
+
+    threadStack++;                     // Discard padding
 
     // Do not allow the thread to modify CS or SS
     memcpy(r, threadStack, offsetof(RegisterContext, cs));
@@ -4016,23 +4029,26 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
         return;
     }
 
+    Thread* thread = GetCPULocal()->currentThread;
+    if (__builtin_expect(acquireTestLock(&thread->kernelLock), 0)) {
+        for (;;)
+            Scheduler::Yield();
+    }
+
     asm("sti"); // By reenabling interrupts, a thread in a syscall can be preempted
 
-    Thread* thread = GetCPULocal()->currentThread;
-    if (__builtin_expect(thread->state == ThreadStateZombie, 0))
+    if (__builtin_expect(thread->state == ThreadStateZombie, 0)) {
+        releaseLock(&thread->kernelLock);
+    
         for (;;)
-            ;
+            Scheduler::Yield();
+    }
 
 #ifdef KERNEL_DEBUG
     if (debugLevelSyscalls >= DebugLevelNormal) {
         thread->lastSyscall = *regs;
     }
 #endif
-    if (__builtin_expect(acquireTestLock(&thread->kernelLock), 0)) {
-        Log::Info("Thread hanging!");
-        for (;;)
-            ;
-    }
 
     regs->rax = syscalls[regs->rax](regs); // Call syscall
 
@@ -4042,6 +4058,7 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
     });
 
     if (__builtin_expect(thread->pendingSignals & (~thread->EffectiveSignalMask()), 0)) {
+        Log::Info("handing singals: %x", thread->pendingSignals & (~thread->EffectiveSignalMask()));
         thread->HandlePendingSignal(regs);
     }
     releaseLock(&thread->kernelLock);

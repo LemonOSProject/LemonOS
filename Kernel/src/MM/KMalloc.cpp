@@ -7,6 +7,8 @@
 #include <Paging.h>
 #include <PhysicalAllocator.h>
 
+#include <StackTrace.h>
+
 class Lock {
 public:
     void lock() { acquireLock(&m_lock); }
@@ -77,7 +79,9 @@ frg::slab_allocator<KernelAllocator, Lock>& Allocator() {
     return allocator->slabAllocator;
 }
 
-void* kmalloc(size_t size) { return Allocator().allocate(size); }
+void* kmalloc(size_t size) { 
+    return Allocator().allocate(size);
+}
 
 void kfree(void* p) { return Allocator().free(p); }
 

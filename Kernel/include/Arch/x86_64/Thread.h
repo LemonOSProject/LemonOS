@@ -60,6 +60,8 @@ struct Thread {
     void* stack = nullptr;       // Pointer to the initial stack
     void* stackLimit = nullptr;  // The limit of the stack
     void* kernelStack = nullptr; // Kernel Stack
+    void* kernelStackBase = 0;
+    
     uint32_t timeSlice = THREAD_TIMESLICE_DEFAULT;
     uint32_t timeSliceDefault = THREAD_TIMESLICE_DEFAULT;
     uint32_t ticksSinceBalance = 0; // Ticks since run queue rebalance
@@ -85,8 +87,12 @@ struct Thread {
     uint64_t signalMask = 0;     // Masked signals
 
     Thread(class Process* _parent, pid_t _tid);
+    ~Thread();
 
-    ALWAYS_INLINE static Thread* Current() { return GetCPULocal()->currentThread; }
+    ALWAYS_INLINE static Thread* Current() {
+        InterruptDisabler disableInts;
+        return GetCPULocal()->currentThread;
+    }
 
     /////////////////////////////
     /// \brief Dispatch a signal to the thread

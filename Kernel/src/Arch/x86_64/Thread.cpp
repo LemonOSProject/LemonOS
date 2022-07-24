@@ -49,13 +49,12 @@ Thread::Thread(Process* _parent, pid_t _tid)
     ((fx_state_t*)fxState)->mxcsrMask = 0xffbf;
     ((fx_state_t*)fxState)->fcw = 0x33f; // Default FPU Control Word State
 
-    kernelStack = Memory::KernelAllocate4KPages(64); // Allocate Memory For Kernel Stack (256KB)
-    for (int i = 0; i < 64; i++) {
-        Memory::KernelMapVirtualMemory4K(Memory::AllocatePhysicalMemoryBlock(),
-                                         reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * i, 1);
-    }
-    memset(kernelStack, 0, PAGE_SIZE_4K * 64);
-    kernelStack = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(kernelStack) + PAGE_SIZE_4K * 64);
+    kernelStackBase = kmalloc(524288);
+    kernelStack = (uint8_t*)kernelStackBase + 524488;
+}
+
+Thread::~Thread() {
+    
 }
 
 void Thread::Signal(int signal) {
@@ -72,8 +71,13 @@ void Thread::Signal(int signal) {
     pendingSignals |= 1 << (signal - 1); // Set corresponding bit for signal
 
     // TODO: Race condition?
+    acquireLock(&stateLock);
     if (blocker && state == ThreadStateBlocked) {
+        releaseLock(&stateLock);
+
         blocker->Interrupt(); // Stop the thread from blocking
+    } else {
+        releaseLock(&stateLock);
     }
 }
 
@@ -168,11 +172,12 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
     uint64_t* stack = reinterpret_cast<uint64_t*>((regs->rsp & (~0xfULL)) - 128 - sizeof(RegisterContext));
     *reinterpret_cast<RegisterContext*>(stack) = *regs;
 
+    *(--stack) = 0; // Pad out the stack
+    
     // Save FP regs
     stack -= 512 / sizeof(uint64_t);
     asm volatile("fxsave64 (%0)" ::"r"((uintptr_t)stack) : "memory");
 
-    *(--stack) = 0; // Pad out the stack
     *(--stack) = oldSignalMask;
     // This could probably be placed in a register but it makes our stack nice and aligned
     *(--stack) = reinterpret_cast<uintptr_t>(handler.userHandler);
@@ -198,7 +203,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
     regs->rsp = reinterpret_cast<uintptr_t>(stack); // Set rsp to new stack value
 
     assert(!(regs->rsp & 0xf)); // Ensure that stack is 16-byte aligned
-    Log::Debug(debugLevelScheduler, DebugLevelVerbose,
+    Log::Debug(debugLevelScheduler, DebugLevelNormal,
         "Thread::HandlePendingSignal: Executing usermode handler for signal %d", signal);
 }
 

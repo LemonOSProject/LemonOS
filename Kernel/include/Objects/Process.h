@@ -24,6 +24,7 @@ class Process : public KernelObject {
     friend struct Thread;
     friend void KernelProcess();
     friend long SysExecve(RegisterContext* r);
+    friend long SysFutexWait(RegisterContext* r);
 
 public:
     enum {
@@ -419,6 +420,7 @@ private:
     lock_t m_watchingLock = 0;       // Should be acquired when modifying watching processes
     lock_t m_fileDescriptorLock = 0; // Should be acquired when modifying file descriptors
     lock_t m_handleLock = 0;         // Should be acquired when modifying handles
+    lock_t m_futexLock = 0;          // Should be acquired when modifying futex block queue
     pid_t m_pid;                     // Process ID (PID)
 
     bool m_started = false; // Has the process been started?

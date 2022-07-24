@@ -41,6 +41,9 @@ void InitStivale2(stivale2_info_header_t* st2Info);
 
 void InitCore() { // ALWAYS call this first
     asm volatile("cli");
+
+    SMP::InitializeCPU0Context();
+    
     Serial::Initialize();
     Serial::Write("Initializing Lemon...\r\n");
 
@@ -52,8 +55,6 @@ void InitCore() { // ALWAYS call this first
 
     // Initialize Physical Memory Allocator
     Memory::InitializePhysicalAllocator(&mem_info);
-
-    SMP::InitializeCPU0Context();
 }
 
 void InitVideo() {

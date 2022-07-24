@@ -34,6 +34,8 @@ void RegisterProcess(FancyRefPtr<Process> proc);
 void MarkProcessForDestruction(Process* proc);
 
 ALWAYS_INLINE static Process* GetCurrentProcess() {
+    InterruptDisabler disableInterrupts;
+
     CPU* cpu = GetCPULocal();
 
     Process* ret = nullptr;
@@ -44,7 +46,10 @@ ALWAYS_INLINE static Process* GetCurrentProcess() {
     return ret;
 }
 
-ALWAYS_INLINE static Thread* GetCurrentThread() { return GetCPULocal()->currentThread; }
+ALWAYS_INLINE static Thread* GetCurrentThread() {
+    InterruptDisabler disableInterrupts;
+    return GetCPULocal()->currentThread;
+}
 
 // Checks that a pointer of type T is valid
 template <typename T>
@@ -54,6 +59,7 @@ ALWAYS_INLINE bool CheckUsermodePointer(T* ptr, AddressSpace* addressSpace = Get
 
 void Yield();
 void Schedule(void* data, RegisterContext* r);
+void DoSwitch(CPU* cpu);
 
 pid_t GetNextPID();
 FancyRefPtr<Process> FindProcessByPID(pid_t pid);

@@ -137,12 +137,13 @@ pid_t GetNextProcessPID(pid_t pid) {
 }
 
 void Yield() {
+    asm("cli");
     CPU* cpu = GetCPULocal();
 
     if (cpu->currentThread) {
         cpu->currentThread->timeSlice = 0;
     }
-    asm("int $0xFD"); // Send schedule IPI to self
+    asm("sti; int $0xFD"); // Send schedule IPI to self
 }
 
 void Tick(RegisterContext* r) {
@@ -201,7 +202,10 @@ void BalanceRunQueues() {
                     // intrusive list
                     cpu->runQueue->remove(it);
                     it->cpu = -1;
-                    threadsToDistribute.add_back(it);
+
+                    if(it->state != ThreadStateDying) {
+                        threadsToDistribute.add_back(it);
+                    }
 
                     goto retry; // The front may have changed
                 } else {
@@ -263,11 +267,13 @@ void BalanceRunQueues() {
 }
 
 void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
+    assert(!CheckInterrupts());
+
     CPU* cpu = GetCPULocal();
 
-    if (cpu->currentThread) {
+    if (cpu->currentThread && !(cpu->currentThread->state & ThreadStateBlocked)) {
         cpu->currentThread->parent->activeTicks++;
-        if (cpu->currentThread->timeSlice > 0 && !(cpu->currentThread->state & ThreadStateBlocked)) {
+        if (cpu->currentThread->timeSlice > 0) {
             cpu->currentThread->ticksSinceBalance++;
             cpu->currentThread->timeSlice--;
             return;
@@ -275,7 +281,10 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
     }
 
     if(__builtin_expect(acquireTestLock(&cpu->runQueueLock), 0)) {
-        return;
+        // If the process should block wait, otherwise return
+        if(cpu->currentThread->state & ThreadStateBlocked) {
+            acquireLock(&cpu->runQueueLock);
+        } else return;
     }
 
     if (SMP::processorCount > 1 && Timer::UsecondsSinceBoot() > nextBalanceDue) {
@@ -356,6 +365,10 @@ void Schedule(__attribute__((unused)) void* data, RegisterContext* r) {
 
     releaseLock(&cpu->runQueueLock);
 
+    DoSwitch(cpu);
+}
+
+void DoSwitch(CPU* cpu) {
     asm volatile("fxrstor64 (%0)" ::"r"((uintptr_t)cpu->currentThread->fxState) : "memory");
 
     asm volatile("wrmsr" ::"a"(cpu->currentThread->fsBase & 0xFFFFFFFF) /*Value low*/,

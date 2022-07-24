@@ -12,7 +12,7 @@ namespace Memory {
 uint32_t physicalMemoryBitmap[PHYSALLOC_BITMAP_SIZE_DWORDS];
 
 uint64_t usedPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS * 32;
-uint64_t maxPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS * 32;
+uint64_t maxPhysicalBlocks = 0;
 
 uint64_t nextChunk = 1;
 
@@ -22,7 +22,7 @@ lock_t allocatorLock = 0;
 void InitializePhysicalAllocator(memory_info_t* mem_info) {
     memset(physicalMemoryBitmap, 0xFFFFFFFF, PHYSALLOC_BITMAP_SIZE_DWORDS * sizeof(uint32_t));
 
-    maxPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS;
+    maxPhysicalBlocks = PHYSALLOC_BITMAP_SIZE_DWORDS * 32;
     usedPhysicalBlocks = maxPhysicalBlocks;
 }
 
@@ -110,7 +110,7 @@ uint64_t AllocatePhysicalMemoryBlock() {
     if (!index) {
         asm("cli");
         Log::Error("Out of memory!");
-        KernelPanic((const char**)(&"Out of memory!"), 1);
+        KernelPanic("Out of memory!");
         for (;;)
             ;
     }

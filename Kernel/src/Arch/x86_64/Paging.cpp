@@ -691,6 +691,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
     int id = errorCode & 0x10;        // Caused by an instruction fetch
 
     Process* process = Process::Current();
+    Thread* thread = Thread::Current();
 
     // We only want to dump fault information when it is fatal
     auto dumpFaultInformation = [&]() -> void {
@@ -723,7 +724,17 @@ void PageFaultHandler(void*, RegisterContext* regs) {
         }
     };
 
-    if ((regs->cs & 0x3)) {                                              // Make sure we acquired the lock
+    if ((regs->cs & 0x3)) {  
+        // If the thread is zombified, do not bother acquiring the lock
+        if(thread->state == ThreadStateZombie) {
+            Log::Info("Zombie thread page fault");
+            asm("sti");
+            for(;;) {
+                Scheduler::Yield();
+            }
+        } 
+        
+        // Make sure we acquired the lock
         int res = acquireTestLock(&Scheduler::GetCurrentThread()->kernelLock); // Prevent the thread from being killed, etc.
         if (res) {
             Log::Info("Process %s (PID: %x) page fault.", process->name, process->PID());
