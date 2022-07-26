@@ -11,7 +11,9 @@
 
 class Lock {
 public:
-    void lock() { acquireLock(&m_lock); }
+    void lock() {
+        acquireLock(&m_lock);
+    }
 
     void unlock() { releaseLock(&m_lock); }
 

@@ -448,7 +448,7 @@ long SysExecve(RegisterContext* r) {
     timeval tvnew = Timer::GetSystemUptimeStruct();
     Log::Info("Done (took %d us)", Timer::TimeDifference(tvnew, tv));
 
-    Thread* currentThread = Scheduler::GetCurrentThread();
+    Thread* currentThread = Thread::Current();
     ScopedSpinLock lockProcess(currentProcess->m_processLock);
 
     // Create a fresh AddressSpace for the new process image
@@ -575,7 +575,7 @@ long SysMapFB(RegisterContext* r) {
 ///
 /// \return Current thread's ID
 /////////////////////////////
-long SysGetTID(RegisterContext* r) { return Scheduler::GetCurrentThread()->tid; }
+long SysGetTID(RegisterContext* r) { return Thread::Current()->tid; }
 
 long SysChmod(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
@@ -897,7 +897,7 @@ long SysDebug(RegisterContext* r) {
         return -EFAULT;
     }
 
-    Log::Info("(%s): %s, %d", proc->name, (char*)SC_ARG0(r), SC_ARG1(r));
+    Log::Info("(%s): %s", proc->name, (char*)SC_ARG0(r));
     return 0;
 }
 
@@ -1094,7 +1094,7 @@ long SysNanoSleep(RegisterContext* r) {
         return 0;
     }
 
-    Scheduler::GetCurrentThread()->Sleep(nanoseconds / 1000);
+    Thread::Current()->Sleep(nanoseconds / 1000);
 
     return 0;
 }
@@ -2204,7 +2204,7 @@ long SysFutexWait(RegisterContext* r) {
     int* futex = reinterpret_cast<int*>(SC_ARG0(r));
 
     Process* currentProcess = Scheduler::GetCurrentProcess();
-    Thread* currentThread = Scheduler::GetCurrentThread();
+    Thread* currentThread = Thread::Current();
 
     if (!Memory::CheckUsermodePointer(SC_ARG0(r), sizeof(int), currentProcess->addressSpace)) {
         return EFAULT;
@@ -3198,7 +3198,7 @@ long SysUnloadKernelModule(RegisterContext* r) {
 /////////////////////////////
 long SysFork(RegisterContext* r) {
     Process* process = Scheduler::GetCurrentProcess();
-    Thread* currentThread = Scheduler::GetCurrentThread();
+    Thread* currentThread = Thread::Current();
 
     FancyRefPtr<Process> newProcess = process->Fork();
     FancyRefPtr<Thread> thread = newProcess->GetMainThread();
@@ -3522,7 +3522,7 @@ long SysSignalAction(RegisterContext* r) {
 }
 
 long SysProcMask(RegisterContext* r) {
-    Thread* t = Scheduler::GetCurrentThread();
+    Thread* t = Thread::Current();
 
     (void)t;
     Log::Debug(debugLevelSyscalls, DebugLevelNormal, "SysProcMask is a stub!");
@@ -3545,7 +3545,7 @@ long SysKill(RegisterContext* r) {
 }
 
 long SysSignalReturn(RegisterContext* r) {
-    Thread* th = Scheduler::GetCurrentThread();
+    Thread* th = Thread::Current();
     uint64_t* threadStack = reinterpret_cast<uint64_t*>(r->rsp);
 
     threadStack++;                     // Discard signal handler address

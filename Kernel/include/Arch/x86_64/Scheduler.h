@@ -46,11 +46,6 @@ ALWAYS_INLINE static Process* GetCurrentProcess() {
     return ret;
 }
 
-ALWAYS_INLINE static Thread* GetCurrentThread() {
-    InterruptDisabler disableInterrupts;
-    return GetCPULocal()->currentThread;
-}
-
 // Checks that a pointer of type T is valid
 template <typename T>
 ALWAYS_INLINE bool CheckUsermodePointer(T* ptr, AddressSpace* addressSpace = GetCurrentProcess()->addressSpace) {

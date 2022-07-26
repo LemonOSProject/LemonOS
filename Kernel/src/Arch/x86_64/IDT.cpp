@@ -253,12 +253,12 @@ extern "C" void isr_handler(int intNum, RegisterContext* regs) {
                               "Exception: ",
                               itoa(intNum, temp2, 16),
                               "Process:",
-                              Scheduler::GetCurrentThread() ? Scheduler::GetCurrentThread()->parent->name : "none"};
+                              Thread::Current() ? Thread::Current()->parent->name : "none"};
         KernelPanic(reasons, 7);
         for (;;)
             ;
     } else {
-        int res = acquireTestLock(&Scheduler::GetCurrentThread()->kernelLock);
+        int res = acquireTestLock(&Thread::Current()->kernelLock);
         if(res) { // Make sure we acquired the lock
             assert(Process::Current()->State() != Process::Process_Running);
             for(;;) {

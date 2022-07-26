@@ -15,7 +15,7 @@ ssize_t UNIXPipe::Read(size_t off, size_t size, uint8_t* buffer){
     if(!widowed && size > stream->Pos()){
         FilesystemBlocker bl(this, size);
 
-        if(Scheduler::GetCurrentThread()->Block(&bl)){
+        if(Thread::Current()->Block(&bl)){
             return -EINTR;
         }
     }
@@ -31,7 +31,7 @@ ssize_t UNIXPipe::Write(size_t off, size_t size, uint8_t* buffer){
     if(end != WriteEnd){
         return -ESPIPE;
     } else if(widowed || !otherEnd){
-        Scheduler::GetCurrentThread()->Signal(SIGPIPE); // Send SIGPIPE on broken pipe
+        Thread::Current()->Signal(SIGPIPE); // Send SIGPIPE on broken pipe
         return -EPIPE;
     }
 

@@ -49,7 +49,7 @@ unsigned short keyQueueStart = 0;
 unsigned short keyCount = 0;
 
 template <bool isMouse> inline void WaitData() {
-    int timeout = 500;
+    int timeout = 250;
     while (timeout--) {
         if constexpr(isMouse) {
             if ((inportb(PS2_CMD) & 0x21) == 0x20)
@@ -66,7 +66,7 @@ template <bool isMouse> inline void WaitData() {
 }
 
 inline void WaitSignal() {
-    int timeout = 500;
+    int timeout = 250;
     while (timeout--) {
         if ((inportb(PS2_CMD) & 0x2) != 0x2)
             return;
@@ -343,9 +343,9 @@ void Initialize() {
     WaitData<false>();
     uint8_t status = inportb(0x20);
 
-    // Disable interrupts, enable keyboard and mouse clock
+    // Enable interrupts, enable keyboard and mouse clock
     // disable scancode translation
-    status = ((status & ~0x73));
+    status = ((status & ~0x70) | 3);
     WaitSignal();
     outportb(PS2_CMD, 0x60);
     WaitSignal();
@@ -358,6 +358,10 @@ void Initialize() {
     outportb(PS2_CMD, 0xAE);
     WaitSignal();
     outportb(PS2_CMD, PS2_ENABLE_AUX_INPUT);
+
+    // Set keyboard scancode set 2
+    SendCommand<false>(0xF0);
+    SendCommand<false>(2);
 
     SendCommand<true>(0xF6);
     // Enable mouse packets
@@ -391,19 +395,6 @@ void Initialize() {
     // 2 px/mm
     SendCommand<true>(0xE8);
     SendCommand<true>(1);
-
-    // Set keyboard scancode set 2
-    SendCommand<false>(0xF0);
-    SendCommand<false>(2);
-
-    // Enable interrupts for kb and mouse
-    status = inportb(0x20) | 3;
-    WaitSignal();
-    outportb(PS2_CMD, 0x60);
-    WaitSignal();
-    outportb(PS2_DATA, status);
-    WaitData<false>();
-    inportb(PS2_DATA);
 
     IDT::RegisterInterruptHandler(IRQ0 + 12, MouseHandler);
     APIC::IO::MapLegacyIRQ(12);

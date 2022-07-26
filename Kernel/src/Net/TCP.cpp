@@ -664,7 +664,7 @@ namespace Network {
                 FilesystemBlocker bl(this);
 
                 long timeout = retryPeriod;
-                if(Scheduler::GetCurrentThread()->Block(&bl, timeout)){
+                if(Thread::Current()->Block(&bl, timeout)){
                     return -EINTR;
                 }
 
@@ -715,7 +715,7 @@ namespace Network {
             if(state == TCPStateEstablished && m_inboundData.Pos() < len){ // We do not want to block when in CLOSE-WAIT
                 FilesystemBlocker bl(this, len);
 
-                if(Scheduler::GetCurrentThread()->Block(&bl)){
+                if(Thread::Current()->Block(&bl)){
                     return -EINTR; // We were interrupted
                 }
             }

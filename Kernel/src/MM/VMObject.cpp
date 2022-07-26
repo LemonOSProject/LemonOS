@@ -100,11 +100,12 @@ void PhysicalVMObject::ForceAllocate(){
 void PhysicalVMObject::MapAllocatedBlocks(uintptr_t base, PageMap* pMap){
     uintptr_t virt = base;
 
+    long pgFlags = PAGE_USER | (PAGE_WRITABLE * (!copyOnWrite)) | PAGE_PRESENT;
     for(unsigned i = 0; i < (size >> PAGE_SHIFT_4K); i++){
         uint64_t block = physicalBlocks[i];
         if(block){ // Is it allocated?
             // Only set write flag if copyOnWrite is false
-            Memory::MapVirtualMemory4K(block << PAGE_SHIFT_4K, virt, 1, PAGE_USER | (PAGE_WRITABLE * (!copyOnWrite)) | PAGE_PRESENT, pMap);
+            Memory::MapVirtualMemory4K(block << PAGE_SHIFT_4K, virt, 1, pgFlags, pMap);
         } else {
             Memory::MapVirtualMemory4K(0, virt, 1, PAGE_USER, pMap); // Mark as user, not present, not writable
         }

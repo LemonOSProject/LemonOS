@@ -194,7 +194,7 @@ namespace Network::UDP{
             releaseLock(&packetsLock);
             if(flags & MSG_DONTWAIT){
                 return -EAGAIN; // Don't wait
-            } else if(FilesystemBlocker bl(this); Scheduler::GetCurrentThread()->Block(&bl)){
+            } else if(FilesystemBlocker bl(this); Thread::Current()->Block(&bl)){
                 return -EINTR; // We were interrupted
             }
         }

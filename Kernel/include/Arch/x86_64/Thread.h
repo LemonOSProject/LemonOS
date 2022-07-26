@@ -90,8 +90,7 @@ struct Thread {
     ~Thread();
 
     ALWAYS_INLINE static Thread* Current() {
-        InterruptDisabler disableInts;
-        return GetCPULocal()->currentThread;
+        return GetCurrentThread();
     }
 
     /////////////////////////////

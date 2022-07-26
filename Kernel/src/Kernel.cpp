@@ -33,7 +33,7 @@
 video_mode_t videoMode;
 
 void IdleProcess() {
-    Thread* th = Scheduler::GetCurrentThread();
+    Thread* th = Thread::Current();
     for (;;) {
         th->timeSlice = 0;
         asm volatile("pause");
@@ -138,7 +138,7 @@ void KernelProcess() {
         }
         releaseLock(&Scheduler::destroyedProcessesLock);
 
-        Scheduler::GetCurrentThread()->Sleep(100000);
+        Thread::Current()->Sleep(100000);
     }
 }
 

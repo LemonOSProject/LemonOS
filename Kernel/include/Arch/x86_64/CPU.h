@@ -182,6 +182,19 @@ static ALWAYS_INLINE CPU* GetCPULocal() {
     return ret;
 }
 
+static ALWAYS_INLINE Thread* GetCurrentThread() {
+    Thread* ret;
+    int intEnable = CheckInterrupts();
+    asm("cli");
+    asm volatile("swapgs; movq %%gs:48, %0; swapgs;"
+                 : "=r"(ret)); // CPU info is 16-byte aligned as per liballoc alignment
+    if (intEnable)
+        asm("sti");
+    return ret;
+
+    static_assert(offsetof(CPU, currentThread) == 48);
+}
+
 static ALWAYS_INLINE void DisableInterrupts() {
     asm volatile("cli");
 }
