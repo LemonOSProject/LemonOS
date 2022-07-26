@@ -114,24 +114,22 @@ MappedRegion* AddressSpace::MapVMO(FancyRefPtr<VMObject> obj, uintptr_t base, bo
 
     MappedRegion* region;
     
-    {
-        ScopedSpinLock acquired(m_lock);
-        if (base && (region = AllocateRegionAt(base, obj->Size()))) {
-            region->vmObject = nullptr;
-        } else if (fixed) { // Could not create region at base
-            IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal), {
-                Log::Warning(
-                    "Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.", base,
-                    base + obj->Size());
-                for (MappedRegion& region : m_regions) {
-                    Log::Info("region (%x - %x)", region.Base(), region.End());
-                }
-            });
-            return nullptr;
-        } else {
-            region = FindAvailableRegion(obj->Size());
-            assert(region);
-        }
+    ScopedSpinLock acquired(m_lock);
+    if (base && (region = AllocateRegionAt(base, obj->Size()))) {
+        region->vmObject = nullptr;
+    } else if (fixed) { // Could not create region at base
+        IF_DEBUG((debugLevelUsermodeMM >= DebugLevelNormal), {
+            Log::Warning(
+                "Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.", base,
+                base + obj->Size());
+            for (MappedRegion& region : m_regions) {
+                Log::Info("region (%x - %x)", region.Base(), region.End());
+            }
+        });
+        return nullptr;
+    } else {
+        region = FindAvailableRegion(obj->Size());
+        assert(region);
     }
 
     assert(region && region->Base());
@@ -149,21 +147,19 @@ MappedRegion* AddressSpace::AllocateAnonymousVMObject(size_t size, uintptr_t bas
     assert(!(base & (PAGE_SIZE_4K - 1)));
 
     MappedRegion* region;
-    {
-        ScopedSpinLock acquired(m_lock);
+    ScopedSpinLock acquired(m_lock);
 
-        if (base && (region = AllocateRegionAt(base, size))) {
-            region->vmObject = nullptr;
-        } else if (fixed) { // Could not create region at base
-            Log::Warning("Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.",
-                        base, size);
-            return nullptr;
-        } else {
-            region = FindAvailableRegion(size);
-        }
-
-        assert(region && region->Base());
+    if (base && (region = AllocateRegionAt(base, size))) {
+        region->vmObject = nullptr;
+    } else if (fixed) { // Could not create region at base
+        Log::Warning("Fixed region (%x - %x) was in use, we do not yet overwrite existing regions for fixed mappings.",
+                    base, size);
+        return nullptr;
+    } else {
+        region = FindAvailableRegion(size);
     }
+
+    assert(region && region->Base());
 
     PhysicalVMObject* vmo = new PhysicalVMObject(size, true, false);
     vmo->anonymous = true;
