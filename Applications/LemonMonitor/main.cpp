@@ -56,7 +56,7 @@ public:
             return usage;
         } case 3: {
             char usedMem[40];
-            snprintf(usedMem, 39, "%lu KB", process.info.usedMem);
+            snprintf(usedMem, 39, "%.1f MB", process.info.usedMem / 1024 / 1024.0);
 
             return std::string(usedMem);
         } case 4: {
