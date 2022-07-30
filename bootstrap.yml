@@ -458,6 +458,7 @@ packages:
       - mlibc
     tools_required:
       - host-compiler
+      - host-pkgconfig
     source:
       subdir: 'Ports'
       git: 'https://github.com/madler/zlib.git'
@@ -484,6 +485,7 @@ packages:
       - host-compiler
       - host-automake
       - host-libtool
+      - host-pkgconfig
     source:
       subdir: 'Ports'
       url: 'https://download.sourceforge.net/libpng/libpng-1.6.37.tar.gz'
@@ -584,6 +586,7 @@ packages:
       - mlibc
       - zlib
       - libpng
+      - libjpeg-turbo
       - freetype
       - lemon-interface-headers
       - libfmt
@@ -609,6 +612,7 @@ packages:
   - name: liblemongui
     tools_required:
       - host-compiler
+      - host-pkgconfig
     pkgs_required:
       - mlibc
       - liblemon
@@ -630,6 +634,7 @@ packages:
   - name: lemon-system
     tools_required:
       - host-compiler
+      - host-pkgconfig
     pkgs_required:
       - mlibc
       - liblemon
@@ -652,6 +657,7 @@ packages:
   - name: lemon-apps
     tools_required:
       - host-compiler
+      - host-pkgconfig
     pkgs_required:
      - mlibc
      - liblemon
