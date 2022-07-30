@@ -19,7 +19,7 @@ asmg = generator(nasm,
 
 liblemon_cpp_args = ['-Wno-write-strings', '-Wno-missing-braces',
     '-fPIC',
-    '-m64' ]
+    '-march=x86-64-v2' ]
 
 liblemon_cpp_files = [
     'src/Graphics/bitmapfont.cpp',
@@ -58,10 +58,11 @@ prefix = get_option('prefix')
 install_subdir('include', install_dir: prefix)
 
 ft_dep = dependency('freetype2')
+jpeg_dep = dependency('libjpeg')
 
 liblemon = library('lemon', [asmg.process(liblemon_asm_files), liblemon_cpp_files],
-    dependencies: ft_dep,
+    link_args: ['-lz', '-lpng'],
+    dependencies: [ft_dep, jpeg_dep],
     include_directories : liblemon_include_dirs,
     cpp_args: liblemon_cpp_args,
-    link_args: ['-lfreetype', '-lstdc++', '-lz', '-lpng'],
     install: true)

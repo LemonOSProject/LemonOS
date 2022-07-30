@@ -65,6 +65,7 @@ enum ImageType {
     Image_Unknown,
     Image_BMP,
     Image_PNG,
+    Image_JPEG,
 };
 
 class Texture final {
@@ -153,7 +154,7 @@ static inline int IdentifyImage(const void* data) {
     } else if (IsPNG(data)) {
         type = Image_PNG;
     } else
-        type = Image_Unknown;
+        type = Image_JPEG;
 
     return type;
 }
@@ -251,6 +252,7 @@ int LoadImage(FILE* f, surface_t* surface);
 // LoadImage (const char* path, surface_t* surface) - Attempt to load image at path and create a new surface
 int LoadImage(const char* path, surface_t* surface);
 int LoadPNGImage(FILE* f, surface_t* surface);
+int LoadJPEGImage(FILE* f, surface_t* surface);
 int SavePNGImage(FILE* f, surface_t* surface, bool writeTransparency);
 int LoadBitmapImage(FILE* f, surface_t* surface);
 int DrawImage(int x, int y, int w, int h, uint8_t* data, size_t dataSz, surface_t* surface, bool preserveAspectRatio);

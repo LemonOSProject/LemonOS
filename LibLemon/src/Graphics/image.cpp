@@ -1,14 +1,23 @@
 #include <Lemon/Graphics/Graphics.h>
 
+#include <Lemon/Core/Logger.h>
+
 #include <assert.h>
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+
 #include <zlib.h>
+#include <png.h>
+#include <jpeglib.h>
 
 namespace Lemon::Graphics {
 bool IsPNG(const void* data) { return !png_sig_cmp((png_const_bytep)data, 0, 8); }
+
+bool IsJPEG(const void* data) {
+    return !memcmp(data, "\xff\xd8\xff", 3);
+}
 
 int LoadImage(FILE* f, surface_t* surface) {
     char sig[8];
@@ -24,6 +33,8 @@ int LoadImage(FILE* f, surface_t* surface) {
         return LoadBitmapImage(f, surface);
     } else if (type == Image_PNG) {
         return LoadPNGImage(f, surface);
+    } else if (type == Image_JPEG) {
+        return LoadJPEGImage(f, surface);
     } else
         return -1;
 }
@@ -195,6 +206,40 @@ int LoadPNGImage(FILE* f, surface_t* surface) {
     }
 
     png_destroy_read_struct(&png, &info, nullptr);
+
+    return 0;
+}
+
+int LoadJPEGImage(FILE* f, Surface* surface) {
+    jpeg_decompress_struct cInfo;
+
+    fseek(f, 0, SEEK_SET);
+
+    struct jpeg_error_mgr err;
+    jpeg_std_error(&err);
+
+    cInfo.err = &err;
+    jpeg_create_decompress(&cInfo);
+
+    jpeg_stdio_src(&cInfo, f);
+    jpeg_read_header(&cInfo, TRUE);
+
+    cInfo.out_color_space = JCS_EXT_BGRA;
+
+    jpeg_start_decompress(&cInfo);
+
+    surface->width = cInfo.output_width;
+    surface->height = cInfo.output_height;
+
+    surface->buffer = new uint8_t[surface->width * surface->height * 4];
+
+    for(int i = 0; i < surface->height; i++) {
+        uint8_t* row = surface->buffer + surface->width * 4 * i;
+        jpeg_read_scanlines(&cInfo, &row, 1);
+    }
+    
+    jpeg_finish_decompress(&cInfo);
+    jpeg_destroy_decompress(&cInfo);
 
     return 0;
 }
