@@ -65,7 +65,7 @@ void Texture::UpdateSurface() {
         double yScale = ((double)size.y) / source.height;
 
         if (scaling == ScaleFit) {
-            if (yScale > xScale)
+            if (yScale < xScale)
                 xScale = yScale;
             else
                 yScale = xScale;
