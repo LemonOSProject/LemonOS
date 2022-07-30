@@ -1236,46 +1236,39 @@ ssize_t Ext2::Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8
         if (size <= 0)
             break;
 
-        if (offset && offset % blocksize) {
+        // Check if offset is a full block
+        long offsetRemainder = offset & (blocksize - 1);
+        if (offsetRemainder) {
             if (int e = ReadBlockCached(block, blockBuffer); e) {
                 Log::Info("[Ext2] Error %i reading block %u", e, block);
                 error = DiskReadError;
                 return e;
             }
 
-            size_t readSize = blocksize - (offset % blocksize);
+            size_t readSize = blocksize - offsetRemainder;
             if (readSize > size) {
                 readSize = size;
             }
 
-            size_t readOffset = (offset % blocksize);
-
-            if (readSize > size)
-                readSize = size;
-
-            memcpy(buffer, blockBuffer + readOffset, readSize);
+            memcpy(buffer, blockBuffer + offsetRemainder, readSize);
 
             size -= readSize;
             buffer += readSize;
             offset += readSize;
         } else if (size >= blocksize) {
             if (int e = ReadBlockCached(block, buffer); e) {
-                if (int e = ReadBlockCached(block, buffer); e) { // Try again
-                    Log::Info("[Ext2] Error %i reading block %u", e, block);
-                    error = DiskReadError;
-                    break;
-                }
+                Log::Info("[Ext2] Error %i reading block %u", e, block);
+                error = DiskReadError;
+                break;
             }
             size -= blocksize;
             buffer += blocksize;
             offset += blocksize;
         } else {
             if (int e = ReadBlockCached(block, blockBuffer); e) {
-                if (int e = ReadBlockCached(block, blockBuffer); e) { // Try again
-                    Log::Info("[Ext2] Error %i reading block %u", e, block);
-                    error = DiskReadError;
-                    break;
-                }
+                Log::Info("[Ext2] Error %i reading block %u", e, block);
+                error = DiskReadError;
+                break;
             }
             memcpy(buffer, blockBuffer, size);
 

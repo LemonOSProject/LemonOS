@@ -382,6 +382,10 @@ long SysUnlink(RegisterContext* r) {
 
 long SysExecve(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
+    if(currentProcess->m_threads.get_length() > 1) {
+        Log::Error("SysExecve does not kill other threads");
+        return -ENOSYS;
+    }
 
     size_t filePathLength;
     long filePathInvalid =
@@ -473,6 +477,8 @@ long SysExecve(RegisterContext* r) {
     r->rsp = (uintptr_t)currentThread->stack + 0x200000;
 
     // Force the first 8KB to be allocated
+    // TODO: PageMap race cond
+
     stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, currentProcess->GetPageMap());
     stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, currentProcess->GetPageMap());
 
@@ -2082,7 +2088,7 @@ long SysGetNextProcessInfo(RegisterContext* r) {
     pInfo->runningTime = Timer::GetSystemUptime() - reqProcess->creationTime.tv_sec;
     pInfo->activeUs = reqProcess->activeTicks * 1000000 / Timer::GetFrequency();
 
-    pInfo->usedMem = reqProcess->usedMemoryBlocks / 4;
+    pInfo->usedMem = reqProcess->addressSpace->UsedPhysicalMemory();
     pInfo->isCPUIdle = reqProcess->IsCPUIdleProcess();
 
     return 0;

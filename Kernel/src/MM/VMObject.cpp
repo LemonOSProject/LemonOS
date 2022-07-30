@@ -149,7 +149,7 @@ size_t PhysicalVMObject::UsedPhysicalMemory() const {
     }
 
     unsigned blockCount = 0;
-    for(unsigned i = 0; i < size >> PAGE_SHIFT_4K; i++){
+    for(unsigned i = 0; i < (size >> PAGE_SHIFT_4K); i++){
         if(physicalBlocks[i]){
             blockCount++;
         }

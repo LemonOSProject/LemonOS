@@ -68,7 +68,9 @@ public:
     size_t UsedPhysicalMemory() const;
     void DumpRegions();
 
-    __attribute__((always_inline)) inline PageMap* GetPageMap() { return m_pageMap; }
+    ALWAYS_INLINE PageMap* GetPageMap() { return m_pageMap; }
+
+    ALWAYS_INLINE lock_t* GetLock() { return &m_lock; }
 
 protected:
     MappedRegion* FindAvailableRegion(size_t size);
