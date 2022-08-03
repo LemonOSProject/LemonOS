@@ -8,12 +8,13 @@ WindowTheme WMWindow::theme;
 
 WMWindow::WMWindow(const Handle& endpoint, int64_t id, const std::string& title, const Vector2i& pos,
                    const Vector2i& size, int flags)
-    : LemonWMClientEndpoint(endpoint), m_id(id), m_title(title), m_size(size), m_rect(Rect{pos, size}), m_flags(flags) {
+    : LemonWMClientEndpoint(endpoint), m_id(id), m_title(title), m_size(size), m_rect(Rect{pos, size}) {
     CreateWindowBuffer();
     Queue(Lemon::Message(LemonWMServer::ResponseCreateWindow, LemonWMServer::CreateWindowResponse{m_id, m_bufferKey}));
 
     UpdateWindowRects();
 
+    SetFlags(flags);
     WM::Instance().Compositor().InvalidateAll();
 }
 
@@ -129,6 +130,8 @@ void WMWindow::SetFlags(int flags) {
     int oldFlags = m_flags;
 
     m_flags = flags;
+    // If transparency is disabled mask the transparent flag
+    m_flags &= ~(WINDOW_FLAGS_TRANSPARENT * (!WM::Instance().enableWindowTransparency));
 
     const int invalidatingFlags = GUI::WindowFlag_NoDecoration | GUI::WindowFlag_Transparent;
     if ((oldFlags & invalidatingFlags) != (m_flags & invalidatingFlags)) {

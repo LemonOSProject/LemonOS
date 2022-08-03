@@ -52,6 +52,8 @@ public:
         }
     }
 
+    bool enableWindowTransparency = false;
+
 private:
     static WM* m_instance;
 
