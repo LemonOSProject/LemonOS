@@ -88,12 +88,11 @@ void InitializeCPU(uint16_t id) {
     wait(50);
 
     if ((*smpMagic) != 0xB33F) { // Check if the trampoline code set the flag to let us know it has started
-        APIC::Local::SendIPI(id, ICR_DSH_DEST, ICR_MESSAGE_TYPE_STARTUP, (SMP_TRAMPOLINE_ENTRY >> 12));
-
         wait(100);
     }
 
     if ((*smpMagic) != 0xB33F) {
+        APIC::Local::SendIPI(id, ICR_DSH_DEST, ICR_MESSAGE_TYPE_STARTUP, (SMP_TRAMPOLINE_ENTRY >> 12));
         wait(200);
     }
 

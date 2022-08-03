@@ -437,8 +437,8 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks 
 /// \return FsNode of parent, nullptr on failure
 /////////////////////////////
 FsNode* ResolveParent(const char* path, FsNode* workingDir = nullptr);
-char* CanonicalizePath(const char* path, char* workingDir);
-char* BaseName(const char* path);
+String CanonicalizePath(const char* path, char* workingDir);
+String BaseName(const char* path);
 
 /////////////////////////////
 /// \brief Read data from filesystem node
@@ -483,7 +483,7 @@ int Unlink(FsNode*, DirectoryEntry*, bool unlinkDirectories = false);
 
 int Ioctl(const FancyRefPtr<UNIXOpenFile>& handle, uint64_t cmd, uint64_t arg);
 
-int Rename(FsNode* olddir, char* oldpath, FsNode* newdir, char* newpath);
+int Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newpath);
 } // namespace fs
 
 ALWAYS_INLINE UNIXOpenFile::~UNIXOpenFile() { fs::Close(this); }

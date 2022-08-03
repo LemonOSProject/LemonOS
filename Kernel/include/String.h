@@ -157,6 +157,13 @@ public:
         return (*s1) - (*data);
     };
 
+    void Erase(unsigned pos) {
+        assert(pos < m_len);
+        memcpy(m_buffer + pos, m_buffer + pos + 1, m_len - pos - 1);
+
+        Resize(m_len - 1);
+    }
+
     ALWAYS_INLINE int Compare(const BasicString& other) const { return Compare(other.Data()); };
 
     /////////////////////////////

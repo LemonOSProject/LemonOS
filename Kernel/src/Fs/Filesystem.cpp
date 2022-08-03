@@ -291,7 +291,7 @@ FsNode* ResolveParent(const char* path, const char* workingDir) {
 }
 
 FsNode* ResolveParent(const char* path, FsNode* workingDir) {
-    char* pathCopy = (char*)kmalloc(strlen(path) + 1);
+    char pathCopy[strlen(path) + 1];
     strcpy(pathCopy, path);
 
     if (pathCopy[strlen(pathCopy) - 1] == '/') { // Remove trailing slash
@@ -309,11 +309,10 @@ FsNode* ResolveParent(const char* path, FsNode* workingDir) {
         parentDirectory = fs::ResolvePath(pathCopy, workingDir);
     }
 
-    kfree(pathCopy);
     return parentDirectory;
 }
 
-char* CanonicalizePath(const char* path, char* workingDir) {
+String CanonicalizePath(const char* path, char* workingDir) {
     char* tempPath;
     if (workingDir && path[0] != '/') {
         tempPath = (char*)kmalloc(strlen(path) + strlen(workingDir) + 2);
@@ -334,8 +333,6 @@ char* CanonicalizePath(const char* path, char* workingDir) {
         file = strtok_r(NULL, "/", &savePtr);
     }
 
-    int newLength = 2; // Separator and null terminator
-    newLength += strlen(path) + strlen(workingDir);
     for (unsigned i = 0; i < tokens->get_length(); i++) {
         if (strlen(tokens->get_at(i)) == 0) {
             tokens->remove_at(i--);
@@ -352,19 +349,14 @@ char* CanonicalizePath(const char* path, char* workingDir) {
                 tokens->remove_at(i);
             continue;
         }
-
-        newLength += strlen(tokens->get_at(i)) + 1; // Name and separator
     }
 
-    char* outPath = (char*)kmalloc(newLength);
-    outPath[0] = 0;
-
+    String outPath;
     if (!tokens->get_length())
-        strcpy(outPath + strlen(outPath), "/");
+        outPath = "/";
     else
         for (unsigned i = 0; i < tokens->get_length(); i++) {
-            strcpy(outPath + strlen(outPath), "/");
-            strcpy(outPath + strlen(outPath), tokens->get_at(i));
+            outPath += String("/") + tokens->get_at(i);
         }
 
     kfree(tempPath);
@@ -373,23 +365,19 @@ char* CanonicalizePath(const char* path, char* workingDir) {
     return outPath;
 }
 
-char* BaseName(const char* path) {
-    char* pathCopy = (char*)kmalloc(strlen(path) + 1);
-    strcpy(pathCopy, path);
+String BaseName(const char* path) {
+    String pathCopy = path;
 
-    if (pathCopy[strlen(pathCopy) - 1] == '/') { // Remove trailing slash
-        pathCopy[strlen(pathCopy) - 1] = 0;
+    if (pathCopy[pathCopy.Length() - 1] == '/') { // Remove trailing slash
+        pathCopy.Erase(pathCopy.Length() - 1);
     }
 
-    char* basename = nullptr;
+    String basename = nullptr;
     char* temp;
-    if ((temp = strrchr(pathCopy, '/'))) {
-        basename = (char*)kmalloc(strlen(temp) + 1);
-        strcpy(basename, temp);
-
-        kfree(pathCopy);
+    if ((temp = strrchr(pathCopy.c_str(), '/'))) {
+        basename = String(temp);
     } else {
-        basename = pathCopy;
+        basename = std::move(pathCopy);
     }
 
     return basename;
@@ -523,7 +511,7 @@ int Ioctl(const FancyRefPtr<UNIXOpenFile>& handle, uint64_t cmd, uint64_t arg) {
     return handle->node->Ioctl(cmd, arg);
 }
 
-int Rename(FsNode* olddir, char* oldpath, FsNode* newdir, char* newpath) {
+int Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newpath) {
     assert(olddir && newdir);
 
     if ((olddir->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
@@ -562,10 +550,10 @@ int Rename(FsNode* olddir, char* oldpath, FsNode* newdir, char* newpath) {
     }
 
     DirectoryEntry oldpathDirent;
-    strncpy(oldpathDirent.name, fs::BaseName(oldpath), NAME_MAX);
+    strncpy(oldpathDirent.name, fs::BaseName(oldpath).c_str(), NAME_MAX);
 
     DirectoryEntry newpathDirent;
-    strncpy(newpathDirent.name, fs::BaseName(newpath), NAME_MAX);
+    strncpy(newpathDirent.name, fs::BaseName(newpath).c_str(), NAME_MAX);
 
     if ((oldnode->flags & FS_NODE_TYPE) != FS_NODE_SYMLINK &&
         oldnode->volumeID == newpathParent->volumeID) { // Easy shit we can just link and unlink
@@ -604,15 +592,21 @@ int Rename(FsNode* olddir, char* oldpath, FsNode* newdir, char* newpath) {
 
         ssize_t rret = oldnode->Read(0, oldnode->size, buffer);
         if (rret < 0) {
+            kfree(buffer);
+
             Log::Warning("Filesystem: Rename: Error reading oldpath");
             return rret;
         }
 
         ssize_t wret = oldnode->Write(0, rret, buffer);
         if (wret < 0) {
+            kfree(buffer);
+
             Log::Warning("Filesystem: Rename: Error reading oldpath");
             return wret;
         }
+
+        kfree(buffer);
 
         if (auto e = oldpathParent->Unlink(&oldpathDirent)) {
             return e; // Unlink error

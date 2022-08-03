@@ -1220,7 +1220,7 @@ ssize_t Ext2::Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8
     }*/
 
 #ifdef EXT2_ENABLE_TIMER
-    timeval_t blktv1 = Timer::GetSystemUptimeStruct();
+    long blktv1 = Timer::UsecondsSinceBoot();
 #endif
 
     ssize_t ret = size;
@@ -1228,8 +1228,8 @@ ssize_t Ext2::Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8
     assert(blocks.size() == (blockLimit - blockIndex + 1));
 
 #ifdef EXT2_ENABLE_TIMER
-    timeval_t blktv2 = Timer::GetSystemUptimeStruct();
-    timeval_t readtv1 = Timer::GetSystemUptimeStruct();
+    long blktv2 = Timer::UsecondsSinceBoot();
+    long readtv1 = Timer::UsecondsSinceBoot();
 #endif
 
     for (uint32_t block : blocks) {
@@ -1278,10 +1278,12 @@ ssize_t Ext2::Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8
     }
 
 #ifdef EXT2_ENABLE_TIMER
-    timeval_t readtv2 = Timer::GetSystemUptimeStruct();
+    long readtv2 = Timer::UsecondsSinceBoot();
 
-    Log::Info("[Ext2] Retrieving inode blocks took %d ms, Reading inode blocks took %d ms",
-              Timer::TimeDifference(blktv2, blktv1), Timer::TimeDifference(readtv2, readtv1));
+    if(readtv2 - readtv1 + (blktv2 - blktv1) > 1200) {
+        Log::Info("[Ext2] Retrieving inode blocks took %d ms, Reading inode blocks took %d ms",
+                blktv2 - blktv1, readtv2 - readtv1);
+    }
 #endif
 
     if (size) {

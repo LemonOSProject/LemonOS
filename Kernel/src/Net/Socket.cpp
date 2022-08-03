@@ -282,7 +282,8 @@ int LocalSocket::Bind(const sockaddr* addr, socklen_t addrlen) {
         return -ENOENT;
     }
 
-    DirectoryEntry ent(this, fs::BaseName(unixAddress->sun_path));
+    String name = fs::BaseName(unixAddress->sun_path);
+    DirectoryEntry ent(this, name.c_str());
     if (int e = fs::Link(parent, this, &ent); e) {
         return e;
     }

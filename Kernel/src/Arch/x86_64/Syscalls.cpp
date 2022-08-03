@@ -233,21 +233,19 @@ open:
     if (!node) {
         if (flags & O_CREAT) {
             FsNode* parent = fs::ResolveParent(filepath, proc->workingDir->node);
-            char* basename = fs::BaseName(filepath);
+            String basename = fs::BaseName(filepath);
 
             if (!parent) {
-                Log::Warning("SysOpen: Could not resolve parent directory of new file %s", basename);
+                Log::Warning("SysOpen: Could not resolve parent directory of new file %s", basename.c_str());
                 return -ENOENT;
             }
 
             DirectoryEntry ent;
-            strcpy(ent.name, basename);
+            strcpy(ent.name, basename.c_str());
 
             IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, { Log::Info("SysOpen: Creating %s", filepath); });
 
             parent->Create(&ent, flags);
-
-            kfree(basename);
 
             flags &= ~O_CREAT;
             goto open;
@@ -316,9 +314,9 @@ long SysLink(RegisterContext* r) {
     }
 
     FsNode* parentDirectory = fs::ResolveParent(newpath, proc->workingDir->node);
-    char* linkName = fs::BaseName(newpath);
+    String linkName = fs::BaseName(newpath);
 
-    Log::Info("SysLink: Attempting to create link %s at path %s", linkName, newpath);
+    Log::Info("SysLink: Attempting to create link %s at path %s", linkName.c_str(), newpath);
 
     if (!parentDirectory) {
         Log::Warning("SysLink: Could not resolve path: %s", newpath);
@@ -331,7 +329,7 @@ long SysLink(RegisterContext* r) {
     }
 
     DirectoryEntry entry;
-    strcpy(entry.name, linkName);
+    strcpy(entry.name, linkName.c_str());
     return parentDirectory->Link(file, &entry);
 }
 
@@ -363,7 +361,7 @@ long SysUnlink(RegisterContext* r) {
         workingDir = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(fd))->node;
     }
 
-    char* linkName = fs::BaseName(path);
+    String linkName = fs::BaseName(path);
 
     if (!workingDir) {
         Log::Warning("SysUnlink: Could not resolve path: %s", path);
@@ -376,7 +374,7 @@ long SysUnlink(RegisterContext* r) {
     }
 
     DirectoryEntry entry;
-    strcpy(entry.name, linkName);
+    strcpy(entry.name, linkName.c_str());
     return workingDir->Unlink(&entry);
 }
 
@@ -525,16 +523,16 @@ long SysExecve(RegisterContext* r) {
 long SysChdir(RegisterContext* r) {
     Process* proc = Process::Current();
     if (SC_ARG0(r)) {
-        char* path = fs::CanonicalizePath((char*)SC_ARG0(r), proc->workingDirPath);
+        String path = fs::CanonicalizePath((char*)SC_ARG0(r), proc->workingDirPath);
         FsNode* n = fs::ResolvePath(path);
         if (!n) {
-            Log::Warning("chdir: Could not find %s", path);
+            Log::Warning("chdir: Could not find %s", path.c_str());
             return -ENOENT;
         } else if (!n->IsDirectory()) {
             return -ENOTDIR;
         }
 
-        strcpy(proc->workingDirPath, path);
+        strcpy(proc->workingDirPath, path.c_str());
         proc->workingDir = SC_TRY_OR_ERROR(n->Open(0));
     } else
         Log::Warning("chdir: Invalid path string");
@@ -749,9 +747,9 @@ long SysMkdir(RegisterContext* r) {
     }
 
     FsNode* parentDirectory = fs::ResolveParent(path, proc->workingDir->node);
-    char* dirPath = fs::BaseName(path);
+    String dirPath = fs::BaseName(path);
 
-    Log::Info("sys_mkdir: Attempting to create %s at path %s", dirPath, path);
+    Log::Info("sys_mkdir: Attempting to create %s at path %s", dirPath.c_str(), path);
 
     if (!parentDirectory) {
         Log::Warning("sys_mkdir: Could not resolve path: %s", path);
@@ -764,7 +762,7 @@ long SysMkdir(RegisterContext* r) {
     }
 
     DirectoryEntry dir;
-    strcpy(dir.name, dirPath);
+    strcpy(dir.name, dirPath.c_str());
     int ret = parentDirectory->CreateDirectory(&dir, mode);
 
     return ret;
@@ -792,7 +790,7 @@ long SysRmdir(RegisterContext* r) {
     }
 
     FsNode* parent = fs::ResolveParent(path);
-    strcpy(ent.name, fs::BaseName(path));
+    strcpy(ent.name, fs::BaseName(path).c_str());
     ent.inode = node->inode;
 
     fs::Unlink(parent, &ent, true);
@@ -822,7 +820,7 @@ long SysRename(RegisterContext* r) {
         return -ENOENT;
     }
 
-    return fs::Rename(olddir, fs::BaseName(oldpath), newdir, fs::BaseName(newpath));
+    return fs::Rename(olddir, fs::BaseName(oldpath).c_str(), newdir, fs::BaseName(newpath).c_str());
 }
 
 long SysYield(RegisterContext* r) {
