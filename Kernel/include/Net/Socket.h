@@ -14,7 +14,7 @@
 #include <abi-bits/in.h>
 #include <abi-bits/socket.h>
 #include <abi-bits/fcntl.h>
-#include <bits/posix/socklen_t.h>
+#include <abi-bits/socklen_t.h>
 
 #define CONNECTION_BACKLOG 128
 
@@ -51,12 +51,6 @@ struct rtentry {
 struct sockaddr_un {
     sa_family_t sun_family; /* AF_UNIX */
     char sun_path[108];     /* Pathname */
-};
-
-struct cmsghdr {
-    socklen_t cmsg_len;
-    int cmsg_level;
-    int cmsg_type;
 };
 
 struct poll {

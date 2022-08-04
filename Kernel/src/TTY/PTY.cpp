@@ -112,21 +112,6 @@ int PTYDevice::Ioctl(uint64_t cmd, uint64_t arg) {
     case TIOCSWINSZ:
         pty->wSz = *((winsz*)arg);
         break;
-    case TIOCGATTR:
-        *((termios*)arg) = pty->tios;
-        break;
-    case TIOCSATTR:
-        pty->tios = *((termios*)arg);
-        pty->slave.ignoreBackspace = !pty->IsCanonical();
-        break;
-    case TIOCFLUSH:
-        if (arg == TCIFLUSH || arg == TCIOFLUSH) {
-            pty->slave.Flush();
-        }
-        if (arg == TCOFLUSH || arg == TCIOFLUSH) {
-            pty->master.Flush();
-        }
-        break;
     case TIOCGPTN:
         *((int*)arg) = pty->GetID();
         break;

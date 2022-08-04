@@ -483,10 +483,9 @@ int main(int argc, char** argv) {
 
     setenv("TERM", "xterm-256color", 1);
 
-    struct sigaction action = {
-        .sa_handler = SIGCHLDHandler,
-        .sa_flags = 0,
-    };
+    struct sigaction action = {};
+    action.sa_handler = SIGCHLDHandler;
+    
     sigemptyset(&action.sa_mask);
 
     // We want to exit on SIGCHLD

@@ -383,10 +383,8 @@ int main() {
     readAttributes = execAttributes;
     readAttributes.c_lflag &= ~(ICANON | ECHO); // Disable canonical mode and echo when reading user input
 
-    struct sigaction action = {
-        .sa_handler = InterruptSignalHandler,
-        .sa_flags = 0,
-    };
+    struct sigaction action = {};
+    action.sa_handler = InterruptSignalHandler;
     sigemptyset(&action.sa_mask);
 
     // Send both SIGINT and SIGWINCH to child

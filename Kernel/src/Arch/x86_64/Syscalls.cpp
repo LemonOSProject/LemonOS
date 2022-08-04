@@ -32,18 +32,17 @@
 #include <ABI/Process.h>
 
 #include <abi-bits/vm-flags.h>
+#include <abi-bits/wait.h>
 #include <sys/ioctl.h>
 
-#define EXEC_CHILD 1
-
-#define WCONTINUED 1
-#define WNOHANG 2
-#define WUNTRACED 4
-#define WEXITED 8
-#define WNOWAIT 16
-#define WSTOPPED 32
-
-#define SC_TRY_OR_ERROR(func) ({auto result = func; if (!result) { return -result.err.code; } std::move(result.Value());})
+#define SC_TRY_OR_ERROR(func)                                                                                          \
+    ({                                                                                                                 \
+        auto result = func;                                                                                            \
+        if (!result) {                                                                                                 \
+            return -result.err.code;                                                                                   \
+        }                                                                                                              \
+        std::move(result.Value());                                                                                     \
+    })
 
 long SysExit(RegisterContext* r) {
     int code = SC_ARG0(r);
@@ -148,8 +147,8 @@ long SysExec(RegisterContext* r) {
 
         // Copy handles
         proc->m_handles.resize(currentProcess->HandleCount());
-        for(unsigned i = 0; i < proc->m_handles.size(); i++) {
-            if(!currentProcess->m_handles[i].closeOnExec) {
+        for (unsigned i = 0; i < proc->m_handles.size(); i++) {
+            if (!currentProcess->m_handles[i].closeOnExec) {
                 proc->m_handles[i] = currentProcess->m_handles[i];
             } else {
                 proc->m_handles[i] = HANDLE_NULL;
@@ -338,12 +337,12 @@ long SysUnlink(RegisterContext* r) {
     const char* path = (const char*)SC_ARG1(r);
     int flag = SC_ARG2(r);
 
-    if(flag & AT_REMOVEDIR) {
+    if (flag & AT_REMOVEDIR) {
         Log::Warning("SysUnlink: AT_REMOVEDIR unsupported!");
         return -EINVAL;
     }
 
-    if(flag & ~(AT_REMOVEDIR)) {
+    if (flag & ~(AT_REMOVEDIR)) {
         return -EINVAL;
     }
 
@@ -355,7 +354,7 @@ long SysUnlink(RegisterContext* r) {
     }
 
     FsNode* workingDir;
-    if(fd == AT_FDCWD) {
+    if (fd == AT_FDCWD) {
         workingDir = proc->workingDir->node;
     } else {
         workingDir = SC_TRY_OR_ERROR(proc->GetHandleAs<UNIXOpenFile>(fd))->node;
@@ -380,7 +379,7 @@ long SysUnlink(RegisterContext* r) {
 
 long SysExecve(RegisterContext* r) {
     Process* currentProcess = Scheduler::GetCurrentProcess();
-    if(currentProcess->m_threads.get_length() > 1) {
+    if (currentProcess->m_threads.get_length() > 1) {
         Log::Error("SysExecve does not kill other threads");
         return -ENOSYS;
     }
@@ -459,7 +458,7 @@ long SysExecve(RegisterContext* r) {
 
     asm volatile("cli");
     currentProcess->addressSpace = newSpace;
-    asm volatile("mov %%rax, %%cr3; sti" :: "a"(newSpace->GetPageMap()->pml4Phys));
+    asm volatile("mov %%rax, %%cr3; sti" ::"a"(newSpace->GetPageMap()->pml4Phys));
 
     delete oldSpace;
     currentProcess->usedMemoryBlocks = 0;
@@ -897,7 +896,7 @@ long SysDebug(RegisterContext* r) {
     Process* proc = Scheduler::GetCurrentProcess();
 
     size_t sLen;
-    if(strlenSafe((char*)SC_ARG0(r), sLen,  proc->addressSpace)) {
+    if (strlenSafe((char*)SC_ARG0(r), sLen, proc->addressSpace)) {
         return -EFAULT;
     }
 
@@ -1094,7 +1093,7 @@ long SysWaitPID(RegisterContext* r) {
 
 long SysNanoSleep(RegisterContext* r) {
     uint64_t nanoseconds = SC_ARG0(r);
-    if(!nanoseconds) {
+    if (!nanoseconds) {
         return 0;
     }
 
@@ -2151,7 +2150,7 @@ long SysExitThread(RegisterContext* r) {
     thread->blocker = nullptr;
     acquireLockIntDisable(&thread->stateLock);
 
-    if(thread->state == ThreadStateRunning) {
+    if (thread->state == ThreadStateRunning) {
         thread->state = ThreadStateBlocked;
     }
 
@@ -2628,7 +2627,6 @@ long SysInterfaceConnect(RegisterContext* r) {
         return -EINVAL; // Some error connecting, interface destroyed?
     }
 
-
     return currentProcess->AllocateHandle(static_pointer_cast<KernelObject>(endp));
 }
 
@@ -2875,7 +2873,7 @@ long SysKernelObjectWait(RegisterContext* r) {
     KernelObjectWatcher watcher;
     for (unsigned i = 0; i < count; i++) {
         handle_id_t id;
-        if(handleIDs.GetValue(i, id)) {
+        if (handleIDs.GetValue(i, id)) {
             return -EFAULT;
         }
 
@@ -3462,34 +3460,27 @@ long SysSignalAction(RegisterContext* r) {
 
         const SignalHandler& sigHandler = proc->signalHandlers[signal - 1];
         if (sigHandler.action == SignalHandler::HandlerAction::UsermodeHandler) {
-            if (sigHandler.flags & SignalHandler::FlagSignalInfo) {
-                *oldSA = {
-                    .sa_handler = nullptr,
-                    .sa_mask = sigHandler.mask,
-                    .sa_flags = sigHandler.flags,
-                    .sa_sigaction = reinterpret_cast<void (*)(int, siginfo_t*, void*)>(sigHandler.userHandler),
-                };
-            } else {
-                *oldSA = {
-                    .sa_handler = reinterpret_cast<void (*)(int)>(sigHandler.userHandler),
-                    .sa_mask = sigHandler.mask,
-                    .sa_flags = sigHandler.flags,
-                    .sa_sigaction = nullptr,
-                };
-            }
-        } else if (sigHandler.action == SignalHandler::HandlerAction::Default) {
-            *oldSA = {
-                .sa_handler = SIG_DFL,
+            // if (sigHandler.flags & SignalHandler::FlagSignalInfo) is true, doesn't matter, both types are just
+            // pointers in a union
+            *oldSA = sigaction{
+                .__sa_handler = {reinterpret_cast<void (*)(int)>(sigHandler.userHandler)},
                 .sa_mask = sigHandler.mask,
                 .sa_flags = sigHandler.flags,
-                .sa_sigaction = nullptr,
+                .sa_restorer = nullptr,
+            };
+        } else if (sigHandler.action == SignalHandler::HandlerAction::Default) {
+            *oldSA = sigaction{
+                .__sa_handler = {SIG_DFL},
+                .sa_mask = sigHandler.mask,
+                .sa_flags = sigHandler.flags,
+                .sa_restorer = nullptr,
             };
         } else if (sigHandler.action == SignalHandler::HandlerAction::Ignore) {
-            *oldSA = {
-                .sa_handler = SIG_IGN,
+            *oldSA = sigaction{
+                .__sa_handler = {SIG_IGN},
                 .sa_mask = sigHandler.mask,
                 .sa_flags = sigHandler.flags,
-                .sa_sigaction = nullptr,
+                .sa_restorer = nullptr,
             };
         } else {
             Log::Error("Invalid signal action!");
@@ -3558,7 +3549,7 @@ long SysSignalReturn(RegisterContext* r) {
     asm volatile("fxrstor64 (%0)" ::"r"((uintptr_t)threadStack) : "memory");
     threadStack += 512 / sizeof(uint64_t);
 
-    threadStack++;                     // Discard padding
+    threadStack++; // Discard padding
 
     // Do not allow the thread to modify CS or SS
     memcpy(r, threadStack, offsetof(RegisterContext, cs));
@@ -3821,12 +3812,13 @@ long SysEpollWait(RegisterContext* r) {
             }
         }
 
-        if(evCount > 0) {
-            if(pair.item2.events & EPOLLONESHOT) {
+        if (evCount > 0) {
+            if (pair.item2.events & EPOLLONESHOT) {
                 removeFds.add_back(pair.item1);
             }
         } else {
-            files.add_back({handle, pair.item1, pair.item2}); // We only need the handle for later if events were not found
+            files.add_back(
+                {handle, pair.item1, pair.item2}); // We only need the handle for later if events were not found
         }
 
         if (evCount >= maxevents) {
@@ -3865,8 +3857,8 @@ long SysEpollWait(RegisterContext* r) {
                     }
                 }
 
-                if(evCount > 0) {
-                    if(handle.ev.events & EPOLLONESHOT) {
+                if (evCount > 0) {
+                    if (handle.ev.events & EPOLLONESHOT) {
                         removeFds.add_back(handle.fd);
                     }
                 }
@@ -3879,9 +3871,9 @@ long SysEpollWait(RegisterContext* r) {
     }
 
 done:
-    for(int fd : removeFds) {
-        for(auto it = epoll->fds.begin(); it != epoll->fds.end(); it++) {
-            if(it->item1 == fd) {
+    for (int fd : removeFds) {
+        for (auto it = epoll->fds.begin(); it != epoll->fds.end(); it++) {
+            if (it->item1 == fd) {
                 epoll->fds.remove(it);
                 break;
             }
@@ -3901,6 +3893,7 @@ long SysFChdir(RegisterContext* r) {
     return 0;
 }
 
+// clang-format off
 syscall_t syscalls[NUM_SYSCALLS]{
     SysDebug,
     SysExit, // 1
@@ -4012,9 +4005,10 @@ syscall_t syscalls[NUM_SYSCALLS]{
     SysGetResourceLimit,
     SysEpollCreate,
     SysEPollCtl,
-    SysEpollWait,   // 110
+    SysEpollWait, // 110
     SysFChdir
 };
+// clang-format on
 
 void DumpLastSyscall(Thread* t) {
     RegisterContext& lastSyscall = t->lastSyscall;
@@ -4043,7 +4037,7 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
 
     if (__builtin_expect(thread->state == ThreadStateZombie, 0)) {
         releaseLock(&thread->kernelLock);
-    
+
         for (;;)
             Scheduler::Yield();
     }
@@ -4057,7 +4051,7 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
     regs->rax = syscalls[regs->rax](regs); // Call syscall
 
     IF_DEBUG((debugLevelSyscalls >= DebugLevelVerbose), {
-        if(regs->rax < 0)
+        if (regs->rax < 0)
             Log::Info("Syscall %d exiting with value %d", thread->lastSyscall.rax, regs->rax);
     });
 
@@ -4067,7 +4061,7 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
     }
     releaseLock(&thread->kernelLock);
 
-    while(thread->state == ThreadStateDying) {
+    while (thread->state == ThreadStateDying) {
         Scheduler::Yield();
     }
 }
