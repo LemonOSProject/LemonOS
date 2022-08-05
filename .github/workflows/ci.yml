@@ -49,14 +49,6 @@ jobs:
             **/Build/tool-builds
             **/Toolchain
 
-      - name: Cache packages
-        uses: actions/cache@v2
-        with:
-          key: ${{ runner.os }}-${{ hashFiles('**/bootstrap.yml') }}-${{ hashFiles('**/Ports/packages.yml') }}-lemon-pkgs
-          path: |
-            **/Build/pkg-builds
-            **/Ports
-
       - name: Init xbstrap
         run: |
           mkdir -p Build
@@ -66,9 +58,8 @@ jobs:
       - name: Build the toolchain
         run: |
           cd Build
-          xbstrap fetch --hard-reset mlibc
           xbstrap regenerate icu gettext
-          xbstrap install-tool host-icu --reconfigure
+          xbstrap install-tool host-icu host-python --reconfigure
           xbstrap install-tool --all
         
       - name: Building system
@@ -124,15 +115,14 @@ jobs:
       - name: Build the toolchain
         run: |
           cd Build
-          xbstrap fetch --hard-reset mlibc
           xbstrap regenerate icu gettext
-          xbstrap install-tool host-icu --reconfigure
+          xbstrap install-tool host-icu host-python --reconfigure
           xbstrap install-tool --all
         
       - name: Building system
         run: |
           cd Build
-          xbstrap install --recursive lemon-base nyancat curl binutils lemondoom
+          xbstrap install --recursive lemon-base nyancat curl libarchive binutils lemondoom nasm
 
       - name: Building disk image
         run: |
