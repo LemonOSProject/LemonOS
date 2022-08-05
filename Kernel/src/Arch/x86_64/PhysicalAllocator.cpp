@@ -103,8 +103,7 @@ void MarkMemoryRegionFree(uint64_t base, size_t size) {
 
 // Allocates a block of physical memory
 uint64_t AllocatePhysicalMemoryBlock() {
-    acquireLock(&allocatorLock);
-    InterruptDisabler disableInterrupts;
+    ScopedSpinLock<true> lock(allocatorLock);
 
     uint64_t index = GetFirstFreeMemoryBlock();
     if (!index) {
@@ -117,8 +116,6 @@ uint64_t AllocatePhysicalMemoryBlock() {
 
     SetBit(index);
     usedPhysicalBlocks++;
-
-    releaseLock(&allocatorLock);
 
     return index << PHYSALLOC_BLOCK_SHIFT;
 }

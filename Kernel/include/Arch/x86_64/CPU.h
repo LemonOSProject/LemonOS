@@ -140,11 +140,10 @@ typedef struct {
 
 ALWAYS_INLINE static bool CheckInterrupts() {
     volatile unsigned long flags;
-    asm volatile("pushf;"
+    asm volatile("pushfq;"
                  "pop %0;"
-                 "andq $0x200, %0;"
                  : "=rm"(flags)::"memory", "cc");
-    return flags != 0;
+    return (flags & 0x200) != 0;
 }
 
 cpuid_info_t CPUID();

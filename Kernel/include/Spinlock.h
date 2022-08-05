@@ -5,16 +5,16 @@ typedef volatile int lock_t;
 #include <CPU.h>
 #include <Compiler.h>
 
-#define CHECK_DEADLOCK
+//#define CHECK_DEADLOCK
 #ifdef CHECK_DEADLOCK
 #include <Assert.h>
 
 #define acquireLock(lock)                                                                                              \
     ({                                                                                                                 \
         unsigned i = 0;                                                                                                \
-        while (__sync_lock_test_and_set(lock, 1) && ++i < 0xFFFFFFF)                                                   \
+        while (__atomic_exchange_n(lock, 1, __ATOMIC_ACQUIRE) && ++i < 0x2FFFFFFF)                                     \
             asm("pause");                                                                                              \
-        if (i >= 0x2FFFFFFF) {                                                                                          \
+        if (i >= 0x2FFFFFFF) {                                                                                         \
             assert(!"Deadlock!");                                                                                      \
         }                                                                                                              \
     })
@@ -24,9 +24,9 @@ typedef volatile int lock_t;
         unsigned i = 0;                                                                                                \
         assert(CheckInterrupts());                                                                                     \
         asm volatile("cli");                                                                                           \
-        while (__sync_lock_test_and_set(lock, 1) && ++i < 0xFFFFFFF)                                                   \
-            asm volatile("sti; pause; cli");                                                                                    \
-        if (i >= 0x2FFFFFFF) {                                                                                          \
+        while (__atomic_exchange_n(lock, 1, __ATOMIC_ACQUIRE) && ++i < 0x2FFFFFFF)                                     \
+            asm volatile("sti; pause; cli");                                                                           \
+        if (i >= 0x2FFFFFFF) {                                                                                         \
             assert(!"Deadlock!");                                                                                      \
         }                                                                                                              \
     })
@@ -34,17 +34,25 @@ typedef volatile int lock_t;
 #else
 #define acquireLock(lock)                                                                                              \
     ({                                                                                                                 \
-        while (__sync_lock_test_and_set(lock, 1))                                                                      \
+        while (__atomic_exchange_n(lock, 1, __ATOMIC_ACQUIRE))                                                         \
             asm("pause");                                                                                              \
     })
+
+#define acquireLockIntDisable(lock)                                                                                    \
+    ({                                                                                                                 \
+        asm volatile("cli");                                                                                           \
+        while (__atomic_exchange_n(lock, 1, __ATOMIC_ACQUIRE))                                                         \
+            asm volatile("sti; pause; cli");                                                                           \
+    })
+
 #endif
 
-#define releaseLock(lock) ({ __sync_lock_release(lock); });
+#define releaseLock(lock) ({ __atomic_store_n(lock, 0, __ATOMIC_RELEASE); });
 
 #define acquireTestLock(lock)                                                                                          \
     ({                                                                                                                 \
         int status;                                                                                                    \
-        status = __sync_lock_test_and_set(lock, 1);                                                                    \
+        status = __atomic_exchange_n(lock, 1, __ATOMIC_ACQUIRE);                                                       \
         status;                                                                                                        \
     })
 
@@ -52,8 +60,12 @@ template <bool disableInterrupts = false> class ScopedSpinLock final {
 public:
     ALWAYS_INLINE ScopedSpinLock(lock_t& lock) : m_lock(lock) {
         if constexpr (disableInterrupts) {
-            assert(CheckInterrupts()); // Ensure interrupts are currently enabled
-            acquireLockIntDisable(&m_lock);
+            m_irq = CheckInterrupts();
+            if (m_irq) {
+                acquireLockIntDisable(&m_lock);
+            } else {
+                acquireLock(&m_lock);
+            }
         } else {
             acquireLock(&m_lock);
         }
@@ -62,10 +74,13 @@ public:
         releaseLock(&m_lock);
 
         if constexpr (disableInterrupts) {
-            asm volatile("sti");
+            if (m_irq) {
+                asm volatile("sti");
+            }
         }
     }
 
 private:
     lock_t& m_lock;
+    bool m_irq;
 };

@@ -298,6 +298,7 @@ bool CheckRegion(uintptr_t addr, uint64_t len, page_map_t* addressSpace) {
 }
 
 bool CheckKernelPointer(uintptr_t addr, uint64_t len) {
+    ScopedSpinLock<true> lock(kernelHeapDirLock);
     if (PML4_GET_INDEX(addr) != PML4_GET_INDEX(KERNEL_VIRTUAL_BASE)) {
         return 0;
     }
@@ -429,6 +430,8 @@ void* Allocate4KPages(uint64_t amount, PageMap* pageMap) {
 }
 
 void* KernelAllocate4KPages(uint64_t amount) {
+    ScopedSpinLock<true> lockKDir(kernelHeapDirLock);
+
     uint64_t offset = 0;
     uint64_t pageDirOffset = 0;
     uint64_t counter = 0;
@@ -436,8 +439,6 @@ void* KernelAllocate4KPages(uint64_t amount) {
 
     uint64_t pml4Index = KERNEL_HEAP_PML4_INDEX;
     uint64_t pdptIndex = KERNEL_HEAP_PDPT_INDEX;
-
-    ScopedSpinLock lockKDir(kernelHeapDirLock);
 
     /* Attempt 1: Already Allocated Page Tables*/
     for (int i = 0; i < TABLES_PER_DIR; i++) {
@@ -515,46 +516,11 @@ void* KernelAllocate4KPages(uint64_t amount) {
     assert(!"Kernel Out of Virtual Memory");
 }
 
-void* KernelAllocate2MPages(uint64_t amount) {
-    uint64_t address = 0;
-    uint64_t offset = 0;
-    uint64_t counter = 0;
-    uint64_t pdptIndex = KERNEL_HEAP_PDPT_INDEX;
-    uint64_t pml4Index = KERNEL_HEAP_PML4_INDEX;
-
-    ScopedSpinLock lockKDir(kernelHeapDirLock);
-
-    for (int i = 0; i < TABLES_PER_DIR; i++) {
-        if (kernelHeapDir[i] & 0x1) {
-            offset = i + 1;
-            counter = 0;
-            continue;
-        }
-        counter++;
-
-        if (counter >= amount) {
-            address = (PDPT_SIZE * pml4Index) + (pdptIndex * PAGE_SIZE_1G) + offset * PAGE_SIZE_2M;
-            address |= 0xFFFF000000000000;
-            while (counter--) {
-                kernelHeapDir[offset] = 0x83;
-                offset++;
-            }
-            return (void*)address;
-        }
-    }
-
-    Log::Error("Kernel Out of Virtual Memory");
-    const char* reasons[1] = {"Kernel Out of Virtual Memory!"};
-    KernelPanic(reasons, 1);
-    for (;;)
-        ;
-}
-
 void KernelFree4KPages(void* addr, uint64_t amount) {
     uint64_t pageDirIndex, pageIndex;
     uint64_t virt = (uint64_t)addr;
 
-    ScopedSpinLock lockKDir(kernelHeapDirLock);
+    ScopedSpinLock<true> lockKDir(kernelHeapDirLock);
 
     while (amount--) {
         pageDirIndex = PAGE_DIR_GET_INDEX(virt);
@@ -562,16 +528,6 @@ void KernelFree4KPages(void* addr, uint64_t amount) {
         kernelHeapDirTables[pageDirIndex][pageIndex] = 0;
         invlpg(virt);
         virt += PAGE_SIZE_4K;
-    }
-}
-
-void KernelFree2MPages(void* addr, uint64_t amount) {
-    ScopedSpinLock lockKDir(kernelHeapDirLock);
-
-    while (amount--) {
-        uint64_t pageDirIndex = PAGE_DIR_GET_INDEX((uint64_t)addr);
-        kernelHeapDir[pageDirIndex] = 0;
-        addr = (void*)((uint64_t)addr + 0x200000);
     }
 }
 
@@ -604,7 +560,7 @@ void Free4KPages(void* addr, uint64_t amount, page_map_t* addressSpace) {
 void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount) {
     uint64_t pageDirIndex = PAGE_DIR_GET_INDEX(virt);
 
-    ScopedSpinLock lockKDir(kernelHeapDirLock);
+    ScopedSpinLock<true> lockKDir(kernelHeapDirLock);
 
     while (amount--) {
         kernelHeapDir[pageDirIndex] = 0x83;
@@ -618,7 +574,7 @@ void KernelMapVirtualMemory2M(uint64_t phys, uint64_t virt, uint64_t amount) {
 void KernelMapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t flags) {
     uint64_t pageDirIndex, pageIndex;
 
-    ScopedSpinLock lockKDir(kernelHeapDirLock);
+    ScopedSpinLock<true> lockKDir(kernelHeapDirLock);
 
     while (amount--) {
         pageDirIndex = PAGE_DIR_GET_INDEX(virt);
@@ -720,7 +676,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
             Log::Info("Process Mapped Memory:");
             process->addressSpace->DumpRegions();
 
-            IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, { DumpLastSyscall(GetCPULocal()->currentThread); });
+            IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, { DumpLastSyscall(Thread::Current()); });
         }
     };
 

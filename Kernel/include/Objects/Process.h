@@ -39,14 +39,7 @@ public:
     static FancyRefPtr<Process> CreateELFProcess(void* elf, const Vector<String>& argv, const Vector<String>& envp,
                                                  const char* execPath, Process* parent);
     ALWAYS_INLINE static Process* Current() {
-        CPU* cpu = GetCPULocal();
-
-        Process* ret = nullptr;
-
-        if (cpu->currentThread)
-            ret = cpu->currentThread->parent;
-
-        return ret;
+        return Thread::Current()->parent;
     }
 
     ~Process();

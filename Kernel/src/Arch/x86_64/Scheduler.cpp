@@ -1,5 +1,7 @@
 #include <Scheduler.h>
 
+#include <atomic>
+
 #include <ABI.h>
 #include <APIC.h>
 #include <CPU.h>
@@ -35,7 +37,7 @@ lock_t destroyedProcessesLock = 0;
 List<FancyRefPtr<Process>>* destroyedProcesses;
 
 unsigned processTableSize = 512;
-pid_t nextPID = 1;
+std::atomic<pid_t> nextPID = 1;
 
 // When the run queue was last balanced
 uint64_t nextBalanceDue = 0;

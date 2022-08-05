@@ -12,13 +12,29 @@
 class Lock {
 public:
     void lock() {
-        acquireLock(&m_lock);
+        bool irq = CheckInterrupts();
+        if (irq) {
+            acquireLockIntDisable(&m_lock);
+        } else {
+            acquireLock(&m_lock);
+        }
+
+        m_irq = irq;
     }
 
-    void unlock() { releaseLock(&m_lock); }
+    void unlock() {
+        bool irq = m_irq;
+        releaseLock(&m_lock);
+
+        if (irq) {
+            EnableInterrupts();
+        }
+    }
 
 private:
     lock_t m_lock = 0;
+    // Whether or not the lock owner had IRQs enabled
+    bool m_irq = false;
 };
 
 lock_t allocatorInstanceLock = 0;
@@ -81,14 +97,10 @@ frg::slab_allocator<KernelAllocator, Lock>& Allocator() {
     return allocator->slabAllocator;
 }
 
-void* kmalloc(size_t size) { 
-    return Allocator().allocate(size);
-}
+void* kmalloc(size_t size) { return Allocator().allocate(size); }
 
 void kfree(void* p) { return Allocator().free(p); }
 
 void* krealloc(void* p, size_t sz) { return Allocator().reallocate(p, sz); }
 
-void frg_panic(const char* s){
-    Log::Error(s);
-}
+void frg_panic(const char* s) { Log::Error(s); }

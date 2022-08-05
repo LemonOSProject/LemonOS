@@ -458,28 +458,27 @@ long SysExecve(RegisterContext* r) {
     AddressSpace* newSpace = new AddressSpace(Memory::CreatePageMap());
     AddressSpace* oldSpace = currentProcess->addressSpace;
 
+    // Reset register state
+    memset(r, 0, sizeof(RegisterContext));
+
+    MappedRegion* stackRegion =
+        newSpace->AllocateAnonymousVMObject(0x200000, 0, false); // 2MB max stacksize
+    currentThread->stack = reinterpret_cast<void*>(stackRegion->base);               // 256KB stack size
+    r->rsp = (uintptr_t)currentThread->stack + 0x200000;
+
+    stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, newSpace->GetPageMap());
+    stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, newSpace->GetPageMap());
+
     asm volatile("cli");
     currentProcess->addressSpace = newSpace;
     asm volatile("mov %%rax, %%cr3; sti" ::"a"(newSpace->GetPageMap()->pml4Phys));
 
     delete oldSpace;
-    currentProcess->usedMemoryBlocks = 0;
 
     currentProcess->MapSignalTrampoline();
 
-    // Reset register state
-    memset(r, 0, sizeof(RegisterContext));
-
-    MappedRegion* stackRegion =
-        currentProcess->addressSpace->AllocateAnonymousVMObject(0x200000, 0, false); // 2MB max stacksize
-    currentThread->stack = reinterpret_cast<void*>(stackRegion->base);               // 256KB stack size
-    r->rsp = (uintptr_t)currentThread->stack + 0x200000;
-
     // Force the first 8KB to be allocated
     // TODO: PageMap race cond
-
-    stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x1000, currentProcess->GetPageMap());
-    stackRegion->vmObject->Hit(stackRegion->base, 0x200000 - 0x2000, currentProcess->GetPageMap());
 
     elf_info_t elfInfo = LoadELFSegments(currentProcess, buffer, 0);
     r->rip = currentProcess->LoadELF(&r->rsp, elfInfo, kernelArgv, kernelEnvp, filepath);
@@ -3226,9 +3225,11 @@ long SysFork(RegisterContext* r) {
     FancyRefPtr<Process> newProcess = process->Fork();
     FancyRefPtr<Thread> thread = newProcess->GetMainThread();
     void* threadKStack = thread->kernelStack; // Save the allocated kernel stack
+    void* threadKStackBase = thread->kernelStackBase;
 
     *thread = *currentThread;
     thread->kernelStack = threadKStack;
+    thread->kernelStackBase = threadKStackBase;
     thread->state = ThreadStateRunning;
     thread->parent = newProcess.get();
     thread->registers = *r;
@@ -4048,7 +4049,7 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
         return;
     }
 
-    Thread* thread = GetCPULocal()->currentThread;
+    Thread* thread = Thread::Current();
     if (__builtin_expect(acquireTestLock(&thread->kernelLock), 0)) {
         for (;;)
             Scheduler::Yield();

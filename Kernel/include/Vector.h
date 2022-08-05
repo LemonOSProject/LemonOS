@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Assert.h>
 #include <CString.h>
 #include <Memory.h>
 #include <Move.h>

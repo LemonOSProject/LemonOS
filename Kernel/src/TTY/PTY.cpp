@@ -210,7 +210,7 @@ void PTY::Close() {
 ssize_t PTY::MasterRead(char* buffer, size_t count) { return master.Read(buffer, count); }
 
 ssize_t PTY::SlaveRead(char* buffer, size_t count) {
-    Thread* thread = GetCPULocal()->currentThread;
+    Thread* thread = Thread::Current();
 
     while (IsCanonical() && !slave.lines) {
         FilesystemBlocker blocker(&slaveFile);

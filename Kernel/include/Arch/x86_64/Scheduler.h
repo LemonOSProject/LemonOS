@@ -34,16 +34,7 @@ void RegisterProcess(FancyRefPtr<Process> proc);
 void MarkProcessForDestruction(Process* proc);
 
 ALWAYS_INLINE static Process* GetCurrentProcess() {
-    InterruptDisabler disableInterrupts;
-
-    CPU* cpu = GetCPULocal();
-
-    Process* ret = nullptr;
-
-    if (cpu->currentThread)
-        ret = cpu->currentThread->parent;
-
-    return ret;
+    return Thread::Current()->parent;
 }
 
 // Checks that a pointer of type T is valid
