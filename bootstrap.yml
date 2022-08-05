@@ -86,7 +86,7 @@ sources:
       - host-libtool
       - host-pkgconfig
     regenerate:
-      - args: ['autoreconf', '-f', '-i']
+      - args: ['autoreconf', '-fi']
       - args: ['cp', '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub', '@THIS_SOURCE_DIR@/']
 
   - name: gnulib
@@ -362,6 +362,15 @@ tools:
       - args: ['make']
     install:
       - args: ['make', 'install-strip']
+
+  - name: host-python
+    from_source: python
+    configure:
+      - args: ['@THIS_SOURCE_DIR@/configure', '--prefix=@PREFIX@']
+    compile:
+      - args: ['make', '-j@PARALLELISM@']
+    install:
+      - args: ['make', 'install']
 
 packages:
   - name: mlibc-headers

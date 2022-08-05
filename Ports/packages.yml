@@ -163,6 +163,7 @@ packages:
       - mlibc
     tools_required:
       - host-libtool
+      - host-pkgconfig
       - host-compiler
     configure:
       - args: ['@THIS_SOURCE_DIR@/configure', '--host=x86_64-lemon', '--prefix=/system', '--with-pic']
@@ -194,6 +195,8 @@ packages:
       - mlibc
     tools_required:
       - host-compiler
+      - host-libtool
+      - host-pkgconfig
     build:
       - args: ['ninja']
         environ:
@@ -258,6 +261,75 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: ncurses
+    source:
+      git: 'https://github.com/ThomasDickey/ncurses-snapshots'
+      tag: 'v6_3'
+      version: '6.3'
+      subdir: 'Ports'
+      tools_required:
+        - host-libtool
+        - host-pkgconfig
+      regenerate:
+        - args: ['cp', '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub', '@THIS_SOURCE_DIR@/']
+    tools_required:
+      - host-compiler
+      - host-libtool
+      - host-pkgconfig
+    pkgs_required:
+      - mlibc
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-lemon'
+        - '--prefix=/system'
+        - '--enable-pc=files'
+        - '--without-ada'
+        - '--with-termlib'
+        - '--enable-widec'
+        - '--enable-ext-colors'
+        - '--enable-sigwinch'
+        - '--with-shared'
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+    build: # For some reason make ignores the DESTDIR environment variable!
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install', 'DESTDIR=@THIS_COLLECT_DIR@']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
+  - name: readline
+    source:
+      subdir: 'Ports'
+      git: 'https://git.savannah.gnu.org/git/readline.git'
+      tag: 'readline-8.1'
+      version: '8.1'
+    tools_required:
+      - host-compiler
+      - host-libtool
+      - host-pkgconfig
+    pkgs_required:
+      - mlibc
+      - ncurses
+    configure:
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-lemon'
+        - '--prefix=/system'
+        - '--enable-multibyte'
+        - '--with-curses'
+        - '--enable-shared'
+        - '--disable-static'
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+    build:
+      - args: ['make', '-j@PARALLELISM@']
+      - args: ['make', 'install', 'DESTDIR=@THIS_COLLECT_DIR@']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   - name: python
     from_source: python
     tools_required:
@@ -271,6 +343,8 @@ packages:
       - libffi
       - libressl
       - zlib
+      - ncurses
+      - readline
     configure:
       - args:
         - '@THIS_SOURCE_DIR@/configure'
@@ -284,21 +358,21 @@ packages:
         - '--with-system-ffi'
         - '--with-system-expat'
         environ:
-          CONFIG_SITE: '@SOURCE_ROOT@/scripts/python-config-site'
           PKG_CONFIG_SYSROOT_DIR: '@SYSROOT_DIR@'
           PKG_CONFIG_LIBDIR: '@SYSROOT_DIR@/system/lib/pkgconfig:@SYSROOT_DIR@/system/share/pkgconfig'
           ac_cv_file__dev_ptmx: 'yes'
           ac_cv_file__dev_ptc: 'no'
           CC: 'clang'
           CXX: 'clang++'
-          PYTHON_FOR_BUILD: 'python3'
-          PYTHON_DISABLE_SSL: '1'
     build:
       - args: ['make', '-j@PARALLELISM@']
         environ:
-          HOSTPGEN: '@BUILD_ROOT@/tool-builds/host-python/Parser/pgen'
+          CC: 'clang'
+          CXX: 'clang++'
       - args: ['make', 'install']
         environ:
+          CC: 'clang'
+          CXX: 'clang++'
           DESTDIR: '@THIS_COLLECT_DIR@'
   
   - name: libmp3lame
