@@ -14,8 +14,8 @@ mkfs.ext2 -b 4096 "${LOOPBACK_DEVICE}"p3
 
 mkdir -p /mnt/Lemon
 mkdir -p /mnt/LemonEFI
-mount "${LOOPBACK_DEVICE}"p2 /mnt/Lemon
-mount "${LOOPBACK_DEVICE}"p3 /mnt/LemonEFI
+mount "${LOOPBACK_DEVICE}"p2 /mnt/LemonEFI
+mount "${LOOPBACK_DEVICE}"p3 /mnt/Lemon
 
 cleanup2(){
     umount -f /mnt/Lemon
