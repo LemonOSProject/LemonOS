@@ -35,6 +35,8 @@
 #include <abi-bits/wait.h>
 #include <sys/ioctl.h>
 
+#define EXEC_CHILD 1
+
 #define SC_TRY_OR_ERROR(func)                                                                                          \
     ({                                                                                                                 \
         auto result = func;                                                                                            \
@@ -740,7 +742,8 @@ long SysMkdir(RegisterContext* r) {
 
     Process* proc = Scheduler::GetCurrentProcess();
 
-    if (!Memory::CheckUsermodePointer(SC_ARG0(r), 0, proc->addressSpace)) {
+    size_t pathLen;
+    if (strlenSafe(path, pathLen, proc->addressSpace)) {
         Log::Warning("sys_mkdir: Invalid path pointer %x", SC_ARG0(r));
         return -EFAULT;
     }
@@ -2179,17 +2182,18 @@ long SysFutexWake(RegisterContext* r) {
 
     Process* currentProcess = Scheduler::GetCurrentProcess();
 
+    acquireLock(&currentProcess->m_futexLock);
     List<FutexThreadBlocker*>* blocked = nullptr;
     if (!currentProcess->futexWaitQueue.get(reinterpret_cast<uintptr_t>(futex), blocked) || !blocked->get_length()) {
+        releaseLock(&currentProcess->m_futexLock);
         return 0;
     }
 
     auto front = blocked->remove_at(0);
-
-    if (front) {
+    if (front && front->ShouldBlock())
         front->Unblock();
-    }
 
+    releaseLock(&currentProcess->m_futexLock);
     return 0;
 }
 
@@ -2231,7 +2235,9 @@ long SysFutexWait(RegisterContext* r) {
 
     while (*futex == expected) {
         if (currentThread->Block(&blocker)) {
+            acquireLock(&currentProcess->m_futexLock);
             blocked->remove(&blocker);
+            releaseLock(&currentProcess->m_futexLock);
 
             return -EINTR; // We were interrupted
         }

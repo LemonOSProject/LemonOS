@@ -25,6 +25,7 @@ class Process : public KernelObject {
     friend void KernelProcess();
     friend long SysExecve(RegisterContext* r);
     friend long SysFutexWait(RegisterContext* r);
+    friend long SysFutexWake(RegisterContext* r);
 
 public:
     enum {

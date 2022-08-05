@@ -372,7 +372,7 @@ String BaseName(const char* path) {
         pathCopy.Erase(pathCopy.Length() - 1);
     }
 
-    String basename = nullptr;
+    String basename;
     char* temp;
     if ((temp = strrchr(pathCopy.c_str(), '/'))) {
         basename = String(temp);

@@ -24,11 +24,15 @@ public:
     }
 
     BasicString(const T* data) {
+        assert(data);
+
         m_buffer = nullptr;
         CopyFromNullTerminatedBuffer(data);
     }
 
     BasicString(const T* data, size_t len) {
+        assert(data);
+        
         m_buffer = nullptr;
         CopyFromBuffer(data, len);
     }
