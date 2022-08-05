@@ -1159,15 +1159,30 @@ long SysIoctl(RegisterContext* r) {
         return -EFAULT;
     }
 
-    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(process->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
-    if (!handle) {
+    Handle h = process->GetHandle(SC_ARG0(r)); 
+    if(h == HANDLE_NULL) {
         Log::Warning("SysIoctl: Invalid File Descriptor: %d", SC_ARG0(r));
         return -EBADF;
     }
 
     if (request == FIOCLEX) {
-        handle->mode |= O_CLOEXEC;
+        h.closeOnExec = true;
+        process->ReplaceHandle(SC_ARG0(r), std::move(h));
+
+        *result = 0;
         return 0;
+    } else if(request == FIONCLEX) {
+        h.closeOnExec = false;
+        process->ReplaceHandle(SC_ARG0(r), std::move(h));
+
+        *result = 0;
+        return 0;
+    }
+
+    FancyRefPtr<UNIXOpenFile> handle = SC_TRY_OR_ERROR(process->GetHandleAs<UNIXOpenFile>(SC_ARG0(r)));
+    if (!handle) {
+        Log::Warning("SysIoctl: Not a UNIX file: %d", SC_ARG0(r));
+        return -EBADF;
     }
 
     int ret = fs::Ioctl(handle, request, arg);
