@@ -259,7 +259,7 @@ rgba_colour_t coloursProfile1[] = {
 };
 
 rgba_colour_t coloursProfile2[] = {
-	{ 0x14, 0x14, 0x14, 200},	   // Black
+	RGBAColour::FromRGB(0x000000), // Black
 	RGBAColour::FromRGB(0xea192f), // Dark Red
 	RGBAColour::FromRGB(0xb0db43), // Dark Green
 	RGBAColour::FromRGB(0xffc145), // Dark Yellow

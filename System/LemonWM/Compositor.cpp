@@ -86,7 +86,29 @@ void Compositor::Render() {
     } else {
         for (WMWindow* win : WM::Instance().m_windows) {
             if (win->IsDirtyAndClear()) {
-                Invalidate(win->GetContentRect());
+                // If the window is transparent, we will need to invalidate
+                // any rects underneath the window
+
+                // If the window is occluded, we will need to invalidate any rects
+                // above the clip
+
+                // Otherwise, just set the window rect as invalid
+                // and move on
+
+                if(win->IsTransparent()) for(auto& r : m_windowClipRects) {
+                    if(r.win == win) {
+                        Invalidate(r.rect);
+                    }
+                } else for(auto& r : m_windowClipRects) {
+                    if(r.win == win) {
+                        if(r.occluded) {
+                            Invalidate(r.rect);
+                        } else {
+                            r.invalid = true;
+                        }
+                    }
+                }
+                
             }
         }
     }

@@ -475,7 +475,7 @@ void* PTYThread() {
 }
 
 int main(int argc, char** argv) {
-    terminalWindow = new GUI::Window("Terminal", {720, 480}, GUI::WindowFlag_Resizable | GUI::WindowFlag_Transparent,
+    terminalWindow = new GUI::Window("Terminal", {720, 480}, GUI::WindowFlag_Resizable,
                                      GUI::WindowType::Basic);
     terminalWindow->OnPaint = OnPaint;
 
