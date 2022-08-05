@@ -263,6 +263,8 @@ packages:
     tools_required:
       - host-compiler
       - host-pkgconfig
+      - host-libtool
+      - host-python
     pkgs_required:
       - mlibc
       - libexpat
@@ -273,7 +275,7 @@ packages:
       - args:
         - '@THIS_SOURCE_DIR@/configure'
         - '--host=x86_64-lemon'
-        - '--build=x86_64'
+        - '--build=x86_64-linux-gnu'
         - '--prefix=/system'
         - '--enable-shared'
         - '--disable-ipv6'
@@ -282,12 +284,19 @@ packages:
         - '--with-system-ffi'
         - '--with-system-expat'
         environ:
+          CONFIG_SITE: '@SOURCE_ROOT@/scripts/python-config-site'
+          PKG_CONFIG_SYSROOT_DIR: '@SYSROOT_DIR@'
+          PKG_CONFIG_LIBDIR: '@SYSROOT_DIR@/system/lib/pkgconfig:@SYSROOT_DIR@/system/share/pkgconfig'
           ac_cv_file__dev_ptmx: 'yes'
           ac_cv_file__dev_ptc: 'no'
           CC: 'clang'
           CXX: 'clang++'
+          PYTHON_FOR_BUILD: 'python3'
+          PYTHON_DISABLE_SSL: '1'
     build:
       - args: ['make', '-j@PARALLELISM@']
+        environ:
+          HOSTPGEN: '@BUILD_ROOT@/tool-builds/host-python/Parser/pgen'
       - args: ['make', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
@@ -440,6 +449,42 @@ packages:
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
 
+  - name: lemon-gnuboy
+    source:
+      git: 'https://github.com/LemonOSProject/lemon-gnuboy'
+      branch: 'master'
+      rolling_version: true
+      version: '0.0pl@ROLLING_ID@'
+      subdir: 'Ports'
+    pkgs_required:
+      - liblemon
+      - liblemongui
+      - mlibc
+    tools_required:
+      - host-compiler
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+      - args:
+        - '@THIS_SOURCE_DIR@/configure'
+        - '--host=x86_64-lemon'
+        - '--prefix=/system'
+        - '--with-lemon'
+        - '--without-fb'
+        - '--without-svgalib'
+        - '--without-x'
+        - '--without-sdl'
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+    build:
+      - args: ['make', 'lemongnuboy', '-j@PARALLELISM@']
+        environ:
+          CC: 'clang'
+          CXX: 'clang++'
+      - args: ['make', 'install']
+        environ:
+          DESTDIR: '@THIS_COLLECT_DIR@'
+
   - name: llvm
     from_source: lemon-llvm
     pkgs_required:
@@ -497,4 +542,35 @@ packages:
           DESTDIR: '@THIS_COLLECT_DIR@'
       - args: ['ln', '-s', 'clang', '@THIS_COLLECT_DIR@/system/bin/cc']
 
+  - name: nasm
+    source:
+      git: 'https://github.com/netwide-assembler/nasm'
+      tag: 'nasm-2.15.05'
+      version: '2.15.05'
+      subdir: 'Ports'
+      tools_required:
+        - host-libtool
+        - host-pkgconfig
+      regenerate:
+        - args: ['./autogen.sh']
+    pkgs_required:
+      - mlibc
+    tools_required:
+      - host-compiler
+      - host-pkgconfig
+      - host-libtool
+    configure:
+      - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
+      - args:
+        - './configure'
+        - '--prefix=/system'
+        - '--host=x86_64-lemon'
+        - '--disable-pdf-compression'
+        environ:
+          CC: 'clang'
+    build: # Install manually as for some reason nasm will try and install documentation even if it does not exist
+      - args: ['make', '-j1']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/system/bin']
+      - args: ['install', '-c', 'nasm', '@THIS_COLLECT_DIR@/system/bin/nasm']
+      - args: ['install', '-c', 'ndisasm', '@THIS_COLLECT_DIR@/system/bin/ndisasm']
 
