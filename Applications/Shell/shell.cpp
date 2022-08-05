@@ -20,10 +20,12 @@ std::unordered_map<std::string, std::string> fileAssociations = {
     {"mp3", "/system/bin/audioplayer.lef"},
     {"wav", "/system/bin/audioplayer.lef"},
     {"flac", "/system/bin/audioplayer.lef"},
+    {"opus", "/system/bin/audioplayer.lef"},
     {"png", "/system/bin/imgview.lef"},
     {"bmp", "/system/bin/imgview.lef"},
     {"jpg", "/system/bin/imgview.lef"},
     {"mkv", "/system/bin/videoplayer.lef"},
+    {"mp4", "/system/bin/videoplayer.lef"},
 };
 
 ShellInstance::ShellInstance(const Lemon::Handle& svc, const char* name) : shellSrv(svc, name, 512) {
