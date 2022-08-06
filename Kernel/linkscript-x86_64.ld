@@ -40,9 +40,6 @@ SECTIONS
    {
         _data = .;
         *(.data)
-        _trampoline = .;
-        *(.trampoline)
-        _trampoline_end = .;
         . = ALIGN(4096);
    }
 

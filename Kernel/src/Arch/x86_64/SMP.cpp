@@ -17,8 +17,8 @@ static inline void wait(uint64_t ms) {
     Timer::Wait(ms);
 }
 
-extern void* _binary_SMPTrampoline_bin_start;
-extern void* _binary_SMPTrampoline_bin_size;
+extern void* _smp_trampoline_entry16;
+extern void* _smp_trampoline_end;
 
 volatile uint16_t* smpMagic = (uint16_t*)SMP_TRAMPOLINE_DATA_START_FLAG;
 volatile uint16_t* smpID = (uint16_t*)SMP_TRAMPOLINE_CPU_ID;
@@ -134,7 +134,7 @@ void Initialize() {
 
     processorCount = ACPI::processorCount;
 
-    memcpy((void*)SMP_TRAMPOLINE_ENTRY, &_binary_SMPTrampoline_bin_start, ((uint64_t)&_binary_SMPTrampoline_bin_size));
+    memcpy((void*)SMP_TRAMPOLINE_ENTRY, &_smp_trampoline_entry16, ((uint64_t)&_smp_trampoline_end) - (uint64_t)(&_smp_trampoline_entry16));
 
     for (int i = 0; i < processorCount; i++) {
         if (ACPI::processors[i] != 0) {

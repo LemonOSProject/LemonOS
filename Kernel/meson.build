@@ -12,14 +12,10 @@ asmg = generator(nasm,
     arguments : [
         '-f', 'elf64',
         '-g', '-F', 'dwarf', '-w+gnu-elf-extensions',
+        '-i' + meson.current_source_dir() + '/src/Arch/x86_64/',
         '@INPUT@',
         '-o', '@OUTPUT@'])
         
-bintoelf = find_program('bintoelf.sh', './bintoelf.sh')
-bing = generator(bintoelf,
-output : '@BASENAME@.bin.o',
-arguments : ['@INPUT@','@OUTPUT@', meson.current_source_dir() + '/src/Arch/x86_64/', '@BASENAME@'])
-
 kernel_c_args = [
     '-g',
     '-Wno-write-strings', '-Wno-unused-parameter', '-Wno-sign-compare',
@@ -145,9 +141,6 @@ kernel_asm_files_x86_64 = [
     'src/Arch/x86_64/Memcpy.asm',
     'src/Arch/x86_64/SignalTrampoline.asm',
     'src/Arch/x86_64/TSS.asm',
-]
-
-kernel_asm_bin_files_x86_64 = [
     'src/Arch/x86_64/SMPTrampoline.asm',
 ]
 
@@ -160,7 +153,7 @@ kernel_link_args = [
 kernel_link_args += kernel_c_args
 
 kernel = executable('kernel.sys',
-    [asmg.process(kernel_asm_files_x86_64), bing.process(kernel_asm_bin_files_x86_64), kernel_cpp_files, kernel_cpp_files_x86_64, lai.get_variable('sources')],
+    [asmg.process(kernel_asm_files_x86_64), kernel_cpp_files, kernel_cpp_files_x86_64, lai.get_variable('sources')],
     include_directories : [kernel_include_dirs], 
     c_args : kernel_c_args, cpp_args : [kernel_c_args, kernel_cpp_args], link_args: kernel_link_args, link_depends: 'linkscript-x86_64.ld',
     install_dir : 'lemon/', install : true)

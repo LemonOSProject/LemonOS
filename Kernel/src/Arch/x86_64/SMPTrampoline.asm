@@ -1,6 +1,15 @@
+%include "smpdefines.inc"
+
+SMP_TRAMPOLINE_ENTRY64 equ (_smp_trampoline_entry64 - _smp_trampoline_entry16 + SMP_TRAMPOLINE_ENTRY)
+
+global _smp_trampoline_entry16
+global _smp_trampoline_end
+
+section .data
+_smp_trampoline_entry16:
 BITS 16
 
-%include "smpdefines.inc"
+; This will get moved to 0x2000 in physical RAM
 
 cli
 cld
@@ -26,13 +35,12 @@ mov cr0, eax
 
 lgdt [SMP_TRAMPOLINE_GDT_PTR]
 
-jmp 0x08:(smpentry64 + SMP_TRAMPOLINE_ENTRY)
+jmp 0x08:(SMP_TRAMPOLINE_ENTRY64)
 
 hlt
 
 BITS 64
-
-smpentry64:
+_smp_trampoline_entry64:
     mov ax, 0x10
     mov ds, ax
     mov es, ax
@@ -59,3 +67,5 @@ smpentry64:
 
     cli
     hlt
+
+_smp_trampoline_end:
