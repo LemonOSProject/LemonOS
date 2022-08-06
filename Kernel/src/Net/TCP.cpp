@@ -288,6 +288,7 @@ namespace Network {
                 if(ack){
                     if(tcpHeader->acknowledgementNumber > m_sequenceNumber){
                         Log::Debug(debugLevelNetwork, DebugLevelNormal, "[Network] [TCP] (State: ESTABLIHSED) recieved ACK wth ack number > sequence number");
+                        Acknowledge(m_remoteSequenceNumber);
                         return;
                     }
 
