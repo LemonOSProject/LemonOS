@@ -412,6 +412,7 @@ packages:
   - name: libfmt
     source:
       name: 'fmt'
+      subdir: 'Thirdparty'
     tools_required:
       - host-compiler
     configure:
