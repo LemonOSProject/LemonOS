@@ -3,3 +3,7 @@ menu, search for applications in the top box.
 
 Notable applications include AudioPlayer,
 Text Editor and Terminal.
+
+Shortcuts:
+Alt+Space    Open menu
+Alt+F4       Close window

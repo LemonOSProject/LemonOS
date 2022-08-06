@@ -2,6 +2,7 @@
 
 #include <Lemon/Core/Keyboard.h>
 #include <Lemon/Core/Logger.h>
+#include <Lemon/Core/Shell.h>
 #include <Lemon/GUI/WindowServer.h>
 
 #include <cassert>
@@ -212,6 +213,12 @@ void WM::OnMouseMove() {
 }
 
 void WM::OnKeyUpdate(int key, bool isPressed) {
+
+    // If Alt+Space is released open the menu
+    if (key == ' ' && m_input.keyboard.alt && !isPressed) {
+        Lemon::Shell::ToggleMenu();
+    }
+
     if (!m_activeWindow) {
         return;
     }
@@ -223,6 +230,10 @@ void WM::OnKeyUpdate(int key, bool isPressed) {
         keyModifiers |= KeyModifier_Shift;
     } else if (m_input.keyboard.control) {
         keyModifiers |= KeyModifier_Control;
+    }
+
+    if (key == KEY_F4 && m_input.keyboard.alt && !isPressed) {
+        m_activeWindow->SendEvent({ .event = EventWindowClosed });
     }
 
     LemonEvent ev;
@@ -464,15 +475,13 @@ void WM::OnPong(const Lemon::Handle& client, int64_t windowID) {
     }
 }
 
-void WM::OnSetSystemTheme(const Lemon::Handle& client, const std::string& path){
-    m_systemTheme = path;
-}
+void WM::OnSetSystemTheme(const Lemon::Handle& client, const std::string& path) { m_systemTheme = path; }
 
-void WM::OnGetSystemTheme(const Lemon::Handle& client){
+void WM::OnGetSystemTheme(const Lemon::Handle& client) {
     Lemon::Message m = Lemon::Message(LemonWMServer::ResponseGetSystemTheme, m_systemTheme);
     Lemon::Endpoint(client).Queue(m);
 }
- 
+
 void WM::OnPeerDisconnect(const Lemon::Handle& client) {
     Lemon::Logger::Debug("Disconnected from {}", (long)client.get());
 
