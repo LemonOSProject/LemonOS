@@ -24,4 +24,4 @@ const int debugLevelMessageEndpoint = 0;
 const int debugLevelSyscalls = DebugLevelNormal;
 const int debugLevelUsermodeMM = 0;
 
-const int debugLevelNetwork = 0;
+const int debugLevelNetwork = DebugLevelNormal;

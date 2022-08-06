@@ -5,11 +5,12 @@
 #include <CString.h>
 #include <Device.h>
 #include <Endian.h>
-#include <netinet/tcp.h>
 #include <stddef.h>
 #include <stdint.h>
 
 class Socket;
+
+#define	TCP_NODELAY 1
 
 #define PORT_MAX UINT16_MAX
 

@@ -11,11 +11,6 @@
 #include <Panic.h>
 #include <Timer.h>
 
-#include <lai/core.h>
-#include <lai/helpers/pci.h>
-#include <lai/helpers/pm.h>
-#include <lai/helpers/sci.h>
-
 #include <Debug.h>
 
 namespace ACPI {
@@ -187,9 +182,6 @@ success:
 
     asm("cli");
 
-    lai_set_acpi_revision(rsdtHeader->header.revision);
-    lai_create_namespace();
-
     ReadMADT();
     mcfg = reinterpret_cast<pci_mcfg_table_t*>(FindSDT("MCFG", 0)); // Attempt to find MCFG table for PCI
 
@@ -198,78 +190,4 @@ success:
 
 void SetRSDP(acpi_xsdp_t* p) { desc = reinterpret_cast<acpi_xsdp_t*>(p); }
 
-uint8_t RoutePCIPin(uint8_t bus, uint8_t slot, uint8_t func, uint8_t pin) {
-    acpi_resource_t res;
-    lai_api_error_t e = lai_pci_route_pin(&res, 0, bus, slot, func, pin);
-    if (e) {
-        return 0xFF;
-    } else {
-        return res.base;
-    }
-}
-
-void Reset() { lai_acpi_reset(); }
 } // namespace ACPI
-
-extern "C" {
-void* laihost_scan(const char* signature, size_t index) { return ACPI::FindSDT(signature, index); }
-
-void laihost_log(int level, const char* msg) {
-    switch (level) {
-    case LAI_WARN_LOG:
-        Log::Warning(msg);
-        break;
-    default:
-        if (debugLevelACPI >= DebugLevelNormal) {
-            Log::Info(msg);
-        }
-        break;
-    }
-}
-
-/* Reports a fatal error, and halts. */
-void laihost_panic(const char* msg) {
-    const char* panicReasons[]{"ACPI Error:", msg};
-    KernelPanic(panicReasons, 2);
-
-    for (;;)
-        ;
-}
-
-void* laihost_malloc(size_t sz) { return kmalloc(sz); }
-
-void* laihost_realloc(void* addr, size_t sz, size_t oldsz) { return krealloc(addr, sz); }
-void laihost_free(void* addr, size_t sz) { kfree(addr); }
-
-void* laihost_map(size_t address, size_t count) {
-    void* virt = Memory::KernelAllocate4KPages(count / PAGE_SIZE_4K + 1);
-
-    Memory::KernelMapVirtualMemory4K(address, (uintptr_t)virt, count / PAGE_SIZE_4K + 1);
-
-    return virt;
-}
-
-void laihost_unmap(void* ptr, size_t count) {
-    // stub
-}
-
-void laihost_outb(uint16_t port, uint8_t val) { outportb(port, val); }
-
-void laihost_outw(uint16_t port, uint16_t val) { outportw(port, val); }
-
-void laihost_outd(uint16_t port, uint32_t val) { outportd(port, val); }
-
-uint8_t laihost_inb(uint16_t port) { return inportb(port); }
-
-uint16_t laihost_inw(uint16_t port) { return inportw(port); }
-
-uint32_t laihost_ind(uint16_t port) { return inportd(port); }
-
-void laihost_sleep(uint64_t ms) {
-    Timer::Wait(ms);
-}
-
-void laihost_pci_writew(uint16_t seg, uint8_t bus, uint8_t slot, uint8_t fun, uint16_t offset, uint16_t val) {
-    PCI::ConfigWriteWord(bus, slot, fun, offset, val);
-}
-}

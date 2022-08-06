@@ -1,7 +1,10 @@
 [submodule "mlibc"]
 	path = mlibc
 	url = https://github.com/managarm/mlibc.git
-
-[submodule "fmt"]
-	path = fmt
+	
+[submodule "Thirdparty/frigg"]
+	path = Thirdparty/frigg
+	url = https://github.com/managarm/frigg
+[submodule "Thirdparty/fmt"]
+	path = Thirdparty/fmt
 	url = https://github.com/fmtlib/fmt

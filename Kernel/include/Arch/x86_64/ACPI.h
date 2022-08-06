@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include <acpispec/tables.h>
-#include <lai/helpers/pci.h>
 #include <List.h>
 
 typedef struct MADT{

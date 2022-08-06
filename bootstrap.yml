@@ -446,12 +446,18 @@ packages:
       - host-compiler
     configure:
       - args:
-        - 'meson'
-        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
-        - '--prefix=/system'
+        - 'cmake'
+        - '-GNinja'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
         - '@THIS_SOURCE_DIR@'
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
     build:
       - args: ['ninja']
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'

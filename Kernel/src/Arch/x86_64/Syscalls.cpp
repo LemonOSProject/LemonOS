@@ -33,7 +33,10 @@
 
 #include <abi-bits/vm-flags.h>
 #include <abi-bits/wait.h>
-#include <sys/ioctl.h>
+
+#include <asm/ioctls.h>
+#define FIONCLEX 0x5450
+#define FIOCLEX 0x5451
 
 #define EXEC_CHILD 1
 
@@ -2367,13 +2370,13 @@ long SysSelect(RegisterContext* r) {
     fd_set_t* readFdsMask = reinterpret_cast<fd_set_t*>(SC_ARG1(r));
     fd_set_t* writeFdsMask = reinterpret_cast<fd_set_t*>(SC_ARG2(r));
     fd_set_t* exceptFdsMask = reinterpret_cast<fd_set_t*>(SC_ARG3(r));
-    timespec_t* timeout = reinterpret_cast<timespec_t*>(SC_ARG4(r));
+    struct timespec* timeout = reinterpret_cast<struct timespec*>(SC_ARG4(r));
 
     if (!((!readFdsMask || Memory::CheckUsermodePointer(SC_ARG1(r), sizeof(fd_set_t), currentProcess->addressSpace)) &&
           (!writeFdsMask || Memory::CheckUsermodePointer(SC_ARG2(r), sizeof(fd_set_t), currentProcess->addressSpace)) &&
           (!exceptFdsMask ||
            Memory::CheckUsermodePointer(SC_ARG3(r), sizeof(fd_set_t), currentProcess->addressSpace)) &&
-          Memory::CheckUsermodePointer(SC_ARG4(r), sizeof(timespec_t), currentProcess->addressSpace))) {
+          Memory::CheckUsermodePointer(SC_ARG4(r), sizeof(struct timespec), currentProcess->addressSpace))) {
         return -EFAULT; // Only return EFAULT if read/write/exceptfds is not null
     }
 
@@ -3464,8 +3467,8 @@ long SysSignalAction(RegisterContext* r) {
     }
     assert(signal < SIGNAL_MAX);
 
-    const sigaction* sa = reinterpret_cast<sigaction*> SC_ARG1(r); // If non-null, new sigaction to set
-    sigaction* oldSA = reinterpret_cast<sigaction*> SC_ARG2(r);    // If non-null, filled with old sigaction
+    const struct sigaction* sa = reinterpret_cast<struct sigaction*> SC_ARG1(r); // If non-null, new sigaction to set
+    struct sigaction* oldSA = reinterpret_cast<struct sigaction*> SC_ARG2(r);    // If non-null, filled with old sigaction
 
     Process* proc = Scheduler::GetCurrentProcess();
 
@@ -3484,21 +3487,21 @@ long SysSignalAction(RegisterContext* r) {
         if (sigHandler.action == SignalHandler::HandlerAction::UsermodeHandler) {
             // if (sigHandler.flags & SignalHandler::FlagSignalInfo) is true, doesn't matter, both types are just
             // pointers in a union
-            *oldSA = sigaction{
+            *oldSA = {
                 .__sa_handler = {reinterpret_cast<void (*)(int)>(sigHandler.userHandler)},
                 .sa_mask = sigHandler.mask,
                 .sa_flags = sigHandler.flags,
                 .sa_restorer = nullptr,
             };
         } else if (sigHandler.action == SignalHandler::HandlerAction::Default) {
-            *oldSA = sigaction{
+            *oldSA = {
                 .__sa_handler = {SIG_DFL},
                 .sa_mask = sigHandler.mask,
                 .sa_flags = sigHandler.flags,
                 .sa_restorer = nullptr,
             };
         } else if (sigHandler.action == SignalHandler::HandlerAction::Ignore) {
-            *oldSA = sigaction{
+            *oldSA = {
                 .__sa_handler = {SIG_IGN},
                 .sa_mask = sigHandler.mask,
                 .sa_flags = sigHandler.flags,

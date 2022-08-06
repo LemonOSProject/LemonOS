@@ -10,7 +10,7 @@
 #include <StackTrace.h>
 #endif
 
-#include <bits/posix/posix_signal.h>
+#include <abi-bits/signal.h>
 
 void ThreadBlocker::Interrupt() {
     interrupted = true;

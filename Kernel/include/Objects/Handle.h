@@ -5,7 +5,7 @@
 #include <Move.h>
 #include <Compiler.h>
 
-#include <cstddef>
+#include <stddef.h>
 
 typedef int handle_id_t;
 
