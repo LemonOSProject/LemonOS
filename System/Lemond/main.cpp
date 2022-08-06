@@ -46,7 +46,7 @@ void StartService(Service& srv){
 	}
 }
 
-int main(int argc, char** argv){
+int main(int, char**){
 	setenv("HOME", "/system", 1); // Default home
 	setenv("PATH", "/system/bin:/system/lemon:/initrd", 1); // Default path
 

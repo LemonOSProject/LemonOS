@@ -233,7 +233,7 @@ void Compositor::Invalidate(const Rect& rect) {
     }
 }
 
-void Compositor::InvalidateWindow(class WMWindow* window) { m_invalidateAll = true; }
+void Compositor::InvalidateWindow(class WMWindow* window) { Invalidate(window->GetContentRect()); }
 
 void Compositor::SetWallpaper(const std::string& path) {
     m_wallpaperStatus = 0;

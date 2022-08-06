@@ -60,7 +60,7 @@ void OnOKPress(void*){
 	}
 }
 
-int main(int argc, char** argv){
+int main(int, char**){
 	Lemon::JSONParser cfgParser = Lemon::JSONParser("/system/lemon/users.json");
 
 	auto json = cfgParser.Parse();

@@ -1,0 +1,39 @@
+From 08ae7798d7da49461a7b212c71aab98bd786edf3 Mon Sep 17 00:00:00 2001
+From: JJ <computerfido@gmail.com>
+Date: Fri, 5 Aug 2022 13:05:39 +1000
+Subject: [PATCH] LemonOS specific changes
+
+---
+ support/config.sub    | 2 +-
+ support/shlib-install | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/support/config.sub b/support/config.sub
+index c874b7a..4e9aff9 100755
+--- a/support/config.sub
++++ b/support/config.sub
+@@ -1717,7 +1717,7 @@ case $os in
+ 	     | os2* | vos* | palmos* | uclinux* | nucleus* | morphos* \
+ 	     | scout* | superux* | sysv* | rtmk* | tpf* | windiss* \
+ 	     | powermax* | dnix* | nx6 | nx7 | sei* | dragonfly* \
+-	     | skyos* | haiku* | rdos* | toppers* | drops* | es* \
++	     | skyos* | haiku* | rdos* | toppers* | drops* | es* | lemon* \
+ 	     | onefs* | tirtos* | phoenix* | fuchsia* | redox* | bme* \
+ 	     | midnightbsd* | amdhsa* | unleashed* | emscripten* | wasi* \
+ 	     | nsk* | powerunix* | genode* | zvmoe* | qnx* | emx*)
+diff --git a/support/shlib-install b/support/shlib-install
+index 661355d..bc2bcc9 100755
+--- a/support/shlib-install
++++ b/support/shlib-install
+@@ -146,7 +146,7 @@ bsdi4*|*gnu*|darwin*|macosx*|netbsd*|mirbsd*)
+ 	fi
+ 	;;
+ 
+-solaris2*|aix4.[2-9]*|aix[5-9]*|osf*|irix[56]*|sysv[45]*|dgux*|interix*)
++solaris2*|aix4.[2-9]*|aix[5-9]*|osf*|irix[56]*|sysv[45]*|dgux*|interix*|lemon*)
+ 	# libname.so -> libname.so.M
+ 	${echo} ${RM} ${INSTALLDIR}/$LINK1
+ 	if [ -z "$uninstall" ]; then
+-- 
+2.37.1
+

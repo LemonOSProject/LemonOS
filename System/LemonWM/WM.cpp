@@ -355,7 +355,7 @@ void WM::OnCreateWindow(const Lemon::Handle& client, int32_t x, int32_t y, int32
     BroadcastCreatedWindow(win);
 }
 
-void WM::OnDestroyWindow(const Lemon::Handle& client, int64_t windowID) {
+void WM::OnDestroyWindow(const Lemon::Handle&, int64_t windowID) {
     WMWindow* win = GetWindowFromID(windowID);
 
     if (!win) {
@@ -366,7 +366,7 @@ void WM::OnDestroyWindow(const Lemon::Handle& client, int64_t windowID) {
     DestroyWindow(win);
 }
 
-void WM::OnSetTitle(const Lemon::Handle& client, int64_t windowID, const std::string& title) {
+void WM::OnSetTitle(const Lemon::Handle&, int64_t windowID, const std::string& title) {
     WMWindow* win = GetWindowFromID(windowID);
     if (!win) {
         Lemon::Logger::Warning("OnSetTitle: Invalid Window ID: {}", windowID);
@@ -376,7 +376,7 @@ void WM::OnSetTitle(const Lemon::Handle& client, int64_t windowID, const std::st
     win->SetTitle(title);
 }
 
-void WM::OnUpdateFlags(const Lemon::Handle& client, int64_t windowID, uint32_t flags) {
+void WM::OnUpdateFlags(const Lemon::Handle&, int64_t windowID, uint32_t flags) {
     WMWindow* win = GetWindowFromID(windowID);
     if (!win) {
         Lemon::Logger::Warning("OnUpdateFlags: Invalid Window ID: {}", windowID);
@@ -386,7 +386,7 @@ void WM::OnUpdateFlags(const Lemon::Handle& client, int64_t windowID, uint32_t f
     win->SetFlags(flags);
 }
 
-void WM::OnRelocate(const Lemon::Handle& client, int64_t windowID, int32_t x, int32_t y) {
+void WM::OnRelocate(const Lemon::Handle&, int64_t windowID, int32_t x, int32_t y) {
     WMWindow* win = GetWindowFromID(windowID);
     if (!win) {
         Lemon::Logger::Warning("OnRelocate: Invalid Window ID: {}", windowID);
@@ -396,7 +396,7 @@ void WM::OnRelocate(const Lemon::Handle& client, int64_t windowID, int32_t x, in
     win->Relocate(x, y);
 }
 
-void WM::OnGetPosition(const Lemon::Handle& client, int64_t windowID) {
+void WM::OnGetPosition(const Lemon::Handle&, int64_t windowID) {
     WMWindow* win = GetWindowFromID(windowID);
     if (!win) {
         Lemon::Logger::Warning("OnGetPosition: Invalid Window ID: {}", windowID);
@@ -407,7 +407,7 @@ void WM::OnGetPosition(const Lemon::Handle& client, int64_t windowID) {
     win->Queue(Lemon::Message(LemonWMServer::ResponseGetPosition, LemonWMServer::GetPositionResponse{pos.x, pos.y}));
 }
 
-void WM::OnResize(const Lemon::Handle& client, int64_t windowID, int32_t width, int32_t height) {
+void WM::OnResize(const Lemon::Handle&, int64_t windowID, int32_t width, int32_t height) {
     WMWindow* win = GetWindowFromID(windowID);
     if (!win) {
         Lemon::Logger::Warning("OnResize: Invalid Window ID: {}", windowID);
@@ -417,7 +417,7 @@ void WM::OnResize(const Lemon::Handle& client, int64_t windowID, int32_t width, 
     win->Resize(width, height);
 }
 
-void WM::OnMinimize(const Lemon::Handle& client, int64_t windowID, bool minimized) {
+void WM::OnMinimize(const Lemon::Handle&, int64_t windowID, bool minimized) {
     WMWindow* win = GetWindowFromID(windowID);
     if (!win) {
         Lemon::Logger::Warning("OnMinimize: Invalid Window ID: {}", windowID);
@@ -427,7 +427,7 @@ void WM::OnMinimize(const Lemon::Handle& client, int64_t windowID, bool minimize
     win->Minimize(minimized);
 }
 
-void WM::OnDisplayContextMenu(const Lemon::Handle& client, int64_t windowID, int32_t x, int32_t y,
+void WM::OnDisplayContextMenu(const Lemon::Handle&, int64_t windowID, int32_t x, int32_t y,
                               const std::string& entries) {
     WMWindow* win = GetWindowFromID(windowID);
     if (!win) {
@@ -467,7 +467,7 @@ void WM::OnDisplayContextMenu(const Lemon::Handle& client, int64_t windowID, int
     m_showContextMenu = true;
 }
 
-void WM::OnPong(const Lemon::Handle& client, int64_t windowID) {
+void WM::OnPong(const Lemon::Handle&, int64_t windowID) {
     WMWindow* win = GetWindowFromID(windowID);
     if (!win) {
         Lemon::Logger::Warning("OnPong: Invalid Window ID: {}", windowID);
@@ -475,7 +475,7 @@ void WM::OnPong(const Lemon::Handle& client, int64_t windowID) {
     }
 }
 
-void WM::OnSetSystemTheme(const Lemon::Handle& client, const std::string& path) { m_systemTheme = path; }
+void WM::OnSetSystemTheme(const Lemon::Handle&, const std::string& path) { m_systemTheme = path; }
 
 void WM::OnGetSystemTheme(const Lemon::Handle& client) {
     Lemon::Message m = Lemon::Message(LemonWMServer::ResponseGetSystemTheme, m_systemTheme);
@@ -510,7 +510,7 @@ void WM::OnGetScreenBounds(const Lemon::Handle& client) {
                                                                 .height = m_compositor.GetScreenBounds().y});
 }
 
-void WM::OnReloadConfig(const Lemon::Handle& client) {}
+void WM::OnReloadConfig(const Lemon::Handle&) {}
 
 void WM::OnSubscribeToWindowEvents(const Lemon::Handle& client) {
     auto endp = std::make_unique<LemonWMClientEndpoint>(client);

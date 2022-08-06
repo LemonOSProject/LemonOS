@@ -2,7 +2,11 @@
 add_link_options(-r)
 
 add_executable(ext2fs.sys Ext2/Main.cpp)
-add_executable(pcaudio.sys PCAudio/Main.cpp)
+add_executable(pcaudio.sys
+    PCAudio/Main.cpp
+    PCAudio/AC97.cpp
+    PCAudio/HDAudio.cpp
+)
 add_executable(e1k.sys Intel8254x/Main.cpp)
 
 set(TEST_SRC

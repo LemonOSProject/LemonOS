@@ -640,12 +640,18 @@ packages:
       name: 'LibGUI'
     configure:
       - args:
-        - 'meson'
-        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
-        - '--prefix=/system'
+        - 'cmake'
+        - '-GNinja'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
         - '@THIS_SOURCE_DIR@'
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
     build:
       - args: ['ninja']
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
@@ -663,12 +669,18 @@ packages:
       name: 'System'
     configure:
       - args:
-        - 'meson'
-        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
-        - '--prefix=/system'
+        - 'cmake'
+        - '-GNinja'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
         - '@THIS_SOURCE_DIR@'
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
     build:
       - args: ['ninja']
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
@@ -687,12 +699,18 @@ packages:
       name: 'Applications'
     configure:
       - args:
-        - 'meson'
-        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
-        - '--prefix=/system'
+        - 'cmake'
+        - '-GNinja'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
         - '@THIS_SOURCE_DIR@'
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
     build:
       - args: ['ninja']
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
@@ -709,12 +727,19 @@ packages:
       name: 'Utilities'
     configure:
       - args:
-        - 'meson'
-        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
-        - '--prefix=/system'
+        - 'cmake'
+        - '-GNinja'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_INSTALL_PREFIX=/system'
         - '@THIS_SOURCE_DIR@'
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
     build:
       - args: ['ninja']
+        environ:
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
