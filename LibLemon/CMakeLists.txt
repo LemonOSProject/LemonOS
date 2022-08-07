@@ -54,14 +54,15 @@ set(LIBLEMON_SRC
 )
 
 find_package(Freetype REQUIRED)
-find_package(libjpeg-turbo REQUIRED)
+find_package(JPEG REQUIRED)
 
 include_directories(${FREETYPE_INCLUDE_DIRS})
-include_directories(${LIBJPEG_INCLUDE_DIRS})
+include_directories(${JPEG_INCLUDE_DIR})
 
 add_library(lemon SHARED ${LIBLEMON_SRC})
 target_link_options(lemon PUBLIC -lz -lpng)
 
-target_link_libraries(lemon ${FREETYPE_LIBRARIES} ${LIBJPEG_LIBRARIES})
+target_link_libraries(lemon PUBLIC ${FREETYPE_LIBRARIES})
+target_link_libraries(lemon PUBLIC ${JPEG_LIBRARIES})
 
 install(TARGETS lemon)
