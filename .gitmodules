@@ -8,3 +8,6 @@
 [submodule "Thirdparty/fmt"]
 	path = Thirdparty/fmt
 	url = https://github.com/fmtlib/fmt
+[submodule "Thirdparty/cxxshim"]
+	path = Thirdparty/cxxshim
+	url = https://github.com/managarm/cxxshim

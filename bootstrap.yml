@@ -462,6 +462,8 @@ packages:
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
         
   - name: lemon-interface-headers
     source:
@@ -594,6 +596,8 @@ packages:
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
       - args: ['mkdir', '@THIS_COLLECT_DIR@/system/lib/crypto']
       - args: ['ln', '-s', '../libcrypto.so', '@THIS_COLLECT_DIR@/system/lib/crypto/libcrypto.so']
 
@@ -628,6 +632,8 @@ packages:
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
 
   - name: liblemongui
     tools_required:
@@ -656,6 +662,8 @@ packages:
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
 
   - name: lemon-system
     tools_required:
@@ -685,6 +693,8 @@ packages:
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
 
   - name: lemon-apps
     tools_required:
@@ -715,6 +725,8 @@ packages:
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
 
   - name: lemon-utils
     tools_required:
@@ -744,6 +756,8 @@ packages:
       - args: ['ninja', 'install']
         environ:
           DESTDIR: '@THIS_COLLECT_DIR@'
+          LEMON_SYSROOT: '@SYSROOT_DIR@'
+          LEMON_BUILDROOT: '@SOURCE_ROOT@'
 
   - name: lemon-base
     metadata:
