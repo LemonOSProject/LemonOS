@@ -7,8 +7,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_compile_options($<$<C_COMPILER_ID:Clang>:-fcolor-diagnostics>)
 
-include_directories('include')
-
 add_compile_options(-Wall -Wextra -Wno-write-strings -Wno-missing-braces)
 
 set(LIBLEMONGUI_SRC
@@ -22,10 +20,12 @@ set(LIBLEMONGUI_SRC
     src/WindowServer.cpp
 )
 
+include_directories(include)
+
 add_library(lemongui SHARED ${LIBLEMONGUI_SRC})
 target_link_options(lemongui PUBLIC -lz -lpng -llemon)
 
 include(GNUInstallDirs)
 
 install(TARGETS lemongui)
-install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY include/Lemon DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
