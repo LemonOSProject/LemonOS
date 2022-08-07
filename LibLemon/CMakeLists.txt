@@ -7,8 +7,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_compile_options($<$<C_COMPILER_ID:Clang>:-fcolor-diagnostics>)
 
-include_directories('include')
-
 add_compile_options(-Wall -Wextra -Wno-write-strings -Wno-missing-braces)
 add_compile_options(-fPIC -march=x86-64-v2)
 
@@ -16,8 +14,8 @@ enable_language(ASM_NASM)
 if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
     message(FATAL_ERROR "Failed to find NASM assembler!")
 endif()
-set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> -i${CMAKE_CURRENT_SOURCE_DIR}/src/Arch/x86_64 \
-    -felf64 -w+gnu-elf-extensions -o <OBJECT> <SOURCE>")
+
+set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> -felf64 -w+gnu-elf-extensions -o <OBJECT> <SOURCE>")
 
 set(LIBLEMON_SRC
     src/Graphics/bitmapfont.cpp
@@ -53,6 +51,7 @@ set(LIBLEMON_SRC
     src/Graphics/sse2.asm
 )
 
+include_directories(include)
 find_package(Freetype REQUIRED)
 find_package(JPEG REQUIRED)
 
