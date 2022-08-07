@@ -65,4 +65,7 @@ target_link_options(lemon PUBLIC -lz -lpng)
 target_link_libraries(lemon PUBLIC ${FREETYPE_LIBRARIES})
 target_link_libraries(lemon PUBLIC ${JPEG_LIBRARIES})
 
+include(GNUInstallDirs)
+
 install(TARGETS lemon)
+install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

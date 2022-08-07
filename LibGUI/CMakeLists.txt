@@ -25,4 +25,7 @@ set(LIBLEMONGUI_SRC
 add_library(lemongui SHARED ${LIBLEMONGUI_SRC})
 target_link_options(lemongui PUBLIC -lz -lpng -llemon)
 
+include(GNUInstallDirs)
+
 install(TARGETS lemongui)
+install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
