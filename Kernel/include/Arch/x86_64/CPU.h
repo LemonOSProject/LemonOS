@@ -19,18 +19,34 @@ typedef struct {
 } __attribute__((packed)) idt_ptr_t;
 
 struct CPU {
-    CPU* self;
+    CPU* self; // Pointer to this struct
     uint64_t id; // APIC/CPU id
+    Thread* currentThread = nullptr; // Current executing thread
+    // Scratch register, it is used by the syscall handler
+    // as it cannot touch any registers without saving them
+    uint64_t scratch;
+    tss_t tss __attribute__((aligned(16)));
+
     void* gdt;   // GDT
     gdt_ptr_t gdtPtr;
     idt_ptr_t idtPtr;
-    Thread* currentThread = nullptr;
+
     Thread* idleThread = nullptr;
     Process* idleProcess;
     volatile int runQueueLock = 0;
     FastList<Thread*>* runQueue;
-    tss_t tss __attribute__((aligned(16)));
-};
+} __attribute__((packed));
+
+#define CPU_LOCAL_SELF 0x0
+#define CPU_LOCAL_ID 0x8
+#define CPU_LOCAL_THREAD 0x10
+#define CPU_LOCAL_SCRATCH 0x18
+#define CPU_LOCAL_TSS 0x20
+#define CPU_LOCAL_TSS_RSP0 (CPU_LOCAL_TSS + 0x4)
+
+static_assert(offsetof(CPU, tss) == CPU_LOCAL_TSS);
+static_assert(offsetof(CPU, tss) + offsetof(tss_t, rsp0) == CPU_LOCAL_TSS_RSP0);
+static_assert(offsetof(CPU, currentThread) == CPU_LOCAL_THREAD);
 
 enum {
     CPUID_ECX_SSE3 = 1 << 0,
@@ -185,13 +201,11 @@ static ALWAYS_INLINE Thread* GetCurrentThread() {
     Thread* ret;
     int intEnable = CheckInterrupts();
     asm("cli");
-    asm volatile("swapgs; movq %%gs:48, %0; swapgs;"
+    asm volatile("swapgs; movq %%gs:16, %0; swapgs;"
                  : "=r"(ret)); // CPU info is 16-byte aligned as per liballoc alignment
     if (intEnable)
         asm("sti");
     return ret;
-
-    static_assert(offsetof(CPU, currentThread) == 48);
 }
 
 static ALWAYS_INLINE void DisableInterrupts() {

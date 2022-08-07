@@ -18,8 +18,8 @@
 
 #define KERNEL_CS 0x08
 #define KERNEL_SS 0x10
-#define USER_CS 0x1B
-#define USER_SS 0x23
+#define USER_SS 0x1B
+#define USER_CS 0x23
 
 namespace Scheduler {
 class ProcessStateThreadBlocker;

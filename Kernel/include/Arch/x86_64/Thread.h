@@ -67,7 +67,10 @@ struct Thread {
     uint32_t ticksSinceBalance = 0; // Ticks since run queue rebalance
     uint32_t ticksGivenSinceBalance = 0;
     RegisterContext registers;   // Registers
-    RegisterContext lastSyscall; // Last system call
+    struct {
+        RegisterContext regs; // Last system call
+        long result;
+    } lastSyscall;
     void* fxState;               // State of the extended registers
 
     int cpu = -1; // CPU the thread is scheduled on

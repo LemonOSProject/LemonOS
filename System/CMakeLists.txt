@@ -36,7 +36,7 @@ set(lemonwm_SRC
 
 add_link_options(-llemon)
 
-add_executable(lemond.lef ${lemond_SRC})
+add_executable(init.lef ${lemond_SRC})
 add_executable(netgov.lef ${netgov_SRC})
 add_executable(kmod.lef ${kmod_SRC})
 
@@ -46,5 +46,5 @@ target_link_options(login.lef PUBLIC -llemongui)
 add_executable(lemonwm.lef ${lemonwm_SRC})
 target_link_options(lemonwm.lef PUBLIC -llemongui)
 
-install(TARGETS lemond.lef netgov.lef login.lef kmod.lef lemonwm.lef
+install(TARGETS init.lef netgov.lef login.lef kmod.lef lemonwm.lef
     RUNTIME DESTINATION lemon)

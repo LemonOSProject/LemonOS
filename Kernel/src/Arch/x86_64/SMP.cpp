@@ -32,6 +32,8 @@ volatile bool doneInit = false;
 extern gdt_ptr_t GDT64Pointer64;
 extern idt_ptr_t idtPtr;
 
+void syscall_init();
+
 namespace SMP {
 CPU* cpus[256];
 unsigned processorCount = 1;
@@ -59,6 +61,8 @@ void SMPEntry(uint16_t id) {
     cpu->runQueue = new FastList<Thread*>();
 
     doneInit = true;
+
+    syscall_init();
 
     asm("sti");
     

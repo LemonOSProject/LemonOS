@@ -27,6 +27,7 @@ mov cr3, eax
 mov ecx, 0xC0000080 ; EFER Model Specific Register
 rdmsr               ; Read from the MSR 
 or eax, 1 << 8
+or eax, 1 ; syscall enable
 wrmsr
 
 mov eax, cr0

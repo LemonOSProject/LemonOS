@@ -4036,16 +4036,44 @@ syscall_t syscalls[NUM_SYSCALLS]{
 // clang-format on
 
 void DumpLastSyscall(Thread* t) {
-    RegisterContext& lastSyscall = t->lastSyscall;
+    RegisterContext& lastSyscall = t->lastSyscall.regs;
     Log::Info("Last syscall:\nCall: %d, arg0: %i (%x), arg1: %i (%x), arg2: %i (%x), arg3: %i (%x), arg4: %i (%x), "
-              "arg5: %i (%x)",
+              "arg5: %i (%x) result: %i (%x)",
               lastSyscall.rax, SC_ARG0(&lastSyscall), SC_ARG0(&lastSyscall), SC_ARG1(&lastSyscall),
               SC_ARG1(&lastSyscall), SC_ARG2(&lastSyscall), SC_ARG2(&lastSyscall), SC_ARG3(&lastSyscall),
               SC_ARG3(&lastSyscall), SC_ARG4(&lastSyscall), SC_ARG4(&lastSyscall), SC_ARG5(&lastSyscall),
-              SC_ARG5(&lastSyscall));
+              SC_ARG5(&lastSyscall), t->lastSyscall.result, t->lastSyscall.result);
+}
+
+#define MSR_STAR 0xC000'0081
+#define MSR_LSTAR 0xC000'0082
+#define MSR_CSTAR 0xC000'0083
+#define MSR_SFMASK 0xC000'0084
+
+extern "C" void syscall_entry();
+
+void syscall_init() {
+    uint64_t low = ((uint64_t)syscall_entry) & 0xFFFFFFFF;
+    uint64_t high = ((uint64_t)syscall_entry) >> 32;
+    asm volatile("wrmsr" ::"a"(low), "d"(high), "c"(MSR_LSTAR));
+
+    // User CS selector set to this field + 16, SS this field + 8 
+    uint32_t sysretSelectors = USER_SS - 8;
+    // When syscall is called, CS set to field, SS this field + 8
+    uint32_t syscallSelectors = KERNEL_CS;
+    asm volatile("wrmsr" ::"a"(0), "d"((sysretSelectors << 16) | syscallSelectors), "c"(MSR_STAR));
+    // SFMASK masks flag values
+    // mask everything except reserved flags to disable IRQs when syscall is called
+    asm volatile("wrmsr" ::"a"(0x3F7FD5U), "d"(0), "c"(MSR_SFMASK));
+
+    asm volatile("rdmsr" : "=a"(low), "=d"(high) : "c"(0xC0000080));
+    low |= 1; // SCE (syscall enable)
+    asm volatile("wrmsr" :: "a"(low), "d"(high), "c"(0xC0000080));
 }
 
 extern "C" void SyscallHandler(RegisterContext* regs) {
+    assert(!CheckInterrupts());
+
     if (__builtin_expect(regs->rax >= NUM_SYSCALLS || !syscalls[regs->rax],
                          0)) { // If syscall is non-existant then return
         regs->rax = -ENOSYS;
@@ -4069,15 +4097,21 @@ extern "C" void SyscallHandler(RegisterContext* regs) {
 
 #ifdef KERNEL_DEBUG
     if (debugLevelSyscalls >= DebugLevelNormal) {
-        thread->lastSyscall = *regs;
+        thread->lastSyscall.regs = *regs;
     }
 #endif
 
     regs->rax = syscalls[regs->rax](regs); // Call syscall
 
+#ifdef KERNEL_DEBUG
+    if (debugLevelSyscalls >= DebugLevelNormal) {
+        thread->lastSyscall.result = regs->rax;
+    }
+#endif
+
     IF_DEBUG((debugLevelSyscalls >= DebugLevelVerbose), {
         if (regs->rax < 0)
-            Log::Info("Syscall %d exiting with value %d", thread->lastSyscall.rax, regs->rax);
+            Log::Info("Syscall %d exiting with value %d", thread->lastSyscall.regs.rax, regs->rax);
     });
 
     if (__builtin_expect(thread->pendingSignals & (~thread->EffectiveSignalMask()), 0)) {

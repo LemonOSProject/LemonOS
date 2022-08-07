@@ -17,6 +17,7 @@ endif()
 
 include_directories(include)
 include_directories($ENV{LEMON_BUILDROOT}/Thirdparty/frigg/include)
+include_directories($ENV{LEMON_BUILDROOT}/Thirdparty/cxxshim/stage2/include)
 
 if("${LEMON_ARCH}" STREQUAL "x86_64")
     include_directories(include/Arch/x86_64)
@@ -135,6 +136,7 @@ set(KERNEL_SRC_x86_64
     src/Arch/x86_64/Memcpy.asm
     src/Arch/x86_64/SignalTrampoline.asm
     src/Arch/x86_64/SMPTrampoline.asm
+    src/Arch/x86_64/Syscall.asm
     src/Arch/x86_64/TSS.asm
 )
 

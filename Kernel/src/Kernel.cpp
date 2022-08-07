@@ -40,6 +40,8 @@ void IdleProcess() {
     }
 }
 
+void syscall_init();
+
 void KernelProcess() {
     NVMe::Initialize();
     USB::XHCIController::Initialize();
@@ -224,6 +226,8 @@ extern "C" [[noreturn]] void kmain() {
     PS2::Initialize();
 
     Log::Info("OK");
+
+    syscall_init();
 
     Log::Info("Initializing Task Scheduler...");
     Scheduler::Initialize();
