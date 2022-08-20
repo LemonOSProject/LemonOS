@@ -6,7 +6,7 @@
 
 #include <lemon/gui/ContextMenu.h>
 #include <lemon/ipc/Interface.h>
-#include <Lemon/Services/lemon.lemonwm.h>
+#include <lemon/protocols/lemon.lemonwm.h>
 
 #include <list>
 

@@ -1,7 +1,7 @@
 #include <lemon/core/Shell.h>
 #include <lemon/gui/Window.h>
 #include <lemon/ipc/Interface.h>
-#include <Lemon/Services/lemon.shell.h>
+#include <lemon/protocols/lemon.shell.h>
 
 #include <map>
 

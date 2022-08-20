@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Lemon/Services/lemon.lemonwm.h>
+#include <lemon/protocols/lemon.lemonwm.h>
 
 #include <lemon/graphics/Types.h>
 

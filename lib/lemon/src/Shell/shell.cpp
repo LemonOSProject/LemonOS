@@ -1,7 +1,7 @@
 #include <lemon/core/Shell.h>
 
 #include <lemon/core/URL.h>
-#include <Lemon/Services/lemon.shell.h>
+#include <lemon/protocols/lemon.shell.h>
 
 namespace Lemon::Shell {
 ShellEndpoint* shellConnection = nullptr;
