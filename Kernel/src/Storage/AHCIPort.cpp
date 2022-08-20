@@ -196,11 +196,10 @@ void Port::ReleaseBuffer(int index) {
     bufferSemaphore.Signal();
 }
 
-int Port::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
+int Port::ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
     uint64_t blockCount = ((count + (blocksize - 1)) / blocksize);
-    uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
 
-    // Log::Info("LBA: %x, count: %u, blcount: %u", lba, count, blockCount);
+    Log::Debug(debugLevelAHCI, DebugLevelVerbose, "LBA: %x, count: %u, blcount: %u", lba, count, blockCount);
 
     int buf = AcquireBuffer();
     if (buf == -EINTR) {
@@ -222,9 +221,10 @@ int Port::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
             return e;                                         // Error Reading Sectors
         }
 
-        memcpy(buffer, buffers[buf], size);
+        if(buffer->Write((uint8_t*)buffers[buf], size)) {
+            return EFAULT;
+        }
 
-        buffer += size;
         lba += 8;
         blockCount -= 8;
         count -= size;
@@ -243,9 +243,10 @@ int Port::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
             return e; // Error Reading Sectors
         }
 
-        memcpy(buffer, buffers[buf], size);
+        if(buffer->Write((uint8_t*)buffers[buf], size)) {
+            return EFAULT;
+        }
 
-        buffer += size;
         lba += 2;
         blockCount -= 2;
         count -= size;
@@ -264,9 +265,10 @@ int Port::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
             return e; // Error Reading Sectors
         }
 
-        memcpy(buffer, buffers[buf], size);
+        if(buffer->Write((uint8_t*)buffers[buf], size)) {
+            return EFAULT;
+        }
 
-        buffer += size;
         lba++;
         blockCount--;
         count -= size;
@@ -275,9 +277,8 @@ int Port::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
     return 0;
 }
 
-int Port::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
+int Port::WriteDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
     uint64_t blockCount = ((count + (blocksize - 1)) / blocksize);
-    uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
 
     unsigned buf = AcquireBuffer();
     if (buf >= 8) {
@@ -294,7 +295,9 @@ int Port::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
         if (!size)
             break;
 
-        memcpy(buffers[buf], buffer, size);
+        if(buffer->Read((uint8_t*)buffers[buf], size)) {
+            return EFAULT;
+        }
 
         if (int e = Access(lba, 1, physBuffers[buf], 1); e) { // LBA, 1 block, write
             ReleaseBuffer(buf);
@@ -313,7 +316,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
     assert(CheckInterrupts());
 
     if (portLock.Wait()) {
-        return -EINTR;
+        return EINTR;
     }
 
     registers->ie = 0xffffffff;
@@ -390,7 +393,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
         Log::Warning("[SATA] Port Hung");
 
         portLock.Signal();
-        return -EIO;
+        return EIO;
     }
 
     registers->ie = registers->is = 0xffffffff;
@@ -409,7 +412,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
 
             StopCMD(registers);
             portLock.Signal();
-            return -EIO;
+            return EIO;
         }
     }
 
@@ -438,7 +441,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
         Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
 
         portLock.Signal();
-        return -EIO;
+        return EIO;
     }
 
     portLock.Signal();

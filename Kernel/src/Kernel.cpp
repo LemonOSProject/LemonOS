@@ -27,6 +27,7 @@
 #include <Types.h>
 #include <USB/XHCI.h>
 #include <Video/Video.h>
+#include <hiraku.h>
 
 #include <Debug.h>
 
@@ -56,13 +57,14 @@ void KernelProcess() {
     if (FsNode* node = fs::ResolvePath("/initrd/modules.cfg")) {
         char* buffer = new char[node->size + 1];
 
-        ssize_t read = fs::Read(node, 0, node->size, buffer);
-        if (read > 0) {
-            buffer[read] = 0; // Null-terminate the buffer
+        auto result = fs::Read(node, 0, node->size, buffer);
+        if (!result.HasError()) {
+            buffer[result.Value()] = 0; // Null-terminate the buffer
 
             char* save;
             char* path = strtok_r(buffer, "\n", &save);
             while (path) {
+                Log::Info("loading %s", path);
                 if (strlen(path) > 0) {
                     ModuleManager::LoadModule(path); // modules.cfg should contain a list of paths to modules
                 }
@@ -112,6 +114,8 @@ void KernelProcess() {
     }
 
     Log::Write("OK");
+
+    LoadHirakuSymbols();
 
     void* initElf = (void*)kmalloc(initFsNode->size);
     fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
@@ -193,30 +197,19 @@ extern "C" [[noreturn]] void kmain() {
 
     fs::VolumeManager::RegisterVolume(new fs::Temp::TempVolume("tmp")); // Create tmpfs instance
 
-    FsNode* initrd = fs::FindDir(fs::GetRoot(), "initrd");
-    FsNode* splashFile = nullptr;
-    FsNode* symbolFile = nullptr;
+    FsNode* splashFile = fs::ResolvePath("/initrd/splash.bmp");
+    if (splashFile) {
+        uint32_t size = splashFile->size;
+        uint8_t* buffer = new uint8_t[size];
 
-    if (initrd) {
-        if ((splashFile = fs::FindDir(initrd, "splash.bmp"))) {
-            uint32_t size = splashFile->size;
-            uint8_t* buffer = new uint8_t[size];
+        if (!fs::Read(splashFile, 0, size, buffer).HasError())
+            Video::DrawBitmapImage(videoMode.width / 2 - 620 / 2, videoMode.height / 2 - 150 / 2, 621, 150, buffer);
 
-            if (fs::Read(splashFile, 0, size, buffer) > 0)
-                Video::DrawBitmapImage(videoMode.width / 2 - 620 / 2, videoMode.height / 2 - 150 / 2, 621, 150, buffer);
+        delete[] buffer;
+    } else
+        Log::Warning("Could not load splash image");
 
-            delete[] buffer;
-        } else
-            Log::Warning("Could not load splash image");
-
-        if ((symbolFile = fs::FindDir(initrd, "kernel.map"))) {
-            LoadSymbolsFromFile(symbolFile);
-        } else {
-            KernelPanic((const char*[]){"Failed to locate kernel.map!"}, 1);
-        }
-    } else {
-        KernelPanic((const char*[]){"initrd not mounted!"}, 1);
-    }
+    LoadSymbols();
 
     Video::DrawString("Copyright 2018-2021 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
     Video::DrawString(Lemon::versionString, 2, videoMode.height - 20, 255, 255, 255);

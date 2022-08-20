@@ -119,7 +119,7 @@ int AC97Controller::OutputSampleRate(void* output) const { return AC97_SAMPLE_RA
 
 int AC97Controller::OutputSetNumberOfChannels(int channels) { return -ENOSYS; }
 
-int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size, bool async) {
+int AC97Controller::WriteSamples(void* output, UIOBuffer* buffer, size_t size, bool async) {
     // TODO: Ensure exclusive access to /dev/pcm,
     // currently if two threads attempt to play audio directly
     // they may deadlock
@@ -180,7 +180,10 @@ int AC97Controller::WriteSamples(void* output, uint8_t* buffer, size_t size, boo
                 int written = MIN(PAGE_SIZE_4K, size);
                 // Copy audio data to our mapped buffers which will be sent
                 // to the hardware
-                memcpy(sampleBuffers[nextBuffer], buffer, written);
+                if(buffer->Read((uint8_t*)sampleBuffers[nextBuffer], written)) {
+                    Log::Warning("[AC97] Fault accessing user memory");
+                    break;
+                }
                 bufferDescriptorList[nextBuffer].flags = 0;
 
                 samplesWritten += written / m_pcmSampleSize / m_pcmNumChannels;

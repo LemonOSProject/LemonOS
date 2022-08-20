@@ -41,6 +41,23 @@ public:
     MappedRegion* AddressToRegionWriteLock(uintptr_t address);
 
     /////////////////////////////
+    /// \brief Find and write lock all regions within this range
+    ///
+    /// Due to the lock, the region cannot be deallocated or modified until this thread releases the write lock.
+    /// Checks whether or not the range has any holes
+    ///
+    /// \param base Base address of range
+    /// \param size Size of range
+    /// \param regions All regions found before any holes. Write locks of any regions placed here MUST be released regardless of return
+    /// \param protection Indicates the access flags requested on the range
+    ///
+    /// \return 0 if the whole range is mapped AND can be accessed under \b protection
+    /// \return 1 if there is a 'hole' in the range
+    /// \return 2 if memory is unaccessible under \b protection
+    /////////////////////////////
+    int GetRegionsForRangeWriteLock(uintptr_t base, size_t size, Vector<MappedRegion*>* regions, MemoryProtection protection);
+
+    /////////////////////////////
     /// \brief Check if the range is in a valid region
     ///
     /// \param base Address of region

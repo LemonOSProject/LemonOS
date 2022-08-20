@@ -6,7 +6,7 @@
 #include <Device.h>
 #include <List.h>
 
-#include <ABI/termios.h>
+#include <abi/termios.h>
 
 enum {
     PTYSlaveDevice,
@@ -21,14 +21,14 @@ public:
     public:
         PTS(PTMultiplexor& ptmx);
 
-        int ReadDir(DirectoryEntry*, uint32_t) override;
-        FsNode* FindDir(const char* name) override;
+        ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t) override;
+        ErrorOr<FsNode*> FindDir(const char* name) override;
 
-        int Create(DirectoryEntry* ent, uint32_t mode) override;
-        int CreateDirectory(DirectoryEntry* ent, uint32_t mode) override;
+        Error Create(DirectoryEntry* ent, uint32_t mode) override;
+        Error CreateDirectory(DirectoryEntry* ent, uint32_t mode) override;
 
-        int Link(FsNode*, DirectoryEntry*) override;
-        int Unlink(DirectoryEntry*, bool unlinkDirectories = false) override;
+        Error Link(FsNode*, DirectoryEntry*) override;
+        Error Unlink(DirectoryEntry*, bool unlinkDirectories = false) override;
     
     private:
         PTMultiplexor& m_ptmx;
@@ -61,9 +61,9 @@ public:
 
     void Close() override;
 
-    ssize_t Read(size_t, size_t, uint8_t *) override;
-    ssize_t Write(size_t, size_t, uint8_t *) override;
-    int Ioctl(uint64_t cmd, uint64_t arg) override;
+    ErrorOr<ssize_t> Read(size_t, size_t, UIOBuffer*) override;
+    ErrorOr<ssize_t> Write(size_t, size_t, UIOBuffer*) override;
+    ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override;
 
     void Watch(FilesystemWatcher& watcher, int events) override;
     void Unwatch(FilesystemWatcher& watcher) override;
@@ -95,11 +95,11 @@ public:
     
     void UpdateLineCount();
 
-    ssize_t MasterRead(char* buffer, size_t count);
-    ssize_t SlaveRead(char* buffer, size_t count);
+    ErrorOr<ssize_t> MasterRead(UIOBuffer* buffer, size_t count);
+    ErrorOr<ssize_t> SlaveRead(UIOBuffer* buffer, size_t count);
 
-    ssize_t MasterWrite(char* buffer, size_t count);
-    ssize_t SlaveWrite(char* buffer, size_t count);
+    ErrorOr<ssize_t> MasterWrite(UIOBuffer* buffer, size_t count);
+    ErrorOr<ssize_t> SlaveWrite(UIOBuffer* buffer, size_t count);
 
     void Close();
 

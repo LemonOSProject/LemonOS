@@ -108,6 +108,10 @@ enum {
     CPUID_EDX_PBE = 1 << 31
 };
 
+#define x86_64_MSR_FS_BASE 0xC0000100
+#define x86_64_MSR_GS_BASE 0xC0000101
+#define x86_64_MSR_KERNEL_GS_BASE 0xC0000102
+
 typedef struct {
     char vendorString[12];      // CPU vendor string
     char nullTerminator = '\0'; // Acts as a terminator for the vendor string
@@ -181,9 +185,7 @@ ALWAYS_INLINE uintptr_t GetCR3() {
 static ALWAYS_INLINE void SetCPULocal(CPU* val) {
     val->self = val;
     asm volatile("wrmsr" ::"a"((uintptr_t)val & 0xFFFFFFFF) /*Value low*/,
-                 "d"(((uintptr_t)val >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000102) /*Set Kernel GS Base*/);
-    asm volatile("wrmsr" ::"a"((uintptr_t)val & 0xFFFFFFFF) /*Value low*/,
-                 "d"(((uintptr_t)val >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000101) /*Set Kernel GS Base*/);
+                 "d"(((uintptr_t)val >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(x86_64_MSR_KERNEL_GS_BASE) /*Set Kernel GS Base*/);
 }
 
 static ALWAYS_INLINE CPU* GetCPULocal() {
@@ -214,6 +216,16 @@ static ALWAYS_INLINE void DisableInterrupts() {
 
 static ALWAYS_INLINE void EnableInterrupts() {
     asm volatile("sti");
+}
+
+static ALWAYS_INLINE void UpdateUserTCB(uintptr_t value) {
+    asm volatile("wrmsr" ::"a"(value & 0xFFFFFFFF) /*Value low*/,
+                 "d"((value >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(x86_64_MSR_FS_BASE) /*Set FS Base*/);
+}
+
+static ALWAYS_INLINE void UpdateUserGS(uintptr_t value) {
+    asm volatile("wrmsr" ::"a"(value & 0xFFFFFFFF) /*Value low*/,
+                 "d"((value >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(x86_64_MSR_GS_BASE) /*Set FS Base*/);
 }
 
 class InterruptDisabler {

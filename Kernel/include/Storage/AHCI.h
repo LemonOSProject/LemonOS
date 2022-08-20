@@ -349,8 +349,8 @@ namespace AHCI{
 	public:
 		Port(int num, hba_port_t* portStructure, hba_mem_t* hbaMem);
 
-		int ReadDiskBlock(uint64_t lba, uint32_t count, void* buffer);
-		int WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer);
+		int ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer);
+		int WriteDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer);
 
         int blocksize = 512;
 		AHCIStatus status = AHCIStatus::Uninitialized;

@@ -64,13 +64,12 @@ void Namespace::ReleaseBuffer(int buffer) {
     bufferAvailability.Signal();
 }
 
-int Namespace::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
+int Namespace::ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
     if (lba + count > diskSize) {
         return 2;
     }
 
     uint32_t blockCount = (count + (blocksize - 1)) / blocksize;
-    uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
     int blockBufferIndex = AcquireBuffer();
     if (blockBufferIndex == -EINTR) {
         return -EINTR;
@@ -112,7 +111,11 @@ int Namespace::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
             return -completion.status;
         }
 
-        memcpy(buffer, buffers[blockBufferIndex], size);
+        if(buffer->Write((uint8_t*)buffers[blockBufferIndex], size)) {
+            ReleaseBuffer(blockBufferIndex);
+            controller->ReleaseIOQueue(queue);
+            return EFAULT;
+        }
 
         count -= size;
         buffer += size;
@@ -125,13 +128,12 @@ int Namespace::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
     return 0;
 }
 
-int Namespace::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
+int Namespace::WriteDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
     if (lba + count > diskSize) {
         return 2;
     }
 
     uint32_t blockCount = (count + (blocksize - 1)) / blocksize;
-    uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
     int blockBufferIndex = AcquireBuffer();
     if (blockBufferIndex == -EINTR) {
         return -EINTR;
@@ -163,7 +165,11 @@ int Namespace::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
         if (!size)
             break;
 
-        memcpy(buffers[blockBufferIndex], buffer, size);
+        if(buffer->Read((uint8_t*)buffers[blockBufferIndex], size)) {
+            ReleaseBuffer(blockBufferIndex);
+            controller->ReleaseIOQueue(queue);
+            return EFAULT;
+        }
 
         queue->SubmitWait(cmd, completion);
 

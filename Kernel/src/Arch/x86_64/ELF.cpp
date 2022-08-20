@@ -6,6 +6,8 @@
 #include <Paging.h>
 #include <PhysicalAllocator.h>
 #include <Scheduler.h>
+#include <StringView.h>
+#include <hiraku.h>
 
 int VerifyELF(void* elf) {
     elf64_header_t elfHdr = *(elf64_header_t*)elf;
@@ -28,6 +30,9 @@ elf_info_t LoadELFSegments(Process* proc, void* _elf, uintptr_t base) {
         return elfInfo; // Invalid ELF Header
 
     elf64_header_t elfHdr = *(elf64_header_t*)elf;
+    Log::Error("entry at %x", elfHdr.entry);
+
+    assert(base == 0 || elfHdr.type == ET_DYN);
 
     elfInfo.entry = base + elfHdr.entry;
     elfInfo.phEntrySize = elfHdr.phEntrySize;
@@ -43,10 +48,10 @@ elf_info_t LoadELFSegments(Process* proc, void* _elf, uintptr_t base) {
 
         proc->usedMemoryBlocks += (elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) >> 12;
         if (!proc->addressSpace->MapVMO(new ProcessImageVMObject((base + elfPHdr.vaddr) & ~0xFFFUL,
-                                                                ((elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) &
-                                                                 ~static_cast<uintptr_t>(PAGE_SIZE_4K - 1)),
-                                                                true),
-                                       (elfPHdr.vaddr + base) & ~0xFFFUL, true)) {
+                                                                 ((elfPHdr.memSize + (elfPHdr.vaddr & 0xFFF) + 0xFFF) &
+                                                                  ~static_cast<uintptr_t>(PAGE_SIZE_4K - 1)),
+                                                                 true),
+                                        (elfPHdr.vaddr + base) & ~0xFFFUL, true)) {
             Log::Error("Failed to map process image memory");
             memset(&elfInfo, 0, sizeof(elfInfo));
             return elfInfo;
@@ -73,8 +78,63 @@ elf_info_t LoadELFSegments(Process* proc, void* _elf, uintptr_t base) {
             linkPath[elfPHdr.fileSize] = 0; // Null terminate the path
 
             elfInfo.linkerPath = linkPath;
+        } else if (elfPHdr.type == PT_DYNAMIC) {
+            elfInfo.dynamic = (elf64_dynamic_t*)(base + elfPHdr.vaddr);
         }
     }
 
     return elfInfo;
 }
+
+extern uint8_t _hiraku[];
+
+HashMap<StringView, HirakuSymbol> symbolMap;
+void LoadHirakuSymbols() {
+    elf64_header_t* header = (elf64_header_t*)_hiraku;
+    elf64_dynamic_t* dynamic = nullptr;
+
+    elf64_program_header_t* phdrs = (elf64_program_header_t*)(_hiraku + header->phOff);
+    for (unsigned i = 0; i < header->phOff; i++) {
+        if (phdrs[i].type == PT_DYNAMIC) {
+            dynamic = (elf64_dynamic_t*)(_hiraku + phdrs[i].offset);
+            break;
+        }
+    }
+
+    assert(dynamic);
+
+    elf64_symbol_t* symtab = nullptr;
+    uint32_t* hashTable = nullptr;
+
+    char* strtab = nullptr;
+
+    while (dynamic->tag != DT_NULL) {
+        if (dynamic->tag == DT_STRTAB) {
+            strtab = (char*)(_hiraku + dynamic->ptr);
+        } else if (dynamic->tag == DT_SYMTAB) {
+            symtab = (elf64_symbol_t*)(_hiraku + dynamic->ptr);
+        } else if (dynamic->tag == DT_HASH) {
+            hashTable = (uint32_t*)(_hiraku + dynamic->ptr);
+        }
+
+        dynamic++;
+    }
+
+    assert(symtab && strtab && hashTable);
+
+    uint32_t symCount = hashTable[1];
+    for (unsigned i = 0; i < symCount; i++) {
+        elf64_symbol_t eSym = symtab[i];
+        if (ELF64_SYM_BIND(eSym.info) != STB_WEAK || !eSym.name) {
+            continue;
+        }
+
+        HirakuSymbol sym;
+        sym.name = strdup(strtab + eSym.name);
+        sym.address = eSym.value;
+
+        symbolMap.insert(sym.name, sym);
+    }
+}
+
+HirakuSymbol* ResolveHirakuSymbol(const char* name) { return symbolMap.get(name); }

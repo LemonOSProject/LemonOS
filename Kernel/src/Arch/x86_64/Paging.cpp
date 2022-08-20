@@ -144,8 +144,10 @@ void InitializeVirtualMemory() {
 void LateInitializeVirtualMemory() {
     pageFaultTraps = new HashMap<uintptr_t, PageFaultTrap>();
 
-    RegisterPageFaultTrap(PageFaultTrap{.instructionPointer = reinterpret_cast<uintptr_t>(UserMemcpyTrap),
-                                        .handler = UserMemcpyTrapHandler});
+    RegisterPageFaultTrap(PageFaultTrap{.instructionPointer = reinterpret_cast<uintptr_t>(user_memcpy_trap),
+                                        .handler = user_memcpy_trap_handler});
+    RegisterPageFaultTrap(PageFaultTrap{.instructionPointer = reinterpret_cast<uintptr_t>(user_strlen_trap),
+                                        .handler = user_strlen_trap_handler});
 }
 
 PageMap* CreatePageMap() {
@@ -676,7 +678,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
             Log::Info("Process Mapped Memory:");
             process->addressSpace->DumpRegions();
 
-            IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, { DumpLastSyscall(Thread::Current()); });
+            IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, { DumpLastSyscall(Thread::Current()); });
         }
     };
 

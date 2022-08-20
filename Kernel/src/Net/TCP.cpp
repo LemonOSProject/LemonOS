@@ -147,6 +147,50 @@ namespace Network {
             return ret;
         }
 
+        /*BigEndian<uint16_t> CalculateTCPChecksum(const IPv4Address& src, const IPv4Address& dest, void* data, uint16_t size){
+            struct PseudoIPv4Header{
+                uint32_t source;
+                uint32_t destination;
+                uint8_t zero = 0;
+                uint8_t protocol = IPv4ProtocolTCP;
+                BigEndian<uint16_t> length = 0;
+            } __attribute__((packed));
+            uint32_t checksum = 0;
+
+            PseudoIPv4Header pseudoHeader;
+            pseudoHeader.source = src.value;
+            pseudoHeader.destination = dest.value;
+            pseudoHeader.zero = 0;
+            pseudoHeader.protocol = IPv4ProtocolTCP;
+            pseudoHeader.length = size;
+
+            uint16_t* ptr = (uint16_t*)&pseudoHeader;
+            uint16_t count = sizeof(PseudoIPv4Header);
+            while(count >= 2){
+                checksum += EndianLittleToBig16(*ptr++);
+                count -= 2;
+            }
+
+            ptr = (uint16_t*)data;
+            count = size;
+            while(count >= 2){
+                checksum += EndianLittleToBig16(*ptr++);
+                count -= 2;
+            }
+
+            if(count){ // Uneven amount of data
+                checksum += ((uint16_t)(*reinterpret_cast<uint8_t*>(ptr))) << 8;
+            }
+
+            if(checksum > 0xffff) {
+                checksum = (checksum & 0xffff) + (checksum >> 16);
+            }
+
+            BigEndian<uint16_t> ret;
+            ret = ~(checksum & 0xffff);
+            return ret;
+        }*/
+
         int SendTCP(void* data, size_t length, IPv4Address& source, IPv4Address& destination, TCPHeader& header, NetworkAdapter* adapter = nullptr){
             uint8_t buffer[1600];
 
@@ -176,10 +220,12 @@ namespace Network {
 
             Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] Recieving Packet from %hd.%hd.%hd.%hd:%hu (dest: %hd.%hd.%hd.%hd:%hu)!", ipHeader.sourceIP.data[0], ipHeader.sourceIP.data[1], ipHeader.sourceIP.data[2], ipHeader.sourceIP.data[3], (uint16_t)tcpHeader->srcPort, ipHeader.destIP.data[0], ipHeader.destIP.data[1], ipHeader.destIP.data[2], ipHeader.destIP.data[3], (uint16_t)tcpHeader->destPort);
 
-            /*tcpHeader->checksum = 0;
-            if(uint16_t chk = CalculateTCPChecksum(ipHeader.sourceIP, ipHeader.destIP, data, ipHeader.length).value; chk != checksum.value){
-                Log::Warning("[Network] [TCP] Dropping Packet (invalid checksum %hx, should be: %hx)", (uint16_t)checksum, EndianBigToLittle16(chk));
-            }*/
+            tcpHeader->checksum = 0;
+            if(BigEndian<uint16_t> chk = CalculateTCPChecksum(ipHeader.sourceIP, ipHeader.destIP, data, length); chk.value != checksum.value){
+                Log::Warning("[Network] [TCP] Dropping Packet (invalid checksum %hx, should be: %hx) seq: %d", (uint16_t)checksum, (uint16_t)chk, tcpHeader->sequence);
+                return;
+            }
+
             tcpHeader->checksum = checksum;
 
             if(tcpHeader->dataOffset * 4 < sizeof(TCPHeader)){
@@ -274,11 +320,12 @@ namespace Network {
                 uint16_t other = (tcpHeader->flags & (TCPHeader::FlagsMask ^ (TCPHeader::ACK | TCPHeader::PSH | TCPHeader::FIN | TCPHeader::ECE))); // Get all other flags
 
                 if(other){
+                    Log::Warning("[Network] [TCP] (State: ESTABLISHED) Discarding packet with unsupported flags %x", other);
                     return; // Unsupported flags
                 }
 
-                if(tcpHeader->sequence != m_remoteSequenceNumber){
-                    Log::Debug(debugLevelNetwork, DebugLevelNormal, "[Network] [TCP] (State: ESTABLISHED) Received packet with sequence number of %d, Expected %d", tcpHeader->sequence, m_remoteSequenceNumber);
+                if(((uint32_t)tcpHeader->sequence) != m_remoteSequenceNumber){
+                    Log::Debug(debugLevelNetwork, DebugLevelNormal, "[Network] [TCP] (State: ESTABLISHED) Received packet with sequence number of %d, Expected %d", (uint32_t)tcpHeader->sequence, m_remoteSequenceNumber);
                     return; // Either a previous packet has been dropped, or it is retransmitting a previous packet
                 }
 
@@ -312,7 +359,7 @@ namespace Network {
                 Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] Recieving %d bytes of data (Flags: %hx, total len: %d)", dataLength, tcpHeader->flags & TCPHeader::FlagsMask);
 
                 if(dataLength){
-                    m_inboundData.Write(data + dataOffset, dataLength);
+                    m_inboundData.WriteRaw(data + dataOffset, dataLength);
 
                     acquireLock(&blockedLock);
                     FilesystemBlocker* bl = blocked.get_front();
@@ -339,7 +386,7 @@ namespace Network {
                 }
 
                 if(fin){
-                    Log::Debug(debugLevelNetwork, DebugLevelVerbose, "[Network] [TCP] (State: ESTABLISHED) Peer closed connection with FIN, entering CLOSE-WAIT");
+                    Log::Debug(debugLevelNetwork, DebugLevelNormal, "[Network] [TCP] (State: ESTABLISHED) Peer closed connection with FIN, entering CLOSE-WAIT");
                     state = TCPStateCloseWait; // Connection ended, wait for process(es) to close file descriptors
 
                     Acknowledge(m_remoteSequenceNumber);
@@ -701,10 +748,10 @@ namespace Network {
             return 0;
         }
 
-        int64_t TCPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
+        ErrorOr<int64_t> TCPSocket::ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
             if(state != TCPStateEstablished && !m_inboundData.Pos()){
                 Log::Debug(debugLevelNetwork, DebugLevelNormal, "TCPSocket::ReceiveFrom: Not connected!");
-                return -ENOTCONN;
+                return ENOTCONN;
             }
 
             if(addrlen && *addrlen >= sizeof(sockaddr_in)){
@@ -717,12 +764,12 @@ namespace Network {
                 FilesystemBlocker bl(this, len);
 
                 if(Thread::Current()->Block(&bl)){
-                    return -EINTR; // We were interrupted
+                    return EINTR; // We were interrupted
                 }
             }
 
             if(state == TCPStateUnknown){
-                return -ECONNRESET; // If state is now unknown we recieved an RST
+                return ECONNRESET; // If state is now unknown we recieved an RST
             }
 
             if(len > m_inboundData.Pos()){
@@ -736,15 +783,15 @@ namespace Network {
             return m_inboundData.Read(buffer, len);
         }
 
-        int64_t TCPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* dest, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
+        ErrorOr<int64_t> TCPSocket::SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* dest, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
             if(state != TCPStateEstablished){
                 Log::Debug(debugLevelNetwork, DebugLevelNormal, "TCPSocket::SendTo: Not connected!");
-                return -ENOTCONN;
+                return ENOTCONN;
             }
 
             if(dest || addrlen){
                 Log::Debug(debugLevelNetwork, DebugLevelNormal, "TCPSocket::SendTo: Already connected!");
-                return -EISCONN; // dest is invalid
+                return EISCONN; // dest is invalid
             }
 
             uint16_t shortLength = static_cast<uint16_t>(len);
@@ -765,7 +812,9 @@ namespace Network {
             header.psh = 1;
 
             TCPPacket pack = { .header = header, .sequenceNumber = m_sequenceNumber, .length = shortLength, .data = new uint8_t[len]};
-            memcpy(pack.data, buffer, shortLength);
+            if(buffer->Read(pack.data, shortLength)) {
+                return EFAULT;
+            }
 
             m_sequenceNumber += shortLength;
 

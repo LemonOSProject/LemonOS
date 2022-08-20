@@ -81,6 +81,7 @@ struct Thread {
     uint8_t priority = 0;               // Thread priority
     uint8_t state = ThreadStateRunning; // Thread state
 
+    uint64_t gsBase = 0;
     uint64_t fsBase = 0;
 
     bool blockTimedOut = false;

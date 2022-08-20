@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <Lock.h>
 #include <Scheduler.h>
+#include <UserIO.h>
 
 #define DATASTREAM_BUFSIZE_DEFAULT 1024
 
@@ -21,9 +22,12 @@ protected:
 public:
     virtual void Wait();
 
-    virtual int64_t Read(void* buffer, size_t len);
-    virtual int64_t Peek(void* buffer, size_t len);
-    virtual int64_t Write(void* buffer, size_t len);
+    ErrorOr<int64_t> ReadRaw(uint8_t* buffer, size_t len);
+    virtual ErrorOr<int64_t> Read(UIOBuffer* buffer, size_t len) = 0;
+    ErrorOr<int64_t> PeekRaw(uint8_t* buffer, size_t len);
+    virtual ErrorOr<int64_t> Peek(UIOBuffer* buffer, size_t len) = 0;
+    ErrorOr<int64_t> WriteRaw(const uint8_t* buffer, size_t len);
+    virtual ErrorOr<int64_t> Write(UIOBuffer* buffer, size_t len) = 0;
 
     virtual int64_t Pos() { return 0; }
     virtual int64_t Empty();
@@ -40,25 +44,25 @@ class DataStream final : public Stream {
     uint8_t* buffer = nullptr;
 public:
     DataStream(size_t bufSize);
-    ~DataStream();
+    ~DataStream() override;
 
-    void Wait();
+    void Wait() override;
 
-    int64_t Read(void* buffer, size_t len);
-    int64_t Peek(void* buffer, size_t len);
-    int64_t Write(void* buffer, size_t len);
+    ErrorOr<int64_t> Read(UIOBuffer* buffer, size_t len) override;
+    ErrorOr<int64_t> Peek(UIOBuffer* buffer, size_t len) override;
+    ErrorOr<int64_t> Write(UIOBuffer* buffer, size_t len) override;
     
-    int64_t Pos() { return bufferPos; }
-    virtual int64_t Empty();
+    int64_t Pos() override { return bufferPos; }
+    int64_t Empty() override;
 };
 
 class PacketStream final : public Stream {
     List<stream_packet_t> packets;
 public:
-    void Wait();
+    void Wait() override;
 
-    int64_t Read(void* buffer, size_t len);
-    int64_t Peek(void* buffer, size_t len);
-    int64_t Write(void* buffer, size_t len);
-    virtual int64_t Empty();
+    ErrorOr<int64_t> Read(UIOBuffer* buffer, size_t len) override;
+    ErrorOr<int64_t> Peek(UIOBuffer* buffer, size_t len) override;
+    ErrorOr<int64_t> Write(UIOBuffer* buffer, size_t len) override;
+    int64_t Empty() override;
 };

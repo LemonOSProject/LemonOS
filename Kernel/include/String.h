@@ -9,6 +9,8 @@
 #include <TTraits.h>
 #include <Vector.h>
 
+#define STRING_POS_NONE ((unsigned)-1)
+
 template <typename T> class BasicString {
 private:
     // Round buffer to 32 bytes
@@ -168,6 +170,32 @@ public:
         Resize(m_len - 1);
     }
 
+    unsigned find_first_of(T val) const {
+        T* ptr = m_buffer;
+        while(*ptr != val && *ptr) {
+            ptr++;
+        }
+
+        if(!ptr) {
+            return STRING_POS_NONE;
+        }
+
+        return ptr - m_buffer;
+    }
+
+    unsigned find_last_of(T val) const {
+        T* ptr = m_buffer + m_len - 1;
+        while(ptr >= m_buffer && *ptr != val) {
+            ptr--;
+        }
+
+        if(ptr < m_buffer) {
+            return STRING_POS_NONE;
+        }
+
+        return ptr - m_buffer;
+    }
+
     ALWAYS_INLINE int Compare(const BasicString& other) const { return Compare(other.Data()); };
 
     /////////////////////////////
@@ -185,28 +213,6 @@ public:
     /// \brief Get whether the string is empty
     /////////////////////////////
     ALWAYS_INLINE bool Empty() const { return (!m_buffer) || (m_len == 0); }
-
-protected:
-    lock_t m_lock = 0;
-
-    unsigned m_len = 0;
-    unsigned m_bufferSize = 0;
-    T* m_buffer = nullptr;
-
-    ALWAYS_INLINE void CopyFromNullTerminatedBuffer(const T* data) {
-        unsigned len = 0;
-        while (data[len])
-            len++; // Get the length of data assuming its null-terminated
-
-        CopyFromBuffer(data, len);
-    }
-
-    ALWAYS_INLINE void CopyFromBuffer(const T* data, size_t len) {
-        Resize(len);
-
-        memcpy(m_buffer, data, m_len * sizeof(T));
-        m_buffer[m_len] = 0; // NULL-terminate
-    }
 
     ALWAYS_INLINE void Resize(unsigned newLen) {
         if (m_buffer && newLen < m_bufferSize) {
@@ -228,6 +234,28 @@ protected:
         m_len = newLen;
 
         m_buffer[m_len] = 0; // null-terminate
+    }
+
+protected:
+    lock_t m_lock = 0;
+
+    unsigned m_len = 0;
+    unsigned m_bufferSize = 0;
+    T* m_buffer = nullptr;
+
+    ALWAYS_INLINE void CopyFromNullTerminatedBuffer(const T* data) {
+        unsigned len = 0;
+        while (data[len])
+            len++; // Get the length of data assuming its null-terminated
+
+        CopyFromBuffer(data, len);
+    }
+
+    ALWAYS_INLINE void CopyFromBuffer(const T* data, size_t len) {
+        Resize(len);
+
+        memcpy(m_buffer, data, m_len * sizeof(T));
+        m_buffer[m_len] = 0; // NULL-terminate
     }
 };
 

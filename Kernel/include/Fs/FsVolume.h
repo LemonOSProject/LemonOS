@@ -26,7 +26,7 @@ public:
         size = link.Length();
     }
 
-    ssize_t ReadLink(char* pathBuffer, size_t bufSize) override { 
+    ErrorOr<ssize_t> ReadLink(char* pathBuffer, size_t bufSize) override { 
         if(bufSize > m_link.Length()){
             memcpy(pathBuffer, m_link.c_str(), m_link.Length()); // Do not null terminate
             return m_link.Length();

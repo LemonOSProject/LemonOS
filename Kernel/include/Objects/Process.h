@@ -184,8 +184,8 @@ public:
     }
 
     template<KernelObjectDerived T> 
-    ALWAYS_INLINE handle_id_t AllocateHandle(FancyRefPtr<T> ko) {
-        return AllocateHandle(static_pointer_cast<KernelObject>(std::move(ko)));
+    ALWAYS_INLINE handle_id_t AllocateHandle(FancyRefPtr<T> ko, bool cloExec = false) {
+        return AllocateHandle(static_pointer_cast<KernelObject>(std::move(ko)), cloExec);
     }
 
     /////////////////////////////
@@ -222,7 +222,7 @@ public:
     /////////////////////////////
     ALWAYS_INLINE int ReplaceHandle(handle_id_t id, Handle newHandle) {
         if(id < 0) {
-            return -EBADF;
+            return EBADF;
         }
         
         ScopedSpinLock lockHandles(m_handleLock);
@@ -232,6 +232,20 @@ public:
         m_handles.at(id) = std::move(newHandle);
 
         return 0;
+    }
+
+    ALWAYS_INLINE Error SetCloseOnExec(handle_id_t id, bool value) {
+        if(id < 0) {
+            return EBADF;
+        }
+        
+        ScopedSpinLock lockHandles(m_handleLock);
+        if(id >= m_handles.size()) {
+            return EBADF;
+        }
+
+        m_handles.at(id).closeOnExec = value;
+        return ERROR_NONE;
     }
 
     /////////////////////////////
@@ -397,6 +411,10 @@ public:
 
     AddressSpace* addressSpace = nullptr;
 
+    MappedRegion* stackregion;
+    MappedRegion* pebRegion;
+    MappedRegion* userSharedDataRegion = nullptr;
+
     HashMap<uintptr_t, List<FutexThreadBlocker*>*> futexWaitQueue = HashMap<uintptr_t, List<FutexThreadBlocker*>*>(8);
 
     int exitCode = 0;
@@ -408,7 +426,7 @@ private:
     Process(pid_t pid, const char* name, const char* workingDir, Process* parent);
 
     FancyRefPtr<Thread> GetThreadFromTID_Unlocked(pid_t tid);
-    void MapSignalTrampoline();
+    void MapUserSharedData();
 
     lock_t m_processLock = 0;        // Should be acquired when modifying the data structure
     lock_t m_watchingLock = 0;       // Should be acquired when modifying watching processes

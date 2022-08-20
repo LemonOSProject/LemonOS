@@ -114,15 +114,15 @@ public:
         flags = FS_NODE_DIRECTORY;
     }
 
-    int ReadDir(DirectoryEntry*, uint32_t);
-    FsNode* FindDir(const char* name);
+    ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t);
+    ErrorOr<FsNode*> FindDir(const char* name);
 
-    int Create(DirectoryEntry* ent, uint32_t mode) {
+    Error Create(DirectoryEntry* ent, uint32_t mode) {
         Log::Warning("[RootFS] Attempted to create a file!");
-        return -EROFS;
+        return Error{EROFS};
     }
 
-    int CreateDirectory(DirectoryEntry* ent, uint32_t mode) { return -EROFS; }
+    Error CreateDirectory(DirectoryEntry* ent, uint32_t mode) { return Error{EROFS}; }
 };
 
 Root root;
@@ -139,11 +139,11 @@ FsNode* FollowLink(FsNode* link, FsNode* workingDir) {
     char buffer[PATH_MAX + 1];
 
     auto bytesRead = link->ReadLink(buffer, PATH_MAX);
-    if (bytesRead < 0) {
-        Log::Warning("FollowLink: Readlink error %d", -bytesRead);
+    if (bytesRead.HasError()) {
+        Log::Warning("FollowLink: Readlink error %d", bytesRead.Err());
         return nullptr;
     }
-    buffer[bytesRead] = 0; // Null terminate
+    buffer[bytesRead.Value()] = 0; // Null terminate
 
     FsNode* node = ResolvePath(buffer, workingDir, false);
 
@@ -182,6 +182,10 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
         return nullptr;
     }
 
+    if(!path.Compare("/")){
+        return fs::GetRoot();
+    }
+
     FsNode* root = fs::GetRoot();
     FsNode* currentNode = root;
 
@@ -201,12 +205,14 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
     unsigned i = 0;
     for(; i < components.size() - 1; i++){
         String& component = components[i];
-        FsNode* node = fs::FindDir(currentNode, component.c_str());
-        if (!node) {
+        auto r = fs::FindDir(currentNode, component.c_str());
+        if (r.HasError()) {
             Log::Debug(debugLevelFilesystem, DebugLevelVerbose, "%s not found!", component.c_str());
 
             return nullptr;
         }
+
+        FsNode* node = r.Value();
 
         size_t amountOfSymlinks = 0;
         if(node->IsSymlink()) { // Check for symlinks
@@ -237,11 +243,12 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
         return currentNode;
     }
 
-    FsNode* node = fs::FindDir(currentNode, components[i].c_str());
-    if(!node){
+    auto r = fs::FindDir(currentNode, components[i].c_str());
+    if(r.HasError()){
         Log::Debug(debugLevelFilesystem, DebugLevelVerbose, "ResolvePath: Failed to find %s!", components[i].c_str());
         return nullptr;
     }
+    FsNode* node = r.Value();
 
     size_t amountOfSymlinks = 0;
     while(followSymlinks && node->IsSymlink()) { // Check for symlinks
@@ -290,22 +297,20 @@ FsNode* ResolveParent(const char* path, const char* workingDir) {
     return parentDirectory;
 }
 
-FsNode* ResolveParent(const char* path, FsNode* workingDir) {
-    char pathCopy[strlen(path) + 1];
-    strcpy(pathCopy, path);
+FsNode* ResolveParent(const String& path, FsNode* workingDir) {
+    String pathCopy = path;
 
-    if (pathCopy[strlen(pathCopy) - 1] == '/') { // Remove trailing slash
-        pathCopy[strlen(pathCopy) - 1] = 0;
+    if (pathCopy[pathCopy.Length() - 1] == '/') { // Remove trailing slash
+        pathCopy.Erase(pathCopy.Length() - 1);
     }
 
-    char* dirPath = strrchr(pathCopy, '/');
-
+    unsigned dirPath = pathCopy.find_last_of('/');
     FsNode* parentDirectory = nullptr;
 
-    if (dirPath == nullptr) {
+    if (dirPath == STRING_POS_NONE) {
         parentDirectory = workingDir;
     } else {
-        *(dirPath - 1) = 0; // Cut off the directory name from the path copy
+        pathCopy.Resize(dirPath); // Cut off the child name and path separator from the path copy
         parentDirectory = fs::ResolvePath(pathCopy, workingDir);
     }
 
@@ -365,7 +370,7 @@ String CanonicalizePath(const char* path, char* workingDir) {
     return outPath;
 }
 
-String BaseName(const char* path) {
+String BaseName(const String& path) {
     String pathCopy = path;
 
     if (pathCopy[pathCopy.Length() - 1] == '/') { // Remove trailing slash
@@ -383,7 +388,7 @@ String BaseName(const char* path) {
     return basename;
 }
 
-int Root::ReadDir(DirectoryEntry* dirent, uint32_t index) {
+ErrorOr<int> Root::ReadDir(DirectoryEntry* dirent, uint32_t index) {
     if(index == 0){
         *dirent = DirectoryEntry(this, ".");
         return 1;
@@ -400,7 +405,7 @@ int Root::ReadDir(DirectoryEntry* dirent, uint32_t index) {
     }
 }
 
-FsNode* Root::FindDir(const char* name) {
+ErrorOr<FsNode*> Root::FindDir(const char* name) {
     if (strcmp(name, ".") == 0)
         return this;
     if (strcmp(name, "..") == 0)
@@ -411,31 +416,33 @@ FsNode* Root::FindDir(const char* name) {
             return (VolumeManager::volumes->get_at(i)->mountPointDirent.node);
     }
 
-    return nullptr;
+    return Error{ENOENT};
 }
 
-ssize_t Read(FsNode* node, size_t offset, size_t size, void* buffer) {
+ErrorOr<ssize_t> Read(FsNode* node, size_t offset, size_t size, void* buffer) {
     assert(node);
 
-    return node->Read(offset, size, reinterpret_cast<uint8_t*>(buffer));
+    UIOBuffer uio(buffer);
+    return node->Read(offset, size, &uio);
 }
 
-ssize_t Write(FsNode* node, size_t offset, size_t size, void* buffer) {
+ErrorOr<ssize_t> Write(FsNode* node, size_t offset, size_t size, void* buffer) {
     assert(node);
 
-    return node->Write(offset, size, reinterpret_cast<uint8_t*>(buffer));
+    UIOBuffer uio(buffer);
+    return node->Write(offset, size, &uio);
 }
 
 ErrorOr<UNIXOpenFile*> Open(FsNode* node, uint32_t flags) { return node->Open(flags); }
 
-int Link(FsNode* dir, FsNode* link, DirectoryEntry* ent) {
+Error Link(FsNode* dir, FsNode* link, DirectoryEntry* ent) {
     assert(dir);
     assert(link);
 
     return dir->Link(link, ent);
 }
 
-int Unlink(FsNode* dir, DirectoryEntry* ent, bool unlinkDirectories) {
+Error Unlink(FsNode* dir, DirectoryEntry* ent, bool unlinkDirectories) {
     assert(dir);
     assert(ent);
 
@@ -456,96 +463,124 @@ void Close(UNIXOpenFile* fd) {
     fd->node = nullptr;
 }
 
-int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index) {
+ErrorOr<int> ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index) {
     assert(node);
 
     return node->ReadDir(dirent, index);
 }
 
-FsNode* FindDir(FsNode* node, const char* name) {
+ErrorOr<FsNode*> FindDir(FsNode* node, const char* name) {
     assert(node);
 
     return node->FindDir(name);
 }
 
-ssize_t Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, uint8_t* buffer) {
+ErrorOr<ssize_t> Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer) {
     assert(handle->node);
 
     ScopedSpinLock lockOpenFile(handle->dataLock);
-    ssize_t ret = Read(handle->node, handle->pos, size, buffer);
+    auto ret = handle->node->Read(handle->pos, size, buffer);
 
-    if (ret > 0) {
-        handle->pos += ret;
+    if(ret.HasError()) {
+        return ret;
+    }
+
+    handle->pos += ret.Value();
+    return ret;
+}
+
+ErrorOr<ssize_t> Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer) {
+    assert(handle->node);
+
+    ScopedSpinLock lockOpenFile(handle->dataLock);
+    auto ret = handle->node->Write(handle->pos, size, buffer);
+
+    if(ret.HasError()) {
+        return ret.err;
+    }
+
+    handle->pos += ret.Value();
+    return ret;
+}
+
+ErrorOr<ssize_t> Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer, off_t off) {
+    assert(handle->node);
+
+    ScopedSpinLock lockOpenFile(handle->dataLock);
+    auto ret = handle->node->Read(off, size, buffer);
+
+    if(ret.HasError()) {
+        return ret;
     }
 
     return ret;
 }
 
-ssize_t Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, uint8_t* buffer) {
+ErrorOr<ssize_t> Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer, off_t off) {
     assert(handle->node);
-    ScopedSpinLock lockOpenFile(handle->dataLock);
-    off_t ret = Write(handle->node, handle->pos, size, buffer);
 
-    if (ret >= 0) {
-        handle->pos += ret;
+    auto ret = handle->node->Write(off, size, buffer);
+
+    if(ret.HasError()) {
+        return ret.err;
     }
 
     return ret;
 }
 
-int ReadDir(const FancyRefPtr<UNIXOpenFile>& handle, DirectoryEntry* dirent, uint32_t index) {
+ErrorOr<int> ReadDir(const FancyRefPtr<UNIXOpenFile>& handle, DirectoryEntry* dirent, uint32_t index) {
     assert(handle->node);
 
-    return ReadDir(handle->node, dirent, index);
+    return handle->node->ReadDir(dirent, index);
 }
 
-FsNode* FindDir(const FancyRefPtr<UNIXOpenFile>& handle, const char* name) {
+ErrorOr<FsNode*> FindDir(const FancyRefPtr<UNIXOpenFile>& handle, const char* name) {
     assert(handle->node);
 
     return FindDir(handle->node, name);
 }
 
-int Ioctl(const FancyRefPtr<UNIXOpenFile>& handle, uint64_t cmd, uint64_t arg) {
+ErrorOr<int> Ioctl(const FancyRefPtr<UNIXOpenFile>& handle, uint64_t cmd, uint64_t arg) {
     assert(handle->node);
 
     return handle->node->Ioctl(cmd, arg);
 }
 
-int Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newpath) {
+Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newpath) {
     assert(olddir && newdir);
 
-    if ((olddir->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
-        return -ENOTDIR;
+    if (!olddir->IsDirectory()) {
+        return Error{ENOTDIR};
     }
 
-    if ((newdir->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
-        return -ENOTDIR;
+    if (!newdir->IsDirectory()) {
+        return Error{ENOTDIR};
     }
 
     FsNode* oldnode = ResolvePath(oldpath, olddir);
 
     if (!oldnode) {
-        return -ENOENT;
+        return Error{ENOENT};
     }
 
     if ((oldnode->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
         Log::Warning("Filesystem: Rename: We do not support using rename on directories yet!");
-        return -ENOSYS;
+        return Error{ENOSYS};
     }
 
     FsNode* newpathParent = ResolveParent(newpath, newdir);
 
     if (!newpathParent) {
-        return -ENOENT;
+        return Error{ENOENT};
     } else if ((newpathParent->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
-        return -ENOTDIR; // Parent of newpath is not a directory
+        return Error{ENOTDIR}; // Parent of newpath is not a directory
     }
 
     FsNode* newnode = ResolvePath(newpath, newdir);
 
     if (newnode) {
         if ((newnode->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
-            return -EISDIR; // If it exists newpath must not be a directory
+            return Error{EISDIR}; // If it exists newpath must not be a directory
         }
     }
 
@@ -585,25 +620,26 @@ int Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newp
         if (!newnode) {
             Log::Warning(
                 "Filesystem: Rename: newpath was created with no error returned however it was unable to be found.");
-            return -ENOENT;
+            return Error{ENOENT};
         }
 
         uint8_t* buffer = (uint8_t*)kmalloc(oldnode->size);
+        UIOBuffer uio = UIOBuffer(buffer);
 
-        ssize_t rret = oldnode->Read(0, oldnode->size, buffer);
-        if (rret < 0) {
+        auto rret = oldnode->Read(0, oldnode->size, &uio);
+        if (rret.HasError()) {
             kfree(buffer);
 
             Log::Warning("Filesystem: Rename: Error reading oldpath");
-            return rret;
+            return rret.err;
         }
 
-        ssize_t wret = oldnode->Write(0, rret, buffer);
-        if (wret < 0) {
+        auto wret = oldnode->Write(0, rret.Value(), &uio);
+        if (wret.HasError()) {
             kfree(buffer);
 
             Log::Warning("Filesystem: Rename: Error reading oldpath");
-            return wret;
+            return wret.err;
         }
 
         kfree(buffer);
@@ -613,9 +649,9 @@ int Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newp
         }
     } else {
         Log::Warning("Filesystem: Rename: We do not support using rename on symlinks yet!"); // TODO: Rename the symlink
-        return -ENOSYS;
+        return Error{ENOSYS};
     }
 
-    return 0;
+    return ERROR_NONE;
 }
 } // namespace fs

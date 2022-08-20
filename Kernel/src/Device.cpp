@@ -20,8 +20,8 @@ public:
         SetDeviceName("UNIX Random Device");
     }
 
-    ssize_t Read(size_t, size_t, uint8_t*);
-    ssize_t Write(size_t, size_t, uint8_t*);
+    ErrorOr<ssize_t> Read(size_t, size_t, uint8_t*);
+    ErrorOr<ssize_t> Write(size_t, size_t, uint8_t*);
 };
 
 class Null : public Device {
@@ -32,8 +32,8 @@ public:
         SetDeviceName("UNIX Null Device");
     }
 
-    ssize_t Read(size_t, size_t, uint8_t*);
-    ssize_t Write(size_t, size_t, uint8_t*);
+    ErrorOr<ssize_t> Read(size_t, size_t, uint8_t*);
+    ErrorOr<ssize_t> Write(size_t, size_t, uint8_t*);
 };
 
 class TTY : public Device {
@@ -108,15 +108,15 @@ void Device::SetDeviceName(const char* name) {
     this->deviceName = name;
 }
 
-ssize_t Null::Read(size_t offset, size_t size, uint8_t* buffer) {
+ErrorOr<ssize_t> Null::Read(size_t offset, size_t size, uint8_t* buffer) {
     memset(buffer, -1, size);
 
     return size;
 }
 
-ssize_t Null::Write(size_t offset, size_t size, uint8_t* buffer) { return size; }
+ErrorOr<ssize_t> Null::Write(size_t offset, size_t size, uint8_t* buffer) { return size; }
 
-ssize_t URandom::Read(size_t offset, size_t size, uint8_t* buffer) {
+ErrorOr<ssize_t> URandom::Read(size_t offset, size_t size, uint8_t* buffer) {
     unsigned int num = (rand() ^ ((Timer::GetSystemUptime() / 2) * Timer::GetFrequency())) + rand();
 
     size_t ogSize = size;
@@ -128,7 +128,7 @@ ssize_t URandom::Read(size_t offset, size_t size, uint8_t* buffer) {
     return ogSize;
 }
 
-ssize_t URandom::Write(size_t offset, size_t size, uint8_t* buffer) { return size; }
+ErrorOr<ssize_t> URandom::Write(size_t offset, size_t size, uint8_t* buffer) { return size; }
 
 ErrorOr<UNIXOpenFile*> TTY::Open(size_t flags){
     auto stdout = TRY_OR_ERROR(Process::Current()->GetHandleAs<UNIXOpenFile>(1));
@@ -157,7 +157,7 @@ public:
         vol.mountPointDirent = DirectoryEntry(this, name);
     }
 
-    int ReadDir(DirectoryEntry* dirPtr, uint32_t index) final {
+    ErrorOr<int> ReadDir(DirectoryEntry* dirPtr, uint32_t index) final {
         if (index >= rootDevices->get_length() + 2) {
             return 0;
         }
@@ -179,7 +179,7 @@ public:
         }
     }
 
-    FsNode* FindDir(const char* name) final {
+    ErrorOr<FsNode*> FindDir(const char* name) final {
         if (!strcmp(name, ".")) {
             return this;
         } else if (!strcmp(name, "..")) {
@@ -192,7 +192,7 @@ public:
             }
         }
 
-        return nullptr; // No such device found
+        return Error{ENOENT}; // No such device found
     }
 };
 
@@ -229,17 +229,17 @@ void UnregisterDevice(Device* dev) {
 
 FsNode* GetDevFS() { return devfs; }
 
-Device* DeviceFromID(int64_t deviceID) {
+ErrorOr<Device*> DeviceFromID(int64_t deviceID) {
     for (auto& device : *devices) {
         if (device->ID() == deviceID) {
             return device;
         }
     }
 
-    return nullptr;
+    return Error{ENOENT};
 }
 
-Device* ResolveDevice(const char* path) {
+ErrorOr<Device*> ResolveDevice(const char* path) {
     while (*path == '/') {
         path++; // Eat leading slashes
     }
@@ -268,7 +268,7 @@ Device* ResolveDevice(const char* path) {
 
     Device* currentDev = devfs;
     while (file != NULL) { // Iterate through the directories to find the file
-        FsNode* node = fs::FindDir(currentDev, file);
+        FsNode* node = TRY_OR_ERROR(fs::FindDir(currentDev, file));
         if (!node) {
             Log::Warning("Device %s not found!", file);
             return nullptr;

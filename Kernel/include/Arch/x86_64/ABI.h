@@ -15,3 +15,4 @@ typedef struct{
 #define AT_EXECPATH 15
 #define AT_RANDOM 25
 #define AT_EXECFN 31
+#define AT_SYSINFO_EHDR 33

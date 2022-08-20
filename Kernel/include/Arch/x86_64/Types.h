@@ -2,4 +2,4 @@
 
 #include <stdint.h>
 
-typedef long long ssize_t;
+#include <abi/types.h>

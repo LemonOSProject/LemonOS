@@ -53,6 +53,84 @@ MappedRegion* AddressSpace::AddressToRegionWriteLock(uintptr_t address) {
     return nullptr;
 }
 
+int AddressSpace::GetRegionsForRangeWriteLock(uintptr_t base, size_t size, Vector<MappedRegion*>* regions, MemoryProtection prot) {
+    ScopedSpinLock acquired(m_lock);
+
+    uintptr_t rangeEnd = base + size;
+    // Next base address we are looking for
+    uintptr_t nextAddress = base;
+
+    MappedRegion* start = nullptr;
+
+    auto it = m_regions.begin();
+    while(it != m_regions.end() && !start) {
+        if (!it->vmObject.get()) {
+            it++;
+            continue;
+        } else if(it->Base() > nextAddress) {
+            // If we have gone past the base address of the range then we are
+            // in trouble
+            break;
+        }
+
+        if(it->Base() <= nextAddress && it->End() > nextAddress) {
+            start = &(*it);
+        }
+
+        it++;
+    }
+    
+    if(!start) {
+        return 1;
+    }
+
+    start->lock.AcquireWrite();
+    if((start->vmObject->GetProtection() & prot) != prot) {
+        // Inadequate protection flags
+        start->lock.ReleaseWrite();
+        return 2;
+    }
+
+    regions->add_back(start);
+
+    if(start->End() >= rangeEnd) {
+        // Whole range is within this region
+        return 0;
+    }
+
+    while(it != m_regions.end()) {
+        MappedRegion* region = &(*it);
+        if(region->Base() > nextAddress) {
+            // There is a hole in the address range if the
+            // next mapped region is above the end of the last one
+            return 1;
+        }
+
+        if(region->Base() == nextAddress) {
+            region->lock.AcquireWrite();
+            if((region->vmObject->GetProtection() & prot) != prot) {
+                // Inadequate protection flags
+                region->lock.ReleaseWrite();
+                return 2;
+            }
+
+            regions->add_back(region);
+            
+            if(region->End() >= rangeEnd) {
+                // This region encompasses the end of our range
+                return 0;
+            } else {
+                nextAddress = region->End();
+            }
+        }
+
+        it++;
+    }
+
+    // If we are here we were unable to find a region for the end of the range
+    return 1;
+}
+
 bool AddressSpace::RangeInRegion(uintptr_t base, size_t size) {
     uintptr_t end = base + size;
 
@@ -165,6 +243,7 @@ MappedRegion* AddressSpace::AllocateAnonymousVMObject(size_t size, uintptr_t bas
     vmo->anonymous = true;
     vmo->copyOnWrite = false;
     vmo->refCount = 1;
+    vmo->protection = MemoryProtection::RegionReadWrite;
 
     region->vmObject = vmo;
 

@@ -41,7 +41,7 @@ int IntelHDAudioController::OutputSampleRate(void* output) const {
 
 int IntelHDAudioController::OutputSetNumberOfChannels(int channels) { return -ENOSYS; }
 
-int IntelHDAudioController::WriteSamples(void*, uint8_t* buffer, size_t size, bool) {
+int IntelHDAudioController::WriteSamples(void*, UIOBuffer* buffer, size_t size, bool) {
     return -ENOSYS;
 }
 

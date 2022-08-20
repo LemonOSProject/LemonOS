@@ -9,9 +9,13 @@
 
 struct Error {
     int code;
-};
 
-static const Error ErrorNone = Error{0};
+    ALWAYS_INLINE operator int() {
+        return code;
+    }
+} __attribute__((packed));
+
+#define ERROR_NONE (Error{0})
 
 template<typename T>
 struct ErrorOr final {
@@ -75,18 +79,22 @@ struct ErrorOr final {
         return err;
     }
 
+    ALWAYS_INLINE bool operator==(const T& r) {
+        return !HasError() && Value() == r;
+    }
+
+    ALWAYS_INLINE bool operator!=(const T& r) {
+        return HasError() || Value() != r;
+    }
+
     union {
         uint8_t data[sizeof(T)];
         Error err;
     };
-
-    ALWAYS_INLINE operator bool() {
-        return !m_hasError;
-    }
 
 private:
     bool m_hasError = false;
     bool m_hasData = false;
 };
 
-#define TRY_OR_ERROR(func) ({auto result = func; if (!result) { return result.err; } std::move(result.Value());})
+#define TRY_OR_ERROR(func) ({auto result = func; if (result.HasError()) { return result.err; } std::move(result.Value());})

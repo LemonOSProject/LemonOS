@@ -1,13 +1,8 @@
 #pragma once
 
 #include <Compiler.h>
+#include <MM/UserAccess.h>
 #include <Paging.h>
-
-extern "C" {
-int UserMemcpy(void* dest, const void* src, size_t count);
-void UserMemcpyTrap();
-void UserMemcpyTrapHandler();
-}
 
 template <typename T, typename P> inline static constexpr int IsUsermodePointer(P* ptr) {
     if (reinterpret_cast<uintptr_t>(ptr + sizeof(T)) >= KERNEL_VIRTUAL_BASE) {
@@ -26,16 +21,15 @@ template <typename P> inline static constexpr int IsUsermodePointer(P* ptr, size
 }
 
 // Class for handling usermode pointers
-//
-template <typename T> class UserPointer {
+template <typename T> class UserPointer final {
 public:
     UserPointer(uintptr_t ptr) : m_ptr(reinterpret_cast<T*>(ptr)) {}
 
     [[nodiscard]] ALWAYS_INLINE int GetValue(T& kernelValue) const {
-        return UserMemcpy(&kernelValue, m_ptr, sizeof(T));
+        return user_memcpy(&kernelValue, m_ptr, sizeof(T));
     }
     [[nodiscard]] ALWAYS_INLINE int StoreValue(const T& kernelValue) {
-        return UserMemcpy(m_ptr, &kernelValue, sizeof(T));
+        return user_memcpy(m_ptr, &kernelValue, sizeof(T));
     }
 
     ALWAYS_INLINE T* Pointer() { return m_ptr; }
@@ -44,17 +38,17 @@ public:
 
 private:
     T* m_ptr;
-};
+} __attribute__((packed));
 
-template <typename T> class UserBuffer {
+template <typename T> class UserBuffer final {
 public:
     UserBuffer(uintptr_t ptr) : m_ptr(reinterpret_cast<T*>(ptr)) {}
 
     [[nodiscard]] ALWAYS_INLINE int GetValue(unsigned index, T& kernelValue) const {
-        return UserMemcpy(&kernelValue, &m_ptr[index], sizeof(T));
+        return user_memcpy(&kernelValue, &m_ptr[index], sizeof(T));
     }
     [[nodiscard]] ALWAYS_INLINE int StoreValue(unsigned index, const T& kernelValue) {
-        return UserMemcpy(&m_ptr[index], &kernelValue, sizeof(T));
+        return user_memcpy(&m_ptr[index], &kernelValue, sizeof(T));
     }
 
     [[nodiscard]] ALWAYS_INLINE int Read(T* data, size_t offset, size_t count) const {
@@ -62,7 +56,7 @@ public:
             return 1;
         }
 
-        return UserMemcpy(data, &m_ptr[offset], sizeof(T) * count);
+        return user_memcpy(data, &m_ptr[offset], sizeof(T) * count);
     }
 
     [[nodiscard]] ALWAYS_INLINE int Write(T* data, size_t offset, size_t count) {
@@ -70,21 +64,21 @@ public:
             return 1;
         }
 
-        return UserMemcpy(&m_ptr[offset], data, sizeof(T) * count);
+        return user_memcpy(&m_ptr[offset], data, sizeof(T) * count);
     }
 
     ALWAYS_INLINE T* Pointer() { return m_ptr; }
 
 private:
     T* m_ptr;
-};
+} __attribute__((packed));
 
 #define TRY_STORE_UMODE_VALUE(ptrObject, value)                                                                        \
     if (ptrObject.StoreValue(value)) {                                                                                 \
-        return -EFAULT;                                                                                                \
+        return EFAULT;                                                                                                \
     }
 
 #define TRY_GET_UMODE_VALUE(ptrObject, value)                                                                          \
     if (ptrObject.GetValue(value)) {                                                                                   \
-        return -EFAULT;                                                                                                \
+        return EFAULT;                                                                                                \
     }

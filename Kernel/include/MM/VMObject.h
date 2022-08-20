@@ -1,5 +1,7 @@
 #pragma once
 
+#include <atomic>
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -9,6 +11,12 @@
 #include <RefPtr.h>
 
 #define PHYS_BLOCK_MAX (0xffffffff << PAGE_SHIFT_4K)
+
+enum MemoryProtection {
+    RegionReadable = 1,
+    RegionWritable = 2,
+    RegionReadWrite = RegionReadable | RegionWritable,
+};
 
 class VMObject {
     friend class AddressSpace;
@@ -33,15 +41,19 @@ public:
 
     ALWAYS_INLINE virtual bool CanMunmap() const { return false; }
     ALWAYS_INLINE size_t ReferenceCount() const { return refCount; }
+
+    ALWAYS_INLINE MemoryProtection GetProtection() const { return (MemoryProtection)protection; }
 protected:
     size_t size;
 
-    size_t refCount = 0; // References to the VM object
+    std::atomic<size_t> refCount = 0; // References to the VM object
 
     bool anonymous : 1 = true;
     bool shared : 1 = false;
     bool copyOnWrite : 1 = false;
     bool reclaimable : 1 = false;
+
+    int protection;
 };
 
 // VMObject that maps to allocated physical pages (as opposed to MMIO, etc.)
@@ -68,8 +80,6 @@ public:
 
     void MapAllocatedBlocks(uintptr_t base, PageMap* pMap);
 protected:
-    bool write : 1 = true;
-
     uintptr_t base;
 };
 

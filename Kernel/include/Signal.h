@@ -3,7 +3,7 @@
 #include <Compiler.h>
 
 typedef void (*__sighandler) (int);
-#include <abi-bits/signal.h>
+#include <abi/signal.h>
 
 #define SIGNAL_MAX 34 // Maximum amount of signal handlers
 #define UNMASKABLE_SIGNALS (1 << (SIGKILL - 1)) | (1 << (SIGSTOP - 1))

@@ -47,7 +47,7 @@ public:
     int OutputSampleRate(void* output) const override;
     int OutputSetNumberOfChannels(int channels) override;
 
-    int WriteSamples(void* output, uint8_t* buffer, size_t size, bool async) override;
+    int WriteSamples(void* output, UIOBuffer* buffer, size_t size, bool async) override;
 
     void OnIRQ();
 

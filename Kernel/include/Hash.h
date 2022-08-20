@@ -108,7 +108,7 @@ public:
 		lock = 0;
 	}
 
-	void insert(K key, const T& value){
+	void insert(const K& key, const T& value){
 		unsigned keyHash = Hash(key);
 		auto& bucket = buckets[keyHash % bucketCount];
 
@@ -183,6 +183,22 @@ public:
 		releaseLock(&lock);
 
 		return 0;
+	}
+
+	T* get(const K& key) {
+		auto& bucket = buckets[Hash(key) % bucketCount];
+
+		acquireLock(&lock);
+		for(KeyValuePair& val : bucket){
+			if(val.key == key){
+				releaseLock(&lock);
+
+				return &val.value;
+			}
+		}
+		releaseLock(&lock);
+
+		return nullptr;
 	}
 
 	int find(K key){

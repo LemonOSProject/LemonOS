@@ -8,7 +8,7 @@ struct KernelSymbol {
     char* mangledName;
 };
 
-void LoadSymbolsFromFile(FsNode* node);
+void LoadSymbols();
 
 int ResolveKernelSymbol(const char* mangledName, KernelSymbol*& symbolPtr);
 int ResolveKernelSymbol(uintptr_t address, KernelSymbol*& symbolPtr);

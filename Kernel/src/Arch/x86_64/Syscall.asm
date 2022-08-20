@@ -1,6 +1,6 @@
 global syscall_entry
 
-extern SyscallHandler
+extern syscall_handler
 
 section .text
 
@@ -44,7 +44,7 @@ syscall_entry:
 
     mov rdi, rsp
     xor rbp, rbp
-    call SyscallHandler
+    call syscall_handler
 
     pop r15
     pop r14

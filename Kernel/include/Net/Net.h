@@ -233,8 +233,8 @@ private:
 public:
     NetFS();
 
-    int ReadDir(DirectoryEntry* dirent, uint32_t index);
-    FsNode* FindDir(const char* name);
+    ErrorOr<int> ReadDir(DirectoryEntry* dirent, uint32_t index);
+    ErrorOr<FsNode*> FindDir(const char* name);
 
     void RegisterAdapter(NetworkAdapter* adapter);
     void RemoveAdapter(NetworkAdapter* adapter);

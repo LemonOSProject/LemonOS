@@ -59,9 +59,9 @@ struct BigEndian {
     T value;
 
     BigEndian() : value(0) {};
-    BigEndian(const T& newValue) : value(newValue) {}
-    
-    BigEndian<T>& operator=(const T& newValue){
+    BigEndian(const T& newValue) : value(EndianLittleToBig<T>(newValue)) {}
+
+    BigEndian<T>& operator=(T newValue){
         value = EndianLittleToBig<T>(newValue);
         return *this;
     }

@@ -3,6 +3,7 @@
 #include <List.h>
 #include <Logging.h>
 #include <Assert.h>
+#include <Error.h>
 #include <Errno.h>
 #include <Net/Socket.h>
 
@@ -60,34 +61,34 @@ namespace Network {
         }
     };
 
-    int NetworkAdapter::Ioctl(uint64_t cmd, uint64_t arg){
+    ErrorOr<int> NetworkAdapter::Ioctl(uint64_t cmd, uint64_t arg){
         Process* currentProcess = Scheduler::GetCurrentProcess();
 
         if(cmd == SIOCADDRT){
             rtentry* route = reinterpret_cast<rtentry*>(arg);
             if(!Memory::CheckUsermodePointer(arg, sizeof(rtentry), currentProcess->addressSpace)){
-                return -EFAULT;
+                return Error{EFAULT};
             }
 
             if(!((route->rt_flags & RTF_GATEWAY) && (route->rt_flags & RTF_UP))){
-                return -EINVAL;
+                return Error{EINVAL};
             }
 
             size_t nameLen;
             if(strlenSafe(route->rt_dev, nameLen, currentProcess->addressSpace)){
-                return -EFAULT;
+                return Error{EFAULT};
             }
 
             NetworkAdapter* namedAdapter = NetFS::GetInstance()->FindAdapter(route->rt_dev, nameLen);
             if(!namedAdapter){
-                return -ENODEV;
+                return Error{ENODEV};
             }
 
             if(currentProcess->euid != 0){
                 IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
                     Log::Warning("[Network] NetworkAdapter::Ioctl: Attempted SIOCADDRT as EUID %d!", currentProcess->euid);
                 });
-                return -EPERM; // We are not root
+                return Error{EPERM}; // We are not root
             }
 
             sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&route->rt_gateway);
@@ -95,7 +96,7 @@ namespace Network {
                 IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
                     Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address!");
                 });
-                return -EPROTONOSUPPORT; // Not IPv4 address
+                return Error{EPROTONOSUPPORT}; // Not IPv4 address
             }
             namedAdapter->gatewayIP.value = addr->sin_addr.s_addr;
 
@@ -107,18 +108,18 @@ namespace Network {
             ifreq* req = reinterpret_cast<ifreq*>(arg);
 
             if(!Memory::CheckUsermodePointer(arg, sizeof(ifreq), currentProcess->addressSpace)){
-                return -EFAULT;
+                return Error{EFAULT};
             }
 
             NetworkAdapter* namedAdapter = NetFS::GetInstance()->FindAdapter(req->ifr_name, IF_NAMESIZE);
             if(!namedAdapter && cmd != SIOCGIFNAME /* SIOCGIFNAME is the only call to return something in ifr_name */){
-                return -ENODEV;
+                return Error{ENODEV};
             }
 
             switch(cmd){
             case SIOCGIFNAME:
                 if(req->ifr_ifindex >= adapters.get_length()){
-                    return -ENOENT;
+                    return Error{ENOENT};
                 }
                 
                 strcpy(req->ifr_name, adapters[req->ifr_ifindex]->instanceName.c_str());
@@ -133,7 +134,7 @@ namespace Network {
                     IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
                         Log::Warning("[Network] NetworkAdapter::Ioctl: Attempted SIOCSIFADDR as EUID %d!", currentProcess->euid);
                     });
-                    return -EPERM; // We are not root
+                    return Error{EPERM}; // We are not root
                 }
 
                 sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&req->ifr_addr);
@@ -141,7 +142,7 @@ namespace Network {
                     IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
                         Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address!", currentProcess->euid);
                     });
-                    return -EPROTONOSUPPORT; // Not IPv4 address
+                    return Error{EPROTONOSUPPORT}; // Not IPv4 address
                 }
 
                 namedAdapter->adapterIP.value = addr->sin_addr.s_addr;
@@ -156,7 +157,7 @@ namespace Network {
                     IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
                         Log::Warning("[Network] NetworkAdapter::Ioctl: Attempted SIOCSIFNETMASK as EUID %d!", currentProcess->euid);
                     });
-                    return -EPERM; // We are not root
+                    return Error{EPERM}; // We are not root
                 }
 
                 sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&req->ifr_netmask);
@@ -164,7 +165,7 @@ namespace Network {
                     IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
                         Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address!", currentProcess->euid);
                     });
-                    return -EPROTONOSUPPORT; // Not IPv4 address
+                    return Error{EPROTONOSUPPORT}; // Not IPv4 address
                 }
 
                 namedAdapter->subnetMask.value = addr->sin_addr.s_addr;
@@ -176,11 +177,11 @@ namespace Network {
                 req->ifr_ifindex = namedAdapter->adapterIndex; // Interface index
                 break;
             default:
-                return -EINVAL;
+                return Error{EINVAL};
             }
             return 0;
         } else {
-            return -EINVAL;
+            return Error{EINVAL};
         }
     }
 

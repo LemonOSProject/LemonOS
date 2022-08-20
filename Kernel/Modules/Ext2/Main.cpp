@@ -50,7 +50,7 @@ Ext2& Ext2::Instance() {
 
 FsVolume* Ext2::Mount(FsNode* device, const char* name) {
     Ext2Volume* vol = new Ext2Volume(device, name);
-    if (vol->Error()) {
+    if (vol->error) {
         delete vol;
         return nullptr; // Error mounting volume
     }
@@ -67,8 +67,11 @@ int Ext2::Identify(FsNode* device) {
         ext2_superblock_extended_t ext;
     } __attribute__((packed)) super;
 
-    if (fs::Read(device, EXT2_SUPERBLOCK_LOCATION, sizeof(super), &super) != sizeof(super)) {
-        return -1; // Disk Error
+    auto r = fs::Read(device, EXT2_SUPERBLOCK_LOCATION, sizeof(super), &super);
+    if (r.HasError()) {
+        return -r.err.code;
+    } else if (r.Value() != sizeof(super)) {
+        return -EIO; // Disk Error
     }
 
     return (super.super.magic == EXT2_SUPER_MAGIC) && !(super.ext.featuresIncompat & (~EXT2_INCOMPAT_FEATURE_SUPPORT));
@@ -80,10 +83,11 @@ Ext2::Ext2Volume::Ext2Volume(FsNode* device, const char* name) {
     m_device = device;
     assert(device->IsCharDevice() || device->IsBlockDevice());
 
-    if (fs::Read(m_device, EXT2_SUPERBLOCK_LOCATION, sizeof(ext2_superblock_t), &super) != sizeof(ext2_superblock_t)) {
+    auto r = fs::Read(m_device, EXT2_SUPERBLOCK_LOCATION, sizeof(ext2_superblock_t), &super);
+    if(r.HasError() || r.Value() != sizeof(ext2_superblock_t)) {
         Log::Error("[Ext2] Disk Error Initializing Volume");
         error = DiskReadError;
-        return; // Disk Error
+        return;
     }
 
     if (super.revLevel) { // If revision level >= 0 grab the extended superblock as well
@@ -187,7 +191,7 @@ void Ext2::Ext2Volume::WriteSuperblock() {
     uint8_t buffer[blocksize];
 
     uint32_t superindex = LocationToBlock(EXT2_SUPERBLOCK_LOCATION);
-    if (ReadBlockCached(superindex, buffer)) {
+    if (ReadBlockCachedRaw(superindex, buffer)) {
         Log::Info("[Ext2] WriteBlock: Error reading block %d", superindex);
         return;
     }
@@ -195,7 +199,7 @@ void Ext2::Ext2Volume::WriteSuperblock() {
     memcpy(buffer + (EXT2_SUPERBLOCK_LOCATION % blocksize), &super,
            sizeof(ext2_superblock_t) + sizeof(ext2_superblock_extended_t));
 
-    if (WriteBlockCached(superindex, buffer)) {
+    if (WriteBlockCachedRaw(superindex, buffer)) {
         Log::Info("[Ext2] WriteBlock: Error writing block %d", superindex);
         return;
     }
@@ -206,7 +210,7 @@ void Ext2::Ext2Volume::WriteBlockGroupDescriptor(uint32_t index) {
     uint32_t block = firstBlockGroup + LocationToBlock(index * sizeof(ext2_blockgrp_desc_t));
     uint8_t buffer[blocksize];
 
-    if (ReadBlockCached(block, buffer)) {
+    if (ReadBlockCachedRaw(block, buffer)) {
         Log::Info("[Ext2] WriteBlock: Error reading block %d", block);
         return;
     }
@@ -214,7 +218,7 @@ void Ext2::Ext2Volume::WriteBlockGroupDescriptor(uint32_t index) {
     memcpy(buffer + ((index * sizeof(ext2_blockgrp_desc_t)) % blocksize), &blockGroups[index],
            sizeof(ext2_blockgrp_desc_t));
 
-    if (WriteBlockCached(block, buffer)) {
+    if (WriteBlockCachedRaw(block, buffer)) {
         Log::Info("[Ext2] WriteBlock: Error writing block %d", block);
         return;
     }
@@ -229,14 +233,17 @@ uint32_t Ext2::Ext2Volume::GetInodeBlock(uint32_t index, ext2_inode_t& ino) {
     assert(index < triplyIndirectStart + blocksPerPointer * blocksPerPointer *
                                              blocksPerPointer); // Make sure that an invalid index was not passed
 
+    // Index lies within the doubly indirect blocklist
+    uint32_t blockPointers[blocksize / sizeof(uint32_t)];
+    uint32_t buffer[blocksize / sizeof(uint32_t)];
+
     if (index < EXT2_DIRECT_BLOCK_COUNT) {
         // Index lies within the direct blocklist
         return ino.blocks[index];
     } else if (index < doublyIndirectStart) {
         // Index lies within the singly indirect blocklist
-        uint32_t buffer[blocksize / sizeof(uint32_t)];
 
-        if (int e = ReadBlockCached(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)) {
+        if (int e = ReadBlockCachedRaw(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)) {
             (void)e;
             error = DiskReadError;
             return 0;
@@ -244,11 +251,7 @@ uint32_t Ext2::Ext2Volume::GetInodeBlock(uint32_t index, ext2_inode_t& ino) {
 
         return buffer[index - singlyIndirectStart];
     } else if (index < triplyIndirectStart) {
-        // Index lies within the doubly indirect blocklist
-        uint32_t blockPointers[blocksize / sizeof(uint32_t)];
-        uint32_t buffer[blocksize / sizeof(uint32_t)];
-
-        if (int e = ReadBlockCached(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)) {
+        if (int e = ReadBlockCachedRaw(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)) {
             (void)e;
             error = DiskReadError;
             return 0;
@@ -256,7 +259,7 @@ uint32_t Ext2::Ext2Volume::GetInodeBlock(uint32_t index, ext2_inode_t& ino) {
 
         uint32_t blockPointer = blockPointers[(index - doublyIndirectStart) / blocksPerPointer];
 
-        if (int e = ReadBlockCached(blockPointer, buffer)) {
+        if (int e = ReadBlockCachedRaw(blockPointer, buffer)) {
             (void)e;
             error = DiskReadError;
             return 0;
@@ -288,11 +291,15 @@ Vector<uint32_t> Ext2::Ext2Volume::GetInodeBlocks(uint32_t index, uint32_t count
         blocks.add_back(ino.blocks[i++]);
     }
 
+    // Index lies within the doubly indirect blocklist
+    uint32_t blockPointers[blocksize / sizeof(uint32_t)];
+    uint32_t buffer[blocksize / sizeof(uint32_t)];
+
     if (i < doublyIndirectStart && i < index + count) {
         // Index lies within the singly indirect blocklist
         uint32_t buffer[blocksize / sizeof(uint32_t)];
 
-        if (int e = ReadBlockCached(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)) {
+        if (int e = ReadBlockCachedRaw(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)) {
             Log::Info("[Ext2] GetInodeBlocks: Error %i reading block %u (singly indirect block)", e,
                       ino.blocks[EXT2_SINGLY_INDIRECT_INDEX]);
             error = DiskReadError;
@@ -312,11 +319,7 @@ Vector<uint32_t> Ext2::Ext2Volume::GetInodeBlocks(uint32_t index, uint32_t count
     }
 
     if (i < triplyIndirectStart && i < index + count) {
-        // Index lies within the doubly indirect blocklist
-        uint32_t blockPointers[blocksize / sizeof(uint32_t)];
-        uint32_t buffer[blocksize / sizeof(uint32_t)];
-
-        if (int e = ReadBlockCached(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)) {
+        if (int e = ReadBlockCachedRaw(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)) {
             Log::Info("[Ext2] GetInodeBlocks: Error %i reading block %u (doubly indirect block)", e,
                       ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX]);
             error = DiskReadError;
@@ -328,7 +331,7 @@ Vector<uint32_t> Ext2::Ext2Volume::GetInodeBlocks(uint32_t index, uint32_t count
         while (i < triplyIndirectStart && i < index + count) {
             uint32_t blockPointer = blockPointers[(i - doublyIndirectStart) / blocksPerPointer];
 
-            if (int e = ReadBlockCached(blockPointer, buffer)) {
+            if (int e = ReadBlockCachedRaw(blockPointer, buffer)) {
                 Log::Info("[Ext2] GetInodeBlocks: Error %i reading block %u (doubly indirect block pointer)", e,
                           blockPointer);
                 error = DiskReadError;
@@ -375,12 +378,11 @@ void Ext2::Ext2Volume::SetInodeBlock(uint32_t index, ext2_inode_t& ino, uint32_t
     } else if (index < doublyIndirectStart) {
         // Index lies within the singly indirect blocklist
         uint32_t buffer[blocksize / sizeof(uint32_t)];
-
         if (ino.blocks[EXT2_SINGLY_INDIRECT_INDEX] == 0) {
             ino.blocks[EXT2_SINGLY_INDIRECT_INDEX] = AllocateBlock();
         }
 
-        if (int e = ReadBlockCached(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)) {
+        if (int e = ReadBlockCachedRaw(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)) {
             (void)e;
             error = DiskReadError;
             return;
@@ -388,7 +390,7 @@ void Ext2::Ext2Volume::SetInodeBlock(uint32_t index, ext2_inode_t& ino, uint32_t
 
         buffer[index - singlyIndirectStart] = block;
 
-        if (int e = WriteBlockCached(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)) {
+        if (int e = WriteBlockCachedRaw(ino.blocks[EXT2_SINGLY_INDIRECT_INDEX], buffer)) {
             (void)e;
             error = DiskWriteError;
             return;
@@ -399,7 +401,7 @@ void Ext2::Ext2Volume::SetInodeBlock(uint32_t index, ext2_inode_t& ino, uint32_t
         uint32_t blockPointers[blocksize / sizeof(uint32_t)];
         uint32_t buffer[blocksize / sizeof(uint32_t)];
 
-        if (int e = ReadBlockCached(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX],
+        if (int e = ReadBlockCachedRaw(ino.blocks[EXT2_DOUBLY_INDIRECT_INDEX],
                                     blockPointers)) { // Read indirect block pointer list
             (void)e;
             error = DiskReadError;
@@ -408,7 +410,7 @@ void Ext2::Ext2Volume::SetInodeBlock(uint32_t index, ext2_inode_t& ino, uint32_t
 
         uint32_t blockPointer = blockPointers[(index - doublyIndirectStart) / blocksPerPointer];
 
-        if (int e = ReadBlockCached(blockPointer, buffer)) { // Read blocklist
+        if (int e = ReadBlockCachedRaw(blockPointer, buffer)) { // Read blocklist
             (void)e;
             error = DiskReadError;
             return;
@@ -416,7 +418,7 @@ void Ext2::Ext2Volume::SetInodeBlock(uint32_t index, ext2_inode_t& ino, uint32_t
 
         buffer[(index - doublyIndirectStart) % blocksPerPointer] = block; // Update the index
 
-        if (int e = WriteBlockCached(blockPointer, buffer)) { // Write our updated blocklist
+        if (int e = WriteBlockCachedRaw(blockPointer, buffer)) { // Write our updated blocklist
             (void)e;
             error = DiskWriteError;
             return;
@@ -431,43 +433,19 @@ void Ext2::Ext2Volume::SetInodeBlock(uint32_t index, ext2_inode_t& ino, uint32_t
 int Ext2::Ext2Volume::ReadInode(uint32_t num, ext2_inode_t& inode) {
     uint8_t buf[512];
 
-    if (int e = fs::Read(m_device, InodeOffset(num) & (~511U), 512, buf); e != 512) {
-        Log::Error("[Ext2] Disk Error (%d) Reading Inode %d", e, num);
+    if (auto r = fs::Read(m_device, InodeOffset(num) & (~511U), 512, buf); r.HasError()) {
+        Log::Error("[Ext2] Disk Error (%d) Reading Inode %d", r.Err(), num);
         error = DiskReadError;
-        return e;
+        return r.err.code;
     }
 
     inode = *(ext2_inode_t*)(buf + ((ResolveInodeBlockGroupIndex(num) * inodeSize) & (512 - 1)));
     return 0;
 }
 
-int Ext2::Ext2Volume::ReadBlock(uint32_t block, void* buffer) {
+int Ext2::Ext2Volume::ReadBlockCached(uint32_t block, UIOBuffer* buffer) {
     if (block > super.blockCount)
-        return 1;
-
-    if (int e = fs::Read(m_device, BlockToLocation(block), blocksize, buffer); e != blocksize) {
-        Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", e, block, blocksize);
-        return e;
-    }
-
-    return 0;
-}
-
-int Ext2::Ext2Volume::WriteBlock(uint32_t block, void* buffer) {
-    if (block > super.blockCount)
-        return 1;
-
-    if (int e = fs::Write(m_device, BlockToLocation(block), blocksize, buffer); e != blocksize) {
-        Log::Error("[Ext2] Disk error (%e) reading block %d (blocksize: %d)", e, block, blocksize);
-        return e;
-    }
-
-    return 0;
-}
-
-int Ext2::Ext2Volume::ReadBlockCached(uint32_t block, void* buffer) {
-    if (block > super.blockCount)
-        return -EINVAL;
+        return EINVAL;
 
 #ifndef EXT2_NO_CACHE
     ScopedSpinLock lockBlockCache(m_blocksLock);
@@ -475,7 +453,9 @@ int Ext2::Ext2Volume::ReadBlockCached(uint32_t block, void* buffer) {
     CachedBlock* cachedBlock;
     if (blockCache.get(block, cachedBlock)) {
         cachedBlock->timestamp = Timer::UsecondsSinceBoot();
-        memcpy(buffer, cachedBlock->data, blocksize);
+        if(buffer->Write(cachedBlock->data, blocksize)) {
+            return EFAULT;
+        }
 
         // Move block to the end of the list
         cachedBlockList.remove(cachedBlock);
@@ -497,19 +477,21 @@ int Ext2::Ext2Volume::ReadBlockCached(uint32_t block, void* buffer) {
         cachedBlock->block = block;
         cachedBlock->timestamp = Timer::UsecondsSinceBoot();
 
-        if (int e = fs::Read(m_device, BlockToLocation(block), blocksize, cachedBlock->data); e != blocksize) {
-            Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", e, block, blocksize);
+        if (auto r = fs::Read(m_device, BlockToLocation(block), blocksize, cachedBlock->data); r.HasError()) {
+            Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", r.err.code, block, blocksize);
             
             // Since we didnt end up using this block, place it at the front of the list
             // so it gets reused first
             cachedBlockList.add_front(cachedBlock);
-            return e;
-        }
+            return r.err.code;
+        } else assert(r.Value() == blocksize);
         
         cachedBlockList.add_back(cachedBlock);
         blockCache.insert(block, cachedBlock);
 
-        memcpy(buffer, cachedBlock->data, blocksize);
+        if(buffer->Write(cachedBlock->data, blocksize)) {
+            return EFAULT;
+        }
     }
 #else
     if (int e = fs::Read(m_device, BlockToLocation(block), blocksize, buffer); e != blocksize) {
@@ -520,26 +502,37 @@ int Ext2::Ext2Volume::ReadBlockCached(uint32_t block, void* buffer) {
     return 0;
 }
 
-int Ext2::Ext2Volume::WriteBlockCached(uint32_t block, void* buffer) {
+int Ext2::Ext2Volume::ReadBlockCachedRaw(uint32_t block, void* buffer) {
+    UIOBuffer b(buffer);
+    return ReadBlockCached(block, &b);
+}
+
+int Ext2::Ext2Volume::WriteBlockCached(uint32_t block, UIOBuffer* buffer) {
     if (block > super.blockCount)
-        return -EINVAL;
+        return EINVAL;
 
 #ifndef EXT2_NO_CACHE
     ScopedSpinLock lockBlockCache(m_blocksLock);
-    
     CachedBlock* cachedBlock;
-    if ((blockCache.get(block, cachedBlock))) {
-        memcpy(cachedBlock->data, buffer, blocksize);
+    if (blockCache.get(block, cachedBlock)) {
+        if(buffer->Read(cachedBlock->data, blocksize)) {
+            return EFAULT;
+        }
         cachedBlock->timestamp = Timer::UsecondsSinceBoot();
     }
 #endif
 
-    if (int e = fs::Write(m_device, BlockToLocation(block), blocksize, buffer); e != blocksize) {
-        Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", e, block, blocksize);
-        return e;
+    if (auto r = m_device->Write(BlockToLocation(block), blocksize, buffer); r.HasError()) {
+        Log::Error("[Ext2] Disk error (%d) reading block %d (blocksize: %d)", r.err.code, block, blocksize);
+        return r.err.code;
     }
 
     return 0;
+}
+
+int Ext2::Ext2Volume::WriteBlockCachedRaw(uint32_t block, void* buffer) {
+    UIOBuffer b(buffer);
+    return WriteBlockCached(block, &b);
 }
 
 uint32_t Ext2::Ext2Volume::AllocateBlock() {
@@ -554,7 +547,7 @@ uint32_t Ext2::Ext2Volume::AllocateBlock() {
         if (uint8_t * cachedBitmap; bitmapCache.get(group.blockBitmap, cachedBitmap)) {
             memcpy(bitmap, cachedBitmap, blocksize);
         } else {
-            if (int e = ReadBlockCached(group.blockBitmap, bitmap)) {
+            if (int e = ReadBlockCachedRaw(group.blockBitmap, bitmap)) {
                 Log::Error("[Ext2] Disk error (%d) reading block bitmap (group %d)", e, i);
                 error = DiskReadError;
                 return 0;
@@ -589,7 +582,7 @@ uint32_t Ext2::Ext2Volume::AllocateBlock() {
             memcpy(cachedBitmap, bitmap, blocksize);
         }
 
-        if (int e = WriteBlockCached(group.blockBitmap, bitmap)) {
+        if (int e = WriteBlockCachedRaw(group.blockBitmap, bitmap)) {
             Log::Error("[Ext2] Disk error (%d) write block bitmap (group %d)", e, i);
             error = DiskWriteError;
             return 0;
@@ -619,9 +612,9 @@ int Ext2::Ext2Volume::FreeBlock(uint32_t block) {
     if (uint8_t * cachedBitmap; bitmapCache.get(group.blockBitmap, cachedBitmap)) {
         memcpy(bitmap, cachedBitmap, blocksize);
     } else {
-        if (int e = ReadBlockCached(group.blockBitmap, bitmap)) {
-            if (e == -EINTR) {
-                return -EINTR;
+        if (int e = ReadBlockCachedRaw(group.blockBitmap, bitmap)) {
+            if (e == EINTR) {
+                return EINTR;
             }
 
             Log::Error("[Ext2] Disk error (%d) reading block bitmap (group %d)", e, block / super.blocksPerGroup);
@@ -638,7 +631,7 @@ int Ext2::Ext2Volume::FreeBlock(uint32_t block) {
         memcpy(cachedBitmap, bitmap, blocksize);
     }
 
-    if (int e = WriteBlockCached(group.blockBitmap, bitmap)) {
+    if (int e = WriteBlockCachedRaw(group.blockBitmap, bitmap)) {
         Log::Error("[Ext2] Disk error (%d) write block bitmap (group %d)", e, block / super.blocksPerGroup);
         error = DiskWriteError;
         return -1;
@@ -663,7 +656,7 @@ Ext2::Ext2Node* Ext2::Ext2Volume::CreateNode() {
 
         uint8_t bitmap[blocksize / sizeof(uint8_t)];
 
-        if (int e = ReadBlockCached(group.inodeBitmap, bitmap)) {
+        if (int e = ReadBlockCachedRaw(group.inodeBitmap, bitmap)) {
             Log::Error("[Ext2] Disk error (%d) reading inode bitmap (group %d)", e, i);
             error = DiskReadError;
             return nullptr;
@@ -696,7 +689,7 @@ Ext2::Ext2Node* Ext2::Ext2Volume::CreateNode() {
         if (!inode)
             continue;
 
-        if (int e = WriteBlockCached(group.inodeBitmap, bitmap)) {
+        if (int e = WriteBlockCachedRaw(group.inodeBitmap, bitmap)) {
             Log::Error("[Ext2] Disk error (%d) write inode bitmap (group %d)", e, i);
             error = DiskWriteError;
             return nullptr;
@@ -759,7 +752,7 @@ int Ext2::Ext2Volume::EraseInode(ext2_inode_t& e2inode, uint32_t inode) {
         if (e2inode.blocks[EXT2_DOUBLY_INDIRECT_INDEX]) {
             uint32_t blockPointers[blocksize / sizeof(uint32_t)];
 
-            if (int e = ReadBlockCached(e2inode.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)) {
+            if (int e = ReadBlockCachedRaw(e2inode.blocks[EXT2_DOUBLY_INDIRECT_INDEX], blockPointers)) {
                 (void)e;
                 error = DiskReadError;
                 return 0;
@@ -787,7 +780,7 @@ int Ext2::Ext2Volume::EraseInode(ext2_inode_t& e2inode, uint32_t inode) {
     if (uint8_t * cachedBitmap; bitmapCache.get(group.inodeBitmap, cachedBitmap)) {
         memcpy(bitmap, cachedBitmap, blocksize);
     } else {
-        if (int e = ReadBlockCached(group.inodeBitmap, bitmap)) {
+        if (int e = ReadBlockCachedRaw(group.inodeBitmap, bitmap)) {
             if (e == -EINTR) {
                 return -EINTR;
             }
@@ -806,7 +799,7 @@ int Ext2::Ext2Volume::EraseInode(ext2_inode_t& e2inode, uint32_t inode) {
         memcpy(cachedBitmap, bitmap, blocksize);
     }
 
-    if (int e = WriteBlockCached(group.blockBitmap, bitmap)) {
+    if (int e = WriteBlockCachedRaw(group.blockBitmap, bitmap)) {
         Log::Error("[Ext2] Disk error (%d) write block bitmap (group %d)", e, inode / super.inodesPerGroup);
         error = DiskWriteError;
         return -1;
@@ -842,9 +835,9 @@ int Ext2::Ext2Volume::ListDir(Ext2Node* node, List<DirectoryEntry>& entries) {
 
     ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
 
-    if (int e = ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)) {
-        if (e == -EINTR) {
-            return -EINTR;
+    if (int e = ReadBlockCachedRaw(GetInodeBlock(currentBlockIndex, ino), buffer)) {
+        if (e == EINTR) {
+            return EINTR;
         }
 
         Log::Warning("[Ext2] ListDir: Error reading block %d", ino.blocks[currentBlockIndex]);
@@ -877,9 +870,9 @@ int Ext2::Ext2Volume::ListDir(Ext2Node* node, List<DirectoryEntry>& entries) {
             }
 
             blockOffset = 0;
-            if (int e = ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)) {
+            if (int e = ReadBlockCachedRaw(GetInodeBlock(currentBlockIndex, ino), buffer)) {
                 if (e == -EINTR) {
-                    return -EINTR;
+                    return EINTR;
                 }
 
                 error = DiskReadError;
@@ -895,7 +888,7 @@ int Ext2::Ext2Volume::ListDir(Ext2Node* node, List<DirectoryEntry>& entries) {
 
 int Ext2::Ext2Volume::WriteDir(Ext2Node* node, List<DirectoryEntry>& entries) {
     if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
-        return -ENOTDIR;
+        return ENOTDIR;
     }
 
     if (node->inode < 1) {
@@ -945,7 +938,7 @@ int Ext2::Ext2Volume::WriteDir(Ext2Node* node, List<DirectoryEntry>& entries) {
         totalOffset += e2dirent->recordLength;
 
         if (blockOffset >= blocksize) {
-            if (WriteBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)) {
+            if (WriteBlockCachedRaw(GetInodeBlock(currentBlockIndex, ino), buffer)) {
                 Log::Error("[Ext2] WriteDir: Failed to write directory block");
                 error = DiskWriteError;
                 return -1;
@@ -982,7 +975,7 @@ int Ext2::Ext2Volume::InsertDir(Ext2Node* node, List<DirectoryEntry>& newEntries
         for (DirectoryEntry& ent : entries) {
             if (strcmp(ent.name, newEnt.name) == 0) {
                 Log::Warning("[Ext2] InsertDir: Entry %s already exists!", newEnt.name);
-                return -EEXIST;
+                return EEXIST;
             }
         }
         entries.add_back(newEnt);
@@ -998,14 +991,14 @@ int Ext2::Ext2Volume::InsertDir(Ext2Node* node, DirectoryEntry& ent) {
     return InsertDir(node, ents);
 }
 
-int Ext2::Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index) {
+ErrorOr<int> Ext2::Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index) {
     if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
-        return -ENOTDIR;
+        return Error{ENOTDIR};
     }
 
     if (node->inode < 1) {
         Log::Warning("[Ext2] ReadDir: Invalid inode: %d", node->inode);
-        return -EIO;
+        return Error{EIO};
     }
 
     ext2_inode_t& ino = node->e2inode;
@@ -1016,10 +1009,10 @@ int Ext2::Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t i
 
     ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
 
-    if (ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)) {
+    if (ReadBlockCachedRaw(GetInodeBlock(currentBlockIndex, ino), buffer)) {
         Log::Warning("[Ext2] Failed to read block %d", GetInodeBlock(currentBlockIndex, ino));
         error = DiskReadError;
-        return -EIO;
+        return Error{EIO};
     }
 
     for (unsigned i = 0; i < index; i++) {
@@ -1049,9 +1042,9 @@ int Ext2::Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t i
             }
 
             blockOffset = 0;
-            if (ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)) {
+            if (ReadBlockCachedRaw(GetInodeBlock(currentBlockIndex, ino), buffer)) {
                 Log::Warning("[Ext2] Failed to read block");
-                return -EIO;
+                return Error{EIO};
             }
         }
 
@@ -1092,14 +1085,14 @@ int Ext2::Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t i
     return 1;
 }
 
-FsNode* Ext2::Ext2Volume::FindDir(Ext2Node* node, const char* name) {
+ErrorOr<FsNode*> Ext2::Ext2Volume::FindDir(Ext2Node* node, const char* name) {
     if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
-        return nullptr;
+        return Error{ENOTDIR};
     }
 
     if (node->inode < 1) {
         Log::Warning("[Ext2] ReadDir: Invalid inode: %d", node->inode);
-        return nullptr;
+        return Error{EINVAL};
     }
 
     uint32_t inode;
@@ -1114,7 +1107,8 @@ FsNode* Ext2::Ext2Volume::FindDir(Ext2Node* node, const char* name) {
 
         ext2_directory_entry_t* e2dirent = (ext2_directory_entry_t*)buffer;
 
-        if (ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)) {
+        uint32_t blk = GetInodeBlock(currentBlockIndex, ino);
+        if (ReadBlockCachedRaw(blk, buffer)) {
             Log::Info("[Ext2] Failed to read block %d", GetInodeBlock(currentBlockIndex, ino));
             return nullptr;
         }
@@ -1147,21 +1141,21 @@ FsNode* Ext2::Ext2Volume::FindDir(Ext2Node* node, const char* name) {
             totalOffset += e2dirent->recordLength;
 
             if (totalOffset > ino.size)
-                return nullptr;
+                return Error{ENOENT};
 
             if (blockOffset >= blocksize) {
                 currentBlockIndex++;
 
                 if (currentBlockIndex >= ino.blockCount / (blocksize / 512)) {
                     // End of dir
-                    return nullptr;
+                    return Error{ENOENT};
                 }
 
                 blockOffset = 0;
 
-                if (ReadBlockCached(GetInodeBlock(currentBlockIndex, ino), buffer)) {
+                if (int e = ReadBlockCachedRaw(GetInodeBlock(currentBlockIndex, ino), buffer); e) {
                     Log::Error("[Ext2] Failed to read block");
-                    return nullptr;
+                    return Error{e};
                 }
             }
 
@@ -1170,12 +1164,12 @@ FsNode* Ext2::Ext2Volume::FindDir(Ext2Node* node, const char* name) {
 
         if (strlen(name) != e2dirent->nameLength || strncmp(e2dirent->name, name, e2dirent->nameLength) != 0) {
             // Not found
-            return nullptr;
+            return Error{ENOENT};
         }
 
         if (!e2dirent->inode || e2dirent->inode > super.inodeCount) {
             Log::Error("[Ext2] Directory Entry %s contains invalid inode %d", name, e2dirent->inode);
-            return nullptr;
+            return Error{EIO};
         }
 
         inode = e2dirent->inode;
@@ -1189,7 +1183,7 @@ FsNode* Ext2::Ext2Volume::FindDir(Ext2Node* node, const char* name) {
         ext2_inode_t direntInode;
         if (ReadInode(inode, direntInode)) {
             Log::Error("[Ext2] Failed to read inode of directory (inode %d) entry %s", node->inode, name);
-            return nullptr; // Could not read inode
+            return Error{EIO}; // Could not read inode
         }
 
         IF_DEBUG(debugLevelExt2 >= DebugLevelNormal,
@@ -1204,7 +1198,7 @@ FsNode* Ext2::Ext2Volume::FindDir(Ext2Node* node, const char* name) {
     return returnNode;
 }
 
-ssize_t Ext2::Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8_t* buffer) {
+ErrorOr<ssize_t> Ext2::Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, UIOBuffer* buffer) {
     if (offset >= node->size)
         return 0;
     if (offset + size > node->size)
@@ -1213,11 +1207,6 @@ ssize_t Ext2::Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8
     uint32_t blockIndex = LocationToBlock(offset);
     uint32_t blockLimit = LocationToBlock(offset + size);
     uint8_t blockBuffer[blocksize];
-
-    /*if(debugLevelExt2 >= DebugLevelVerbose){
-        Log::Info("[Ext2] Reading: Block index: %d, Block limit: %d, Offset: %d, Size: %d, Node size: %d", blockIndex,
-    blockLimit, offset, size, node->size);
-    }*/
 
 #ifdef EXT2_ENABLE_TIMER
     long blktv1 = Timer::UsecondsSinceBoot();
@@ -1239,10 +1228,9 @@ ssize_t Ext2::Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8
         // Check if offset is a full block
         long offsetRemainder = offset & (blocksize - 1);
         if (offsetRemainder) {
-            if (int e = ReadBlockCached(block, blockBuffer); e) {
+            if (int e = ReadBlockCachedRaw(block, blockBuffer); e) {
                 Log::Info("[Ext2] Error %i reading block %u", e, block);
-                error = DiskReadError;
-                return e;
+                return Error{EIO};
             }
 
             size_t readSize = blocksize - offsetRemainder;
@@ -1250,27 +1238,28 @@ ssize_t Ext2::Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8
                 readSize = size;
             }
 
-            memcpy(buffer, blockBuffer + offsetRemainder, readSize);
+            if(buffer->Write(blockBuffer + offsetRemainder, readSize)) {
+                return EFAULT;
+            }
 
             size -= readSize;
-            buffer += readSize;
             offset += readSize;
         } else if (size >= blocksize) {
             if (int e = ReadBlockCached(block, buffer); e) {
                 Log::Info("[Ext2] Error %i reading block %u", e, block);
-                error = DiskReadError;
-                break;
+                return Error{EIO};
             }
             size -= blocksize;
-            buffer += blocksize;
             offset += blocksize;
         } else {
-            if (int e = ReadBlockCached(block, blockBuffer); e) {
+            if (int e = ReadBlockCachedRaw(block, blockBuffer); e) {
                 Log::Info("[Ext2] Error %i reading block %u", e, block);
-                error = DiskReadError;
-                break;
+                return Error{EIO};
             }
-            memcpy(buffer, blockBuffer, size);
+        
+            if(buffer->Write(blockBuffer, size)) {
+                return EFAULT;
+            }
 
             size = 0;
             break;
@@ -1296,14 +1285,14 @@ ssize_t Ext2::Ext2Volume::Read(Ext2Node* node, size_t offset, size_t size, uint8
     return ret;
 }
 
-ssize_t Ext2::Ext2Volume::Write(Ext2Node* node, size_t offset, size_t size, uint8_t* buffer) {
+ErrorOr<ssize_t> Ext2::Ext2Volume::Write(Ext2Node* node, size_t offset, size_t size, UIOBuffer* buffer) {
     if (readOnly) {
         error = FilesystemAccessError;
-        return -EROFS;
+        return Error{EROFS};
     }
 
     if ((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
-        return -EISDIR;
+        return Error{EISDIR};
     }
 
     uint32_t blockIndex = LocationToBlock(offset);                          // Index of first block to write
@@ -1350,7 +1339,7 @@ ssize_t Ext2::Ext2Volume::Write(Ext2Node* node, size_t offset, size_t size, uint
             break;
 
         if (offset % blocksize) {
-            ReadBlockCached(block, blockBuffer);
+            ReadBlockCachedRaw(block, blockBuffer);
 
             size_t writeSize = blocksize - (offset % blocksize);
             size_t writeOffset = (offset % blocksize);
@@ -1358,51 +1347,41 @@ ssize_t Ext2::Ext2Volume::Write(Ext2Node* node, size_t offset, size_t size, uint
             if (writeSize > size)
                 writeSize = size;
 
-            memcpy(blockBuffer + writeOffset, buffer, writeSize);
-            if (int e = WriteBlockCached(block, blockBuffer); e) {
-                if (int e = WriteBlockCached(block, blockBuffer); e) { // Try again
-                    Log::Warning("[Ext2] Error %i writing block %u", e, block);
-                    error = DiskReadError;
-                    break;
-                }
+            if(buffer->Read(blockBuffer + writeOffset, writeSize)) {
+                return EFAULT;
+            }
+
+            if (int e = WriteBlockCachedRaw(block, blockBuffer); e) {
+                Log::Warning("[Ext2] Error %i writing block %u", e, block);
+                return Error{e};
             }
 
             size -= writeSize;
-            buffer += writeSize;
             offset += writeSize;
         } else if (size >= blocksize) {
-            memcpy(blockBuffer, buffer, blocksize);
-            if (int e = WriteBlockCached(block, blockBuffer); e) {
-                if (int e = WriteBlockCached(block, blockBuffer); e) { // Try again
-                    Log::Warning("[Ext2] Error %i writing block %u", e, block);
-                    error = DiskReadError;
-                    break;
-                }
+            if (int e = WriteBlockCachedRaw(block, buffer); e) {
+                Log::Warning("[Ext2] Error %i writing block %u", e, block);
+                return Error{e};
             }
 
             size -= blocksize;
-            buffer += blocksize;
             offset += blocksize;
         } else {
-            if (int e = ReadBlockCached(block, blockBuffer); e) {
-                if (int e = ReadBlockCached(block, blockBuffer); e) { // Try again
-                    Log::Info("[Ext2] Error %i reading block %u", e, block);
-                    error = DiskReadError;
-                    break;
-                }
+            if (int e = ReadBlockCachedRaw(block, blockBuffer); e) { // Try again
+                Log::Info("[Ext2] Error %i reading block %u", e, block);
+                return Error{e};
             }
 
-            memcpy(blockBuffer, buffer, size);
-
-            if (int e = WriteBlockCached(block, blockBuffer); e) {
-                if (int e = WriteBlockCached(block, blockBuffer); e) { // Try again
-                    Log::Warning("[Ext2] Error %i writing block %u", e, block);
-                    error = DiskReadError;
-                    break;
-                }
+            if(buffer->Read(blockBuffer, size)) {
+                return EFAULT;
             }
 
-            buffer += size;
+            if (int e = WriteBlockCachedRaw(block, blockBuffer); e) { // Try again
+                Log::Warning("[Ext2] Error %i writing block %u", e, block);
+                error = DiskReadError;
+                break;
+            }
+
             offset += size;
             size = 0;
             break;
@@ -1419,23 +1398,25 @@ ssize_t Ext2::Ext2Volume::Write(Ext2Node* node, size_t offset, size_t size, uint
     return ret;
 }
 
-void Ext2::Ext2Volume::SyncInode(ext2_inode_t& e2inode, uint32_t inode) {
+Error Ext2::Ext2Volume::SyncInode(ext2_inode_t& e2inode, uint32_t inode) {
     uint8_t buf[blocksize];
     uint64_t off = InodeOffset(inode);
 
-    if (int e = fs::Read(m_device, off & (~511U), blocksize, buf); e != blocksize) {
-        Log::Error("[Ext2] Sync: Disk Error (%d) Reading Inode %d", e, inode);
+    if (auto r = fs::Read(m_device, off & (~511U), blocksize, buf); r.HasError()) {
+        Log::Error("[Ext2] Sync: Disk Error (%d) Reading Inode %d", r.err.code, inode);
         error = DiskReadError;
-        return;
+        return r.err;
     }
 
     *(ext2_inode_t*)(buf + (off & (511U))) = e2inode;
 
-    if (int e = fs::Write(m_device, off & (~511U), blocksize, buf); e != blocksize) {
-        Log::Error("[Ext2] Sync: Disk Error (%d) Writing Inode %d", e, inode);
+    if (auto r = fs::Write(m_device, off & (~511U), blocksize, buf); r.HasError()) {
+        Log::Error("[Ext2] Sync: Disk Error (%d) Writing Inode %d", r.err.code, inode);
         error = DiskWriteError;
-        return;
+        return r.err;
     }
+
+    return ERROR_NONE;
 }
 
 void Ext2::Ext2Volume::SyncNode(Ext2Node* node) {
@@ -1443,21 +1424,21 @@ void Ext2::Ext2Volume::SyncNode(Ext2Node* node) {
     SyncInode(node->e2inode, node->inode);
 }
 
-int Ext2::Ext2Volume::Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode) {
+Error Ext2::Ext2Volume::Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode) {
     if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY)
-        return -ENOTDIR; // Ensure the directory node is actually a directory
+        return Error{ENOTDIR}; // Ensure the directory node is actually a directory
 
     // Make sure the filename does not already exist under the directory
-    if (FindDir(node, ent->name)) {
+    if (!FindDir(node, ent->name).HasError()) {
         Log::Info("[Ext2] Create: Entry %s already exists!", ent->name);
-        return -EEXIST;
+        return Error{EEXIST};
     }
 
     // Create new inode in the VFS for the new file
     Ext2Node* file = CreateNode();
 
     if (!file) {
-        return -EIO;
+        return Error{EIO};
     }
 
     // Regular file
@@ -1477,29 +1458,29 @@ int Ext2::Ext2Volume::Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode)
     SyncNode(file);
 
     // Add the new entry in the given directory
-    return InsertDir(node, *ent);
+    return Error{InsertDir(node, *ent)};
 }
 
-int Ext2::Ext2Volume::CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode) {
+Error Ext2::Ext2Volume::CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode) {
     if (readOnly) {
-        return -EROFS;
+        return Error{EROFS};
     }
 
     if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
         Log::Info("[Ext2] Not a directory!");
-        return -ENOTDIR;
+        return Error{ENOTDIR};
     }
 
-    if (FindDir(node, ent->name)) {
+    if (!FindDir(node, ent->name).HasError()) {
         Log::Info("[Ext2] CreateDirectory: Entry %s already exists!", ent->name);
-        return -EEXIST;
+        return Error{EEXIST};
     }
 
     Ext2Node* dir = CreateNode();
 
     if (!dir) {
         Log::Error("[Ext2] Could not create inode!");
-        return -EIO;
+        return Error{EIO};
     }
 
     dir->e2inode.mode = EXT2_S_IFDIR;
@@ -1530,11 +1511,11 @@ int Ext2::Ext2Volume::CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint3
     entries.add_back(parentEnt);
 
     if (int e = InsertDir(dir, entries)) {
-        return e;
+        return Error{e};
     }
 
     if (int e = InsertDir(node, *ent)) {
-        return e;
+        return Error{e};
     }
 
     dir->nlink = dir->e2inode.linkCount;
@@ -1542,12 +1523,12 @@ int Ext2::Ext2Volume::CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint3
     SyncNode(dir);
     SyncNode(node);
 
-    return 0;
+    return ERROR_NONE;
 }
 
-ssize_t Ext2::Ext2Volume::ReadLink(Ext2Node* node, char* pathBuffer, size_t bufSize) {
+ErrorOr<ssize_t> Ext2::Ext2Volume::ReadLink(Ext2Node* node, char* pathBuffer, size_t bufSize) {
     if ((node->flags & S_IFMT) != S_IFLNK) {
-        return -EINVAL; // Not a symbolic link
+        return Error{EINVAL}; // Not a symbolic link
     }
 
     if (node->size <= 60) {
@@ -1557,31 +1538,34 @@ ssize_t Ext2::Ext2Volume::ReadLink(Ext2Node* node, char* pathBuffer, size_t bufS
 
         return copySize;
     } else {
-        return this->Read(node, 0, bufSize, (uint8_t*)pathBuffer);
+        Log::Warning("[Ext2] ReadLink pointer not treated as user memory");
+
+        UIOBuffer uio(pathBuffer);
+        return this->Read(node, 0, bufSize, &uio);
     }
 }
 
-int Ext2::Ext2Volume::Link(Ext2Node* node, Ext2Node* file, DirectoryEntry* ent) {
+Error Ext2::Ext2Volume::Link(Ext2Node* node, Ext2Node* file, DirectoryEntry* ent) {
     ent->inode = file->inode;
     if (!ent->inode) {
         Log::Error("[Ext2] Link: Invalid inode %d", ent->inode);
-        return -EINVAL;
+        return Error{EINVAL};
     }
 
     if (file->volumeID != volumeID) {
-        return -EXDEV; // Different filesystem
+        return Error{EXDEV}; // Different filesystem
     }
 
     List<DirectoryEntry> entries;
     if (int e = ListDir(node, entries)) {
         Log::Error("[Ext2] Link: Error listing directory!", ent->inode);
-        return e;
+        return Error{e};
     }
 
     for (DirectoryEntry& dirent : entries) {
         if (strcmp(dirent.name, ent->name) == 0) {
             Log::Error("[Ext2] Link: Directory entry %s already exists!", ent->name);
-            return -EEXIST;
+            return Error{EEXIST};
         }
     }
 
@@ -1592,14 +1576,14 @@ int Ext2::Ext2Volume::Link(Ext2Node* node, Ext2Node* file, DirectoryEntry* ent) 
 
     SyncNode(file);
 
-    return WriteDir(node, entries);
+    return Error{WriteDir(node, entries)};
 }
 
-int Ext2::Ext2Volume::Unlink(Ext2Node* node, DirectoryEntry* ent, bool unlinkDirectories) {
+Error Ext2::Ext2Volume::Unlink(Ext2Node* node, DirectoryEntry* ent, bool unlinkDirectories) {
     List<DirectoryEntry> entries;
     if (int e = ListDir(node, entries)) {
         Log::Error("[Ext2] Unlink: Error listing directory!", ent->inode);
-        return e;
+        return Error{e};
     }
 
     // Remove from cache if cached
@@ -1613,12 +1597,12 @@ int Ext2::Ext2Volume::Unlink(Ext2Node* node, DirectoryEntry* ent, bool unlinkDir
     }
 
     Log::Error("[Ext2] Unlink: Directory entry %s does not exist!", ent->name);
-    return -ENOENT;
+    return Error{ENOENT};
 
 found:
     if (!ent->inode) {
         Log::Error("[Ext2] Unlink: Invalid inode %d", ent->inode);
-        return -EINVAL;
+        return Error{EINVAL};
     }
 
     {
@@ -1626,7 +1610,7 @@ found:
         if (Ext2Node * file; inodeCache.get(ent->inode, file)) {
             if ((file->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
                 if (!unlinkDirectories) {
-                    return -EISDIR;
+                    return Error{EISDIR};
                 }
             }
 
@@ -1642,12 +1626,12 @@ found:
             if (int e = ReadInode(ent->inode, e2inode)) {
                 IF_DEBUG(debugLevelExt2 >= DebugLevelNormal,
                         { Log::Error("[Ext2] Link: Error reading inode %d", ent->inode); });
-                return e;
+                return Error{e};
             }
 
             if ((e2inode.mode & EXT2_S_IFMT) == EXT2_S_IFDIR) {
                 if (!unlinkDirectories) {
-                    return -EISDIR;
+                    return Error{EISDIR};
                 }
             }
 
@@ -1661,12 +1645,12 @@ found:
         }
     }
 
-    return WriteDir(node, entries);
+    return Error{WriteDir(node, entries)};
 }
 
-int Ext2::Ext2Volume::Truncate(Ext2Node* node, off_t length) {
+Error Ext2::Ext2Volume::Truncate(Ext2Node* node, off_t length) {
     if (length < 0) {
-        return -EINVAL;
+        return Error{EINVAL};
     }
 
     if (length > node->e2inode.blockCount * 512) { // We need to allocate blocks
@@ -1684,7 +1668,7 @@ int Ext2::Ext2Volume::Truncate(Ext2Node* node, off_t length) {
 
     SyncNode(node);
 
-    return 0;
+    return ERROR_NONE;
 }
 
 void Ext2::Ext2Volume::CleanNode(Ext2Node* node) {
@@ -1734,59 +1718,59 @@ Ext2::Ext2Node::Ext2Node(Ext2Volume* vol, ext2_inode_t& ino, ino_t inode) {
     e2inode = ino;
 }
 
-int Ext2::Ext2Node::ReadDir(DirectoryEntry* ent, uint32_t idx) {
+ErrorOr<int> Ext2::Ext2Node::ReadDir(DirectoryEntry* ent, uint32_t idx) {
     flock.AcquireRead();
     auto ret = vol->ReadDir(this, ent, idx);
     flock.ReleaseRead();
     return ret;
 }
 
-FsNode* Ext2::Ext2Node::FindDir(const char* name) {
+ErrorOr<FsNode*> Ext2::Ext2Node::FindDir(const char* name) {
     flock.AcquireRead();
     auto ret = vol->FindDir(this, name);
     flock.ReleaseRead();
     return ret;
 }
 
-ssize_t Ext2::Ext2Node::Read(size_t offset, size_t size, uint8_t* buffer) {
+ErrorOr<ssize_t> Ext2::Ext2Node::Read(size_t offset, size_t size, UIOBuffer* buffer) {
     flock.AcquireRead();
     auto ret = vol->Read(this, offset, size, buffer);
     flock.ReleaseRead();
     return ret;
 }
 
-ssize_t Ext2::Ext2Node::Write(size_t offset, size_t size, uint8_t* buffer) {
+ErrorOr<ssize_t> Ext2::Ext2Node::Write(size_t offset, size_t size, UIOBuffer* buffer) {
     flock.AcquireWrite();
     auto ret = vol->Write(this, offset, size, buffer);
     flock.ReleaseWrite();
     return ret;
 }
 
-int Ext2::Ext2Node::Create(DirectoryEntry* ent, uint32_t mode) {
+Error Ext2::Ext2Node::Create(DirectoryEntry* ent, uint32_t mode) {
     flock.AcquireWrite();
     auto ret = vol->Create(this, ent, mode);
     flock.ReleaseWrite();
     return ret;
 }
 
-int Ext2::Ext2Node::CreateDirectory(DirectoryEntry* ent, uint32_t mode) {
+Error Ext2::Ext2Node::CreateDirectory(DirectoryEntry* ent, uint32_t mode) {
     flock.AcquireWrite();
     auto ret = vol->CreateDirectory(this, ent, mode);
     flock.ReleaseWrite();
     return ret;
 }
 
-ssize_t Ext2::Ext2Node::ReadLink(char* pathBuffer, size_t bufSize) {
+ErrorOr<ssize_t> Ext2::Ext2Node::ReadLink(char* pathBuffer, size_t bufSize) {
     flock.AcquireRead();
     auto ret = vol->ReadLink(this, pathBuffer, bufSize);
     flock.ReleaseRead();
     return ret;
 }
 
-int Ext2::Ext2Node::Link(FsNode* n, DirectoryEntry* d) {
+Error Ext2::Ext2Node::Link(FsNode* n, DirectoryEntry* d) {
     if (!n->inode) {
         Log::Warning("[Ext2] Ext2::Ext2Node::Link: Invalid inode %d", n->inode);
-        return -EINVAL;
+        return Error{EINVAL};
     }
 
     flock.AcquireWrite();
@@ -1795,14 +1779,14 @@ int Ext2::Ext2Node::Link(FsNode* n, DirectoryEntry* d) {
     return ret;
 }
 
-int Ext2::Ext2Node::Unlink(DirectoryEntry* d, bool unlinkDirectories) {
+Error Ext2::Ext2Node::Unlink(DirectoryEntry* d, bool unlinkDirectories) {
     flock.AcquireWrite();
     auto ret = vol->Unlink(this, d, unlinkDirectories);
     flock.ReleaseWrite();
     return ret;
 }
 
-int Ext2::Ext2Node::Truncate(off_t length) {
+Error Ext2::Ext2Node::Truncate(off_t length) {
     flock.AcquireWrite();
     auto ret = vol->Truncate(this, length);
     flock.ReleaseWrite();

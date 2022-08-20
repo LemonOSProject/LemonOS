@@ -26,20 +26,20 @@ FsVolume* FindVolume(const char* name) {
     return nullptr;
 }
 
-void MountSystemVolume() {
+Error MountSystemVolume() {
     FsNode* devFS = fs::ResolvePath("/dev");
     assert(devFS);
 
     DirectoryEntry ent;
     int i = 0;
-    while (fs::ReadDir(devFS, &ent, i++)) {
+    while (TRY_OR_ERROR(fs::ReadDir(devFS, &ent, i++))) {
         FsDriver* drv = nullptr;
         FsNode* device = nullptr;
-        if ((device = fs::FindDir(devFS, ent.name)) && device->IsCharDevice()) {
+        if ((device = TRY_OR_ERROR(fs::FindDir(devFS, ent.name))) && device->IsCharDevice()) {
             if ((drv = fs::IdentifyFilesystem(device))) {
                 int ret = Mount(device, drv, "system");
                 if (!ret) {
-                    return;
+                    return ERROR_NONE;
                 }
             }
         }

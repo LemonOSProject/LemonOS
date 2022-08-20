@@ -479,8 +479,8 @@ namespace NVMe{
 	public:
 		Namespace(Controller* c, uint32_t nsID, const NamespaceIdentity& id);
 
-		int ReadDiskBlock(uint64_t lba, uint32_t count, void* buffer);
-		int WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer);
+		int ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer);
+		int WriteDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer);
 	};
 
 	void Initialize();

@@ -11,8 +11,9 @@
 #include <Types.h>
 #include <Objects/KObject.h>
 
-#include <abi-bits/fcntl.h>
-#include <abi-bits/uid_t.h>
+#include <UserIO.h>
+
+#include <abi/fcntl.h>
 
 #define FD_SETSIZE 1024
 
@@ -56,13 +57,6 @@
 #define POLLNVAL 0x40
 #define POLLWRNORM 0x80
 
-#define O_ACCESS 7
-#define O_EXEC 1
-#define O_RDONLY 2
-#define O_RDWR 3
-#define O_SEARCH 4
-#define O_WRONLY 5
-
 #define POLLIN 0x01
 #define POLLOUT 0x02
 #define POLLPRI 0x04
@@ -72,20 +66,7 @@
 #define POLLNVAL 0x40
 #define POLLWRNORM 0x80
 
-#define AT_EMPTY_PATH 1
-#define AT_SYMLINK_FOLLOW 2
-#define AT_SYMLINK_NOFOLLOW 4
-#define AT_REMOVEDIR 8
-#define AT_EACCESS 512
-
 #define MAXIMUM_SYMLINK_AMOUNT 10
-
-typedef int64_t ino_t;
-typedef uint64_t dev_t;
-typedef int64_t off_t;
-typedef int32_t mode_t;
-typedef int32_t nlink_t;
-typedef int64_t volume_id_t;
 
 typedef struct {
     dev_t st_dev;
@@ -139,6 +120,9 @@ public:
     class FsNode* node = nullptr;
     off_t pos = 0;
     mode_t mode = 0;
+
+    // e.g. O_NONBLOCK
+    unsigned int flags;
 };
 
 class FsNode {
@@ -151,6 +135,7 @@ public:
     uint32_t flags = 0;       // Flags
     uint32_t pmask = 0;       // Permission mask
     uid_t uid = 0;            // User id
+    gid_t gid = 0;
     ino_t inode = 0;          // Inode number
     size_t size = 0;          // Node size
     int nlink = 0;            // Amount of references/hard links
@@ -171,7 +156,7 @@ public:
     ///
     /// \return Bytes read or if negative an error code
     /////////////////////////////
-    virtual ssize_t Read(size_t off, size_t size, uint8_t* buffer); // Read Data
+    virtual ErrorOr<ssize_t> Read(size_t off, size_t size, UIOBuffer* buffer); // Read Data
 
     /////////////////////////////
     /// \brief Write data to filesystem node
@@ -183,24 +168,24 @@ public:
     ///
     /// \return Bytes written or if negative an error code
     /////////////////////////////
-    virtual ssize_t Write(size_t off, size_t size, uint8_t* buffer); // Write Data
+    virtual ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer); // Write Data
 
     virtual ErrorOr<UNIXOpenFile*> Open(size_t flags); // Open
     virtual void Close();                           // Close
 
-    virtual int ReadDir(DirectoryEntry*, uint32_t); // Read Directory
-    virtual FsNode* FindDir(const char* name);            // Find in directory
+    virtual ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t); // Read Directory
+    virtual ErrorOr<FsNode*> FindDir(const char* name);            // Find in directory
 
-    virtual int Create(DirectoryEntry* ent, uint32_t mode);
-    virtual int CreateDirectory(DirectoryEntry* ent, uint32_t mode);
+    virtual Error Create(DirectoryEntry* ent, uint32_t mode);
+    virtual Error CreateDirectory(DirectoryEntry* ent, uint32_t mode);
 
-    virtual ssize_t ReadLink(char* pathBuffer, size_t bufSize);
-    virtual int Link(FsNode*, DirectoryEntry*);
-    virtual int Unlink(DirectoryEntry*, bool unlinkDirectories = false);
+    virtual ErrorOr<ssize_t> ReadLink(char* pathBuffer, size_t bufSize);
+    virtual Error Link(FsNode*, DirectoryEntry*);
+    virtual Error Unlink(DirectoryEntry*, bool unlinkDirectories = false);
 
-    virtual int Truncate(off_t length);
+    virtual Error Truncate(off_t length);
 
-    virtual int Ioctl(uint64_t cmd, uint64_t arg); // I/O Control
+    virtual ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg); // I/O Control
     virtual void Sync();                           // Sync node to device
 
     virtual bool CanRead() { return true; }
@@ -216,6 +201,7 @@ public:
     virtual inline bool IsCharDevice() { return (flags & FS_NODE_TYPE) == FS_NODE_CHARDEVICE; }
     virtual inline bool IsSocket() { return (flags & FS_NODE_TYPE) == FS_NODE_SOCKET; }
     virtual inline bool IsEPoll() const { return false; }
+    virtual inline bool IsPipe() const { return false; }
 
     void UnblockAll();
 
@@ -412,21 +398,21 @@ FsNode* FollowLink(FsNode* link, FsNode* workingDir);
 /// \brief Resolve a path.
 ///
 /// \param path Path to resolve
-/// \param workingDir Path of working directory
+/// \param workingDir Node of working directory
 ///
 /// \return FsNode which path points to, nullptr on failure
 /////////////////////////////
-FsNode* ResolvePath(const String& path, const char* workingDir = nullptr, bool followSymlinks = true);
+FsNode* ResolvePath(const String& path, FsNode* workingDir = nullptr, bool followSymlinks = true);
 
 /////////////////////////////
 /// \brief Resolve a path.
 ///
 /// \param path Path to resolve
-/// \param workingDir Node of working directory
+/// \param workingDir Path of working directory
 ///
 /// \return FsNode which path points to, nullptr on failure
 /////////////////////////////
-FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks = true);
+FsNode* ResolvePath(const String& path, const char* workingDir, bool followSymlinks = true);
 
 /////////////////////////////
 /// \brief Resolve parent directory of path.
@@ -436,9 +422,9 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks 
 ///
 /// \return FsNode of parent, nullptr on failure
 /////////////////////////////
-FsNode* ResolveParent(const char* path, FsNode* workingDir = nullptr);
+FsNode* ResolveParent(const String& path, FsNode* workingDir = nullptr);
 String CanonicalizePath(const char* path, char* workingDir);
-String BaseName(const char* path);
+String BaseName(const String& path);
 
 /////////////////////////////
 /// \brief Read data from filesystem node
@@ -452,7 +438,7 @@ String BaseName(const char* path);
 ///
 /// \return Bytes read or if negative an error code
 /////////////////////////////
-ssize_t Read(FsNode* node, size_t offset, size_t size, void* buffer);
+ErrorOr<ssize_t> Read(FsNode* node, size_t offset, size_t size, void* buffer);
 
 /////////////////////////////
 /// \brief Write data to filesystem node
@@ -466,24 +452,27 @@ ssize_t Read(FsNode* node, size_t offset, size_t size, void* buffer);
 ///
 /// \return Bytes written or if negative an error code
 /////////////////////////////
-ssize_t Write(FsNode* node, size_t offset, size_t size, void* buffer);
+ErrorOr<ssize_t> Write(FsNode* node, size_t offset, size_t size, void* buffer);
+
 ErrorOr<UNIXOpenFile*> Open(FsNode* node, uint32_t flags = 0);
 void Close(FsNode* node);
 void Close(UNIXOpenFile* openFile);
-int ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index);
-FsNode* FindDir(FsNode* node, const char* name);
+ErrorOr<int> ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index);
+ErrorOr<FsNode*> FindDir(FsNode* node, const char* name);
 
-ssize_t Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, uint8_t* buffer);
-ssize_t Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, uint8_t* buffer);
-int ReadDir(const FancyRefPtr<UNIXOpenFile>& handle, DirectoryEntry* dirent, uint32_t index);
-FsNode* FindDir(const FancyRefPtr<UNIXOpenFile>& handle, const char* name);
+ErrorOr<ssize_t> Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer);
+ErrorOr<ssize_t> Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer);
+ErrorOr<ssize_t> Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer, off_t offset);
+ErrorOr<ssize_t> Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer, off_t offset);
 
-int Link(FsNode*, FsNode*, DirectoryEntry*);
-int Unlink(FsNode*, DirectoryEntry*, bool unlinkDirectories = false);
+ErrorOr<int> ReadDir(const FancyRefPtr<UNIXOpenFile>& handle, DirectoryEntry* dirent, uint32_t index);
+ErrorOr<FsNode*> FindDir(const FancyRefPtr<UNIXOpenFile>& handle, const char* name);
+ErrorOr<int> Ioctl(const FancyRefPtr<UNIXOpenFile>& handle, uint64_t cmd, uint64_t arg);
 
-int Ioctl(const FancyRefPtr<UNIXOpenFile>& handle, uint64_t cmd, uint64_t arg);
+Error Link(FsNode*, FsNode*, DirectoryEntry*);
+Error Unlink(FsNode*, DirectoryEntry*, bool unlinkDirectories = false);
 
-int Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newpath);
+Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newpath);
 } // namespace fs
 
 ALWAYS_INLINE UNIXOpenFile::~UNIXOpenFile() { fs::Close(this); }

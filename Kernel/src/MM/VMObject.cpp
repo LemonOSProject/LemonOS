@@ -174,19 +174,23 @@ PhysicalVMObject::~PhysicalVMObject(){
 }
 
 ProcessImageVMObject::ProcessImageVMObject(uintptr_t base, size_t size, bool write) :
-    PhysicalVMObject(size, false, false), write(write), base(base) {
-
+    PhysicalVMObject(size, false, false), base(base) {
+        protection = MemoryProtection::RegionReadable;
+        if(write) {
+            protection |= MemoryProtection::RegionWritable;
+        }
 }
 
 void ProcessImageVMObject::MapAllocatedBlocks(uintptr_t requestedBase, PageMap* pMap){
     assert(requestedBase == base);
 
     uintptr_t virt = base;
+    uint64_t pgFlags = PAGE_USER | (PAGE_WRITABLE * ((protection & MemoryProtection::RegionWritable) && !copyOnWrite)) | PAGE_PRESENT;
     for(unsigned i = 0; i < (size >> PAGE_SHIFT_4K); i++){
         uint64_t block = physicalBlocks[i];
         assert(block);
 
-        Memory::MapVirtualMemory4K(block << PAGE_SHIFT_4K, virt, 1, PAGE_USER | (PAGE_WRITABLE * (write && !copyOnWrite)) | PAGE_PRESENT, pMap);
+        Memory::MapVirtualMemory4K(block << PAGE_SHIFT_4K, virt, 1, pgFlags, pMap);
         virt += PAGE_SIZE_4K;
     }
 }

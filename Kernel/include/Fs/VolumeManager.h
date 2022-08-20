@@ -33,7 +33,7 @@ int Unmount(const char* name);
 void RegisterVolume(FsVolume* vol);
 int UnregisterVolume(FsVolume* vol);
 
-void MountSystemVolume();
+Error MountSystemVolume();
 FsVolume* SystemVolume();
 
 } // namespace VolumeManager

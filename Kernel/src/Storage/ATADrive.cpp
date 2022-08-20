@@ -56,9 +56,8 @@ ATADiskDevice::ATADiskDevice(int port, int drive) {
     InitializePartitions();
 }
 
-int ATADiskDevice::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
+int ATADiskDevice::ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
     uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
-    uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
 
     while (blockCount-- && count) {
         uint64_t size;
@@ -79,7 +78,10 @@ int ATADiskDevice::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
             return 1; // Error Reading Sectors
         }
 
-        memcpy(buffer, prdBuffer, size);
+        if(buffer->Write((uint8_t*)prdBuffer, size)) {
+            return EFAULT;
+        }
+
         driveLock.Signal();
 
         buffer += size;
@@ -89,9 +91,8 @@ int ATADiskDevice::ReadDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
     return 0;
 }
 
-int ATADiskDevice::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
+int ATADiskDevice::WriteDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
     uint64_t blockCount = ((count / 512 * 512) < count) ? ((count / 512) + 1) : (count / 512);
-    uint8_t* buffer = reinterpret_cast<uint8_t*>(_buffer);
 
     while (blockCount-- && count) {
         uint64_t size;
@@ -104,10 +105,12 @@ int ATADiskDevice::WriteDiskBlock(uint64_t lba, uint32_t count, void* _buffer) {
             continue;
 
         if (driveLock.Wait()) {
-            return -EINTR;
+            return EINTR;
         }
 
-        memcpy(prdBuffer, buffer, size);
+        if(buffer->Read((uint8_t*)prdBuffer, size)) {
+            return EFAULT;
+        }
 
         if (ATA::Access(this, lba, 1, true)) {
             driveLock.Signal();

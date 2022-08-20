@@ -220,17 +220,17 @@ public:
     public:
         Ext2Node(Ext2Volume* vol, ext2_inode_t& ino, ino_t inode);
 
-        ssize_t Read(size_t, size_t, uint8_t*);
-        ssize_t Write(size_t, size_t, uint8_t*);
-        int ReadDir(DirectoryEntry*, uint32_t);
-        FsNode* FindDir(const char* name);
-        int Create(DirectoryEntry*, uint32_t);
-        int CreateDirectory(DirectoryEntry*, uint32_t);
+        ErrorOr<ssize_t> Read(size_t, size_t, UIOBuffer*);
+        ErrorOr<ssize_t> Write(size_t, size_t, UIOBuffer*);
+        ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t);
+        ErrorOr<FsNode*> FindDir(const char* name);
+        Error Create(DirectoryEntry*, uint32_t);
+        Error CreateDirectory(DirectoryEntry*, uint32_t);
 
-        ssize_t ReadLink(char* pathBuffer, size_t bufSize);
-        int Link(FsNode*, DirectoryEntry*);
-        int Unlink(DirectoryEntry*, bool unlinkDirectories = false);
-        int Truncate(off_t length);
+        ErrorOr<ssize_t> ReadLink(char* pathBuffer, size_t bufSize);
+        Error Link(FsNode*, DirectoryEntry*);
+        Error Unlink(DirectoryEntry*, bool unlinkDirectories = false);
+        Error Truncate(off_t length);
 
         void Close();
         void Sync();
@@ -252,8 +252,6 @@ public:
 
         ext2_blockgrp_desc_t* blockGroups;
         uint32_t blockGroupCount;
-
-        int error = false;
         bool readOnly = false;
 
         bool sparse, largeFiles, filetype;
@@ -308,15 +306,15 @@ public:
         int ReadInode(uint32_t num, ext2_inode_t& inode);
         int WriteInode(uint32_t num, ext2_inode_t& inode);
 
-        int ReadBlock(uint32_t block, void* buffer);
-        int ReadBlockCached(uint32_t block, void* buffer);
+        int ReadBlockCached(uint32_t block, UIOBuffer* buffer);
+        int ReadBlockCachedRaw(uint32_t block, void* buffer);
 
-        int WriteBlock(uint32_t block, void* buffer);
-        int WriteBlockCached(uint32_t block, void* buffer);
+        int WriteBlockCached(uint32_t block, UIOBuffer* buffer);
+        int WriteBlockCachedRaw(uint32_t block, void* buffer);
 
         Ext2Node* CreateNode();
         int EraseInode(ext2_inode_t& e2inode, uint32_t inode);
-        void SyncInode(ext2_inode_t& e2ino, uint32_t inode);
+        Error SyncInode(ext2_inode_t& e2ino, uint32_t inode);
 
         uint32_t AllocateBlock();
         int FreeBlock(uint32_t block);
@@ -329,21 +327,21 @@ public:
     public:
         Ext2Volume(FsNode* device, const char* name);
 
-        ssize_t Read(Ext2Node* node, size_t offset, size_t size, uint8_t* buffer);
-        ssize_t Write(Ext2Node* node, size_t offset, size_t size, uint8_t* buffer);
-        int ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index);
-        FsNode* FindDir(Ext2Node* node, const char* name);
-        int Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
-        int CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
-        ssize_t ReadLink(Ext2Node* node, char* pathBuffer, size_t bufSize);
-        int Link(Ext2Node* dir, Ext2Node* node, DirectoryEntry* ent);
-        int Unlink(Ext2Node* dir, DirectoryEntry* ent, bool unlinkDirectories = false);
-        int Truncate(Ext2Node* node, off_t length);
+        ErrorOr<ssize_t> Read(Ext2Node* node, size_t offset, size_t size, UIOBuffer* buffer);
+        ErrorOr<ssize_t> Write(Ext2Node* node, size_t offset, size_t size, UIOBuffer* buffer);
+        ErrorOr<int> ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index);
+        ErrorOr<FsNode*> FindDir(Ext2Node* node, const char* name);
+        Error Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
+        Error CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
+        ErrorOr<ssize_t> ReadLink(Ext2Node* node, char* pathBuffer, size_t bufSize);
+        Error Link(Ext2Node* dir, Ext2Node* node, DirectoryEntry* ent);
+        Error Unlink(Ext2Node* dir, DirectoryEntry* ent, bool unlinkDirectories = false);
+        Error Truncate(Ext2Node* node, off_t length);
 
         void SyncNode(Ext2Node* node);
         void CleanNode(Ext2Node* node);
-
-        int Error() { return error; }
+        
+        int error = false;
     };
 
 public:

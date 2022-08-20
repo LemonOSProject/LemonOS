@@ -11,7 +11,7 @@ namespace fs::FAT32 {
 int Identify(PartitionDevice* part) {
     fat32_boot_record_t* bootRecord = (fat32_boot_record_t*)kmalloc(512);
 
-    if (part->ReadBlock(0, 512, (uint8_t*)bootRecord)) { // Read Volume Boot Record (First sector of partition)
+    if (part->ReadBlockRaw(0, 512, (uint8_t*)bootRecord)) { // Read Volume Boot Record (First sector of partition)
         return -1;                                       // Disk Error
     }
 
@@ -42,7 +42,7 @@ Fat32Volume::Fat32Volume(PartitionDevice* _part, char* name) {
 
     fat32_boot_record_t* bootRecord = (fat32_boot_record_t*)kmalloc(512);
 
-    if (part->ReadBlock(0, 512, (uint8_t*)bootRecord)) { // Read Volume Boot Record (First sector of partition)
+    if (part->ReadBlockRaw(0, 512, (uint8_t*)bootRecord)) { // Read Volume Boot Record (First sector of partition)
         Log::Warning("Disk Error Initializing Volume");  // Disk Error
         return;
     }
@@ -81,7 +81,7 @@ List<uint32_t>* Fat32Volume::GetClusterChain(uint32_t cluster) {
         uint32_t offset = cluster % (4096 / 4);
 
         if (block != lastBlock) {
-            if (part->ReadBlock(bootRecord->bpb.reservedSectors +
+            if (part->ReadBlockRaw(bootRecord->bpb.reservedSectors +
                                     block * (4096 / part->parentDisk->blocksize) /* Get Sector of Block */,
                                 4096, buf)) {
                 delete list;
@@ -109,7 +109,7 @@ void* Fat32Volume::ReadClusterChain(uint32_t cluster, int* clusterCount, size_t 
     void* _buf = buf;
 
     for (unsigned i = 0; i < clusterChain->get_length() && maxCluster; i++) {
-        part->ReadBlock(ClusterToLBA(clusterChain->get_at(i)), clusterSizeBytes, buf);
+        part->ReadBlockRaw(ClusterToLBA(clusterChain->get_at(i)), clusterSizeBytes, buf);
 
         buf += clusterSizeBytes;
     }
@@ -134,7 +134,7 @@ void* Fat32Volume::ReadClusterChain(uint32_t cluster, int* clusterCount) {
     void* _buf = buf;
 
     for (unsigned i = 0; i < clusterChain->get_length(); i++) {
-        part->ReadBlock(ClusterToLBA(clusterChain->get_at(i)), clusterSizeBytes, buf);
+        part->ReadBlockRaw(ClusterToLBA(clusterChain->get_at(i)), clusterSizeBytes, buf);
 
         buf += clusterSizeBytes;
     }
@@ -147,9 +147,9 @@ void* Fat32Volume::ReadClusterChain(uint32_t cluster, int* clusterCount) {
     return _buf;
 }
 
-ssize_t Fat32Volume::Read(Fat32Node* node, size_t offset, size_t size, uint8_t* buffer) {
+ErrorOr<ssize_t> Fat32Volume::Read(Fat32Node* node, size_t offset, size_t size, UIOBuffer* buffer) {
     if (!node->inode || node->flags & FS_NODE_DIRECTORY)
-        return -1;
+        return Error{EINVAL};
 
     int count;
     void* _buf = ReadClusterChain(node->inode, &count, size);
@@ -157,12 +157,14 @@ ssize_t Fat32Volume::Read(Fat32Node* node, size_t offset, size_t size, uint8_t* 
     if (static_cast<unsigned>(count) * bootRecord->bpb.sectorsPerCluster * part->parentDisk->blocksize < size)
         return 0;
 
-    memcpy(buffer, _buf, size);
+    if(buffer->Write((uint8_t*)_buf, size)) {
+        return EFAULT;
+    }
     return size;
 }
 
-ssize_t Fat32Volume::Write(Fat32Node* node, size_t offset, size_t size, uint8_t* buffer) {
-    return -EROFS;
+ErrorOr<ssize_t> Fat32Volume::Write(Fat32Node* node, size_t offset, size_t size, UIOBuffer* buffer) {
+    return Error{EROFS};
 
     List<uint32_t>* clusters = GetClusterChain(node->inode);
     if (offset + size > clusters->get_length() * bootRecord->bpb.sectorsPerCluster * part->parentDisk->blocksize) {
@@ -175,7 +177,11 @@ void Fat32Volume::Open(Fat32Node* node, uint32_t flags) {}
 
 void Fat32Volume::Close(Fat32Node* node) {}
 
-int Fat32Volume::ReadDir(Fat32Node* node, DirectoryEntry* dirent, uint32_t index) {
+ErrorOr<int> Fat32Volume::ReadDir(Fat32Node* node, DirectoryEntry* dirent, uint32_t index) {
+    if(!node->IsDirectory()) {
+        return Error{ENOTDIR};
+    }
+
     unsigned lfnCount = 0;
     unsigned entryCount = 0;
 
@@ -244,7 +250,7 @@ int Fat32Volume::ReadDir(Fat32Node* node, DirectoryEntry* dirent, uint32_t index
     return 1;
 }
 
-FsNode* Fat32Volume::FindDir(Fat32Node* node, const char* name) {
+ErrorOr<FsNode*> Fat32Volume::FindDir(Fat32Node* node, const char* name) {
     unsigned lfnCount = 0;
 
     uint32_t cluster = node->inode;
@@ -317,11 +323,12 @@ FsNode* Fat32Volume::FindDir(Fat32Node* node, const char* name) {
     return _node;
 }
 
-ssize_t Fat32Node::Read(size_t offset, size_t size, uint8_t* buffer) { return vol->Read(this, offset, size, buffer); }
+ErrorOr<ssize_t> Fat32Node::Read(size_t offset, size_t size, UIOBuffer* buffer) { return vol->Read(this, offset, size, buffer); }
 
-ssize_t Fat32Node::Write(size_t offset, size_t size, uint8_t* buffer) { return vol->Write(this, offset, size, buffer); }
+ErrorOr<ssize_t> Fat32Node::Write(size_t offset, size_t size, UIOBuffer* buffer) { return vol->Write(this, offset, size, buffer); }
 
-int Fat32Node::ReadDir(DirectoryEntry* dirent, uint32_t index) { return vol->ReadDir(this, dirent, index); }
+ErrorOr<int> Fat32Node::ReadDir(DirectoryEntry* dirent, uint32_t index) { return vol->ReadDir(this, dirent, index); }
 
-FsNode* Fat32Node::FindDir(const char* name) { return vol->FindDir(this, name); }
+ErrorOr<FsNode*> Fat32Node::FindDir(const char* name) { return vol->FindDir(this, name); }
+
 } // namespace fs::FAT32

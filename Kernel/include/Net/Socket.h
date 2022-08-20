@@ -13,7 +13,6 @@
 
 #include <abi-bits/in.h>
 #include <abi-bits/socket.h>
-#include <abi-bits/fcntl.h>
 #include <abi-bits/socklen_t.h>
 
 #define CONNECTION_BACKLOG 128
@@ -103,15 +102,15 @@ class Socket : public FsNode {
     virtual int Connect(const sockaddr* addr, socklen_t addrlen);
     virtual int Listen(int backlog);
 
-    virtual int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
+    virtual ErrorOr<int64_t> ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
                                 const void* ancillary = nullptr, size_t ancillaryLen = 0);
-    virtual int64_t Receive(void* buffer, size_t len, int flags);
-    virtual ssize_t Read(size_t offset, size_t size, uint8_t* buffer);
+    virtual ErrorOr<int64_t> Receive(UIOBuffer* buffer, size_t len, int flags);
+    virtual ErrorOr<ssize_t> Read(size_t offset, size_t size, UIOBuffer* buffer);
 
-    virtual int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
+    virtual ErrorOr<int64_t> SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
                            const void* ancillary = nullptr, size_t ancillaryLen = 0);
-    virtual int64_t Send(void* buffer, size_t len, int flags);
-    virtual ssize_t Write(size_t offset, size_t size, uint8_t* buffer);
+    virtual ErrorOr<int64_t> Send(UIOBuffer* buffer, size_t len, int flags);
+    virtual ErrorOr<ssize_t> Write(size_t offset, size_t size, UIOBuffer* buffer);
 
     virtual int SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength);
     virtual int GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength);
@@ -167,9 +166,9 @@ class LocalSocket final : public Socket {
     ErrorOr<UNIXOpenFile*> Open(size_t flags);
     void Close();
 
-    int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
+    ErrorOr<int64_t> ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
                         const void* ancillary = nullptr, size_t ancillaryLen = 0);
-    int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
+    ErrorOr<int64_t> SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
                    const void* ancillary = nullptr, size_t ancillaryLen = 0);
 
     void Watch(FilesystemWatcher& watcher, int events);
@@ -188,7 +187,7 @@ class IPSocket : public Socket {
     IPSocket(int type, int protocol);
     virtual ~IPSocket();
 
-    int Ioctl(uint64_t cmd, uint64_t arg);
+    ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg);
 
     Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
     int Bind(const sockaddr* addr, socklen_t addrlen);
@@ -205,9 +204,9 @@ class IPSocket : public Socket {
 
     void Close();
 
-    virtual int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
+    virtual ErrorOr<int64_t> ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
                                 const void* ancillary = nullptr, size_t ancillaryLen = 0);
-    virtual int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
+    virtual ErrorOr<int64_t> SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
                            const void* ancillary = nullptr, size_t ancillaryLen = 0);
 
     Network::NetworkAdapter* adapter = nullptr; // Bound adapter
@@ -240,9 +239,9 @@ class UDPSocket final : public IPSocket {
     int Connect(const sockaddr* addr, socklen_t addrlen);
     int Listen(int backlog);
 
-    int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
+    ErrorOr<int64_t> ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
                         const void* ancillary = nullptr, size_t ancillaryLen = 0);
-    int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
+    ErrorOr<int64_t> SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
                    const void* ancillary = nullptr, size_t ancillaryLen = 0);
 
   protected:
@@ -277,9 +276,9 @@ class TCPSocket final : public IPSocket {
     int Connect(const sockaddr* addr, socklen_t addrlen);
     int Listen(int backlog);
 
-    int64_t ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
+    ErrorOr<int64_t> ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
                         const void* ancillary = nullptr, size_t ancillaryLen = 0);
-    int64_t SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
+    ErrorOr<int64_t> SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
                    const void* ancillary = nullptr, size_t ancillaryLen = 0);
 
     int SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength);

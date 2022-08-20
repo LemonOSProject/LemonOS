@@ -69,24 +69,24 @@ int Socket::Listen(int backlog) {
     return -EOPNOTSUPP; // If Listen has not been implemented assume that the socket is not connection-oriented
 }
 
-ssize_t Socket::Read(size_t offset, size_t size, uint8_t* buffer) { return Receive(buffer, size, 0); }
+ErrorOr<ssize_t> Socket::Read(size_t offset, size_t size, UIOBuffer* buffer) { return Receive(buffer, size, 0); }
 
-int64_t Socket::Receive(void* buffer, size_t len, int flags) {
+ErrorOr<int64_t> Socket::Receive(UIOBuffer* buffer, size_t len, int flags) {
     return ReceiveFrom(buffer, len, flags, nullptr, nullptr);
 }
 
-int64_t Socket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
+ErrorOr<int64_t> Socket::ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
                             const void* ancillary, size_t ancillaryLen) {
     assert(!"ReceiveFrom has been called from socket base");
 
     return -1; // We should not return but get the compiler to shut up
 }
 
-ssize_t Socket::Write(size_t offset, size_t size, uint8_t* buffer) { return Send(buffer, size, 0); }
+ErrorOr<ssize_t> Socket::Write(size_t offset, size_t size, UIOBuffer* buffer) { return Send(buffer, size, 0); }
 
-int64_t Socket::Send(void* buffer, size_t len, int flags) { return SendTo(buffer, len, flags, nullptr, 0); }
+ErrorOr<int64_t> Socket::Send(UIOBuffer* buffer, size_t len, int flags) { return SendTo(buffer, len, flags, nullptr, 0); }
 
-int64_t Socket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
+ErrorOr<int64_t> Socket::SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
                        const void* ancillary, size_t ancillaryLen) {
     assert(!"SendTo has been called from socket base");
 
@@ -355,21 +355,21 @@ int LocalSocket::Listen(int backlog) {
     return 0;
 }
 
-int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
+ErrorOr<int64_t> LocalSocket::ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
                                  const void* ancillary, size_t ancillaryLen) {
     if (type == StreamSocket) {
         if (src || addrlen) {
-            return -EISCONN;
+            return EISCONN;
         }
     } else if (type == DatagramSocket) {
         if (src || addrlen) {
-            return -EOPNOTSUPP;
+            return EOPNOTSUPP;
         }
     }
 
     if (!inbound) {
         Log::Warning("LocalSocket::ReceiveFrom: LocalSocket not connected");
-        return -ENOTCONN;
+        return ENOTCONN;
     }
 
     if (inbound->Empty() && (flags & MSG_DONTWAIT)) {
@@ -386,31 +386,31 @@ int64_t LocalSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* 
     }
 }
 
-int64_t LocalSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
+ErrorOr<int64_t> LocalSocket::SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
                             const void* ancillary, size_t ancillaryLen) {
     if (type == StreamSocket) {
         if (src || addrlen) {
-            return -EISCONN;
+            return EISCONN;
         }
     } else if (type == DatagramSocket) {
         if (src || addrlen) {
-            return -EOPNOTSUPP;
+            return EOPNOTSUPP;
         }
     }
 
     if (!m_connected) {
         Log::Warning("LocalSocket::SendTo: LocalSocket not connected, peer set? %Y", peer);
-        return -ENOTCONN;
+        return ENOTCONN;
     }
 
     if (type == StreamSocket && (flags & MSG_DONTWAIT) && outbound->Pos() + len >= STREAM_MAX_BUFSIZE) {
-        return -EAGAIN;
+        return EAGAIN;
     } else
         while (type == StreamSocket && outbound->Pos() + len >= STREAM_MAX_BUFSIZE) {
             Scheduler::Yield();
         }
 
-    int64_t written = outbound->Write(buffer, len);
+    int64_t written = TRY_OR_ERROR(outbound->Write(buffer, len));
 
     if (peer && peer->CanRead()) {
         acquireLock(&peer->m_watcherLock);

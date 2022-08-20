@@ -11,10 +11,11 @@
 #include <Scheduler.h>
 #include <IOPorts.h>
 
+extern uint64_t usSinceBoot = 0; // System uptime in microseconds
+
 namespace Timer {
 int frequency = 1000;         // Timer frequency
 uint64_t ticks = 0; // System uptime in ticks since the timer was initialized
-uint64_t uptimeUs = 0; // System uptime in microseconds
 long pendingTicks = 0; // If the sleep queue is locked add ticks here
 
 lock_t sleepQueueLock = 0;
@@ -86,8 +87,8 @@ void TimerEvent::Dispatch() {
     releaseLock(&lock);
 }
 
-uint64_t GetSystemUptime() { return uptimeUs / 1000000; }
-uint64_t UsecondsSinceBoot() { return uptimeUs; }
+uint64_t GetSystemUptime() { return usSinceBoot / 1000000; }
+uint64_t UsecondsSinceBoot() { return usSinceBoot; }
 uint64_t GetTicks() { return ticks; }
 
 uint32_t GetFrequency() { return frequency; }
@@ -96,8 +97,8 @@ inline uint64_t UsToTicks(long us) { return us * frequency / 1000000; }
 
 timeval GetSystemUptimeStruct() {
     timeval tval;
-    tval.tv_sec = uptimeUs / 1000000;
-    tval.tv_usec = uptimeUs - tval.tv_sec * 1000000;
+    tval.tv_sec = usSinceBoot / 1000000;
+    tval.tv_usec = usSinceBoot - tval.tv_sec * 1000000;
     return tval;
 }
 
@@ -113,15 +114,15 @@ void SleepCurrentThread(timeval& time) { Thread::Current()->Sleep(time.tv_sec * 
 void Wait(long ms) {
     assert(ms > 0);
 
-    ms = ms * 1000 + uptimeUs;
-    while (uptimeUs <= static_cast<unsigned long>(ms))
+    ms = ms * 1000 + usSinceBoot;
+    while (usSinceBoot <= static_cast<unsigned long>(ms))
         asm volatile("pause");
 }
 
 // Timer handler
 void Handler(void*, RegisterContext* r) {
     ticks++;
-    __atomic_store_n(&uptimeUs, ticks * 1000000 / frequency, __ATOMIC_RELAXED);
+    __atomic_store_n(&usSinceBoot, ticks * 1000000 / frequency, __ATOMIC_RELAXED);
 
     pendingTicks++;
     if (!(acquireTestLock(&sleepQueueLock))) {

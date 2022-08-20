@@ -16,8 +16,8 @@ if(NOT CMAKE_SYSTEM_NAME MATCHES Lemon)
 endif()
 
 include_directories(include)
-include_directories($ENV{LEMON_BUILDROOT}/Thirdparty/frigg/include)
-include_directories($ENV{LEMON_BUILDROOT}/Thirdparty/cxxshim/stage2/include)
+include_directories($ENV{LEMON_BUILDROOT}/thirdparty/frigg/include)
+include_directories($ENV{LEMON_BUILDROOT}/thirdparty/cxxshim/stage2/include)
 
 if("${LEMON_ARCH}" STREQUAL "x86_64")
     include_directories(include/Arch/x86_64)
@@ -49,7 +49,6 @@ set(KERNEL_SRC
     src/Device.cpp
     src/Debug.cpp
     src/Hash.cpp
-    src/Kernel.cpp
     src/Lemon.cpp
     src/Lock.cpp
     src/Logging.cpp
@@ -59,6 +58,7 @@ set(KERNEL_SRC
     src/SharedMemory.cpp
     src/Streams.cpp
     src/String.cpp
+    src/UserIO.cpp
 
     src/Audio/Audio.cpp
 
@@ -106,6 +106,11 @@ set(KERNEL_SRC
     src/TTY/PTY.cpp
 
     src/USB/XHCI.cpp
+
+    src/sys/le_core.cpp
+    src/sys/le_mm.cpp
+    src/sys/sys_vfs.cpp
+    src/sys/syscall.cpp
 )
 
 set(KERNEL_SRC_x86_64
@@ -126,7 +131,6 @@ set(KERNEL_SRC_x86_64
     src/Arch/x86_64/SSP.cpp
     src/Arch/x86_64/StringSafe.cpp
     src/Arch/x86_64/Symbols.cpp
-    src/Arch/x86_64/Syscalls.cpp
     src/Arch/x86_64/Thread.cpp
     src/Arch/x86_64/Timer.cpp
     src/Arch/x86_64/TSS.cpp
@@ -142,10 +146,34 @@ set(KERNEL_SRC_x86_64
 
 add_link_options(-z max-page-size=0x1000 -ffreestanding -nostdlib)
 
-add_executable(kernel.sys ${KERNEL_SRC} ${KERNEL_SRC_x86_64})
-target_link_options(kernel.sys PRIVATE -T ${CMAKE_CURRENT_SOURCE_DIR}/linkscript-x86_64.ld)
+add_library(hiraku SHARED hiraku/syscalls.cpp)
+target_compile_options(hiraku PRIVATE -fPIC -nostdlib)
+target_include_directories(hiraku PRIVATE $ENV{LEMON_BUILDROOT}/lib/lemon/include)
 
-add_subdirectory(Modules)
+add_library(kernel_obj OBJECT ${KERNEL_SRC} ${KERNEL_SRC_x86_64})
+
+add_custom_command(
+    OUTPUT hiraku-embed.o
+    DEPENDS hiraku
+    COMMAND objcopy -I binary -O elf64-x86-64 $<TARGET_FILE:hiraku> --rename-section .data=.hiraku hiraku-embed.o 
+    VERBATIM
+)
+
+add_custom_command(
+    OUTPUT ksyms.asm
+    DEPENDS kernel_obj
+    COMMAND $ENV{LEMON_BUILDROOT}/scripts/genkernelsyms.py ksyms.asm $<TARGET_OBJECTS:kernel_obj>
+    VERBATIM
+)
+
+add_executable(kernel.sys
+    src/Kernel.cpp ksyms.asm hiraku-embed.o $<TARGET_OBJECTS:kernel_obj>
+)
+target_link_options(kernel.sys PRIVATE 
+    -T ${CMAKE_CURRENT_SOURCE_DIR}/linkscript-x86_64.ld
+)
+
+add_subdirectory(modules)
 
 install(TARGETS kernel.sys
     RUNTIME DESTINATION lemon)

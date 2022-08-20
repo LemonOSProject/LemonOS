@@ -41,6 +41,13 @@ SECTIONS
         _data = .;
         *(.data)
         . = ALIGN(4096);
+        _user_shared_data = .;
+        *(.user_shared_data)
+        _hiraku = .;
+        *(.hiraku)
+        _hiraku_end = .;
+        _user_shared_data_end = .;
+        . = ALIGN(4096);
    }
 
    .eh_frame : AT(ADDR(.eh_frame) - KERNEL_VMA)

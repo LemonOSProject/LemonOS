@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ABI/Audio.h>
+#include <abi/Audio.h>
 
 #include <Device.h>
 
@@ -29,7 +29,7 @@ public:
     virtual int OutputSampleRate(void* output) const = 0;
     virtual int OutputSetNumberOfChannels(int channels) = 0;
 
-    virtual int WriteSamples(void* output, uint8_t* buffer, size_t size, bool async) = 0;
+    virtual int WriteSamples(void* output, UIOBuffer* buffer, size_t size, bool async) = 0;
 private:
 
 };

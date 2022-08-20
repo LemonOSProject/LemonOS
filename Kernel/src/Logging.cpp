@@ -1,6 +1,10 @@
 #include <Logging.h>
 
+#include <Timer.h>
+
 #include <Device.h>
+#include <Error.h>
+#include <Errno.h>
 #include <Fs/Filesystem.h>
 #include <MM/KMalloc.h>
 #include <TTY/PTY.h>
@@ -26,7 +30,7 @@ class LogDevice : public Device {
 public:
     LogDevice(char* name) : Device(name, DeviceTypeKernelLog) { flags = FS_NODE_FILE; }
 
-    ssize_t Read(size_t offset, size_t size, uint8_t* buffer) {
+    ErrorOr<ssize_t> Read(size_t offset, size_t size, UIOBuffer* buffer) {
         if (!logBuffer)
             return 0;
         if (offset > logBufferPos)
@@ -34,22 +38,32 @@ public:
 
         if (size + offset > logBufferPos)
             size = logBufferPos - offset;
-        memcpy(buffer, logBuffer + offset, size);
+
+        if(buffer->Write((uint8_t*)logBuffer + offset, size)) {
+            return EFAULT;
+        }
 
         return size;
     }
 
-    ssize_t Write(size_t offset, size_t size, uint8_t* buffer) {
-        WriteN((char*)buffer, size);
+    ErrorOr<ssize_t> Write(size_t offset, size_t size, UIOBuffer* buffer) {
+        char* data = new char[size];
+        if(buffer->Read((uint8_t*)data, size)) {
+            delete[] data;
+            return EFAULT;
+        }
 
+        WriteN(data, size);
+
+        delete[] data;
         return size;
     }
 
-    int Ioctl(uint64_t cmd, uint64_t arg) {
+    ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) {
         if (cmd == TIOCGWINSZ)
             return 0; // Pretend to be a terminal
         else
-            return -1;
+            return ::Error{EINVAL};
     }
 };
 

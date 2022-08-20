@@ -134,7 +134,7 @@ namespace Network {
         flags = FS_NODE_DIRECTORY;
     }
 
-    int NetFS::ReadDir(DirectoryEntry* dirent, uint32_t index){
+    ErrorOr<int> NetFS::ReadDir(DirectoryEntry* dirent, uint32_t index){
         if(index == 0){
             strcpy(dirent->name, ".");
 
@@ -159,7 +159,7 @@ namespace Network {
         return 1;
     }
 
-    FsNode* NetFS::FindDir(const char* name){
+    ErrorOr<FsNode*> NetFS::FindDir(const char* name){
         if(strcmp(name, ".") == 0){
             return this;
         } else if(strcmp(name, "..") == 0){
@@ -172,7 +172,7 @@ namespace Network {
             }
         }
 
-        return nullptr;
+        return Error{ENOENT};
     }
 
     void NetFS::RegisterAdapter(NetworkAdapter* adapter){

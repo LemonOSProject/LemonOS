@@ -7,7 +7,6 @@
 #include <CPU.h>
 #include <Debug.h>
 #include <ELF.h>
-#include <Fs/Initrd.h>
 #include <IDT.h>
 #include <List.h>
 #include <Lock.h>
@@ -375,6 +374,9 @@ void DoSwitch(CPU* cpu) {
 
     asm volatile("wrmsr" ::"a"(cpu->currentThread->fsBase & 0xFFFFFFFF) /*Value low*/,
                  "d"((cpu->currentThread->fsBase >> 32) & 0xFFFFFFFF) /*Value high*/, "c"(0xC0000100) /*Set FS Base*/);
+
+    UpdateUserTCB(cpu->currentThread->fsBase);
+    UpdateUserGS(cpu->currentThread->gsBase);
 
     TSS::SetKernelStack(&cpu->tss, (uintptr_t)cpu->currentThread->kernelStack);
 

@@ -7,16 +7,16 @@ UNIXPipe::UNIXPipe(int _end, FancyRefPtr<DataStream> stream)
     : end(static_cast<decltype(end)>(_end)), stream(std::move(stream)){
 }
 
-ssize_t UNIXPipe::Read(size_t off, size_t size, uint8_t* buffer){
+ErrorOr<ssize_t> UNIXPipe::Read(size_t off, size_t size, UIOBuffer* buffer){
     if(end != ReadEnd){
-        return -ESPIPE;
+        return Error{ESPIPE};
     }
 
     if(!widowed && size > stream->Pos()){
         FilesystemBlocker bl(this, size);
 
         if(Thread::Current()->Block(&bl)){
-            return -EINTR;
+            return Error{EINTR};
         }
     }
 
@@ -27,15 +27,15 @@ ssize_t UNIXPipe::Read(size_t off, size_t size, uint8_t* buffer){
     return stream->Read(buffer, size);
 }
 
-ssize_t UNIXPipe::Write(size_t off, size_t size, uint8_t* buffer){
+ErrorOr<ssize_t> UNIXPipe::Write(size_t off, size_t size, UIOBuffer* buffer){
     if(end != WriteEnd){
-        return -ESPIPE;
+        return Error{ESPIPE};
     } else if(widowed || !otherEnd){
         Thread::Current()->Signal(SIGPIPE); // Send SIGPIPE on broken pipe
-        return -EPIPE;
+        return Error{EPIPE};
     }
 
-    ssize_t ret = stream->Write(buffer, size);
+    ssize_t ret = TRY_OR_ERROR(stream->Write(buffer, size));
 
     {
         ScopedSpinLock acq(otherEnd->watchingLock);

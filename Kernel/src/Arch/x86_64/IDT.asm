@@ -137,7 +137,7 @@ ISR_ERROR_CODE 30
 ISR_NO_ERROR_CODE 31
 ISR_NO_ERROR_CODE 32
 
-extern SyscallHandler ; Syscall
+extern syscall_handler ; Syscall
 global isr0x69
 isr0x69:
     cli
@@ -145,7 +145,7 @@ isr0x69:
     pushaq
     mov rdi, rsp
     xor rbp, rbp
-    call SyscallHandler
+    call syscall_handler
     ISR_COMMON_EXIT
 
 %assign num 48

@@ -74,7 +74,7 @@ namespace Network::UDP{
         return 0;
     }
 
-    int SendUDP(void* data, size_t length, IPv4Address& source, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter){
+    int SendUDP(UIOBuffer* data, size_t length, IPv4Address& source, IPv4Address& destination, BigEndian<uint16_t> sourcePort, BigEndian<uint16_t> destinationPort, NetworkAdapter* adapter){
 		if(length > 1518){
 			return -EMSGSIZE;
 		}
@@ -87,7 +87,9 @@ namespace Network::UDP{
 		header->length = sizeof(UDPHeader) + length;
 		header->checksum = 0;
 
-		memcpy(header->data, data, length);
+        if(data->Read(header->data, length)) {
+            return EFAULT;
+        }
 
 		//header->checksum = CaclulateChecksum(header, sizeof(UDPHeader));
 
@@ -188,14 +190,14 @@ namespace Network::UDP{
         return -EOPNOTSUPP;
     }
 
-    int64_t UDPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
+    ErrorOr<int64_t> UDPSocket::ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
         acquireLock(&packetsLock);
         if(packets.get_length() <= 0){
             releaseLock(&packetsLock);
             if(flags & MSG_DONTWAIT){
-                return -EAGAIN; // Don't wait
+                return EAGAIN; // Don't wait
             } else if(FilesystemBlocker bl(this); Thread::Current()->Block(&bl)){
-                return -EINTR; // We were interrupted
+                return EINTR; // We were interrupted
             }
         }
 
@@ -214,14 +216,16 @@ namespace Network::UDP{
         }
 
         size_t finalLength = MIN(len, pkt.length);
-        memcpy(buffer, pkt.data, finalLength);
+        if(buffer->Write(pkt.data, finalLength)) {
+            return EFAULT;
+        }
 
         delete[] pkt.data; // Free buffer
 
         return finalLength;
     }
 
-    int64_t UDPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* dest, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
+    ErrorOr<int64_t> UDPSocket::SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* dest, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
         IPv4Address sendIPAddress;
         BigEndian<uint16_t> destPort;
 
@@ -230,12 +234,12 @@ namespace Network::UDP{
 
             if(dest->family != InternetProtocol){
                 Log::Warning("[UDPSocket] Invalid address family (not IPv4)");
-                return -EINVAL;
+                return EINVAL;
             }
             
             if(addrlen < sizeof(sockaddr_in)){
                 Log::Warning("[UDPSocket] Invalid address length");
-                return -EINVAL;
+                return EINVAL;
             }
 
             sendIPAddress = inetAddr->sin_addr.s_addr;

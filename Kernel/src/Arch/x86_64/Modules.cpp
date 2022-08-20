@@ -40,8 +40,12 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
     ELF64Section* symTab = nullptr;    // Symbol table
 
     for (unsigned i = 0; i < shNum; i++) {
-        ssize_t r = fs::Read(file, shOff + i * shEntSize, sizeof(ELF64Section), &sections[i]);
-        assert(r == sizeof(ELF64Section));
+        auto r = fs::Read(file, shOff + i * shEntSize, sizeof(ELF64Section), &sections[i]);
+        if(r.HasError()) {
+            return r.err.code;
+        }
+
+        assert(r.Value() == sizeof(ELF64Section));
 
         if (sections[i].type == SHT_STRTAB) {
             if (i == shStrIndex) {
@@ -66,9 +70,14 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
 
     char* sectionStringTable = new char[shStrTab->size + 1];
     {
-        long len = fs::Read(file, shStrTab->off, shStrTab->size, sectionStringTable);
-        assert(len == shStrTab->size);
-        sectionStringTable[len] = 0;
+        auto r = fs::Read(file, shStrTab->off, shStrTab->size, sectionStringTable);
+        if(r.HasError()) {
+            delete[] sectionStringTable;
+            return r.err.code;
+        }
+
+        assert(r.Value() == shStrTab->size);
+        sectionStringTable[r.Value()] = 0;
     }
 
     for (unsigned i = 0; i < shNum; i++) {
@@ -93,16 +102,25 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
 
     char* symStringTable = new char[symStrTab->size + 1];
     {
-        long len = fs::Read(file, symStrTab->off, symStrTab->size, symStringTable);
-        assert(len == symStrTab->size);
-        symStringTable[len] = 0;
+        auto r = fs::Read(file, symStrTab->off, symStrTab->size, symStringTable);
+        if(r.HasError()) {
+            delete[] symStringTable;
+            delete[] sectionStringTable;
+            delete[] sections;
+        }
+
+        assert(r.Value() == symStrTab->size);
+        symStringTable[r.Value()] = 0;
     }
 
     unsigned symCount = symTab->size / sizeof(ELF64Symbol);
 
     long moduleInfoIndex = -1;
     ELF64Symbol* symbols = new ELF64Symbol[symCount + 1];
-    assert(fs::Read(file, symTab->off, symTab->size, symbols) == symTab->size);
+    auto r = fs::Read(file, symTab->off, symTab->size, symbols);
+    assert(!r.HasError());
+    assert(r.Value() == symTab->size);
+
     {
         for (unsigned i = 0; i < symCount; i++) {
             ELF64Symbol& symbol = symbols[i];
@@ -221,8 +239,8 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
             memset(reinterpret_cast<void*>(segmentBase), 0, section.size);
 
             if (section.type == SHT_PROGBITS) {
-                ssize_t read = fs::Read(file, section.off, section.size, reinterpret_cast<void*>(segmentBase));
-                assert(read == section.size);
+                auto r = fs::Read(file, section.off, section.size, reinterpret_cast<void*>(segmentBase));
+                assert(!r.HasError() && r.Value() == section.size);
 
                 Log::Debug(debugLevelModules, DebugLevelVerbose,
                            "[Module] ELF section '%s' loaded! Index: %d Write? %Y", sectionStringTable + section.name,
@@ -256,10 +274,10 @@ int LoadModuleSegments(Module* module, FsNode* file, elf64_header_t& header) {
 
             size_t offset = 0;
             while (offset < section.size) {
-                ssize_t read = fs::Read(file, section.off + offset, sizeof(ELF64RelocationA), &relocation);
-                assert(read == sizeof(ELF64RelocationA));
+                auto r = fs::Read(file, section.off + offset, sizeof(ELF64RelocationA), &relocation);
+                assert(!r.HasError() && r.Value() == sizeof(ELF64RelocationA));
 
-                offset += read;
+                offset += r.Value();
 
                 unsigned symIndex = ELF64_R_SYM(relocation.info);
                 assert(symIndex < symCount);
@@ -369,14 +387,19 @@ ModuleLoadStatus LoadModule(const char* path) {
     }
 
     ErrorOr<UNIXOpenFile*> handle = nullptr;
-    if (!(handle = fs::Open(node))) { // Make sure we open a handle so the node stays in memory
+    if ((handle = fs::Open(node)).HasError()) { // Make sure we open a handle so the node stays in memory
         Log::Error("Failed to open handle for module '%s'", path);
         return {.status = ModuleLoadStatus::ModuleNotFound, .code = 0};
     }
 
     elf64_header_t header;
-    long len = fs::Read(node, 0, sizeof(elf64_header_t), &header); // Attempt to read ELF header
+    auto result = fs::Read(node, 0, sizeof(elf64_header_t), &header); // Attempt to read ELF header
+    if(result.HasError()) {
+        Log::Error("Error %d reading module %s", result.err.code, path);
+        return {.status = ModuleLoadStatus::ModuleInvalid, .code = result.err.code};
+    }
 
+    long len = result.Value();
     if (len < sizeof(elf64_header_t) || !VerifyELF(&header)) { // Verify ELF header
         Log::Info("Module '%s' is not in ELF format!", path);
         return {.status = ModuleLoadStatus::ModuleInvalid, .code = 0};

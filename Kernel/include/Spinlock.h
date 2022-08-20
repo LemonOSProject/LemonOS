@@ -12,11 +12,9 @@ typedef volatile int lock_t;
 #define acquireLock(lock)                                                                                              \
     ({                                                                                                                 \
         unsigned i = 0;                                                                                                \
-        while (__atomic_exchange_n(lock, 1, __ATOMIC_ACQUIRE) && ++i < 0x2FFFFFFF)                                     \
+        while (__atomic_exchange_n(lock, 1, __ATOMIC_ACQUIRE) && ++i < 0xFFFFFFF)                                     \
             asm("pause");                                                                                              \
-        if (i >= 0x2FFFFFFF) {                                                                                         \
-            assert(!"Deadlock!");                                                                                      \
-        }                                                                                                              \
+        assert(i < 0xFFFFFFF);                                                                                        \
     })
 
 #define acquireLockIntDisable(lock)                                                                                    \
@@ -24,11 +22,9 @@ typedef volatile int lock_t;
         unsigned i = 0;                                                                                                \
         assert(CheckInterrupts());                                                                                     \
         asm volatile("cli");                                                                                           \
-        while (__atomic_exchange_n(lock, 1, __ATOMIC_ACQUIRE) && ++i < 0x2FFFFFFF)                                     \
+        while (__atomic_exchange_n(lock, 1, __ATOMIC_ACQUIRE) && ++i < 0xFFFFFFF)                                     \
             asm volatile("sti; pause; cli");                                                                           \
-        if (i >= 0x2FFFFFFF) {                                                                                         \
-            assert(!"Deadlock!");                                                                                      \
-        }                                                                                                              \
+        assert(i < 0xFFFFFFF);                                                                                        \
     })
 
 #else

@@ -1,6 +1,6 @@
 #include <PS2.h>
 
-#include <ABI/Keyboard.h>
+#include <abi/Keyboard.h>
 
 #include <APIC.h>
 #include <CString.h>
@@ -259,7 +259,7 @@ public:
         SetDeviceName("PS/2 Keyboard Device");
     }
 
-    ssize_t Read(size_t offset, size_t size, uint8_t* buffer) {
+    ErrorOr<ssize_t> Read(size_t offset, size_t size, uint8_t* buffer) {
         if (size > keyCount)
             size = keyCount;
 
@@ -289,7 +289,7 @@ public:
         SetDeviceName("PS/2 Mouse Device");
     }
 
-    ssize_t Read(size_t offset, size_t size, uint8_t* buffer) {
+    ErrorOr<ssize_t> Read(size_t offset, size_t size, uint8_t* buffer) {
         if (size < sizeof(MousePacket))
             return 0;
 

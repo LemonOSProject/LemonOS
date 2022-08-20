@@ -8,8 +8,8 @@ class UNIXPipe final : public FsNode {
 public:
     UNIXPipe(int end, FancyRefPtr<DataStream> stream);
 
-    ssize_t Read(size_t off, size_t size, uint8_t* buffer);
-    ssize_t Write(size_t off, size_t size, uint8_t* buffer);
+    ErrorOr<ssize_t> Read(size_t off, size_t size, UIOBuffer* buffer);
+    ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer);
 
     void Watch(FilesystemWatcher& watcher, int events);
     void Unwatch(FilesystemWatcher& watcher);

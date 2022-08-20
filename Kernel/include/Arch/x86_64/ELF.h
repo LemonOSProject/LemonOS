@@ -78,6 +78,8 @@ typedef struct {
 	uint64_t phEntrySize;
 	uint64_t phNum;
 
+	elf64_dynamic_t* dynamic = nullptr;
+
 	char* linkerPath;
 } elf_info_t;
 
@@ -85,9 +87,20 @@ typedef struct {
 #define ELF64_R_TYPE(i) ((i) & 0xffffffffL) // Relocation info to relocation type
 #define ELF64_R_INFO(s, t) (((s) << 32) + ((t) & 0xffffffffL)) // Create relocation info value out of index s and type t
 
+#define ET_NONE	0 // None
+#define ET_REL	1 // Relocatable
+#define ET_EXEC	2 // Executable file
+#define ET_DYN	3 // Shared object file
+#define ET_CORE	4 // Core
+#define	ET_NUM	5 // Number of defined types
+#define ET_LOOS	0xfe00 // OS-specific range start
+#define ET_HIOS	0xfeff // OS-specific range end
+#define ET_LOPROC 0xff00 // Processor-specific range start
+#define ET_HIPROC 0xffff // Processor-specific range end
+
 #define DT_NULL 0
 #define DT_NEEDED 1
-#define DT_PTRELSZ 2 // Size of the PLT relocaiton entries
+#define DT_PLTRELSZ 2 // Size of the PLT relocaiton entries
 #define DT_PLTGOT 3 // Address associated with the PLT
 #define DT_HASH 4 // Symbol hashtable address
 #define DT_STRTAB 5 // Dyanmic String Table
@@ -166,6 +179,7 @@ typedef struct {
 // Relocation types
 #define ELF64_R_X86_64_NONE 0
 #define ELF64_R_X86_64_64 1 // symbol + addend
+#define ELF64_R_X86_64_JUMP_SLOT 7
 #define ELF64_R_X86_64_32 10 // symbol (32-bit) + addend
 #define ELF64_R_X86_64_32S 11 // symbol (32-bit, sign extended) + addend
 

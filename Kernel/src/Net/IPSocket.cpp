@@ -14,11 +14,11 @@ IPSocket::~IPSocket(){
 	
 }
 
-int IPSocket::Ioctl(uint64_t cmd, uint64_t arg){
+ErrorOr<int> IPSocket::Ioctl(uint64_t cmd, uint64_t arg){
 	if(adapter){
 		return adapter->Ioctl(cmd, arg); // Adapter ioctls
 	} else {
-		return -ENODEV; // We are not bound to an interface
+		return Error{ENODEV}; // We are not bound to an interface
 	}
 }
 
@@ -74,12 +74,12 @@ int IPSocket::Listen(int backlog){
 	return -ENOSYS;
 }
     
-int64_t IPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
+ErrorOr<int64_t> IPSocket::ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen, const void* ancillary, size_t ancillaryLen){
 	if(flags & SOCK_NONBLOCK && !pQueue.get_length()){
-		return -EAGAIN;
+		return EAGAIN;
 	}
 
-	return -ENOSYS;
+	return ENOSYS;
 
 	while(!pQueue.get_length()) Scheduler::Yield();
 
@@ -88,8 +88,8 @@ int64_t IPSocket::ReceiveFrom(void* buffer, size_t len, int flags, sockaddr* src
 	}
 }
 
-int64_t IPSocket::SendTo(void* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
-	return -ENOSYS;
+ErrorOr<int64_t> IPSocket::SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
+	return ENOSYS;
 }
 
 int IPSocket::SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength){

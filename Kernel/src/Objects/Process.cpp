@@ -6,17 +6,41 @@
 #include <CPU.h>
 #include <ELF.h>
 #include <IDT.h>
+#include <Panic.h>
 #include <SMP.h>
 #include <Scheduler.h>
 #include <String.h>
-#include <Panic.h>
+#include <hiraku.h>
+
+#include <abi/peb.h>
 
 extern uint8_t signalTrampolineStart[];
 extern uint8_t signalTrampolineEnd[];
 
+extern uint8_t _user_shared_data[];
+extern uint8_t _hiraku[];
+extern uint8_t _hiraku_end[];
+extern uint8_t _user_shared_data_end[];
+
+// the user_shared_data section is aligned to page size.
+class UserSharedData : public VMObject {
+public:
+    UserSharedData()
+        : VMObject(PAGE_COUNT_4K(_user_shared_data_end - _user_shared_data) << PAGE_SHIFT_4K, false, true) {}
+
+    void MapAllocatedBlocks(uintptr_t base, PageMap* pMap) {
+        Memory::MapVirtualMemory4K(((uintptr_t)_user_shared_data - KERNEL_VIRTUAL_BASE), base, size >> PAGE_SHIFT_4K,
+                                   PAGE_USER | PAGE_PRESENT, pMap);
+    }
+
+    [[noreturn]] VMObject* Clone() { assert(!"user_shared_data VMO cannot be cloned!"); }
+};
+lock_t userSharedDataLock = 0;
+FancyRefPtr<UserSharedData> userSharedDataVMO = nullptr;
+
 void IdleProcess();
 
-FancyRefPtr<Process> Process::CreateIdleProcess(const char* name){
+FancyRefPtr<Process> Process::CreateIdleProcess(const char* name) {
     FancyRefPtr<Process> proc = new Process(Scheduler::GetNextPID(), name, "/", nullptr);
 
     proc->m_mainThread->registers.rip = reinterpret_cast<uintptr_t>(IdleProcess);
@@ -32,7 +56,7 @@ FancyRefPtr<Process> Process::CreateIdleProcess(const char* name){
     return proc;
 }
 
-FancyRefPtr<Process> Process::CreateKernelProcess(void* entry, const char* name, Process* parent){
+FancyRefPtr<Process> Process::CreateKernelProcess(void* entry, const char* name, Process* parent) {
     FancyRefPtr<Process> proc = new Process(Scheduler::GetNextPID(), name, "/", parent);
 
     proc->m_mainThread->registers.rip = reinterpret_cast<uintptr_t>(entry);
@@ -43,13 +67,14 @@ FancyRefPtr<Process> Process::CreateKernelProcess(void* entry, const char* name,
     return proc;
 }
 
-FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& argv, const Vector<String>& envp, const char* execPath, Process* parent){
+FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& argv, const Vector<String>& envp,
+                                               const char* execPath, Process* parent) {
     if (!VerifyELF(elf)) {
         return nullptr;
     }
 
     const char* name = "unknown";
-    if(argv.size() >= 1){
+    if (argv.size() >= 1) {
         name = argv[0].c_str();
     }
     FancyRefPtr<Process> proc = new Process(Scheduler::GetNextPID(), name, "/", parent);
@@ -63,7 +88,8 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
 
     elf_info_t elfInfo = LoadELFSegments(proc.get(), elf, 0);
 
-    MappedRegion* stackRegion = proc->addressSpace->AllocateAnonymousVMObject(0x400000, 0, false); // 4MB max stacksize
+    MappedRegion* stackRegion =
+        proc->addressSpace->AllocateAnonymousVMObject(0x400000, 0x7000000000, false); // 4MB max stacksize
 
     thread->stack = reinterpret_cast<void*>(stackRegion->base); // 4MB stack size
     thread->registers.rsp = (uintptr_t)thread->stack + 0x400000;
@@ -73,6 +99,15 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
     stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x1000, proc->GetPageMap());
     stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x2000, proc->GetPageMap());
     stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x3000, proc->GetPageMap());
+
+    proc->MapUserSharedData();
+
+    proc->pebRegion = proc->addressSpace->AllocateAnonymousVMObject(
+        PAGE_COUNT_4K(sizeof(ProcessEnvironmentBlock)) << PAGE_SHIFT_4K, 0x7000800000, false);
+    proc->pebRegion->vmObject->Hit(proc->pebRegion->base, 0, proc->GetPageMap());
+
+    thread->gsBase = proc->pebRegion->Base();
+    Log::Info("pebbase %x", thread->gsBase);
 
     thread->registers.rip = proc->LoadELF(&thread->registers.rsp, elfInfo, argv, envp, execPath);
     if (!thread->registers.rip) {
@@ -102,15 +137,13 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
         Log::Warning("Failed to find /dev/kernellog");
     }
 
-    proc->MapSignalTrampoline();
-
     Scheduler::RegisterProcess(proc);
     return proc;
 }
 
 Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process* parent)
     : m_pid(pid), m_parent(parent) {
-    if(_workingDir){
+    if (_workingDir) {
         strncpy(workingDirPath, _workingDir, PATH_MAX);
     } else {
         strcpy(workingDirPath, "/");
@@ -120,7 +153,7 @@ Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process*
     assert(wdNode);
     assert(wdNode->IsDirectory());
 
-    if(auto openFile = wdNode->Open(0); !openFile.HasError()) {
+    if (auto openFile = wdNode->Open(0); !openFile.HasError()) {
         workingDir = std::move(openFile.Value());
     } else {
         assert(!openFile.HasError());
@@ -152,11 +185,14 @@ Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process*
     m_handles.add_back(HANDLE_NULL); // stderr
 }
 
-uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Vector<String>& argv, const Vector<String>& envp, const char* execPath) {
+uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Vector<String>& argv,
+                           const Vector<String>& envp, const char* execPath) {
     uintptr_t rip = elfInfo.entry;
+    uintptr_t linkerBaseAddress = 0x7FC0000000; // Linker base address
+    elf_info_t linkerELFInfo;
+
     if (elfInfo.linkerPath) {
         // char* linkPath = elfInfo.linkerPath;
-        uintptr_t linkerBaseAddress = 0x7FC0000000; // Linker base address
 
         FsNode* node = fs::ResolvePath("/lib/ld.so");
         if (!node) {
@@ -171,23 +207,84 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
             return 0;
         }
 
-        elf_info_t linkerELFInfo = LoadELFSegments(this, linkerElf, linkerBaseAddress);
+        linkerELFInfo = LoadELFSegments(this, linkerElf, linkerBaseAddress);
         rip = linkerELFInfo.entry;
 
         kfree(linkerElf);
     }
 
-    char* tempArgv[argv.size()];
-    char* tempEnvp[envp.size()];
-
-    asm("cli");
-    asm volatile("mov %%rax, %%cr3" ::"a"(this->GetPageMap()->pml4Phys));
+    // char* tempArgv[argv.size()];
+    // char* tempEnvp[envp.size()];
 
     // ABI Stuff
     uint64_t* stack = (uint64_t*)(*stackPointer);
 
+    asm("cli");
+    asm volatile("mov %%rax, %%cr3" ::"a"(this->GetPageMap()->pml4Phys));
+
+    ProcessEnvironmentBlock* peb = (ProcessEnvironmentBlock*)m_mainThread->gsBase;
+    peb->self = peb;
+    peb->executableBaseAddress = 0x80000000;
+    peb->sharedDataBase = userSharedDataRegion->Base();
+    peb->sharedDataSize = userSharedDataRegion->Size();
+    peb->hirakuBase = userSharedDataRegion->Base() + (_hiraku - _user_shared_data);
+    peb->hirakuSize = (_hiraku_end - _hiraku);
+
+    if (linkerELFInfo.dynamic) {
+        elf64_dynamic_t* dynamic = linkerELFInfo.dynamic;
+        elf64_symbol_t* symtab = nullptr;
+        elf64_rela_t* plt = nullptr;
+        size_t pltSz = 0;
+        char* strtab = nullptr;
+
+        while (dynamic->tag != DT_NULL) {
+            if (dynamic->tag == DT_PLTRELSZ) {
+                pltSz = dynamic->val;
+            } else if (dynamic->tag == DT_STRTAB) {
+                strtab = (char*)(linkerBaseAddress + dynamic->ptr);
+            } else if (dynamic->tag == DT_SYMTAB) {
+                symtab = (elf64_symbol_t*)(linkerBaseAddress + dynamic->ptr);
+            } else if (dynamic->tag == DT_JMPREL) {
+                plt = (elf64_rela_t*)(linkerBaseAddress + dynamic->ptr);
+            }
+
+            dynamic++;
+        }
+
+        assert(plt && symtab && strtab);
+
+        elf64_rela_t* pltEnd = (elf64_rela_t*)((uintptr_t)plt + pltSz);
+        while (plt < pltEnd) {
+            if (ELF64_R_TYPE(plt->info) == ELF64_R_X86_64_JUMP_SLOT) {
+                long symIndex = ELF64_R_SYM(plt->info);
+                elf64_symbol_t sym = symtab[symIndex];
+
+                if (!sym.name) {
+                    plt++;
+                    continue;
+                }
+
+                int binding = ELF64_SYM_BIND(sym.info);
+                assert(binding == STB_WEAK);
+
+                char* name = strtab + sym.name;
+                if (auto* s = ResolveHirakuSymbol(name)) {
+                    Log::Info("%x", peb->hirakuBase + s->address);
+
+                    uintptr_t* p = (uintptr_t*)(linkerBaseAddress + plt->offset);
+
+                    *p = peb->hirakuBase + s->address + plt->addend;
+                } else {
+                    Log::Error("Failed to resolve program interpreter symbol %s", name);
+                }
+            }
+
+            plt++;
+        }
+    }
+
     char* stackStr = (char*)stack;
-    for (int i = 0; i < argv.size(); i++) {
+    /*for (int i = 0; i < argv.size(); i++) {
         stackStr -= argv[i].Length() + 1;
         tempArgv[i] = stackStr;
         strcpy((char*)stackStr, argv[i].c_str());
@@ -205,13 +302,13 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
         strcpy((char*)stackStr, execPath);
 
         execPathValue = stackStr;
-    }
+    }*/
 
     stackStr -= (uintptr_t)stackStr & 0xf; // align the stack
 
     stack = (uint64_t*)stackStr;
 
-    stack -= ((argv.size() + envp.size()) % 2); // If argc + envc is odd then the stack will be misaligned
+    // stack -= ((argv.size() + envp.size()) % 2); // If argc + envc is odd then the stack will be misaligned
 
     stack--;
     *stack = 0; // AT_NULL
@@ -228,29 +325,34 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
     stack -= sizeof(auxv_t) / sizeof(*stack);
     *((auxv_t*)stack) = {.a_type = AT_ENTRY, .a_val = elfInfo.entry}; // AT_ENTRY
 
-    if (execPath && execPathValue) {
+    stack -= sizeof(auxv_t) / sizeof(*stack);
+    *((auxv_t*)stack) = {.a_type = AT_SYSINFO_EHDR, .a_val = peb->hirakuBase}; // AT_ENTRY
+
+    /*if (execPath && execPathValue) {
         stack -= sizeof(auxv_t) / sizeof(*stack);
         *((auxv_t*)stack) = {.a_type = AT_EXECPATH, .a_val = (uint64_t)execPathValue}; // AT_EXECPATH
-    }
+    }*/
 
     stack--;
     *stack = 0; // null
 
-    stack -= envp.size();
+    /*stack -= envp.size();
     for (int i = 0; i < envp.size(); i++) {
         *(stack + i) = (uint64_t)tempEnvp[i];
-    }
+    }*/
 
     stack--;
     *stack = 0; // null
 
-    stack -= argv.size();
+    /*stack -= argv.size();
     for (int i = 0; i < argv.size(); i++) {
         *(stack + i) = (uint64_t)tempArgv[i];
-    }
+    }*/
 
     stack--;
-    *stack = argv.size(); // argc
+    *stack = 0; // argv.size(); // argc
+
+    assert(!((uintptr_t)stack & 0xf));
 
     asm volatile("mov %%rax, %%cr3" ::"a"(Scheduler::GetCurrentProcess()->GetPageMap()->pml4Phys));
     asm("sti");
@@ -303,9 +405,9 @@ void Process::Die() {
 
     // Check if we are main thread
     Thread* thisThread = Thread::Current();
-    if(thisThread != thisThread->parent->GetMainThread().get()) {
+    if (thisThread != thisThread->parent->GetMainThread().get()) {
         acquireLock(&m_processLock);
-        if(m_state != Process_Dying) {
+        if (m_state != Process_Dying) {
             // Kill the main thread
             thisThread->parent->GetMainThread()->Signal(SIGKILL);
         }
@@ -316,7 +418,8 @@ void Process::Die() {
         releaseLock(&m_processLock);
         releaseLock(&thisThread->kernelLock);
         asm volatile("sti");
-        for(;;) Scheduler::Yield();
+        for (;;)
+            Scheduler::Yield();
     }
 
     assert(m_state == Process_Running);
@@ -328,12 +431,12 @@ void Process::Die() {
 
     acquireLock(&m_processLock);
     List<FancyRefPtr<Thread>> runningThreads;
-    
+
     for (auto& thread : m_threads) {
         if (thread != thisThread && thread) {
             asm("sti");
             acquireLockIntDisable(&thread->stateLock);
-            if(thread->state == ThreadStateDying) {
+            if (thread->state == ThreadStateDying) {
                 releaseLock(&thread->stateLock);
                 asm("sti");
             }
@@ -342,12 +445,12 @@ void Process::Die() {
                 thread->state = ThreadStateZombie;
                 releaseLock(&thread->stateLock);
                 asm("sti");
-                
+
                 thread->blocker->Interrupt(); // Stop the thread from blocking
 
                 acquireLockIntDisable(&thread->stateLock);
             }
-            
+
             thread->state = ThreadStateZombie;
 
             if (!acquireTestLock(&thread->kernelLock)) {
@@ -376,14 +479,14 @@ void Process::Die() {
         Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Killing %d (%s)...", PID(), child->PID(), child->name);
         if (child->State() == Process_Running) {
             child->GetMainThread()->Signal(SIGKILL); // Kill it, burn it with fire
-            while(child->State() != Process_Dead)
+            while (child->State() != Process_Dead)
                 Scheduler::Yield(); // Wait for it to die
         } else if (child->State() == Process_Dying) {
             KernelObjectWatcher w;
             child->Watch(w, 0);
 
             bool wasInterrupted = w.Wait(); // Wait for the process to die
-            while(wasInterrupted) {
+            while (wasInterrupted) {
                 wasInterrupted = w.Wait(); // If the parent tried to interrupt us we are dying anyway
             }
         }
@@ -402,7 +505,8 @@ void Process::Die() {
         auto it = runningThreads.begin();
         while (it != runningThreads.end()) {
             FancyRefPtr<Thread> thread = *it;
-            if (!acquireTestLock(&thread->kernelLock)) { // Loop through all of the threads so we can acquire their locks
+            if (!acquireTestLock(
+                    &thread->kernelLock)) { // Loop through all of the threads so we can acquire their locks
                 acquireLockIntDisable(&thread->stateLock);
                 thread->state = ThreadStateDying;
                 thread->timeSlice = thread->timeSliceDefault = 0;
@@ -429,10 +533,11 @@ void Process::Die() {
     CPU* cpu = GetCPULocal();
     APIC::Local::SendIPI(cpu->id, ICR_DSH_OTHER, ICR_MESSAGE_TYPE_FIXED, IPI_SCHEDULE);
 
-    for(auto& t : m_threads) {
+    for (auto& t : m_threads) {
         assert(t->parent == this);
-        if(t->state != ThreadStateDying && t != thisThread) {
-            Log::Error("Thread (%s : %x) TID: %d should be dead, Current Thread (%s : %x) TID: %d", t->parent->name, t.get(), t->tid, thisThread->parent->name, thisThread, thisThread->tid);
+        if (t->state != ThreadStateDying && t != thisThread) {
+            Log::Error("Thread (%s : %x) TID: %d should be dead, Current Thread (%s : %x) TID: %d", t->parent->name,
+                       t.get(), t->tid, thisThread->parent->name, thisThread, thisThread->tid);
             KernelPanic("Thread should be dead");
         }
     }
@@ -456,7 +561,7 @@ void Process::Die() {
         asm("sti");
         acquireLockIntDisable(&other->runQueueLock);
 
-        if(other->currentThread && other->currentThread->parent == this) {
+        if (other->currentThread && other->currentThread->parent == this) {
             assert(other->currentThread->state == ThreadStateDying); // The thread state should be blocked
 
             other->currentThread = nullptr;
@@ -498,14 +603,13 @@ void Process::Die() {
         // All threads have ceased, set state to dead
         m_state = Process_Dead;
 
-        for(auto* watcher : m_watching){
+        for (auto* watcher : m_watching) {
             watcher->Signal();
-
         }
         m_watching.clear();
     }
 
-    if(m_parent && (m_parent->State() == Process_Running)){
+    if (m_parent && (m_parent->State() == Process_Running)) {
         Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Sending SIGCHILD to %s...", m_pid, m_parent->name);
         m_parent->GetMainThread()->Signal(SIGCHLD);
     }
@@ -515,7 +619,7 @@ void Process::Die() {
     Scheduler::MarkProcessForDestruction(this);
 
     bool isDyingProcess = (thisThread->parent == this);
-    if(isDyingProcess){
+    if (isDyingProcess) {
         acquireLockIntDisable(&cpu->runQueueLock);
         Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Rescheduling...", m_pid);
 
@@ -541,7 +645,7 @@ void Process::Die() {
     }
 }
 
-void Process::Start(){
+void Process::Start() {
     ScopedSpinLock acq(m_processLock);
     assert(!m_started);
 
@@ -583,7 +687,7 @@ FancyRefPtr<Process> Process::Fork() {
     newProcess->gid = gid;
 
     newProcess->m_handles.resize(m_handles.size());
-    for(unsigned i = 0; i < m_handles.size(); i++){
+    for (unsigned i = 0; i < m_handles.size(); i++) {
         newProcess->m_handles[i] = m_handles[i];
     }
 
@@ -592,7 +696,7 @@ FancyRefPtr<Process> Process::Fork() {
     return newProcess;
 }
 
-pid_t Process::CreateChildThread(uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss){
+pid_t Process::CreateChildThread(uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss) {
     pid_t threadID = m_nextThreadID++;
     Thread& thread = *m_threads.add_back(new Thread(this, threadID));
 
@@ -624,12 +728,23 @@ FancyRefPtr<Thread> Process::GetThreadFromTID_Unlocked(pid_t tid) {
     return nullptr;
 }
 
-void Process::MapSignalTrampoline(){
+void Process::MapUserSharedData() {
+    FancyRefPtr<UserSharedData> userSharedData;
+    {
+        ScopedSpinLock<true> lockUSD(userSharedDataLock);
+        if (!userSharedDataVMO) {
+            userSharedDataVMO = new UserSharedData();
+        }
+
+        userSharedData = userSharedDataVMO;
+    }
+
+    userSharedDataRegion = addressSpace->MapVMO(static_pointer_cast<VMObject>(userSharedData), 0x7000C00000, true);
+
     // Allocate space for both a siginfo struct and the signal trampoline
     m_signalTrampoline = addressSpace->AllocateAnonymousVMObject(
-        ((signalTrampolineEnd - signalTrampolineStart) + PAGE_SIZE_4K - 1) &
-            ~static_cast<unsigned>(PAGE_SIZE_4K - 1),
-        0, false);
+        ((signalTrampolineEnd - signalTrampolineStart) + PAGE_SIZE_4K - 1) & ~static_cast<unsigned>(PAGE_SIZE_4K - 1),
+        0x7000A00000, false);
     reinterpret_cast<PhysicalVMObject*>(m_signalTrampoline->vmObject.get())
         ->ForceAllocate(); // Forcibly allocate all blocks
     m_signalTrampoline->vmObject->MapAllocatedBlocks(m_signalTrampoline->Base(), GetPageMap());

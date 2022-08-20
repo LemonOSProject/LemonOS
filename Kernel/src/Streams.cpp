@@ -4,22 +4,19 @@
 #include <Logging.h>
 #include <Timer.h>
 
-int64_t Stream::Read(void* buffer, size_t len) {
-    assert(!"Stream::Read called from base class");
-
-    return -1; // We should not return but get the compiler to shut up
+ErrorOr<int64_t> Stream::ReadRaw(uint8_t* buffer, size_t len) {
+    UIOBuffer uio = UIOBuffer(buffer);
+    return Read(&uio, len);
 }
 
-int64_t Stream::Write(void* buffer, size_t len) {
-    assert(!"Stream::Write called from base class");
-
-    return -1; // We should not return but get the compiler to shut up
+ErrorOr<int64_t> Stream::WriteRaw(const uint8_t* buffer, size_t len) {
+    UIOBuffer uio = UIOBuffer((uint8_t*)buffer);
+    return Write(&uio, len);
 }
 
-int64_t Stream::Peek(void* buffer, size_t len) {
-    assert(!"Stream::Peek called from base class");
-
-    return -1; // We should not return but get the compiler to shut up
+ErrorOr<int64_t> Stream::PeekRaw(uint8_t* buffer, size_t len) {
+    UIOBuffer uio = UIOBuffer(buffer);
+    return Peek(&uio, len);
 }
 
 int64_t Stream::Empty() { return 1; }
@@ -37,7 +34,7 @@ DataStream::DataStream(size_t bufSize) {
 
 DataStream::~DataStream() { kfree(buffer); }
 
-int64_t DataStream::Read(void* data, size_t len) {
+ErrorOr<int64_t> DataStream::Read(UIOBuffer* data, size_t len) {
     acquireLock(&streamLock);
 
     if (len >= bufferPos)
@@ -48,7 +45,9 @@ int64_t DataStream::Read(void* data, size_t len) {
         return 0;
     }
 
-    memcpy(data, buffer, len);
+    if(data->Write(buffer, len)) {
+        return EFAULT;
+    }
 
     memcpy(buffer, buffer + len, bufferPos - len);
     bufferPos -= len;
@@ -58,7 +57,7 @@ int64_t DataStream::Read(void* data, size_t len) {
     return len;
 }
 
-int64_t DataStream::Peek(void* data, size_t len) {
+ErrorOr<int64_t> DataStream::Peek(UIOBuffer* data, size_t len) {
     acquireLock(&streamLock);
 
     if (len >= bufferPos)
@@ -69,14 +68,16 @@ int64_t DataStream::Peek(void* data, size_t len) {
         return 0;
     }
 
-    memcpy(data, buffer, len);
+    if(data->Write(buffer, len)) {
+        return EFAULT;
+    }
 
     releaseLock(&streamLock);
 
     return len;
 }
 
-int64_t DataStream::Write(void* data, size_t len) {
+ErrorOr<int64_t> DataStream::Write(UIOBuffer* data, size_t len) {
     acquireLock(&streamLock);
     if (bufferPos + len >= bufferSize) {
         void* oldBuffer = buffer;
@@ -91,8 +92,9 @@ int64_t DataStream::Write(void* data, size_t len) {
         kfree(oldBuffer);
     }
 
-    memcpy(buffer + bufferPos, data, len);
-    bufferPos += len;
+    if(data->Read(buffer + bufferPos, len)) {
+        return EFAULT;
+    }
 
     if (bufferPos > 0 && waiting.get_length() > 0) {
         while (waiting.get_length()) {
@@ -120,7 +122,7 @@ void DataStream::Wait() {
     }
 }
 
-int64_t PacketStream::Read(void* buffer, size_t len) {
+ErrorOr<int64_t> PacketStream::Read(UIOBuffer* buffer, size_t len) {
     if (packets.get_length() <= 0)
         return 0;
 
@@ -129,14 +131,16 @@ int64_t PacketStream::Read(void* buffer, size_t len) {
     if (len > pkt.len)
         len = pkt.len;
 
-    memcpy(buffer, pkt.data, len);
+    if(buffer->Write(pkt.data, len)) {
+        return EFAULT;
+    }
 
     kfree(pkt.data);
 
     return len;
 }
 
-int64_t PacketStream::Peek(void* buffer, size_t len) {
+ErrorOr<int64_t> PacketStream::Peek(UIOBuffer* buffer, size_t len) {
     if (packets.get_length() <= 0)
         return 0;
 
@@ -145,16 +149,21 @@ int64_t PacketStream::Peek(void* buffer, size_t len) {
     if (len > pkt.len)
         len = pkt.len;
 
-    memcpy(buffer, pkt.data, len);
+    if(buffer->Write(pkt.data, len)) {
+        return EFAULT;
+    }
 
     return len;
 }
 
-int64_t PacketStream::Write(void* buffer, size_t len) {
+ErrorOr<int64_t> PacketStream::Write(UIOBuffer* buffer, size_t len) {
     stream_packet_t pkt;
     pkt.len = len;
     pkt.data = reinterpret_cast<uint8_t*>(kmalloc(len));
-    memcpy(pkt.data, buffer, len);
+    if(buffer->Read(pkt.data, len)) {
+        kfree(pkt.data);
+        return EFAULT;
+    }
 
     packets.add_back(pkt);
 

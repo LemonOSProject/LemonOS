@@ -13,13 +13,13 @@ public:
         flags = FS_NODE_CHARDEVICE;
     }
 
-    int Ioctl(uint64_t cmd, uint64_t arg) override {
+    ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override {
         switch(cmd) {
         default:
-            return -EINVAL;
+            return Error{EINVAL};
         }
 
-        return -EINVAL;
+        return Error{EINVAL};
     }
 };
 
@@ -30,7 +30,7 @@ public:
         flags = FS_NODE_CHARDEVICE;
     }
 
-    int Ioctl(uint64_t cmd, uint64_t arg) override {
+    ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override {
         ScopedSpinLock lockOutputs(pcmOutputsLock);
         if(!currentOutput) {
             Log::Warning("no audio output!", size);
@@ -60,7 +60,7 @@ public:
         }
     }
 
-    ssize_t Write(size_t off, size_t size, uint8_t* buffer) override {
+    ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer) override {
         ScopedSpinLock lockOutputs(pcmOutputsLock);
         if(!currentOutput) {
             // If no output treat as dummy device
@@ -83,7 +83,7 @@ public:
         flags = FS_NODE_DIRECTORY;
     }
 
-    int ReadDir(DirectoryEntry* dirent, uint32_t index) override {
+    ErrorOr<int> ReadDir(DirectoryEntry* dirent, uint32_t index) override {
         switch(index) {
         case 0:
             *dirent = DirectoryEntry(this, ".");
@@ -102,13 +102,13 @@ public:
         }
     }
 
-    FsNode* FindDir(const char* name) override;
+    ErrorOr<FsNode*> FindDir(const char* name) override;
 
     PCMOutputDevice pcm = PCMOutputDevice();
     MixerDevice mixer = MixerDevice();
 };
 
-FsNode* SoundFS::FindDir(const char* name) {
+ErrorOr<FsNode*> SoundFS::FindDir(const char* name) {
     if(strcmp(name, "mixer") == 0) {
         return &mixer;
     }
@@ -117,7 +117,7 @@ FsNode* SoundFS::FindDir(const char* name) {
         return &pcm;
     }
 
-    return nullptr;
+    return Error{ENOENT};
 }
 
 AudioController::AudioController()
@@ -153,7 +153,7 @@ Error UnregisterPCMOut(PCMOutput* out) {
                 currentOutput = nullptr;
             }
 
-            return ErrorNone;
+            return ERROR_NONE;
         }
     }
 

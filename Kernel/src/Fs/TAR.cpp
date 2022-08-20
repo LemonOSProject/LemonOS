@@ -33,16 +33,16 @@ inline static uint32_t TarTypeToFilesystemFlags(char type){
 }
 
 namespace fs::tar{
-    ssize_t TarNode::Read(size_t offset, size_t size, uint8_t *buffer){
+    ErrorOr<ssize_t> TarNode::Read(size_t offset, size_t size, UIOBuffer* buffer){
         if(vol){
             return vol->Read(this, offset, size, buffer);
-        } else return -1;
+        } else return EIO;
     }
 
-    ssize_t TarNode::Write(size_t offset, size_t size, uint8_t *buffer){
+    ErrorOr<ssize_t> TarNode::Write(size_t offset, size_t size, UIOBuffer* buffer){
         if(vol){
             return vol->Write(this, offset, size, buffer);
-        } else return -1;
+        } else return EIO;
     }
 
     void TarNode::Close(){
@@ -50,15 +50,15 @@ namespace fs::tar{
             vol->Close(this);
         }
     }
-    int TarNode::ReadDir(DirectoryEntry* dirent, uint32_t index){
+    ErrorOr<int> TarNode::ReadDir(DirectoryEntry* dirent, uint32_t index){
         if(vol){
             return vol->ReadDir(this, dirent, index);
-        } else return -10;
+        } else return Error{ENOTDIR};
     }
-    FsNode* TarNode::FindDir(const char* name){
+    ErrorOr<FsNode*> TarNode::FindDir(const char* name){
         if(vol){
             return vol->FindDir(this, name);
-        } else return nullptr;
+        } else return Error{ENOTDIR};
     }
 
     void TarVolume::MakeNode(tar_header_t* header, TarNode* n, ino_t inode, ino_t parent, tar_header_t* dirHeader){
@@ -171,11 +171,11 @@ namespace fs::tar{
         volumeNode->entryCount = e;
     }
 
-    ssize_t TarVolume::Read(TarNode* node, size_t offset, size_t size, uint8_t *buffer){
+    ErrorOr<ssize_t> TarVolume::Read(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer){
         TarNode* tarNode = &nodes[node->inode];
 
         if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
-            return -EISDIR;
+            return Error{EISDIR};
         }
 
 		if(offset > node->size) return 0;
@@ -183,16 +183,18 @@ namespace fs::tar{
 
 		if(!size) return 0;
 
-		memcpy(buffer, (void*)(((uintptr_t)tarNode->header) + 512 + offset), size);
+        if(buffer->Write((uint8_t*)(((uintptr_t)tarNode->header) + 512 + offset), size)) {
+            return EFAULT;
+        }
 		return size;
     }
 
-    ssize_t TarVolume::Write(TarNode* node, size_t offset, size_t size, uint8_t *buffer){
+    ErrorOr<ssize_t> TarVolume::Write(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer){
         if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
-            return -EISDIR;
+            return Error{EISDIR};
         }
 
-        return -EROFS;
+        return Error{EROFS};
     }
 
     void TarVolume::Open(__attribute__((unused)) TarNode* node, __attribute__((unused)) uint32_t flags){
@@ -203,10 +205,10 @@ namespace fs::tar{
 
     }
 
-    int TarVolume::ReadDir(TarNode* node, DirectoryEntry* dirent, uint32_t index){
+    ErrorOr<int> TarVolume::ReadDir(TarNode* node, DirectoryEntry* dirent, uint32_t index){
         TarNode* tarNode = &nodes[node->inode];
         
-        if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) return -ENOTDIR;
+        if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) return Error{ENOTDIR};
 
         if(index >= static_cast<unsigned>(tarNode->entryCount + 2)) return 0;
 
@@ -250,10 +252,10 @@ namespace fs::tar{
         return 1;
     }
 
-    FsNode* TarVolume::FindDir(TarNode* node, const char* name){
+    ErrorOr<FsNode*> TarVolume::FindDir(TarNode* node, const char* name){
         TarNode* tarNode = &nodes[node->inode];
         
-        if(!(node->flags & FS_NODE_DIRECTORY)) return nullptr;
+        if(!(node->flags & FS_NODE_DIRECTORY)) return Error{ENOTDIR};
 
         if(strcmp(".", name) == 0) return node;
         if(strcmp("..", name) == 0){
@@ -265,6 +267,6 @@ namespace fs::tar{
             if(strcmp(nodes[tarNode->children[i]].name, name) == 0) return &nodes[tarNode->children[i]];
         }
 
-        return nullptr;
+        return Error{ENOENT};
     }
 }

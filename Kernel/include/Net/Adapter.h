@@ -19,12 +19,12 @@ namespace Network{
             NetworkAdapterEthernet,
         };
 
-        enum DriverState{
+        enum class DriverState{
             OK,
             Uninitialized,
             Error,
         };
-        DriverState dState = Uninitialized;
+        DriverState dState = DriverState::Uninitialized;
 
         MACAddress mac;
 
@@ -36,7 +36,7 @@ namespace Network{
         
         NetworkAdapter(AdapterType aType);
 
-        virtual int Ioctl(uint64_t cmd, uint64_t arg);
+        virtual ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg);
         
         virtual void SendPacket(void* data, size_t len);
 

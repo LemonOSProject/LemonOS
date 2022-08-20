@@ -103,11 +103,21 @@ public:
 
     int InitializePartitions();
 
-    virtual int ReadDiskBlock(uint64_t lba, uint32_t count, void* buffer);
-    virtual int WriteDiskBlock(uint64_t lba, uint32_t count, void* buffer);
+    virtual int ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer);
+    virtual int WriteDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer);
+    
+    int ReadDiskBlockRaw(uint64_t lba, uint32_t count, void* buffer) {
+        UIOBuffer uio(buffer);
+        return ReadDiskBlock(lba, count, &uio);
+    }
 
-    virtual ssize_t Read(size_t off, size_t size, uint8_t* buffer);
-    virtual ssize_t Write(size_t off, size_t size, uint8_t* buffer);
+    int WriteDiskBlockRaw(uint64_t lba, uint32_t count, void* buffer) {
+        UIOBuffer uio(buffer);
+        return WriteDiskBlock(lba, count, &uio);
+    }
+
+    virtual ErrorOr<ssize_t> Read(size_t off, size_t size, UIOBuffer* buffer);
+    virtual ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer);
 
     virtual ~DiskDevice();
 
@@ -121,12 +131,22 @@ class PartitionDevice final : public Device {
 public:
     PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice* disk);
 
-    int ReadAbsolute(uint64_t off, uint32_t count, void* buffer);
-    int ReadBlock(uint64_t lba, uint32_t count, void* buffer);
-    int WriteBlock(uint64_t lba, uint32_t count, void* buffer);
+    int ReadAbsolute(uint64_t off, uint32_t count, UIOBuffer* buffer);
+    int ReadBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer);
+    int WriteBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer);
 
-    ssize_t Read(size_t off, size_t size, uint8_t* buffer) override;
-    ssize_t Write(size_t off, size_t size, uint8_t* buffer) override;
+    ALWAYS_INLINE int ReadBlockRaw(uint64_t lba, uint32_t count, void* buffer) {
+        UIOBuffer uio(buffer);
+        return ReadBlock(lba, count, &uio);
+    }
+
+    ALWAYS_INLINE int WriteBlockRaw(uint64_t lba, uint32_t count, void* buffer) {
+        UIOBuffer uio(buffer);
+        return WriteBlock(lba, count, &uio);
+    }
+
+    ErrorOr<ssize_t> Read(size_t off, size_t size, UIOBuffer* buffer) override;
+    ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer) override;
 
     virtual ~PartitionDevice();
 
@@ -191,7 +211,7 @@ FsNode* GetDevFS();
 ///
 /// \return Corresponding device, nullptr if it does not exist
 /////////////////////////////
-Device* DeviceFromID(int64_t deviceID);
+ErrorOr<Device*> DeviceFromID(int64_t deviceID);
 
 /////////////////////////////
 /// \brief Find device from path (relative to DevFS root)
@@ -200,7 +220,7 @@ Device* DeviceFromID(int64_t deviceID);
 ///
 /// \return Corresponding device, nullptr if it does not exist
 /////////////////////////////
-Device* ResolveDevice(const char* path);
+ErrorOr<Device*> ResolveDevice(const char* path);
 
 /////////////////////////////
 /// \brief Get device count

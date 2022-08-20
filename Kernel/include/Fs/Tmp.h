@@ -34,19 +34,19 @@ namespace fs::Temp{
         TempNode(TempVolume* v, int flags);
         ~TempNode();
 
-        ssize_t Read(size_t off, size_t size, uint8_t* buffer); // Read Data
-        ssize_t Write(size_t off, size_t size, uint8_t* buffer); // Write Data
+        ErrorOr<ssize_t> Read(size_t off, size_t size, UIOBuffer* buffer); // Read Data
+        ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer); // Write Data
 
-        int Truncate(off_t length); // Truncate file
+        Error Truncate(off_t length); // Truncate file
 
-        int ReadDir(DirectoryEntry*, uint32_t); // Read Directory
-        FsNode* FindDir(const char* name); // Find in directory
+        ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t); // Read Directory
+        ErrorOr<FsNode*> FindDir(const char* name); // Find in directory
 
-        int Create(DirectoryEntry* entry, uint32_t mode); // Create regular file
-        int CreateDirectory(DirectoryEntry* entry, uint32_t mode); // Create directory
+        Error Create(DirectoryEntry* entry, uint32_t mode); // Create regular file
+        Error CreateDirectory(DirectoryEntry* entry, uint32_t mode); // Create directory
         
-        int Link(FsNode*, DirectoryEntry*); // Link
-        int Unlink(DirectoryEntry*, bool unlinkDirectories = false); // Unlink
+        Error Link(FsNode*, DirectoryEntry*); // Link
+        Error Unlink(DirectoryEntry*, bool unlinkDirectories = false); // Unlink
 
         ErrorOr<UNIXOpenFile*> Open(size_t flags);
         void Close();
