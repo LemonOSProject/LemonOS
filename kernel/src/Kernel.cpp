@@ -21,7 +21,6 @@
 #include <Storage/NVMe.h>
 #include <String.h>
 #include <Symbols.h>
-#include <Syscalls.h>
 #include <TTY/PTY.h>
 #include <Timer.h>
 #include <Types.h>

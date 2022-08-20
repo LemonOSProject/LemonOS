@@ -9,7 +9,6 @@
 #include <PhysicalAllocator.h>
 #include <Scheduler.h>
 #include <StackTrace.h>
-#include <Syscalls.h>
 #include <UserPointer.h>
 
 // extern uint32_t kernel_end;
@@ -677,8 +676,6 @@ void PageFaultHandler(void*, RegisterContext* regs) {
         if (process) {
             Log::Info("Process Mapped Memory:");
             process->addressSpace->DumpRegions();
-
-            IF_DEBUG(debugLevelSyscalls >= DebugLevelNormal, { DumpLastSyscall(Thread::Current()); });
         }
     };
 

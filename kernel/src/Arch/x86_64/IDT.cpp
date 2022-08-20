@@ -8,7 +8,6 @@
 #include <Panic.h>
 #include <Scheduler.h>
 #include <StackTrace.h>
-#include <Syscalls.h>
 
 idt_entry_t idt[256];
 
@@ -218,7 +217,6 @@ extern "C" void isr_handler(int intNum, RegisterContext* regs) {
         APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED,
                              IPI_HALT);
 
-        IF_DEBUG(debugLevelSyscalls >= DebugLevelVerbose, { DumpLastSyscall(Thread::Current()); });
         Log::Error("Fatal Kernel Exception: ");
         Log::Info(intNum);
         Log::Info("RIP: ");
