@@ -1,17 +1,17 @@
-![banner](Extra/lemonlt.png)
+![banner](extra/lemonlt.png)
 
 [![CI](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml/badge.svg)](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml)
 
 Lemon OS is a UNIX-like 64-bit operating system written in C++.
 
 ## About Lemon OS
-Lemon OS includes its own [modular kernel](Kernel) with SMP and networking, [window server/compositor](System/LemonWM) and [userspace applications](Applications) as well as [a collection of software ports](Ports).
+Lemon OS includes its own [modular kernel](kernel) with SMP and networking, [window server/compositor](apps/servers/lemonwm) and [userspace applications](apps) as well as [a collection of software ports](ports).
 
 If you have any questions or concerns feel free to open a GitHub issue, join our [Discord server](https://discord.gg/NAYp6AUYWM) or email me at computerfido@gmail.com.
 
 ## [Website](https://lemonos.org)
 ## [Discord Server](https://discord.gg/NAYp6AUYWM)
-## [Building Lemon OS](Documentation/Build/Building-Lemon-OS.md)
+## [Building Lemon OS](docs/Build/Building-Lemon-OS.md)
 
 ## Prebuilt Image
 [Nightly Images](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml?query=is%3Asuccess+branch%3Amaster) - Go to latest job, `Lemon.img` located under Artifacts\
@@ -20,16 +20,16 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 **Before running**
 See [System Requirements](#system-requirements)
 
-![Lemon OS Screenshot](Screenshots/image9.png)\
-[More screenshots](Screenshots)
+![Lemon OS Screenshot](extra/screenshots/image9.png)\
+[More screenshots](extra/screenshots)
 ## Features
 - Modular Kernel
 - Symmetric Multiprocessing (SMP)
 - UNIX/BSD Sockets
 - Network Stack (UDP, TCP, DHCP)
-- A small HTTP client/downloader called [steal](Applications/Steal)
-- Window Manager/Server [LemonWM](System/LemonWM)
-- [Terminal Emulator](Applications/Terminal)
+- A small HTTP client/downloader called [steal](apps/utilities/steal)
+- Window Manager/Server [LemonWM](apps/servers/lemonwm)
+- [Terminal Emulator](apps/core/terminal)
 - Writable Ext2 Filesystem
 - IDE, AHCI and NVMe Driver
 - Dynamic Linking
@@ -47,9 +47,9 @@ See [System Requirements](#system-requirements)
 Lemon OS depends on:
 [mlibc](https://github.com/managarm/mlibc), [Freetype](https://freetype.org/), [zlib](https://z-lib.org/), [libressl](https://www.libressl.org/), [ffmpeg](https://ffmpeg.org/), [libfmt](https://fmt.dev) and [libpng](http://www.libpng.org/pub/png/libpng.html).
 
-[Optional ports](Ports/) include LLVM/Clang, DOOM, Binutils and Python 3.8
+[Optional ports](ports/) include LLVM/Clang, DOOM, Binutils and Python 3.8
 
-[Various background images are located here](Base/lemon/resources/backgrounds)
+[Various background images are located here](base/lemon/resources/backgrounds)
 
 ## System requirements
 - 256 MB RAM (512 is more optimal)
@@ -67,18 +67,12 @@ For QEMU run with: \
 
 | Directory          | Description                              |
 | ------------------ | ---------------------------------------- |
-| Applications/      | Userspace Applications                   |
-| Base/              | Config, etc. Files copied to disk        |
-| Documentation/     | Lemon OS Documentation                   |
-| Extra/             | (Currently) vector icons                 |
-| InterfaceCompiler/ |  Compiler for interface definition files |
-| Kernel/            | Lemon Kernel                             |
-| LibGUI/            | LibGUI (Windowing and widgets)           |
-| LibLemon/          | LibLemon (Lemon API)                     |
-| Toolchain/         | Toolchain build scripts and patches      |
-| Ports/             | Build scripts and patches for ports      |
-| Resources/         | Images, fonts, etc.                      |
-| Screenshots/       | Screenshots                              |
-| Scripts/           | Build Scripts                            |
-| Services/          | Interface definition files               |
-| System/            | Core system programs and services        |
+| apps/              | Userspace Applications                   |
+| base/              | Config, etc. Files copied to disk        |
+| docs/              | Lemon OS Documentation                   |
+| extra/             | (Currently) images and screenshots       |
+| kernel/            | Lemon Kernel                             |
+| lib/               | liblemon and liblemongui                 |
+| ports/             | Build scripts and patches for ports      |
+| scripts/           | Build Scripts                            |
+| protocols/         | Interface definition files               |
