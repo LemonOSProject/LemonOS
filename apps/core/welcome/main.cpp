@@ -1,10 +1,10 @@
-#include <Lemon/Core/Shell.h>
+#include <lemon/core/Shell.h>
 
-#include <Lemon/GUI/Messagebox.h>
-#include <Lemon/GUI/Window.h>
-#include <Lemon/GUI/Widgets.h>
+#include <lemon/gui/Messagebox.h>
+#include <lemon/gui/Window.h>
+#include <lemon/gui/Widgets.h>
 
-#include <Lemon/Graphics/Graphics.h>
+#include <lemon/graphics/Graphics.h>
 
 using namespace Lemon;
 

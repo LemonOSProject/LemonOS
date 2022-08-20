@@ -1,5 +1,5 @@
-#include <Lemon/Core/Input.h>
-#include <Lemon/Core/Keyboard.h>
+#include <lemon/core/Input.h>
+#include <lemon/core/Keyboard.h>
 
 #include "fterm.h"
 

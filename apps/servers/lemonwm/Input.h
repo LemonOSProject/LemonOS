@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Lemon/Graphics/Vector.h>
+#include <lemon/graphics/Vector.h>
 
 struct MouseState {
     Vector2i pos;

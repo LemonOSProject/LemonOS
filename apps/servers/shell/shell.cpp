@@ -1,7 +1,7 @@
-#include <Lemon/Core/Logger.h>
-#include <Lemon/Core/Shell.h>
-#include <Lemon/Core/URL.h>
-#include <Lemon/IPC/Interface.h>
+#include <lemon/core/Logger.h>
+#include <lemon/core/Shell.h>
+#include <lemon/core/URL.h>
+#include <lemon/ipc/Interface.h>
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>

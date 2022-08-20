@@ -10,9 +10,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include <Lemon/Core/Keyboard.h>
-#include <Lemon/GUI/Window.h>
-#include <Lemon/GUI/WindowServer.h>
+#include <lemon/core/Keyboard.h>
+#include <lemon/gui/Window.h>
+#include <lemon/gui/WindowServer.h>
 
 #include "colours.h"
 #include "escape.h"

@@ -1,6 +1,6 @@
-#include <Lemon/Core/Shell.h>
-#include <Lemon/GUI/Window.h>
-#include <Lemon/IPC/Interface.h>
+#include <lemon/core/Shell.h>
+#include <lemon/gui/Window.h>
+#include <lemon/ipc/Interface.h>
 #include <Lemon/Services/lemon.shell.h>
 
 #include <map>

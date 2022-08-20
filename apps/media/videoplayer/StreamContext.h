@@ -4,7 +4,7 @@
 #include <mutex>
 #include <thread>
 
-#include <Lemon/Graphics/Rect.h>
+#include <lemon/graphics/Rect.h>
 
 #define StreamContext_NUM_SAMPLE_BUFFERS 16
 

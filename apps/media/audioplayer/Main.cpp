@@ -1,14 +1,14 @@
-#include <Lemon/GUI/Window.h>
+#include <lemon/gui/Window.h>
 
-#include <Lemon/GUI/FileDialog.h>
-#include <Lemon/GUI/Messagebox.h>
-#include <Lemon/GUI/Model.h>
-#include <Lemon/GUI/Widgets.h>
-#include <Lemon/Graphics/Graphics.h>
-#include <Lemon/Graphics/Text.h>
+#include <lemon/gui/FileDialog.h>
+#include <lemon/gui/Messagebox.h>
+#include <lemon/gui/Model.h>
+#include <lemon/gui/Widgets.h>
+#include <lemon/graphics/Graphics.h>
+#include <lemon/graphics/Text.h>
 
-#include <Lemon/Core/Format.h>
-#include <Lemon/Core/JSON.h>
+#include <lemon/core/Format.h>
+#include <lemon/core/JSON.h>
 
 #include <dirent.h>
 #include <sys/stat.h>

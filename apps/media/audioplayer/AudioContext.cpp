@@ -1,7 +1,7 @@
 #include "AudioContext.h"
 
-#include <Lemon/Core/Logger.h>
-#include <Lemon/System/ABI/Audio.h>
+#include <lemon/core/Logger.h>
+#include <lemon/system/abi/Audio.h>
 
 #include <assert.h>
 #include <errno.h>

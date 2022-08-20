@@ -1,13 +1,13 @@
 #include "shell.h"
 
-#include <Lemon/Core/CFGParser.h>
-#include <Lemon/Core/IconManager.h>
-#include <Lemon/Core/Keyboard.h>
-#include <Lemon/GUI/Model.h>
-#include <Lemon/GUI/Theme.h>
-#include <Lemon/GUI/Window.h>
-#include <Lemon/Graphics/Graphics.h>
-#include <Lemon/System/Spawn.h>
+#include <lemon/core/CFGParser.h>
+#include <lemon/core/IconManager.h>
+#include <lemon/core/Keyboard.h>
+#include <lemon/gui/Model.h>
+#include <lemon/gui/Theme.h>
+#include <lemon/gui/Window.h>
+#include <lemon/graphics/Graphics.h>
+#include <lemon/system/Spawn.h>
 
 #include <dirent.h>
 #include <fcntl.h>

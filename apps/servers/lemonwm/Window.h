@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Lemon/GUI/Window.h>
-#include <Lemon/Graphics/Types.h>
+#include <lemon/gui/Window.h>
+#include <lemon/graphics/Types.h>
 
 #include <string>
 

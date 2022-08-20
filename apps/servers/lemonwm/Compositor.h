@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Lemon/Graphics/Surface.h>
-#include <Lemon/Graphics/Types.h>
+#include <lemon/graphics/Surface.h>
+#include <lemon/graphics/Types.h>
 
 #include <atomic>
 #include <ctime>

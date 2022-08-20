@@ -1,18 +1,23 @@
-#include <Lemon/System/Spawn.h>
-#include <Lemon/System/Util.h>
-#include <Lemon/Core/JSON.h>
-#include <Lemon/Core/SHA.h>
+#include <lemon/system/Spawn.h>
+#include <lemon/system/Util.h>
+#include <lemon/core/JSON.h>
+#include <lemon/core/SHA.h>
 
 #include <string.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/wait.h>
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+
 #include <string>
 #include <vector>
 #include <list>
 
-struct Service {
+/*struct Service {
 	std::string name;
 	std::string target;
 
@@ -30,8 +35,8 @@ std::multimap<std::string, Service> waitingServices;
 std::list<Service> services;
 
 void StartService(Service& srv){
-	char* const argv[] = { (char*) srv.name.c_str() };
-	pid_t pid = lemon_spawn(srv.target.c_str(), 1, argv, 1);
+	//char* const argv[] = { (char*) srv.name.c_str() };
+	pid_t pid = 0; // lemon_spawn(srv.target.c_str(), 1, argv, 1);
 	if(pid <= 0){
 		printf("[lemond] Error: Failed to start '%s'!\n", srv.name.c_str());
 		return;
@@ -44,13 +49,24 @@ void StartService(Service& srv){
 		services.push_back(it->second);
 		StartService(it->second);
 	}
-}
+}*/
 
 int main(int, char**){
 	setenv("HOME", "/system", 1); // Default home
 	setenv("PATH", "/system/bin:/system/lemon:/initrd", 1); // Default path
 
-	Lemon::JSONParser confParser = Lemon::JSONParser("/system/lemon/lemond.json");
+	int fd = open("/system/hello.asm", O_RDONLY);
+	if(fd < 0) {
+		perror("open");
+	}
+
+	if(read(fd, (void*)0x12345678, 10)) {
+		perror("read");
+	}
+
+	for(;;) asm("pause");
+
+	/*Lemon::JSONParser confParser = Lemon::JSONParser("/system/lemon/lemond.json");
 	auto json = confParser.Parse();
     if(json.IsObject()){
         std::map<Lemon::JSONKey, Lemon::JSONValue>& values = *json.data.object;
@@ -143,6 +159,8 @@ int main(int, char**){
 		return 2;
 	}
 
+	for(;;);
+
 	for(auto& srv : services){
 		StartService(srv);
 	}
@@ -159,5 +177,5 @@ int main(int, char**){
 				break;
 			}
 		}
-	}
+	}*/
 }

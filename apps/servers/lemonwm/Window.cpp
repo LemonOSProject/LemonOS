@@ -2,7 +2,7 @@
 
 #include "WM.h"
 
-#include <Lemon/Core/SharedMemory.h>
+#include <lemon/core/SharedMemory.h>
 
 WindowTheme WMWindow::theme;
 

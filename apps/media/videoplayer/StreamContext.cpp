@@ -1,8 +1,8 @@
 #include "StreamContext.h"
 
-#include <Lemon/Core/Logger.h>
-#include <Lemon/Graphics/Surface.h>
-#include <Lemon/System/ABI/Audio.h>
+#include <lemon/core/Logger.h>
+#include <lemon/graphics/Surface.h>
+#include <lemon/system/abi/Audio.h>
 
 #include <assert.h>
 #include <errno.h>

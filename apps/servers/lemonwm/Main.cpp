@@ -1,9 +1,9 @@
 #include "WM.h"
 
-#include <Lemon/Core/ConfigManager.h>
-#include <Lemon/Core/Framebuffer.h>
-#include <Lemon/Core/Logger.h>
-#include <Lemon/System/Spawn.h>
+#include <lemon/core/ConfigManager.h>
+#include <lemon/core/Framebuffer.h>
+#include <lemon/core/Logger.h>
+#include <lemon/system/Spawn.h>
 
 int main() {
     Surface displaySurface;

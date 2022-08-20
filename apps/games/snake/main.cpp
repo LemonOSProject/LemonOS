@@ -1,6 +1,6 @@
-#include <Lemon/GUI/Window.h>
-#include <Lemon/Graphics/Graphics.h>
-#include <Lemon/Core/Keyboard.h>
+#include <lemon/gui/Window.h>
+#include <lemon/graphics/Graphics.h>
+#include <lemon/core/Keyboard.h>
 
 #include <map>
 #include <list>

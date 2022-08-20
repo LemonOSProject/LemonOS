@@ -1,5 +1,5 @@
-#include <Lemon/GUI/Window.h>
-#include <Lemon/GUI/Messagebox.h>
+#include <lemon/gui/Window.h>
+#include <lemon/gui/Messagebox.h>
 
 #include <map>
 #include <functional>

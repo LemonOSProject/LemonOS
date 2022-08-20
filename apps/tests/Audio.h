@@ -8,7 +8,7 @@
 
 #include <sys/ioctl.h>
 
-#include <Lemon/System/ABI/Audio.h>
+#include <lemon/system/abi/Audio.h>
 
 #define AUDIO_NOTE_E4 329.63
 #define AUDIO_NOTE_FS4 369.99

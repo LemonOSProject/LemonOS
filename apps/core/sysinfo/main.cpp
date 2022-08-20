@@ -1,8 +1,8 @@
-#include <Lemon/GUI/Window.h>
-#include <Lemon/GUI/Widgets.h>
-#include <Lemon/GUI/Messagebox.h>
-#include <Lemon/GUI/FileDialog.h>
-#include <Lemon/System/Info.h>
+#include <lemon/gui/Window.h>
+#include <lemon/gui/Widgets.h>
+#include <lemon/gui/Messagebox.h>
+#include <lemon/gui/FileDialog.h>
+#include <lemon/system/Info.h>
 #include <lemon/syscall.h>
 #include <stdio.h>
 #include <stdlib.h>

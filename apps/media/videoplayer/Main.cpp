@@ -1,6 +1,6 @@
-#include <Lemon/GUI/Window.h>
+#include <lemon/gui/Window.h>
 
-#include <Lemon/Graphics/Graphics.h>
+#include <lemon/graphics/Graphics.h>
 
 #include "StreamContext.h"
 

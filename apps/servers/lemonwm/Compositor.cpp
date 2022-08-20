@@ -2,8 +2,8 @@
 
 #include "WM.h"
 
-#include <Lemon/Core/Logger.h>
-#include <Lemon/Graphics/Graphics.h>
+#include <lemon/core/Logger.h>
+#include <lemon/graphics/Graphics.h>
 
 //#define COMPOSITOR_DEBUG
 

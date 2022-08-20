@@ -11,10 +11,10 @@
 #include <sys/poll.h>
 #include <unistd.h>
 
-#include <Lemon/Core/Keyboard.h>
-#include <Lemon/Core/Framebuffer.h>
+#include <lemon/core/Keyboard.h>
+#include <lemon/core/Framebuffer.h>
 
-#include <Lemon/Graphics/Graphics.h>
+#include <lemon/graphics/Graphics.h>
 
 #include "colours.h"
 #include "escape.h"

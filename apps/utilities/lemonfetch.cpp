@@ -3,9 +3,9 @@
 #include <string_view>
 #include <stdio.h>
 
-#include <Lemon/System/Util.h>
+#include <lemon/system/Util.h>
 #include <lemon/syscall.h>
-#include <Lemon/GUI/WindowServer.h>
+#include <lemon/gui/WindowServer.h>
 
 const char* normalColour = "\e[0m";
 const char* accentColour = "\e[0m\e[33m";

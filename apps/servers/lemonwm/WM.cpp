@@ -1,9 +1,9 @@
 #include "WM.h"
 
-#include <Lemon/Core/Keyboard.h>
-#include <Lemon/Core/Logger.h>
-#include <Lemon/Core/Shell.h>
-#include <Lemon/GUI/WindowServer.h>
+#include <lemon/core/Keyboard.h>
+#include <lemon/core/Logger.h>
+#include <lemon/core/Shell.h>
+#include <lemon/gui/WindowServer.h>
 
 #include <cassert>
 #include <unistd.h>

@@ -17,7 +17,7 @@ extern "C" {
 
 #include <string>
 
-#include <Lemon/System/ABI/Audio.h>
+#include <lemon/system/abi/Audio.h>
 
 struct SampleBuffer {
     uint8_t* data = nullptr;

@@ -1,17 +1,17 @@
 #include <stdint.h>
 
-#include <Lemon/Core/Keyboard.h>
-#include <Lemon/Core/SharedMemory.h>
-#include <Lemon/Core/Shell.h>
-#include <Lemon/GUI/Theme.h>
-#include <Lemon/GUI/Window.h>
-#include <Lemon/Graphics/Graphics.h>
-#include <Lemon/System/Framebuffer.h>
-#include <Lemon/System/IPC.h>
-#include <Lemon/System/Info.h>
-#include <Lemon/System/Spawn.h>
-#include <Lemon/System/Util.h>
-#include <Lemon/System/Waitable.h>
+#include <lemon/core/Keyboard.h>
+#include <lemon/core/SharedMemory.h>
+#include <lemon/core/Shell.h>
+#include <lemon/gui/Theme.h>
+#include <lemon/gui/Window.h>
+#include <lemon/graphics/Graphics.h>
+#include <lemon/system/Framebuffer.h>
+#include <lemon/system/IPC.h>
+#include <lemon/system/Info.h>
+#include <lemon/system/Spawn.h>
+#include <lemon/system/Util.h>
+#include <lemon/system/Waitable.h>
 #include <fcntl.h>
 #include <lemon/syscall.h>
 #include <map>
@@ -31,8 +31,6 @@ ShellInstance* shell;
 surface_t menuButton;
 
 bool showMenu = false;
-
-char versionString[80];
 
 lemon_sysinfo_t sysInfo;
 int64_t cpuUsage;
@@ -196,8 +194,6 @@ int main() {
 
     Lemon::Handle svc = Lemon::Handle(Lemon::CreateService("lemon.shell"));
     shell = new ShellInstance(svc, "Instance");
-
-    syscall(SYS_UNAME, (uintptr_t)versionString, 0, 0, 0, 0);
 
     Lemon::Graphics::LoadImage("/system/lemon/resources/menubuttons.png", &menuButton);
 
