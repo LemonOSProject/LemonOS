@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Lemon/System/KernelObject.h>
-#include <Lemon/Types.h>
+#include <lemon/system/KernelObject.h>
+#include <lemon/types.h>
 
 namespace Lemon {
 /////////////////////////////

@@ -1,6 +1,6 @@
-#include <Lemon/Core/Serializable.h>
+#include <lemon/core/Serializable.h>
 
-#include <Lemon/Graphics/Colour.h>
+#include <lemon/graphics/Colour.h>
 
 #include <cassert>
 #include <iomanip>

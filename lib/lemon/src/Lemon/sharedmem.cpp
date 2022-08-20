@@ -1,4 +1,4 @@
-#include <Lemon/Core/SharedMemory.h>
+#include <lemon/core/SharedMemory.h>
 
 #include <lemon/syscall.h>
 #include <sys/types.h>

@@ -3,7 +3,7 @@
 #include <cassert>
 #include <string>
 
-#include <Lemon/GUI/Variant.h>
+#include <lemon/gui/Variant.h>
 
 namespace Lemon::GUI {
 class DataModel {

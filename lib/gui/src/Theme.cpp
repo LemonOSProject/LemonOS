@@ -1,6 +1,6 @@
-#include <Lemon/GUI/Theme.h>
+#include <lemon/gui/Theme.h>
 
-#include <Lemon/GUI/WindowServer.h>
+#include <lemon/gui/WindowServer.h>
 
 #define SET_COLOUR(c, val) 
 

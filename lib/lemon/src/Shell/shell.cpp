@@ -1,6 +1,6 @@
-#include <Lemon/Core/Shell.h>
+#include <lemon/core/Shell.h>
 
-#include <Lemon/Core/URL.h>
+#include <lemon/core/URL.h>
 #include <Lemon/Services/lemon.shell.h>
 
 namespace Lemon::Shell {

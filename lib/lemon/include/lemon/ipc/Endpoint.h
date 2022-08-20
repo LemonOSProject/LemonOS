@@ -1,14 +1,14 @@
 #pragma once
 
-#include <Lemon/System/Handle.h>
-#include <Lemon/System/IPC.h>
-#include <Lemon/System/KernelObject.h>
-#include <Lemon/System/Waitable.h>
-#include <Lemon/Types.h>
+#include <lemon/system/Handle.h>
+#include <lemon/system/IPC.h>
+#include <lemon/system/KernelObject.h>
+#include <lemon/system/Waitable.h>
+#include <lemon/types.h>
 
-#include <Lemon/Core/Logger.h>
+#include <lemon/core/Logger.h>
 
-#include <Lemon/IPC/Message.h>
+#include <lemon/ipc/Message.h>
 
 #include <assert.h>
 #include <stdint.h>

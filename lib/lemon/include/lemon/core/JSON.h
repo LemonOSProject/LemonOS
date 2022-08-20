@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <Lemon/Core/Lexer.h>
+#include <lemon/core/Lexer.h>
 
 namespace Lemon {
 using JSONKey = std::string;

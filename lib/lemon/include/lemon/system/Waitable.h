@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Lemon/System/Handle.h>
-#include <Lemon/Types.h>
+#include <lemon/system/Handle.h>
+#include <lemon/types.h>
 
 #include <list>
 #include <vector>

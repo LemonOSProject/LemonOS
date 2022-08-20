@@ -1,6 +1,6 @@
 #include <lemon/syscall.h>
 
-#include <Lemon/Core/Framebuffer.h>
+#include <lemon/core/Framebuffer.h>
 #include <assert.h>
 #include <stdlib.h>
 

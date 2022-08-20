@@ -1,4 +1,4 @@
-#include <Lemon/Core/CFGParser.h>
+#include <lemon/core/CFGParser.h>
 
 enum ParserState {
     ParserStateHeading,

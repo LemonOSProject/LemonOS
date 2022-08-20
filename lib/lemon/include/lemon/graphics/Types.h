@@ -1,5 +1,5 @@
 #pragma once
 
-#include <Lemon/Graphics/Colour.h>
-#include <Lemon/Graphics/Rect.h>
-#include <Lemon/Graphics/Vector.h>
+#include <lemon/graphics/Colour.h>
+#include <lemon/graphics/Rect.h>
+#include <lemon/graphics/Vector.h>

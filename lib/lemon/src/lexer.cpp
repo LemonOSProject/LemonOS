@@ -1,4 +1,4 @@
-#include <Lemon/Core/Lexer.h>
+#include <lemon/core/Lexer.h>
 
 #include <cassert>
 #include <cstring>

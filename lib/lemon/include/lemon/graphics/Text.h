@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Lemon/Graphics/Font.h>
-#include <Lemon/Graphics/Surface.h>
-#include <Lemon/Graphics/Types.h>
+#include <lemon/graphics/Font.h>
+#include <lemon/graphics/Surface.h>
+#include <lemon/graphics/Types.h>
 
 #include <string>
 

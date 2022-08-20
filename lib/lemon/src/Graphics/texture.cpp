@@ -1,4 +1,4 @@
-#include <Lemon/Graphics/Graphics.h>
+#include <lemon/graphics/Graphics.h>
 
 #include <cmath>
 

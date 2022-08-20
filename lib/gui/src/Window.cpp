@@ -1,9 +1,9 @@
-#include <Lemon/Core/JSON.h>
-#include <Lemon/Core/SharedMemory.h>
-#include <Lemon/Core/Logger.h>
-#include <Lemon/GUI/Window.h>
+#include <lemon/core/JSON.h>
+#include <lemon/core/SharedMemory.h>
+#include <lemon/core/Logger.h>
+#include <lemon/gui/Window.h>
 
-#include <Lemon/GUI/WindowServer.h>
+#include <lemon/gui/WindowServer.h>
 
 #include <stdlib.h>
 #include <unistd.h>

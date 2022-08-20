@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Lemon/Core/Icon.h>
-#include <Lemon/Graphics/Surface.h>
+#include <lemon/core/Icon.h>
+#include <lemon/graphics/Surface.h>
 
 #include <map>
 #include <mutex>

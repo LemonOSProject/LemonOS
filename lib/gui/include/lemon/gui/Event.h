@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Lemon/Core/Util.h>
-#include <Lemon/Graphics/Graphics.h>
+#include <lemon/core/Util.h>
+#include <lemon/graphics/Graphics.h>
 
 #include <assert.h>
 

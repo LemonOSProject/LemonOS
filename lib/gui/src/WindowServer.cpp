@@ -1,7 +1,7 @@
-#include <Lemon/GUI/WindowServer.h>
+#include <lemon/gui/WindowServer.h>
 
-#include <Lemon/GUI/Theme.h>
-#include <Lemon/GUI/Window.h>
+#include <lemon/gui/Theme.h>
+#include <lemon/gui/Window.h>
 
 #include <assert.h>
 

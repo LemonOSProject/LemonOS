@@ -1,6 +1,6 @@
-#include <Lemon/Core/URL.h>
+#include <lemon/core/URL.h>
 
-#include <Lemon/Core/Lexer.h>
+#include <lemon/core/Lexer.h>
 
 namespace Lemon {
 URL::URL(const char* url) {

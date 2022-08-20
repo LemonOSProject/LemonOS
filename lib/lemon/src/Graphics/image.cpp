@@ -1,6 +1,6 @@
-#include <Lemon/Graphics/Graphics.h>
+#include <lemon/graphics/Graphics.h>
 
-#include <Lemon/Core/Logger.h>
+#include <lemon/core/Logger.h>
 
 #include <assert.h>
 #include <math.h>

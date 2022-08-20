@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Lemon/Graphics/Surface.h>
+#include <lemon/graphics/Surface.h>
 
 namespace Lemon {
 struct Icon {

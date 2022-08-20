@@ -1,10 +1,10 @@
 #ifndef FB_H
 #define FB_H
 
-#include <Lemon/Graphics/Surface.h>
+#include <lemon/graphics/Surface.h>
 
 #ifdef __lemon__
-#include <Lemon/System/Framebuffer.h>
+#include <lemon/system/Framebuffer.h>
 #endif
 
 namespace Lemon{

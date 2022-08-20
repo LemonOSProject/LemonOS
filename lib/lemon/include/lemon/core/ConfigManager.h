@@ -6,8 +6,8 @@
 #include <variant>
 #include <type_traits>
 
-#include <Lemon/Core/JSON.h>
-#include <Lemon/Core/Serializable.h>
+#include <lemon/core/JSON.h>
+#include <lemon/core/Serializable.h>
 
 namespace Lemon {
 

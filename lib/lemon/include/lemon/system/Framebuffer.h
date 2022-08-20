@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Lemon/System/ABI/Framebuffer.h>
+#include <lemon/system/abi/Framebuffer.h>
 #include <stdint.h>
 
 #ifndef __lemon__

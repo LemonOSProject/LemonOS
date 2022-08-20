@@ -4,8 +4,8 @@
     #error "Lemon OS Only"
 #endif
 
-#include <Lemon/System/Info.h>
-#include <Lemon/System/ABI/Process.h>
+#include <lemon/system/Info.h>
+#include <lemon/system/abi/process.h>
 
 #include <sys/types.h>
 #include <stdint.h>

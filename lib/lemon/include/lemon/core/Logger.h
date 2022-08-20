@@ -3,7 +3,7 @@
 #include <iostream>
 #include <mutex>
 
-#include <Lemon/Core/Format.h>
+#include <lemon/core/Format.h>
 
 namespace Lemon {
 namespace Logger {

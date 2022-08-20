@@ -2,8 +2,8 @@
 
 #include <stdint.h>
 
-#include <Lemon/Graphics/Rect.h>
-#include <Lemon/Graphics/Vector.h>
+#include <lemon/graphics/Rect.h>
+#include <lemon/graphics/Vector.h>
 
 typedef struct Surface {
     int width = 0;

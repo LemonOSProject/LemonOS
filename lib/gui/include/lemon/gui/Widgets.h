@@ -1,10 +1,10 @@
 #pragma once
 
-#include <Lemon/GUI/ContextMenu.h>
-#include <Lemon/GUI/Event.h>
-#include <Lemon/GUI/Theme.h>
-#include <Lemon/Graphics/Graphics.h>
-#include <Lemon/Graphics/Surface.h>
+#include <lemon/gui/ContextMenu.h>
+#include <lemon/gui/Event.h>
+#include <lemon/gui/Theme.h>
+#include <lemon/graphics/Graphics.h>
+#include <lemon/graphics/Surface.h>
 
 #include <string>
 #include <vector>

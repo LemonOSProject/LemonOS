@@ -1,6 +1,6 @@
-#include <Lemon/Core/IconManager.h>
+#include <lemon/core/IconManager.h>
 
-#include <Lemon/Graphics/Graphics.h>
+#include <lemon/graphics/Graphics.h>
 
 namespace Lemon {
 IconManager* IconManager::m_instance = nullptr;

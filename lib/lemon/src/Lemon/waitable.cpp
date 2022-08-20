@@ -1,6 +1,6 @@
-#include <Lemon/System/Waitable.h>
+#include <lemon/system/Waitable.h>
 
-#include <Lemon/System/KernelObject.h>
+#include <lemon/system/KernelObject.h>
 
 namespace Lemon {
 void Waitable::Wait(long timeout) { WaitForKernelObject(GetHandle(), timeout); }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Lemon/Core/ConfigManager.h>
-#include <Lemon/Graphics/Colour.h>
+#include <lemon/core/ConfigManager.h>
+#include <lemon/graphics/Colour.h>
 
 #include <mutex>
 #include <vector>

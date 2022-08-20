@@ -1,8 +1,8 @@
-#include <Lemon/Graphics/Font.h>
-#include <Lemon/Graphics/Graphics.h>
-#include <Lemon/Graphics/Text.h>
+#include <lemon/graphics/Font.h>
+#include <lemon/graphics/Graphics.h>
+#include <lemon/graphics/Text.h>
 
-#include <Lemon/Core/Unicode.h>
+#include <lemon/core/Unicode.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H

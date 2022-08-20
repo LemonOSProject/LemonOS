@@ -1,6 +1,6 @@
-#include <Lemon/GUI/Widgets.h>
+#include <lemon/gui/Widgets.h>
 
-#include <Lemon/Graphics/Graphics.h>
+#include <lemon/graphics/Graphics.h>
 
 namespace Lemon::GUI {
 //////////////////////////

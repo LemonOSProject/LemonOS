@@ -1,7 +1,7 @@
-#include <Lemon/Core/JSON.h>
+#include <lemon/core/JSON.h>
 
-#include <Lemon/Core/Format.h>
-#include <Lemon/Core/Logger.h>
+#include <lemon/core/Format.h>
+#include <lemon/core/Logger.h>
 
 #include <stdio.h>
 

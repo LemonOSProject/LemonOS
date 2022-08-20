@@ -1,9 +1,9 @@
-#include <Lemon/IPC/Endpoint.h>
-#include <Lemon/IPC/Interface.h>
+#include <lemon/ipc/Endpoint.h>
+#include <lemon/ipc/Interface.h>
 
-#include <Lemon/Core/Logger.h>
+#include <lemon/core/Logger.h>
 
-#include <Lemon/System/IPC.h>
+#include <lemon/system/IPC.h>
 #include <errno.h>
 #include <fcntl.h>
 

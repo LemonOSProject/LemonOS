@@ -28,4 +28,4 @@ target_link_options(lemongui PUBLIC -lz -lpng -llemon)
 include(GNUInstallDirs)
 
 install(TARGETS lemongui)
-install(DIRECTORY include/Lemon DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY include/lemon DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

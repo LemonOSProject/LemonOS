@@ -1,111 +1,22 @@
 #pragma once
 
-#define SYS_EXIT 1
-#define SYS_EXEC 2
-#define SYS_READ 3
-#define SYS_WRITE 4
-#define SYS_OPEN 5
-#define SYS_CLOSE 6
-#define SYS_SLEEP 7
-#define SYS_CREATE 8
-#define SYS_LINK 9
-#define SYS_UNLINK 10
-#define SYS_EXECVE 11
-#define SYS_CHDIR 12
-#define SYS_TIME 13
-#define SYS_MAP_FB 14
-#define SYS_GETTID 15
-#define SYS_CHMOD 16
-#define SYS_FSTAT 17
-#define SYS_STAT 18
-#define SYS_LSEEK 19
-#define SYS_GETPID 20
-#define SYS_MOUNT 21
-#define SYS_MKDIR 22
-#define SYS_RMDIR 23
-#define SYS_RENAME 24
-#define SYS_YIELD 25
-#define SYS_READDIR_NEXT 26
-#define SYS_SEND_MESSAGE 28
-#define SYS_RECEIVE_MESSAGE 29
-#define SYS_NANOUPTIME 30
-#define SYS_GET_VIDEO_MODE 31
-#define SYS_UNAME 32
-#define SYS_READDIR 33
-#define SYS_SET_FS_BASE 34
-#define SYS_MMAP 35
-// Unused
-#define SYS_GET_CWD 37
-#define SYS_WAIT_PID 38
-#define SYS_NANO_SLEEP 39
-#define SYS_PREAD 40
-#define SYS_PWRITE 41
-#define SYS_IOCTL 42
-#define SYS_INFO 43
-#define SYS_MUNMAP 44
-#define SYS_CREATE_SHARED_MEMORY 45
-#define SYS_MAP_SHARED_MEMORY 46
-#define SYS_UNMAP_SHARED_MEMORY 47
-#define SYS_DESTROY_SHARED_MEMORY 48
-#define SYS_SOCKET 49
-#define SYS_BIND 50
-#define SYS_LISTEN 51
-#define SYS_ACCEPT 52
-#define SYS_CONNECT 53
-#define SYS_SEND 54
-#define SYS_SENDTO 55
-#define SYS_RECEIVE 56
-#define SYS_RECEIVEFROM 57
-#define SYS_GETUID 58
-#define SYS_SETUID 59
-#define SYS_POLL 60
-#define SYS_SENDMSG 61
-#define SYS_RECVMSG 62
-#define SYS_GETEUID 63
-#define SYS_SETEUID 64
-#define SYS_GET_PROCESS_INFO 65
-#define SYS_GET_NEXT_PROCESS_INFO 66
-#define SYS_READLINK 67
-#define SYS_SPAWN_THREAD 68
-#define SYS_EXIT_THREAD 69
-#define SYS_FUTEX_WAKE 70
-#define SYS_FUTEX_WAIT 71
-#define SYS_DUP 72
-#define SYS_GET_FILE_STATUS_FLAGS 73
-#define SYS_SET_FILE_STATUS_FLAGS 74
-#define SYS_SELECT 75
-#define SYS_CREATE_SERVICE 76
-#define SYS_CREATE_INTERFACE 77
-#define SYS_INTERFACE_ACCEPT 78
-#define SYS_INTERFACE_CONNECT 79
-#define SYS_ENDPOINT_QUEUE 80
-#define SYS_ENDPOINT_DEQUEUE 81
-#define SYS_ENDPOINT_CALL 82
-#define SYS_ENDPOINT_INFO 83
-#define SYS_KERNELOBJECT_WAIT_ONE 84
-#define SYS_KERNELOBJECT_WAIT 85
-#define SYS_KERNELOBJECT_DESTROY 86
-#define SYS_SET_SOCKET_OPTIONS 87
-#define SYS_GET_SOCKET_OPTIONS 88
-#define SYS_DEVICE_MANAGEMENT 89
-#define SYS_INTERRUPT_THREAD 90
-#define SYS_LOAD_KERNEL_MODULE 91
-#define SYS_UNLOAD_KERNEL_MODULE 92
-#define SYS_FORK 93
-#define SYS_GETGID 94
-#define SYS_GETEGID 95
-#define SYS_GETPPID 96
-#define SYS_PIPE 97
-#define SYS_GETENTROPY 98
-#define SYS_SOCKETPAIR 99
-#define SYS_PEERNAME 100
-#define SYS_SOCKNAME 101
-#define SYS_SIGNAL_ACTION 102
-#define SYS_SIGPROCMASK 103
-#define SYS_KILL 104
-#define SYS_SIGNAL_RETURN 105
-#define SYS_ALARM 106
-#define SYS_GET_RESOURCE_LIMIT 107 
-#define SYS_EPOLL_CREATE 108
-#define SYS_EPOLL_CTL 109
-#define SYS_EPOLL_WAIT 110
+enum {
+    _sys_read = 0,
+    _sys_write = 1,
+    _sys_openat = 2,
+    _sys_fstatat = 3,
+    _sys_lseek = 4,
+    _sys_mmap = 5,
+    _sys_mprotect = 6,
+    _sys_munmap = 7,
+    _sys_ioctl = 8,
+    _sys_pread = 9,
+    _sys_pwrite = 10,
+    _le_log = 0x10000,
+    _le_boot_timer = 0x10001,
+    _le_handle_close = 0x10002,
+    _le_handle_dup = 0x10003,
+    _le_futex_wait = 0x10004,
+    _le_futex_wake = 0x10005,
+    _le_set_user_tcb = 0x10006,
+};

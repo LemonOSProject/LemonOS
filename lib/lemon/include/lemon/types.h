@@ -1,3 +1,3 @@
 #pragma once
 
-typedef int handle_t;
+#include <lemon/system/abi/types.h>

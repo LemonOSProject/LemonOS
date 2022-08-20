@@ -1,8 +1,8 @@
-#include <Lemon/Graphics/Surface.h>
+#include <lemon/graphics/Surface.h>
 
-#include <Lemon/Core/Logger.h>
-#include <Lemon/Graphics/Graphics.h>
-#include <Lemon/Graphics/Rect.h>
+#include <lemon/core/Logger.h>
+#include <lemon/graphics/Graphics.h>
+#include <lemon/graphics/Rect.h>
 
 #include "FastMem.h"
 

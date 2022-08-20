@@ -1,4 +1,4 @@
-#include <Lemon/Graphics/Colour.h>
+#include <lemon/graphics/Colour.h>
 
 const RGBAColour RGBAColour::red = {0xff, 0, 0, 0xff};
 const RGBAColour RGBAColour::green = {0, 0xff, 0, 0xff};

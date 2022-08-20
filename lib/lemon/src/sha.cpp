@@ -1,5 +1,5 @@
-#include <Lemon/Core/Rotate.h>
-#include <Lemon/Core/SHA.h>
+#include <lemon/core/Rotate.h>
+#include <lemon/core/SHA.h>
 
 #include <stdint.h>
 #include <string.h>

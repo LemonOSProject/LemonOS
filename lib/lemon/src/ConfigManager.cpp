@@ -1,7 +1,7 @@
-#include <Lemon/Core/ConfigManager.h>
+#include <lemon/core/ConfigManager.h>
 
-#include <Lemon/Core/Logger.h>
-#include <Lemon/Core/JSON.h>
+#include <lemon/core/Logger.h>
+#include <lemon/core/JSON.h>
 
 #include <functional>
 

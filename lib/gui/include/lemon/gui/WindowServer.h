@@ -2,7 +2,7 @@
 
 #include <Lemon/Services/lemon.lemonwm.h>
 
-#include <Lemon/Graphics/Types.h>
+#include <lemon/graphics/Types.h>
 
 #include <map>
 #include <mutex>

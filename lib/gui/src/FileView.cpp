@@ -1,10 +1,10 @@
-#include <Lemon/GUI/Widgets.h>
+#include <lemon/gui/Widgets.h>
 
-#include <Lemon/Core/IconManager.h>
-#include <Lemon/Core/Keyboard.h>
-#include <Lemon/GUI/Messagebox.h>
-#include <Lemon/GUI/Theme.h>
-#include <Lemon/GUI/Window.h>
+#include <lemon/core/IconManager.h>
+#include <lemon/core/Keyboard.h>
+#include <lemon/gui/Messagebox.h>
+#include <lemon/gui/Theme.h>
+#include <lemon/gui/Window.h>
 
 #include <assert.h>
 #include <dirent.h>

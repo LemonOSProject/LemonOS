@@ -67,4 +67,4 @@ target_link_libraries(lemon PUBLIC ${JPEG_LIBRARIES})
 include(GNUInstallDirs)
 
 install(TARGETS lemon)
-install(DIRECTORY include/Lemon DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(DIRECTORY include/lemon DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

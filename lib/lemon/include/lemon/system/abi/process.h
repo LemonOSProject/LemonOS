@@ -2,6 +2,8 @@
 
 #include <abi-bits/pid_t.h>
 
+#include <lemon/system/abi/process.h>
+
 typedef struct LemonProcessInfo {
     pid_t pid; // Process ID
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include <Lemon/GUI/ContextMenu.h>
-#include <Lemon/GUI/Event.h>
-#include <Lemon/GUI/Widgets.h>
-#include <Lemon/GUI/WindowServer.h>
-#include <Lemon/Graphics/Graphics.h>
-#include <Lemon/Graphics/Surface.h>
+#include <lemon/gui/ContextMenu.h>
+#include <lemon/gui/Event.h>
+#include <lemon/gui/Widgets.h>
+#include <lemon/gui/WindowServer.h>
+#include <lemon/graphics/Graphics.h>
+#include <lemon/graphics/Surface.h>
 
 #include <queue>
 #include <utility>

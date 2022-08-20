@@ -1,8 +1,8 @@
-#include <Lemon/GUI/Messagebox.h>
+#include <lemon/gui/Messagebox.h>
 
-#include <Lemon/GUI/Widgets.h>
-#include <Lemon/GUI/Window.h>
-#include <Lemon/Graphics/Font.h>
+#include <lemon/gui/Widgets.h>
+#include <lemon/gui/Window.h>
+#include <lemon/graphics/Font.h>
 
 namespace Lemon::GUI {
 int pressed = 1;

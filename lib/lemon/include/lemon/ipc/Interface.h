@@ -1,16 +1,16 @@
 #pragma once
 
-#include <Lemon/IPC/Message.h>
+#include <lemon/ipc/Message.h>
 #include <string.h>
 
 #include <list>
 #include <map>
 #include <vector>
 
-#include <Lemon/System/Handle.h>
-#include <Lemon/System/IPC.h>
-#include <Lemon/System/Waitable.h>
-#include <Lemon/Types.h>
+#include <lemon/system/Handle.h>
+#include <lemon/system/IPC.h>
+#include <lemon/system/Waitable.h>
+#include <lemon/types.h>
 
 #include <exception>
 
