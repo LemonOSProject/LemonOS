@@ -1,4 +1,4 @@
-LOOPBACK_DEVICE=$(losetup --find --partscan --show Disks/Lemon.img) # Find an empty loopback device and mount
+LOOPBACK_DEVICE=$(losetup --find --partscan --show build/lemon.img) # Find an empty loopback device and mount
 echo "Mounted image as loopback device at ${LOOPBACK_DEVICE}"
 
 cleanup1(){
@@ -31,9 +31,9 @@ trap 'cleanup2' 1
 mkdir -p /mnt/LemonEFI/EFI/BOOT
 if [ ! -z "$USE_GRUB_EFI" ]; then
     grub-install --target=x86_64-efi --boot-directory=/mnt/Lemon/lemon/boot --efi-directory=/mnt/LemonEFI "${LOOPBACK_DEVICE}" --removable
-elif [ -e "Build/tools/host-limine/share/limine/BOOTX64.EFI" ]; then
-    cp "Build/tools/host-limine/share/limine/BOOTX64.EFI" /mnt/LemonEFI/EFI/BOOT/
-    cp "Build/tools/host-limine/share/limine/limine.sys" /mnt/Lemon/
+elif [ -e "build/tools/host-limine/share/limine/BOOTX64.EFI" ]; then
+    cp "build/tools/host-limine/share/limine/BOOTX64.EFI" /mnt/LemonEFI/EFI/BOOT/
+    cp "build/tools/host-limine/share/limine/limine.sys" /mnt/Lemon/
 else
     echo "Failed to find limine BOOTX64.EFI or limine.sys"
     cleanup2
@@ -46,8 +46,6 @@ mkdir -p /mnt/Lemon/lemon/boot
 
 umount /mnt/Lemon
 umount /mnt/LemonEFI
-
-#limine-deploy "Disks/Lemon.img" 1
 
 losetup -d "${LOOPBACK_DEVICE}"
 

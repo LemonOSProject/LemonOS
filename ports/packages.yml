@@ -64,8 +64,7 @@ packages:
     tools_required:
       - host-compiler
     pkgs_required:
-      - liblemon
-      - liblemongui
+      - lemon-system-libs
       - mlibc
     configure:
       - args: ['cp', '-r', '@THIS_SOURCE_DIR@/.', '@THIS_BUILD_DIR@']
@@ -186,7 +185,7 @@ packages:
         - '-GNinja'
         - '@THIS_SOURCE_DIR@/expat' 
         - '-DCMAKE_CROSSCOMPILING=True'
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/scripts/CMake/lemon-cmake-options.txt'
         - '-DCMAKE_INSTALL_PREFIX=/system'
         environ:
           LEMON_SYSROOT: '@SYSROOT_DIR@'
@@ -244,7 +243,7 @@ packages:
         - '-GNinja'
         - '@THIS_SOURCE_DIR@' 
         - '-DCMAKE_CROSSCOMPILING=True'
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/scripts/CMake/lemon-cmake-options.txt'
         - '-DCMAKE_INSTALL_PREFIX=/system'
         - '-DLIBXML2_WITH_LZMA=OFF'
         - '-DLIBXML2_WITH_ICU=ON'
@@ -470,7 +469,7 @@ packages:
         - 'cmake'
         - '-GNinja'
         - '@THIS_SOURCE_DIR@' 
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/scripts/CMake/lemon-cmake-options.txt'
         - '-DCMAKE_INSTALL_PREFIX=/system'
         - '-DHAVE_OPENAT=OFF'
         environ:
@@ -503,7 +502,7 @@ packages:
         - 'cmake'
         - '-GNinja'
         - '@THIS_SOURCE_DIR@' 
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/scripts/CMake/lemon-cmake-options.txt'
         - '-DCMAKE_INSTALL_PREFIX=/system'
         - '-DCMAKE_BUILD_TYPE=None'
         - '-DENABLE_STATIC=OFF'
@@ -531,8 +530,7 @@ packages:
       version: '0.0pl@ROLLING_ID@'
       subdir: 'Ports'
     pkgs_required:
-      - liblemon
-      - liblemongui
+      - lemon-system-libs
       - mlibc
     tools_required:
       - host-compiler
@@ -572,7 +570,7 @@ packages:
         - '-GNinja'
         - '-DLLVM_ENABLE_PROJECTS=clang'
         - '-DCMAKE_BUILD_TYPE=Release'
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/scripts/CMake/lemon-cmake-options.txt'
         - '-DLLVM_TARGETS_TO_BUILD=X86'
         - '-DLLVM_PARALLEL_LINK_JOBS=@OPTION:llvm_linkcount@'
         - '-DCMAKE_CROSSCOMPILING=ON'

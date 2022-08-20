@@ -290,10 +290,10 @@ std::map<Type, CppType> cppTypes = {
 
 void Generate(std::ostream& out){
     out << "#pragma once\n\n"
-        << "#include <Lemon/IPC/Message.h>\n"
-        << "#include <Lemon/IPC/Interface.h>\n"
-        << "#include <Lemon/IPC/Endpoint.h>\n\n"
-        << "#include <Lemon/System/Handle.h>\n\n";
+        << "#include <lemon/ipc/Message.h>\n"
+        << "#include <lemon/ipc/Interface.h>\n"
+        << "#include <lemon/ipc/Endpoint.h>\n\n"
+        << "#include <lemon/system/Handle.h>\n\n";
 
     for(auto& st : statements){
         assert(st.get());

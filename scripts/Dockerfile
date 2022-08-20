@@ -8,9 +8,9 @@ RUN python3 -m ensurepip; python3 -m pip install meson xbstrap
 WORKDIR /var
 RUN set -e; git clone https://github.com/LemonOSProject/LemonOS --depth 1; find LemonOS/ -maxdepth 1 -mindepth 1 -type d \
     -not -name patches -not -name Ports -not -name Scripts -exec rm -rf {} +
-RUN cd LemonOS; mkdir Build; cd Build; xbstrap init ..
-RUN cd LemonOS/Build; xbstrap compile-tool --all;
-RUN apt-get install zstd; mkdir -p /var/lemon-tools/Build; mv /var/LemonOS/Toolchain /var/lemon-tools; mv /var/LemonOS/Build/tool-builds /var/lemon-tools/Build/tool-builds; \
+RUN cd LemonOS; mkdir build; cd build; xbstrap init ..
+RUN cd LemonOS/build; xbstrap compile-tool --all;
+RUN apt-get install zstd; mkdir -p /var/lemon-tools/Build; mv /var/LemonOS/toolchain /var/lemon-tools; mv /var/LemonOS/Build/tool-builds /var/lemon-tools/Build/tool-builds; \
     tar -cvf - lemon-tools | zstd - -o lemon-tools.tar.zst; rm -rf LemonOS lemon-tools; chmod 644 /var/lemon-tools.tar.zst
 
 FROM ubuntu:latest

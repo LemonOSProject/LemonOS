@@ -11,11 +11,11 @@ declare_options:
     default: '2'
 
 imports:
-  - file: Ports/packages.yml
+  - file: ports/packages.yml
 
 sources:
   - name: binutils
-    subdir: 'Toolchain'
+    subdir: 'toolchain'
     git: 'git://sourceware.org/git/binutils-gdb.git'
     tag: 'binutils-2_32'
     version: '2.32'
@@ -27,7 +27,7 @@ sources:
         workdir: '@THIS_SOURCE_DIR@/ld'
 
   - name: bison
-    subdir: 'Toolchain'
+    subdir: 'toolchain'
     git: 'https://git.savannah.gnu.org/git/bison.git'
     tag: 'v3.6.2'
     version: '3.6.2'
@@ -43,12 +43,12 @@ sources:
       - args: ['./bootstrap']
 
   - name: lemon-llvm
-    subdir: 'Toolchain'
+    subdir: 'toolchain'
     git: 'https://github.com/LemonOSProject/llvm-project'
     branch: 'master'
 
   - name: automake
-    subdir: 'Toolchain'
+    subdir: 'toolchain'
     git: 'https://git.savannah.gnu.org/git/automake.git'
     tag: 'v1.16.5'
     version: '1.16.5'
@@ -62,9 +62,10 @@ sources:
     branch: 'master'
     rolling_version: true
     version: '0.0pl@ROLLING_ID@'
+    subdir: 'lib'
 
   - name: icu
-    subdir: 'Ports'
+    subdir: 'ports'
     git: 'https://github.com/unicode-org/icu.git'
     tag: 'release-69-1'
     version: '69.1'
@@ -77,7 +78,7 @@ sources:
           '@THIS_SOURCE_DIR@/icu4c/source']
 
   - name: python
-    subdir: 'Ports'
+    subdir: 'ports'
     git: 'https://github.com/python/cpython'
     tag: 'v3.8.2'
     version: '3.8.2'
@@ -90,13 +91,13 @@ sources:
       - args: ['cp', '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub', '@THIS_SOURCE_DIR@/']
 
   - name: gnulib
-    subdir: 'Ports'
+    subdir: 'ports'
     git: 'https://git.savannah.gnu.org/git/gnulib.git'
     branch: 'master'
     rolling_version: true
 
   - name: gettext
-    subdir: 'Ports'
+    subdir: 'ports'
     git: 'https://git.savannah.gnu.org/git/gettext.git'
     tag: 'v0.19.8'
     version: 'v0.19.8'
@@ -129,7 +130,7 @@ tools:
   - name: host-autoconf-v2.69 # Some things e.g. binutils want exactly this version, painnnnnn
     source:
       name: host-autoconf-v2.69
-      subdir: 'Toolchain'
+      subdir: 'toolchain'
       url: 'https://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz'
       format: 'tar.gz' # Only ~600K larger than .xz
       extract_path: 'autoconf-2.69'
@@ -244,13 +245,13 @@ tools:
       - tool: host-llvm
         recursive: true
     source:
-      name: 'Toolchain'
+      name: 'toolchain'
 
   - name: host-libtool
     exports_aclocal: true
     source:
       name: libtool
-      subdir: 'Toolchain'
+      subdir: 'toolchain'
       git: 'https://git.savannah.gnu.org/git/libtool.git'
       tag: 'v2.4.6'
       version: '2.4.6'
@@ -280,7 +281,7 @@ tools:
     exports_aclocal: true
     source:
       name: 'pkg-config'
-      subdir: 'Toolchain'
+      subdir: 'toolchain'
       git: 'https://gitlab.freedesktop.org/pkg-config/pkg-config.git'
       tag: 'pkg-config-0.29.2'
       version: '0.29.2'
@@ -313,7 +314,7 @@ tools:
 
   - name: host-limine
     source:
-      subdir: 'Toolchain'
+      subdir: 'toolchain'
       git: 'https://github.com/limine-bootloader/limine.git'
       tag: 'v3.7.2'
       version: '3.7.2'
@@ -378,7 +379,7 @@ packages:
     configure:
       - args:
         - 'meson'
-        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
+        - '--cross=@SOURCE_ROOT@/scripts/lemon-crossfile.txt'
         - '-Dheaders_only=True'
         - '--prefix=/system'
         - '@THIS_SOURCE_DIR@'
@@ -399,7 +400,7 @@ packages:
     configure:
       - args:
         - 'meson'
-        - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
+        - '--cross=@SOURCE_ROOT@/scripts/lemon-crossfile.txt'
         - '-Dmlibc_no_headers=true'
         - '--prefix=/system'
         - '@THIS_SOURCE_DIR@'
@@ -412,7 +413,7 @@ packages:
   - name: libfmt
     source:
       name: 'fmt'
-      subdir: 'Thirdparty'
+      subdir: 'thirdparty'
     tools_required:
       - host-compiler
     configure:
@@ -421,7 +422,7 @@ packages:
         - '-GNinja'
         - '@THIS_SOURCE_DIR@' 
         - '-DCMAKE_CROSSCOMPILING=True'
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/scripts/CMake/lemon-cmake-options.txt'
         - '-DCMAKE_INSTALL_PREFIX=/system'
         - '-DBUILD_SHARED_LIBS=ON'
         - '-DFMT_TEST=OFF'
@@ -442,14 +443,14 @@ packages:
       summary: Lemon Kernel
       website: 'https://lemonos.org'
     source:
-      name: 'Kernel'
+      name: 'kernel'
     tools_required:
       - host-compiler
     configure:
       - args:
         - 'cmake'
         - '-GNinja'
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/scripts/CMake/lemon-cmake-options.txt'
         - '@THIS_SOURCE_DIR@'
         environ:
           LEMON_SYSROOT: '@SYSROOT_DIR@'
@@ -467,9 +468,9 @@ packages:
         
   - name: lemon-interface-headers
     source:
-      name: 'Services'
+      name: 'protocols'
     build:
-        - args: ['@SOURCE_ROOT@/Scripts/buildinterfaces.sh', '@SOURCE_ROOT@', '@SYSROOT_DIR@']
+        - args: ['@SOURCE_ROOT@/scripts/buildinterfaces.sh', '@SOURCE_ROOT@', '@SYSROOT_DIR@']
 
   - name: zlib
     pkgs_required:
@@ -478,7 +479,7 @@ packages:
       - host-compiler
       - host-pkgconfig
     source:
-      subdir: 'Ports'
+      subdir: 'ports'
       git: 'https://github.com/madler/zlib.git'
       tag: 'v1.2.12'
       version: '1.2.12'
@@ -505,7 +506,7 @@ packages:
       - host-libtool
       - host-pkgconfig
     source:
-      subdir: 'Ports'
+      subdir: 'ports'
       url: 'https://download.sourceforge.net/libpng/libpng-1.6.37.tar.gz'
       format: 'tar.gz'
       extract_path: 'libpng-1.6.37'
@@ -528,7 +529,7 @@ packages:
     tools_required:
       - host-compiler
     source:
-      subdir: 'Ports'
+      subdir: 'ports'
       git: 'git://git.sv.nongnu.org/freetype/freetype2.git'
       tag: 'VER-2-11-1'
       version: '2.11.1'
@@ -567,7 +568,7 @@ packages:
 
   - name: libressl
     source:
-      subdir: 'Ports'
+      subdir: 'ports'
       url: 'https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-3.3.1.tar.gz'
       format: 'tar.gz'
       extract_path: libressl-3.3.1
@@ -580,7 +581,7 @@ packages:
         - '-GNinja'
         - '@THIS_SOURCE_DIR@' 
         - '-DCMAKE_CROSSCOMPILING=True'
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/scripts/CMake/lemon-cmake-options.txt'
         - '-DCMAKE_INSTALL_PREFIX=/system'
         - '-DBUILD_SHARED_LIBS=ON'
         - '-DLIBRESSL_APPS=OFF'
@@ -601,7 +602,7 @@ packages:
       - args: ['mkdir', '@THIS_COLLECT_DIR@/system/lib/crypto']
       - args: ['ln', '-s', '../libcrypto.so', '@THIS_COLLECT_DIR@/system/lib/crypto/libcrypto.so']
 
-  - name: liblemon
+  - name: lemon-system-libs
     pkgs_required:
       - mlibc
       - zlib
@@ -614,42 +615,12 @@ packages:
       - host-pkgconfig
       - host-compiler
     source:
-      name: 'LibLemon'
+      name: 'lib'
     configure:
       - args:
         - 'cmake'
         - '-GNinja'
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
-        - '@THIS_SOURCE_DIR@'
-        environ:
-          LEMON_SYSROOT: '@SYSROOT_DIR@'
-          LEMON_BUILDROOT: '@SOURCE_ROOT@'
-    build:
-      - args: ['ninja']
-        environ:
-          LEMON_SYSROOT: '@SYSROOT_DIR@'
-          LEMON_BUILDROOT: '@SOURCE_ROOT@'
-      - args: ['ninja', 'install']
-        environ:
-          DESTDIR: '@THIS_COLLECT_DIR@'
-          LEMON_SYSROOT: '@SYSROOT_DIR@'
-          LEMON_BUILDROOT: '@SOURCE_ROOT@'
-
-  - name: liblemongui
-    tools_required:
-      - host-compiler
-      - host-pkgconfig
-    pkgs_required:
-      - mlibc
-      - liblemon
-      - libfmt
-    source:
-      name: 'LibGUI'
-    configure:
-      - args:
-        - 'cmake'
-        - '-GNinja'
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/scripts/CMake/lemon-cmake-options.txt'
         - '@THIS_SOURCE_DIR@'
         environ:
           LEMON_SYSROOT: '@SYSROOT_DIR@'
@@ -666,84 +637,22 @@ packages:
           LEMON_BUILDROOT: '@SOURCE_ROOT@'
 
   - name: lemon-system
+    metadata:
+      summary: LemonOS system
+      website: 'https://lemonos.org'
+    pkgs_required:
+      - lemon-kernel
+      - lemon-system-libs
     tools_required:
-      - host-compiler
       - host-pkgconfig
-    pkgs_required:
-      - mlibc
-      - liblemon
-      - liblemongui
-      - lemon-interface-headers
-    source:
-      name: 'System'
-    configure:
-      - args:
-        - 'cmake'
-        - '-GNinja'
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
-        - '@THIS_SOURCE_DIR@'
-        environ:
-          LEMON_SYSROOT: '@SYSROOT_DIR@'
-          LEMON_BUILDROOT: '@SOURCE_ROOT@'
-    build:
-      - args: ['ninja']
-        environ:
-          LEMON_SYSROOT: '@SYSROOT_DIR@'
-          LEMON_BUILDROOT: '@SOURCE_ROOT@'
-      - args: ['ninja', 'install']
-        environ:
-          DESTDIR: '@THIS_COLLECT_DIR@'
-          LEMON_SYSROOT: '@SYSROOT_DIR@'
-          LEMON_BUILDROOT: '@SOURCE_ROOT@'
-
-  - name: lemon-apps
-    tools_required:
       - host-compiler
-      - host-pkgconfig
-    pkgs_required:
-     - mlibc
-     - liblemon
-     - liblemongui
-     - libressl
-     - ffmpeg
     source:
-      name: 'Applications'
+      name: 'apps'
     configure:
       - args:
         - 'cmake'
         - '-GNinja'
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
-        - '@THIS_SOURCE_DIR@'
-        environ:
-          LEMON_SYSROOT: '@SYSROOT_DIR@'
-          LEMON_BUILDROOT: '@SOURCE_ROOT@'
-    build:
-      - args: ['ninja']
-        environ:
-          LEMON_SYSROOT: '@SYSROOT_DIR@'
-          LEMON_BUILDROOT: '@SOURCE_ROOT@'
-      - args: ['ninja', 'install']
-        environ:
-          DESTDIR: '@THIS_COLLECT_DIR@'
-          LEMON_SYSROOT: '@SYSROOT_DIR@'
-          LEMON_BUILDROOT: '@SOURCE_ROOT@'
-
-  - name: lemon-utils
-    tools_required:
-      - host-compiler
-    pkgs_required:
-      - mlibc
-      - liblemon
-      - lemon-system
-      - ffmpeg
-    source:
-      name: 'Utilities'
-    configure:
-      - args:
-        - 'cmake'
-        - '-GNinja'
-        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
-        - '-DCMAKE_INSTALL_PREFIX=/system'
+        - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/scripts/CMake/lemon-cmake-options.txt'
         - '@THIS_SOURCE_DIR@'
         environ:
           LEMON_SYSROOT: '@SYSROOT_DIR@'
@@ -765,12 +674,11 @@ packages:
       description: Metapackage containing the kernel, libraries, services and core applications for Lemon OS.
       website: 'https://lemonos.org'
     pkgs_required:
-      - lemon-apps
       - lemon-kernel
+      - lemon-system-libs
       - lemon-system
-      - lemon-utils
     source:
-      name: 'Base'
+      name: 'base'
     build:
       - args: ['sh', '-c', 'mkdir -p @THIS_COLLECT_DIR@/system; cp -ru Base/* @THIS_COLLECT_DIR@/system']
         workdir: '@SOURCE_ROOT@'
@@ -779,11 +687,9 @@ tasks:
   - name: build-initrd
     pkgs_required:
       - lemon-kernel
-      - lemon-apps
       - lemon-system
-      - lemon-utils
     args:
-      - '@SOURCE_ROOT@/Scripts/buildinitrd.sh'
+      - '@SOURCE_ROOT@/scripts/buildinitrd.sh'
 
   - name: build-disk
     tools_required:
@@ -797,7 +703,7 @@ tasks:
         path: '@SOURCE_ROOT@/Disks'
     args:
       - 'limine-deploy'
-      - '@SOURCE_ROOT@/Disks/Lemon.img'
+      - '@BUILD_ROOT@/lemon.img'
       - '1'
 
   - name: create-disk
@@ -812,4 +718,4 @@ tasks:
       - name: Lemon.img
         path: '@SOURCE_ROOT@/Disks'
     args:
-      - '@SOURCE_ROOT@/Scripts/builddisk.sh'
+      - '@SOURCE_ROOT@/scripts/builddisk.sh'

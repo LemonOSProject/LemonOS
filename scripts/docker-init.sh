@@ -8,8 +8,8 @@ cd $SPATH/..
 
 mkdir -p Build
 
-cp Scripts/docker-bootstrap-site.yml Build/bootstrap-site.yml
-echo "    create_extra_args: ['--user', '$(id -u):$(id -g)']" >> Build/bootstrap-site.yml
+cp scripts/docker-bootstrap-site.yml build/bootstrap-site.yml
+echo "    create_extra_args: ['--user', '$(id -u):$(id -g)']" >> build/bootstrap-site.yml
 
 set -e 1
 

@@ -8,18 +8,18 @@ cd "$LEMOND"
 
 set -e
 
-mkdir -p Initrd/
-cp -ru Resources/* Initrd/
-cp -L Build//sysroot/system/lib/libc.so* Build//sysroot/system/lib/libc++*.so* Build//sysroot/system/lib/libunwind.so* Build//sysroot/system/lib/ld.so* Build//sysroot/system/lib/libfreetype.so* Build//sysroot/system/lib/libpthread.so* Build//sysroot/system/lib/librt.so* Build//sysroot/system/lib/libdl.so* Initrd/ # Only copy crucial libraries
-cp Build/sysroot/system/bin/lsh Initrd/ # Create a backup of LSh on the ramdisk for FTerm
-cp Build/packages/lemon-utils/system/bin/* Initrd/ # Create a backup of LemonUtils on the ramdisk for FTerm
+INITRDDIR="$LEMOND/build/initrd"
 
-mkdir -p Initrd/modules
-cp -r Build/pkg-builds/lemon-kernel/Modules/*.sys Initrd/modules # Add kernel modules
-cp Kernel/modules.cfg Initrd/
+mkdir -p $INITRDDIR
+mkdir -p $INITRDDIR/modules
 
-nm Build/packages/lemon-kernel/system/lemon/kernel.sys > Initrd/kernel.map
+cp -ru kernel/resources/* $INITRDDIR
+cp -L build//sysroot/system/lib/libc.so* build//sysroot/system/lib/libc++*.so* build//sysroot/system/lib/libunwind.so* build//sysroot/system/lib/ld.so* build//sysroot/system/lib/libfreetype.so* build//sysroot/system/lib/libpthread.so* build//sysroot/system/lib/librt.so* build//sysroot/system/lib/libdl.so* $INITRDDIR # Only copy crucial libraries
+cp build/sysroot/system/bin/lsh $INITRDDIR # Create a backup of LSh on the ramdisk for FTerm
+cp build/packages/lemon-utils/system/bin/* $INITRDDIR # Create a backup of LemonUtils on the ramdisk for FTerm
 
-cd Initrd
-tar -cf ../Build/sysroot/system/lemon/initrd.tar *
-cd ..
+cp -r build/pkg-builds/lemon-kernel/modules/*.sys $INITRDDIR/modules # Add kernel modules
+
+cd $INITRDDIR
+tar -cf $LEMOND/build/sysroot/system/lemon/initrd.tar *
+cd $LEMOND
