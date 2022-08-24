@@ -251,9 +251,9 @@ public:
     DirectoryEntry dirent;
 
     KeyboardDevice(char* name) : Device(name, DeviceTypeLegacyHID) {
-        flags = FS_NODE_CHARDEVICE;
+        type = FileType::CharDevice;
         strcpy(dirent.name, name);
-        dirent.flags = flags;
+        dirent.flags = DT_CHR;
         dirent.node = this;
 
         SetDeviceName("PS/2 Keyboard Device");
@@ -281,9 +281,9 @@ public:
     DirectoryEntry dirent;
 
     MouseDevice(char* name) : Device(name, DeviceTypeLegacyHID) {
-        flags = FS_NODE_CHARDEVICE;
+        type = FileType::CharDevice;
         strcpy(dirent.name, name);
-        dirent.flags = flags;
+        dirent.flags = DT_CHR;
         dirent.node = this;
 
         SetDeviceName("PS/2 Mouse Device");

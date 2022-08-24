@@ -17,16 +17,12 @@ ErrorOr<ssize_t> FsNode::Write(size_t, size_t, UIOBuffer*){
     return Error{ENOSYS};
 }
 
-ErrorOr<UNIXOpenFile*> FsNode::Open(size_t flags){
-    UNIXOpenFile* fDesc = new UNIXOpenFile;
-
-    fDesc->pos = 0;
-    fDesc->mode = flags;
-    fDesc->node = this;
+ErrorOr<File*> FsNode::Open(size_t flags){
+    File* file = TRY_OR_ERROR(NodeFile::Create(this));
 
     handleCount++;
 
-    return fDesc;
+    return file;
 }
 
 void FsNode::Close(){
@@ -34,7 +30,7 @@ void FsNode::Close(){
 }
 
 ErrorOr<int> FsNode::ReadDir(DirectoryEntry*, uint32_t){
-    if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+    if(type != FileType::Directory){
         return Error{ENOTDIR};
     }
     
@@ -50,7 +46,7 @@ ErrorOr<FsNode*> FsNode::FindDir(const char*){
 }
 
 Error FsNode::Create(DirectoryEntry*, uint32_t){
-    if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+    if(type != FileType::Directory){
         return Error{ENOTDIR};
     }
 
@@ -59,7 +55,7 @@ Error FsNode::Create(DirectoryEntry*, uint32_t){
 }
 
 Error FsNode::CreateDirectory(DirectoryEntry*, uint32_t){
-    if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+    if(type != FileType::Directory){
         return Error{ENOTDIR};
     }
 
@@ -96,24 +92,10 @@ ErrorOr<int> FsNode::Ioctl(uint64_t cmd, uint64_t arg){
     return Error{ENOTTY};
 }
 
-void FsNode::Watch(FilesystemWatcher& watcher, int events){
-    Log::Warning("FsNode::Watch base called");
-    
-    watcher.Signal();
-}
-
-void FsNode::Unwatch(FilesystemWatcher& watcher){
-    Log::Warning("FsNode::Unwatch base called");
+ErrorOr<MappedRegion*> FsNode::MMap(uintptr_t base, uintptr_t size, off_t off, int prot, bool shared, bool fixed) {
+    return ENODEV;
 }
 
 void FsNode::Sync(){
     
-}
-
-void FsNode::UnblockAll(){
-    acquireLock(&blockedLock);
-    while(blocked.get_length()){
-        blocked.get_front()->Unblock();
-    }
-    releaseLock(&blockedLock);
 }

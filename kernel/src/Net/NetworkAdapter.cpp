@@ -10,8 +10,8 @@
 namespace Network {
     extern Vector<NetworkAdapter*> adapters;
 
-    NetworkAdapter::NetworkAdapter(AdapterType aType) : Device(DeviceTypeNetworkAdapter, NetFS::GetInstance()), type(aType) {
-        flags = FS_NODE_CHARDEVICE;
+    NetworkAdapter::NetworkAdapter(AdapterType aType) : Device(DeviceTypeNetworkAdapter, NetFS::GetInstance()), m_adapterType(aType) {
+        type = FileType::CharDevice;
     }
 
     void NetworkAdapter::SendPacket(void* data, size_t len){

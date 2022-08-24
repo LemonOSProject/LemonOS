@@ -10,7 +10,7 @@ class MixerDevice
     : public FsNode {
 public:
     MixerDevice () {
-        flags = FS_NODE_CHARDEVICE;
+        type = FileType::CharDevice;
     }
 
     ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override {
@@ -27,7 +27,7 @@ class PCMOutputDevice
     : public FsNode {
 public:
     PCMOutputDevice() {
-        flags = FS_NODE_CHARDEVICE;
+        type = FileType::CharDevice;
     }
 
     ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override {
@@ -80,7 +80,7 @@ class SoundFS
 public:
     SoundFS()
         : Device("snd", DeviceTypeUnknown) {
-        flags = FS_NODE_DIRECTORY;
+        type = FileType::Directory;
     }
 
     ErrorOr<int> ReadDir(DirectoryEntry* dirent, uint32_t index) override {

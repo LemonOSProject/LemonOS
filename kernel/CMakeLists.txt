@@ -20,13 +20,13 @@ include_directories($ENV{LEMON_BUILDROOT}/thirdparty/frigg/include)
 include_directories($ENV{LEMON_BUILDROOT}/thirdparty/cxxshim/stage2/include)
 
 if("${LEMON_ARCH}" STREQUAL "x86_64")
-    include_directories(include/Arch/x86_64)
+    include_directories(include/arch/x86_64)
 
     enable_language(ASM_NASM)
     if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
         message(FATAL_ERROR "Failed to find NASM assembler!")
     endif()
-    set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> -i${CMAKE_CURRENT_SOURCE_DIR}/src/Arch/x86_64 \
+    set(CMAKE_ASM_NASM_COMPILE_OBJECT "<CMAKE_ASM_NASM_COMPILER> -i${CMAKE_CURRENT_SOURCE_DIR}/src/arch/x86_64 \
         -felf64 -w+gnu-elf-extensions -o <OBJECT> <SOURCE>")
 else()
     message(FATAL_ERROR "Unsupported architecture ${LEMON_ARCH}")
@@ -69,7 +69,7 @@ set(KERNEL_SRC
     src/Fs/Filesystem.cpp
     src/Fs/FsNode.cpp
     src/Fs/FsVolume.cpp
-    src/Fs/Pipe.cpp
+    #src/Fs/Pipe.cpp
     src/Fs/TAR.cpp
     src/Fs/Tmp.cpp
     src/Fs/VolumeManager.cpp
@@ -86,11 +86,12 @@ set(KERNEL_SRC
     src/Net/UDP.cpp
     src/Net/TCP.cpp
 
-    src/Objects/Interface.cpp
+    src/Objects/File.cpp
+    #src/Objects/Interface.cpp
     src/Objects/KObject.cpp
-    src/Objects/Message.cpp
+    #src/Objects/Message.cpp
     src/Objects/Process.cpp
-    src/Objects/Service.cpp
+    #src/Objects/Service.cpp
 
     src/Storage/AHCIController.cpp
     src/Storage/AHCIPort.cpp
@@ -107,41 +108,43 @@ set(KERNEL_SRC
 
     src/USB/XHCI.cpp
 
+    src/sys/syscall.cpp
+
     src/sys/le_core.cpp
     src/sys/le_mm.cpp
+    
     src/sys/sys_vfs.cpp
-    src/sys/syscall.cpp
 )
 
 set(KERNEL_SRC_x86_64
-    src/Arch/x86_64/ACPI.cpp
-    src/Arch/x86_64/APIC.cpp
-    src/Arch/x86_64/CPUID.cpp
-    src/Arch/x86_64/ELF.cpp
-    src/Arch/x86_64/HAL.cpp
-    src/Arch/x86_64/IDT.cpp
-    src/Arch/x86_64/PS2.cpp
-    src/Arch/x86_64/Modules.cpp
-    src/Arch/x86_64/Paging.cpp
-    src/Arch/x86_64/PCI.cpp
-    src/Arch/x86_64/PhysicalAllocator.cpp
-    src/Arch/x86_64/Scheduler.cpp
-    src/Arch/x86_64/Serial.cpp
-    src/Arch/x86_64/SMP.cpp
-    src/Arch/x86_64/SSP.cpp
-    src/Arch/x86_64/StringSafe.cpp
-    src/Arch/x86_64/Symbols.cpp
-    src/Arch/x86_64/Thread.cpp
-    src/Arch/x86_64/Timer.cpp
-    src/Arch/x86_64/TSS.cpp
+    src/arch/x86_64/ACPI.cpp
+    src/arch/x86_64/APIC.cpp
+    src/arch/x86_64/CPUID.cpp
+    src/arch/x86_64/ELF.cpp
+    src/arch/x86_64/HAL.cpp
+    src/arch/x86_64/IDT.cpp
+    src/arch/x86_64/PS2.cpp
+    src/arch/x86_64/Modules.cpp
+    src/arch/x86_64/Paging.cpp
+    src/arch/x86_64/PCI.cpp
+    src/arch/x86_64/PhysicalAllocator.cpp
+    src/arch/x86_64/Scheduler.cpp
+    src/arch/x86_64/Serial.cpp
+    src/arch/x86_64/SMP.cpp
+    src/arch/x86_64/SSP.cpp
+    src/arch/x86_64/StringSafe.cpp
+    src/arch/x86_64/Symbols.cpp
+    src/arch/x86_64/Thread.cpp
+    src/arch/x86_64/Timer.cpp
+    src/arch/x86_64/TSS.cpp
 
-    src/Arch/x86_64/Entry.asm
-    src/Arch/x86_64/IDT.asm
-    src/Arch/x86_64/Memcpy.asm
-    src/Arch/x86_64/SignalTrampoline.asm
-    src/Arch/x86_64/SMPTrampoline.asm
-    src/Arch/x86_64/Syscall.asm
-    src/Arch/x86_64/TSS.asm
+    src/arch/x86_64/Entry.asm
+    src/arch/x86_64/IDT.asm
+    src/arch/x86_64/Memcpy.asm
+    src/arch/x86_64/SignalTrampoline.asm
+    src/arch/x86_64/SMPTrampoline.asm
+    src/arch/x86_64/Syscall.asm
+    src/arch/x86_64/TSS.asm
 )
 
 add_link_options(-z max-page-size=0x1000 -ffreestanding -nostdlib)
@@ -161,7 +164,7 @@ add_custom_command(
 
 add_custom_command(
     OUTPUT ksyms.asm
-    DEPENDS kernel_obj
+    DEPENDS $<TARGET_OBJECTS:kernel_obj>
     COMMAND $ENV{LEMON_BUILDROOT}/scripts/genkernelsyms.py ksyms.asm $<TARGET_OBJECTS:kernel_obj>
     VERBATIM
 )

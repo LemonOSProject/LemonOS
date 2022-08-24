@@ -28,7 +28,7 @@ void WriteN(const char* str, size_t n);
 
 class LogDevice : public Device {
 public:
-    LogDevice(char* name) : Device(name, DeviceTypeKernelLog) { flags = FS_NODE_FILE; }
+    LogDevice(char* name) : Device(name, DeviceTypeKernelLog) { type = FileType::Regular; }
 
     ErrorOr<ssize_t> Read(size_t offset, size_t size, UIOBuffer* buffer) {
         if (!logBuffer)

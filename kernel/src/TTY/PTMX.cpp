@@ -8,7 +8,7 @@ void PTMultiplexor::Initialize(){
 
 PTMultiplexor::PTS::PTS(PTMultiplexor& ptmx)
     : Device("pts", DeviceTypeUNIXPseudo), m_ptmx(ptmx) {
-    flags = FS_NODE_DIRECTORY;
+    type = FileType::Directory;
     pmask = 0755;
 }
 
@@ -51,14 +51,14 @@ Error PTMultiplexor::PTS::Unlink(DirectoryEntry*, bool){
 
 PTMultiplexor::PTMultiplexor()
     : Device("ptmx", DeviceTypeUNIXPseudo), m_pts(*this) {
-    flags = FS_NODE_CHARDEVICE;
+    type = FileType::CharDevice;
     pmask = 0666;
     uid = 0;
 
     SetDeviceName("UNIX PTY Multiplexor");
 }
 
-ErrorOr<UNIXOpenFile*> PTMultiplexor::Open(size_t flags){
+ErrorOr<File*> PTMultiplexor::Open(size_t flags){
     PTY* pty = new PTY(m_nextPT++);
 
     ScopedSpinLock lock(m_ptmxLock);

@@ -131,19 +131,19 @@ namespace Network {
         }
 
         instance = this;
-        flags = FS_NODE_DIRECTORY;
+        type = FileType::Directory;
     }
 
     ErrorOr<int> NetFS::ReadDir(DirectoryEntry* dirent, uint32_t index){
         if(index == 0){
             strcpy(dirent->name, ".");
 
-            dirent->flags = FS_NODE_DIRECTORY;
+            dirent->flags = DT_DIR;
             return 1;
         } else if(index == 1){
             strcpy(dirent->name, "..");
 
-            dirent->flags = FS_NODE_DIRECTORY;
+            dirent->flags = DT_DIR;
             return 1;
         }
 
@@ -154,7 +154,7 @@ namespace Network {
         NetworkAdapter* adapter = adapters[index - 2];
         strcpy(dirent->name, adapter->InstanceName().c_str());
 
-        dirent->flags = FS_NODE_CHARDEVICE;
+        dirent->flags = DT_CHR;
 
         return 1;
     }

@@ -5,8 +5,8 @@
 
 namespace fs::Temp{
     TempVolume::TempVolume(const char* name){
-        mountPoint = new TempNode(this, FS_NODE_DIRECTORY);
-        mountPoint->parent = fs::GetRoot();
+        mountPoint = new TempNode(this, FileType::Directory);
+        //mountPoint->parent = fs::GetRoot();
 
         mountPointDirent = DirectoryEntry(mountPoint, name);
     }
@@ -64,7 +64,7 @@ namespace fs::Temp{
         }
     }
 
-    TempNode::TempNode(TempVolume* v, int createFlags){
+    TempNode::TempNode(TempVolume* v, FileType ft){
         vol = v;
         volumeID = v->volumeID;
 
@@ -73,13 +73,13 @@ namespace fs::Temp{
 
         nlink = 1;
 
-        flags = createFlags;
+        type = ft;
 
-        if((flags & FS_NODE_TYPE) == FS_NODE_FILE){
+        if(IsFile()){
             bufferLock = ReadWriteLock();
             buffer = nullptr;
             bufferSize = 0;
-        } else if((flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+        } else if(IsDirectory()){
             children = List<DirectoryEntry>();
         } else {
             assert(!"TempNode not regular file or directory!");
@@ -97,7 +97,7 @@ namespace fs::Temp{
     }
 
     TempNode* TempNode::Find(const char* name){
-        assert((flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY);
+        assert(IsDirectory());
 
         for(DirectoryEntry& ent : children){
             if(strncmp(ent.name, name, NAME_MAX) == 0){
@@ -109,7 +109,7 @@ namespace fs::Temp{
     }
 
     ErrorOr<ssize_t> TempNode::Read(size_t off, size_t readSize, UIOBuffer* readBuffer){
-        if((flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+        if(IsDirectory()){
             return Error{EISDIR};
         }
 
@@ -132,7 +132,7 @@ namespace fs::Temp{
     }
 
     ErrorOr<ssize_t> TempNode::Write(size_t off, size_t writeSize, UIOBuffer* writeBuffer){
-        if((flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+        if(IsDirectory()){
             return Error{EISDIR};
         }
 
@@ -192,21 +192,21 @@ namespace fs::Temp{
 
         if(index == 0){
             strcpy(dirent->name, ".");
-            dirent->flags = DirectoryEntry::FileToDirentFlags(flags);
+            dirent->flags = DirectoryEntry::FileToDirentFlags(type);
             
             return 1;
         } else if(index == 1){
             strcpy(dirent->name, "..");
             if(!parent){
-                dirent->flags = DirectoryEntry::FileToDirentFlags(fs::GetRoot()->flags);
+                dirent->flags = DirectoryEntry::FileToDirentFlags(fs::GetRoot()->type);
             } else {
-                dirent->flags = DirectoryEntry::FileToDirentFlags(parent->flags);
+                dirent->flags = DirectoryEntry::FileToDirentFlags(parent->type);
             }
 
             return 1;
         } else {
             *dirent = children[index - 2];
-            dirent->flags = DirectoryEntry::FileToDirentFlags(dirent->node->flags);
+            dirent->flags = DirectoryEntry::FileToDirentFlags(dirent->node->type);
             dirent->node = nullptr; // Do not expose node
 
             return 1;
@@ -242,7 +242,7 @@ namespace fs::Temp{
     }
 
     Error TempNode::Create(DirectoryEntry* ent, uint32_t mode){
-        if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+        if(!IsDirectory()){
             IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
                 Log::Warning("[tmpfs] Create: Node is not a directory!");
             });
@@ -254,7 +254,7 @@ namespace fs::Temp{
             return Error{EEXIST};
         }
 
-        TempNode* newNode = new TempNode(vol, FS_NODE_FILE);
+        TempNode* newNode = new TempNode(vol, FileType::Regular);
         newNode->parent = this;
         
         *ent = DirectoryEntry(newNode, ent->name);
@@ -270,7 +270,7 @@ namespace fs::Temp{
     }
 
     Error TempNode::CreateDirectory(DirectoryEntry* ent, uint32_t mode){
-        if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+        if(!IsDirectory()){
             IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
                 Log::Warning("[tmpfs] CreateDirectory: Node is not a directory!");
             });
@@ -282,7 +282,7 @@ namespace fs::Temp{
             return Error{EEXIST};
         }
 
-        TempNode* newNode = new TempNode(vol, FS_NODE_DIRECTORY);
+        TempNode* newNode = new TempNode(vol, FileType::Directory);
         newNode->parent = this;
         
         *ent = DirectoryEntry(newNode, ent->name);
@@ -294,7 +294,7 @@ namespace fs::Temp{
     }
         
     Error TempNode::Link(FsNode* file, DirectoryEntry* ent){
-        if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+        if(!IsDirectory()){
             return Error{ENOTDIR};
         }
 
@@ -325,7 +325,7 @@ namespace fs::Temp{
     }
 
     Error TempNode::Unlink(DirectoryEntry* ent, bool unlinkDirectories){
-        if((flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY){
+        if(!IsDirectory()){
             IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
                 Log::Warning("[tmpfs] Unlink: Node not a directory!");
             });
@@ -364,16 +364,8 @@ namespace fs::Temp{
         return ERROR_NONE;
     }
 
-    ErrorOr<UNIXOpenFile*> TempNode::Open(size_t flags){
-        UNIXOpenFile* fDesc = new UNIXOpenFile;
-
-        fDesc->pos = 0;
-        fDesc->mode = flags;
-        fDesc->node = this;
-
-        handleCount++;
-
-        return fDesc;
+    ErrorOr<File*> TempNode::Open(size_t flags){
+        return TRY_OR_ERROR(NodeFile::Create(this));
     }
 
     void TempNode::Close(){

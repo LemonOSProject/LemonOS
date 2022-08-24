@@ -386,7 +386,7 @@ ModuleLoadStatus LoadModule(const char* path) {
         return {.status = ModuleLoadStatus::ModuleNotFound, .code = 0};
     }
 
-    ErrorOr<UNIXOpenFile*> handle = nullptr;
+    ErrorOr<File*> handle = nullptr;
     if ((handle = fs::Open(node)).HasError()) { // Make sure we open a handle so the node stays in memory
         Log::Error("Failed to open handle for module '%s'", path);
         return {.status = ModuleLoadStatus::ModuleNotFound, .code = 0};

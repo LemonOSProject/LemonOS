@@ -23,12 +23,12 @@ inline static long GetBlockCount(char* size){ // Get size of file in blocks
     return (sz + 511) / 512;
 }
 
-inline static uint32_t TarTypeToFilesystemFlags(char type){
+inline static FileType TarToFiletype(char type){
     switch(type){
         case TAR_TYPE_DIRECTORY:
-            return FS_NODE_DIRECTORY;
+            return FileType::Directory;
         default:
-            return FS_NODE_FILE;
+            return FileType::Regular;
     }
 }
 
@@ -67,7 +67,7 @@ namespace fs::tar{
 
         n->inode = inode;
         n->uid = OctToDec(header->ustar.uid, 8);
-        n->flags = TarTypeToFilesystemFlags(header->ustar.type);
+        n->type = TarToFiletype(header->ustar.type);
         n->vol = this;
         n->volumeID = volumeID;
 
@@ -135,11 +135,11 @@ namespace fs::tar{
 
         TarNode* volumeNode = &nodes[0];
         volumeNode->header = nullptr;
-        volumeNode->flags = FS_NODE_DIRECTORY | FS_NODE_MOUNTPOINT;
+        volumeNode->type = FileType::Directory;
         volumeNode->inode = 0;
         volumeNode->size = size;
         volumeNode->vol = this;
-        volumeNode->parent = 0;
+        //volumeNode->parent = 0;
 
         mountPoint = volumeNode;
         strcpy(mountPointDirent.name, name);
@@ -174,7 +174,7 @@ namespace fs::tar{
     ErrorOr<ssize_t> TarVolume::Read(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer){
         TarNode* tarNode = &nodes[node->inode];
 
-        if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+        if(node->IsDirectory()){
             return Error{EISDIR};
         }
 
@@ -190,7 +190,7 @@ namespace fs::tar{
     }
 
     ErrorOr<ssize_t> TarVolume::Write(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer){
-        if((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY){
+        if(node->IsDirectory()){
             return Error{EISDIR};
         }
 
@@ -206,11 +206,9 @@ namespace fs::tar{
     }
 
     ErrorOr<int> TarVolume::ReadDir(TarNode* node, DirectoryEntry* dirent, uint32_t index){
-        TarNode* tarNode = &nodes[node->inode];
-        
-        if((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) return Error{ENOTDIR};
+        if(node->type != FileType::Directory) return Error{ENOTDIR};
 
-        if(index >= static_cast<unsigned>(tarNode->entryCount + 2)) return 0;
+        if(index >= static_cast<unsigned>(node->entryCount + 2)) return 0;
 
         if(index == 0){
             strcpy(dirent->name, ".");
@@ -222,40 +220,16 @@ namespace fs::tar{
             return 1;
         }
 
-        TarNode* dir = &nodes[tarNode->children[index - 2]];
-
-        strcpy(dirent->name, dir->name);
-        dirent->flags = dir->flags;
-        dirent->node = dir;
-
-        switch(dir->flags & FS_NODE_TYPE){
-            case FS_NODE_FILE:
-                dirent->flags = DT_REG;
-                break;
-            case FS_NODE_DIRECTORY:
-                dirent->flags = DT_DIR;
-                break;
-            case FS_NODE_CHARDEVICE:
-                dirent->flags = DT_CHR;
-                break;
-            case FS_NODE_BLKDEVICE:
-                dirent->flags = DT_BLK;
-                break;
-            case FS_NODE_SOCKET:
-                dirent->flags = DT_SOCK;
-                break;
-            case FS_NODE_SYMLINK:
-                dirent->flags = DT_LNK;
-                break;
-        }
-
+        TarNode* dir = &nodes[node->children[index - 2]];
+        
+        *dirent = DirectoryEntry(dir, dir->name);
         return 1;
     }
 
     ErrorOr<FsNode*> TarVolume::FindDir(TarNode* node, const char* name){
         TarNode* tarNode = &nodes[node->inode];
         
-        if(!(node->flags & FS_NODE_DIRECTORY)) return Error{ENOTDIR};
+        if(!node->IsDirectory()) return Error{ENOTDIR};
 
         if(strcmp(".", name) == 0) return node;
         if(strcmp("..", name) == 0){

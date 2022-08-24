@@ -17,7 +17,7 @@ enum class KOTypeID : int {
     MessageEndpoint,
     MessageInterface,
     Service,
-    UNIXOpenFile,
+    File,
     Process,
 };
 
@@ -30,6 +30,10 @@ protected:
 
 class KernelObjectWatcher;
 
+class KernelObjectWatcher : public Semaphore {
+
+};
+
 class KernelObject {
 public:
     virtual KOTypeID InstanceTypeID() const = 0;
@@ -40,27 +44,6 @@ public:
     virtual void Unwatch(KernelObjectWatcher& watcher);
 
     virtual ~KernelObject() = default;
-};
-
-class KernelObjectWatcher : public Semaphore {
-    List<FancyRefPtr<KernelObject>> watching;
-
-public:
-    KernelObjectWatcher() : Semaphore(0) {}
-
-    inline void WatchObject(FancyRefPtr<KernelObject> node, int events) {
-        node->Watch(*this, events);
-
-        watching.add_back(node);
-    }
-
-    ~KernelObjectWatcher() {
-        for (auto& node : watching) {
-            node->Unwatch(*this);
-        }
-
-        watching.clear();
-    }
 };
 
 template<typename T>

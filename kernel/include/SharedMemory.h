@@ -1,6 +1,6 @@
 #pragma once
 
-#include <abi-bits/pid_t.h>
+#include <abi/types.h>
 
 #include <MM/VMObject.h>
 #include <Scheduler.h>

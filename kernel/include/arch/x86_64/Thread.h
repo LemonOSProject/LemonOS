@@ -8,7 +8,7 @@
 #include <Timer.h>
 
 #include <stdint.h>
-#include <abi-bits/pid_t.h>
+#include <abi/types.h>
 
 #define THREAD_TIMESLICE_DEFAULT 10
 

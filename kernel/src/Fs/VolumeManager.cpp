@@ -106,7 +106,7 @@ int Unmount(const char* name) {
 void RegisterVolume(FsVolume* volume) {
     volume->SetVolumeID(nextVolumeID++);
     if(volume->mountPoint){
-        volume->mountPoint->parent = fs::GetRoot();
+        //volume->mountPoint->parent = fs::GetRoot();
     }
     volumes->add_back(volume);
 }

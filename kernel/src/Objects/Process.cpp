@@ -375,14 +375,14 @@ Process::~Process() {
 void Process::Destroy() {
     if (m_state != Process_Dead) {
         // Use SIGKILL as the process will kill itself
-        KernelObjectWatcher watcher;
+        /*KernelObjectWatcher watcher;
         Watch(watcher, 0);
 
         m_mainThread->Signal(SIGKILL);
         bool interrupted = watcher.Wait(); // Wait for the process to die
 
         assert(!interrupted);
-        assert(m_state == Process_Dead);
+        assert(m_state == Process_Dead);*/
     }
 
     // Remove from parent completely
@@ -482,13 +482,13 @@ void Process::Die() {
             while (child->State() != Process_Dead)
                 Scheduler::Yield(); // Wait for it to die
         } else if (child->State() == Process_Dying) {
-            KernelObjectWatcher w;
+            /*KernelObjectWatcher w;
             child->Watch(w, 0);
 
             bool wasInterrupted = w.Wait(); // Wait for the process to die
             while (wasInterrupted) {
                 wasInterrupted = w.Wait(); // If the parent tried to interrupt us we are dying anyway
-            }
+            }*/
         }
 
         child->m_parent = nullptr;
@@ -596,7 +596,7 @@ void Process::Die() {
     Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Closing handles...", m_pid);
     m_handles.clear();
 
-    Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Signaling watchers...", m_pid);
+    /*Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Signaling watchers...", m_pid);
     {
         ScopedSpinLock lockWatchers(m_watchingLock);
 
@@ -607,7 +607,7 @@ void Process::Die() {
             watcher->Signal();
         }
         m_watching.clear();
-    }
+    }*/
 
     if (m_parent && (m_parent->State() == Process_Running)) {
         Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Sending SIGCHILD to %s...", m_pid, m_parent->name);

@@ -37,7 +37,7 @@ public:
     static void Initialize();
     static inline PTMultiplexor& Instance() { return *m_instance; }
 
-    ErrorOr<UNIXOpenFile*> Open(size_t flags) override;
+    ErrorOr<File*> Open(size_t flags) override;
     void DestroyPTY(PTY* pt);
 
 private:
@@ -65,8 +65,8 @@ public:
     ErrorOr<ssize_t> Write(size_t, size_t, UIOBuffer*) override;
     ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override;
 
-    void Watch(FilesystemWatcher& watcher, int events) override;
-    void Unwatch(FilesystemWatcher& watcher) override;
+    //void Watch(FilesystemWatcher& watcher, int events); //override;
+    //void Unwatch(FilesystemWatcher& watcher); // override;
 
     bool CanRead() override;
 };
@@ -103,15 +103,15 @@ public:
 
     void Close();
 
-    void WatchMaster(FilesystemWatcher& watcher, int events);
-    void WatchSlave(FilesystemWatcher& watcher, int events);
-    void UnwatchMaster(FilesystemWatcher& watcher);
-    void UnwatchSlave(FilesystemWatcher& watcher);
+    //void WatchMaster(FilesystemWatcher& watcher, int events);
+    //void WatchSlave(FilesystemWatcher& watcher, int events);
+    //void UnwatchMaster(FilesystemWatcher& watcher);
+    //void UnwatchSlave(FilesystemWatcher& watcher);
 private:
     int m_id;
 
-    List<FilesystemWatcher*> m_watchingSlave;
-    List<FilesystemWatcher*> m_watchingMaster;
+    //List<FilesystemWatcher*> m_watchingSlave;
+    //List<FilesystemWatcher*> m_watchingMaster;
 };
 
 PTY* GrantPTY(uint64_t pid);

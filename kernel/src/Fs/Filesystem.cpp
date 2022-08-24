@@ -9,7 +9,7 @@
 
 #include <Debug.h>
 
-void FilesystemBlocker::Interrupt() {
+/*void FilesystemBlocker::Interrupt() {
     shouldBlock = false;
     interrupted = true;
 
@@ -45,29 +45,32 @@ retry:
         node->blocked.remove(this);
         releaseLock(&node->blockedLock);
     }
-}
+}*/
 
 DirectoryEntry::DirectoryEntry(FsNode* node, const char* name) : node(node) {
     strncpy(this->name, name, NAME_MAX);
 
-    switch (node->flags & FS_NODE_TYPE) {
-    case FS_NODE_FILE:
+    switch (node->type) {
+    case FileType::Regular:
         flags = DT_REG;
         break;
-    case FS_NODE_DIRECTORY:
+    case FileType::Directory:
         flags = DT_DIR;
         break;
-    case FS_NODE_CHARDEVICE:
+    case FileType::CharDevice:
         flags = DT_CHR;
         break;
-    case FS_NODE_BLKDEVICE:
+    case FileType::BlockDevice:
         flags = DT_BLK;
         break;
-    case FS_NODE_SOCKET:
+    case FileType::Socket:
         flags = DT_SOCK;
         break;
-    case FS_NODE_SYMLINK:
+    case FileType::SymbolicLink:
         flags = DT_LNK;
+        break;
+    case FileType::Pipe:
+        flags = DT_FIFO;
         break;
     }
 }
@@ -111,7 +114,7 @@ class Root : public FsNode {
 public:
     Root() {
         inode = 0;
-        flags = FS_NODE_DIRECTORY;
+        type = FileType::Directory;
     }
 
     ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t);
@@ -213,6 +216,10 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
         }
 
         FsNode* node = r.Value();
+        if(!node) {
+            Log::Error("component %s has no node!", component.c_str());
+            assert(node);
+        }
 
         size_t amountOfSymlinks = 0;
         if(node->IsSymlink()) { // Check for symlinks
@@ -413,7 +420,7 @@ ErrorOr<FsNode*> Root::FindDir(const char* name) {
 
     for (unsigned i = 0; i < VolumeManager::volumes->get_length(); i++) {
         if (strcmp(VolumeManager::volumes->get_at(i)->mountPointDirent.name, name) == 0)
-            return (VolumeManager::volumes->get_at(i)->mountPointDirent.node);
+            return (VolumeManager::volumes->get_at(i)->mountPointDirent.inode());
     }
 
     return Error{ENOENT};
@@ -433,7 +440,7 @@ ErrorOr<ssize_t> Write(FsNode* node, size_t offset, size_t size, void* buffer) {
     return node->Write(offset, size, &uio);
 }
 
-ErrorOr<UNIXOpenFile*> Open(FsNode* node, uint32_t flags) { return node->Open(flags); }
+ErrorOr<File*> Open(FsNode* node, uint32_t flags) { return node->Open(flags); }
 
 Error Link(FsNode* dir, FsNode* link, DirectoryEntry* ent) {
     assert(dir);
@@ -449,18 +456,16 @@ Error Unlink(FsNode* dir, DirectoryEntry* ent, bool unlinkDirectories) {
     return dir->Unlink(ent, unlinkDirectories);
 }
 
-void Close(FsNode* node) { return node->Close(); }
-
-void Close(UNIXOpenFile* fd) {
+void Close(File* fd) {
     if (!fd)
         return;
 
-    ScopedSpinLock lockOpenFileData(fd->dataLock);
+    ScopedSpinLock lockOpenFileData(fd->fLock);
 
-    assert(fd->node);
+    assert(fd->inode);
 
-    fd->node->Close();
-    fd->node = nullptr;
+    fd->inode->Close();
+    fd->inode = nullptr;
 }
 
 ErrorOr<int> ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index) {
@@ -473,77 +478,6 @@ ErrorOr<FsNode*> FindDir(FsNode* node, const char* name) {
     assert(node);
 
     return node->FindDir(name);
-}
-
-ErrorOr<ssize_t> Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer) {
-    assert(handle->node);
-
-    ScopedSpinLock lockOpenFile(handle->dataLock);
-    auto ret = handle->node->Read(handle->pos, size, buffer);
-
-    if(ret.HasError()) {
-        return ret;
-    }
-
-    handle->pos += ret.Value();
-    return ret;
-}
-
-ErrorOr<ssize_t> Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer) {
-    assert(handle->node);
-
-    ScopedSpinLock lockOpenFile(handle->dataLock);
-    auto ret = handle->node->Write(handle->pos, size, buffer);
-
-    if(ret.HasError()) {
-        return ret.err;
-    }
-
-    handle->pos += ret.Value();
-    return ret;
-}
-
-ErrorOr<ssize_t> Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer, off_t off) {
-    assert(handle->node);
-
-    ScopedSpinLock lockOpenFile(handle->dataLock);
-    auto ret = handle->node->Read(off, size, buffer);
-
-    if(ret.HasError()) {
-        return ret;
-    }
-
-    return ret;
-}
-
-ErrorOr<ssize_t> Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer, off_t off) {
-    assert(handle->node);
-
-    auto ret = handle->node->Write(off, size, buffer);
-
-    if(ret.HasError()) {
-        return ret.err;
-    }
-
-    return ret;
-}
-
-ErrorOr<int> ReadDir(const FancyRefPtr<UNIXOpenFile>& handle, DirectoryEntry* dirent, uint32_t index) {
-    assert(handle->node);
-
-    return handle->node->ReadDir(dirent, index);
-}
-
-ErrorOr<FsNode*> FindDir(const FancyRefPtr<UNIXOpenFile>& handle, const char* name) {
-    assert(handle->node);
-
-    return FindDir(handle->node, name);
-}
-
-ErrorOr<int> Ioctl(const FancyRefPtr<UNIXOpenFile>& handle, uint64_t cmd, uint64_t arg) {
-    assert(handle->node);
-
-    return handle->node->Ioctl(cmd, arg);
 }
 
 Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newpath) {
@@ -563,7 +497,7 @@ Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* ne
         return Error{ENOENT};
     }
 
-    if ((oldnode->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
+    if (oldnode->IsDirectory()) {
         Log::Warning("Filesystem: Rename: We do not support using rename on directories yet!");
         return Error{ENOSYS};
     }
@@ -572,14 +506,14 @@ Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* ne
 
     if (!newpathParent) {
         return Error{ENOENT};
-    } else if ((newpathParent->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
+    } else if (!newpathParent->IsDirectory()) {
         return Error{ENOTDIR}; // Parent of newpath is not a directory
     }
 
     FsNode* newnode = ResolvePath(newpath, newdir);
 
     if (newnode) {
-        if ((newnode->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
+        if (newnode->IsDirectory()) {
             return Error{EISDIR}; // If it exists newpath must not be a directory
         }
     }
@@ -590,7 +524,7 @@ Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* ne
     DirectoryEntry newpathDirent;
     strncpy(newpathDirent.name, fs::BaseName(newpath).c_str(), NAME_MAX);
 
-    if ((oldnode->flags & FS_NODE_TYPE) != FS_NODE_SYMLINK &&
+    if (!oldnode->IsSymlink() &&
         oldnode->volumeID == newpathParent->volumeID) { // Easy shit we can just link and unlink
         FsNode* oldpathParent = fs::ResolveParent(oldpath, olddir);
         assert(oldpathParent); // If this is null something went horribly wrong
@@ -608,7 +542,7 @@ Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* ne
         if (auto e = oldpathParent->Unlink(&oldpathDirent)) {
             return e; // Unlink error
         }
-    } else if ((oldnode->flags & FS_NODE_TYPE) != FS_NODE_SYMLINK) { // Aight we have to copy it
+    } else if (!oldnode->IsSymlink()) { // Aight we have to copy it
         FsNode* oldpathParent = fs::ResolveParent(oldpath, olddir);
         assert(oldpathParent); // If this is null something went horribly wrong
 

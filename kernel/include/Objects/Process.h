@@ -1,6 +1,6 @@
 #pragma once
 
-#include <abi-bits/pid_t.h>
+#include <abi/types.h>
 
 #include <CPU.h>
 #include <Compiler.h>
@@ -74,8 +74,8 @@ public:
     /// \param watcher Watcher object
     /// \param events Ignored (for now)
     /////////////////////////////
-    void Watch(KernelObjectWatcher& watcher, int events) override;
-    void Unwatch(KernelObjectWatcher& watcher) override;
+    void Watch(KernelObjectWatcher& watcher, int events); // override;
+    void Unwatch(KernelObjectWatcher& watcher); // override;
 
     /////////////////////////////
     /// \brief Fork Process
@@ -161,7 +161,7 @@ public:
     /// \param fd Reference pointer to valid KernelObject
     /// \return ID of new file descriptor
     /////////////////////////////
-    ALWAYS_INLINE handle_id_t AllocateHandle(FancyRefPtr<KernelObject> ko, bool closeOnExec = false) {
+    ALWAYS_INLINE le_handle_t AllocateHandle(FancyRefPtr<KernelObject> ko, bool closeOnExec = false) {
         ScopedSpinLock lockHandles(m_handleLock);
 
         Handle h;
@@ -184,7 +184,7 @@ public:
     }
 
     template<KernelObjectDerived T> 
-    ALWAYS_INLINE handle_id_t AllocateHandle(FancyRefPtr<T> ko, bool cloExec = false) {
+    ALWAYS_INLINE le_handle_t AllocateHandle(FancyRefPtr<T> ko, bool cloExec = false) {
         return AllocateHandle(static_pointer_cast<KernelObject>(std::move(ko)), cloExec);
     }
 
@@ -194,7 +194,7 @@ public:
     /// \return Handle object on success
     /// \return null handle when \a id is invalid
     /////////////////////////////
-    ALWAYS_INLINE Handle GetHandle(handle_id_t id) {
+    ALWAYS_INLINE Handle GetHandle(le_handle_t id) {
         ScopedSpinLock lockHandles(m_handleLock);
         if (id < 0 || id >= m_handles.size()) {
             return HANDLE_NULL; // No such handle
@@ -204,7 +204,7 @@ public:
     }
 
     template<typename T>
-    ALWAYS_INLINE ErrorOr<FancyRefPtr<T>> GetHandleAs(handle_id_t id) {
+    ALWAYS_INLINE ErrorOr<FancyRefPtr<T>> GetHandleAs(le_handle_t id) {
         Handle h = GetHandle(id);
         if(!h.IsValid()) {
             return Error{EBADF};
@@ -220,7 +220,7 @@ public:
     /////////////////////////////
     /// \brief Replace handle
     /////////////////////////////
-    ALWAYS_INLINE int ReplaceHandle(handle_id_t id, Handle newHandle) {
+    ALWAYS_INLINE int ReplaceHandle(le_handle_t id, Handle newHandle) {
         if(id < 0) {
             return EBADF;
         }
@@ -234,7 +234,7 @@ public:
         return 0;
     }
 
-    ALWAYS_INLINE Error SetCloseOnExec(handle_id_t id, bool value) {
+    ALWAYS_INLINE Error SetCloseOnExec(le_handle_t id, bool value) {
         if(id < 0) {
             return EBADF;
         }
@@ -256,7 +256,7 @@ public:
     /// \param id Handle to destroy
     /// \return 0 on success, EBADF when fd is out of range
     /////////////////////////////
-    ALWAYS_INLINE int DestroyHandle(handle_id_t id) {
+    ALWAYS_INLINE int DestroyHandle(le_handle_t id) {
         ScopedSpinLock lockHandles(m_handleLock);
         if (id >= m_handles.size()) {
             return EBADF; // No such handle
@@ -354,13 +354,13 @@ public:
             return -ECHILD; // No children to wait for
         }
 
-        KernelObjectWatcher watcher;
+        /*KernelObjectWatcher watcher;
         for (auto& child : m_children) {
             watcher.WatchObject(static_pointer_cast<KernelObject>(child), 0);
-        }
+        }*/
         releaseLock(&m_processLock);
 
-        bool wasInterrupted = watcher.Wait();
+        /*bool wasInterrupted = watcher.Wait();
 
         child = RemoveDeadChild();
         if (child.get()) {
@@ -370,7 +370,8 @@ public:
             return -EINTR; // We were interrupted
         }
 
-        goto retry; // Keep waiting
+        goto retry; // Keep waiting*/
+        return 0;
     }
 
     ALWAYS_INLINE void SetAlarm(unsigned int seconds) {
@@ -393,7 +394,7 @@ public:
 
     char name[NAME_MAX + 1];
 
-    FancyRefPtr<UNIXOpenFile> workingDir;
+    FancyRefPtr<File> workingDir;
     char workingDirPath[PATH_MAX + 1];
 
     // POSIX permissions

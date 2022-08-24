@@ -7,11 +7,6 @@
 #include <Timer.h>
 #include <Errno.h>
 
-#include <Objects/Service.h>
-#include <Objects/Interface.h>
-
-#define NET_INTERFACE_STACKSIZE 32768
-
 namespace Network{
 	extern HashMap<uint32_t, MACAddress> addressCache;
 	extern Vector<NetworkAdapter*> adapters;

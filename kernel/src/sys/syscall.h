@@ -7,6 +7,35 @@
 
 #include <stdint.h>
 
+#define SC_TRY_OR_ERROR(func)                                                                                          \
+    ({                                                                                                                 \
+        auto result = func;                                                                                            \
+        if (result.HasError()) {                                                                                       \
+            return result.err.code;                                                                                    \
+        }                                                                                                              \
+        std::move(result.Value());                                                                                     \
+    })
+
+#define SC_TRY(func)                                                                                                   \
+    ({                                                                                                                 \
+        if (Error e = func; e.code)                                                                                    \
+            return e.code;                                                                                             \
+    })
+
+#define FD_GET(handle)                                                                                                 \
+    ({                                                                                                                 \
+        auto r = Process::Current()->GetHandleAs<File>(handle);                                                        \
+        if (r.HasError()) {                                                                                            \
+            return r.err.code;                                                                                         \
+        }                                                                                                              \
+        if (!r.Value()) {                                                                                              \
+            return EBADF;                                                                                              \
+        }                                                                                                              \
+        std::move(r.Value());                                                                                          \
+    })
+
+#define SC_LOG_VERBOSE(msg, ...) ({ Log::Debug(debugLevelSyscalls, DebugLevelVerbose, msg, ##__VA_ARGS__); })
+
 using UserString = const char*;
 typedef UserString le_str_t;
 

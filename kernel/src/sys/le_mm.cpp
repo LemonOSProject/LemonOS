@@ -19,15 +19,13 @@ long sys_mmap(void* address, size_t len, long flags, le_handle_t handle, long of
 
     int prot = flags >> 32;
 
-    bool priv = (flags & MAP_PRIVATE) != 0;
-    bool shared = (flags & MAP_SHARED) != 0;
-
     // Either MAP_PRIVATE OR MAP_SHARED must be specified
-    if(!(priv ^ shared)) {
+    bool shared = (flags & MAP_SHARED) != 0;
+    if(!shared && !(flags & MAP_PRIVATE)) {
         Log::Warning("sys_mmap: MAP_PRIVATE OR MAP_SHARED must be specified");
         return EINVAL;
     }
-    
+
     bool fixed = flags & MAP_FIXED;
     bool anon = flags & MAP_ANON;
 
@@ -37,14 +35,23 @@ long sys_mmap(void* address, size_t len, long flags, le_handle_t handle, long of
         return EINVAL;
     }
 
-    if(!anon) {
-        Log::Warning("sys_mmap: File mmap not supported!");
-        return EBADF;
-    }
-
     len = (len + PAGE_SIZE_4K - 1) & ~(PAGE_SIZE_4K - 1);
 
     Process* process = Process::Current();
+    if(!anon) {
+        auto file = FD_GET(handle);
+
+        MappedRegion* region = SC_TRY_OR_ERROR(file->MMap((uintptr_t)address, len, off, prot, shared, fixed));
+        assert(region);
+
+        if(returnAddress.StoreValue((void*)region->Base())) {
+            return EFAULT;
+        }
+
+        return 0;
+    }
+
+    // Allocate anonymous memory
     MappedRegion* region = process->addressSpace->AllocateAnonymousVMObject(len, (uintptr_t)address, fixed);
     if(!region) {
         // Fixed region likely was taken

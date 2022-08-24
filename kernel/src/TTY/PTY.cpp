@@ -114,7 +114,7 @@ ErrorOr<int> PTYDevice::Ioctl(uint64_t cmd, uint64_t arg) {
     return 0;
 }
 
-void PTYDevice::Watch(FilesystemWatcher& watcher, int events) {
+/*void PTYDevice::Watch(FilesystemWatcher& watcher, int events) {
     if (device == PTYMasterDevice) {
         pty->WatchMaster(watcher, events);
     } else if (device == PTYSlaveDevice) {
@@ -132,7 +132,7 @@ void PTYDevice::Unwatch(FilesystemWatcher& watcher) {
     } else {
         assert(!"PTYDevice::Unwatch: PTYDevice is designated neither slave nor master");
     }
-}
+}*/
 
 bool PTYDevice::CanRead() {
     if (device == PTYMasterDevice) {
@@ -156,8 +156,8 @@ void PTYDevice::Close() {
 }
 
 PTY::PTY(int id) : m_id(id) {
-    slaveFile.flags = FS_NODE_CHARDEVICE;
-    masterFile.flags = FS_NODE_CHARDEVICE;
+    slaveFile.type = FileType::CharDevice;
+    masterFile.type = FileType::CharDevice;
 
     master.ignoreBackspace = true;
     slave.ignoreBackspace = false;
@@ -167,7 +167,7 @@ PTY::PTY(int id) : m_id(id) {
 
     strcpy(slaveDirent.name, to_string(id).c_str());
     slaveDirent.flags = DT_CHR;
-    slaveDirent.inode = m_id;
+    slaveDirent.ino = m_id;
 
     masterFile.pty = this;
     masterFile.device = PTYMasterDevice;
@@ -182,13 +182,13 @@ PTY::PTY(int id) : m_id(id) {
 }
 
 PTY::~PTY(){
-    while (m_watchingSlave.get_length()) {
+    /*while (m_watchingSlave.get_length()) {
         m_watchingSlave.remove_at(0)->Signal(); // Signal all watching
     }
 
     while (m_watchingMaster.get_length()) {
         m_watchingMaster.remove_at(0)->Signal(); // Signal all watching
-    }
+    }*/
 }
 
 void PTY::Close() {
@@ -204,7 +204,7 @@ ErrorOr<ssize_t> PTY::MasterRead(UIOBuffer* buffer, size_t count) { return maste
 ErrorOr<ssize_t> PTY::SlaveRead(UIOBuffer* buffer, size_t count) {
     Thread* thread = Thread::Current();
 
-    while (IsCanonical() && !slave.lines) {
+    /*while (IsCanonical() && !slave.lines) {
         FilesystemBlocker blocker(&slaveFile);
 
         if (thread->Block(&blocker)) {
@@ -218,7 +218,7 @@ ErrorOr<ssize_t> PTY::SlaveRead(UIOBuffer* buffer, size_t count) {
         if (thread->Block(&blocker)) {
             return Error{EINTR};
         }
-    }
+    }*/
 
     return slave.Read(buffer, count);
 }
@@ -226,7 +226,7 @@ ErrorOr<ssize_t> PTY::SlaveRead(UIOBuffer* buffer, size_t count) {
 ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
     ssize_t ret = TRY_OR_ERROR(slave.Write(buffer, count));
 
-    if (slaveFile.blocked.get_length()) {
+    /*if (slaveFile.blocked.get_length()) {
         if (IsCanonical()) {
             while (slave.lines && slaveFile.blocked.get_length()) {
                 acquireLock(&slaveFile.blockedLock);
@@ -244,7 +244,7 @@ ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
                 releaseLock(&slaveFile.blockedLock);
             }
         }
-    }
+    }*/
 
     if (Echo() && ret) {
         for (unsigned i = 0; i < count; i++) {
@@ -261,7 +261,7 @@ ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
         }
     }
 
-    if (IsCanonical()) {
+    /*if (IsCanonical()) {
         if (slave.lines && m_watchingSlave.get_length()) {
             while (m_watchingSlave.get_length()) {
                 m_watchingSlave.remove_at(0)->Signal(); // Signal all watching
@@ -273,7 +273,7 @@ ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
                 m_watchingSlave.remove_at(0)->Signal(); // Signal all watching
             }
         }
-    }
+    }*/
 
     return ret;
 }
@@ -281,7 +281,7 @@ ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
 ErrorOr<ssize_t> PTY::SlaveWrite(UIOBuffer* buffer, size_t count) {
     ssize_t written = TRY_OR_ERROR(master.Write(buffer, count));
 
-    while (master.bufferPos && masterFile.blocked.get_length()) {
+    /*while (master.bufferPos && masterFile.blocked.get_length()) {
         acquireLock(&masterFile.blockedLock);
         if (masterFile.blocked.get_length()) {
             masterFile.blocked.get_front()->Unblock();
@@ -293,12 +293,12 @@ ErrorOr<ssize_t> PTY::SlaveWrite(UIOBuffer* buffer, size_t count) {
         while (m_watchingMaster.get_length()) {
             m_watchingMaster.remove_at(0)->Signal(); // Signal all watching
         }
-    }
+    }*/
 
     return written;
 }
 
-void PTY::WatchMaster(FilesystemWatcher& watcher, int events) {
+/*void PTY::WatchMaster(FilesystemWatcher& watcher, int events) {
     if (!(events & (POLLIN))) { // We don't really block on writes and nothing else applies except POLLIN
         watcher.Signal();
         return;
@@ -307,7 +307,7 @@ void PTY::WatchMaster(FilesystemWatcher& watcher, int events) {
         return;
     }
 
-    m_watchingMaster.add_back(&watcher);
+    //m_watchingMaster.add_back(&watcher);
 }
 
 void PTY::WatchSlave(FilesystemWatcher& watcher, int events) {
@@ -319,9 +319,9 @@ void PTY::WatchSlave(FilesystemWatcher& watcher, int events) {
         return;
     }
 
-    m_watchingSlave.add_back(&watcher);
+    //m_watchingSlave.add_back(&watcher);
 }
 
-void PTY::UnwatchMaster(FilesystemWatcher& watcher) { m_watchingMaster.remove(&watcher); }
+void PTY::UnwatchMaster(FilesystemWatcher& watcher) { } //m_watchingMaster.remove(&watcher); }
 
-void PTY::UnwatchSlave(FilesystemWatcher& watcher) { m_watchingSlave.remove(&watcher); }
+void PTY::UnwatchSlave(FilesystemWatcher& watcher) { } //m_watchingSlave.remove(&watcher); }*/

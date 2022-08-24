@@ -71,8 +71,10 @@ public:
     inline const String& InstanceName() const { return instanceName; }
     inline const String& DeviceName() const { return deviceName; }
 
-    inline DeviceType Type() const { return type; }
+    inline DeviceType Type() const { return m_deviceType; }
     inline int64_t ID() const { return deviceID; }
+
+    Device* parent;
 
 protected:
     void SetInstanceName(const char* name);
@@ -83,7 +85,7 @@ protected:
     String instanceName = "";
     String deviceName = "Unknown Device";
 
-    DeviceType type = DeviceTypeUnknown;
+    DeviceType m_deviceType = DeviceTypeUnknown;
 
     int64_t deviceID = 0;
 

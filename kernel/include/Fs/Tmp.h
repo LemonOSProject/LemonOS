@@ -31,7 +31,7 @@ namespace fs::Temp{
 
         TempNode* Find(const char* name);
     public:
-        TempNode(TempVolume* v, int flags);
+        TempNode(TempVolume* v, FileType type);
         ~TempNode();
 
         ErrorOr<ssize_t> Read(size_t off, size_t size, UIOBuffer* buffer); // Read Data
@@ -48,7 +48,7 @@ namespace fs::Temp{
         Error Link(FsNode*, DirectoryEntry*); // Link
         Error Unlink(DirectoryEntry*, bool unlinkDirectories = false); // Unlink
 
-        ErrorOr<UNIXOpenFile*> Open(size_t flags);
+        ErrorOr<File*> Open(size_t flags);
         void Close();
     };
 

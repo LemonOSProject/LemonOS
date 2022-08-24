@@ -815,7 +815,7 @@ int Ext2::Ext2Volume::EraseInode(ext2_inode_t& e2inode, uint32_t inode) {
 }
 
 int Ext2::Ext2Volume::ListDir(Ext2Node* node, List<DirectoryEntry>& entries) {
-    if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
+    if (!node->IsDirectory()) {
         Log::Warning("[Ext2] ListDir: Not a directory (inode %d)", node->inode);
         error = MiscError;
         return -ENOTDIR;
@@ -854,7 +854,7 @@ int Ext2::Ext2Volume::ListDir(Ext2Node* node, List<DirectoryEntry>& entries) {
             dirent.flags = e2dirent->fileType;
             strncpy(dirent.name, e2dirent->name, e2dirent->nameLength);
             dirent.name[e2dirent->nameLength] = 0;
-            dirent.inode = e2dirent->inode;
+            dirent.ino = e2dirent->inode;
 
             entries.add_back(dirent);
         }
@@ -887,7 +887,7 @@ int Ext2::Ext2Volume::ListDir(Ext2Node* node, List<DirectoryEntry>& entries) {
 }
 
 int Ext2::Ext2Volume::WriteDir(Ext2Node* node, List<DirectoryEntry>& entries) {
-    if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
+    if (!node->IsDirectory()) {
         return ENOTDIR;
     }
 
@@ -914,7 +914,7 @@ int Ext2::Ext2Volume::WriteDir(Ext2Node* node, List<DirectoryEntry>& entries) {
         }
 
         e2dirent->fileType = ent.flags;
-        e2dirent->inode = ent.inode;
+        e2dirent->inode = ent.ino;
         strncpy(e2dirent->name, ent.name, strlen(ent.name));
         e2dirent->nameLength = strlen(ent.name);
 
@@ -992,7 +992,7 @@ int Ext2::Ext2Volume::InsertDir(Ext2Node* node, DirectoryEntry& ent) {
 }
 
 ErrorOr<int> Ext2::Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index) {
-    if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
+    if (!node->IsDirectory()) {
         return Error{ENOTDIR};
     }
 
@@ -1086,7 +1086,7 @@ ErrorOr<int> Ext2::Ext2Volume::ReadDir(Ext2Node* node, DirectoryEntry* dirent, u
 }
 
 ErrorOr<FsNode*> Ext2::Ext2Volume::FindDir(Ext2Node* node, const char* name) {
-    if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
+    if (!node->IsDirectory()) {
         return Error{ENOTDIR};
     }
 
@@ -1291,7 +1291,7 @@ ErrorOr<ssize_t> Ext2::Ext2Volume::Write(Ext2Node* node, size_t offset, size_t s
         return Error{EROFS};
     }
 
-    if ((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
+    if (node->IsDirectory()) {
         return Error{EISDIR};
     }
 
@@ -1425,7 +1425,7 @@ void Ext2::Ext2Volume::SyncNode(Ext2Node* node) {
 }
 
 Error Ext2::Ext2Volume::Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode) {
-    if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY)
+    if (!node->IsDirectory())
         return Error{ENOTDIR}; // Ensure the directory node is actually a directory
 
     // Make sure the filename does not already exist under the directory
@@ -1443,7 +1443,7 @@ Error Ext2::Ext2Volume::Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mod
 
     // Regular file
     file->e2inode.mode = EXT2_S_IFREG;
-    file->flags = FS_NODE_FILE;
+    file->type = FileType::Regular;
     // File is only references by one directory
     file->nlink = 1;
     file->e2inode.linkCount = 1;
@@ -1451,7 +1451,7 @@ Error Ext2::Ext2Volume::Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mod
 
     // Update the directory entry with the inode
     ent->node = file;
-    ent->inode = file->inode;
+    ent->ino = file->inode;
     ent->flags = EXT2_FT_REG_FILE;
 
     // Sync inode to disk
@@ -1466,7 +1466,7 @@ Error Ext2::Ext2Volume::CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uin
         return Error{EROFS};
     }
 
-    if ((node->flags & FS_NODE_TYPE) != FS_NODE_DIRECTORY) {
+    if (!node->IsDirectory()) {
         Log::Info("[Ext2] Not a directory!");
         return Error{ENOTDIR};
     }
@@ -1484,25 +1484,25 @@ Error Ext2::Ext2Volume::CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uin
     }
 
     dir->e2inode.mode = EXT2_S_IFDIR;
-    dir->flags = FS_NODE_DIRECTORY;
+    dir->type = FileType::Directory;
     dir->e2inode.linkCount = 1;
 
     inodeCache.insert(dir->inode, dir);
     ent->node = dir;
-    ent->inode = dir->inode;
+    ent->ino = dir->inode;
     ent->flags = EXT2_FT_DIR;
 
     DirectoryEntry currentEnt;
     strcpy(currentEnt.name, ".");
     currentEnt.node = dir;
-    currentEnt.inode = dir->inode;
+    currentEnt.ino = dir->inode;
     currentEnt.flags = EXT2_FT_DIR;
     dir->e2inode.linkCount++;
 
     DirectoryEntry parentEnt;
     strcpy(parentEnt.name, "..");
     parentEnt.node = node;
-    parentEnt.inode = node->inode;
+    parentEnt.ino = node->inode;
     parentEnt.flags = EXT2_FT_DIR;
     node->e2inode.linkCount++;
 
@@ -1527,7 +1527,7 @@ Error Ext2::Ext2Volume::CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uin
 }
 
 ErrorOr<ssize_t> Ext2::Ext2Volume::ReadLink(Ext2Node* node, char* pathBuffer, size_t bufSize) {
-    if ((node->flags & S_IFMT) != S_IFLNK) {
+    if (!node->IsSymlink()) {
         return Error{EINVAL}; // Not a symbolic link
     }
 
@@ -1546,9 +1546,9 @@ ErrorOr<ssize_t> Ext2::Ext2Volume::ReadLink(Ext2Node* node, char* pathBuffer, si
 }
 
 Error Ext2::Ext2Volume::Link(Ext2Node* node, Ext2Node* file, DirectoryEntry* ent) {
-    ent->inode = file->inode;
-    if (!ent->inode) {
-        Log::Error("[Ext2] Link: Invalid inode %d", ent->inode);
+    ent->ino = file->inode;
+    if (!ent->ino) {
+        Log::Error("[Ext2] Link: Invalid inode %d", ent->ino);
         return Error{EINVAL};
     }
 
@@ -1558,7 +1558,7 @@ Error Ext2::Ext2Volume::Link(Ext2Node* node, Ext2Node* file, DirectoryEntry* ent
 
     List<DirectoryEntry> entries;
     if (int e = ListDir(node, entries)) {
-        Log::Error("[Ext2] Link: Error listing directory!", ent->inode);
+        Log::Error("[Ext2] Link: Error listing directory!", ent->ino);
         return Error{e};
     }
 
@@ -1582,33 +1582,23 @@ Error Ext2::Ext2Volume::Link(Ext2Node* node, Ext2Node* file, DirectoryEntry* ent
 Error Ext2::Ext2Volume::Unlink(Ext2Node* node, DirectoryEntry* ent, bool unlinkDirectories) {
     List<DirectoryEntry> entries;
     if (int e = ListDir(node, entries)) {
-        Log::Error("[Ext2] Unlink: Error listing directory!", ent->inode);
+        Log::Error("[Ext2] Unlink: Error listing directory!", ent->ino);
         return Error{e};
-    }
-
-    // Remove from cache if cached
-    node->directoryCache.remove(ent->name);
-
-    for (unsigned i = 0; i < entries.get_length(); i++) {
-        if (strcmp(entries[i].name, ent->name) == 0) {
-            ent->inode = entries.remove_at(i).inode;
-            goto found;
-        }
     }
 
     Log::Error("[Ext2] Unlink: Directory entry %s does not exist!", ent->name);
     return Error{ENOENT};
 
 found:
-    if (!ent->inode) {
-        Log::Error("[Ext2] Unlink: Invalid inode %d", ent->inode);
+    if (!ent->ino) {
+        Log::Error("[Ext2] Unlink: Invalid inode %d", ent->ino);
         return Error{EINVAL};
     }
 
     {
         ScopedSpinLock lockInodes(m_inodesLock);
-        if (Ext2Node * file; inodeCache.get(ent->inode, file)) {
-            if ((file->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
+        if (Ext2Node * file; inodeCache.get(ent->ino, file)) {
+            if (file->IsDirectory()) {
                 if (!unlinkDirectories) {
                     return Error{EISDIR};
                 }
@@ -1623,9 +1613,9 @@ found:
             }
         } else {
             ext2_inode_t e2inode;
-            if (int e = ReadInode(ent->inode, e2inode)) {
+            if (int e = ReadInode(ent->ino, e2inode)) {
                 IF_DEBUG(debugLevelExt2 >= DebugLevelNormal,
-                        { Log::Error("[Ext2] Link: Error reading inode %d", ent->inode); });
+                        { Log::Error("[Ext2] Link: Error reading inode %d", ent->ino); });
                 return Error{e};
             }
 
@@ -1638,9 +1628,9 @@ found:
             e2inode.linkCount--;
 
             if (e2inode.linkCount) {
-                SyncInode(e2inode, ent->inode);
+                SyncInode(e2inode, ent->ino);
             } else { // Last link, delete inode
-                EraseInode(e2inode, ent->inode);
+                EraseInode(e2inode, ent->ino);
             }
         }
     }
@@ -1696,22 +1686,22 @@ Ext2::Ext2Node::Ext2Node(Ext2Volume* vol, ext2_inode_t& ino, ino_t inode) {
 
     switch (ino.mode & EXT2_S_IFMT) {
     case EXT2_S_IFBLK:
-        flags = FS_NODE_BLKDEVICE;
+        type = FileType::BlockDevice;
         break;
     case EXT2_S_IFCHR:
-        flags = FS_NODE_CHARDEVICE;
+        type = FileType::CharDevice;
         break;
     case EXT2_S_IFDIR:
-        flags = FS_NODE_DIRECTORY;
+        type = FileType::Directory;
         break;
     case EXT2_S_IFLNK:
-        flags = FS_NODE_SYMLINK;
+        type = FileType::SymbolicLink;
         break;
     case EXT2_S_IFSOCK:
-        flags = FS_NODE_SOCKET;
+        type = FileType::Socket;
         break;
     default:
-        flags = FS_NODE_FILE;
+        type = FileType::Regular;
         break;
     }
 

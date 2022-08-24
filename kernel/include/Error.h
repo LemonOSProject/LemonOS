@@ -17,9 +17,9 @@ struct Error {
 
 #define ERROR_NONE (Error{0})
 
-template<typename T>
-struct ErrorOr final {
-    ErrorOr(ErrorOr&& other) {
+template<typename T, typename E>
+struct Result final {
+    Result(Result&& other) {
         if(other.m_hasData) {
             m_hasData = true;
             new (data) T(std::move(other.Value()));
@@ -29,9 +29,9 @@ struct ErrorOr final {
             err = other.err;
         }
     }
-    ErrorOr(const ErrorOr<T>&) = delete;
+    Result(const Result<T, E>&) = delete;
 
-    ErrorOr& operator=(ErrorOr&& other) {
+    Result& operator=(Result&& other) {
         if(m_hasData) {
             ((T*)data)->~T();
             m_hasData = false;
@@ -51,18 +51,18 @@ struct ErrorOr final {
         return *this;
     }
     
-    ALWAYS_INLINE ~ErrorOr() {
+    ALWAYS_INLINE ~Result() {
         if(m_hasData) {
             ((T*)data)->~T();
         }
     }
 
-    ALWAYS_INLINE ErrorOr(T val)
+    ALWAYS_INLINE Result(T val)
         : m_hasData(true) {
             new (data) T(std::move(val));
         }
 
-    ALWAYS_INLINE ErrorOr(Error val)
+    ALWAYS_INLINE Result(E val)
         : err(val), m_hasError(true) {}
 
     ALWAYS_INLINE bool HasError() const {
@@ -74,7 +74,7 @@ struct ErrorOr final {
         return *((T*)data);
     }
 
-    ALWAYS_INLINE Error Err() {
+    ALWAYS_INLINE E Err() {
         assert(m_hasError);
         return err;
     }
@@ -89,12 +89,15 @@ struct ErrorOr final {
 
     union {
         uint8_t data[sizeof(T)];
-        Error err;
+        E err;
     };
 
 private:
     bool m_hasError = false;
     bool m_hasData = false;
 };
+
+template<typename T>
+using ErrorOr = Result<T, Error>;
 
 #define TRY_OR_ERROR(func) ({auto result = func; if (result.HasError()) { return result.err; } std::move(result.Value());})

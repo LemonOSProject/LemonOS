@@ -69,7 +69,7 @@ namespace Network{
 
         lock_t threadLock = 0;
 
-        AdapterType type;
+        AdapterType m_adapterType;
 
         lock_t boundSocketsLock = 0;
         List<class ::IPSocket*> boundSockets; // If an adapter is destroyed, we need to know what sockets are bound to it

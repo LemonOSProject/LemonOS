@@ -15,7 +15,7 @@
 class URandom : public Device {
 public:
     URandom(const char* name) : Device(name, DeviceTypeUNIXPseudo) {
-        flags = FS_NODE_CHARDEVICE;
+        type = FileType::CharDevice;
 
         SetDeviceName("UNIX Random Device");
     }
@@ -27,7 +27,7 @@ public:
 class Null : public Device {
 public:
     Null(const char* name) : Device(name, DeviceTypeUNIXPseudo) {
-        flags = FS_NODE_CHARDEVICE;
+        type = FileType::CharDevice;
 
         SetDeviceName("UNIX Null Device");
     }
@@ -39,17 +39,17 @@ public:
 class TTY : public Device {
 public:
     TTY(const char* name) : Device(name, DeviceTypeUNIXPseudo) {
-        flags = FS_NODE_CHARDEVICE;
+        type = FileType::CharDevice;
 
         SetDeviceName("Process Terminal");
     }
 
-    ErrorOr<UNIXOpenFile*> Open(size_t flags) override;
+    ErrorOr<File*> Open(size_t flags) override;
 };
 
 int Device::nextUnnamedDeviceNumber = 0;
 
-Device::Device(DeviceType type) : isRootDevice(true), type(type) {
+Device::Device(DeviceType type) : isRootDevice(true), m_deviceType(type) {
     if (type == DeviceTypeDevFS) {
         return; // No need to register device or set name
     }
@@ -63,7 +63,7 @@ Device::Device(DeviceType type) : isRootDevice(true), type(type) {
     DeviceManager::RegisterDevice(this);
 }
 
-Device::Device(const char* name, DeviceType type) : isRootDevice(true), type(type) {
+Device::Device(const char* name, DeviceType type) : isRootDevice(true), m_deviceType(type) {
     if (type == DeviceTypeDevFS) {
         return; // No need to register device or set name
     }
@@ -73,7 +73,7 @@ Device::Device(const char* name, DeviceType type) : isRootDevice(true), type(typ
     DeviceManager::RegisterDevice(this);
 }
 
-Device::Device(DeviceType type, Device* parent) : isRootDevice(false), type(type) {
+Device::Device(DeviceType type, Device* parent) : isRootDevice(false), m_deviceType(type) {
     if (type == DeviceTypeDevFS) {
         return; // No need to register device or set name
     }
@@ -87,7 +87,7 @@ Device::Device(DeviceType type, Device* parent) : isRootDevice(false), type(type
     DeviceManager::RegisterDevice(this);
 }
 
-Device::Device(const char* name, DeviceType type, Device* parent) : isRootDevice(false), type(type) {
+Device::Device(const char* name, DeviceType type, Device* parent) : isRootDevice(false), m_deviceType(type) {
     if (type == DeviceTypeDevFS) {
         return; // No need to register device or set name
     }
@@ -130,16 +130,18 @@ ErrorOr<ssize_t> URandom::Read(size_t offset, size_t size, uint8_t* buffer) {
 
 ErrorOr<ssize_t> URandom::Write(size_t offset, size_t size, uint8_t* buffer) { return size; }
 
-ErrorOr<UNIXOpenFile*> TTY::Open(size_t flags){
-    auto stdout = TRY_OR_ERROR(Process::Current()->GetHandleAs<UNIXOpenFile>(1));
+ErrorOr<File*> TTY::Open(size_t flags){
+    /*auto stdout = TRY_OR_ERROR(Process::Current()->GetHandleAs<File>(1));
 
     assert(stdout->node);
-    return stdout->node->Open(flags);
+    return stdout->node->Open(flags);*/
+
+    return ENOSYS;
 }
 
-Null null = Null("null");
-URandom urand = URandom("urandom");
-TTY tty = TTY("tty");
+Null null("null");
+URandom urand("urandom");
+TTY tty("tty");
 
 namespace DeviceManager {
 int64_t nextDeviceID = 1;
@@ -151,7 +153,7 @@ public:
     fs::FsVolume vol;
 
     DevFS(const char* name) : Device(DeviceTypeDevFS) {
-        flags = FS_NODE_DIRECTORY;
+        type = FileType::Directory;
 
         vol.mountPoint = this;
         vol.mountPointDirent = DirectoryEntry(this, name);
@@ -164,12 +166,12 @@ public:
 
         if (index == 0) {
             strcpy(dirPtr->name, ".");
-            dirPtr->flags = FS_NODE_DIRECTORY;
+            dirPtr->flags = DT_DIR;
 
             return 1;
         } else if (index == 1) {
             strcpy(dirPtr->name, "..");
-            dirPtr->flags = FS_NODE_DIRECTORY;
+            dirPtr->flags = DT_DIR;
 
             return 1;
         } else {
@@ -274,13 +276,13 @@ ErrorOr<Device*> ResolveDevice(const char* path) {
             return nullptr;
         }
 
-        if (((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)) { // Check for symlinks
+        if (node->IsSymlink()) { // Check for symlinks
             assert(!"Symlinks not supported in DevFS");
 
             return nullptr;
         }
 
-        if ((node->flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY) {
+        if (node->IsDirectory()) {
             currentDev = reinterpret_cast<Device*>(node);
             file = strtok_r(NULL, "/", &strtokSavePtr);
             continue;
@@ -291,7 +293,7 @@ ErrorOr<Device*> ResolveDevice(const char* path) {
             return nullptr;
         }
 
-        if (((node->flags & FS_NODE_TYPE) == FS_NODE_SYMLINK)) { // Check for symlinks
+        if (node->IsSymlink()) { // Check for symlinks
             assert(!"Symlinks not supported in DevFS");
 
             return nullptr;

@@ -19,7 +19,7 @@ public:
 class LinkNode : public FsNode {
 public:
     LinkNode(const String& link) : m_link(link) {
-        flags = FS_NODE_SYMLINK;
+        type = FileType::SymbolicLink;
         pmask = 0755;
         uid = 0;
         inode = 0;

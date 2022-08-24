@@ -11,49 +11,14 @@
 #include <abi/lseek.h>
 #include <abi/stat.h>
 
-#define SC_TRY_OR_ERROR(func)                                                                                          \
-    ({                                                                                                                 \
-        auto result = func;                                                                                            \
-        if (result.HasError()) {                                                                                       \
-            return result.err.code;                                                                                    \
-        }                                                                                                              \
-        std::move(result.Value());                                                                                     \
-    })
-
-#define SC_TRY(func)                                                                                                   \
-    ({                                                                                                                 \
-        if (Error e = func; e.code)                                                                                    \
-            return e.code;                                                                                             \
-    })
-
-#define FD_GET(handle)                                                                                                 \
-    ({                                                                                                                 \
-        auto r = Process::Current()->GetHandleAs<UNIXOpenFile>(handle);                                                \
-        if (r.HasError()) {                                                                                            \
-            return r.err.code;                                                                                         \
-        }                                                                                                              \
-        if (!r.Value()) {                                                                                              \
-            return EBADF;                                                                                              \
-        }                                                                                                              \
-        std::move(r.Value());                                                                                          \
-    })
-
-#define SC_LOG_VERBOSE(msg, ...) ({ Log::Debug(debugLevelSyscalls, DebugLevelVerbose, msg, ##__VA_ARGS__); })
-
-ALWAYS_INLINE void ReleaseRegions(Vector<MappedRegion*>& regions) {
-    for (MappedRegion* r : regions) {
-        r->lock.ReleaseWrite();
-    }
-}
-
 SYSCALL long sys_read(le_handle_t handle, uint8_t* buf, size_t count, UserPointer<ssize_t> bytesRead) {
     Process* process = Process::Current();
 
-    FancyRefPtr<UNIXOpenFile> fd = FD_GET(handle);
+    FancyRefPtr<File> fd = FD_GET(handle);
 
     UIOBuffer buffer = UIOBuffer::FromUser(buf);
 
-    auto r = fs::Read(fd, count, &buffer);
+    auto r = fd->Read(count, &buffer);
     if (r.HasError()) {
         return r.err.code;
     }
@@ -68,12 +33,11 @@ SYSCALL long sys_read(le_handle_t handle, uint8_t* buf, size_t count, UserPointe
 SYSCALL long sys_write(le_handle_t handle, const uint8_t* buf, size_t count, UserPointer<ssize_t> bytesWritten) {
     Process* process = Process::Current();
 
-    FancyRefPtr<UNIXOpenFile> fd = FD_GET(handle);
+    FancyRefPtr<File> fd = FD_GET(handle);
 
     UIOBuffer buffer = UIOBuffer::FromUser((uint8_t*)buf);
 
-    auto r = fs::Write(fd, count, &buffer);
-
+    auto r = fd->Write(count, &buffer);
     if (r.HasError()) {
         return r.err.code;
     }
@@ -159,7 +123,7 @@ SYSCALL long sys_openat(le_handle_t directory, le_str_t _filename, int flags, in
         return EINVAL;
     }
 
-    FancyRefPtr<UNIXOpenFile> fd;
+    FancyRefPtr<File> fd;
     FsNode* dirNode;
 
     if (filename[0] == '/') {
@@ -170,18 +134,18 @@ SYSCALL long sys_openat(le_handle_t directory, le_str_t _filename, int flags, in
             fd = process->workingDir;
         } else {
             fd = FD_GET(directory);
-            if (!fd->node->IsDirectory()) {
+            if (!fd->IsDirectory()) {
                 return ENOTDIR;
             }
         }
 
         assert(fd);
 
-        if (!fd->node->IsDirectory()) {
+        if (!fd->IsDirectory()) {
             return ENOTDIR;
         }
 
-        dirNode = fd->node;
+        dirNode = fd->inode;
     }
 
 open:
@@ -250,7 +214,9 @@ open:
 SYSCALL long sys_fstatat(int fd, le_str_t path, int flags, UserPointer<struct stat> out) {
     Process* process = Process::Current();
 
-    FancyRefPtr<UNIXOpenFile> wd;
+    return ENOSYS;
+
+    /*FancyRefPtr<File> wd;
     if (fd == AT_FDCWD) {
         wd = process->workingDir;
     } else {
@@ -289,17 +255,17 @@ SYSCALL long sys_fstatat(int fd, le_str_t path, int flags, UserPointer<struct st
         return EFAULT;
     }
 
-    return 0;
+    return 0;*/
 }
 
 SYSCALL long sys_lseek(le_handle_t handle, off_t offset, unsigned int whence, UserPointer<off_t> out) {
     auto file = FD_GET(handle);
 
-    if (file->node->IsSocket() || file->node->IsPipe()) {
+    if (file->IsSocket() || file->IsPipe()) {
         return ESPIPE;
     }
 
-    ScopedSpinLock lockPosition(file->dataLock);
+    ScopedSpinLock lockPosition(file->fLock);
 
     off_t offsetResult = 0;
 
@@ -311,7 +277,7 @@ SYSCALL long sys_lseek(le_handle_t handle, off_t offset, unsigned int whence, Us
         offsetResult = file->pos + offset;
         break;
     case SEEK_END:
-        offsetResult = file->node->size + offset;
+        offsetResult = file->inode->size + offset;
         break;
     default:
         return EINVAL;
@@ -335,7 +301,7 @@ SYSCALL long sys_lseek(le_handle_t handle, off_t offset, unsigned int whence, Us
 SYSCALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long arg, UserPointer<int> result) {
     Process* process = Process::Current();
 
-    FancyRefPtr<UNIXOpenFile> fd = FD_GET(handle);
+    FancyRefPtr<File> fd = FD_GET(handle);
 
     long r = 0;
 
@@ -347,7 +313,7 @@ SYSCALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long arg, 
         SC_TRY(process->SetCloseOnExec(handle, 0));
         break;
     default:
-        r = SC_TRY_OR_ERROR(fs::Ioctl(fd, cmd, arg));
+        r = SC_TRY_OR_ERROR(fd->Ioctl(cmd, arg));
         break;
     }
 
@@ -361,16 +327,12 @@ SYSCALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long arg, 
 SYSCALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, UserPointer<ssize_t> bytes) {
     Process* process = Process::Current();
 
-    FancyRefPtr<UNIXOpenFile> fd = FD_GET(handle);
+    FancyRefPtr<File> fd = FD_GET(handle);
 
     UIOBuffer uio = UIOBuffer::FromUser(buf);
-    auto r = fs::Read(fd, count, &uio, pos);
-
-    if (r.HasError()) {
-        return r.err.code;
-    }
-
-    if (bytes.StoreValue(r.Value())) {
+    
+    auto r = SC_TRY_OR_ERROR(fd->Read(pos, count, &uio));
+    if (bytes.StoreValue(r)) {
         return EFAULT;
     }
 
@@ -380,16 +342,12 @@ SYSCALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, U
 SYSCALL long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t pos, UserPointer<ssize_t> bytes) {
     Process* process = Process::Current();
 
-    FancyRefPtr<UNIXOpenFile> fd = FD_GET(handle);
+    FancyRefPtr<File> fd = FD_GET(handle);
 
     UIOBuffer uio = UIOBuffer::FromUser((void*)buf);
-    auto r = fs::Write(fd, count, &uio, pos);
 
-    if (r.HasError()) {
-        return r.err.code;
-    }
-
-    if (bytes.StoreValue(r.Value())) {
+    auto r = SC_TRY_OR_ERROR(fd->Write(pos, count, &uio));
+    if (bytes.StoreValue(r)) {
         return EFAULT;
     }
 

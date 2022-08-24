@@ -40,7 +40,7 @@ int Socket::CreateSocket(int domain, int type, int protocol, Socket** sock) {
 
 Socket::Socket(int type, int protocol) {
     this->type = type;
-    flags = FS_NODE_SOCKET;
+    ((FsNode*)this)->type = FileType::Socket;
 }
 
 Socket::~Socket() {}
@@ -121,8 +121,8 @@ int Socket::SetSocketOptions(int level, int opt, const void* optValue, socklen_t
     return -ENOPROTOOPT;
 }
 
-ErrorOr<UNIXOpenFile*> Socket::Open(size_t flags) {
-    UNIXOpenFile* fDesc = new UNIXOpenFile();
+ErrorOr<File*> Socket::Open(size_t flags) {
+    /*File* fDesc = new File();
 
     fDesc->pos = 0;
     fDesc->mode = flags;
@@ -130,7 +130,8 @@ ErrorOr<UNIXOpenFile*> Socket::Open(size_t flags) {
 
     handleCount++;
 
-    return fDesc;
+    return fDesc;*/
+    return ENOSYS;
 }
 
 void Socket::Close() {}
@@ -141,7 +142,7 @@ void Socket::Unwatch(FilesystemWatcher& watcher) { assert(!"Socket::Unwatch call
 
 LocalSocket::LocalSocket(int type, int protocol) : Socket(type, protocol) {
     domain = UnixDomain;
-    flags = FS_NODE_SOCKET;
+    //flags = FileType::Socket;
 
     assert(type == StreamSocket || type == DatagramSocket);
 
@@ -198,11 +199,11 @@ int LocalSocket::ConnectTo(LocalSocket* client) {
 
     pending.add_back(client);
 
-    acquireLock(&m_watcherLock);
+    /*acquireLock(&m_watcherLock);
     while (m_watching.get_length()) {
         m_watching.remove_at(0)->Signal();
     }
-    releaseLock(&m_watcherLock);
+    releaseLock(&m_watcherLock);*/
 
     while (!client->m_connected) {
         // TODO: Actually block the task
@@ -225,11 +226,11 @@ void LocalSocket::DisconnectPeer() {
 void LocalSocket::OnDisconnect() {
     m_connected = false;
 
-    acquireLock(&m_watcherLock);
+    /*acquireLock(&m_watcherLock);
     while (m_watching.get_length()) {
         m_watching.remove_at(0)->Signal(); // Signal all watching on disconnect
     }
-    releaseLock(&m_watcherLock);
+    releaseLock(&m_watcherLock);*/
 
     peer = nullptr;
 }
@@ -413,18 +414,18 @@ ErrorOr<int64_t> LocalSocket::SendTo(UIOBuffer* buffer, size_t len, int flags, c
     int64_t written = TRY_OR_ERROR(outbound->Write(buffer, len));
 
     if (peer && peer->CanRead()) {
-        acquireLock(&peer->m_watcherLock);
+        /*acquireLock(&peer->m_watcherLock);
         while (peer->m_watching.get_length()) {
             peer->m_watching.remove_at(0)->Signal();
         }
-        releaseLock(&peer->m_watcherLock);
+        releaseLock(&peer->m_watcherLock);*/
     }
 
     return written;
 }
 
-ErrorOr<UNIXOpenFile*> LocalSocket::Open(size_t flags) {
-    UNIXOpenFile* fDesc = new UNIXOpenFile;
+ErrorOr<File*> LocalSocket::Open(size_t flags) {
+    /*File* fDesc = new File;
 
     fDesc->pos = 0;
     fDesc->mode = flags;
@@ -432,7 +433,8 @@ ErrorOr<UNIXOpenFile*> LocalSocket::Open(size_t flags) {
 
     handleCount++;
 
-    return fDesc;
+    return fDesc;*/
+    return ENOSYS;
 }
 
 void LocalSocket::Close() {
@@ -466,13 +468,13 @@ void LocalSocket::Watch(FilesystemWatcher& watcher, int events) {
         return;
     }
 
-    acquireLock(&m_watcherLock);
+    /*acquireLock(&m_watcherLock);
     m_watching.add_back(&watcher);
-    releaseLock(&m_watcherLock);
+    releaseLock(&m_watcherLock);*/
 }
 
 void LocalSocket::Unwatch(FilesystemWatcher& watcher) {
-    acquireLock(&m_watcherLock);
+    /*acquireLock(&m_watcherLock);
     m_watching.remove(&watcher);
-    releaseLock(&m_watcherLock);
+    releaseLock(&m_watcherLock);*/
 }

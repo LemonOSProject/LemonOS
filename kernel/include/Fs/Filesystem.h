@@ -3,50 +3,34 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <List.h>
 #include <Error.h>
+#include <List.h>
 #include <Lock.h>
+#include <MM/VMObject.h>
+#include <Objects/File.h>
+#include <Objects/KObject.h>
 #include <RefPtr.h>
 #include <String.h>
 #include <Types.h>
-#include <Objects/KObject.h>
 
 #include <UserIO.h>
 
 #include <abi/fcntl.h>
+#include <abi/stat.h>
+
+#include <Fs/DirectoryEntry.h>
+#include <Fs/Events.h>
 
 #define FD_SETSIZE 1024
 
-#define PATH_MAX 4096
-#define NAME_MAX 255
-
-#define S_IFMT 0xF000
-#define S_IFBLK 0x6000
-#define S_IFCHR 0x2000
-#define S_IFIFO 0x1000
-#define S_IFREG 0x8000
-#define S_IFDIR 0x4000
-#define S_IFLNK 0xA000
-#define S_IFSOCK 0xC000
-
-#define DT_UNKNOWN 0
-#define DT_FIFO 1
-#define DT_CHR 2
-#define DT_DIR 4
-#define DT_BLK 6
-#define DT_REG 8
-#define DT_LNK 10
-#define DT_SOCK 12
-#define DT_WHT 14
-
 #define FS_NODE_TYPE 0xF000
 #define FS_NODE_FILE S_IFREG
-#define FS_NODE_DIRECTORY S_IFDIR 
+#define FS_NODE_DIRECTORY S_IFDIR
 #define FS_NODE_MOUNTPOINT S_IFDIR
-#define FS_NODE_BLKDEVICE S_IFBLK 
-#define FS_NODE_SYMLINK S_IFLNK   
+#define FS_NODE_BLKDEVICE S_IFBLK
+#define FS_NODE_SYMLINK S_IFLNK
 #define FS_NODE_CHARDEVICE S_IFCHR
-#define FS_NODE_SOCKET S_IFSOCK   
+#define FS_NODE_SOCKET S_IFSOCK
 
 #define POLLIN 0x01
 #define POLLOUT 0x02
@@ -67,19 +51,6 @@
 #define POLLWRNORM 0x80
 
 #define MAXIMUM_SYMLINK_AMOUNT 10
-
-typedef struct {
-    dev_t st_dev;
-    ino_t st_ino;
-    mode_t st_mode;
-    nlink_t st_nlink;
-    uid_t st_uid;
-    uid_t st_gid;
-    dev_t st_rdev;
-    off_t st_size;
-    int64_t st_blksize;
-    int64_t st_blocks;
-} stat_t;
 
 class FsNode;
 
@@ -110,39 +81,18 @@ static inline void FD_SET(int fd, fd_set_t* fds) {
 class FilesystemWatcher;
 class DirectoryEntry;
 
-class UNIXOpenFile : public KernelObject {
-    DECLARE_KOBJECT(UNIXOpenFile);
-public:
-    ~UNIXOpenFile();
-
-    lock_t dataLock = 0;
-
-    class FsNode* node = nullptr;
-    off_t pos = 0;
-    mode_t mode = 0;
-
-    // e.g. O_NONBLOCK
-    unsigned int flags;
-};
-
 class FsNode {
-    friend class FilesystemBlocker;
-
 public:
-    lock_t blockedLock = 0;
-    FastList<class FilesystemBlocker*> blocked;
+    FileType type;
 
-    uint32_t flags = 0;       // Flags
-    uint32_t pmask = 0;       // Permission mask
-    uid_t uid = 0;            // User id
+    uint32_t pmask = 0; // Permission mask
+    uid_t uid = 0;      // User id
     gid_t gid = 0;
     ino_t inode = 0;          // Inode number
     size_t size = 0;          // Node size
     int nlink = 0;            // Amount of references/hard links
     unsigned handleCount = 0; // Amount of file handles that point to this node
     volume_id_t volumeID;
-
-    int error = 0;
 
     virtual ~FsNode();
 
@@ -170,11 +120,11 @@ public:
     /////////////////////////////
     virtual ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer); // Write Data
 
-    virtual ErrorOr<UNIXOpenFile*> Open(size_t flags); // Open
-    virtual void Close();                           // Close
+    virtual ErrorOr<class File*> Open(size_t flags); // Open
+    virtual void Close();                            // Close
 
-    virtual ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t); // Read Directory
-    virtual ErrorOr<FsNode*> FindDir(const char* name);            // Find in directory
+    virtual ErrorOr<int> ReadDir(struct DirectoryEntry*, uint32_t);
+    virtual ErrorOr<FsNode*> FindDir(const char* name); // Find in directory
 
     virtual Error Create(DirectoryEntry* ent, uint32_t mode);
     virtual Error CreateDirectory(DirectoryEntry* ent, uint32_t mode);
@@ -186,101 +136,50 @@ public:
     virtual Error Truncate(off_t length);
 
     virtual ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg); // I/O Control
-    virtual void Sync();                           // Sync node to device
+    virtual void Sync();                                    // Sync node to device
+
+    virtual ErrorOr<MappedRegion*> MMap(uintptr_t base, size_t size, off_t off, int prot, bool shared, bool fixed);
 
     virtual bool CanRead() { return true; }
     virtual bool CanWrite() { return true; }
 
-    virtual void Watch(FilesystemWatcher& watcher, int events);
-    virtual void Unwatch(FilesystemWatcher& watcher);
-
-    virtual inline bool IsFile() { return (flags & FS_NODE_TYPE) == FS_NODE_FILE; }
-    virtual inline bool IsDirectory() { return (flags & FS_NODE_TYPE) == FS_NODE_DIRECTORY; }
-    virtual inline bool IsBlockDevice() { return (flags & FS_NODE_TYPE) == FS_NODE_BLKDEVICE; }
-    virtual inline bool IsSymlink() { return (flags & FS_NODE_TYPE) == FS_NODE_SYMLINK; }
-    virtual inline bool IsCharDevice() { return (flags & FS_NODE_TYPE) == FS_NODE_CHARDEVICE; }
-    virtual inline bool IsSocket() { return (flags & FS_NODE_TYPE) == FS_NODE_SOCKET; }
+    virtual inline bool IsFile() { return type == FileType::Regular; }
+    virtual inline bool IsDirectory() { return  type == FileType::Directory; }
+    virtual inline bool IsBlockDevice() { return  type == FileType::BlockDevice; }
+    virtual inline bool IsSymlink() { return  type == FileType::SymbolicLink; }
+    virtual inline bool IsCharDevice() { return  type == FileType::CharDevice; }
+    virtual inline bool IsSocket() { return  type == FileType::Socket; }
     virtual inline bool IsEPoll() const { return false; }
     virtual inline bool IsPipe() const { return false; }
 
     void UnblockAll();
 
-    FsNode* link;
-    FsNode* parent;
-
     FilesystemLock nodeLock; // Lock on FsNode info
-};
-
-class DirectoryEntry {
-public:
-    char name[NAME_MAX];
-
-    FsNode* node = nullptr;
-    uint32_t inode = 0;
-
-    DirectoryEntry* parent = nullptr;
-
-    mode_t flags = 0;
-
-    DirectoryEntry(FsNode* node, const char* name);
-    DirectoryEntry() {}
-
-    static mode_t FileToDirentFlags(mode_t flags) {
-        switch (flags & FS_NODE_TYPE) {
-        case FS_NODE_FILE:
-            flags = DT_REG;
-            break;
-        case FS_NODE_DIRECTORY:
-            flags = DT_DIR;
-            break;
-        case FS_NODE_CHARDEVICE:
-            flags = DT_CHR;
-            break;
-        case FS_NODE_BLKDEVICE:
-            flags = DT_BLK;
-            break;
-        case FS_NODE_SOCKET:
-            flags = DT_SOCK;
-            break;
-        case FS_NODE_SYMLINK:
-            flags = DT_LNK;
-            break;
-        default:
-            assert(!"Invalid file flags!");
-        }
-        return flags;
-    }
 };
 
 // FilesystemWatcher is a semaphore initialized to 0.
 // A thread can wait on it like any semaphore,
 // and when a file is ready it will signal and waiting thread(s) will get woken
-class FilesystemWatcher : public Semaphore {
-    List<UNIXOpenFile*> watching;
+class FsWatcher : public Semaphore {
+    List<FancyRefPtr<File>> watching;
 
 public:
-    FilesystemWatcher() : Semaphore(0) {}
+    FsWatcher() : Semaphore(0) {}
 
-    inline void WatchNode(FsNode* node, int events) {
-        ErrorOr<UNIXOpenFile*> desc = node->Open(0);
-        assert(!desc.HasError() && desc.Value());
+    inline void WatchNode(FancyRefPtr<File> file, Fs::FsEvent events) {
+        file->Watch(this, events);
 
-        UNIXOpenFile* f = desc.Value();
-        f->node->Watch(*this, events);
-
-        watching.add_back(f);
+        watching.add_back(std::move(file));
     }
 
-    ~FilesystemWatcher() {
-        for (auto& fd : watching) {
-            fd->node->Unwatch(*this);
-
-            delete fd;
+    ~FsWatcher() {
+        for (const auto& f : watching) {
+            f->Unwatch(this);
         }
     }
 };
 
-class FilesystemBlocker : public ThreadBlocker {
+/*class FilesystemBlocker : public ThreadBlocker {
     friend FsNode;
     friend FastList<FilesystemBlocker*>;
 
@@ -342,7 +241,7 @@ public:
     inline size_t RequestedLength() { return requestedLength; }
 
     ~FilesystemBlocker();
-};
+};*/
 
 typedef struct fs_dirent {
     uint32_t inode; // Inode number
@@ -454,25 +353,18 @@ ErrorOr<ssize_t> Read(FsNode* node, size_t offset, size_t size, void* buffer);
 /////////////////////////////
 ErrorOr<ssize_t> Write(FsNode* node, size_t offset, size_t size, void* buffer);
 
-ErrorOr<UNIXOpenFile*> Open(FsNode* node, uint32_t flags = 0);
+ErrorOr<File*> Open(FsNode* node, uint32_t flags = 0);
 void Close(FsNode* node);
-void Close(UNIXOpenFile* openFile);
+void Close(File* openFile);
 ErrorOr<int> ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index);
 ErrorOr<FsNode*> FindDir(FsNode* node, const char* name);
 
-ErrorOr<ssize_t> Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer);
-ErrorOr<ssize_t> Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer);
-ErrorOr<ssize_t> Read(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer, off_t offset);
-ErrorOr<ssize_t> Write(const FancyRefPtr<UNIXOpenFile>& handle, size_t size, UIOBuffer* buffer, off_t offset);
-
-ErrorOr<int> ReadDir(const FancyRefPtr<UNIXOpenFile>& handle, DirectoryEntry* dirent, uint32_t index);
-ErrorOr<FsNode*> FindDir(const FancyRefPtr<UNIXOpenFile>& handle, const char* name);
-ErrorOr<int> Ioctl(const FancyRefPtr<UNIXOpenFile>& handle, uint64_t cmd, uint64_t arg);
+ErrorOr<int> ReadDir(const FancyRefPtr<File>& handle, DirectoryEntry* dirent, uint32_t index);
+ErrorOr<FsNode*> FindDir(const FancyRefPtr<File>& handle, const char* name);
+ErrorOr<int> Ioctl(const FancyRefPtr<File>& handle, uint64_t cmd, uint64_t arg);
 
 Error Link(FsNode*, FsNode*, DirectoryEntry*);
 Error Unlink(FsNode*, DirectoryEntry*, bool unlinkDirectories = false);
 
 Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newpath);
 } // namespace fs
-
-ALWAYS_INLINE UNIXOpenFile::~UNIXOpenFile() { fs::Close(this); }

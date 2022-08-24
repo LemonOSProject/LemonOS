@@ -1,29 +1,26 @@
 #pragma once
 
-#include <Fs/Filesystem.h>
+#include <Objects/File.h>
+
 #include <RefPtr.h>
 #include <Stream.h>
 
-class UNIXPipe final : public FsNode {
+#include <Error.h>
+
+class UNIXPipe final : public File {
 public:
-    UNIXPipe(int end, FancyRefPtr<DataStream> stream);
+    UNIXPipe(mode_t mode, FancyRefPtr<DataStream> stream);
+    ~UNIXPipe() override;
 
-    ErrorOr<ssize_t> Read(size_t off, size_t size, UIOBuffer* buffer);
-    ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer);
+    ErrorOr<ssize_t> Read(off_t off, size_t size, UIOBuffer* buffer) override;
+    ErrorOr<ssize_t> Write(off_t off, size_t size, UIOBuffer* buffer) override;
 
-    void Watch(FilesystemWatcher& watcher, int events);
-    void Unwatch(FilesystemWatcher& watcher);
+    void Watch(class FsWatcher* watcher, Fs::FsEvent events) override;
+    void Unwatch(class FsWatcher* watcher) override;
 
-    void Close();
+    Error Create(FancyRefPtr<UNIXPipe>& read, FancyRefPtr<UNIXPipe>& write);
 
-    static void CreatePipe(UNIXPipe*& read, UNIXPipe*& write);
 protected:
-    enum {
-        InvalidPipe,
-        ReadEnd,
-        WriteEnd,
-    } end = InvalidPipe;
-
     bool widowed = false;
     UNIXPipe* otherEnd = nullptr;
 

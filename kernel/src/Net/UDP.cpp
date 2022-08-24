@@ -151,11 +151,11 @@ namespace Network::UDP{
 
         packets.add_back(pkt);
 
-        acquireLock(&blockedLock);
+        /*acquireLock(&blockedLock);
         while(blocked.get_length()){
             blocked.get_front()->Unblock();
         }
-        releaseLock(&blockedLock);
+        releaseLock(&blockedLock);*/
 
         return 0;
     }
@@ -196,9 +196,9 @@ namespace Network::UDP{
             releaseLock(&packetsLock);
             if(flags & MSG_DONTWAIT){
                 return EAGAIN; // Don't wait
-            } else if(FilesystemBlocker bl(this); Thread::Current()->Block(&bl)){
+            } /*else if(FilesystemBlocker bl(this); Thread::Current()->Block(&bl)){
                 return EINTR; // We were interrupted
-            }
+            }*/
         }
 
         UDPPacket pkt = packets.remove_at(0);

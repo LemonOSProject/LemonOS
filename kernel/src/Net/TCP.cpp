@@ -272,7 +272,7 @@ namespace Network {
             if(tcpHeader->rst){
                 state = TCPStateUnknown; // Abort connection
 
-                UnblockAll();
+                //UnblockAll();
             } else if(state == TCPStateSyn){
                 bool ack = tcpHeader->ack;
                 bool syn = tcpHeader->syn;
@@ -294,7 +294,7 @@ namespace Network {
                     if(m_lastAcknowledged == m_sequenceNumber){ // The ACK number must be equal to the sequence number.
                         state = TCPStateEstablished; // Our SYN has been acknowledged with a SYN-ACK
 
-                        UnblockAll(); // Unblock waiting threads
+                        //UnblockAll(); // Unblock waiting threads
                     }
                 }
 
@@ -309,7 +309,7 @@ namespace Network {
 
                     state = TCPStateEstablished; // Our SYN has been acknowledged with a SYN-ACK
 
-                    UnblockAll(); // Unblock waiting threads
+                    //UnblockAll(); // Unblock waiting threads
                 }
             } else if(state == TCPStateEstablished){
                 bool ack = tcpHeader->ack;
@@ -361,7 +361,7 @@ namespace Network {
                 if(dataLength){
                     m_inboundData.WriteRaw(data + dataOffset, dataLength);
 
-                    acquireLock(&blockedLock);
+                    /*acquireLock(&blockedLock);
                     FilesystemBlocker* bl = blocked.get_front();
                     while(bl){
                         FilesystemBlocker* next = blocked.next(bl);
@@ -372,7 +372,7 @@ namespace Network {
 
                         bl = next;
                     }
-                    releaseLock(&blockedLock);
+                    releaseLock(&blockedLock);*/
 
                     m_remoteSequenceNumber = tcpHeader->sequence + dataLength;
 
@@ -394,7 +394,7 @@ namespace Network {
                 }
 
                 if(doUnblock){
-                    UnblockAll();
+                    //UnblockAll();
                 }
             } else if(state == TCPStateFinWait1){
                 bool ack = tcpHeader->ack;
@@ -709,7 +709,7 @@ namespace Network {
 
             long retryPeriod = TCP_RETRY_MIN;
             while(state == TCPStateSyn){
-                FilesystemBlocker bl(this);
+                /*FilesystemBlocker bl(this);
 
                 long timeout = retryPeriod;
                 if(Thread::Current()->Block(&bl, timeout)){
@@ -718,7 +718,7 @@ namespace Network {
 
                 if(timeout <= 0){
                     retryPeriod *= 4;
-                }
+                }*/
             }
 
             if(state != TCPStateEstablished){
@@ -761,11 +761,11 @@ namespace Network {
             }
 
             if(state == TCPStateEstablished && m_inboundData.Pos() < len){ // We do not want to block when in CLOSE-WAIT
-                FilesystemBlocker bl(this, len);
+                /*FilesystemBlocker bl(this, len);
 
                 if(Thread::Current()->Block(&bl)){
                     return EINTR; // We were interrupted
-                }
+                }*/
             }
 
             if(state == TCPStateUnknown){

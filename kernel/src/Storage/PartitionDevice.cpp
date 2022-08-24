@@ -9,7 +9,7 @@ PartitionDevice::PartitionDevice(uint64_t startLBA, uint64_t endLBA, DiskDevice*
     m_endLBA = endLBA;
     this->parentDisk = disk;
 
-    flags = FS_NODE_CHARDEVICE;
+    type = FileType::CharDevice;
 
     char buf[18];
     strcpy(buf, parentDisk->InstanceName().c_str());

@@ -115,7 +115,7 @@ class Socket : public FsNode {
     virtual int SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength);
     virtual int GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength);
 
-    virtual ErrorOr<UNIXOpenFile*> Open(size_t flags);
+    virtual ErrorOr<File*> Open(size_t flags);
     virtual void Close();
 
     virtual void Watch(FilesystemWatcher& watcher, int events);
@@ -163,7 +163,7 @@ class LocalSocket final : public Socket {
     int Connect(const sockaddr* addr, socklen_t addrlen);
     int Listen(int backlog);
 
-    ErrorOr<UNIXOpenFile*> Open(size_t flags);
+    ErrorOr<File*> Open(size_t flags);
     void Close();
 
     ErrorOr<int64_t> ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,

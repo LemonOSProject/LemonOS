@@ -8,7 +8,7 @@
 static int nextDeviceNumber = 0;
 
 DiskDevice::DiskDevice() : Device(DeviceTypeStorageDevice) {
-    flags = FS_NODE_CHARDEVICE;
+    type = FileType::CharDevice;
 
     char buf[16];
     strcpy(buf, "hd");

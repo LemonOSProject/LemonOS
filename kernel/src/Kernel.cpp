@@ -10,7 +10,6 @@
 #include <Math.h>
 #include <Modules.h>
 #include <Net/Net.h>
-#include <Objects/Service.h>
 #include <PCI.h>
 #include <PS2.h>
 #include <Panic.h>
@@ -47,8 +46,6 @@ void KernelProcess() {
     USB::XHCIController::Initialize();
     ATA::Init();
     AHCI::Init();
-
-    ServiceFS::Initialize();
 
     Network::InitializeConnections();
     Audio::InitializeSystem();
