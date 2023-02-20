@@ -125,7 +125,7 @@ tools:
     install:
       - args: ['make', 'install']
       - args: ['ln', '-sf', '@PREFIX@/share/aclocal-1.16', '@PREFIX@/share/aclocal']
-  
+
   - name: host-autoconf-v2.69 # Some things e.g. binutils want exactly this version, painnnnnn
     source:
       name: host-autoconf-v2.69
@@ -373,13 +373,34 @@ tools:
       - args: ['make', 'install']
 
 packages:
+  - name: linux-headers
+    source:
+      subdir: 'ports'
+      url: 'https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.1.8.tar.xz'
+      checksum: 'blake2b:1eeab95bf09757131031ebeaa3fb66f01626ecfe3b72d0044176613d027ac6643c688a0bb8f4493ae6faa3d3bf0c89fcdff3c28d7b8375e59ed6e8bd6d856e44'
+      extract_path: 'linux-6.1.8'
+      format: 'tar.xz'
+      version: '6.1.8'
+    configure:
+      - args: ['cp', '-Tr', '@THIS_SOURCE_DIR@', '.']
+    build:
+      - args: ['make', 'ARCH=x86_64', 'headers_install']
+      - args: ['find', 'usr/include', '-type', 'f', '!', '-name', '*.h', '-delete']
+      - args: ['mkdir', '-p', '@THIS_COLLECT_DIR@/usr']
+      # remove this file, as mlibc will override this file with one suited to mlibc
+      - args: ['rm', 'usr/include/linux/libc-compat.h']
+      - args: ['cp', '-r', 'usr/include', '@THIS_COLLECT_DIR@/usr']
+
   - name: mlibc-headers
     from_source: mlibc
+    pkgs_required:
+      - linux-headers
     configure:
       - args:
         - 'meson'
         - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
         - '-Dheaders_only=True'
+        - '-Dlinux_kernel_headers=@BUILD_ROOT@/packages/linux-headers/usr/include'
         - '--prefix=/system'
         - '@THIS_SOURCE_DIR@'
     build:
@@ -392,6 +413,7 @@ packages:
     from_source: mlibc
     pkgs_required:
       - mlibc-headers
+      - linux-headers
     tools_required:
       - tool: host-llvm
         stage_dependencies: [compiler]
@@ -401,6 +423,7 @@ packages:
         - 'meson'
         - '--cross=@SOURCE_ROOT@/Scripts/lemon-crossfile.txt'
         - '-Dmlibc_no_headers=true'
+        - '-Dlinux_kernel_headers=@BUILD_ROOT@/packages/linux-headers/usr/include'
         - '--prefix=/system'
         - '@THIS_SOURCE_DIR@'
     build:
@@ -419,7 +442,7 @@ packages:
       - args:
         - 'cmake'
         - '-GNinja'
-        - '@THIS_SOURCE_DIR@' 
+        - '@THIS_SOURCE_DIR@'
         - '-DCMAKE_CROSSCOMPILING=True'
         - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
         - '-DCMAKE_INSTALL_PREFIX=/system'
@@ -464,7 +487,7 @@ packages:
           DESTDIR: '@THIS_COLLECT_DIR@'
           LEMON_SYSROOT: '@SYSROOT_DIR@'
           LEMON_BUILDROOT: '@SOURCE_ROOT@'
-        
+
   - name: lemon-interface-headers
     source:
       name: 'Services'
@@ -578,7 +601,7 @@ packages:
       - args:
         - 'cmake'
         - '-GNinja'
-        - '@THIS_SOURCE_DIR@' 
+        - '@THIS_SOURCE_DIR@'
         - '-DCMAKE_CROSSCOMPILING=True'
         - '-DCMAKE_TOOLCHAIN_FILE=@SOURCE_ROOT@/Scripts/CMake/lemon-cmake-options.txt'
         - '-DCMAKE_INSTALL_PREFIX=/system'
