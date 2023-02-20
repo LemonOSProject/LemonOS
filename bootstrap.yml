@@ -375,7 +375,7 @@ tools:
 packages:
   - name: linux-headers
     source:
-      subdir: 'ports'
+      subdir: 'Ports'
       url: 'https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.1.8.tar.xz'
       checksum: 'blake2b:1eeab95bf09757131031ebeaa3fb66f01626ecfe3b72d0044176613d027ac6643c688a0bb8f4493ae6faa3d3bf0c89fcdff3c28d7b8375e59ed6e8bd6d856e44'
       extract_path: 'linux-6.1.8'

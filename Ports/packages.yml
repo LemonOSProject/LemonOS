@@ -444,6 +444,8 @@ packages:
       - '--disable-mmx'
       - '--disable-network'
       - '--disable-demuxer=nistsphere'
+      - '--disable-libv4l2'
+      - '--disable-v4l2-m2m'
       environ:
         CC: 'clang'
         CXX: 'clang++'
