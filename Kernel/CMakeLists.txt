@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+set(KERNEL_DEBUG_SYMBOLS OFF)
+
 set(LEMON_ARCH "x86_64")
 
 add_compile_options($<$<C_COMPILER_ID:Clang>:-fcolor-diagnostics>)
@@ -41,7 +43,11 @@ add_compile_options(-mcmodel=large -mno-red-zone -fno-pic)
 # Inline functions even with O0
 add_compile_options(-O0)
 add_compile_options(-fno-builtin -finline-functions)
-add_compile_options(-g)
+
+# Clang crashes sometimes when generating debug information
+if(KERNEL_DEBUG_SYMBOLS)
+    add_compile_options(-g)
+endif()
 
 set(KERNEL_SRC
     src/Assert.cpp

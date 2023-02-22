@@ -4,7 +4,6 @@
 
 #include <CPU.h>
 #include <Compiler.h>
-#include <ELF.h>
 #include <Error.h>
 #include <Errno.h>
 #include <Fs/Filesystem.h>
@@ -96,7 +95,7 @@ public:
     ///
     /// \return Entry point of the ELF (either dynamic linker or executable itself)
     /////////////////////////////
-    uintptr_t LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Vector<String>& argv,
+    uintptr_t LoadELF(uintptr_t* stackPointer, struct ELFInfo elfInfo, const Vector<String>& argv,
                       const Vector<String>& envp, const char* execPath);
 
     /////////////////////////////

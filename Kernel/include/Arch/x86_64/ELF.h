@@ -72,7 +72,7 @@ typedef struct ELF64RelocationA {
 	int64_t addend; // Constant addend
 } __attribute__((packed)) elf64_rela_t;
 
-typedef struct {
+typedef struct ELFInfo {
 	uint64_t entry;
 	uint64_t pHdrSegment;
 	uint64_t phEntrySize;
