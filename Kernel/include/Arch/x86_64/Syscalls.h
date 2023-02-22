@@ -15,3 +15,12 @@
 void DumpLastSyscall(struct Thread*);
 
 typedef long (*syscall_t)(RegisterContext*);
+
+#define SC_TRY_OR_ERROR(func)                                                                                          \
+    ({                                                                                                                 \
+        auto result = func;                                                                                            \
+        if (!result) {                                                                                                 \
+            return -result.err.code;                                                                                   \
+        }                                                                                                              \
+        std::move(result.Value());                                                                                     \
+    })

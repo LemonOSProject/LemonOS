@@ -126,10 +126,13 @@ set(KERNEL_SRC_x86_64
     src/Arch/x86_64/SSP.cpp
     src/Arch/x86_64/StringSafe.cpp
     src/Arch/x86_64/Symbols.cpp
-    src/Arch/x86_64/Syscalls.cpp
     src/Arch/x86_64/Thread.cpp
     src/Arch/x86_64/Timer.cpp
     src/Arch/x86_64/TSS.cpp
+
+    src/Arch/x86_64/Syscalls.cpp
+    src/Arch/x86_64/Syscalls/Filesystem.cpp
+    src/Arch/x86_64/Syscalls/EPoll.cpp
 
     src/Arch/x86_64/Entry.asm
     src/Arch/x86_64/IDT.asm
