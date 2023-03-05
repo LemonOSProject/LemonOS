@@ -4,43 +4,25 @@
 
 Lemon OS is a UNIX-like 64-bit operating system written in C++.
 
-## About Lemon OS
-Lemon OS includes its own [modular kernel](kernel) with SMP and networking, [window server/compositor](apps/servers/lemonwm) and [userspace applications](apps) as well as [a collection of software ports](ports).
+## About Lemon OS (Work-in-progress branch)
+This branch involves a new user-kernel API and a lot of kernel changes, hence a lot doesn't work right now. Big plans!
 
-If you have any questions or concerns feel free to open a GitHub issue, join our [Discord server](https://discord.gg/NAYp6AUYWM) or email me at computerfido@gmail.com.
+- Safer syscall API (much less unchecked memory accesses)
+- vDSO to make system calls bc it's cool
+- Repo reorganisation
+- It turns out typing capital letters on filepaths is kinda annoying, so less of that
+- Untie a lot of code from x86 to support ARM in the future :)
+- Pay closer attention to how UNIX systems work in regards to filesystems and sockets
+- Less shitter reimplementations of features that already exist on other *nixes 
+
+Maybes:
+- Reduce amount of external dependencies
+- Get userspace working on other kernels
+- Port a bunch of software known to work with mlibc (maintaining software is really 面倒くさい)
 
 ## [Website](https://lemonos.org)
 ## [Discord Server](https://discord.gg/NAYp6AUYWM)
 ## [Building Lemon OS](docs/Build/Building-Lemon-OS.md)
-
-## Prebuilt Image
-[Nightly Images](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml?query=is%3Asuccess+branch%3Amaster) - Go to latest job, `Lemon.img` located under Artifacts\
-**You must be logged in to GitHub to download the image**
-
-**Before running**
-See [System Requirements](#system-requirements)
-
-![Lemon OS Screenshot](extra/screenshots/image9.png)\
-[More screenshots](extra/screenshots)
-## Features
-- Modular Kernel
-- Symmetric Multiprocessing (SMP)
-- UNIX/BSD Sockets
-- Network Stack (UDP, TCP, DHCP)
-- A small HTTP client/downloader called [steal](apps/utilities/steal)
-- Window Manager/Server [LemonWM](apps/servers/lemonwm)
-- [Terminal Emulator](apps/core/terminal)
-- Writable Ext2 Filesystem
-- IDE, AHCI and NVMe Driver
-- Dynamic Linking
-- [mlibc](https://github.com/managarm/mlibc) C Library Port
-- [LLVM/Clang Port](https://github.com/LemonOSProject/llvm-project)
-- [DOOM Port](https://github.com/LemonOSProject/LemonDOOM)
-- [Audio Player (using ffmpeg)](Applications/AudioPlayer)
-
-## Work In Progress
-- XHCI Driver
-- Intel HD Audio Driver
 
 ## Third Party
 
