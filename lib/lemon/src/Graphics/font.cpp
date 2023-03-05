@@ -29,7 +29,7 @@ void RefreshFonts() {
     fontState = 0;
 }
 
-/*__attribute__((constructor))*/ void InitializeFonts() {
+__attribute__((constructor)) void InitializeFonts() {
     fontState = -1;
 
     if (FT_Init_FreeType(&library)) {

@@ -12,7 +12,7 @@ build init: run_cmd
 build toolchain: run_xbstrap
     cmd = install-tool --all
 
-build kernel: run_xbstrap
+build ke: run_xbstrap
     cmd = install lemon-kernel --rebuild
 
 build libs: run_xbstrap
@@ -21,7 +21,7 @@ build libs: run_xbstrap
 build system: run_xbstrap
     cmd = install lemon-system --rebuild
 
-build lemon: run_xbstrap kernel system libs
+build lemon: run_xbstrap ke system libs
 
 build install-all-packages: run_xbstrap
     cmd = install --all

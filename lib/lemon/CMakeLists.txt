@@ -41,7 +41,7 @@ set(LIBLEMON_SRC
     src/url.cpp
 
     src/Lemon/device.cpp
-    src/Lemon/fb.cpp
+    src/Lemon/framebuffer.cpp
     src/Lemon/info.cpp
     src/Lemon/sharedmem.cpp
     src/Lemon/util.cpp
