@@ -1,9 +1,7 @@
 # Lemon OS Documentation
 
-[Kernel/](Kernel/README.md) Lemon Kernel
+[kernel/](kernel/README.md) Lemon Kernel
 
-[System/](System/README.md) System Interfaces and Design
+[api/](api/README.md) API Reference including syscalls
 
-[Userspace/](Userspace/README.md) Userspace applications (CLI and GUI) 
-
-[Build/](Build/README.md) Building Lemon OS and Lemon OS toolchain 
+[build/](build/README.md) Building Lemon OS and Lemon OS toolchain
