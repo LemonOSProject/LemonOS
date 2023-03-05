@@ -23,7 +23,8 @@ set(LIBLEMONGUI_SRC
 include_directories(include)
 
 add_library(lemongui SHARED ${LIBLEMONGUI_SRC})
-target_link_options(lemongui PUBLIC -lz -lpng -llemon)
+target_link_libraries(lemongui PUBLIC lemon)
+target_link_options(lemongui PUBLIC -lz -lpng)
 
 include(GNUInstallDirs)
 
