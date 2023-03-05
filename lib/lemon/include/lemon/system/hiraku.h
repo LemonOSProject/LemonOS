@@ -1,6 +1,6 @@
 #pragma once
 
-#include <lemon/system/abi/types.h>
+#include <lemon/abi/types.h>
 
 #define HIRAKU_CALL [[gnu::weak]] extern "C"
 
@@ -11,6 +11,7 @@ HIRAKU_CALL long le_handle_dup(le_handle_t handle, int64_t flags);
 HIRAKU_CALL long le_futex_wait(int* futex, int expected, const struct timespec* time);
 HIRAKU_CALL long le_futex_wake(int* futex);
 HIRAKU_CALL long le_set_user_tcb(void* tcb);
+HIRAKU_CALL long le_create_process(le_handle_t* handle, uint64_t flags, le_str_t name);
 
 HIRAKU_CALL long sys_read(le_handle_t handle, uint8_t* buf, size_t count, ssize_t* bytesRead);
 HIRAKU_CALL long sys_write(le_handle_t handle, const uint8_t* buf, size_t count, ssize_t* bytesWritten);

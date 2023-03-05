@@ -1,6 +1,9 @@
 #ifndef LEMON_SYS_ABI_FCNTL_H
 #define LEMON_SYS_ABI_FCNTL_H
 
+#define PATH_MAX 4096
+#define NAME_MAX 255
+
 #define O_ACCESS 0x0007
 #define O_EXEC 1
 #define O_RDONLY 2
@@ -52,5 +55,15 @@
 #define AT_EACCESS 512
 
 #define AT_FDCWD -100
+
+#define DT_UNKNOWN 0
+#define DT_FIFO 1
+#define DT_CHR 2
+#define DT_DIR 4
+#define DT_BLK 6
+#define DT_REG 8
+#define DT_LNK 10
+#define DT_SOCK 12
+#define DT_WHT 14
 
 #endif // LEMON_SYS_ABI_FCNTL

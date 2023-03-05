@@ -19,4 +19,5 @@ enum {
     _le_futex_wait = 0x10004,
     _le_futex_wake = 0x10005,
     _le_set_user_tcb = 0x10006,
+    _le_create_process = 0x10007,
 };

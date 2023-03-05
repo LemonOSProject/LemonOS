@@ -1,15 +1,8 @@
-#ifndef FB_H
-#define FB_H
+#pragma once
 
-#include <lemon/graphics/Surface.h>
+#include <stdint.h>
+#include <lemon/graphics/Graphics.h>
 
-#ifdef __lemon__
-#include <lemon/system/Framebuffer.h>
-#endif
-
-namespace Lemon{
-    Surface* CreateFramebufferSurface();
-    void CreateFramebufferSurface(Surface& surface);
+namespace Lemon {
+long CreateFramebufferSurface(Surface* surface);
 }
-
-#endif

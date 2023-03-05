@@ -5,7 +5,7 @@
 #endif
 
 #include <lemon/system/Info.h>
-#include <lemon/system/abi/process.h>
+#include <lemon/abi/process.h>
 
 #include <sys/types.h>
 #include <stdint.h>
