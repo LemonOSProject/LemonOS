@@ -38,7 +38,7 @@ sources:
     sources_required: ['gnulib']
     regenerate:
       - args: ['rm', '-rf', 'gnulib']
-      - args: ['cp', '-r', '@SOURCE_ROOT@/Ports/gnulib', './']
+      - args: ['cp', '-r', '@SOURCE_ROOT@/ports/gnulib', './']
       - args: ['git', 'submodule', 'update', '--init']
       - args: ['./bootstrap']
 
@@ -107,7 +107,7 @@ sources:
     sources_required: ['gnulib']
     regenerate:
       - args: ['rm', '-rf', 'gnulib']
-      - args: ['cp', '-r', '@SOURCE_ROOT@/Ports/gnulib', './']
+      - args: ['cp', '-r', '@SOURCE_ROOT@/ports/gnulib', './']
       - args: 'sed -i s/"SUBDIRS = doc intl intl-java intl-csharp gnulib-lib \$(SUBDIR_libasprintf)\ src po man m4 tests"/"SUBDIRS = intl intl-java intl-csharp gnulib-lib \$(SUBDIR_libasprintf)\ src po m4 tests"/ @THIS_SOURCE_DIR@/gettext-runtime/Makefile.am'
       - args: 'sed -i s/"SUBDIRS = doc intl gnulib-lib libgrep src libgettextpo po projects styles misc man m4 tests gnulib-tests examples its"/"SUBDIRS = intl gnulib-lib libgrep src libgettextpo po projects styles misc m4 tests gnulib-tests examples its"/ @THIS_SOURCE_DIR@/gettext-tools/Makefile.am'
       - args: ['./autogen.sh']
@@ -261,7 +261,7 @@ tools:
       sources_required: ['gnulib']
       regenerate:
         - args: ['rm', '-rf', 'gnulib']
-        - args: ['cp', '-r', '@SOURCE_ROOT@/Ports/gnulib', './']
+        - args: ['cp', '-r', '@SOURCE_ROOT@/ports/gnulib', './']
         - args: ['./bootstrap']
     tools_required:
       - tool: host-autoconf-v2.69
@@ -643,6 +643,8 @@ packages:
     pkgs_required:
       - lemon-kernel
       - lemon-system-libs
+      - ffmpeg
+      - libressl
     tools_required:
       - host-pkgconfig
       - host-compiler
@@ -680,7 +682,7 @@ packages:
     source:
       name: 'base'
     build:
-      - args: ['sh', '-c', 'mkdir -p @THIS_COLLECT_DIR@/system; cp -ru Base/* @THIS_COLLECT_DIR@/system']
+      - args: ['sh', '-c', 'mkdir -p @THIS_COLLECT_DIR@/system; cp -ru base/* @THIS_COLLECT_DIR@/system']
         workdir: '@SOURCE_ROOT@'
 
 tasks:
