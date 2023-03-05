@@ -3,7 +3,7 @@ packages:
     source:
       git: 'https://github.com/klange/nyancat/'
       branch: 'master'
-      subdir: 'Ports'
+      subdir: 'ports'
     tools_required:
       - host-compiler
     pkgs_required:
@@ -22,7 +22,7 @@ packages:
     source:
       url: 'https://curl.se/download/curl-7.77.0.tar.gz'
       format: 'tar.gz'
-      subdir: 'Ports'
+      subdir: 'ports'
       extract_path: 'curl-7.77.0'
       tools_required:
         - host-automake
@@ -60,7 +60,7 @@ packages:
     source:
       git: 'https://github.com/LemonOSProject/LemonDOOM.git'
       branch: 'master'
-      subdir: 'Ports'
+      subdir: 'ports'
     tools_required:
       - host-compiler
     pkgs_required:
@@ -85,7 +85,7 @@ packages:
     
   - name: coreutils
     source:
-      subdir: 'Ports'
+      subdir: 'ports'
       git: 'git://git.sv.gnu.org/coreutils'
       tag: 'v9.0'
       tools_required:
@@ -95,7 +95,7 @@ packages:
         - host-bison
       sources_required: ['gnulib']
       regenerate:
-        - args: ['./bootstrap', '--gnulib-srcdir=@SOURCE_ROOT@/Ports/gnulib', '--skip-po', '--no-git']
+        - args: ['./bootstrap', '--gnulib-srcdir=@SOURCE_ROOT@/ports/gnulib', '--skip-po', '--no-git']
         - args: ['cp', '@BUILD_ROOT@/tools/host-automake/share/automake-1.16/config.sub', '@THIS_SOURCE_DIR@/build-aux']
     tools_required:
       - host-compiler
@@ -148,7 +148,7 @@ packages:
           DESTDIR: '@THIS_COLLECT_DIR@'
   - name: libffi
     source:
-      subdir: 'Ports'
+      subdir: 'ports'
       git: 'https://github.com/libffi/libffi.git'
       tag: 'v3.4.2'
       tools_required:
@@ -176,7 +176,7 @@ packages:
           DESTDIR: '@THIS_COLLECT_DIR@'
   - name: libexpat
     source:
-      subdir: 'Ports'
+      subdir: 'ports'
       git: 'https://github.com/libexpat/libexpat.git'
       tag: 'R_2_4_1'
     configure:
@@ -227,7 +227,7 @@ packages:
 
   - name: libxml2
     source:
-      subdir: 'Ports'
+      subdir: 'ports'
       url: 'https://gitlab.gnome.org/GNOME/libxml2/-/archive/v2.9.11/libxml2-v2.9.11.tar.gz'
       format: 'tar.gz'
       extract_path: 'libxml2-v2.9.11'
@@ -265,7 +265,7 @@ packages:
       git: 'https://github.com/ThomasDickey/ncurses-snapshots'
       tag: 'v6_3'
       version: '6.3'
-      subdir: 'Ports'
+      subdir: 'ports'
       tools_required:
         - host-libtool
         - host-pkgconfig
@@ -300,7 +300,7 @@ packages:
 
   - name: readline
     source:
-      subdir: 'Ports'
+      subdir: 'ports'
       git: 'https://git.savannah.gnu.org/git/readline.git'
       tag: 'readline-8.1'
       version: '8.1'
@@ -378,7 +378,7 @@ packages:
     source:
       url: 'https://downloads.sourceforge.net/lame/lame-3.100.tar.gz'
       format: 'tar.gz'
-      subdir: 'Ports'
+      subdir: 'ports'
       extract_path: 'lame-3.100'
       version: '3.100'
       tools_required:
@@ -421,7 +421,7 @@ packages:
       git: 'https://github.com/FFmpeg/FFmpeg'
       tag: 'n5.0.1'
       version: '5.0.1'
-      subdir: 'Ports'
+      subdir: 'ports'
     pkgs_required:
       - mlibc
     tools_required:
@@ -456,7 +456,7 @@ packages:
       git: 'https://github.com/libarchive/libarchive.git'
       tag: 'v3.6.1'
       version: '3.6.1'
-      subdir: 'Ports'
+      subdir: 'ports'
     pkgs_required:
       - mlibc
       - zlib
@@ -489,7 +489,7 @@ packages:
       git: 'https://github.com/libjpeg-turbo/libjpeg-turbo'
       tag: '2.1.3'
       version: '2.1.3'
-      subdir: 'Ports'
+      subdir: 'ports'
     pkgs_required:
       - mlibc
       - libpng
@@ -528,7 +528,7 @@ packages:
       branch: 'master'
       rolling_version: true
       version: '0.0pl@ROLLING_ID@'
-      subdir: 'Ports'
+      subdir: 'ports'
     pkgs_required:
       - lemon-system-libs
       - mlibc
@@ -619,7 +619,7 @@ packages:
       git: 'https://github.com/netwide-assembler/nasm'
       tag: 'nasm-2.15.05'
       version: '2.15.05'
-      subdir: 'Ports'
+      subdir: 'ports'
       tools_required:
         - host-libtool
         - host-pkgconfig
