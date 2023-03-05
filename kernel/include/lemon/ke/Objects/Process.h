@@ -74,8 +74,8 @@ public:
     /// \param watcher Watcher object
     /// \param events Ignored (for now)
     /////////////////////////////
-    void Watch(KernelObjectWatcher& watcher, int events); // override;
-    void Unwatch(KernelObjectWatcher& watcher); // override;
+    void Watch(KernelObjectWatcher* watcher, KOEvent events) override;
+    void Unwatch(KernelObjectWatcher* watcher) override;
 
     /////////////////////////////
     /// \brief Fork Process
@@ -354,13 +354,13 @@ public:
             return -ECHILD; // No children to wait for
         }
 
-        /*KernelObjectWatcher watcher;
+        KernelObjectWatcher watcher;
         for (auto& child : m_children) {
-            watcher.WatchObject(static_pointer_cast<KernelObject>(child), 0);
-        }*/
+            watcher.Watch(child, KOEvent::ProcessTerminated);
+        }
         releaseLock(&m_processLock);
 
-        /*bool wasInterrupted = watcher.Wait();
+        bool wasInterrupted = watcher.Wait();
 
         child = RemoveDeadChild();
         if (child.get()) {
@@ -370,7 +370,7 @@ public:
             return -EINTR; // We were interrupted
         }
 
-        goto retry; // Keep waiting*/
+        goto retry; // Keep waiting
         return 0;
     }
 

@@ -19,7 +19,6 @@
 #include <abi/stat.h>
 
 #include <Fs/DirectoryEntry.h>
-#include <Fs/Events.h>
 
 #define FD_SETSIZE 1024
 
@@ -79,7 +78,7 @@ static inline void FD_SET(int fd, fd_set_t* fds) {
 }
 
 class FilesystemWatcher;
-class DirectoryEntry;
+struct DirectoryEntry;
 
 class FsNode {
 public:
@@ -90,9 +89,10 @@ public:
     gid_t gid = 0;
     ino_t inode = 0;          // Inode number
     size_t size = 0;          // Node size
-    int nlink = 0;            // Amount of references/hard links
-    unsigned handleCount = 0; // Amount of file handles that point to this node
     volume_id_t volumeID;
+
+    int nlink = 0;            // Amount of references/hard links
+    unsigned handleCount = 0; // Amount of files that point to this node
 
     virtual ~FsNode();
 
@@ -154,29 +154,7 @@ public:
 
     void UnblockAll();
 
-    FilesystemLock nodeLock; // Lock on FsNode info
-};
-
-// FilesystemWatcher is a semaphore initialized to 0.
-// A thread can wait on it like any semaphore,
-// and when a file is ready it will signal and waiting thread(s) will get woken
-class FsWatcher : public Semaphore {
-    List<FancyRefPtr<File>> watching;
-
-public:
-    FsWatcher() : Semaphore(0) {}
-
-    inline void WatchNode(FancyRefPtr<File> file, Fs::FsEvent events) {
-        file->Watch(this, events);
-
-        watching.add_back(std::move(file));
-    }
-
-    ~FsWatcher() {
-        for (const auto& f : watching) {
-            f->Unwatch(this);
-        }
-    }
+    lock_t nodeLock = 0;
 };
 
 /*class FilesystemBlocker : public ThreadBlocker {

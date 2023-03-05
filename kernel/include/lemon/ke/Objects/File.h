@@ -4,7 +4,6 @@
 #include <Spinlock.h>
 #include <UserIO.h>
 
-#include <Fs/Events.h>
 #include <Fs/FileType.h>
 
 #include <Objects/KObject.h>
@@ -16,7 +15,7 @@ class File : public KernelObject {
     DECLARE_KOBJECT(File);
 
 public:
-    virtual ~File();
+    virtual ~File() override;
 
     /////////////////////////////
     /// \brief Read data from file object
@@ -49,11 +48,11 @@ public:
     // Read Directory
     virtual ErrorOr<int> ReadDir(struct DirectoryEntry*, uint32_t);
 
-    virtual ErrorOr<class MappedRegion*> MMap(uintptr_t base, size_t size, off_t off, int prot, bool shared,
+    virtual ErrorOr<struct MappedRegion*> MMap(uintptr_t base, size_t size, off_t off, int prot, bool shared,
                                               bool fixed);
 
-    virtual void Watch(class FsWatcher* watcher, Fs::FsEvent events);
-    virtual void Unwatch(class FsWatcher* watcher);
+    virtual void Watch(class KernelObjectWatcher* watcher, KOEvent events) override;
+    virtual void Unwatch(class KernelObjectWatcher* watcher) override;
 
     ALWAYS_INLINE bool IsFile() const { return type == FileType::Regular; }
     ALWAYS_INLINE bool IsBlockDev() const { return type == FileType::BlockDevice; }

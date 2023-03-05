@@ -8,9 +8,9 @@
 
 #include <abi/termios.h>
 
-enum {
-    PTYSlaveDevice,
-    PTYMasterDevice,
+enum class PTYType {
+    Slave,
+    Master,
 };
 
 class PTY;
@@ -52,32 +52,31 @@ private:
     List<class PTY*> m_ptList;
 };
 
-class PTYDevice : public FsNode {
+class PTYDevice : public File {
 public:
-    PTY* pty = nullptr;
-    int device;
+    PTYDevice(PTYType dType);
+    ~PTYDevice() override;
 
-    PTYDevice();
-
-    void Close() override;
-
-    ErrorOr<ssize_t> Read(size_t, size_t, UIOBuffer*) override;
-    ErrorOr<ssize_t> Write(size_t, size_t, UIOBuffer*) override;
+    ErrorOr<ssize_t> Read(off_t off, size_t size, UIOBuffer* buffer) override;
+    ErrorOr<ssize_t> Write(off_t off, size_t size, UIOBuffer* buffer) override;
     ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override;
 
-    //void Watch(FilesystemWatcher& watcher, int events); //override;
-    //void Unwatch(FilesystemWatcher& watcher); // override;
+    void Watch(class KernelObjectWatcher* watcher, KOEvent events) override;
+    void Unwatch(class KernelObjectWatcher* watcher) override;
 
-    bool CanRead() override;
+    bool CanRead();
+
+    PTYType ptyType;
+    PTY* pty;
 };
 
-class PTY{
+class PTY : public FsNode {
 public:
     CharacterBuffer master;
     CharacterBuffer slave;
 
-    PTYDevice masterFile;
-    PTYDevice slaveFile;
+    FancyRefPtr<PTYDevice> masterFile;
+    FancyRefPtr<PTYDevice> slaveFile;
 
     // /dev/pts/<id>
     DirectoryEntry slaveDirent;
@@ -103,15 +102,16 @@ public:
 
     void Close();
 
-    //void WatchMaster(FilesystemWatcher& watcher, int events);
-    //void WatchSlave(FilesystemWatcher& watcher, int events);
-    //void UnwatchMaster(FilesystemWatcher& watcher);
-    //void UnwatchSlave(FilesystemWatcher& watcher);
+    void WatchMaster(KernelObjectWatcher* watcher, KOEvent events);
+    void WatchSlave(KernelObjectWatcher* watcher, KOEvent events);
+    void UnwatchMaster(KernelObjectWatcher* watcher);
+    void UnwatchSlave(KernelObjectWatcher* watcher);
 private:
     int m_id;
 
-    //List<FilesystemWatcher*> m_watchingSlave;
-    //List<FilesystemWatcher*> m_watchingMaster;
+    lock_t m_watcherLock = 0;
+    List<KernelObjectWatcher*> m_watchingSlave;
+    List<KernelObjectWatcher*> m_watchingMaster;
 };
 
 PTY* GrantPTY(uint64_t pid);

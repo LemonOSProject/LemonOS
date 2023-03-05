@@ -91,7 +91,8 @@ class AnonymousVMObject : public PhysicalVMObject{
     ALWAYS_INLINE bool CanMunmap() const override { return true; }
 };
 
-struct MappedRegion {
+class MappedRegion {
+public:
     uintptr_t base;
     size_t size;
     FancyRefPtr<VMObject> vmObject;

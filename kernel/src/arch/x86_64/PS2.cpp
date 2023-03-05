@@ -1,6 +1,6 @@
 #include <PS2.h>
 
-#include <abi/Keyboard.h>
+#include <abi/keyboard.h>
 
 #include <APIC.h>
 #include <CString.h>

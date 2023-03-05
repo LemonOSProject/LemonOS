@@ -374,15 +374,17 @@ Process::~Process() {
 
 void Process::Destroy() {
     if (m_state != Process_Dead) {
+        assert(this != Current());
+
         // Use SIGKILL as the process will kill itself
-        /*KernelObjectWatcher watcher;
-        Watch(watcher, 0);
+        KernelObjectWatcher watcher;
+        Watch(&watcher, KOEvent::ProcessTerminated);
 
         m_mainThread->Signal(SIGKILL);
         bool interrupted = watcher.Wait(); // Wait for the process to die
 
         assert(!interrupted);
-        assert(m_state == Process_Dead);*/
+        assert(m_state == Process_Dead);
     }
 
     // Remove from parent completely
@@ -482,13 +484,13 @@ void Process::Die() {
             while (child->State() != Process_Dead)
                 Scheduler::Yield(); // Wait for it to die
         } else if (child->State() == Process_Dying) {
-            /*KernelObjectWatcher w;
-            child->Watch(w, 0);
+            KernelObjectWatcher w;
+            child->Watch(&w, KOEvent::ProcessTerminated);
 
             bool wasInterrupted = w.Wait(); // Wait for the process to die
             while (wasInterrupted) {
                 wasInterrupted = w.Wait(); // If the parent tried to interrupt us we are dying anyway
-            }*/
+            }
         }
 
         child->m_parent = nullptr;
@@ -596,7 +598,7 @@ void Process::Die() {
     Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Closing handles...", m_pid);
     m_handles.clear();
 
-    /*Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Signaling watchers...", m_pid);
+    Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Signaling watchers...", m_pid);
     {
         ScopedSpinLock lockWatchers(m_watchingLock);
 
@@ -607,7 +609,7 @@ void Process::Die() {
             watcher->Signal();
         }
         m_watching.clear();
-    }*/
+    }
 
     if (m_parent && (m_parent->State() == Process_Running)) {
         Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Sending SIGCHILD to %s...", m_pid, m_parent->name);
@@ -653,25 +655,27 @@ void Process::Start() {
     m_started = true;
 }
 
-void Process::Watch(KernelObjectWatcher& watcher, int events) {
+void Process::Watch(KernelObjectWatcher* watcher, KOEvent events) {
+    assert(HAS_KOEVENT(events, KOEvent::ProcessTerminated));
+
     ScopedSpinLock acq(m_watchingLock);
 
     if (m_state == Process_Dead) {
-        watcher.Signal();
+        watcher->Signal();
         return; // Process is already dead
     }
 
-    m_watching.add_back(&watcher);
+    m_watching.add_back(watcher);
 }
 
-void Process::Unwatch(KernelObjectWatcher& watcher) {
+void Process::Unwatch(KernelObjectWatcher* watcher) {
     ScopedSpinLock acq(m_watchingLock);
 
     if (m_state == Process_Dead) {
         return; // Should already be removed from watching
     }
 
-    m_watching.remove(&watcher);
+    m_watching.remove(watcher);
 }
 
 FancyRefPtr<Process> Process::Fork() {

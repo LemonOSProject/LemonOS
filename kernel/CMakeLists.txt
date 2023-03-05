@@ -16,11 +16,13 @@ if(NOT CMAKE_SYSTEM_NAME MATCHES Lemon)
 endif()
 
 include_directories(include)
+include_directories(include/lemon)
+include_directories(include/lemon/ke)
 include_directories($ENV{LEMON_BUILDROOT}/thirdparty/frigg/include)
 include_directories($ENV{LEMON_BUILDROOT}/thirdparty/cxxshim/stage2/include)
 
 if("${LEMON_ARCH}" STREQUAL "x86_64")
-    include_directories(include/arch/x86_64)
+    include_directories(include/lemon/ke/arch/x86_64)
 
     enable_language(ASM_NASM)
     if(NOT CMAKE_ASM_NASM_COMPILER_LOADED)
@@ -112,6 +114,7 @@ set(KERNEL_SRC
 
     src/sys/le_core.cpp
     src/sys/le_mm.cpp
+    src/sys/le_process.cpp
     
     src/sys/sys_vfs.cpp
 )

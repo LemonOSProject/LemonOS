@@ -26,7 +26,7 @@ ErrorOr<FsNode*> PTMultiplexor::PTS::FindDir(const char* name){
     ScopedSpinLock lock(m_ptmx.m_ptmxLock);
     for(auto& pty : m_ptmx.m_ptList){
         if(!strcmp(pty->slaveDirent.name, name)){
-            return &pty->slaveFile;
+            return pty;
         }
     }
 
@@ -64,7 +64,7 @@ ErrorOr<File*> PTMultiplexor::Open(size_t flags){
     ScopedSpinLock lock(m_ptmxLock);
     m_ptList.add_back(pty);
 
-    return pty->masterFile.Open(flags);
+    return pty->Open(flags);
 }
 
 void PTMultiplexor::DestroyPTY(PTY* pt){

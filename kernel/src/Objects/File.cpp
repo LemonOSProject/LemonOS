@@ -42,8 +42,8 @@ ErrorOr<int> File::Ioctl(uint64_t cmd, uint64_t arg) {
     return ENOTTY;
 }
 
-void File::Watch(FsWatcher*, Fs::FsEvent) {}
-void File::Unwatch(FsWatcher*) {}
+void File::Watch(KernelObjectWatcher*, KOEvent) {}
+void File::Unwatch(KernelObjectWatcher*) {}
 
 ErrorOr<int> File::ReadDir(struct DirectoryEntry*, uint32_t) {
     if (!IsDirectory()) {

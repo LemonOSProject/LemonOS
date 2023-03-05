@@ -1,8 +1,8 @@
 #include <lemon/syscall.h>
 
 #include <lemon/system/hiraku.h>
-#include <lemon/system/abi/syscall.h>
-#include <lemon/system/abi/types.h>
+#include <lemon/abi/syscall.h>
+#include <lemon/abi/types.h>
 
 extern "C" {
 
@@ -29,6 +29,10 @@ long le_set_user_tcb(void* tcb) {
 
 long le_handle_close(le_handle_t handle) {
     return syscall(_le_handle_close, handle);
+}
+
+long le_create_process(le_handle_t* handle, uint64_t flags, le_str_t name) {
+    return syscall(_le_create_process, handle, flags, name);
 }
 
 long sys_read(le_handle_t handle, uint8_t* buf, size_t count, ssize_t* bytesRead) {

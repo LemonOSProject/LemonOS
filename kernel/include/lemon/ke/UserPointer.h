@@ -24,6 +24,7 @@ template <typename P> inline static constexpr int IsUsermodePointer(P* ptr, size
 template <typename T> class UserPointer final {
 public:
     UserPointer(uintptr_t ptr) : m_ptr(reinterpret_cast<T*>(ptr)) {}
+    UserPointer(T* ptr) : m_ptr(ptr) {}
 
     [[nodiscard]] ALWAYS_INLINE int GetValue(T& kernelValue) const {
         return user_memcpy(&kernelValue, m_ptr, sizeof(T));

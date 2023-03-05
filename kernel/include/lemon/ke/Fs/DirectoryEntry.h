@@ -7,8 +7,7 @@
 #include <abi/fcntl.h>
 #include <abi/types.h>
 
-class DirectoryEntry {
-public:
+struct DirectoryEntry {
     char name[NAME_MAX];
 
     DirectoryEntry* parent = nullptr;
