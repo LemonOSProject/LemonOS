@@ -51,7 +51,7 @@ SYSCALL long sys_write(le_handle_t handle, const uint8_t* buf, size_t count, Use
 
 SYSCALL long sys_openat(le_handle_t directory, le_str_t _filename, int flags, int mode, UserPointer<le_handle_t> out) {
     Process* process = Process::Current();
-    String filename = get_user_string_or_fault(_filename);
+    String filename = get_user_string_or_fault(_filename, PATH_MAX+1);
 
     if (filename.Length() > PATH_MAX) {
         return ENAMETOOLONG;

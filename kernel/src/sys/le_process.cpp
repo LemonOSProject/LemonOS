@@ -37,7 +37,7 @@ long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, le_str_t
 
         String newName = process->name;
         if (name) {
-            newName = get_user_string_or_fault(name);
+            newName = get_user_string_or_fault(name, NAME_MAX+1);
             if (newName.Length() > NAME_MAX) {
                 return ENAMETOOLONG;
             }
@@ -105,6 +105,6 @@ long le_process_getpid(le_handle_t handle, UserPointer<pid_t> pid) {
     return 0;
 }
 
-long le_process_mem_poke(le_handle_t process) { return ENOSYS; }
+long le_process_mem_poke(le_handle_t process, void* destination, void* virtualAddress, uintptr_t size) { return ENOSYS; }
 
-long le_process_mem_write(le_handle_t process) { return ENOSYS; }
+long le_process_mem_write(le_handle_t process, void* virtualAddress, void* source, uintptr_t size) { return ENOSYS; }

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <Assert.h>
 #include <Compiler.h>
+#include <Errno.h>
 #include <String.h>
 #include <Types.h>
 #include <UserPointer.h>
@@ -47,25 +49,25 @@ typedef UserString le_str_t;
 
 typedef int le_handle_t;
 
-inline long get_user_string(le_str_t str, String& kernelString) {
-    long len = user_strlen((const char*)str);
+inline Error get_user_string(le_str_t str, String& kernelString, size_t maxLength) {
+    long len = user_strnlen((const char*)str, maxLength);
     if (len < 0) {
-        return 1;
+        return EFAULT;
     }
 
     kernelString.Resize(len);
     if (user_memcpy(&kernelString[0], (const char*)str, len)) {
-        return 1;
+        return EFAULT;
     }
 
-    return 0;
+    return ERROR_NONE;
 }
 
-#define get_user_string_or_fault(str)                                                                                  \
+#define get_user_string_or_fault(str, maxLength)                                                                                  \
     ({                                                                                                                 \
         String kString;                                                                                                \
-        if (get_user_string(str, kString)) {                                                                           \
-            return EFAULT;                                                                                             \
+        if (auto e = get_user_string(str, kString, maxLength); e) {                                                                           \
+            return e;                                                                                             \
         }                                                                                                              \
         std::move(kString);                                                                                            \
     })

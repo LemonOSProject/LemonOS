@@ -37,6 +37,28 @@ public:
 
     ALWAYS_INLINE operator bool() const { return m_ptr != nullptr; }
 
+    ALWAYS_INLINE UserPointer& operator+=(ptrdiff_t i) {
+        m_ptr += i;
+        return *this;
+    }
+
+    ALWAYS_INLINE UserPointer& operator-=(ptrdiff_t i) {
+        m_ptr -= i;
+        return *this;
+    }
+
+    ALWAYS_INLINE UserPointer operator++(int) {
+        UserPointer v = *this;
+        m_ptr++;
+        return v;
+    }
+
+    ALWAYS_INLINE UserPointer operator--(int) {
+        UserPointer v = *this;
+        m_ptr--;
+        return v;
+    }
+
 private:
     T* m_ptr;
 } __attribute__((packed));

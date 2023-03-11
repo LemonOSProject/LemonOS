@@ -14,7 +14,7 @@ struct DeviceQuery {
 };
 
 SYSCALL long le_log(le_str_t umsg) {
-    String msg = get_user_string_or_fault(umsg);
+    String msg = get_user_string_or_fault(umsg, 0xffffffff);
     Process* process = Process::Current(); 
 
     Log::Info("[%s] %s", process->name, msg.c_str());

@@ -116,6 +116,7 @@ set(KERNEL_SRC
     src/sys/le_mm.cpp
     src/sys/le_process.cpp
     
+    src/sys/sys_exec.cpp
     src/sys/sys_vfs.cpp
 )
 
