@@ -23,10 +23,14 @@ typedef void (*isr_t)(void*, RegisterContext*);
 extern "C" void idt_flush();
 
 namespace IDT {
+
 void Initialize();
 void RegisterInterruptHandler(uint8_t interrupt, isr_t handler, void* data = nullptr);
 
 void DisablePIC();
 
 uint8_t ReserveUnusedInterrupt();
+
+void HandleFatalInterrupt(int intNum, RegisterContext* r);
+
 } // namespace IDT

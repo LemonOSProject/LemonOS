@@ -155,6 +155,7 @@ uint64_t VirtualToPhysicalAddress(uint64_t addr, page_map_t* addressSpace);
 void SwitchPageDirectory(uint64_t phys);
 
 void RegisterPageFaultTrap(PageFaultTrap trap);
+
 void PageFaultHandler(void*, RegisterContext* regs);
 
 inline void SetPageFrame(uint64_t* page, uint64_t addr) { *page = (*page & ~PAGE_FRAME) | (addr & PAGE_FRAME); }

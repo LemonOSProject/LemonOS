@@ -194,25 +194,8 @@ uint8_t ReserveUnusedInterrupt() {
     return interrupt;
 }
 
-void DisablePIC() {
-    outportb(0x20, 0x11);
-    outportb(0xA0, 0x11);
-    outportb(0x21, 0xF0); // Remap IRQs on both PICs to 0xF0-0xF8
-    outportb(0xA1, 0xF0);
-    outportb(0x21, 0x04);
-    outportb(0xA1, 0x02);
-    outportb(0x21, 0x01);
-    outportb(0xA1, 0x01);
-
-    outportb(0x21, 0xFF); // Mask all interrupts
-    outportb(0xA1, 0xFF);
-}
-} // namespace IDT
-
-extern "C" void isr_handler(int intNum, RegisterContext* regs) {
-    if (__builtin_expect(interruptHandlers[intNum].handler != 0, 1)) {
-        interruptHandlers[intNum].handler(interruptHandlers[intNum].data, regs);
-    } else if (!(regs->ss & 0x3)) { // Check the CPL of the segment, caused by kernel?
+void HandleFatalInterrupt(int intNum, RegisterContext* regs) {
+    if (!(regs->ss & 0x3)) { // Check the CPL of the segment, caused by kernel?
         // Kernel Panic so tell other processors to stop executing
         APIC::Local::SendIPI(0, ICR_DSH_OTHER /* Send to all other processors except us */, ICR_MESSAGE_TYPE_FIXED,
                              IPI_HALT);
@@ -293,6 +276,29 @@ extern "C" void isr_handler(int intNum, RegisterContext* regs) {
         Log::Info("Stack trace:");
         UserPrintStackTrace(regs->rbp, current->addressSpace);
         current->Die();
+    }
+}
+
+void DisablePIC() {
+    outportb(0x20, 0x11);
+    outportb(0xA0, 0x11);
+    outportb(0x21, 0xF0); // Remap IRQs on both PICs to 0xF0-0xF8
+    outportb(0xA1, 0xF0);
+    outportb(0x21, 0x04);
+    outportb(0xA1, 0x02);
+    outportb(0x21, 0x01);
+    outportb(0xA1, 0x01);
+
+    outportb(0x21, 0xFF); // Mask all interrupts
+    outportb(0xA1, 0xFF);
+}
+} // namespace IDT
+
+extern "C" void isr_handler(int intNum, RegisterContext* regs) {
+    if (__builtin_expect(interruptHandlers[intNum].handler != 0, 1)) {
+        interruptHandlers[intNum].handler(interruptHandlers[intNum].data, regs);
+    } else {
+        IDT::HandleFatalInterrupt(intNum, regs);
     }
 }
 

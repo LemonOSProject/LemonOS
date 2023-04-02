@@ -102,7 +102,11 @@ page_table_t CreatePageTable(uint16_t pdptIndex, uint16_t pageDirIndex, PageMap*
     return pTable;
 }
 
+void GPFHandler(void*, RegisterContext* regs);
+void PageFaultHandler(void*, RegisterContext* regs);
+
 void InitializeVirtualMemory() {
+    IDT::RegisterInterruptHandler(13, GPFHandler);
     IDT::RegisterInterruptHandler(14, PageFaultHandler);
     memset(kernelPML4, 0, sizeof(pml4_t));
     memset(kernelPDPT, 0, sizeof(pdpt_t));
@@ -635,6 +639,20 @@ uintptr_t GetIOMapping(uintptr_t addr) {
 }
 
 void RegisterPageFaultTrap(PageFaultTrap trap) { pageFaultTraps->insert(trap.instructionPointer, trap); }
+
+void GPFHandler(void*, RegisterContext* regs) {
+    if(!(regs->ss & 0x3)) {
+        // Fault occurred in kernel
+        if (PageFaultTrap trap; pageFaultTraps->get(regs->rip, trap)) {
+            // If we have found a handler, set the IP to the handler
+            // and run
+            regs->rip = reinterpret_cast<uintptr_t>(trap.handler);
+            return;
+        }
+    }
+
+    IDT::HandleFatalInterrupt(0xd, regs);
+}
 
 void PageFaultHandler(void*, RegisterContext* regs) {
     uint64_t faultAddress;
