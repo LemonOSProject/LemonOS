@@ -27,3 +27,5 @@ void KernelAllocateMappedBlocks(uintptr_t* phys, T** virt, unsigned amount) {
         Memory::KernelMapVirtualMemory4K(phys[i], (uintptr_t)(*virt), 1, flags);
     }
 }
+
+#define IS_CANONICAL_USERMODE_ADDRESS(x) (!(x & 0xffff000000000000))

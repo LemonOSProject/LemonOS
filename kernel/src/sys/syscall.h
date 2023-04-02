@@ -50,6 +50,12 @@ typedef UserString le_str_t;
 typedef int le_handle_t;
 
 inline Error get_user_string(le_str_t str, String& kernelString, size_t maxLength) {
+    // TODO: If a string is placed right before kernel memory get_user_string will fail
+    // since the maximum possible length will run into kernel space
+    if(!IsUsermodePointer(str, 0, maxLength)) {
+        return EFAULT;
+    }
+
     long len = user_strnlen((const char*)str, maxLength);
     if (len < 0) {
         return EFAULT;
@@ -98,3 +104,4 @@ SYSCALL long sys_munmap(void* address, size_t len);
 SYSCALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long arg, UserPointer<int> result);
 SYSCALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, UserPointer<ssize_t> bytes);
 SYSCALL long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t pos, UserPointer<ssize_t> bytes);
+SYSCALL long sys_execve(le_str_t filepath, UserPointer<le_str_t> argv, UserPointer<le_str_t> envp);

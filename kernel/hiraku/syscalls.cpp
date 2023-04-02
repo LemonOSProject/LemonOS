@@ -91,4 +91,8 @@ long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t pos, ss
 long sys_getpid() {
     return PEB(pid);
 }
+
+long sys_execve(le_str_t filepath, le_str_t const* argv, le_str_t const* envp) {
+    return syscall(_sys_execve, filepath, argv, envp);
+}
 }

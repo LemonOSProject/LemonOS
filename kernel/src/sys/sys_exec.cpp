@@ -32,7 +32,7 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
             environ.add_back(get_user_string_or_fault(argp, SYS_ARGLEN_MAX));
         }
 
-        Log::Info("Arg %s", environ.get_back().c_str());
+        Log::Info("EnV %s", environ.get_back().c_str());
     } while(argp);
 
     return ENOSYS;

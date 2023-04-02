@@ -17,7 +17,7 @@ template <typename P> inline static constexpr int IsUsermodePointer(P* ptr, size
         return 0;
     }
 
-    return 1;
+    return IS_CANONICAL_USERMODE_ADDRESS(reinterpret_cast<uintptr_t>(ptr + offset + count));
 }
 
 // Class for handling usermode pointers

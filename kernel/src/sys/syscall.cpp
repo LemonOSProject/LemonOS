@@ -42,14 +42,14 @@ void DumpLastSyscall(Thread*) {
               SC_ARG5(&lastSyscall), t->lastSyscall.result, t->lastSyscall.result);*/
 }
 
-#define SYS_SYSCALLS 10
+#define SYS_SYSCALLS 12
 #define LE_SYSCALLS 8
 
 #define SC(x) ((void*)&x)
 
 void* sysTable[] = {
     SC(sys_read),     SC(sys_write),  SC(sys_openat), SC(sys_fstatat), SC(sys_lseek),  SC(sys_mmap),
-    SC(sys_mprotect), SC(sys_munmap), SC(sys_ioctl),  SC(sys_pread),   SC(sys_pwrite),
+    SC(sys_mprotect), SC(sys_munmap), SC(sys_ioctl),  SC(sys_pread),   SC(sys_pwrite), SC(sys_execve)
 };
 
 void* leTable[] = {
