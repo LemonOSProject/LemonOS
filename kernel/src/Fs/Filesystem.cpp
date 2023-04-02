@@ -115,6 +115,7 @@ public:
     Root() {
         inode = 0;
         type = FileType::Directory;
+        dirent = DirectoryEntry(this, ".");
     }
 
     ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t);
@@ -126,15 +127,20 @@ public:
     }
 
     Error CreateDirectory(DirectoryEntry* ent, uint32_t mode) { return Error{EROFS}; }
+
+    DirectoryEntry dirent;
 };
 
-Root root;
-DirectoryEntry rootDirent = DirectoryEntry(&root, "");
+Root* rootNode;
 
 DirectoryEntry* devices[64];
 uint32_t deviceCount = 0;
 
-FsNode* GetRoot() { return &root; }
+void create_root_fs() {
+    rootNode = new Root();
+}
+
+FsNode* root() { return rootNode; }
 
 FsNode* FollowLink(FsNode* link, FsNode* workingDir) {
     assert(link);
@@ -163,7 +169,7 @@ FsNode* ResolvePath(const String& path, const char* workingDir, bool followSymli
     }
 
     if(!path.Compare("/")){
-        return fs::GetRoot();
+        return fs::root();
     }
 
     Log::Debug(debugLevelFilesystem, DebugLevelVerbose, "Opening '%s'", path.c_str());
@@ -186,10 +192,10 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
     }
 
     if(!path.Compare("/")){
-        return fs::GetRoot();
+        return fs::root();
     }
 
-    FsNode* root = fs::GetRoot();
+    FsNode* root = fs::root();
     FsNode* currentNode = root;
 
     if (workingDir && path[0] != '/') {
@@ -199,7 +205,7 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
     Vector<String> components = path.Split('/');
     if(components.size() == 0){
         if(path.Compare("/") == 0){
-            return fs::GetRoot();
+            return fs::root();
         } else {
             return nullptr;
         }
@@ -295,7 +301,7 @@ FsNode* ResolveParent(const char* path, const char* workingDir) {
     } else {
         *(dirPath - 1) = 0;      // Cut off the directory name from the path copy
         if (!strlen(pathCopy)) { // Root
-            return fs::GetRoot();
+            return fs::root();
         } else {
             parentDirectory = fs::ResolvePath(pathCopy, workingDir);
         }

@@ -41,7 +41,59 @@ void IdleProcess() {
 
 void syscall_init();
 
+typedef void (*ctor_t)(void);
+extern ctor_t _ctors_start[0];
+extern ctor_t _ctors_end[0];
+extern "C" void _init();
+
+void InitializeConstructors() {
+    unsigned ctorCount = ((uint64_t)&_ctors_end - (uint64_t)&_ctors_start) / sizeof(void*);
+
+    for (unsigned i = 0; i < ctorCount; i++) {
+        _ctors_start[i]();
+    }
+}
+
 void KernelProcess() {
+    fs::VolumeManager::Initialize();
+    DeviceManager::Initialize();
+    Log::LateInitialize();
+
+    InitializeConstructors(); // Call global constructors
+
+    DeviceManager::RegisterFSVolume();
+    Log::EnableBuffer();
+
+    videoMode = Video::GetVideoMode();
+
+    if (debugLevelMisc >= DebugLevelVerbose) {
+        Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
+    }
+
+    if (videoMode.height < 600)
+        Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");
+    if (videoMode.bpp != 32)
+        Log::Warning("Unsupported Colour Depth expect issues.");
+
+    Log::Info("Used RAM: %d MB", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);
+
+    Log::Info("Mounting initrd, tmpfs...");
+
+    fs::tar::TarVolume* tar = new fs::tar::TarVolume(HAL::bootModules[0].base, HAL::bootModules[0].size, "initrd");
+    fs::VolumeManager::RegisterVolume(tar);
+
+    fs::VolumeManager::RegisterVolume(new fs::Temp::TempVolume("tmp")); // Create tmpfs instance
+
+    Log::Write("OK");
+
+    LoadSymbols();
+
+    syscall_init();
+
+    Log::Info("Initializing HID...");
+    PS2::Initialize();
+    Log::Info("OK");
+
     NVMe::Initialize();
     USB::XHCIController::Initialize();
     ATA::Init();
@@ -50,43 +102,11 @@ void KernelProcess() {
     Network::InitializeConnections();
     Audio::InitializeSystem();
 
-    if (FsNode* node = fs::ResolvePath("/initrd/modules.cfg")) {
-        char* buffer = new char[node->size + 1];
+    FsNode* initrd = fs::ResolvePath("/initrd");
+    assert(initrd);
 
-        auto result = fs::Read(node, 0, node->size, buffer);
-        if (!result.HasError()) {
-            buffer[result.Value()] = 0; // Null-terminate the buffer
-
-            char* save;
-            char* path = strtok_r(buffer, "\n", &save);
-            while (path) {
-                Log::Info("loading %s", path);
-                if (strlen(path) > 0) {
-                    ModuleManager::LoadModule(path); // modules.cfg should contain a list of paths to modules
-                }
-
-                path = strtok_r(nullptr, "\n", &save);
-            }
-        }
-
-        delete[] buffer;
-    }
-
-    fs::VolumeManager::MountSystemVolume();
-
-    // TODO: Move this to userspace
-    fs::VolumeManager::RegisterVolume(new fs::LinkVolume("/system/etc", "etc"));
-    fs::VolumeManager::RegisterVolume(new fs::LinkVolume("/system/bin", "bin"));
-
-    if (FsNode* node = fs::ResolvePath("/system/lib")) {
-        fs::VolumeManager::RegisterVolume(new fs::LinkVolume("/system/lib", "lib"));
-    } else {
-        FsNode* initrd = fs::ResolvePath("/initrd");
-        assert(initrd);
-
-        fs::VolumeManager::RegisterVolume(
-            new fs::LinkVolume("/initrd", "lib")); // If /system/lib is not present is /initrd
-    }
+    fs::VolumeManager::RegisterVolume(
+        new fs::LinkVolume("/initrd", "lib")); // If /system/lib is not present is /initrd
 
     if (HAL::runTests) {
         ModuleManager::LoadModule("/initrd/modules/testmodule.sys");
@@ -98,27 +118,20 @@ void KernelProcess() {
     PTMultiplexor::Initialize();
 
     Log::Info("Loading Init Process...");
-    FsNode* initFsNode = nullptr;
-
-    if (HAL::useKCon || !(initFsNode = fs::ResolvePath("/system/lemon/init.lef"))) { // Attempt to start fterm
-        initFsNode = fs::ResolvePath("/initrd/fterm.lef");
-
-        if (!initFsNode) { // Shit has really hit the fan and fterm is not on the ramdisk
-            const char* panicReasons[]{"Failed to load either init task (init.lef) or fterm (fterm.lef)!"};
-            KernelPanic(panicReasons, 1);
-        }
-    }
+    FsNode* initNode = fs::ResolvePath("/initrd/init.lef");
 
     Log::Write("OK");
 
     LoadHirakuSymbols();
 
-    void* initElf = (void*)kmalloc(initFsNode->size);
-    fs::Read(initFsNode, 0, initFsNode->size, (uint8_t*)initElf);
+    void* initElf = (void*)kmalloc(initNode->size);
+    fs::Read(initNode, 0, initNode->size, initElf);
 
     auto initProc = Process::CreateELFProcess(initElf, Vector<String>("init"), Vector<String>("PATH=/initrd"),
-                                              "/system/lemon/init.lef", nullptr);
+                                              "/initrd/init.lef", nullptr);
     initProc->Start();
+
+    kfree(initElf);
 
     for (;;) {
         acquireLock(&Scheduler::destroyedProcessesLock);
@@ -144,76 +157,8 @@ void KernelProcess() {
     }
 }
 
-typedef void (*ctor_t)(void);
-extern ctor_t _ctors_start[0];
-extern ctor_t _ctors_end[0];
-extern "C" void _init();
-
-void InitializeConstructors() {
-    unsigned ctorCount = ((uint64_t)&_ctors_end - (uint64_t)&_ctors_start) / sizeof(void*);
-
-    for (unsigned i = 0; i < ctorCount; i++) {
-        _ctors_start[i]();
-    }
-}
-
 extern "C" [[noreturn]] void kmain() {
-    fs::VolumeManager::Initialize();
-    DeviceManager::Initialize();
-    Log::LateInitialize();
-
-    InitializeConstructors(); // Call global constructors
-
-    DeviceManager::RegisterFSVolume();
-    Log::EnableBuffer();
-
-    videoMode = Video::GetVideoMode();
-
-    if (debugLevelMisc >= DebugLevelVerbose) {
-        Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
-    }
-
-    if (videoMode.height < 600)
-        Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");
-    if (videoMode.bpp != 32)
-        Log::Warning("Unsupported Colour Depth expect issues.");
-
-    Video::DrawRect(0, 0, videoMode.width, videoMode.height, 0, 0, 0);
-
-    Log::Info("Used RAM: %d MB", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);
-
-    assert(fs::GetRoot());
-
-    Log::Info("Initializing Ramdisk...");
-
-    fs::tar::TarVolume* tar = new fs::tar::TarVolume(HAL::bootModules[0].base, HAL::bootModules[0].size, "initrd");
-    fs::VolumeManager::RegisterVolume(tar);
-
-    Log::Write("OK");
-
-    fs::VolumeManager::RegisterVolume(new fs::Temp::TempVolume("tmp")); // Create tmpfs instance
-
-    FsNode* splashFile = fs::ResolvePath("/initrd/splash.bmp");
-    if (splashFile) {
-        uint32_t size = splashFile->size;
-        uint8_t* buffer = new uint8_t[size];
-
-        if (!fs::Read(splashFile, 0, size, buffer).HasError())
-            Video::DrawBitmapImage(videoMode.width / 2 - 620 / 2, videoMode.height / 2 - 150 / 2, 621, 150, buffer);
-
-        delete[] buffer;
-    } else
-        Log::Warning("Could not load splash image");
-
-    LoadSymbols();
-
-    Video::DrawString("Copyright 2019-2023 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
-    Video::DrawString(Lemon::versionString, 2, videoMode.height - 20, 255, 255, 255);
-
-    syscall_init();
-
-    Log::Info("Initializing Task Scheduler...");
+    fs::create_root_fs();
     Scheduler::Initialize();
-    for (;;)
-        ;
+    KernelPanic("Failed to create kernel process!");
 }

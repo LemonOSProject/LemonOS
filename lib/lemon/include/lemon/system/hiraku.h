@@ -25,3 +25,5 @@ HIRAKU_CALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long a
 HIRAKU_CALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, ssize_t* bytes);
 HIRAKU_CALL long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t pos, ssize_t* bytes);
 HIRAKU_CALL long sys_exit(int status);
+HIRAKU_CALL long sys_getpid();
+HIRAKU_CALL long sys_execve(le_str_t filename, le_str_t const* argv, le_str_t const* envp);

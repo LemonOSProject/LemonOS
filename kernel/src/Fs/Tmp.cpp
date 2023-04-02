@@ -6,7 +6,7 @@
 namespace fs::Temp{
     TempVolume::TempVolume(const char* name){
         mountPoint = new TempNode(this, FileType::Directory);
-        //mountPoint->parent = fs::GetRoot();
+        //mountPoint->parent = fs::root();
 
         mountPointDirent = DirectoryEntry(mountPoint, name);
     }
@@ -198,7 +198,7 @@ namespace fs::Temp{
         } else if(index == 1){
             strcpy(dirent->name, "..");
             if(!parent){
-                dirent->flags = DirectoryEntry::FileToDirentFlags(fs::GetRoot()->type);
+                dirent->flags = DirectoryEntry::FileToDirentFlags(fs::root()->type);
             } else {
                 dirent->flags = DirectoryEntry::FileToDirentFlags(parent->type);
             }

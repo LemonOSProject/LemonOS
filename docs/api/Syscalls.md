@@ -53,6 +53,21 @@ Closes the specified handle
 long le_process_getpid(le_handle_t process)
 ```
 
+## le_create_process
+```c
+long le_create_process(le_handle_t* handle, uint64_t flags, le_str_t name)
+```
+
+## Flags
+**LE_PROCESS_FORK** The created process is a fork of the caller \
+**LE_PROCESS_PID** \
+**LE_PROCESS_DETACH** Do not kill the process when the handle is closed \
+
+## Errors
+**EINVAL** LE_PROCESS_PID was specified without LE_PROCESS_DETACH \
+**EFAULT** `handle` or `name` is not accessible memory \
+**ENAMETOOLONG** `name` was greater than *NAME_MAX* \
+
 ## le_handle_dup
 ```c
 long le_handle_dup(le_handle_t handle, int flags)

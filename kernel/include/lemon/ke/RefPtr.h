@@ -16,7 +16,7 @@ public:
         __sync_fetch_and_add(refCount, 1);
     }
 
-    FancyRefPtr() : refCount(nullptr), obj(nullptr) {}
+    FancyRefPtr() = default;
 
     FancyRefPtr(std::nullptr_t) : refCount(nullptr), obj(nullptr) {}
 

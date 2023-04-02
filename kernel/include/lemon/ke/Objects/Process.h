@@ -41,7 +41,12 @@ public:
     static FancyRefPtr<Process> CreateKernelProcess(void* entry, const char* name, Process* parent);
     static FancyRefPtr<Process> CreateELFProcess(void* elf, const Vector<String>& argv, const Vector<String>& envp,
                                                  const char* execPath, Process* parent);
-    ALWAYS_INLINE static Process* Current() { return Thread::Current()->parent; }
+    ALWAYS_INLINE static Process* Current() {
+        if (Thread::Current())
+            return Thread::Current()->parent;
+
+        return nullptr;
+    }
 
     ~Process();
 
@@ -103,23 +108,33 @@ public:
     /////////////////////////////
     /// \brief Retrieve Process PID
     /////////////////////////////
-    ALWAYS_INLINE pid_t PID() const { return m_pid; }
+    ALWAYS_INLINE pid_t PID() const {
+        return m_pid;
+    }
     /////////////////////////////
     /// \brief Retrieve Process State
     /////////////////////////////
-    ALWAYS_INLINE int State() const { return m_state; }
+    ALWAYS_INLINE int State() const {
+        return m_state;
+    }
     /////////////////////////////
     /// \brief Retrieve Whether Process is Dead
     /////////////////////////////
-    ALWAYS_INLINE int IsDead() const { return m_state == Process_Dead; }
+    ALWAYS_INLINE int IsDead() const {
+        return m_state == Process_Dead;
+    }
     /////////////////////////////
     /// \brief Retrieve Whether Process is the Idle Process of a CPU
     /////////////////////////////
-    ALWAYS_INLINE int IsCPUIdleProcess() const { return m_isIdleProcess; }
+    ALWAYS_INLINE int IsCPUIdleProcess() const {
+        return m_isIdleProcess;
+    }
     /////////////////////////////
     /// \brief Retrieve Process Parent
     /////////////////////////////
-    ALWAYS_INLINE const Process* Parent() const { return m_parent; }
+    ALWAYS_INLINE const Process* Parent() const {
+        return m_parent;
+    }
 
     /////////////////////////////
     /// \brief Retrieve Main Thread
@@ -128,7 +143,9 @@ public:
     /// always have a TID of 1.
     /// Lemon OS does not currently support killing the main thread.
     /////////////////////////////
-    ALWAYS_INLINE FancyRefPtr<Thread> GetMainThread() { return m_mainThread; }
+    ALWAYS_INLINE FancyRefPtr<Thread> GetMainThread() {
+        return m_mainThread;
+    }
     /////////////////////////////
     /// \brief Retrieve thread using TID
     ///
@@ -145,16 +162,22 @@ public:
     }
 
     pid_t CreateChildThread(uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss);
-    const List<FancyRefPtr<Thread>>& Threads() { return m_threads; }
+    const List<FancyRefPtr<Thread>>& Threads() {
+        return m_threads;
+    }
 
-    ALWAYS_INLINE PageMap* GetPageMap() { return addressSpace->GetPageMap(); }
+    ALWAYS_INLINE PageMap* GetPageMap() {
+        return addressSpace->GetPageMap();
+    }
 
     /////////////////////////////
     /// \brief Get size of handle vector
     ///
     /// Includes invalid/closed handles
     /////////////////////////////
-    ALWAYS_INLINE unsigned HandleCount() const { return m_handles.size(); }
+    ALWAYS_INLINE unsigned HandleCount() const {
+        return m_handles.size();
+    }
 
     /////////////////////////////
     /// \brief Allocate Handle
@@ -266,9 +289,15 @@ public:
         return 0;
     }
 
-    ALWAYS_INLINE Handle stdin() { return m_handles[0]; };
-    ALWAYS_INLINE Handle stdout() { return m_handles[1]; };
-    ALWAYS_INLINE Handle stderr() { return m_handles[2]; };
+    ALWAYS_INLINE Handle stdin() {
+        return m_handles[0];
+    };
+    ALWAYS_INLINE Handle stdout() {
+        return m_handles[1];
+    };
+    ALWAYS_INLINE Handle stderr() {
+        return m_handles[2];
+    };
 
     ALWAYS_INLINE void RegisterChildProcess(const FancyRefPtr<Process>& child) {
         ScopedSpinLock lock(m_processLock);

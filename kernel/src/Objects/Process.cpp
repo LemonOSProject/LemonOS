@@ -36,7 +36,7 @@ public:
     [[noreturn]] VMObject* Clone() { assert(!"user_shared_data VMO cannot be cloned!"); }
 };
 lock_t userSharedDataLock = 0;
-FancyRefPtr<UserSharedData> userSharedDataVMO = nullptr;
+FancyRefPtr<UserSharedData>* userSharedDataVMO = nullptr;
 
 void IdleProcess();
 
@@ -767,10 +767,10 @@ void Process::MapUserSharedData() {
     {
         ScopedSpinLock<true> lockUSD(userSharedDataLock);
         if (!userSharedDataVMO) {
-            userSharedDataVMO = new UserSharedData();
+            userSharedDataVMO = new FancyRefPtr(new UserSharedData());
         }
 
-        userSharedData = userSharedDataVMO;
+        userSharedData = *userSharedDataVMO;
     }
 
     userSharedDataRegion = addressSpace->MapVMO(static_pointer_cast<VMObject>(userSharedData), PROC_USER_SHARED_DATA_BASE, true);

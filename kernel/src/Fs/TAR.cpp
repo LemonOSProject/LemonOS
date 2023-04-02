@@ -233,7 +233,7 @@ namespace fs::tar{
 
         if(strcmp(".", name) == 0) return node;
         if(strcmp("..", name) == 0){
-            if(node->inode == 0) return fs::GetRoot();
+            if(node->inode == 0) return fs::root();
             else return &nodes[tarNode->parentInode];
         }
 

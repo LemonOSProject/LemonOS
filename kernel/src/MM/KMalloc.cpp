@@ -97,10 +97,18 @@ frg::slab_allocator<KernelAllocator, Lock>& Allocator() {
     return allocator->slabAllocator;
 }
 
-void* kmalloc(size_t size) { return Allocator().allocate(size); }
+void* kmalloc(size_t size) {
+    return Allocator().allocate(size);
+}
 
-void kfree(void* p) { return Allocator().free(p); }
+void kfree(void* p) {
+    return Allocator().free(p);
+}
 
-void* krealloc(void* p, size_t sz) { return Allocator().reallocate(p, sz); }
+void* krealloc(void* p, size_t sz) {
+    return Allocator().reallocate(p, sz);
+}
 
-void frg_panic(const char* s) { Log::Error(s); }
+void frg_panic(const char* s) {
+    Log::Error(s);
+}

@@ -36,7 +36,8 @@ lock_t destroyedProcessesLock = 0;
 List<FancyRefPtr<Process>>* destroyedProcesses;
 
 unsigned processTableSize = 512;
-std::atomic<pid_t> nextPID = 1;
+
+std::atomic<pid_t>* nextPID;
 
 // When the run queue was last balanced
 uint64_t nextBalanceDue = 0;
@@ -70,16 +71,14 @@ void Initialize() {
     processes = new List<FancyRefPtr<Process>>();
     destroyedProcesses = new List<FancyRefPtr<Process>>();
 
-    CPU* cpu = GetCPULocal();
+    nextPID = new std::atomic<pid_t>(1);
 
+    CPU* cpu = GetCPULocal();
+    
     for (unsigned i = 0; i < SMP::processorCount; i++) {
         FancyRefPtr<Process> idleProcess = Process::CreateIdleProcess((String("idle_cpu") + to_string(i)).c_str());
         SMP::cpus[i]->idleProcess = idleProcess.get();
         SMP::cpus[i]->idleThread = idleProcess->GetMainThread().get();
-    }
-
-    for (unsigned i = 0; i < SMP::processorCount; i++) {
-        SMP::cpus[i]->runQueue->clear();
         releaseLock(&SMP::cpus[i]->runQueueLock);
     }
 
@@ -114,7 +113,7 @@ void MarkProcessForDestruction(Process* proc) {
     assert(!"Failed to mark process for destruction!");
 }
 
-pid_t GetNextPID() { return nextPID++; }
+pid_t GetNextPID() { return (*nextPID)++; }
 
 FancyRefPtr<Process> FindProcessByPID(pid_t pid) {
     ScopedSpinLock lockProcesses(processesLock);

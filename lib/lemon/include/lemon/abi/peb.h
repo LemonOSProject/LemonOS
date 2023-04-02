@@ -7,6 +7,8 @@
 struct ProcessEnvironmentBlock {
     struct ProcessEnvironmentBlock* self;
 
+    int64_t pid;
+
     uint64_t executableBaseAddress;
     
     uint64_t hirakuBase;

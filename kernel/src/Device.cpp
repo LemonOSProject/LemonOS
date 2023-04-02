@@ -185,7 +185,7 @@ public:
         if (!strcmp(name, ".")) {
             return this;
         } else if (!strcmp(name, "..")) {
-            return fs::GetRoot();
+            return fs::root();
         }
 
         for (auto& dev : *rootDevices) {

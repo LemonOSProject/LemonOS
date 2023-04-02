@@ -72,6 +72,10 @@ void SMPEntry(uint16_t id) {
 
 void InitializeCPU(uint16_t id) {
     CPU* cpu = new CPU;
+    
+    cpu->currentThread = nullptr;
+    cpu->idleThread = nullptr;
+
     cpu->id = id;
     cpu->runQueueLock = 0;
     cpus[id] = cpu;
@@ -112,14 +116,16 @@ void InitializeCPU(uint16_t id) {
 }
 
 bool didInitializeCPU0 = false;
-CPU cpu0;
+
+char cpu0[sizeof(CPU)];
 void InitializeCPU0Context() {
     didInitializeCPU0 = true;
-    cpus[0] = &cpu0;
+    cpus[0] = (CPU*)cpu0;
     cpus[0]->id = 0;
     cpus[0]->gdt = (void*)GDT64Pointer64.base;
     cpus[0]->gdtPtr = GDT64Pointer64;
     cpus[0]->currentThread = nullptr;
+    cpus[0]->idleThread = nullptr;
     cpus[0]->runQueueLock = 0;
     SetCPULocal(cpus[0]);
 }

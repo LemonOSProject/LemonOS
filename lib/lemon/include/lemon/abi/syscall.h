@@ -12,6 +12,7 @@ enum {
     _sys_ioctl = 8,
     _sys_pread = 9,
     _sys_pwrite = 10,
+    _sys_execve = 11,
     _le_log = 0x10000,
     _le_boot_timer = 0x10001,
     _le_handle_close = 0x10002,

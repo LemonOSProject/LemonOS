@@ -245,9 +245,9 @@ public:
 
 extern List<FsDriver*> drivers;
 
-void Initialize();
+void create_root_fs();
 
-FsNode* GetRoot();
+FsNode* root();
 
 /////////////////////////////
 /// \brief Register Kernel-level Filesystem Driver
