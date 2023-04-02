@@ -1,8 +1,17 @@
 #include <lemon/syscall.h>
 
-#include <lemon/system/hiraku.h>
 #include <lemon/abi/syscall.h>
 #include <lemon/abi/types.h>
+#include <lemon/system/hiraku.h>
+
+#include <lemon/abi/peb.h>
+
+#define PEB(x)                                                                                                         \
+    ({                                                                                                                 \
+        typeof(ProcessEnvironmentBlock::x) v;                                                                          \
+        asm volatile("movq %%gs:%c1, %0;" : "=r"(v) : "i"(offsetof(ProcessEnvironmentBlock, x)));                      \
+        v;                                                                                                             \
+    })
 
 extern "C" {
 
@@ -48,7 +57,7 @@ long sys_openat(le_handle_t directory, le_str_t filename, int flags, int mode, l
 }
 
 long sys_fstatat(le_handle_t fd, le_str_t path, int flags, struct stat* st) {
-    syscall(_sys_fstatat, fd, path, flags, st);
+    return syscall(_sys_fstatat, fd, path, flags, st);
 }
 
 long sys_lseek(le_handle_t handle, off_t offset, unsigned int whence, off_t* out) {
@@ -79,4 +88,7 @@ long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t pos, ss
     return syscall(_sys_pwrite, handle, buf, count, pos, bytes);
 }
 
+long sys_getpid() {
+    return PEB(pid);
+}
 }

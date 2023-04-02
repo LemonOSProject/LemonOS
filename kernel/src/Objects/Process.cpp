@@ -101,10 +101,7 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
     stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x3000, proc->GetPageMap());
 
     proc->MapUserSharedData();
-
-    proc->pebRegion = proc->addressSpace->AllocateAnonymousVMObject(
-        PAGE_COUNT_4K(sizeof(ProcessEnvironmentBlock)) << PAGE_SHIFT_4K, 0x7000800000, false);
-    proc->pebRegion->vmObject->Hit(proc->pebRegion->base, 0, proc->GetPageMap());
+    proc->MapProcessEnvironmentBlock();
 
     thread->gsBase = proc->pebRegion->Base();
     Log::Info("pebbase %x", thread->gsBase);
@@ -222,14 +219,9 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
     asm("cli");
     asm volatile("mov %%rax, %%cr3" ::"a"(this->GetPageMap()->pml4Phys));
 
-    ProcessEnvironmentBlock* peb = (ProcessEnvironmentBlock*)m_mainThread->gsBase;
-    peb->self = peb;
-    peb->executableBaseAddress = 0x80000000;
-    peb->sharedDataBase = userSharedDataRegion->Base();
-    peb->sharedDataSize = userSharedDataRegion->Size();
-    peb->hirakuBase = userSharedDataRegion->Base() + (_hiraku - _user_shared_data);
-    peb->hirakuSize = (_hiraku_end - _hiraku);
+    InitializePEB();
 
+    ProcessEnvironmentBlock* peb = (ProcessEnvironmentBlock*)m_mainThread->gsBase;
     if (linkerELFInfo.dynamic) {
         elf64_dynamic_t* dynamic = linkerELFInfo.dynamic;
         elf64_symbol_t* symtab = nullptr;
@@ -696,6 +688,44 @@ FancyRefPtr<Process> Process::Fork() {
     }
 
     m_children.add_back(newProcess);
+
+    acquireLock(addressSpace->GetLock());
+
+    // Unmap the old PEB and allocate a new one
+    if(pebRegion) {
+        newProcess->addressSpace->UnmapMemory(pebRegion->Base(), pebRegion->Size());
+    }
+
+    // The base of the user shared data region should be identical
+    newProcess->userSharedDataRegion = newProcess->addressSpace->AddressToRegionReadLock(userSharedDataRegion->Base());
+    if(!newProcess->userSharedDataRegion) {
+        Log::Warning("[%d : %s] User shared data region may have been unmapped.", m_pid, name);
+        newProcess->MapUserSharedData();
+    } else {
+        newProcess->userSharedDataRegion->lock.ReleaseRead();
+    }
+
+    releaseLock(addressSpace->GetLock());
+
+    newProcess->MapProcessEnvironmentBlock();
+    newProcess->m_mainThread->gsBase = newProcess->pebRegion->Base();
+
+    PageMap* thisPageMap = this->GetPageMap();
+    PageMap* otherPageMap = newProcess->GetPageMap();
+
+    // TODO: Make it so that the process cannot unmap the PEB
+
+    newProcess->pebRegion->vmObject->MapAllocatedBlocks(newProcess->pebRegion->Base(), otherPageMap);
+
+    assert(CheckInterrupts());
+    asm("cli");
+
+    assert(newProcess->userSharedDataRegion);
+    asm volatile("mov %%rax, %%cr3" ::"a"(otherPageMap->pml4Phys));
+    newProcess->InitializePEB();
+    asm volatile("mov %%rax, %%cr3" ::"a"(thisPageMap->pml4Phys));
+    asm("sti");
+
     Scheduler::RegisterProcess(newProcess);
     return newProcess;
 }
@@ -743,7 +773,8 @@ void Process::MapUserSharedData() {
         userSharedData = userSharedDataVMO;
     }
 
-    userSharedDataRegion = addressSpace->MapVMO(static_pointer_cast<VMObject>(userSharedData), 0x7000C00000, true);
+    userSharedDataRegion = addressSpace->MapVMO(static_pointer_cast<VMObject>(userSharedData), PROC_USER_SHARED_DATA_BASE, true);
+    assert(userSharedDataRegion);
 
     // Allocate space for both a siginfo struct and the signal trampoline
     m_signalTrampoline = addressSpace->AllocateAnonymousVMObject(
@@ -758,4 +789,21 @@ void Process::MapUserSharedData() {
     memcpy(reinterpret_cast<void*>(m_signalTrampoline->Base()), signalTrampolineStart,
            signalTrampolineEnd - signalTrampolineStart);
     asm volatile("mov %%rax, %%cr3; sti" ::"a"(Scheduler::GetCurrentProcess()->GetPageMap()->pml4Phys));
+}
+
+void Process::MapProcessEnvironmentBlock() {
+    pebRegion = addressSpace->AllocateAnonymousVMObject(PAGE_COUNT_4K(sizeof(ProcessEnvironmentBlock)) << PAGE_SHIFT_4K,
+                                                        PROC_PEB_BASE, false);
+    pebRegion->vmObject->Hit(pebRegion->base, 0, GetPageMap());
+}
+
+void Process::InitializePEB() {
+    ProcessEnvironmentBlock* peb = (ProcessEnvironmentBlock*)m_mainThread->gsBase;
+    peb->self = peb;
+    peb->pid = m_pid;
+    peb->executableBaseAddress = 0x80000000;
+    peb->sharedDataBase = userSharedDataRegion->Base();
+    peb->sharedDataSize = userSharedDataRegion->Size();
+    peb->hirakuBase = userSharedDataRegion->Base() + (_hiraku - _user_shared_data);
+    peb->hirakuSize = (_hiraku_end - _hiraku);
 }

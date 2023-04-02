@@ -101,6 +101,7 @@ void PhysicalVMObject::MapAllocatedBlocks(uintptr_t base, PageMap* pMap){
     uintptr_t virt = base;
 
     long pgFlags = PAGE_USER | (PAGE_WRITABLE * (!copyOnWrite)) | PAGE_PRESENT;
+
     for(unsigned i = 0; i < (size >> PAGE_SHIFT_4K); i++){
         uint64_t block = physicalBlocks[i];
         if(block){ // Is it allocated?

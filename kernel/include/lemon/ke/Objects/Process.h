@@ -5,8 +5,8 @@
 #include <CPU.h>
 #include <Compiler.h>
 #include <ELF.h>
-#include <Error.h>
 #include <Errno.h>
+#include <Error.h>
 #include <Fs/Filesystem.h>
 #include <Hash.h>
 #include <List.h>
@@ -17,6 +17,9 @@
 #include <Thread.h>
 #include <TimerEvent.h>
 #include <Vector.h>
+
+#define PROC_USER_SHARED_DATA_BASE 0x7000C00000
+#define PROC_PEB_BASE 0x7000800000
 
 class Process : public KernelObject {
     DECLARE_KOBJECT(Process);
@@ -38,9 +41,7 @@ public:
     static FancyRefPtr<Process> CreateKernelProcess(void* entry, const char* name, Process* parent);
     static FancyRefPtr<Process> CreateELFProcess(void* elf, const Vector<String>& argv, const Vector<String>& envp,
                                                  const char* execPath, Process* parent);
-    ALWAYS_INLINE static Process* Current() {
-        return Thread::Current()->parent;
-    }
+    ALWAYS_INLINE static Process* Current() { return Thread::Current()->parent; }
 
     ~Process();
 
@@ -169,22 +170,21 @@ public:
         h.closeOnExec = closeOnExec;
 
         int i = 0;
-        for(; i < static_cast<int>(m_handles.get_length()); i++){
-            if(!m_handles[i].IsValid()){
+        for (; i < static_cast<int>(m_handles.get_length()); i++) {
+            if (!m_handles[i].IsValid()) {
                 h.id = i;
                 m_handles[i] = std::move(h);
                 return i;
             }
         }
-        
+
         h.id = i;
         m_handles.add_back(h);
 
         return i;
     }
 
-    template<KernelObjectDerived T> 
-    ALWAYS_INLINE le_handle_t AllocateHandle(FancyRefPtr<T> ko, bool cloExec = false) {
+    template <KernelObjectDerived T> ALWAYS_INLINE le_handle_t AllocateHandle(FancyRefPtr<T> ko, bool cloExec = false) {
         return AllocateHandle(static_pointer_cast<KernelObject>(std::move(ko)), cloExec);
     }
 
@@ -203,28 +203,27 @@ public:
         return m_handles[id];
     }
 
-    template<typename T>
-    ALWAYS_INLINE ErrorOr<FancyRefPtr<T>> GetHandleAs(le_handle_t id) {
+    template <typename T> ALWAYS_INLINE ErrorOr<FancyRefPtr<T>> GetHandleAs(le_handle_t id) {
         Handle h = GetHandle(id);
-        if(!h.IsValid()) {
+        if (!h.IsValid()) {
             return Error{EBADF};
         }
 
-        if(h.ko->IsType(T::TypeID())) {
+        if (h.ko->IsType(T::TypeID())) {
             return static_pointer_cast<T>(h.ko);
         }
 
         return Error{EINVAL};
-    } 
+    }
 
     /////////////////////////////
     /// \brief Replace handle
     /////////////////////////////
     ALWAYS_INLINE int ReplaceHandle(le_handle_t id, Handle newHandle) {
-        if(id < 0) {
+        if (id < 0) {
             return EBADF;
         }
-        
+
         ScopedSpinLock lockHandles(m_handleLock);
         assert(id < m_handles.size());
 
@@ -235,12 +234,12 @@ public:
     }
 
     ALWAYS_INLINE Error SetCloseOnExec(le_handle_t id, bool value) {
-        if(id < 0) {
+        if (id < 0) {
             return EBADF;
         }
-        
+
         ScopedSpinLock lockHandles(m_handleLock);
-        if(id >= m_handles.size()) {
+        if (id >= m_handles.size()) {
             return EBADF;
         }
 
@@ -413,7 +412,7 @@ public:
     AddressSpace* addressSpace = nullptr;
 
     MappedRegion* stackregion;
-    MappedRegion* pebRegion;
+    MappedRegion* pebRegion = nullptr;
     MappedRegion* userSharedDataRegion = nullptr;
 
     HashMap<uintptr_t, List<FutexThreadBlocker*>*> futexWaitQueue = HashMap<uintptr_t, List<FutexThreadBlocker*>*>(8);
@@ -428,6 +427,10 @@ private:
 
     FancyRefPtr<Thread> GetThreadFromTID_Unlocked(pid_t tid);
     void MapUserSharedData();
+    void MapProcessEnvironmentBlock();
+
+    // Assumes calling thread is running in the address space of the process
+    void InitializePEB();
 
     lock_t m_processLock = 0;        // Should be acquired when modifying the data structure
     lock_t m_watchingLock = 0;       // Should be acquired when modifying watching processes

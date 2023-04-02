@@ -49,19 +49,19 @@ long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, le_str_t
         Thread* t = Thread::Current();
         auto nt = newProcess->GetMainThread();
 
-        void* kStack = nt->kernelStack;
-        void* kStackBase = nt->kernelStackBase;
-        void* fxState = nt->fxState;
+        nt->gsBase = t->gsBase;
+        nt->fsBase = t->fsBase;
 
-        *nt = *t;
+        nt->pendingSignals = t->pendingSignals;
+        nt->signalMask = t->signalMask;
 
         nt->tid = 1;
-        nt->kernelStack = kStack;
-        nt->kernelStackBase = kStackBase;
-        nt->fxState = fxState;
 
         nt->registers = *t->scRegisters;
-        nt->registers.rax = 0;
+        memcpy(nt->fxState, t->fxState, PAGE_SIZE_4K);
+
+        // Returns ECHILD from the syscall
+        nt->registers.rax = ECHILD;
 
         nt->kernelLock = 0;
 

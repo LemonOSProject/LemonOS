@@ -182,6 +182,14 @@ ALWAYS_INLINE uintptr_t GetCR3() {
     return val;
 }
 
+static ALWAYS_INLINE void FlushTLB() {
+    // Force a TLB flush
+    int intEn = CheckInterrupts();
+    asm volatile("cli; movq %%cr3, %%rax; movq %%rax, %%cr3" ::: "rax", "memory");
+    if(intEn)
+        asm volatile("sti");
+}
+
 static ALWAYS_INLINE void SetCPULocal(CPU* val) {
     val->self = val;
     asm volatile("wrmsr" ::"a"((uintptr_t)val & 0xFFFFFFFF) /*Value low*/,

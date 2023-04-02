@@ -8,3 +8,4 @@ PointerAlignment: Left
 AccessModifierOffset: -4
 AllowAllConstructorInitializersOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortFunctionsOnASingleLine: false
