@@ -207,14 +207,8 @@ extern "C" [[noreturn]] void kmain() {
 
     LoadSymbols();
 
-    Video::DrawString("Copyright 2018-2021 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
+    Video::DrawString("Copyright 2019-2023 JJ Roberts-White", 2, videoMode.height - 10, 255, 255, 255);
     Video::DrawString(Lemon::versionString, 2, videoMode.height - 20, 255, 255, 255);
-
-    Log::Info("Initializing HID...");
-
-    PS2::Initialize();
-
-    Log::Info("OK");
 
     syscall_init();
 
