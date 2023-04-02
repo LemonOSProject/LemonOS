@@ -21,7 +21,7 @@ extern uint8_t defaultFont[128][8];
 namespace Video {
 video_mode_t videoMode;
 
-uint8_t* videoMemory = nullptr;
+uint32_t* videoMemory = nullptr;
 
 uint32_t screenWidth;
 uint32_t screenHeight;
@@ -32,13 +32,16 @@ uint32_t screenPitch;
 class FramebufferVMO : public VMObject {
 public:
     FramebufferVMO()
-        : VMObject(PAGE_COUNT_4K(screenPitch * screenHeight * (screenDepth / 8)) << PAGE_SHIFT_4K, false, true) {}
+        : VMObject(PAGE_COUNT_4K(screenPitch * screenHeight * (screenDepth / 8)) << PAGE_SHIFT_4K, false, true) {
+    }
 
     void MapAllocatedBlocks(uintptr_t base, PageMap* pMap) {
         Memory::MapVirtualMemory4K(videoMode.physicalAddress, base, size >> PAGE_SHIFT_4K, pMap);
     }
 
-    [[noreturn]] VMObject* Clone() { assert(!"Framebuffer VMO cannot be cloned!"); }
+    [[noreturn]] VMObject* Clone() {
+        assert(!"Framebuffer VMO cannot be cloned!");
+    }
 };
 
 FramebufferVMO* framebufferVMO = nullptr;
@@ -46,17 +49,19 @@ FancyRefPtr<VMObject>* framebufferVMOPtr = nullptr;
 
 class FramebufferDevice : public Device {
 public:
-    FramebufferDevice() : Device("fb0", DeviceType::DeviceTypeUnknown) {}
+    FramebufferDevice() : Device("fb0", DeviceType::DeviceTypeUnknown) {
+    }
 
-    ErrorOr<MappedRegion*> MMap(uintptr_t base, uintptr_t size, off_t offset, int prot, bool shared, bool fixed) override {
+    ErrorOr<MappedRegion*> MMap(uintptr_t base, uintptr_t size, off_t offset, int prot, bool shared,
+                                bool fixed) override {
         Process* process = Process::Current();
-        if(!shared) {
+        if (!shared) {
             Log::Error("Framebuffer mmap must be shared");
             return EINVAL;
         }
 
         auto region = process->addressSpace->MapVMO(*framebufferVMOPtr, base, fixed);
-        if(!region) {
+        if (!region) {
             // Fixed mapping probably failed,
             // lets check that actually happened
             assert(fixed);
@@ -67,7 +72,7 @@ public:
     }
 
     ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override {
-        if(cmd == LeIoctlGetFramebuffferInfo) {
+        if (cmd == LeIoctlGetFramebuffferInfo) {
             UserPointer<FramebufferInfo> userInfo(arg);
 
             FramebufferInfo info;
@@ -76,7 +81,7 @@ public:
             info.bpp = 32;
             info.pitch = screenPitch;
 
-            if(userInfo.StoreValue(info)) {
+            if (userInfo.StoreValue(info)) {
                 return EFAULT;
             }
 
@@ -90,7 +95,7 @@ public:
 FramebufferDevice fbDev;
 
 void Initialize(video_mode_t videoMode) {
-    videoMemory = (uint8_t*)videoMode.address;
+    videoMemory = (uint32_t*)videoMode.address;
 
     screenWidth = videoMode.width;
     screenHeight = videoMode.height;
@@ -105,34 +110,39 @@ void Initialize(video_mode_t videoMode) {
         framebufferVMO); // We cannot guarantee that constructors have been called, so make a pointer to a FancyRefPtr
 }
 
-video_mode_t GetVideoMode() { return videoMode; }
-
-FancyRefPtr<VMObject> GetFramebufferVMO() { return *framebufferVMOPtr; }
-
-void DrawPixel(unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b) {
-    uint32_t colour = r << 16 | g << 8 | b;
-    ((uint32_t*)videoMemory)[(y * screenWidth) + x] = colour;
+video_mode_t GetVideoMode() {
+    return videoMode;
 }
 
-void DrawRect(unsigned int x, unsigned int y, unsigned int width, unsigned int height, uint8_t r, uint8_t g,
-              uint8_t b) {
+FancyRefPtr<VMObject> GetFramebufferVMO() {
+    return *framebufferVMOPtr;
+}
+
+void DrawPixel(void* buffer, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b) {
+    uint32_t colour = r << 16 | g << 8 | b;
+    ((uint32_t*)buffer)[(y * screenWidth) + x] = colour;
+}
+
+void DrawRect(void* buffer, unsigned int x, unsigned int y, unsigned int width, unsigned int height, uint8_t r,
+              uint8_t g, uint8_t b) {
     uint32_t colour = r << 16 | g << 8 | b;
 
     for (unsigned i = 0; i < height; i++) {
         for (unsigned j = 0; j < width; j++) {
-            ((uint32_t*)videoMemory)[((i + y) * screenWidth) + j + x] = colour;
+            ((uint32_t*)buffer)[((i + y) * screenWidth) + j + x] = colour;
         }
     }
 }
 
-void DrawChar(char c, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, int vscale, int hscale) {
+void DrawChar(void* buffer, char c, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, int vscale,
+              int hscale) {
     if (vscale <= 1 && hscale <= 1) {
         uint32_t colour = r << 16 | g << 8 | b;
         for (unsigned i = 0; i < 8; i++) {
             int row = defaultFont[(int)c][i];
             for (unsigned j = 0; j < 8; j++) {
                 if ((row & (1 << j)) >> j) {
-                    ((uint32_t*)videoMemory)[((y + i) * screenWidth) + x + j] = colour;
+                    ((uint32_t*)buffer)[((y + i) * screenWidth) + x + j] = colour;
                 }
             }
         }
@@ -141,14 +151,14 @@ void DrawChar(char c, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint
             int row = defaultFont[(int)c][i];
             for (unsigned j = 0; j < 8; j++) {
                 if ((row & (1 << j)) >> j) {
-                    DrawRect(x + j * hscale, y + i * vscale, hscale, vscale, r, g, b);
+                    DrawRect(buffer, x + j * hscale, y + i * vscale, hscale, vscale, r, g, b);
                 }
             }
         }
     }
 }
 
-void DrawBitmapImage(unsigned int x, unsigned int y, unsigned int w, unsigned int h, uint8_t* data) {
+void DrawBitmapImage(void* buffer, unsigned int x, unsigned int y, unsigned int w, unsigned int h, uint8_t* data) {
     bitmap_file_header_t bmpHeader = *(bitmap_file_header_t*)data;
     data += bmpHeader.offset;
 
@@ -163,20 +173,20 @@ void DrawBitmapImage(unsigned int x, unsigned int y, unsigned int w, unsigned in
                 data[bmpOffset + j * (bmpBpp / 8) + 2] == 1)
                 continue;
             uint32_t offset = (y + i) * (videoMode.width * pixelSize) + (x + j) * pixelSize;
-            videoMemory[offset] = data[bmpOffset + j * (bmpBpp / 8)];
-            videoMemory[offset + 1] = data[bmpOffset + j * (bmpBpp / 8) + 1];
-            videoMemory[offset + 2] = data[bmpOffset + j * (bmpBpp / 8) + 2];
+            ((uint32_t*)buffer)[offset] = data[bmpOffset + j * (bmpBpp / 8)];
+            ((uint32_t*)buffer)[offset + 1] = data[bmpOffset + j * (bmpBpp / 8) + 1];
+            ((uint32_t*)buffer)[offset + 2] = data[bmpOffset + j * (bmpBpp / 8) + 2];
         }
         bmpOffset -= rowSize;
     }
 }
 
-void DrawString(const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b, int vscale,
-                int hscale) {
+void DrawString(void* buffer, const char* str, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b,
+                int vscale, int hscale) {
     int xOffset = 0;
     int step = 8 * hscale;
     while (*str != 0) {
-        Video::DrawChar(*str, x + xOffset, y, r, g, b, vscale, hscale);
+        Video::DrawChar(buffer, *str, x + xOffset, y, r, g, b, vscale, hscale);
         xOffset += step;
         str++;
     }

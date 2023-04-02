@@ -4,9 +4,11 @@
 #include <stdarg.h>
 
 #include <Debug.h>
+#include <Spinlock.h>
 
 namespace Log{
     extern VideoConsole* console;
+    extern lock_t logLock;
 
     void LateInitialize();
     void SetVideoConsole(VideoConsole* con);

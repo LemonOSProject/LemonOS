@@ -261,8 +261,6 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
 
                 char* name = strtab + sym.name;
                 if (auto* s = ResolveHirakuSymbol(name)) {
-                    Log::Info("%x", peb->hirakuBase + s->address);
-
                     uintptr_t* p = (uintptr_t*)(linkerBaseAddress + plt->offset);
 
                     *p = peb->hirakuBase + s->address + plt->addend;

@@ -66,14 +66,7 @@ void KernelProcess() {
 
     videoMode = Video::GetVideoMode();
 
-    if (debugLevelMisc >= DebugLevelVerbose) {
-        Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
-    }
-
-    if (videoMode.height < 600)
-        Log::Warning("Small Resolution, it is recommended to use a higher resoulution if possible.");
-    if (videoMode.bpp != 32)
-        Log::Warning("Unsupported Colour Depth expect issues.");
+    Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
 
     Log::Info("Used RAM: %d MB", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);
 
@@ -129,6 +122,19 @@ void KernelProcess() {
 
     auto initProc = Process::CreateELFProcess(initElf, Vector<String>("init"), Vector<String>("PATH=/initrd"),
                                               "/initrd/init.lef", nullptr);
+
+    if(HAL::debugMode) {
+        ScopedSpinLock lock{Log::logLock};
+
+        delete Log::console;
+        Log::SetVideoConsole(new VideoConsole(0, (videoMode.height / 3) * 2, videoMode.width, videoMode.height / 3));
+    } else {
+        ScopedSpinLock lock{Log::logLock};
+
+        delete Log::console;
+        Log::SetVideoConsole(NULL);
+    }
+
     initProc->Start();
 
     kfree(initElf);

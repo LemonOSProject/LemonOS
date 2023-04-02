@@ -6,6 +6,7 @@
 #include <CString.h>
 #include <Device.h>
 #include <IDT.h>
+#include <Lemon.h>
 #include <Logging.h>
 #include <MM/KMalloc.h>
 #include <PCI.h>
@@ -59,17 +60,15 @@ void InitCore() { // ALWAYS call this first
 
 void InitVideo() {
     Video::Initialize(videoMode);
-    Video::DrawString("Starting Lemon x64...", 0, 0, 255, 255, 255);
+    Video::DrawString(videoMode.address, "Starting Lemon x64...", 0, 0, 255, 255, 255);
 
-    Log::SetVideoConsole(NULL);
-
-    if (debugMode) {
-        con = new VideoConsole(0, (videoMode.height / 3) * 2, videoMode.width, videoMode.height / 3);
-        Log::SetVideoConsole(con);
-    }
+    con = new VideoConsole(0, 0, videoMode.width, videoMode.height);
+    Log::SetVideoConsole(con);
 }
 
 void InitExtra() {
+    Log::Info("%s", Lemon::versionString);
+
     Log::Info("Checking CPU supports x86_64-v2...");
     cpuid_info_t cpuidInfo = CPUID();
 

@@ -21,9 +21,12 @@ class VideoConsole{
     int widthInCharacters;
     int heightInCharacters;
 
-    ConsoleCharacter* characterBuffer;
+    ConsoleCharacter* characterBuffer = nullptr;
+    uint32_t* videoBuffer = nullptr;
     
     VideoConsole(int x, int y, int width, int height);
+
+    void Reposition(int x, int y, int width, int height);
 
     void Update();
     void Clear(uint8_t r, uint8_t g, uint8_t b);

@@ -12,28 +12,53 @@ VideoConsole::VideoConsole(int x, int y, int width, int height) {
     this->width = width;
     this->height = height;
 
+    Reposition(x, y, width, height);
+}
+
+void VideoConsole::Reposition(int x, int y, int width, int height) {
+    this->x = x;
+    this->y = y;
+    this->width = width;
+    this->height = height;
+
+    void* oldBuffer = characterBuffer;
+    void* oldVideoBuffer = videoBuffer;
+
     cursorX = 0;
     cursorY = 0;
 
     widthInCharacters = width / 8 - 1;
     heightInCharacters = height / 8 - 1;
 
+    videoBuffer = new uint32_t[width * height];
+
     characterBuffer =
         (ConsoleCharacter*)kmalloc(widthInCharacters * (heightInCharacters + 1) *
                                    sizeof(ConsoleCharacter)); // One ConsoleCharacter is 4 bytes (char, r, g, b)
     memset(characterBuffer, 0, widthInCharacters * heightInCharacters * sizeof(ConsoleCharacter));
+
+    if(oldBuffer) {
+        kfree(oldBuffer);
+    }
+
+    if(oldVideoBuffer) {
+        kfree(oldVideoBuffer);
+    }
 }
 
 void VideoConsole::Update() {
-    Video::DrawRect(x, y, width, height, 32, 32, 32);
+    Video::DrawRect(videoBuffer, x, y, width, height, 0, 0, 0);
     for (int i = 0; i < heightInCharacters; i++) {
         for (int j = 0; j < widthInCharacters; j++) {
             ConsoleCharacter c = characterBuffer[i * widthInCharacters + j];
             if (c.c == 0)
                 continue;
-            Video::DrawChar(c.c, x + j * 8, y + i * 8, c.r, c.g, c.b);
+            Video::DrawChar(videoBuffer, c.c, x + j * 8, y + i * 8, c.r, c.g, c.b);
         }
     }
+
+    video_mode_t vMode = Video::GetVideoMode();
+    memcpy(vMode.address, videoBuffer + y * vMode.pitch, height * vMode.pitch);
 }
 
 void VideoConsole::Print(char c, uint8_t r, uint8_t g, uint8_t b) {
