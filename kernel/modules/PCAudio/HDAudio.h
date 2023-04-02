@@ -314,7 +314,7 @@ class IntelHDAudioController : public AudioController, PCIDevice {
 	};
 
 public:
-    IntelHDAudioController(const PCIInfo& info);
+    IntelHDAudioController(const PCIInfo* info);
 
     int SetMasterVolume(int percentage) override;
     int GetMasterVolume() const override;

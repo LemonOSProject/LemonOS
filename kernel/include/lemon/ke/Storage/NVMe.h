@@ -257,7 +257,7 @@ namespace NVMe{
 			ControllerReady,
 		};
 
-		Controller(const PCIInfo& pciDev);
+		Controller(const PCIInfo* pciDev);
 	
 		long IdentifyController();
 		long GetNamespaceList();

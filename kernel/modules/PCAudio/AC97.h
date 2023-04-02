@@ -32,7 +32,7 @@ namespace Audio {
 
 class AC97Controller : public AudioController, public PCIDevice {
 public:
-    AC97Controller(const PCIInfo& info);
+    AC97Controller(const PCIInfo* info);
 
     int SetMasterVolume(int percentage) override;
     int GetMasterVolume() const override;

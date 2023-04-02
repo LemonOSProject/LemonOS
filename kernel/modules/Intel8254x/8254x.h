@@ -79,7 +79,7 @@
 
 class Intel8254x final : public Network::NetworkAdapter, private PCIDevice {
 public:
-    Intel8254x(const PCIInfo& device);
+    Intel8254x(const PCIInfo* device);
 
     void SendPacket(void* data, size_t len);
 

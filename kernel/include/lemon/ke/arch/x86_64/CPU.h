@@ -21,7 +21,7 @@ typedef struct {
 struct CPU {
     CPU* self; // Pointer to this struct
     uint64_t id; // APIC/CPU id
-    Thread* currentThread = nullptr; // Current executing thread
+    Thread* currentThread; // Current executing thread
     // Scratch register, it is used by the syscall handler
     // as it cannot touch any registers without saving them
     uint64_t scratch;
@@ -31,9 +31,9 @@ struct CPU {
     gdt_ptr_t gdtPtr;
     idt_ptr_t idtPtr;
 
-    Thread* idleThread = nullptr;
+    Thread* idleThread;
     Process* idleProcess;
-    volatile int runQueueLock = 0;
+    volatile int runQueueLock;
     FastList<Thread*>* runQueue;
 } __attribute__((packed));
 

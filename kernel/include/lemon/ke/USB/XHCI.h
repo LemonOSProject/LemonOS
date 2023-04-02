@@ -59,7 +59,7 @@ public:
         ControllerInitialized,
     };
 
-    XHCIController(const PCIInfo& dev);
+    XHCIController(const PCIInfo* dev);
     ~XHCIController();
 
     inline Status GetControllerStatus() { return controllerStatus; }

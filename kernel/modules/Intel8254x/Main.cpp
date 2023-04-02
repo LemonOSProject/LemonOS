@@ -24,7 +24,7 @@ static int ModuleInit() {
     adapters = new Vector<Intel8254x*>();
 
     for (int i = 0; i < supportedDeviceCount; i++) {
-        PCI::EnumeratePCIDevices(supportedDevices[i], INTEL_VENDOR_ID, [](const PCIInfo& dev) -> void {
+        PCI::EnumeratePCIDevices(supportedDevices[i], INTEL_VENDOR_ID, [](const PCIInfo* dev) -> void {
             Intel8254x* card = new Intel8254x(dev);
 
             if (card->dState == Intel8254x::DriverState::OK) {
@@ -232,9 +232,9 @@ void Intel8254x::InitializeTx() {
     WriteMem32(I8254_REGISTER_TCTRL, (TCTRL_ENABLE | TCTRL_PSP));
 }
 
-Intel8254x::Intel8254x(const PCIInfo& device)
-    : NetworkAdapter(NetworkAdapterEthernet), PCIDevice(device.bus, device.slot, device.func) {
-    assert(device.vendorID != 0xFFFF);
+Intel8254x::Intel8254x(const PCIInfo* device)
+    : NetworkAdapter(NetworkAdapterEthernet), PCIDevice(device) {
+    assert(device->vendorID != 0xFFFF);
 
     txTail = rxTail = 0;
 

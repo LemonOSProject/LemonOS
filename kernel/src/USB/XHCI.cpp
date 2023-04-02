@@ -34,7 +34,7 @@ int XHCIController::Initialize() {
     return 0;*/
 }
 
-XHCIController::XHCIController(const PCIInfo& dev) : PCIDevice(dev) {
+XHCIController::XHCIController(const PCIInfo* dev) : PCIDevice(dev) {
     xhciBaseAddress = GetBaseAddressRegister(0);
     EnableBusMastering();
     EnableInterrupts();

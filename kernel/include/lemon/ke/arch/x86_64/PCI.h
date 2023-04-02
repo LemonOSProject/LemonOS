@@ -197,11 +197,11 @@ namespace PCI{
 	bool FindDevice(uint16_t deviceID, uint16_t vendorID);
 	bool FindGenericDevice(uint16_t classCode, uint16_t subclass);
 
-	const PCIInfo& GetPCIDevice(uint16_t deviceID, uint16_t vendorID);
-	const PCIInfo& GetGenericPCIDevice(uint8_t classCode, uint8_t subclass);
+	const PCIInfo* GetPCIDevice(uint16_t deviceID, uint16_t vendorID);
+	const PCIInfo* GetGenericPCIDevice(uint8_t classCode, uint8_t subclass);
 
-	void EnumeratePCIDevices(uint16_t deviceID, uint16_t vendorID, void(*func)(const PCIInfo&));
-	void EnumerateGenericPCIDevices(uint8_t classCode, uint8_t subclass, void(*func)(const PCIInfo&));
+	void EnumeratePCIDevices(uint16_t deviceID, uint16_t vendorID, void(*func)(const PCIInfo*));
+	void EnumerateGenericPCIDevices(uint8_t classCode, uint8_t subclass, void(*func)(const PCIInfo*));
 
 	void Init();
 }
@@ -209,7 +209,7 @@ namespace PCI{
 class PCIDevice{
 public:
 	PCIDevice(uint8_t bus, uint8_t slot, uint8_t func);
-	PCIDevice(const PCIInfo& info) : PCIDevice(info.bus, info.slot, info.func) {}
+	PCIDevice(const PCIInfo* info) : PCIDevice(info->bus, info->slot, info->func) {}
 
 	inline uintptr_t GetBaseAddressRegister(uint8_t idx) {
 		assert(idx >= 0 && idx <= 5);

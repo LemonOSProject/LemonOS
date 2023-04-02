@@ -103,7 +103,7 @@ int Init() {
         return 1;
     }
 
-    const PCIInfo& dInfo = PCI::GetGenericPCIDevice(ideClassCode, ideSubclass);
+    const PCIInfo* dInfo = PCI::GetGenericPCIDevice(ideClassCode, ideSubclass);
     controllerPCIDevice = new PCIDevice(dInfo);
     assert(controllerPCIDevice->VendorID() != 0xFFFF);
 

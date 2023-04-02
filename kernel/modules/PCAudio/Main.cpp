@@ -36,7 +36,7 @@ int ModuleInit() {
     audioControllers = new Vector<AudioController*>();
 
     for (auto& p : controllerPCIIDs) {
-        PCI::EnumeratePCIDevices(p.item2, p.item1, [](const PCIInfo& info) -> void {
+        PCI::EnumeratePCIDevices(p.item2, p.item1, [](const PCIInfo* info) -> void {
             IntelHDAudioController* cnt = new IntelHDAudioController(info);
 
             DeviceManager::RegisterDevice(cnt);
@@ -44,7 +44,7 @@ int ModuleInit() {
         });
     }
 
-    PCI::EnumerateGenericPCIDevices(PCI_CLASS_MULTIMEDIA, PCI_SUBCLASS_AC97, [](const PCIInfo& info) -> void {
+    PCI::EnumerateGenericPCIDevices(PCI_CLASS_MULTIMEDIA, PCI_SUBCLASS_AC97, [](const PCIInfo* info) -> void {
         AC97Controller* cnt = new AC97Controller(info);
 
         DeviceManager::RegisterDevice(cnt);

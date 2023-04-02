@@ -12,7 +12,7 @@ Vector<Controller*> nvmControllers;
 
 void Initialize() {
     PCI::EnumerateGenericPCIDevices(PCI_CLASS_STORAGE, PCI_SUBCLASS_NVM,
-                                    [](const PCIInfo& dev) -> void { nvmControllers.add_back(new Controller(dev)); });
+                                    [](const PCIInfo* dev) -> void { nvmControllers.add_back(new Controller(dev)); });
 }
 
 NVMeQueue::NVMeQueue(uint16_t qid, uintptr_t cqBase, uintptr_t sqBase, void* cq, void* sq, uint32_t* cqDB,
@@ -91,7 +91,7 @@ void NVMeQueue::SubmitWait(NVMeCommand& cmd, NVMeCompletion& complet) {
     *completionDB = cqHead;
 }
 
-Controller::Controller(const PCIInfo& dev) : PCIDevice(dev) {
+Controller::Controller(const PCIInfo* dev) : PCIDevice(dev) {
 
     cRegs = reinterpret_cast<Registers*>(Memory::KernelAllocate4KPages(4));
     Memory::KernelMapVirtualMemory4K(GetBaseAddressRegister(0), (uintptr_t)cRegs, 4,

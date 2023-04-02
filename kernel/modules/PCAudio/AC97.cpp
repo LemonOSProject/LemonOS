@@ -6,7 +6,7 @@
 
 namespace Audio {
 
-AC97Controller::AC97Controller(const PCIInfo& info) : PCIDevice(info) {
+AC97Controller::AC97Controller(const PCIInfo* info) : PCIDevice(info) {
     SetDeviceName("AC97 Audio Controller");
 
     uintptr_t bar = GetBaseAddressRegister(0);

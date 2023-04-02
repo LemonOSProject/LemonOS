@@ -56,7 +56,7 @@ void IntelHDAudioController::OnInterrupt() {
     m_cRegs->rirbStatus |= 4 | 1;
 }
 
-IntelHDAudioController::IntelHDAudioController(const PCIInfo& info) : PCIDevice(info) {
+IntelHDAudioController::IntelHDAudioController(const PCIInfo* info) : PCIDevice(info) {
     SetDeviceName("Intel HD Audio Controller");
 
     uintptr_t bar = GetBaseAddressRegister(0);
