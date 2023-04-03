@@ -1,0 +1,81 @@
+name: Release
+
+# Controls when the action will run. 
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  full-system:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Update PATH
+        run: echo "$HOME/.local/share/lemon/bin" >> $GITHUB_PATH
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf libtool python3 python3-pip ninja-build qemu-utils nasm help2man gettext autopoint gperf
+          sudo python3 -m pip install meson xbstrap
+
+      - name: Initialize and Update submodules
+        run: git submodule update --init
+
+      - name: Get hash of latest llvm-project commit
+        run: |
+          git ls-remote https://github.com/LemonOSProject/llvm-project.git | head -1 > llvm-hash.txt
+          echo "Commit Hash:"
+          cat llvm-hash.txt
+
+      - name: Cache the toolchain
+        uses: actions/cache@v2
+        with:
+          key: ${{ runner.os }}-${{ hashFiles('**/bootstrap.yml') }}-lemon-toolchain
+          path: |
+            **/Build/tool-builds
+            **/Toolchain
+
+      - name: Init xbstrap
+        run: |
+          mkdir -p Build
+          cd Build
+          xbstrap init ..
+
+      - name: Build the toolchain
+        run: |
+          cd Build
+          xbstrap regenerate icu gettext
+          xbstrap install-tool host-icu host-python --reconfigure
+          xbstrap install-tool --all
+        
+      - name: Building system
+        run: |
+          cd Build
+          xbstrap install --recursive lemon-base nyancat curl libarchive binutils lemondoom nasm
+
+      - name: Building disk image
+        run: |
+          cd Build
+          xbstrap run build-disk
+          zip lemon.img.zip Disks/Lemon.img
+          echo "RELEASE_DATE=$(date --iso-8601)" >> $GITHUB_ENV
+      
+      - name: Uploading image as artefact
+        uses: actions/upload-artifact@v2
+        with:
+          name: Lemon
+          path: Disks/Lemon.img
+
+      - name: Create release
+        uses: actions/create-release@v1
+        with:
+          name: nightly-${{ env.RELEASE_DATE }}
+          prerelease: true
+          artefacts: "lemon.img.zip"
