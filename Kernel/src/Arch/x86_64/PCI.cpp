@@ -10,7 +10,7 @@
 
 namespace PCI {
 lock_t devicesLock = 0;
-Vector<PCIInfo>* devices = nullptr;
+Vector<PCIInfo*>* devices = nullptr;
 PCIInfo* unknownDevice = nullptr;
 PCIMCFG* mcfgTable = nullptr;
 PCIConfigurationAccessMode configMode = PCIConfigurationAccessMode::Legacy;
@@ -106,7 +106,7 @@ bool FindDevice(uint16_t deviceID, uint16_t vendorID) {
     ScopedSpinLock lockDevs(devicesLock);
 
     for (unsigned i = 0; i < devices->get_length(); i++) {
-        if (devices->get_at(i).deviceID == deviceID && devices->get_at(i).vendorID == vendorID) {
+        if (devices->at(i)->deviceID == deviceID && devices->at(i)->vendorID == vendorID) {
             return true;
         }
     }
@@ -118,7 +118,7 @@ bool FindGenericDevice(uint16_t classCode, uint16_t subclass) {
     ScopedSpinLock lockDevs(devicesLock);
 
     for (unsigned i = 0; i < devices->get_length(); i++) {
-        if (devices->get_at(i).classCode == classCode && devices->get_at(i).subclass == subclass) {
+        if (devices->at(i)->classCode == classCode && devices->at(i)->subclass == subclass) {
             return true;
         }
     }
@@ -129,9 +129,9 @@ bool FindGenericDevice(uint16_t classCode, uint16_t subclass) {
 const PCIInfo& GetPCIDevice(uint16_t deviceID, uint16_t vendorID) {
     ScopedSpinLock lockDevs(devicesLock);
 
-    for (PCIInfo& dev : *devices) {
-        if (dev.deviceID == deviceID && dev.vendorID == vendorID) {
-            return dev;
+    for (PCIInfo* dev : *devices) {
+        if (dev->deviceID == deviceID && dev->vendorID == vendorID) {
+            return *dev;
         }
     }
 
@@ -143,9 +143,9 @@ const PCIInfo& GetGenericPCIDevice(uint8_t classCode, uint8_t subclass) {
     assert(devices);
     ScopedSpinLock lockDevs(devicesLock);
 
-    for (PCIInfo& dev : *devices) {
-        if (dev.classCode == classCode && dev.subclass == subclass) {
-            return dev;
+    for (PCIInfo* dev : *devices) {
+        if (dev->classCode == classCode && dev->subclass == subclass) {
+            return *dev;
         }
     }
 
@@ -156,9 +156,9 @@ const PCIInfo& GetGenericPCIDevice(uint8_t classCode, uint8_t subclass) {
 void EnumeratePCIDevices(uint16_t deviceID, uint16_t vendorID, void (*func)(const PCIInfo&)) {
     ScopedSpinLock lockDevs(devicesLock);
 
-    for (PCIInfo& dev : *devices) {
-        if (dev.deviceID == deviceID && dev.vendorID == vendorID) {
-            func(dev);
+    for (PCIInfo* dev : *devices) {
+        if (dev->deviceID == deviceID && dev->vendorID == vendorID) {
+            func(*dev);
         }
     }
 }
@@ -166,9 +166,9 @@ void EnumeratePCIDevices(uint16_t deviceID, uint16_t vendorID, void (*func)(cons
 void EnumerateGenericPCIDevices(uint8_t classCode, uint8_t subclass, void (*func)(const PCIInfo&)) {
     ScopedSpinLock lockDevs(devicesLock);
 
-    for (PCIInfo& dev : *devices) {
-        if (dev.classCode == classCode && dev.subclass == subclass) {
-            func(dev);
+    for (PCIInfo* dev : *devices) {
+        if (dev->classCode == classCode && dev->subclass == subclass) {
+            func(*dev);
         }
     }
 }
@@ -176,18 +176,18 @@ void EnumerateGenericPCIDevices(uint8_t classCode, uint8_t subclass, void (*func
 int AddDevice(int bus, int slot, int func) {
     ScopedSpinLock lockDevs(devicesLock);
     
-    PCIInfo device;
+    PCIInfo* device = new PCIInfo;
 
-    device.vendorID = GetVendor(bus, slot, func);
-    device.deviceID = GetDeviceID(bus, slot, func);
+    device->vendorID = GetVendor(bus, slot, func);
+    device->deviceID = GetDeviceID(bus, slot, func);
 
-    device.bus = bus;
-    device.slot = slot;
-    device.func = func;
+    device->bus = bus;
+    device->slot = slot;
+    device->func = func;
 
-    device.classCode = GetClassCode(bus, slot, func);
-    device.subclass = GetSubclass(bus, slot, func);
-    device.progIf = GetProgIf(bus, slot, func);
+    device->classCode = GetClassCode(bus, slot, func);
+    device->subclass = GetSubclass(bus, slot, func);
+    device->progIf = GetProgIf(bus, slot, func);
 
     int ret = devices->get_length();
     devices->add_back(device);
@@ -198,7 +198,7 @@ void Init() {
     unknownDevice = new PCIInfo;
     unknownDevice->vendorID = unknownDevice->deviceID = 0xFFFF;
 
-    devices = new Vector<PCIInfo>();
+    devices = new Vector<PCIInfo*>();
     enhancedBaseAddresses = new Vector<PCIMCFGBaseAddress>();
 
     mcfgTable = ACPI::mcfg;
@@ -219,9 +219,9 @@ void Init() {
         for (uint16_t j = 0; j < 32; j++) { // Slot
             if (CheckDevice(i, j, 0)) {
                 int index = AddDevice(i, j, 0);
-                auto& d = devices->get_at(index);
+                auto* d = devices->get_at(index);
 
-                if (GetHeaderType(d.bus, d.slot, d.func) & 0x80) {
+                if (GetHeaderType(d->bus, d->slot, d->func) & 0x80) {
                     for (int k = 1; k < 8; k++) { // Func
                         if (CheckDevice(i, j, k)) {
                             AddDevice(i, j, k);
