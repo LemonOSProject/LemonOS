@@ -45,7 +45,7 @@ See [System Requirements](#system-requirements)
 ## Third Party
 
 Lemon OS depends on:
-[mlibc](https://github.com/managarm/mlibc), [Freetype](https://freetype.org/), [zlib](https://z-lib.org/), [libressl](https://www.libressl.org/), [ffmpeg](https://ffmpeg.org/), [libfmt](https://fmt.dev) and [libpng](http://www.libpng.org/pub/png/libpng.html).
+[mlibc](https://github.com/managarm/mlibc), [Freetype](https://freetype.org/), [zlib](https://z-lib.org/), [libressl](https://www.libressl.org/), [ffmpeg](https://ffmpeg.org/), [libfmt](https://fmt.dev), [libjpeg-turbo](https://libjpeg-turbo.org/) and [libpng](http://www.libpng.org/pub/png/libpng.html).
 
 [Optional ports](Ports/) include LLVM/Clang, DOOM, Binutils and Python 3.8
 

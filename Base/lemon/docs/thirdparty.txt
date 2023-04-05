@@ -1,4 +1,4 @@
-Lemon OS uses the following third paty libraries: 
+Lemon OS uses the following third party libraries: 
 [mlibc](https/://github.com/managarm/mlibc)
 
 [FreeType](https://freetype.org/)
@@ -14,3 +14,6 @@ This software uses libraries from the FFmpeg project under the LGPLv2.1
 [libfmt](https://fmt.dev)
 
 [libpng](http://www.libpng.org/pub/png/libpng.html)
+
+[libjpeg-turbo](https://libjpeg-turbo.org/)
+
