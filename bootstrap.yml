@@ -58,10 +58,6 @@ sources:
       - args: ['./bootstrap']
 
   - name: mlibc
-    git: 'https://github.com/managarm/mlibc.git'
-    branch: 'master'
-    rolling_version: true
-    version: '0.0pl@ROLLING_ID@'
 
   - name: icu
     subdir: 'Ports'
