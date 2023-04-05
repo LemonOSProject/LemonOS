@@ -64,6 +64,7 @@ jobs:
         run: |
           cd Build
           xbstrap run build-disk
+          cd ..
           zip lemon.img.zip Disks/Lemon.img
           echo "RELEASE_DATE=$(date --iso-8601)" >> $GITHUB_ENV
       
