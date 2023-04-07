@@ -67,16 +67,12 @@ jobs:
           cd ..
           zip lemon.img.zip Disks/Lemon.img
           echo "RELEASE_DATE=$(date --iso-8601)" >> $GITHUB_ENV
-      
-      - name: Uploading image as artefact
-        uses: actions/upload-artifact@v2
-        with:
-          name: Lemon
-          path: Disks/Lemon.img
 
       - name: Create release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         with:
+          tag_name: nightly-${{ env.RELEASE_DATE }}
           name: nightly-${{ env.RELEASE_DATE }}
           prerelease: true
-          artefacts: "lemon.img.zip"
+          files: |
+            lemon.img.zip
