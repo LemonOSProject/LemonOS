@@ -14,8 +14,7 @@ If you have any questions or concerns feel free to open a GitHub issue, join our
 ## [Building Lemon OS](Documentation/Build/Building-Lemon-OS.md)
 
 ## Prebuilt Image
-[Nightly Images](https://github.com/LemonOSProject/LemonOS/actions/workflows/ci.yml?query=is%3Asuccess+branch%3Amaster) - Go to latest job, `Lemon.img` located under Artifacts\
-**You must be logged in to GitHub to download the image**
+[Nightly Images](https://github.com/LemonOSProject/LemonOS/releases)
 
 **Before running**
 See [System Requirements](#system-requirements)
