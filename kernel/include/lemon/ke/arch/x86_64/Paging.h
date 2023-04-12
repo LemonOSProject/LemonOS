@@ -55,6 +55,9 @@
 #define PAGE_SHIFT_4K 12
 #define PAGE_COUNT_4K(size) (((size) + (PAGE_SIZE_4K - 1)) >> 12)
 
+// Write-protect - kernel writes to read-only pages cause a page fault
+#define CR0_WP (1 << 16)
+
 typedef uint64_t page_t;
 typedef uint64_t pd_entry_t;
 typedef uint64_t pdpt_entry_t;

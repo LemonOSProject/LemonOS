@@ -140,6 +140,12 @@ void InitializeVirtualMemory() {
         memset(&(kernelHeapDirTables[i]), 0, sizeof(page_t) * PAGES_PER_TABLE);
     }
 
+    uint64_t cr0;
+    asm volatile("mov %%cr0, %%rax" : "=a"(cr0));
+    cr0 |= CR0_WP;
+    asm volatile("mov %%rax, %%cr0" :: "a"(cr0));
+    
+
     kernelPML4Phys = (uint64_t)kernelPML4 - KERNEL_VIRTUAL_BASE;
     asm("mov %%rax, %%cr3" ::"a"((uint64_t)kernelPML4 - KERNEL_VIRTUAL_BASE));
 }
@@ -615,8 +621,7 @@ void MapVirtualMemory4K(uint64_t phys, uint64_t virt, uint64_t amount, uint64_t 
                             pageMap); // If we don't have a page table at this address, create one.
 
         assert(pageMap->pageTables[pdptIndex][pageDirIndex]);
-        pageMap->pageTables[pdptIndex][pageDirIndex][pageIndex] = flags;
-        SetPageFrame(&(pageMap->pageTables[pdptIndex][pageDirIndex][pageIndex]), phys);
+        pageMap->pageTables[pdptIndex][pageDirIndex][pageIndex] = (phys & PAGE_FRAME) | flags;
 
         invlpg(virt);
 
@@ -725,7 +730,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
         AddressSpace* addressSpace = process->addressSpace;
         asm("sti");
         MappedRegion* faultRegion =
-            addressSpace->AddressToRegionReadLock(faultAddress); // Remember that this acquires a lock
+            addressSpace->AddressToRegionWriteLock(faultAddress); // Remember that this acquires a lock
         asm("cli");
         if (faultRegion &&
             faultRegion->vmObject.get()) { // If there is a corresponding VMO for the fault then this is not an error
@@ -742,7 +747,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
                              addressSpace->GetPageMap()); // In case the block was never allocated in the first place
                     asm("cli");
 
-                    faultRegion->lock.ReleaseRead();
+                    faultRegion->lock.ReleaseWrite();
                     if ((regs->cs & 0x3)) {
                         releaseLock(&Thread::Current()->kernelLock);
                     }
@@ -759,7 +764,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
                     clone->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(),
                                addressSpace->GetPageMap()); // In case the block was never allocated in the first place
 
-                    faultRegion->lock.ReleaseRead();
+                    faultRegion->lock.ReleaseWrite();
 
                     if ((regs->cs & 0x3)) {
                         releaseLock(&Thread::Current()->kernelLock);
@@ -771,7 +776,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
             asm("sti");
             int status = faultRegion->vmObject->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(),
                                                     addressSpace->GetPageMap());
-            faultRegion->lock.ReleaseRead();
+            faultRegion->lock.ReleaseWrite();
 
             if (!status) {
                 if ((regs->cs & 0x3)) {
@@ -781,7 +786,8 @@ void PageFaultHandler(void*, RegisterContext* regs) {
             }
             asm("cli");
         } else if (faultRegion) {
-            faultRegion->lock.ReleaseRead();
+            Log::Info("invalid region!");
+            faultRegion->lock.ReleaseWrite();
         } else if (PageFaultTrap trap; pageFaultTraps->get(regs->rip, trap)) {
             // If we have found a handler, set the IP to the handler
             // and run
