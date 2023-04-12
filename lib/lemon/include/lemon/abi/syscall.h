@@ -21,4 +21,6 @@ enum {
     _le_futex_wake = 0x10005,
     _le_set_user_tcb = 0x10006,
     _le_create_process = 0x10007,
+    _le_create_thread = 0x10008,
+    _le_nanosleep = 0x10009
 };

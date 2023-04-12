@@ -12,6 +12,8 @@ HIRAKU_CALL long le_futex_wait(int* futex, int expected, const struct timespec* 
 HIRAKU_CALL long le_futex_wake(int* futex);
 HIRAKU_CALL long le_set_user_tcb(void* tcb);
 HIRAKU_CALL long le_create_process(le_handle_t* handle, uint64_t flags, le_str_t name);
+HIRAKU_CALL long le_create_thread(le_handle_t* handle, uint64_t flags, void* entry, void* stack);
+HIRAKU_CALL long le_nanosleep(long* nanos);
 
 HIRAKU_CALL long sys_read(le_handle_t handle, uint8_t* buf, size_t count, ssize_t* bytesRead);
 HIRAKU_CALL long sys_write(le_handle_t handle, const uint8_t* buf, size_t count, ssize_t* bytesWritten);

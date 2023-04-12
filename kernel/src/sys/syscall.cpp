@@ -43,7 +43,7 @@ void DumpLastSyscall(Thread*) {
 }
 
 #define SYS_SYSCALLS 12
-#define LE_SYSCALLS 8
+#define LE_SYSCALLS 10
 
 #define SC(x) ((void*)&x)
 
@@ -55,6 +55,7 @@ void* sysTable[] = {
 void* leTable[] = {
     SC(le_log),        SC(le_boot_timer), SC(le_handle_close), SC(le_handle_dup),
     SC(le_futex_wait), SC(le_futex_wake), SC(le_set_user_tcb), SC(le_create_process),
+    SC(le_create_thread), SC(le_nanosleep)
 };
 
 void** subsystems[2] = {sysTable, leTable};
@@ -81,7 +82,21 @@ extern "C" void syscall_handler(RegisterContext* r) {
         return;
     }
 
-    acquireLock(&th->kernelLock);
+    asm("cli");
+
+    // If the thread is zombified, do NOT take the kernel lock
+    // so that the thread can be killed
+    while(th->state == ThreadStateZombie) {
+        asm("sti");
+        Scheduler::Yield();
+    }
+
+    while(acquireTestLock(&th->kernelLock)) {
+        asm("sti");
+        Scheduler::Yield();
+
+        asm("cli");
+    }
     asm("sti");
 
     th->scRegisters = r;

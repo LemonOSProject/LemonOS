@@ -13,6 +13,7 @@
 #include <MM/AddressSpace.h>
 #include <Objects/Handle.h>
 #include <Objects/KObject.h>
+#include <Objects/Watcher.h>
 #include <RefPtr.h>
 #include <Thread.h>
 #include <TimerEvent.h>
@@ -24,7 +25,7 @@
 class Process : public KernelObject {
     DECLARE_KOBJECT(Process);
 
-    friend struct Thread;
+    friend class Thread;
     friend void KernelProcess();
     friend long SysExecve(RegisterContext* r);
     friend long SysFutexWait(RegisterContext* r);
@@ -106,6 +107,13 @@ public:
                       const Vector<String>& envp, const char* execPath);
 
     /////////////////////////////
+    /// \brief Kills all other threads
+    ///
+    /// Assumes the function is called from a thread of the process
+    /////////////////////////////
+    void KillAllOtherThreads();
+
+    /////////////////////////////
     /// \brief Retrieve Process PID
     /////////////////////////////
     ALWAYS_INLINE pid_t PID() const {
@@ -161,7 +169,7 @@ public:
         return GetThreadFromTID_Unlocked(tid);
     }
 
-    pid_t CreateChildThread(uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss);
+    FancyRefPtr<Thread> CreateChildThread(void* entry, void* stack);
     const List<FancyRefPtr<Thread>>& Threads() {
         return m_threads;
     }

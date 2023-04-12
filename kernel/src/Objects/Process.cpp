@@ -138,6 +138,95 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
     return proc;
 }
 
+void Process::KillAllOtherThreads() {
+    ScopedSpinLock lock{m_processLock};
+
+    Thread* thisThread = Thread::Current();
+    assert(thisThread->parent == this);
+
+    FancyRefPtr<Thread> thisThreadRef;
+
+    List<FancyRefPtr<Thread>> runningThreads;
+    for (auto& thread : m_threads) {
+        if (thread == thisThread) {
+            thisThreadRef = thread;
+        } else if (thread) {
+            asm("sti");
+            acquireLockIntDisable(&thread->stateLock);
+            if (thread->state == ThreadStateDying) {
+                releaseLock(&thread->stateLock);
+                asm("sti");
+            }
+
+            if (thread->blocker && thread->state == ThreadStateBlocked) {
+                thread->state = ThreadStateZombie;
+                releaseLock(&thread->stateLock);
+                asm("sti");
+
+                thread->blocker->Interrupt(); // Stop the thread from blocking
+
+                acquireLockIntDisable(&thread->stateLock);
+            }
+
+            thread->state = ThreadStateZombie;
+
+            if (!acquireTestLock(&thread->kernelLock)) {
+                thread->state =
+                    ThreadStateDying; // We have acquired the lock so prevent the thread from getting scheduled
+                thread->timeSlice = thread->timeSliceDefault = 0;
+
+                releaseLock(&thread->stateLock);
+                asm("sti");
+            } else {
+                releaseLock(&thread->stateLock);
+                asm("sti");
+
+                runningThreads.add_back(thread);
+            }
+        }
+    }
+
+    asm("sti");
+    Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Killing threads...", m_pid);
+    while (runningThreads.get_length()) {
+        auto it = runningThreads.begin();
+        while (it != runningThreads.end()) {
+            assert(it->get()->state != ThreadStateRunning); 
+
+            FancyRefPtr<Thread> thread = *it;
+            if (!acquireTestLock(
+                    &thread->kernelLock)) { // Loop through all of the threads so we can acquire their locks
+                acquireLockIntDisable(&thread->stateLock);
+                thread->state = ThreadStateDying;
+                thread->timeSlice = thread->timeSliceDefault = 0;
+                releaseLock(&thread->stateLock);
+                asm("sti");
+
+                runningThreads.remove(it);
+
+                it = runningThreads.begin();
+            } else {
+                it++;
+            }
+        }
+
+        Scheduler::Yield();
+    }
+
+    assert(!runningThreads.get_length());
+
+    m_mainThread = thisThreadRef;
+
+    // Remove all the threads that were just killed
+    for(auto it = m_threads.begin(); it != m_threads.end(); it++) {
+        if((*it) != thisThreadRef) {
+            m_threads.remove(it);
+
+            it = m_threads.begin();
+        }
+    }
+}
+
 Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process* parent)
     : m_pid(pid), m_parent(parent) {
     if (_workingDir) {
@@ -669,11 +758,19 @@ void Process::Unwatch(KernelObjectWatcher* watcher) {
 }
 
 FancyRefPtr<Process> Process::Fork() {
+    assert(this == Process::Current());
+
     ScopedSpinLock lock(m_processLock);
 
     FancyRefPtr<Process> newProcess = new Process(Scheduler::GetNextPID(), name, workingDirPath, this);
     delete newProcess->addressSpace; // TODO: Do not create address space in first place
     newProcess->addressSpace = addressSpace->Fork();
+
+    PageMap* thisPageMap = this->GetPageMap();
+    PageMap* otherPageMap = newProcess->GetPageMap();
+
+    // Force TLB flush
+    asm volatile("mov %%rax, %%cr3" ::"a"(thisPageMap->pml4Phys));
 
     newProcess->euid = euid;
     newProcess->uid = uid;
@@ -708,9 +805,6 @@ FancyRefPtr<Process> Process::Fork() {
     newProcess->MapProcessEnvironmentBlock();
     newProcess->m_mainThread->gsBase = newProcess->pebRegion->Base();
 
-    PageMap* thisPageMap = this->GetPageMap();
-    PageMap* otherPageMap = newProcess->GetPageMap();
-
     // TODO: Make it so that the process cannot unmap the PEB
 
     newProcess->pebRegion->vmObject->MapAllocatedBlocks(newProcess->pebRegion->Base(), otherPageMap);
@@ -728,26 +822,28 @@ FancyRefPtr<Process> Process::Fork() {
     return newProcess;
 }
 
-pid_t Process::CreateChildThread(uintptr_t entry, uintptr_t stack, uint64_t cs, uint64_t ss) {
+FancyRefPtr<Thread> Process::CreateChildThread(void* entry, void* stack) {
+    ScopedSpinLock lock{m_processLock};
+
     pid_t threadID = m_nextThreadID++;
-    Thread& thread = *m_threads.add_back(new Thread(this, threadID));
+    FancyRefPtr<Thread> thread = m_threads.add_back(new Thread(this, threadID));
 
-    thread.registers.rip = entry;
-    thread.registers.rsp = stack;
-    thread.registers.rbp = stack;
-    thread.state = ThreadStateRunning;
-    thread.stack = thread.stackLimit = reinterpret_cast<void*>(stack);
+    thread->registers.rip = (uintptr_t)entry;
+    thread->registers.rsp = (uintptr_t)stack;
+    thread->registers.rbp = (uintptr_t)stack;
+    thread->state = ThreadStateRunning;
+    thread->stack = thread->stackLimit = reinterpret_cast<void*>(stack);
 
-    RegisterContext* registers = &thread.registers;
+    RegisterContext* registers = &thread->registers;
     registers->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
-    thread.registers.cs = cs;
-    thread.registers.ss = ss;
-    thread.timeSliceDefault = THREAD_TIMESLICE_DEFAULT;
-    thread.timeSlice = thread.timeSliceDefault;
-    thread.priority = 4;
+    thread->registers.cs = USER_CS;
+    thread->registers.ss = USER_SS;
+    thread->timeSliceDefault = THREAD_TIMESLICE_DEFAULT;
+    thread->timeSlice = thread->timeSliceDefault;
+    thread->priority = 4;
 
-    Scheduler::InsertNewThreadIntoQueue(&thread);
-    return threadID;
+    Scheduler::InsertNewThreadIntoQueue(thread.get());
+    return thread;
 }
 
 FancyRefPtr<Thread> Process::GetThreadFromTID_Unlocked(pid_t tid) {

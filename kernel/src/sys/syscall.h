@@ -36,6 +36,18 @@
         std::move(r.Value());                                                                                          \
     })
 
+#define KO_GET(T, handle)                                                                                                 \
+    ({                                                                                                                 \
+        auto r = Process::Current()->GetHandleAs<T>(handle);                                                        \
+        if (r.HasError()) {                                                                                            \
+            return r.err.code;                                                                                         \
+        }                                                                                                              \
+        if (!r.Value()) {                                                                                              \
+            return EBADF;                                                                                              \
+        }                                                                                                              \
+        std::move(r.Value());                                                                                          \
+    })
+
 #define SC_USER_STORE(ptr, val)                                                                                        \
     ({                                                                                                                 \
         if (ptr.StoreValue(val))                                                                                       \
@@ -91,6 +103,8 @@ SYSCALL long le_futex_wake(UserPointer<int> futex);
 SYSCALL long le_set_user_tcb(uintptr_t value);
 SYSCALL long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, le_str_t name);
 SYSCALL long le_start_process(le_handle_t handle);
+SYSCALL long le_create_thread(UserPointer<le_handle_t> handle, uint64_t flags, void* entry, void* stack);
+SYSCALL long le_nanosleep(UserPointer<long> nanos);
 
 SYSCALL long sys_read(le_handle_t handle, uint8_t* buf, size_t count, UserPointer<ssize_t> bytesRead);
 SYSCALL long sys_write(le_handle_t handle, const uint8_t* buf, size_t count, UserPointer<ssize_t> bytesWritten);

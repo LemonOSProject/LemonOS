@@ -1,14 +1,8 @@
 #pragma once
 
-#include <Debug.h>
-#ifdef DEBUG_KOBJECTS
-#include <Logging.h>
-#endif
-
 #include <Objects/Event.h>
 
-#include <CString.h>
-#include <Lock.h>
+#include <Debug.h>
 #include <RefPtr.h>
 #include <stdint.h>
 
@@ -21,6 +15,7 @@ enum class KOTypeID : int {
     Service,
     File,
     Process,
+    Thread,
 };
 
 #define DECLARE_KOBJECT(type)                                                                                          \
@@ -48,26 +43,4 @@ concept KernelObjectDerived = requires(T t) {
     T::TypeID();
     t.InstanceTypeID();
     static_cast<KernelObject*>(&t);
-};
-
-// KernelObjectWatcher is a semaphore initialized to 0.
-// A thread can wait on it like any semaphore,
-// and when a file is ready it will signal and waiting thread(s) will get woken
-class KernelObjectWatcher : public Semaphore {
-    List<FancyRefPtr<KernelObject>> watching;
-
-public:
-    KernelObjectWatcher() : Semaphore(0) {}
-
-    template <KernelObjectDerived O> ALWAYS_INLINE void Watch(FancyRefPtr<O> object, KOEvent events) {
-        object->Watch(this, events);
-
-        watching.add_back(static_pointer_cast<KernelObject, O>(std::move(object)));
-    }
-
-    ~KernelObjectWatcher() {
-        for (const auto& f : watching) {
-            f->Unwatch(this);
-        }
-    }
 };

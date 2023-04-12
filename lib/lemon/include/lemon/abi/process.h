@@ -33,9 +33,6 @@ typedef struct LemonProcessInfo {
 // Return a PID instea of a handle (LE_PROCESS_DETACH must be set)
 #define LE_PROCESS_PID 8
 
-// Returned from le_create_process when the process is forked
-#define LE_PROCESS_IS_CHILD -1
-
 // Cap the maximum length of any one argument passed to sys_execve
 // Prevents the kernel getting caught up trying to find the end of a dodgy string passed by the user
 #define SYS_ARGLEN_MAX (0x100000)

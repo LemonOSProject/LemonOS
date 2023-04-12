@@ -255,7 +255,7 @@ MappedRegion* AddressSpace::AllocateAnonymousVMObject(size_t size, uintptr_t bas
 AddressSpace* AddressSpace::Fork() {
     ScopedSpinLock acquired(m_lock);
 
-    AddressSpace* fork = new AddressSpace(Memory::ClonePageMap(m_pageMap));
+    AddressSpace* fork = new AddressSpace(Memory::CreatePageMap());
     for (auto it = m_regions.begin(); it != m_regions.end(); it++) {
         MappedRegion& r = *it;
 

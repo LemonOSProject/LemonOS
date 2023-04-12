@@ -151,3 +151,20 @@ long sys_openat(le_handle_t directory, le_str_t _filename, int flags, int mode, 
 ## sys_pread
 
 ## sys_pwrite
+
+## sys_execve
+```c
+long sys_execve(le_str_t filename, le_str_t const* argv, le_str_t const* envp);
+```
+
+Executes the ELF executable at *filename*. The calling process is replaced with the new program. 
+
+*argv* is a pointer to strings containing the program arguments.
+*envp* is a pointer to string containing the environment variables.
+
+### Errors
+**EFAULT** *filename* or a pointer in *argv* or *envp* does not point to accessible memory.
+
+**ENOENT** *filename* does not exist.
+
+**ENOEXEC** *filename* is not a valid ELF executable.

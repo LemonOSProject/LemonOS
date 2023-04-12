@@ -4,7 +4,9 @@
 
 extern "C" {
 
+// Returns 1 on fault
 int user_memcpy(void* dest, const void* src, size_t count);
+
 void user_memcpy_trap();
 void user_memcpy_trap_handler();
 

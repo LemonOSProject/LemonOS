@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 class Process;
-struct Thread;
+class Thread;
 template <typename T> class FastList;
 
 typedef struct {

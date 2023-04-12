@@ -44,6 +44,8 @@ PhysicalVMObject::PhysicalVMObject(uintptr_t size, bool anonymous, bool shared) 
 }
 
 int PhysicalVMObject::Hit(uintptr_t base, uintptr_t offset, PageMap* pMap){
+    assert(!copyOnWrite);
+
     unsigned blockIndex = offset >> PAGE_SHIFT_4K;
     assert(blockIndex < (size >> PAGE_SHIFT_4K));
 

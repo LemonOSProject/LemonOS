@@ -44,6 +44,14 @@ long le_create_process(le_handle_t* handle, uint64_t flags, le_str_t name) {
     return syscall(_le_create_process, handle, flags, name);
 }
 
+long le_create_thread(le_handle_t* handle, uint64_t flags, void* entry, void* stack) {
+    return syscall(_le_create_thread, handle, flags, entry, stack);
+}
+
+long le_nanosleep(long* nanos) {
+    return syscall(_le_nanosleep, nanos);
+}
+
 long sys_read(le_handle_t handle, uint8_t* buf, size_t count, ssize_t* bytesRead) {
     return syscall(_sys_read, handle, buf, count, bytesRead);
 }

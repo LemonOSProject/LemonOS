@@ -23,19 +23,27 @@ template <typename P> inline static constexpr int IsUsermodePointer(P* ptr, size
 // Class for handling usermode pointers
 template <typename T> class UserPointer final {
 public:
-    UserPointer(uintptr_t ptr) : m_ptr(reinterpret_cast<T*>(ptr)) {}
-    UserPointer(T* ptr) : m_ptr(ptr) {}
+    UserPointer(uintptr_t ptr) : m_ptr(reinterpret_cast<T*>(ptr)) {
+    }
+    UserPointer(T* ptr) : m_ptr(ptr) {
+    }
 
     [[nodiscard]] ALWAYS_INLINE int GetValue(T& kernelValue) const {
-        return user_memcpy(&kernelValue, m_ptr, sizeof(T));
+        return (!IsUsermodePointer<T>(m_ptr)) ||
+            user_memcpy(&kernelValue, m_ptr, sizeof(T));
     }
     [[nodiscard]] ALWAYS_INLINE int StoreValue(const T& kernelValue) {
-        return user_memcpy(m_ptr, &kernelValue, sizeof(T));
+        return (!IsUsermodePointer<T>(m_ptr)) ||
+            user_memcpy(m_ptr, &kernelValue, sizeof(T));
     }
 
-    ALWAYS_INLINE T* Pointer() { return m_ptr; }
+    ALWAYS_INLINE T* Pointer() {
+        return m_ptr;
+    }
 
-    ALWAYS_INLINE operator bool() const { return m_ptr != nullptr; }
+    ALWAYS_INLINE operator bool() const {
+        return m_ptr != nullptr;
+    }
 
     ALWAYS_INLINE UserPointer& operator+=(ptrdiff_t i) {
         m_ptr += i;
@@ -65,7 +73,8 @@ private:
 
 template <typename T> class UserBuffer final {
 public:
-    UserBuffer(uintptr_t ptr) : m_ptr(reinterpret_cast<T*>(ptr)) {}
+    UserBuffer(uintptr_t ptr) : m_ptr(reinterpret_cast<T*>(ptr)) {
+    }
 
     [[nodiscard]] ALWAYS_INLINE int GetValue(unsigned index, T& kernelValue) const {
         return user_memcpy(&kernelValue, &m_ptr[index], sizeof(T));
@@ -90,7 +99,9 @@ public:
         return user_memcpy(&m_ptr[offset], data, sizeof(T) * count);
     }
 
-    ALWAYS_INLINE T* Pointer() { return m_ptr; }
+    ALWAYS_INLINE T* Pointer() {
+        return m_ptr;
+    }
 
 private:
     T* m_ptr;
@@ -98,10 +109,10 @@ private:
 
 #define TRY_STORE_UMODE_VALUE(ptrObject, value)                                                                        \
     if (ptrObject.StoreValue(value)) {                                                                                 \
-        return EFAULT;                                                                                                \
+        return EFAULT;                                                                                                 \
     }
 
 #define TRY_GET_UMODE_VALUE(ptrObject, value)                                                                          \
     if (ptrObject.GetValue(value)) {                                                                                   \
-        return EFAULT;                                                                                                \
+        return EFAULT;                                                                                                 \
     }

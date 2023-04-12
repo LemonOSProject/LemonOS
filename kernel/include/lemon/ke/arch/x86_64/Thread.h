@@ -7,6 +7,8 @@
 #include <Spinlock.h>
 #include <Timer.h>
 
+#include <Objects/KObject.h>
+
 #include <stdint.h>
 #include <abi/types.h>
 
@@ -20,10 +22,10 @@ enum {
 };
 
 class Process;
-struct Thread;
+class Thread;
 
 class ThreadBlocker {
-    friend struct Thread;
+    friend class Thread;
 
 protected:
     lock_t lock = 0;
@@ -50,7 +52,9 @@ public:
 
 using FutexThreadBlocker = GenericThreadBlocker;
 
-struct Thread {
+class Thread final : public KernelObject {
+    DECLARE_KOBJECT(Thread)
+public:
     lock_t stateLock = 0; // Thread lock
     lock_t kernelLock = 0; // Indicates whether the thread is executing kernel code
 

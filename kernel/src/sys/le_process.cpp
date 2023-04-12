@@ -1,5 +1,6 @@
 #include "syscall.h"
 
+#include <abi/handle.h>
 #include <abi/process.h>
 
 #include <Objects/Process.h>
@@ -30,7 +31,7 @@ long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, le_str_t
 
             // Store zero before the address space is forked,
             // the child will know its the child when the returned value is LE_PROCESS_IS_CHILD
-            if (handle.StoreValue(LE_PROCESS_IS_CHILD)) {
+            if (handle.StoreValue(LE_HANDLE_PROCESS_SELF)) {
                 return EFAULT;
             }
         }
@@ -60,9 +61,7 @@ long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, le_str_t
         nt->registers = *t->scRegisters;
         memcpy(nt->fxState, t->fxState, PAGE_SIZE_4K);
 
-        // Returns ECHILD from the syscall
-        nt->registers.rax = ECHILD;
-
+        nt->registers.rax = 0;
         nt->kernelLock = 0;
 
         if (flags & LE_PROCESS_PID) {

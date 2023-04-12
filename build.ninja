@@ -21,7 +21,7 @@ build libs: run_xbstrap
 build system: run_xbstrap
     cmd = install lemon-system --rebuild
 
-build lemon: run_xbstrap ke system libs
+build lemon: phony ke system libs
 
 build install-all-packages: run_xbstrap
     cmd = install --all

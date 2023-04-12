@@ -55,6 +55,35 @@ SYSCALL long le_set_user_tcb(uintptr_t value) {
     return 0;
 }
 
+long le_nanosleep(UserPointer<long> nanos) {
+    long us;
+    if(nanos.GetValue(us)) {
+        return EFAULT;
+    }
+
+    if(us < 0) {
+        return EINVAL;
+    }
+
+    us /= 1000;
+    
+    long targetTime = Timer::UsecondsSinceBoot() + us;
+
+    Thread::Current()->Sleep(us);
+
+    targetTime -= Timer::UsecondsSinceBoot();
+
+    if(Thread::Current()->HasPendingSignals() && targetTime > 0) {
+        // Don't worry about EFAULT,
+        // just return EINTR
+        nanos.StoreValue(targetTime * 1000);
+
+        return EINTR;
+    }
+
+    return 0;
+}
+
 long le_load_module(le_str_t path) {
     return ENOSYS;
 }
