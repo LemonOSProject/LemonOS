@@ -27,9 +27,6 @@ class Process : public KernelObject {
 
     friend class Thread;
     friend void KernelProcess();
-    friend long SysExecve(RegisterContext* r);
-    friend long SysFutexWait(RegisterContext* r);
-    friend long SysFutexWake(RegisterContext* r);
 
 public:
     enum {
@@ -40,8 +37,9 @@ public:
 
     static FancyRefPtr<Process> CreateIdleProcess(const char* name);
     static FancyRefPtr<Process> CreateKernelProcess(void* entry, const char* name, Process* parent);
-    static FancyRefPtr<Process> CreateELFProcess(void* elf, const Vector<String>& argv, const Vector<String>& envp,
-                                                 const char* execPath, Process* parent);
+    static ErrorOr<FancyRefPtr<Process>> CreateELFProcess(const FancyRefPtr<File>& elf, const Vector<String>& argv,
+                                                          const Vector<String>& envp, const char* execPath,
+                                                          Process* parent);
     ALWAYS_INLINE static Process* Current() {
         if (Thread::Current())
             return Thread::Current()->parent;
@@ -103,8 +101,8 @@ public:
     ///
     /// \return Entry point of the ELF (either dynamic linker or executable itself)
     /////////////////////////////
-    uintptr_t LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Vector<String>& argv,
-                      const Vector<String>& envp, const char* execPath);
+    ErrorOr<uintptr_t> LoadELF(uintptr_t* stackPointer, ELFData elfInfo, const Vector<String>& argv,
+                               const Vector<String>& envp, const char* execPath);
 
     /////////////////////////////
     /// \brief Kills all other threads
@@ -293,7 +291,7 @@ public:
         }
 
         // Deferences the KernelObject
-        m_handles[id] = {-1, nullptr};
+        m_handles[id] = {};
         return 0;
     }
 
@@ -442,7 +440,6 @@ public:
     // POSIX signal handlers
     SignalHandler signalHandlers[SIGNAL_MAX];
 
-    uint64_t usedMemoryBlocks = 0;
     timeval creationTime;     // When the process was created
     uint64_t activeTicks = 0; // How many ticks this process has been active
 

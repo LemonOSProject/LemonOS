@@ -74,10 +74,15 @@ using pml4_t = pml4_entry_t[PDPTS_PER_PML4];
 
 typedef struct PageMap { // Each process will have a maximum of 96GB of virtual memory.
     pdpt_entry_t* pdpt;  // 512GB is more than ample
-    pd_entry_t** pageDirs;
-    uint64_t* pageDirsPhys;
+
+    pd_entry_t** pageDirPointers;
+    uint64_t* pageDirPointersPhys;
+    pd_entry_t* pageDirs;
+
     page_t*** pageTables;
+
     pml4_entry_t* pml4;
+
     uint64_t pdptPhys;
     uint64_t pml4Phys;
 } __attribute__((packed)) page_map_t;

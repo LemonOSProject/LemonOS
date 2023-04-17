@@ -65,8 +65,16 @@ public:
         } else {
             acquireLock(&m_lock);
         }
+
+        m_acquired = true;
     }
     ALWAYS_INLINE ~ScopedSpinLock() {
+        if(m_acquired) {
+            release();
+        }
+    }
+
+    ALWAYS_INLINE void release() {
         releaseLock(&m_lock);
 
         if constexpr (disableInterrupts) {
@@ -74,9 +82,12 @@ public:
                 asm volatile("sti");
             }
         }
+
+        m_acquired = false;
     }
 
 private:
     lock_t& m_lock;
     bool m_irq;
+    bool m_acquired;
 };

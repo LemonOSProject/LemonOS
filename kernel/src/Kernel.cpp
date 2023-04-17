@@ -68,7 +68,7 @@ void KernelProcess() {
 
     Log::Info("Video Resolution: %dx%dx%d", videoMode.width, videoMode.height, videoMode.bpp);
 
-    Log::Info("Used RAM: %d MB", Memory::usedPhysicalBlocks * 4096 / 1024 / 1024);
+    Log::Info("Used RAM: %d MB", Memory::usedPhysicalBlocks * 4 / 1024);
 
     Log::Info("Mounting initrd, tmpfs...");
 
@@ -117,11 +117,25 @@ void KernelProcess() {
 
     LoadHirakuSymbols();
 
-    void* initElf = (void*)kmalloc(initNode->size);
-    fs::Read(initNode, 0, initNode->size, initElf);
+    FancyRefPtr<File> file = ({
+        auto r = fs::Open(initNode);
+        if(r.HasError()) {
+            KernelPanic("Error opening /initrd/init.lef");
+        }
 
-    auto initProc = Process::CreateELFProcess(initElf, Vector<String>("init"), Vector<String>("PATH=/initrd"),
+        r.Value();
+    });
+
+
+    auto initProc = ({
+        auto r = Process::CreateELFProcess(file, Vector<String>("init"), Vector<String>("PATH=/initrd"),
                                               "/initrd/init.lef", nullptr);
+        if(r.HasError()) {
+            KernelPanic("Error executing /initrd/init.lef");
+        }
+
+        r.Value();
+    });
 
     if(HAL::debugMode) {
         ScopedSpinLock lock{Log::logLock};
@@ -136,8 +150,6 @@ void KernelProcess() {
     }
 
     initProc->Start();
-
-    kfree(initElf);
 
     for (;;) {
         acquireLock(&Scheduler::destroyedProcessesLock);

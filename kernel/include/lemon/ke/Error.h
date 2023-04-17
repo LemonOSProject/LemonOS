@@ -100,4 +100,5 @@ private:
 template<typename T>
 using ErrorOr = Result<T, Error>;
 
+#define TRY(func) ({auto result = func; if(result != ERROR_NONE) { return result; }})
 #define TRY_OR_ERROR(func) ({auto result = func; if (result.HasError()) { return result.err; } std::move(result.Value());})

@@ -61,6 +61,14 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
 
     proc->KillAllOtherThreads();
 
+    for(le_handle_t i = 0; i < proc->HandleCount(); i++) {
+        Handle h = proc->GetHandle(i);
+
+        if(h.IsValid() && h.closeOnExec) {
+            proc->DestroyHandle(i);
+        }
+    }
+
     fs::Close(file);
 
     return ENOSYS;

@@ -63,15 +63,16 @@ FancyRefPtr<Process> Process::CreateKernelProcess(void* entry, const char* name,
     proc->m_mainThread->registers.rsp = reinterpret_cast<uintptr_t>(proc->m_mainThread->kernelStack);
     proc->m_mainThread->registers.rbp = reinterpret_cast<uintptr_t>(proc->m_mainThread->kernelStack);
 
+    proc->m_mainThread->kernelLock = 1;
+
     Scheduler::RegisterProcess(proc);
     return proc;
 }
 
-FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& argv, const Vector<String>& envp,
+ErrorOr<FancyRefPtr<Process>> Process::CreateELFProcess(const FancyRefPtr<File>& elf, const Vector<String>& argv, const Vector<String>& envp,
                                                const char* execPath, Process* parent) {
-    if (!VerifyELF(elf)) {
-        return nullptr;
-    }
+    ELFData exe;
+    TRY(elf_load_file(elf, exe));
 
     const char* name = "unknown";
     if (argv.size() >= 1) {
@@ -86,7 +87,16 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
     thread->timeSlice = thread->timeSliceDefault;
     thread->priority = 4;
 
-    elf_info_t elfInfo = LoadELFSegments(proc.get(), elf, 0);
+    Error e = elf_load_segments(proc.get(), exe, 0);
+    elf_free_data(exe);
+
+    if(e != ERROR_NONE) {
+        proc->Die();
+        delete proc->addressSpace;
+        proc->addressSpace = nullptr;
+
+        return e;
+    }
 
     MappedRegion* stackRegion =
         proc->addressSpace->AllocateAnonymousVMObject(0x400000, 0x7000000000, false); // 4MB max stacksize
@@ -106,14 +116,16 @@ FancyRefPtr<Process> Process::CreateELFProcess(void* elf, const Vector<String>& 
     thread->gsBase = proc->pebRegion->Base();
     Log::Info("pebbase %x", thread->gsBase);
 
-    thread->registers.rip = proc->LoadELF(&thread->registers.rsp, elfInfo, argv, envp, execPath);
-    if (!thread->registers.rip) {
+    auto r = proc->LoadELF(&thread->registers.rsp, exe, argv, envp, execPath);
+    if (r.HasError()) {
         proc->Die();
         delete proc->addressSpace;
         proc->addressSpace = nullptr;
 
-        return nullptr;
+        return r.Err();
     }
+
+    thread->registers.rip = r.Value();
 
     assert(!(thread->registers.rsp & 0xF));
 
@@ -271,11 +283,11 @@ Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process*
     m_handles.add_back(HANDLE_NULL); // stderr
 }
 
-uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Vector<String>& argv,
+ErrorOr<uintptr_t> Process::LoadELF(uintptr_t* stackPointer, ELFData elfInfo, const Vector<String>& argv,
                            const Vector<String>& envp, const char* execPath) {
     uintptr_t rip = elfInfo.entry;
     uintptr_t linkerBaseAddress = 0x7FC0000000; // Linker base address
-    elf_info_t linkerELFInfo;
+    ELFData interpreter;
 
     if (elfInfo.linkerPath) {
         // char* linkPath = elfInfo.linkerPath;
@@ -285,22 +297,25 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
             KernelPanic("Failed to load dynamic linker!");
         }
 
-        void* linkerElf = kmalloc(node->size);
-        fs::Read(node, 0, node->size, (uint8_t*)linkerElf); // Load Dynamic Linker
-
-        if (!VerifyELF(linkerElf)) {
-            Log::Warning("Invalid Dynamic Linker ELF");
-            return 0;
+        auto open = fs::Open(node);
+        if(open.HasError()) {
+            return open.Err();
         }
 
-        linkerELFInfo = LoadELFSegments(this, linkerElf, linkerBaseAddress);
-        rip = linkerELFInfo.entry;
+        FancyRefPtr<File> file = open.Value();
+        
+        Error e = elf_load_file(file, interpreter);
+        if(e) {
+            elf_free_data(interpreter);
+            return e;
+        }
 
-        kfree(linkerElf);
+        e = elf_load_segments(this, interpreter, linkerBaseAddress);
+        rip = interpreter.entry;
     }
 
-    // char* tempArgv[argv.size()];
-    // char* tempEnvp[envp.size()];
+    char* tempArgv[argv.size()];
+    char* tempEnvp[envp.size()];
 
     // ABI Stuff
     uint64_t* stack = (uint64_t*)(*stackPointer);
@@ -311,25 +326,23 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
     InitializePEB();
 
     ProcessEnvironmentBlock* peb = (ProcessEnvironmentBlock*)m_mainThread->gsBase;
-    if (linkerELFInfo.dynamic) {
-        elf64_dynamic_t* dynamic = linkerELFInfo.dynamic;
+    if (interpreter.dynamic.size()) {
         elf64_symbol_t* symtab = nullptr;
         elf64_rela_t* plt = nullptr;
         size_t pltSz = 0;
         char* strtab = nullptr;
 
-        while (dynamic->tag != DT_NULL) {
-            if (dynamic->tag == DT_PLTRELSZ) {
-                pltSz = dynamic->val;
-            } else if (dynamic->tag == DT_STRTAB) {
-                strtab = (char*)(linkerBaseAddress + dynamic->ptr);
-            } else if (dynamic->tag == DT_SYMTAB) {
-                symtab = (elf64_symbol_t*)(linkerBaseAddress + dynamic->ptr);
-            } else if (dynamic->tag == DT_JMPREL) {
-                plt = (elf64_rela_t*)(linkerBaseAddress + dynamic->ptr);
+        for(const elf64_dynamic_t& dynamic : interpreter.dynamic) {
+            if (dynamic.tag == DT_PLTRELSZ) {
+                pltSz = dynamic.val;
+            } else if (dynamic.tag == DT_STRTAB) {
+                strtab = (char*)(linkerBaseAddress + dynamic.ptr);
+            } else if (dynamic.tag == DT_SYMTAB) {
+                symtab = (elf64_symbol_t*)(linkerBaseAddress + dynamic.ptr);
+            } else if (dynamic.tag == DT_JMPREL) {
+                Log::Info("PLT at: %x (%x)", linkerBaseAddress + dynamic.ptr, dynamic.ptr);
+                plt = (elf64_rela_t*)(linkerBaseAddress + dynamic.ptr);
             }
-
-            dynamic++;
         }
 
         assert(plt && symtab && strtab);
@@ -360,10 +373,12 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
 
             plt++;
         }
+    } else {
+        Log::Info("no dynamic??");
     }
 
     char* stackStr = (char*)stack;
-    /*for (int i = 0; i < argv.size(); i++) {
+    for (int i = 0; i < argv.size(); i++) {
         stackStr -= argv[i].Length() + 1;
         tempArgv[i] = stackStr;
         strcpy((char*)stackStr, argv[i].c_str());
@@ -381,13 +396,13 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
         strcpy((char*)stackStr, execPath);
 
         execPathValue = stackStr;
-    }*/
+    }
 
     stackStr -= (uintptr_t)stackStr & 0xf; // align the stack
 
     stack = (uint64_t*)stackStr;
 
-    // stack -= ((argv.size() + envp.size()) % 2); // If argc + envc is odd then the stack will be misaligned
+    stack -= ((argv.size() + envp.size()) % 2); // If argc + envc is odd then the stack will be misaligned
 
     stack--;
     *stack = 0; // AT_NULL
@@ -415,26 +430,28 @@ uintptr_t Process::LoadELF(uintptr_t* stackPointer, elf_info_t elfInfo, const Ve
     stack--;
     *stack = 0; // null
 
-    /*stack -= envp.size();
+    stack -= envp.size();
     for (int i = 0; i < envp.size(); i++) {
         *(stack + i) = (uint64_t)tempEnvp[i];
-    }*/
+    }
 
     stack--;
     *stack = 0; // null
 
-    /*stack -= argv.size();
+    stack -= argv.size();
     for (int i = 0; i < argv.size(); i++) {
         *(stack + i) = (uint64_t)tempArgv[i];
-    }*/
+    }
 
     stack--;
-    *stack = 0; // argv.size(); // argc
+    *stack = argv.size(); // argc
 
     assert(!((uintptr_t)stack & 0xf));
 
     asm volatile("mov %%rax, %%cr3" ::"a"(Scheduler::GetCurrentProcess()->GetPageMap()->pml4Phys));
     asm("sti");
+
+    elf_free_data(interpreter);
 
     *stackPointer = (uintptr_t)stack;
     return rip;
@@ -481,8 +498,6 @@ void Process::Destroy() {
 
 void Process::Die() {
     asm volatile("sti");
-
-    assert(Scheduler::GetCurrentProcess() == this);
 
     // Check if we are main thread
     Thread* thisThread = Thread::Current();
