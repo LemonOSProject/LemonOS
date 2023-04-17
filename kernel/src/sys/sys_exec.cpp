@@ -13,8 +13,8 @@
 long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_str_t> envp) {
     String filepath = get_user_string_or_fault(_filepath, PATH_MAX);
 
-    List<String> args;
-    List<String> environ;
+    Vector<String> args;
+    Vector<String> environ;
 
     le_str_t argp;
     do {
@@ -25,7 +25,7 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
             args.add_back(get_user_string_or_fault(argp, SYS_ARGLEN_MAX));
         }
 
-        Log::Info("Arg %s", args.get_back().c_str());
+        Log::Info("Arg %s", args[args.size() - 1].c_str());
     } while (argp);
 
     do {
@@ -36,7 +36,7 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
             environ.add_back(get_user_string_or_fault(argp, SYS_ARGLEN_MAX));
         }
 
-        Log::Info("EnV %s", environ.get_back().c_str());
+        Log::Info("EnV %s", environ[environ.size() - 1].c_str());
     } while (argp);
 
     Process* proc = Process::Current();
@@ -45,7 +45,7 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
         return ENOENT;
     }
 
-    File* file = SC_TRY_OR_ERROR(fs::Open(inode, 0));
+    FancyRefPtr<File> file = SC_TRY_OR_ERROR(fs::Open(inode, 0));
     if(file->IsDirectory()) {
         return ENOEXEC;
     }
@@ -59,6 +59,11 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
         return ENOEXEC;
     }
 
+    ELFData exe;
+    if(elf_load_file(file, exe) != ERROR_NONE) {
+        return ENOEXEC;
+    }
+
     proc->KillAllOtherThreads();
 
     for(le_handle_t i = 0; i < proc->HandleCount(); i++) {
@@ -69,7 +74,11 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
         }
     }
 
-    fs::Close(file);
+    if(proc->execve(exe, args, environ, filepath.c_str()) != ERROR_NONE) {
+        proc->Die();
+    }
 
-    return ENOSYS;
+    elf_free_data(exe);
+
+    return 0;
 }

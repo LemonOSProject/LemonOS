@@ -101,8 +101,16 @@ public:
     ///
     /// \return Entry point of the ELF (either dynamic linker or executable itself)
     /////////////////////////////
-    ErrorOr<uintptr_t> LoadELF(uintptr_t* stackPointer, ELFData elfInfo, const Vector<String>& argv,
+    ErrorOr<uintptr_t> LoadELF(uintptr_t* stackPointer, ELFData& elfInfo, const Vector<String>& argv,
                                const Vector<String>& envp, const char* execPath);
+
+    /////////////////////////////
+    /// \brief Replaces the calling process with a new executable
+    ///
+    /// Assumes it is running within a syscall.
+    ///
+    /////////////////////////////
+    Error execve(ELFData& exe, const Vector<String>& argv, const Vector<String>& envp, const char* execPath);
 
     /////////////////////////////
     /// \brief Kills all other threads
@@ -445,7 +453,6 @@ public:
 
     AddressSpace* addressSpace = nullptr;
 
-    MappedRegion* stackregion;
     MappedRegion* pebRegion = nullptr;
     MappedRegion* userSharedDataRegion = nullptr;
 

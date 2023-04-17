@@ -26,14 +26,17 @@ extern uint8_t _user_shared_data_end[];
 class UserSharedData : public VMObject {
 public:
     UserSharedData()
-        : VMObject(PAGE_COUNT_4K(_user_shared_data_end - _user_shared_data) << PAGE_SHIFT_4K, false, true) {}
+        : VMObject(PAGE_COUNT_4K(_user_shared_data_end - _user_shared_data) << PAGE_SHIFT_4K, false, true) {
+    }
 
     void MapAllocatedBlocks(uintptr_t base, PageMap* pMap) {
         Memory::MapVirtualMemory4K(((uintptr_t)_user_shared_data - KERNEL_VIRTUAL_BASE), base, size >> PAGE_SHIFT_4K,
                                    PAGE_USER | PAGE_PRESENT, pMap);
     }
 
-    [[noreturn]] VMObject* Clone() { assert(!"user_shared_data VMO cannot be cloned!"); }
+    [[noreturn]] VMObject* Clone() {
+        assert(!"user_shared_data VMO cannot be cloned!");
+    }
 };
 lock_t userSharedDataLock = 0;
 FancyRefPtr<UserSharedData>* userSharedDataVMO = nullptr;
@@ -69,8 +72,9 @@ FancyRefPtr<Process> Process::CreateKernelProcess(void* entry, const char* name,
     return proc;
 }
 
-ErrorOr<FancyRefPtr<Process>> Process::CreateELFProcess(const FancyRefPtr<File>& elf, const Vector<String>& argv, const Vector<String>& envp,
-                                               const char* execPath, Process* parent) {
+ErrorOr<FancyRefPtr<Process>> Process::CreateELFProcess(const FancyRefPtr<File>& elf, const Vector<String>& argv,
+                                                        const Vector<String>& envp, const char* execPath,
+                                                        Process* parent) {
     ELFData exe;
     TRY(elf_load_file(elf, exe));
 
@@ -90,7 +94,7 @@ ErrorOr<FancyRefPtr<Process>> Process::CreateELFProcess(const FancyRefPtr<File>&
     Error e = elf_load_segments(proc.get(), exe, 0);
     elf_free_data(exe);
 
-    if(e != ERROR_NONE) {
+    if (e != ERROR_NONE) {
         proc->Die();
         delete proc->addressSpace;
         proc->addressSpace = nullptr;
@@ -203,7 +207,7 @@ void Process::KillAllOtherThreads() {
     while (runningThreads.get_length()) {
         auto it = runningThreads.begin();
         while (it != runningThreads.end()) {
-            assert(it->get()->state != ThreadStateRunning); 
+            assert(it->get()->state != ThreadStateRunning);
 
             FancyRefPtr<Thread> thread = *it;
             if (!acquireTestLock(
@@ -230,8 +234,8 @@ void Process::KillAllOtherThreads() {
     m_mainThread = thisThreadRef;
 
     // Remove all the threads that were just killed
-    for(auto it = m_threads.begin(); it != m_threads.end(); it++) {
-        if((*it) != thisThreadRef) {
+    for (auto it = m_threads.begin(); it != m_threads.end(); it++) {
+        if ((*it) != thisThreadRef) {
             m_threads.remove(it);
 
             it = m_threads.begin();
@@ -283,8 +287,8 @@ Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process*
     m_handles.add_back(HANDLE_NULL); // stderr
 }
 
-ErrorOr<uintptr_t> Process::LoadELF(uintptr_t* stackPointer, ELFData elfInfo, const Vector<String>& argv,
-                           const Vector<String>& envp, const char* execPath) {
+ErrorOr<uintptr_t> Process::LoadELF(uintptr_t* stackPointer, ELFData& elfInfo, const Vector<String>& argv,
+                                    const Vector<String>& envp, const char* execPath) {
     uintptr_t rip = elfInfo.entry;
     uintptr_t linkerBaseAddress = 0x7FC0000000; // Linker base address
     ELFData interpreter;
@@ -298,14 +302,14 @@ ErrorOr<uintptr_t> Process::LoadELF(uintptr_t* stackPointer, ELFData elfInfo, co
         }
 
         auto open = fs::Open(node);
-        if(open.HasError()) {
+        if (open.HasError()) {
             return open.Err();
         }
 
         FancyRefPtr<File> file = open.Value();
-        
+
         Error e = elf_load_file(file, interpreter);
-        if(e) {
+        if (e) {
             elf_free_data(interpreter);
             return e;
         }
@@ -332,7 +336,7 @@ ErrorOr<uintptr_t> Process::LoadELF(uintptr_t* stackPointer, ELFData elfInfo, co
         size_t pltSz = 0;
         char* strtab = nullptr;
 
-        for(const elf64_dynamic_t& dynamic : interpreter.dynamic) {
+        for (const elf64_dynamic_t& dynamic : interpreter.dynamic) {
             if (dynamic.tag == DT_PLTRELSZ) {
                 pltSz = dynamic.val;
             } else if (dynamic.tag == DT_STRTAB) {
@@ -455,6 +459,68 @@ ErrorOr<uintptr_t> Process::LoadELF(uintptr_t* stackPointer, ELFData elfInfo, co
 
     *stackPointer = (uintptr_t)stack;
     return rip;
+}
+
+Error Process::execve(ELFData& exe, const Vector<String>& argv, const Vector<String>& envp, const char* execPath) {
+    ScopedSpinLock lock{m_processLock};
+
+    RegisterContext* r = Thread::Current()->scRegisters;
+
+    assert(Process::Current() == this);
+
+    auto* oldSpace = addressSpace;
+    auto* newSpace = new AddressSpace(Memory::CreatePageMap());
+
+    asm("cli");
+    addressSpace = newSpace;
+    pebRegion = nullptr;
+    userSharedDataRegion = nullptr;
+    asm volatile("mov %%rax, %%cr3; sti" ::"a"(newSpace->GetPageMap()->pml4Phys));
+
+    delete oldSpace;
+
+    Error e = elf_load_segments(this, exe, 0);
+    if(e != ERROR_NONE) {
+        return e;
+    }
+
+    Thread* t = Thread::Current();
+    MappedRegion* stack = addressSpace->AllocateAnonymousVMObject(0x400000, 0x7000000000, false); // 4MB max stacksize
+
+    t->stack = (void*)stack->Base();
+    r->rsp = stack->Base() + 0x400000;
+    r->rbp = stack->Base() + 0x400000;
+
+    // Force the first 12KB to be allocated
+    stack->vmObject->Hit(stack->base, 0x400000 - 0x1000, addressSpace->GetPageMap());
+    stack->vmObject->Hit(stack->base, 0x400000 - 0x2000, addressSpace->GetPageMap());
+    stack->vmObject->Hit(stack->base, 0x400000 - 0x3000, addressSpace->GetPageMap());
+
+    MapUserSharedData();
+    MapProcessEnvironmentBlock();
+
+    t->gsBase = pebRegion->Base();
+
+    auto ip = LoadELF(&r->rsp, exe, argv, envp, execPath);
+    if (ip.HasError()) {
+        return ip.Err();
+    }
+
+    r->rip = ip.Value();
+
+    assert(!(r->rsp & 0xF));
+
+    r->rflags = 0x202; // IF - Interrupt Flag, bit 1 should be 1
+    memset(t->fxState, 0, 4096);
+
+    ((fx_state_t*)t->fxState)->mxcsr = 0x1f80; // Default MXCSR (SSE Control Word) State
+    ((fx_state_t*)t->fxState)->mxcsrMask = 0xffbf;
+    ((fx_state_t*)t->fxState)->fcw = 0x33f; // Default FPU Control Word State
+
+    // Restore default FPU state
+    asm volatile("fxrstor64 (%0)" ::"r"((uintptr_t)t->fxState) : "memory");
+
+    return ERROR_NONE;
 }
 
 Process::~Process() {
@@ -802,13 +868,13 @@ FancyRefPtr<Process> Process::Fork() {
     acquireLock(addressSpace->GetLock());
 
     // Unmap the old PEB and allocate a new one
-    if(pebRegion) {
+    if (pebRegion) {
         newProcess->addressSpace->UnmapMemory(pebRegion->Base(), pebRegion->Size());
     }
 
     // The base of the user shared data region should be identical
     newProcess->userSharedDataRegion = newProcess->addressSpace->AddressToRegionReadLock(userSharedDataRegion->Base());
-    if(!newProcess->userSharedDataRegion) {
+    if (!newProcess->userSharedDataRegion) {
         Log::Warning("[%d : %s] User shared data region may have been unmapped.", m_pid, name);
         newProcess->MapUserSharedData();
     } else {
@@ -882,7 +948,8 @@ void Process::MapUserSharedData() {
         userSharedData = *userSharedDataVMO;
     }
 
-    userSharedDataRegion = addressSpace->MapVMO(static_pointer_cast<VMObject>(userSharedData), PROC_USER_SHARED_DATA_BASE, true);
+    userSharedDataRegion =
+        addressSpace->MapVMO(static_pointer_cast<VMObject>(userSharedData), PROC_USER_SHARED_DATA_BASE, true);
     assert(userSharedDataRegion);
 
     // Allocate space for both a siginfo struct and the signal trampoline
