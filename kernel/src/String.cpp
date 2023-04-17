@@ -75,23 +75,26 @@ extern "C" void* memset(void* src, int c, size_t count) {
 extern "C" void* memcpy(void* dest, const void* src, size_t count) {
     const char* sp = (char*)src;
     char* dp = (char*)dest;
-    for (size_t i = count; i >= sizeof(uint64_t); i = count) {
-        *((uint64_t*)dp) = *((uint64_t*)sp);
-        sp = sp + sizeof(uint64_t);
-        dp = dp + sizeof(uint64_t);
-        count -= sizeof(uint64_t);
+
+    // Check if the destination is qword aligned
+    if(((uintptr_t)dp & 0x7) == 0) {
+        for (; count >= 32; count -= 32, sp += 32, dp += 32) {
+            *(uint64_t*)(dp) = *(uint64_t*)(sp);
+            *(uint64_t*)(dp + 8) = *(uint64_t*)(sp + 8);
+            *(uint64_t*)(dp + 16) = *(uint64_t*)(sp + 16);
+            *(uint64_t*)(dp + 24) = *(uint64_t*)(sp + 24);
+        }
     }
 
-    for (size_t i = count; i >= 4; i = count) {
-        *((uint32_t*)dp) = *((uint32_t*)sp);
-        sp = sp + 4;
-        dp = dp + 4;
-        count -= 4;
+    if(((uintptr_t)dp & 0x3) == 0) {
+        for (; count >= 4; count -= 4, sp += 4, dp += 4) {
+            *((uint32_t*)dp) = *((uint32_t*)sp);
+            *(uint32_t*)(dp) = *(uint32_t*)(sp);
+        }
     }
 
-    for (size_t i = count; i > 0; i = count) {
+    while(count--) {
         *(dp++) = *(sp++);
-        count--;
     }
 
     return dest;

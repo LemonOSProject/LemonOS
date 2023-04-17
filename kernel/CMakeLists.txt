@@ -121,6 +121,8 @@ set(KERNEL_SRC
     src/sys/sys_vfs.cpp
 )
 
+set_source_files_properties(src/String.cpp PROPERTIES COMPILE_FLAGS -O3)
+
 set(KERNEL_SRC_x86_64
     src/arch/x86_64/ACPI.cpp
     src/arch/x86_64/APIC.cpp
