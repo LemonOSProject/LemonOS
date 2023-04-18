@@ -154,7 +154,7 @@ int AC97Controller::WriteSamples(void* output, UIOBuffer* buffer, size_t size, b
 
                     // Sleep whilst the next buffer gets processed
                     if (samples > 0) {
-                        Thread::Current()->Sleep(samples * 1000000 / AC97_SAMPLE_RATE);
+                        Thread::current()->sleep(samples * 1000000 / AC97_SAMPLE_RATE);
                     }
                 }
             } while (remainingBuffers >= AC97_BDL_ENTRIES - 1 && IsDMARunning());

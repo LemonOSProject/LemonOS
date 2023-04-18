@@ -18,7 +18,7 @@ void ThreadBlocker::Interrupt() {
 
     acquireLock(&lock);
     if (thread) {
-        thread->Unblock();
+        thread->unblock();
     }
     releaseLock(&lock);
 }
@@ -29,7 +29,7 @@ void ThreadBlocker::Unblock() {
 
     acquireLock(&lock);
     if (thread) {
-        thread->Unblock();
+        thread->unblock();
     }
     releaseLock(&lock);
 }
@@ -57,7 +57,7 @@ Thread::~Thread() {
     
 }
 
-void Thread::Signal(int signal) {
+void Thread::signal(int signal) {
     SignalHandler& sigHandler = parent->signalHandlers[signal - 1];
     if (sigHandler.action == SignalHandler::HandlerAction::Ignore) {
         Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Ignoring signal %d!", signal);
@@ -81,8 +81,8 @@ void Thread::Signal(int signal) {
     }
 }
 
-void Thread::HandlePendingSignal(RegisterContext* regs) {
-    assert(Thread::Current() == this); // Make sure we are this thread
+void Thread::handle_pending_signal(RegisterContext* regs) {
+    assert(Thread::current() == this); // Make sure we are this thread
 
     SignalHandler handler;
     int signal = 0;
@@ -94,7 +94,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
     }
 
     if (signal == 0) {
-        Log::Warning("Thread::HandlePendingSignal: No pending signals!");
+        Log::Warning("Thread::handle_pending_signal: No pending signals!");
         return; // No pending signal
     }
 
@@ -102,10 +102,10 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
 
     // These cannot be caught, blocked or ignored
     if (signal == SIGKILL) {
-        parent->Die();
+        parent->die();
         return;
     } else if (signal == SIGSTOP) {
-        Log::Error("Thread::HandlePendingSignal: SIGSTOP not handled!");
+        Log::Error("Thread::handle_pending_signal: SIGSTOP not handled!");
         return;
     }
 
@@ -117,7 +117,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
     }
 
     if (handler.action == SignalHandler::HandlerAction::Default) {
-        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Thread::HandlePendingSignal: Common action for signal %d",
+        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Thread::handle_pending_signal: Common action for signal %d",
                    signal);
         // Default action
         switch (signal) {
@@ -136,7 +136,7 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
         case SIGQUIT:
         case SIGSEGV:
         case SIGSTKFLT:
-            parent->Die();
+            parent->die();
             return;
             // Ignore
         case SIGCHLD:
@@ -149,12 +149,12 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
         case SIGCONT:
         case SIGSTOP:
         default:
-            Log::Error("Thread::HandlePendingSignal: Unhandled signal %i", signal);
+            Log::Error("Thread::handle_pending_signal: Unhandled signal %i", signal);
             break;
         }
         return;
     } else if (handler.action == SignalHandler::HandlerAction::Ignore) {
-        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Thread::HandlePendingSignal: Ignoring signal %d", signal);
+        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "Thread::handle_pending_signal: Ignoring signal %d", signal);
         return;
     }
 
@@ -204,10 +204,10 @@ void Thread::HandlePendingSignal(RegisterContext* regs) {
 
     assert(!(regs->rsp & 0xf)); // Ensure that stack is 16-byte aligned
     Log::Debug(debugLevelScheduler, DebugLevelNormal,
-        "Thread::HandlePendingSignal: Executing usermode handler for signal %d", signal);
+        "Thread::handle_pending_signal: Executing usermode handler for signal %d", signal);
 }
 
-bool Thread::Block(ThreadBlocker* newBlocker) {
+bool Thread::block(ThreadBlocker* newBlocker) {
     assert(CheckInterrupts());
 
     acquireLock(&newBlocker->lock);
@@ -231,7 +231,7 @@ bool Thread::Block(ThreadBlocker* newBlocker) {
         return true;
     }
 
-    if (pendingSignals & (~EffectiveSignalMask())) {
+    if (pendingSignals & (~effective_signal_mask())) {
         releaseLock(&newBlocker->lock); // Pending signals, don't block
         releaseLock(&stateLock);
         asm("sti");
@@ -257,12 +257,12 @@ bool Thread::Block(ThreadBlocker* newBlocker) {
     return newBlocker->WasInterrupted();
 }
 
-bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout) {
+bool Thread::block(ThreadBlocker* newBlocker, long& usTimeout) {
     assert(CheckInterrupts());
 
     Timer::TimerCallback timerCallback = [](void* t) -> void {
         reinterpret_cast<Thread*>(t)->blockTimedOut = true;
-        reinterpret_cast<Thread*>(t)->Unblock();
+        reinterpret_cast<Thread*>(t)->unblock();
     };
 
     acquireLock(&newBlocker->lock);
@@ -284,7 +284,7 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout) {
         return true;
     }
 
-    if (pendingSignals & (~EffectiveSignalMask())) {
+    if (pendingSignals & (~effective_signal_mask())) {
         releaseLock(&newBlocker->lock); // Pending signals, don't block
         releaseLock(&stateLock);
         asm("sti");
@@ -310,7 +310,7 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout) {
 
             Scheduler::Yield();
         } else {
-            Unblock();
+            unblock();
 
             asm("sti");
 
@@ -326,14 +326,14 @@ bool Thread::Block(ThreadBlocker* newBlocker, long& usTimeout) {
     return (!blockTimedOut) && newBlocker->WasInterrupted();
 }
 
-void Thread::Sleep(long us) {
+void Thread::sleep(long us) {
     assert(CheckInterrupts());
 
     blockTimedOut = false;
 
     Timer::TimerCallback timerCallback = [](void* t) -> void {
         reinterpret_cast<Thread*>(t)->blockTimedOut = true;
-        reinterpret_cast<Thread*>(t)->Unblock();
+        reinterpret_cast<Thread*>(t)->unblock();
     };
 
     {
@@ -354,14 +354,14 @@ void Thread::Sleep(long us) {
 
             Scheduler::Yield();
         } else {
-            Unblock();
+            unblock();
 
             asm("sti");
         }
     }
 }
 
-void Thread::Unblock() {
+void Thread::unblock() {
     assert(state != ThreadStateDying);
     bool intsWereEnabled = CheckInterrupts();
     if(intsWereEnabled)

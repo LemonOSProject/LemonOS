@@ -78,14 +78,14 @@ public:
 
     [[nodiscard]] MappedRegion* MapVMO(FancyRefPtr<VMObject> obj, uintptr_t base, bool fixed);
     MappedRegion* AllocateAnonymousVMObject(size_t size, uintptr_t base, bool fixed);
-    AddressSpace* Fork();
+    AddressSpace* fork();
 
     long UnmapMemory(uintptr_t base, size_t size);
 
     size_t UsedPhysicalMemory() const;
     void DumpRegions();
 
-    ALWAYS_INLINE PageMap* GetPageMap() { return m_pageMap; }
+    ALWAYS_INLINE PageMap* get_page_map() { return m_pageMap; }
 
     ALWAYS_INLINE lock_t* GetLock() { return &m_lock; }
 

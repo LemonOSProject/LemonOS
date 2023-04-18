@@ -96,29 +96,29 @@ public:
     Thread(class Process* _parent, pid_t _tid);
     ~Thread();
 
-    ALWAYS_INLINE static Thread* Current() {
+    ALWAYS_INLINE static Thread* current() {
         return GetCurrentThread();
     }
 
     /////////////////////////////
     /// \brief Dispatch a signal to the thread
     /////////////////////////////
-    void Signal(int signal);
+    void signal(int signal);
 
     /////////////////////////////
     /// \brief Call the signal handler for the first pending signal
     /////////////////////////////
-    void HandlePendingSignal(RegisterContext* regs);
+    void handle_pending_signal(RegisterContext* regs);
     
     /////////////////////////////
     /// \brief Get the signal mask accounting for unmaskable signals
     /////////////////////////////
-    ALWAYS_INLINE uint64_t EffectiveSignalMask() const {
+    ALWAYS_INLINE uint64_t effective_signal_mask() const {
         return signalMask & (~UNMASKABLE_SIGNALS);
     }
 
-    ALWAYS_INLINE bool HasPendingSignals() {
-        return (~EffectiveSignalMask()) & pendingSignals;
+    ALWAYS_INLINE bool has_pending_signals() {
+        return (~effective_signal_mask()) & pendingSignals;
     }
 
     /////////////////////////////
@@ -130,7 +130,7 @@ public:
     ///
     /// \return Whether or not the thread was interrupted
     /////////////////////////////
-    [[nodiscard]] bool Block(ThreadBlocker* blocker);
+    [[nodiscard]] bool block(ThreadBlocker* blocker);
 
     /////////////////////////////
     /// \brief Block a thread with timeout
@@ -143,12 +143,12 @@ public:
     ///
     /// \return Whether or not the thread was interrupted
     /////////////////////////////
-    [[nodiscard]] bool Block(ThreadBlocker* blocker, long& usTimeout);
+    [[nodiscard]] bool block(ThreadBlocker* blocker, long& usTimeout);
 
     /////////////////////////////
     /// \brief Put the thread to sleep (blocking)
     /////////////////////////////
-    void Sleep(long us);
+    void sleep(long us);
 
     /////////////////////////////
     /// \brief Write data to filesystem node
@@ -160,5 +160,5 @@ public:
     ///
     /// \return Bytes written or if negative an error code
     /////////////////////////////
-    void Unblock();
+    void unblock();
 };

@@ -6,6 +6,9 @@ global user_memcpy_trap_handler
 global user_strnlen
 global user_strlen_trap
 global user_strlen_trap_handler
+global user_memset
+global user_memset_trap
+global user_memset_trap_handler
 
 ; UserMemcpy (dst, src, cnt)
 user_memcpy:
@@ -53,4 +56,17 @@ user_strlen_trap:
     ret
 user_strlen_trap_handler:
     mov rax, -1
+    ret
+
+user_memset:
+    mov rcx, rdx
+    mov rax, rsi
+
+user_memset_trap:
+    rep stosb
+
+    xor rax, rax
+    ret
+user_memset_trap_handler:
+    mov rax, 1
     ret

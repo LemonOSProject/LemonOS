@@ -35,7 +35,7 @@ protected:
             }
 
             if(thread){
-                thread->Unblock();
+                thread->unblock();
             }
             thread = nullptr;
             releaseLock(&lock);
@@ -51,7 +51,7 @@ protected:
             semaphore = nullptr;
 
             if(thread){
-                thread->Unblock();
+                thread->unblock();
             }
             releaseLock(&lock);
         }

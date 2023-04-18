@@ -54,7 +54,7 @@ public:
 
     ErrorOr<MappedRegion*> MMap(uintptr_t base, uintptr_t size, off_t offset, int prot, bool shared,
                                 bool fixed) override {
-        Process* process = Process::Current();
+        Process* process = Process::current();
         if (!shared) {
             Log::Error("Framebuffer mmap must be shared");
             return EINVAL;

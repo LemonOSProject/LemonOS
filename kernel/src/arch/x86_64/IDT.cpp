@@ -234,23 +234,23 @@ void HandleFatalInterrupt(int intNum, RegisterContext* regs) {
                               "Exception: ",
                               itoa(intNum, temp2, 16),
                               "Process:",
-                              Thread::Current() ? Thread::Current()->parent->name : "none"};
+                              Thread::current() ? Thread::current()->parent->name : "none"};
         KernelPanic(reasons, 7);
         for (;;)
             ;
     } else {
-        int res = acquireTestLock(&Thread::Current()->kernelLock);
+        int res = acquireTestLock(&Thread::current()->kernelLock);
         if(res) { // Make sure we acquired the lock
-            assert(Process::Current()->State() != Process::Process_Running);
+            assert(Process::current()->state() != Process::Process_Running);
             for(;;) {
                 Scheduler::Yield();
             }
         }
 
-        Process* current = Process::Current();
+        Process* current = Process::current();
 
         Log::Warning("Process %s crashed, PID: ", current->name);
-        Log::Write(current->PID());
+        Log::Write(current->pid());
         Log::Write(", RIP: ");
         Log::Write(regs->rip);
         Log::Write(", Exception: ");
@@ -275,7 +275,7 @@ void HandleFatalInterrupt(int intNum, RegisterContext* regs) {
         Log::Write(regs->rbp);
         Log::Info("Stack trace:");
         UserPrintStackTrace(regs->rbp, current->addressSpace);
-        current->Die();
+        current->die();
     }
 }
 

@@ -32,7 +32,7 @@
 video_mode_t videoMode;
 
 void IdleProcess() {
-    Thread* th = Thread::Current();
+    Thread* th = Thread::current();
     for (;;) {
         th->timeSlice = 0;
         asm volatile("pause");
@@ -128,7 +128,7 @@ void KernelProcess() {
 
 
     auto initProc = ({
-        auto r = Process::CreateELFProcess(file, Vector<String>("init"), Vector<String>("PATH=/initrd"),
+        auto r = Process::create_elf_process(file, Vector<String>("init"), Vector<String>("PATH=/initrd"),
                                               "/initrd/init.lef", nullptr);
         if(r.HasError()) {
             KernelPanic("Error executing /initrd/init.lef");
@@ -149,7 +149,7 @@ void KernelProcess() {
         Log::SetVideoConsole(NULL);
     }
 
-    initProc->Start();
+    initProc->start();
 
     for (;;) {
         acquireLock(&Scheduler::destroyedProcessesLock);
@@ -171,7 +171,7 @@ void KernelProcess() {
         }
         releaseLock(&Scheduler::destroyedProcessesLock);
 
-        Thread::Current()->Sleep(100000);
+        Thread::current()->sleep(100000);
     }
 }
 

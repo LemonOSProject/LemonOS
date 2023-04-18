@@ -12,7 +12,7 @@
 #include <abi/stat.h>
 
 SYSCALL long sys_read(le_handle_t handle, uint8_t* buf, size_t count, UserPointer<ssize_t> bytesRead) {
-    Process* process = Process::Current();
+    Process* process = Process::current();
 
     FancyRefPtr<File> fd = FD_GET(handle);
 
@@ -31,7 +31,7 @@ SYSCALL long sys_read(le_handle_t handle, uint8_t* buf, size_t count, UserPointe
 }
 
 SYSCALL long sys_write(le_handle_t handle, const uint8_t* buf, size_t count, UserPointer<ssize_t> bytesWritten) {
-    Process* process = Process::Current();
+    Process* process = Process::current();
 
     FancyRefPtr<File> fd = FD_GET(handle);
 
@@ -50,7 +50,7 @@ SYSCALL long sys_write(le_handle_t handle, const uint8_t* buf, size_t count, Use
 }
 
 SYSCALL long sys_openat(le_handle_t directory, le_str_t _filename, int flags, int mode, UserPointer<le_handle_t> out) {
-    Process* process = Process::Current();
+    Process* process = Process::current();
     String filename = get_user_string_or_fault(_filename, PATH_MAX+1);
 
     if (filename.Length() > PATH_MAX) {
@@ -201,7 +201,7 @@ open:
     auto openFile = SC_TRY_OR_ERROR(file->Open(flags));
     assert(openFile && !openFile->pos);
 
-    le_handle_t handle = process->AllocateHandle(openFile, closeOnExec);
+    le_handle_t handle = process->allocate_handle(openFile, closeOnExec);
     if (out.StoreValue(handle)) {
         return EFAULT;
     }
@@ -212,7 +212,7 @@ open:
 }
 
 SYSCALL long sys_fstatat(int fd, le_str_t path, int flags, UserPointer<struct stat> out) {
-    Process* process = Process::Current();
+    Process* process = Process::current();
 
     return ENOSYS;
 
@@ -299,7 +299,7 @@ SYSCALL long sys_lseek(le_handle_t handle, off_t offset, unsigned int whence, Us
 }
 
 SYSCALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long arg, UserPointer<int> result) {
-    Process* process = Process::Current();
+    Process* process = Process::current();
 
     FancyRefPtr<File> fd = FD_GET(handle);
 
@@ -307,10 +307,10 @@ SYSCALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long arg, 
 
     switch (cmd) {
     case FIOCLEX:
-        SC_TRY(process->SetCloseOnExec(handle, 1));
+        SC_TRY(process->handle_set_cloexec(handle, 1));
         break;
     case FIONCLEX:
-        SC_TRY(process->SetCloseOnExec(handle, 0));
+        SC_TRY(process->handle_set_cloexec(handle, 0));
         break;
     default:
         r = SC_TRY_OR_ERROR(fd->Ioctl(cmd, arg));
@@ -325,7 +325,7 @@ SYSCALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long arg, 
 }
 
 SYSCALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, UserPointer<ssize_t> bytes) {
-    Process* process = Process::Current();
+    Process* process = Process::current();
 
     FancyRefPtr<File> fd = FD_GET(handle);
 
@@ -340,7 +340,7 @@ SYSCALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, U
 }
 
 SYSCALL long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t pos, UserPointer<ssize_t> bytes) {
-    Process* process = Process::Current();
+    Process* process = Process::current();
 
     FancyRefPtr<File> fd = FD_GET(handle);
 

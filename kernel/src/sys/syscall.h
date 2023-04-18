@@ -26,7 +26,7 @@
 
 #define FD_GET(handle)                                                                                                 \
     ({                                                                                                                 \
-        auto r = Process::Current()->GetHandleAs<File>(handle);                                                        \
+        auto r = Process::current()->get_handle_as<File>(handle);                                                        \
         if (r.HasError()) {                                                                                            \
             return r.err.code;                                                                                         \
         }                                                                                                              \
@@ -38,7 +38,7 @@
 
 #define KO_GET(T, handle)                                                                                                 \
     ({                                                                                                                 \
-        auto r = Process::Current()->GetHandleAs<T>(handle);                                                        \
+        auto r = Process::current()->get_handle_as<T>(handle);                                                        \
         if (r.HasError()) {                                                                                            \
             return r.err.code;                                                                                         \
         }                                                                                                              \

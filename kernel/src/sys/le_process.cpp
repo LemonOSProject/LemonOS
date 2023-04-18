@@ -5,8 +5,8 @@
 
 #include <Objects/Process.h>
 
-long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, le_str_t name) {
-    Process* process = Process::Current();
+SYSCALL long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, le_str_t name) {
+    Process* process = Process::current();
     FancyRefPtr<Process> newProcess;
 
     if (flags & LE_PROCESS_FORK) {
@@ -44,11 +44,11 @@ long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, le_str_t
             }
         }
 
-        newProcess = process->Fork();
+        newProcess = process->fork();
         strcpy(newProcess->name, newName.c_str());
 
-        Thread* t = Thread::Current();
-        auto nt = newProcess->GetMainThread();
+        Thread* t = Thread::current();
+        auto nt = newProcess->get_main_thread();
 
         nt->gsBase = t->gsBase;
         nt->fsBase = t->fsBase;
@@ -65,19 +65,19 @@ long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, le_str_t
         nt->kernelLock = 0;
 
         if (flags & LE_PROCESS_PID) {
-            if(handle.StoreValue(process->PID())) {
+            if(handle.StoreValue(process->pid())) {
                 Log::Warning("le_create_process: PID gets leaked on EFAULT");
                 return EFAULT;
             }
         } else {
-            le_handle_t pHandle = process->AllocateHandle(newProcess, flags & LE_PROCESS_CLOEXEC);
+            le_handle_t pHandle = process->allocate_handle(newProcess, flags & LE_PROCESS_CLOEXEC);
             if (handle.StoreValue(pHandle)) {
                 Log::Warning("le_create_process: Handle gets leaked on EFAULT");
                 return EFAULT;
             }
         }
 
-        newProcess->Start();
+        newProcess->start();
         return 0;
     } else {
         // For now all process creation must be a fork
@@ -86,24 +86,24 @@ long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, le_str_t
     }
 }
 
-long le_start_process(le_handle_t handle) {
-    Process* self = Process::Current();
-    auto proc = SC_TRY_OR_ERROR(self->GetHandleAs<Process>(handle));
+SYSCALL long le_start_process(le_handle_t handle) {
+    Process* self = Process::current();
+    auto proc = SC_TRY_OR_ERROR(self->get_handle_as<Process>(handle));
 
-    proc->Start();
-
-    return 0;
-}
-
-long le_process_getpid(le_handle_t handle, UserPointer<pid_t> pid) {
-    Process* self = Process::Current();
-    auto proc = SC_TRY_OR_ERROR(self->GetHandleAs<Process>(handle));
-
-    SC_USER_STORE(pid, proc->PID());
+    proc->start();
 
     return 0;
 }
 
-long le_process_mem_poke(le_handle_t process, void* destination, void* virtualAddress, uintptr_t size) { return ENOSYS; }
+SYSCALL long le_process_getpid(le_handle_t handle, UserPointer<pid_t> pid) {
+    Process* self = Process::current();
+    auto proc = SC_TRY_OR_ERROR(self->get_handle_as<Process>(handle));
 
-long le_process_mem_write(le_handle_t process, void* virtualAddress, void* source, uintptr_t size) { return ENOSYS; }
+    SC_USER_STORE(pid, proc->pid());
+
+    return 0;
+}
+
+SYSCALL long le_process_mem_poke(le_handle_t process, void* destination, void* virtualAddress, uintptr_t size) { return ENOSYS; }
+
+SYSCALL long le_process_mem_write(le_handle_t process, void* virtualAddress, void* source, uintptr_t size) { return ENOSYS; }

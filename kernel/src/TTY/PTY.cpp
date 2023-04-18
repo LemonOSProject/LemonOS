@@ -195,7 +195,7 @@ void PTY::Close() {
 ErrorOr<ssize_t> PTY::MasterRead(UIOBuffer* buffer, size_t count) { return master.Read(buffer, count); }
 
 ErrorOr<ssize_t> PTY::SlaveRead(UIOBuffer* buffer, size_t count) {
-    Thread* thread = Thread::Current();
+    Thread* thread = Thread::current();
 
     while (IsCanonical() && !slave.lines) {
         KernelObjectWatcher w;

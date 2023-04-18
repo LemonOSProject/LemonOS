@@ -20,8 +20,8 @@ public:
         SetDeviceName("UNIX Random Device");
     }
 
-    ErrorOr<ssize_t> Read(size_t, size_t, uint8_t*);
-    ErrorOr<ssize_t> Write(size_t, size_t, uint8_t*);
+    ErrorOr<ssize_t> Read(size_t, size_t, UIOBuffer*);
+    ErrorOr<ssize_t> Write(size_t, size_t, UIOBuffer*);
 };
 
 class Null : public Device {
@@ -32,8 +32,8 @@ public:
         SetDeviceName("UNIX Null Device");
     }
 
-    ErrorOr<ssize_t> Read(size_t, size_t, uint8_t*);
-    ErrorOr<ssize_t> Write(size_t, size_t, uint8_t*);
+    ErrorOr<ssize_t> Read(size_t, size_t, UIOBuffer*);
+    ErrorOr<ssize_t> Write(size_t, size_t, UIOBuffer*);
 };
 
 class TTY : public Device {
@@ -108,30 +108,46 @@ void Device::SetDeviceName(const char* name) {
     this->deviceName = name;
 }
 
-ErrorOr<ssize_t> Null::Read(size_t offset, size_t size, uint8_t* buffer) {
-    memset(buffer, -1, size);
+ErrorOr<ssize_t> Null::Read(size_t offset, size_t size, UIOBuffer* buffer) {
+    if(buffer->Fill(-1, size)) {
+        return EFAULT;
+    }
 
     return size;
 }
 
-ErrorOr<ssize_t> Null::Write(size_t offset, size_t size, uint8_t* buffer) { return size; }
+ErrorOr<ssize_t> Null::Write(size_t offset, size_t size, UIOBuffer* buffer) { return size; }
 
-ErrorOr<ssize_t> URandom::Read(size_t offset, size_t size, uint8_t* buffer) {
+ErrorOr<ssize_t> URandom::Read(size_t offset, size_t size, UIOBuffer* buffer) {
     unsigned int num = (rand() ^ ((Timer::GetSystemUptime() / 2) * Timer::GetFrequency())) + rand();
 
     size_t ogSize = size;
 
-    while (size--) {
-        *(buffer++) = ((num + rand()) >> (rand() % 32)) & 0xFF;
+    uint8_t data[4096];
+    while (size > 0) {
+        for(int i = 0; i < 4096 && i < size; i++) {
+            data[i] = ((num + rand()) >> (rand() % 32)) & 0xFF;
+        }
+
+        int bytes = 4096;
+        if(bytes > size) {
+            bytes = size;
+        }
+
+        if(buffer->Write(data, bytes)) {
+            return EFAULT;
+        }
+
+        size -= bytes;
     }
 
     return ogSize;
 }
 
-ErrorOr<ssize_t> URandom::Write(size_t offset, size_t size, uint8_t* buffer) { return size; }
+ErrorOr<ssize_t> URandom::Write(size_t offset, size_t size, UIOBuffer* buffer) { return size; }
 
 ErrorOr<File*> TTY::Open(size_t flags){
-    /*auto stdout = TRY_OR_ERROR(Process::Current()->GetHandleAs<File>(1));
+    /*auto stdout = TRY_OR_ERROR(Process::current()->get_handle_as<File>(1));
 
     assert(stdout->node);
     return stdout->node->Open(flags);*/

@@ -6,7 +6,7 @@ static void ProcessEntry(){
     memset(buf, 1, 4096);
 
     acquireLock(&Scheduler::GetCurrentThread()->lock);
-    Process::Current()->Die();
+    Process::current()->Die();
 }*/
 
 int ThreadingTest(){

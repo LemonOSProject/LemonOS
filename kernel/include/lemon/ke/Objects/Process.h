@@ -35,14 +35,14 @@ public:
         Process_Dead = 3,
     };
 
-    static FancyRefPtr<Process> CreateIdleProcess(const char* name);
-    static FancyRefPtr<Process> CreateKernelProcess(void* entry, const char* name, Process* parent);
-    static ErrorOr<FancyRefPtr<Process>> CreateELFProcess(const FancyRefPtr<File>& elf, const Vector<String>& argv,
+    static FancyRefPtr<Process> create_idle_process(const char* name);
+    static FancyRefPtr<Process> create_kernel_process(void* entry, const char* name, Process* parent);
+    static ErrorOr<FancyRefPtr<Process>> create_elf_process(const FancyRefPtr<File>& elf, const Vector<String>& argv,
                                                           const Vector<String>& envp, const char* execPath,
                                                           Process* parent);
-    ALWAYS_INLINE static Process* Current() {
-        if (Thread::Current())
-            return Thread::Current()->parent;
+    ALWAYS_INLINE static Process* current() {
+        if (Thread::current())
+            return Thread::current()->parent;
 
         return nullptr;
     }
@@ -67,9 +67,9 @@ public:
     /// Will stay in memory until both the reaper thread has finished with it,
     /// and the parent has called Destroy() or waitpid().
     /////////////////////////////
-    void Die();
+    void die();
 
-    void Start();
+    void start();
 
     /////////////////////////////
     /// \brief Watch process with watcher
@@ -90,18 +90,18 @@ public:
     ///
     /// \return Pointer to new process
     /////////////////////////////
-    FancyRefPtr<Process> Fork();
+    FancyRefPtr<Process> fork();
 
     /////////////////////////////
     /// \brief Load ELF into the process' address space
     ///
     /// Loads ELF data into the process' address space,
     /// and sets up the stack.
-    /// e.g. Used in CreateELFProcess or execve syscall.
+    /// e.g. Used in create_elf_process or execve syscall.
     ///
     /// \return Entry point of the ELF (either dynamic linker or executable itself)
     /////////////////////////////
-    ErrorOr<uintptr_t> LoadELF(uintptr_t* stackPointer, ELFData& elfInfo, const Vector<String>& argv,
+    ErrorOr<uintptr_t> load_elf(uintptr_t* stackPointer, ELFData& elfInfo, const Vector<String>& argv,
                                const Vector<String>& envp, const char* execPath);
 
     /////////////////////////////
@@ -117,37 +117,31 @@ public:
     ///
     /// Assumes the function is called from a thread of the process
     /////////////////////////////
-    void KillAllOtherThreads();
+    void kill_all_other_threads();
 
     /////////////////////////////
     /// \brief Retrieve Process PID
     /////////////////////////////
-    ALWAYS_INLINE pid_t PID() const {
+    ALWAYS_INLINE pid_t pid() const {
         return m_pid;
     }
     /////////////////////////////
     /// \brief Retrieve Process State
     /////////////////////////////
-    ALWAYS_INLINE int State() const {
+    ALWAYS_INLINE int state() const {
         return m_state;
     }
     /////////////////////////////
     /// \brief Retrieve Whether Process is Dead
     /////////////////////////////
-    ALWAYS_INLINE int IsDead() const {
+    ALWAYS_INLINE int is_dead() const {
         return m_state == Process_Dead;
     }
     /////////////////////////////
     /// \brief Retrieve Whether Process is the Idle Process of a CPU
     /////////////////////////////
-    ALWAYS_INLINE int IsCPUIdleProcess() const {
+    ALWAYS_INLINE int is_cpu_idle_process() const {
         return m_isIdleProcess;
-    }
-    /////////////////////////////
-    /// \brief Retrieve Process Parent
-    /////////////////////////////
-    ALWAYS_INLINE const Process* Parent() const {
-        return m_parent;
     }
 
     /////////////////////////////
@@ -157,7 +151,7 @@ public:
     /// always have a TID of 1.
     /// Lemon OS does not currently support killing the main thread.
     /////////////////////////////
-    ALWAYS_INLINE FancyRefPtr<Thread> GetMainThread() {
+    ALWAYS_INLINE FancyRefPtr<Thread> get_main_thread() {
         return m_mainThread;
     }
     /////////////////////////////
@@ -170,18 +164,18 @@ public:
     ///
     /// \return Return pointer to thread on success, FancyRefPtr<nullptr> on false
     /////////////////////////////
-    ALWAYS_INLINE FancyRefPtr<Thread> GetThreadFromTID(pid_t tid) {
+    ALWAYS_INLINE FancyRefPtr<Thread> get_thread_from_tid(pid_t tid) {
         ScopedSpinLock acq(m_processLock);
         return GetThreadFromTID_Unlocked(tid);
     }
 
-    FancyRefPtr<Thread> CreateChildThread(void* entry, void* stack);
+    FancyRefPtr<Thread> create_child_thread(void* entry, void* stack);
     const List<FancyRefPtr<Thread>>& Threads() {
         return m_threads;
     }
 
-    ALWAYS_INLINE PageMap* GetPageMap() {
-        return addressSpace->GetPageMap();
+    ALWAYS_INLINE PageMap* get_page_map() {
+        return addressSpace->get_page_map();
     }
 
     /////////////////////////////
@@ -189,7 +183,7 @@ public:
     ///
     /// Includes invalid/closed handles
     /////////////////////////////
-    ALWAYS_INLINE unsigned HandleCount() const {
+    ALWAYS_INLINE unsigned handle_count() const {
         return m_handles.size();
     }
 
@@ -199,7 +193,7 @@ public:
     /// \param fd Reference pointer to valid KernelObject
     /// \return ID of new file descriptor
     /////////////////////////////
-    ALWAYS_INLINE le_handle_t AllocateHandle(FancyRefPtr<KernelObject> ko, bool closeOnExec = false) {
+    ALWAYS_INLINE le_handle_t allocate_handle(FancyRefPtr<KernelObject> ko, bool closeOnExec = false) {
         ScopedSpinLock lockHandles(m_handleLock);
 
         Handle h;
@@ -221,8 +215,8 @@ public:
         return i;
     }
 
-    template <KernelObjectDerived T> ALWAYS_INLINE le_handle_t AllocateHandle(FancyRefPtr<T> ko, bool cloExec = false) {
-        return AllocateHandle(static_pointer_cast<KernelObject>(std::move(ko)), cloExec);
+    template <KernelObjectDerived T> ALWAYS_INLINE le_handle_t allocate_handle(FancyRefPtr<T> ko, bool cloExec = false) {
+        return allocate_handle(static_pointer_cast<KernelObject>(std::move(ko)), cloExec);
     }
 
     /////////////////////////////
@@ -231,7 +225,7 @@ public:
     /// \return Handle object on success
     /// \return null handle when \a id is invalid
     /////////////////////////////
-    ALWAYS_INLINE Handle GetHandle(le_handle_t id) {
+    ALWAYS_INLINE Handle get_handle(le_handle_t id) {
         ScopedSpinLock lockHandles(m_handleLock);
         if (id < 0 || id >= m_handles.size()) {
             return HANDLE_NULL; // No such handle
@@ -240,8 +234,8 @@ public:
         return m_handles[id];
     }
 
-    template <typename T> ALWAYS_INLINE ErrorOr<FancyRefPtr<T>> GetHandleAs(le_handle_t id) {
-        Handle h = GetHandle(id);
+    template <typename T> ALWAYS_INLINE ErrorOr<FancyRefPtr<T>> get_handle_as(le_handle_t id) {
+        Handle h = get_handle(id);
         if (!h.IsValid()) {
             return Error{EBADF};
         }
@@ -256,7 +250,7 @@ public:
     /////////////////////////////
     /// \brief Replace handle
     /////////////////////////////
-    ALWAYS_INLINE int ReplaceHandle(le_handle_t id, Handle newHandle) {
+    ALWAYS_INLINE int handle_replace(le_handle_t id, Handle newHandle) {
         if (id < 0) {
             return EBADF;
         }
@@ -270,7 +264,7 @@ public:
         return 0;
     }
 
-    ALWAYS_INLINE Error SetCloseOnExec(le_handle_t id, bool value) {
+    ALWAYS_INLINE Error handle_set_cloexec(le_handle_t id, bool value) {
         if (id < 0) {
             return EBADF;
         }
@@ -292,7 +286,7 @@ public:
     /// \param id Handle to destroy
     /// \return 0 on success, EBADF when fd is out of range
     /////////////////////////////
-    ALWAYS_INLINE int DestroyHandle(le_handle_t id) {
+    ALWAYS_INLINE int handle_destroy(le_handle_t id) {
         ScopedSpinLock lockHandles(m_handleLock);
         if (id >= m_handles.size()) {
             return EBADF; // No such handle
@@ -313,15 +307,15 @@ public:
         return m_handles[2];
     };
 
-    ALWAYS_INLINE void RegisterChildProcess(const FancyRefPtr<Process>& child) {
+    ALWAYS_INLINE void register_child(const FancyRefPtr<Process>& child) {
         ScopedSpinLock lock(m_processLock);
         m_children.add_back(child);
     }
 
-    ALWAYS_INLINE FancyRefPtr<Process> FindChildByPID(pid_t pid) {
+    ALWAYS_INLINE FancyRefPtr<Process> find_child_by_pid(pid_t pid) {
         ScopedSpinLock lock(m_processLock);
         for (auto& child : m_children) {
-            if (child->PID() == pid) {
+            if (child->pid() == pid) {
                 return child;
             }
         }
@@ -335,12 +329,12 @@ public:
     /// \return Reference pointer to dead child
     /// \return nullptr when no dead children
     /////////////////////////////
-    ALWAYS_INLINE FancyRefPtr<Process> RemoveDeadChild() {
+    ALWAYS_INLINE FancyRefPtr<Process> remove_dead_child() {
         ScopedSpinLock lock(m_processLock);
         FancyRefPtr<Process> proc;
 
         for (auto it = m_children.begin(); it != m_children.end(); it++) {
-            if ((*it)->State() == Process_Dead) {
+            if ((*it)->state() == Process_Dead) {
                 proc = std::move(*it);
                 m_children.remove(it);
                 break;
@@ -360,11 +354,11 @@ public:
     ///
     /// \param pid PID of child to remove
     /////////////////////////////
-    ALWAYS_INLINE FancyRefPtr<Process> RemoveDeadChild(pid_t pid) {
+    ALWAYS_INLINE FancyRefPtr<Process> remove_dead_child(pid_t pid) {
         ScopedSpinLock lock(m_processLock);
         for (auto it = m_children.begin(); it != m_children.end(); it++) {
-            if ((*it)->PID() == pid) {
-                assert((*it)->IsDead());
+            if ((*it)->pid() == pid) {
+                assert((*it)->is_dead());
 
                 acquireLock(&(*it)->m_processLock);
                 FancyRefPtr<Process> proc = std::move(*it);
@@ -382,8 +376,8 @@ public:
     ///
     /// \return 0 on success, otherwise error code
     /////////////////////////////
-    ALWAYS_INLINE int WaitForChildToDie(FancyRefPtr<Process>& ptr) {
-        auto child = RemoveDeadChild();
+    ALWAYS_INLINE int wait_for_child_to_die(FancyRefPtr<Process>& ptr) {
+        auto child = remove_dead_child();
         if (child.get()) {
             ptr = std::move(child);
             return 0;
@@ -404,7 +398,7 @@ public:
 
         bool wasInterrupted = watcher.Wait();
 
-        child = RemoveDeadChild();
+        child = remove_dead_child();
         if (child.get()) {
             ptr = std::move(child);
             return 0;
@@ -416,7 +410,7 @@ public:
         return 0;
     }
 
-    ALWAYS_INLINE void SetAlarm(unsigned int seconds) {
+    ALWAYS_INLINE void set_alarm(unsigned int seconds) {
         ScopedSpinLock lockProcess(m_processLock);
 
         if (seconds == 0) {
@@ -429,7 +423,7 @@ public:
             [](void* thread) {
                 Thread* t = reinterpret_cast<Thread*>(thread);
 
-                t->Signal(SIGALRM);
+                t->signal(SIGALRM);
             },
             m_mainThread.get());
     }
@@ -467,11 +461,11 @@ private:
     Process(pid_t pid, const char* name, const char* workingDir, Process* parent);
 
     FancyRefPtr<Thread> GetThreadFromTID_Unlocked(pid_t tid);
-    void MapUserSharedData();
-    void MapProcessEnvironmentBlock();
+    void map_user_shared_data();
+    void map_process_environment_block();
 
     // Assumes calling thread is running in the address space of the process
-    void InitializePEB();
+    void initialize_peb();
 
     lock_t m_processLock = 0;        // Should be acquired when modifying the data structure
     lock_t m_watchingLock = 0;       // Should be acquired when modifying watching processes

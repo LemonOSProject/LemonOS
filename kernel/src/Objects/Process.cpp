@@ -43,7 +43,7 @@ FancyRefPtr<UserSharedData>* userSharedDataVMO = nullptr;
 
 void IdleProcess();
 
-FancyRefPtr<Process> Process::CreateIdleProcess(const char* name) {
+FancyRefPtr<Process> Process::create_idle_process(const char* name) {
     FancyRefPtr<Process> proc = new Process(Scheduler::GetNextPID(), name, "/", nullptr);
 
     proc->m_mainThread->registers.rip = reinterpret_cast<uintptr_t>(IdleProcess);
@@ -59,7 +59,7 @@ FancyRefPtr<Process> Process::CreateIdleProcess(const char* name) {
     return proc;
 }
 
-FancyRefPtr<Process> Process::CreateKernelProcess(void* entry, const char* name, Process* parent) {
+FancyRefPtr<Process> Process::create_kernel_process(void* entry, const char* name, Process* parent) {
     FancyRefPtr<Process> proc = new Process(Scheduler::GetNextPID(), name, "/", parent);
 
     proc->m_mainThread->registers.rip = reinterpret_cast<uintptr_t>(entry);
@@ -72,7 +72,7 @@ FancyRefPtr<Process> Process::CreateKernelProcess(void* entry, const char* name,
     return proc;
 }
 
-ErrorOr<FancyRefPtr<Process>> Process::CreateELFProcess(const FancyRefPtr<File>& elf, const Vector<String>& argv,
+ErrorOr<FancyRefPtr<Process>> Process::create_elf_process(const FancyRefPtr<File>& elf, const Vector<String>& argv,
                                                         const Vector<String>& envp, const char* execPath,
                                                         Process* parent) {
     ELFData exe;
@@ -95,7 +95,7 @@ ErrorOr<FancyRefPtr<Process>> Process::CreateELFProcess(const FancyRefPtr<File>&
     elf_free_data(exe);
 
     if (e != ERROR_NONE) {
-        proc->Die();
+        proc->die();
         delete proc->addressSpace;
         proc->addressSpace = nullptr;
 
@@ -110,19 +110,19 @@ ErrorOr<FancyRefPtr<Process>> Process::CreateELFProcess(const FancyRefPtr<File>&
     thread->registers.rbp = (uintptr_t)thread->stack + 0x400000;
 
     // Force the first 12KB to be allocated
-    stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x1000, proc->GetPageMap());
-    stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x2000, proc->GetPageMap());
-    stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x3000, proc->GetPageMap());
+    stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x1000, proc->get_page_map());
+    stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x2000, proc->get_page_map());
+    stackRegion->vmObject->Hit(stackRegion->base, 0x400000 - 0x3000, proc->get_page_map());
 
-    proc->MapUserSharedData();
-    proc->MapProcessEnvironmentBlock();
+    proc->map_user_shared_data();
+    proc->map_process_environment_block();
 
     thread->gsBase = proc->pebRegion->Base();
     Log::Info("pebbase %x", thread->gsBase);
 
-    auto r = proc->LoadELF(&thread->registers.rsp, exe, argv, envp, execPath);
+    auto r = proc->load_elf(&thread->registers.rsp, exe, argv, envp, execPath);
     if (r.HasError()) {
-        proc->Die();
+        proc->die();
         delete proc->addressSpace;
         proc->addressSpace = nullptr;
 
@@ -154,10 +154,10 @@ ErrorOr<FancyRefPtr<Process>> Process::CreateELFProcess(const FancyRefPtr<File>&
     return proc;
 }
 
-void Process::KillAllOtherThreads() {
+void Process::kill_all_other_threads() {
     ScopedSpinLock lock{m_processLock};
 
-    Thread* thisThread = Thread::Current();
+    Thread* thisThread = Thread::current();
     assert(thisThread->parent == this);
 
     FancyRefPtr<Thread> thisThreadRef;
@@ -287,7 +287,7 @@ Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process*
     m_handles.add_back(HANDLE_NULL); // stderr
 }
 
-ErrorOr<uintptr_t> Process::LoadELF(uintptr_t* stackPointer, ELFData& elfInfo, const Vector<String>& argv,
+ErrorOr<uintptr_t> Process::load_elf(uintptr_t* stackPointer, ELFData& elfInfo, const Vector<String>& argv,
                                     const Vector<String>& envp, const char* execPath) {
     uintptr_t rip = elfInfo.entry;
     uintptr_t linkerBaseAddress = 0x7FC0000000; // Linker base address
@@ -325,9 +325,9 @@ ErrorOr<uintptr_t> Process::LoadELF(uintptr_t* stackPointer, ELFData& elfInfo, c
     uint64_t* stack = (uint64_t*)(*stackPointer);
 
     asm("cli");
-    asm volatile("mov %%rax, %%cr3" ::"a"(this->GetPageMap()->pml4Phys));
+    asm volatile("mov %%rax, %%cr3" ::"a"(this->get_page_map()->pml4Phys));
 
-    InitializePEB();
+    initialize_peb();
 
     ProcessEnvironmentBlock* peb = (ProcessEnvironmentBlock*)m_mainThread->gsBase;
     if (interpreter.dynamic.size()) {
@@ -452,7 +452,7 @@ ErrorOr<uintptr_t> Process::LoadELF(uintptr_t* stackPointer, ELFData& elfInfo, c
 
     assert(!((uintptr_t)stack & 0xf));
 
-    asm volatile("mov %%rax, %%cr3" ::"a"(Scheduler::GetCurrentProcess()->GetPageMap()->pml4Phys));
+    asm volatile("mov %%rax, %%cr3" ::"a"(Scheduler::GetCurrentProcess()->get_page_map()->pml4Phys));
     asm("sti");
 
     elf_free_data(interpreter);
@@ -464,9 +464,9 @@ ErrorOr<uintptr_t> Process::LoadELF(uintptr_t* stackPointer, ELFData& elfInfo, c
 Error Process::execve(ELFData& exe, const Vector<String>& argv, const Vector<String>& envp, const char* execPath) {
     ScopedSpinLock lock{m_processLock};
 
-    RegisterContext* r = Thread::Current()->scRegisters;
+    RegisterContext* r = Thread::current()->scRegisters;
 
-    assert(Process::Current() == this);
+    assert(Process::current() == this);
 
     auto* oldSpace = addressSpace;
     auto* newSpace = new AddressSpace(Memory::CreatePageMap());
@@ -475,7 +475,7 @@ Error Process::execve(ELFData& exe, const Vector<String>& argv, const Vector<Str
     addressSpace = newSpace;
     pebRegion = nullptr;
     userSharedDataRegion = nullptr;
-    asm volatile("mov %%rax, %%cr3; sti" ::"a"(newSpace->GetPageMap()->pml4Phys));
+    asm volatile("mov %%rax, %%cr3; sti" ::"a"(newSpace->get_page_map()->pml4Phys));
 
     delete oldSpace;
 
@@ -484,7 +484,7 @@ Error Process::execve(ELFData& exe, const Vector<String>& argv, const Vector<Str
         return e;
     }
 
-    Thread* t = Thread::Current();
+    Thread* t = Thread::current();
     MappedRegion* stack = addressSpace->AllocateAnonymousVMObject(0x400000, 0x7000000000, false); // 4MB max stacksize
 
     t->stack = (void*)stack->Base();
@@ -492,16 +492,16 @@ Error Process::execve(ELFData& exe, const Vector<String>& argv, const Vector<Str
     r->rbp = stack->Base() + 0x400000;
 
     // Force the first 12KB to be allocated
-    stack->vmObject->Hit(stack->base, 0x400000 - 0x1000, addressSpace->GetPageMap());
-    stack->vmObject->Hit(stack->base, 0x400000 - 0x2000, addressSpace->GetPageMap());
-    stack->vmObject->Hit(stack->base, 0x400000 - 0x3000, addressSpace->GetPageMap());
+    stack->vmObject->Hit(stack->base, 0x400000 - 0x1000, addressSpace->get_page_map());
+    stack->vmObject->Hit(stack->base, 0x400000 - 0x2000, addressSpace->get_page_map());
+    stack->vmObject->Hit(stack->base, 0x400000 - 0x3000, addressSpace->get_page_map());
 
-    MapUserSharedData();
-    MapProcessEnvironmentBlock();
+    map_user_shared_data();
+    map_process_environment_block();
 
     t->gsBase = pebRegion->Base();
 
-    auto ip = LoadELF(&r->rsp, exe, argv, envp, execPath);
+    auto ip = load_elf(&r->rsp, exe, argv, envp, execPath);
     if (ip.HasError()) {
         return ip.Err();
     }
@@ -536,13 +536,13 @@ Process::~Process() {
 
 void Process::Destroy() {
     if (m_state != Process_Dead) {
-        assert(this != Current());
+        assert(this != current());
 
         // Use SIGKILL as the process will kill itself
         KernelObjectWatcher watcher;
         Watch(&watcher, KOEvent::ProcessTerminated);
 
-        m_mainThread->Signal(SIGKILL);
+        m_mainThread->signal(SIGKILL);
         bool interrupted = watcher.Wait(); // Wait for the process to die
 
         assert(!interrupted);
@@ -562,16 +562,16 @@ void Process::Destroy() {
     }
 }
 
-void Process::Die() {
+void Process::die() {
     asm volatile("sti");
 
     // Check if we are main thread
-    Thread* thisThread = Thread::Current();
-    if (thisThread != thisThread->parent->GetMainThread().get()) {
+    Thread* thisThread = Thread::current();
+    if (thisThread != thisThread->parent->get_main_thread().get()) {
         acquireLock(&m_processLock);
         if (m_state != Process_Dying) {
             // Kill the main thread
-            thisThread->parent->GetMainThread()->Signal(SIGKILL);
+            thisThread->parent->get_main_thread()->signal(SIGKILL);
         }
 
         assert(thisThread->parent == this);
@@ -638,12 +638,12 @@ void Process::Die() {
         asm("sti");
 
         FancyRefPtr<Process> child = m_children.get_front();
-        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Killing %d (%s)...", PID(), child->PID(), child->name);
-        if (child->State() == Process_Running) {
-            child->GetMainThread()->Signal(SIGKILL); // Kill it, burn it with fire
-            while (child->State() != Process_Dead)
+        Log::Debug(debugLevelScheduler, DebugLevelVerbose, "[%d] Killing %d (%s)...", pid(), child->pid(), child->name);
+        if (child->state() == Process_Running) {
+            child->get_main_thread()->signal(SIGKILL); // Kill it, burn it with fire
+            while (child->state() != Process_Dead)
                 Scheduler::Yield(); // Wait for it to die
-        } else if (child->State() == Process_Dying) {
+        } else if (child->state() == Process_Dying) {
             KernelObjectWatcher w;
             child->Watch(&w, KOEvent::ProcessTerminated);
 
@@ -683,7 +683,7 @@ void Process::Die() {
             }
         }
 
-        thisThread->Sleep(50000); // Sleep for 50 ms so we do not chew through CPU time
+        thisThread->sleep(50000); // Sleep for 50 ms so we do not chew through CPU time
     }
 
     assert(!runningThreads.get_length());
@@ -771,9 +771,9 @@ void Process::Die() {
         m_watching.clear();
     }
 
-    if (m_parent && (m_parent->State() == Process_Running)) {
+    if (m_parent && (m_parent->state() == Process_Running)) {
         Log::Debug(debugLevelScheduler, DebugLevelNormal, "[%d] Sending SIGCHILD to %s...", m_pid, m_parent->name);
-        m_parent->GetMainThread()->Signal(SIGCHLD);
+        m_parent->get_main_thread()->signal(SIGCHLD);
     }
 
     // Add to destroyed processes so the reaper thread can safely destroy any last resources
@@ -807,7 +807,7 @@ void Process::Die() {
     }
 }
 
-void Process::Start() {
+void Process::start() {
     ScopedSpinLock acq(m_processLock);
     assert(!m_started);
 
@@ -838,17 +838,17 @@ void Process::Unwatch(KernelObjectWatcher* watcher) {
     m_watching.remove(watcher);
 }
 
-FancyRefPtr<Process> Process::Fork() {
-    assert(this == Process::Current());
+FancyRefPtr<Process> Process::fork() {
+    assert(this == Process::current());
 
     ScopedSpinLock lock(m_processLock);
 
     FancyRefPtr<Process> newProcess = new Process(Scheduler::GetNextPID(), name, workingDirPath, this);
     delete newProcess->addressSpace; // TODO: Do not create address space in first place
-    newProcess->addressSpace = addressSpace->Fork();
+    newProcess->addressSpace = addressSpace->fork();
 
-    PageMap* thisPageMap = this->GetPageMap();
-    PageMap* otherPageMap = newProcess->GetPageMap();
+    PageMap* thisPageMap = this->get_page_map();
+    PageMap* otherPageMap = newProcess->get_page_map();
 
     // Force TLB flush
     asm volatile("mov %%rax, %%cr3" ::"a"(thisPageMap->pml4Phys));
@@ -876,14 +876,14 @@ FancyRefPtr<Process> Process::Fork() {
     newProcess->userSharedDataRegion = newProcess->addressSpace->AddressToRegionReadLock(userSharedDataRegion->Base());
     if (!newProcess->userSharedDataRegion) {
         Log::Warning("[%d : %s] User shared data region may have been unmapped.", m_pid, name);
-        newProcess->MapUserSharedData();
+        newProcess->map_user_shared_data();
     } else {
         newProcess->userSharedDataRegion->lock.ReleaseRead();
     }
 
     releaseLock(addressSpace->GetLock());
 
-    newProcess->MapProcessEnvironmentBlock();
+    newProcess->map_process_environment_block();
     newProcess->m_mainThread->gsBase = newProcess->pebRegion->Base();
 
     // TODO: Make it so that the process cannot unmap the PEB
@@ -895,7 +895,7 @@ FancyRefPtr<Process> Process::Fork() {
 
     assert(newProcess->userSharedDataRegion);
     asm volatile("mov %%rax, %%cr3" ::"a"(otherPageMap->pml4Phys));
-    newProcess->InitializePEB();
+    newProcess->initialize_peb();
     asm volatile("mov %%rax, %%cr3" ::"a"(thisPageMap->pml4Phys));
     asm("sti");
 
@@ -903,7 +903,7 @@ FancyRefPtr<Process> Process::Fork() {
     return newProcess;
 }
 
-FancyRefPtr<Thread> Process::CreateChildThread(void* entry, void* stack) {
+FancyRefPtr<Thread> Process::create_child_thread(void* entry, void* stack) {
     ScopedSpinLock lock{m_processLock};
 
     pid_t threadID = m_nextThreadID++;
@@ -937,7 +937,7 @@ FancyRefPtr<Thread> Process::GetThreadFromTID_Unlocked(pid_t tid) {
     return nullptr;
 }
 
-void Process::MapUserSharedData() {
+void Process::map_user_shared_data() {
     FancyRefPtr<UserSharedData> userSharedData;
     {
         ScopedSpinLock<true> lockUSD(userSharedDataLock);
@@ -958,22 +958,22 @@ void Process::MapUserSharedData() {
         0x7000A00000, false);
     reinterpret_cast<PhysicalVMObject*>(m_signalTrampoline->vmObject.get())
         ->ForceAllocate(); // Forcibly allocate all blocks
-    m_signalTrampoline->vmObject->MapAllocatedBlocks(m_signalTrampoline->Base(), GetPageMap());
+    m_signalTrampoline->vmObject->MapAllocatedBlocks(m_signalTrampoline->Base(), get_page_map());
 
     // Copy signal trampoline code into process
-    asm volatile("cli; mov %%rax, %%cr3" ::"a"(GetPageMap()->pml4Phys));
+    asm volatile("cli; mov %%rax, %%cr3" ::"a"(get_page_map()->pml4Phys));
     memcpy(reinterpret_cast<void*>(m_signalTrampoline->Base()), signalTrampolineStart,
            signalTrampolineEnd - signalTrampolineStart);
-    asm volatile("mov %%rax, %%cr3; sti" ::"a"(Scheduler::GetCurrentProcess()->GetPageMap()->pml4Phys));
+    asm volatile("mov %%rax, %%cr3; sti" ::"a"(Scheduler::GetCurrentProcess()->get_page_map()->pml4Phys));
 }
 
-void Process::MapProcessEnvironmentBlock() {
+void Process::map_process_environment_block() {
     pebRegion = addressSpace->AllocateAnonymousVMObject(PAGE_COUNT_4K(sizeof(ProcessEnvironmentBlock)) << PAGE_SHIFT_4K,
                                                         PROC_PEB_BASE, false);
-    pebRegion->vmObject->Hit(pebRegion->base, 0, GetPageMap());
+    pebRegion->vmObject->Hit(pebRegion->base, 0, get_page_map());
 }
 
-void Process::InitializePEB() {
+void Process::initialize_peb() {
     ProcessEnvironmentBlock* peb = (ProcessEnvironmentBlock*)m_mainThread->gsBase;
     peb->self = peb;
     peb->pid = m_pid;

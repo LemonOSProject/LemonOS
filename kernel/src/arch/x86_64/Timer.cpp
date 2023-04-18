@@ -109,7 +109,7 @@ long TimeDifference(const timeval& newTime, const timeval& oldTime) {
     return seconds * 1000000 + microseconds;
 }
 
-void SleepCurrentThread(timeval& time) { Thread::Current()->Sleep(time.tv_sec * 1000000 + time.tv_usec); }
+void SleepCurrentThread(timeval& time) { Thread::current()->sleep(time.tv_sec * 1000000 + time.tv_usec); }
 
 void Wait(long ms) {
     assert(ms > 0);

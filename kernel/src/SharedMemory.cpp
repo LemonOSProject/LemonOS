@@ -71,7 +71,7 @@ void* MapSharedMemory(int64_t key, Process* proc, uint64_t hint) {
     }
 
     if (sMem->IsPrivate()) { // Private Mapping
-        if (proc->PID() != sMem->Owner() && proc->PID() != sMem->Recipient()) {
+        if (proc->pid() != sMem->Owner() && proc->pid() != sMem->Recipient()) {
             Log::Warning("Cannot access private mapping!");
             return nullptr; // Does not have access rights
         }

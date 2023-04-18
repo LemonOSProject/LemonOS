@@ -63,7 +63,7 @@ void** subsystems[2] = {sysTable, leTable};
 long syscallCounts[2] = {SYS_SYSCALLS, LE_SYSCALLS};
 
 extern "C" void syscall_handler(RegisterContext* r) {
-    Thread* th = Thread::Current();
+    Thread* th = Thread::current();
 
     uint64_t num = SC_NUM(r) & 0xffff;
     uint64_t ss = SC_NUM(r) >> 16;

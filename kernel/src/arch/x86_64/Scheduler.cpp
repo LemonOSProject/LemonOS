@@ -48,8 +48,8 @@ void InsertNewThreadIntoQueue(Thread* thread) {
     CPU* cpu = SMP::cpus[0];
     for (unsigned i = 1; i < SMP::processorCount; i++) {
         // Pick the CPU with the most idle time since run queue balance
-        if (SMP::cpus[i]->idleProcess->GetMainThread()->ticksSinceBalance >
-            cpu->idleProcess->GetMainThread()->ticksSinceBalance) {
+        if (SMP::cpus[i]->idleProcess->get_main_thread()->ticksSinceBalance >
+            cpu->idleProcess->get_main_thread()->ticksSinceBalance) {
             cpu = SMP::cpus[i];
         }
 
@@ -76,16 +76,16 @@ void Initialize() {
     CPU* cpu = GetCPULocal();
     
     for (unsigned i = 0; i < SMP::processorCount; i++) {
-        FancyRefPtr<Process> idleProcess = Process::CreateIdleProcess((String("idle_cpu") + to_string(i)).c_str());
+        FancyRefPtr<Process> idleProcess = Process::create_idle_process((String("idle_cpu") + to_string(i)).c_str());
         SMP::cpus[i]->idleProcess = idleProcess.get();
-        SMP::cpus[i]->idleThread = idleProcess->GetMainThread().get();
+        SMP::cpus[i]->idleThread = idleProcess->get_main_thread().get();
         releaseLock(&SMP::cpus[i]->runQueueLock);
     }
 
     IDT::RegisterInterruptHandler(IPI_SCHEDULE, Schedule);
 
-    auto kproc = Process::CreateKernelProcess((void*)KernelProcess, "Kernel", nullptr);
-    kproc->Start();
+    auto kproc = Process::create_kernel_process((void*)KernelProcess, "Kernel", nullptr);
+    kproc->start();
 
     cpu->currentThread = nullptr;
     schedulerReady = true;
@@ -118,7 +118,7 @@ pid_t GetNextPID() { return (*nextPID)++; }
 FancyRefPtr<Process> FindProcessByPID(pid_t pid) {
     ScopedSpinLock lockProcesses(processesLock);
     for (auto& proc : *processes) {
-        if (proc->PID() == pid)
+        if (proc->pid() == pid)
             return proc;
     }
 
@@ -128,8 +128,8 @@ FancyRefPtr<Process> FindProcessByPID(pid_t pid) {
 pid_t GetNextProcessPID(pid_t pid) {
     ScopedSpinLock lockProcesses(processesLock);
     for (auto it = processes->begin(); it != processes->end(); it++) {
-        if (it->get()->PID() > pid) { // Found process with PID greater than pid
-            return it->get()->PID();
+        if (it->get()->pid() > pid) { // Found process with PID greater than pid
+            return it->get()->pid();
         }
     }
 
@@ -251,7 +251,7 @@ void BalanceRunQueues() {
                 thread->ticksGivenSinceBalance = 0;
 
                 Log::Debug(debugLevelScheduler, DebugLevelVerbose, "%d: resetting %s (pid %d tid %d)", i,
-                           thread->parent->name, thread->parent->PID(), thread->tid);
+                           thread->parent->name, thread->parent->pid(), thread->tid);
                 thread = thread->next;
             } while (thread != SMP::cpus[i]->runQueue->get_front());
         }
@@ -386,12 +386,12 @@ void DoSwitch(CPU* cpu) {
     // - Pending unmasked signals
     // If true, invoke the signal handler
     if ((cpu->currentThread->registers.cs & 0x3) &&
-        (cpu->currentThread->pendingSignals & ~cpu->currentThread->EffectiveSignalMask())) {
-        if (cpu->currentThread->parent->State() == Process::Process_Running) {
+        (cpu->currentThread->pendingSignals & ~cpu->currentThread->effective_signal_mask())) {
+        if (cpu->currentThread->parent->state() == Process::Process_Running) {
             int ret = acquireTestLock(&cpu->currentThread->kernelLock);
             assert(!ret);
 
-            cpu->currentThread->HandlePendingSignal(&cpu->currentThread->registers);
+            cpu->currentThread->handle_pending_signal(&cpu->currentThread->registers);
             releaseLock(&cpu->currentThread->kernelLock);
         }
     }
@@ -418,7 +418,7 @@ void DoSwitch(CPU* cpu) {
         pop %%rax
         addq $8, %%rsp
         iretq)" ::"r"(&cpu->currentThread->registers),
-        "r"(cpu->currentThread->parent->GetPageMap()->pml4Phys));
+        "r"(cpu->currentThread->parent->get_page_map()->pml4Phys));
 }
 
 } // namespace Scheduler

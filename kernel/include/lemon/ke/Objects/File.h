@@ -48,7 +48,7 @@ public:
     // Read Directory
     virtual ErrorOr<int> ReadDir(struct DirectoryEntry*, uint32_t);
 
-    virtual ErrorOr<struct MappedRegion*> MMap(uintptr_t base, size_t size, off_t off, int prot, bool shared,
+    virtual ErrorOr<class MappedRegion*> MMap(uintptr_t base, size_t size, off_t off, int prot, bool shared,
                                               bool fixed);
 
     virtual void Watch(class KernelObjectWatcher* watcher, KOEvent events) override;

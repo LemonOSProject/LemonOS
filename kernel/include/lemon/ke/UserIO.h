@@ -57,6 +57,18 @@ public:
         }
     }
 
+    [[nodiscard]] ALWAYS_INLINE int Fill(int c, size_t len) {
+        if(m_user) {
+            int r = user_memset(m_data + m_offset, c, len);
+            m_offset += len;
+            return r;
+        } else {
+            memset(m_data + m_offset, c, len);
+            m_offset += len;
+            return 0;
+        }
+    }
+
     ALWAYS_INLINE size_t Offset() const { return m_offset; }
     ALWAYS_INLINE void SetOffset(size_t off) { m_offset = off; }
 

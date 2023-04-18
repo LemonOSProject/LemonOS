@@ -24,8 +24,6 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
         if (argp) {
             args.add_back(get_user_string_or_fault(argp, SYS_ARGLEN_MAX));
         }
-
-        Log::Info("Arg %s", args[args.size() - 1].c_str());
     } while (argp);
 
     do {
@@ -35,11 +33,9 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
         if (argp) {
             environ.add_back(get_user_string_or_fault(argp, SYS_ARGLEN_MAX));
         }
-
-        Log::Info("EnV %s", environ[environ.size() - 1].c_str());
     } while (argp);
 
-    Process* proc = Process::Current();
+    Process* proc = Process::current();
     auto* inode = fs::ResolvePath(filepath, proc->workingDir->inode);
     if(!inode) {
         return ENOENT;
@@ -64,18 +60,18 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
         return ENOEXEC;
     }
 
-    proc->KillAllOtherThreads();
+    proc->kill_all_other_threads();
 
-    for(le_handle_t i = 0; i < proc->HandleCount(); i++) {
-        Handle h = proc->GetHandle(i);
+    for(le_handle_t i = 0; i < proc->handle_count(); i++) {
+        Handle h = proc->get_handle(i);
 
         if(h.IsValid() && h.closeOnExec) {
-            proc->DestroyHandle(i);
+            proc->handle_destroy(i);
         }
     }
 
     if(proc->execve(exe, args, environ, filepath.c_str()) != ERROR_NONE) {
-        proc->Die();
+        proc->die();
     }
 
     elf_free_data(exe);

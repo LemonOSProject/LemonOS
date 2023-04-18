@@ -159,8 +159,8 @@ namespace Network{
 	}
 
 	void InitializeNetworkThread(){
-		netProcess = Process::CreateKernelProcess((void*)InterfaceThread, "NetworkStack", nullptr);
-		netProcess->Start();
+		netProcess = Process::create_kernel_process((void*)InterfaceThread, "NetworkStack", nullptr);
+		netProcess->start();
 	}
 
 	void Send(void* data, size_t length, NetworkAdapter* adapter){

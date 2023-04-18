@@ -17,7 +17,7 @@ bool Semaphore::Wait() {
 
         releaseLock(&lock);
 
-        return Thread::Current()->Block(&blocker);
+        return Thread::current()->block(&blocker);
     }
     releaseLock(&lock);
 
@@ -34,7 +34,7 @@ bool Semaphore::WaitTimeout(long& timeout) {
 
         releaseLock(&lock);
 
-        return Thread::Current()->Block(&blocker, timeout);
+        return Thread::current()->block(&blocker, timeout);
     }
     releaseLock(&lock);
 

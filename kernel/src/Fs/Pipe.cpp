@@ -15,7 +15,7 @@ ErrorOr<ssize_t> UNIXPipe::Read(size_t off, size_t size, UIOBuffer* buffer){
     if(!widowed && size > stream->Pos()){
         FilesystemBlocker bl(this, size);
 
-        if(Thread::Current()->Block(&bl)){
+        if(Thread::current()->block(&bl)){
             return Error{EINTR};
         }
     }
@@ -31,7 +31,7 @@ ErrorOr<ssize_t> UNIXPipe::Write(size_t off, size_t size, UIOBuffer* buffer){
     if(end != WriteEnd){
         return Error{ESPIPE};
     } else if(widowed || !otherEnd){
-        Thread::Current()->Signal(SIGPIPE); // Send SIGPIPE on broken pipe
+        Thread::current()->signal(SIGPIPE); // Send SIGPIPE on broken pipe
         return Error{EPIPE};
     }
 

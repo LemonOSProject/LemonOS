@@ -15,7 +15,7 @@ struct DeviceQuery {
 
 SYSCALL long le_log(le_str_t umsg) {
     String msg = get_user_string_or_fault(umsg, 0xffffffff);
-    Process* process = Process::Current(); 
+    Process* process = Process::current(); 
 
     Log::Info("[%s] %s", process->name, msg.c_str());
     return 0;
@@ -26,9 +26,9 @@ SYSCALL long le_boot_timer() {
 }
 
 SYSCALL long le_handle_close(le_handle_t handle) {
-    Process* process = Process::Current();
+    Process* process = Process::current();
 
-    return process->DestroyHandle(handle);
+    return process->handle_destroy(handle);
 }
 
 SYSCALL long le_handle_dup(le_handle_t handle, int flags) {
@@ -44,7 +44,7 @@ SYSCALL long le_futex_wake(UserPointer<int> futex) {
 }
 
 SYSCALL long le_set_user_tcb(uintptr_t value) {
-    Thread* thread = Thread::Current();
+    Thread* thread = Thread::current();
 
     asm("cli");
     thread->fsBase = value;
@@ -69,11 +69,11 @@ long le_nanosleep(UserPointer<long> nanos) {
     
     long targetTime = Timer::UsecondsSinceBoot() + us;
 
-    Thread::Current()->Sleep(us);
+    Thread::current()->sleep(us);
 
     targetTime -= Timer::UsecondsSinceBoot();
 
-    if(Thread::Current()->HasPendingSignals() && targetTime > 0) {
+    if(Thread::current()->has_pending_signals() && targetTime > 0) {
         // Don't worry about EFAULT,
         // just return EINTR
         nanos.StoreValue(targetTime * 1000);

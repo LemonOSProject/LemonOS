@@ -149,10 +149,10 @@ Error elf_load_segments(Process* proc, ELFData& exe, uintptr_t base) {
             // If we aren't the same process then we can't fault in the
             // other process's address space (for now)
             vmo->ForceAllocate();
-            vmo->MapAllocatedBlocks(region->Base(), proc->GetPageMap());
+            vmo->MapAllocatedBlocks(region->Base(), proc->get_page_map());
 
-            uintptr_t pml4 = Process::Current()->GetPageMap()->pml4Phys;
-            asm volatile("cli; mov %%rax, %%cr3" ::"a"(proc->GetPageMap()->pml4Phys) : "memory");
+            uintptr_t pml4 = Process::current()->get_page_map()->pml4Phys;
+            asm volatile("cli; mov %%rax, %%cr3" ::"a"(proc->get_page_map()->pml4Phys) : "memory");
             memcpy((void*)(base + header.vaddr), data, header.fileSize);
             asm volatile("mov %%rax, %%cr3; sti" ::"a"(pml4) : "memory");
         }

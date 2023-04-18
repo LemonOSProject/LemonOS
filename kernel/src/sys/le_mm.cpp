@@ -37,7 +37,7 @@ long sys_mmap(void* address, size_t len, long flags, le_handle_t handle, long of
 
     len = (len + PAGE_SIZE_4K - 1) & ~(PAGE_SIZE_4K - 1);
 
-    Process* process = Process::Current();
+    Process* process = Process::current();
     if(!anon) {
         auto file = FD_GET(handle);
 
@@ -70,7 +70,7 @@ long sys_mprotect(void* address, size_t len, int prot) {
 }
 
 long sys_munmap(void* address, size_t len) {
-    Process* process = Process::Current();
+    Process* process = Process::current();
 
     // address and len must be multiples of page size
     if(((uintptr_t)address) & (PAGE_SIZE_4K - 1) || (len & (PAGE_SIZE_4K - 1))) {

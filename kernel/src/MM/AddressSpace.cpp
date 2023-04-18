@@ -252,7 +252,7 @@ MappedRegion* AddressSpace::AllocateAnonymousVMObject(size_t size, uintptr_t bas
     return region;
 }
 
-AddressSpace* AddressSpace::Fork() {
+AddressSpace* AddressSpace::fork() {
     ScopedSpinLock acquired(m_lock);
 
     AddressSpace* fork = new AddressSpace(Memory::CreatePageMap());
