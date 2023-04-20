@@ -1,6 +1,7 @@
 #pragma once
 
 #include <lemon/abi/types.h>
+#include <lemon/abi/signal.h>
 
 #define HIRAKU_CALL [[gnu::weak]] extern "C"
 
@@ -29,3 +30,6 @@ HIRAKU_CALL long sys_pwrite(le_handle_t handle, const void* buf, size_t count, o
 HIRAKU_CALL long sys_exit(int status);
 HIRAKU_CALL long sys_getpid();
 HIRAKU_CALL long sys_execve(le_str_t filename, le_str_t const* argv, le_str_t const* envp);
+HIRAKU_CALL long sys_sigprocmask(int how, const sigset_t* set, sigset_t* oldset);
+HIRAKU_CALL long sys_sigaction(int sig, const struct sigaction* act, struct sigaction* oldact);
+HIRAKU_CALL long sys_kill(pid_t pid, pid_t tid, int signal);

@@ -2,6 +2,7 @@
 
 #include <lemon/abi/syscall.h>
 #include <lemon/abi/types.h>
+#include <lemon/abi/signal.h>
 #include <lemon/system/hiraku.h>
 
 #include <lemon/abi/peb.h>
@@ -102,5 +103,17 @@ long sys_getpid() {
 
 long sys_execve(le_str_t filepath, le_str_t const* argv, le_str_t const* envp) {
     return syscall(_sys_execve, filepath, argv, envp);
+}
+
+long sys_sigprocmask(int how, const sigset_t* set, sigset_t* oldset) {
+    return syscall(_sys_sigprocmask, set, oldset);
+}
+
+long sys_sigaction(int sig, const struct sigaction* act, struct sigaction* oldact) {
+    return syscall(_sys_sigaction, act, oldact);
+}
+
+long sys_kill(pid_t pid, pid_t tid, int signal) {
+    return syscall(_sys_kill, pid, tid, signal);
 }
 }

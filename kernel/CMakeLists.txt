@@ -118,6 +118,7 @@ set(KERNEL_SRC
     src/sys/le_thread.cpp
     
     src/sys/sys_exec.cpp
+    src/sys/sys_signal.cpp
     src/sys/sys_vfs.cpp
 )
 

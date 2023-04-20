@@ -9,6 +9,8 @@
 
 #include <stdint.h>
 
+#include <lemon/abi/signal.h>
+
 #define SC_TRY_OR_ERROR(func)                                                                                          \
     ({                                                                                                                 \
         auto result = func;                                                                                            \
@@ -26,7 +28,7 @@
 
 #define FD_GET(handle)                                                                                                 \
     ({                                                                                                                 \
-        auto r = Process::current()->get_handle_as<File>(handle);                                                        \
+        auto r = Process::current()->get_handle_as<File>(handle);                                                      \
         if (r.HasError()) {                                                                                            \
             return r.err.code;                                                                                         \
         }                                                                                                              \
@@ -36,9 +38,9 @@
         std::move(r.Value());                                                                                          \
     })
 
-#define KO_GET(T, handle)                                                                                                 \
+#define KO_GET(T, handle)                                                                                              \
     ({                                                                                                                 \
-        auto r = Process::current()->get_handle_as<T>(handle);                                                        \
+        auto r = Process::current()->get_handle_as<T>(handle);                                                         \
         if (r.HasError()) {                                                                                            \
             return r.err.code;                                                                                         \
         }                                                                                                              \
@@ -50,7 +52,7 @@
 
 #define SC_USER_STORE(ptr, val)                                                                                        \
     ({                                                                                                                 \
-        if (ptr.store(val))                                                                                       \
+        if (ptr.store(val))                                                                                            \
             return EFAULT;                                                                                             \
     })
 
@@ -64,7 +66,7 @@ typedef int le_handle_t;
 inline Error get_user_string(le_str_t str, String& kernelString, size_t maxLength) {
     // TODO: If a string is placed right before kernel memory get_user_string will fail
     // since the maximum possible length will run into kernel space
-    if(!is_usermode_pointer(str, 0, maxLength)) {
+    if (!is_usermode_pointer(str, 0, maxLength)) {
         return EFAULT;
     }
 
@@ -81,11 +83,11 @@ inline Error get_user_string(le_str_t str, String& kernelString, size_t maxLengt
     return ERROR_NONE;
 }
 
-#define get_user_string_or_fault(str, maxLength)                                                                                  \
+#define get_user_string_or_fault(str, maxLength)                                                                       \
     ({                                                                                                                 \
         String kString;                                                                                                \
-        if (auto e = get_user_string(str, kString, maxLength); e) {                                                                           \
-            return e;                                                                                             \
+        if (auto e = get_user_string(str, kString, maxLength); e) {                                                    \
+            return e;                                                                                                  \
         }                                                                                                              \
         std::move(kString);                                                                                            \
     })
@@ -119,3 +121,7 @@ SYSCALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long arg, 
 SYSCALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, UserPointer<ssize_t> bytes);
 SYSCALL long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t pos, UserPointer<ssize_t> bytes);
 SYSCALL long sys_execve(le_str_t filepath, UserPointer<le_str_t> argv, UserPointer<le_str_t> envp);
+SYSCALL long sys_sigprocmask(int how, UserPointer<sigset_t> _set, UserPointer<sigset_t> _oldset);
+SYSCALL long sys_sigaction(int sig, UserPointer<struct sigaction> _sigaction,
+                           UserPointer<struct sigaction> _oldaction);
+SYSCALL long sys_kill(pid_t pid, pid_t tid, int signal);
