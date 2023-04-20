@@ -180,7 +180,7 @@ int AC97Controller::WriteSamples(void* output, UIOBuffer* buffer, size_t size, b
                 int written = MIN(PAGE_SIZE_4K, size);
                 // Copy audio data to our mapped buffers which will be sent
                 // to the hardware
-                if(buffer->Read((uint8_t*)sampleBuffers[nextBuffer], written)) {
+                if(buffer->read((uint8_t*)sampleBuffers[nextBuffer], written)) {
                     Log::Warning("[AC97] Fault accessing user memory");
                     break;
                 }

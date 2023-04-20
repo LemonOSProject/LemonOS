@@ -21,14 +21,14 @@ public:
     public:
         PTS(PTMultiplexor& ptmx);
 
-        ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t) override;
-        ErrorOr<FsNode*> FindDir(const char* name) override;
+        ErrorOr<int> read_dir(DirectoryEntry*, uint32_t) override;
+        ErrorOr<FsNode*> find_dir(const char* name) override;
 
-        Error Create(DirectoryEntry* ent, uint32_t mode) override;
-        Error CreateDirectory(DirectoryEntry* ent, uint32_t mode) override;
+        Error create(DirectoryEntry* ent, uint32_t mode) override;
+        Error create_directory(DirectoryEntry* ent, uint32_t mode) override;
 
-        Error Link(FsNode*, DirectoryEntry*) override;
-        Error Unlink(DirectoryEntry*, bool unlinkDirectories = false) override;
+        Error link(FsNode*, DirectoryEntry*) override;
+        Error unlink(DirectoryEntry*, bool unlinkDirectories = false) override;
     
     private:
         PTMultiplexor& m_ptmx;
@@ -57,14 +57,14 @@ public:
     PTYDevice(PTYType dType);
     ~PTYDevice() override;
 
-    ErrorOr<ssize_t> Read(off_t off, size_t size, UIOBuffer* buffer) override;
-    ErrorOr<ssize_t> Write(off_t off, size_t size, UIOBuffer* buffer) override;
-    ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override;
+    ErrorOr<ssize_t> read(off_t off, size_t size, UIOBuffer* buffer) override;
+    ErrorOr<ssize_t> write(off_t off, size_t size, UIOBuffer* buffer) override;
+    ErrorOr<int> ioctl(uint64_t cmd, uint64_t arg) override;
 
     void Watch(class KernelObjectWatcher* watcher, KOEvent events) override;
     void Unwatch(class KernelObjectWatcher* watcher) override;
 
-    bool CanRead();
+    bool can_read();
 
     PTYType ptyType;
     PTY* pty;

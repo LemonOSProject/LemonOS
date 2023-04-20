@@ -20,8 +20,8 @@ public:
         SetDeviceName("UNIX Random Device");
     }
 
-    ErrorOr<ssize_t> Read(size_t, size_t, UIOBuffer*);
-    ErrorOr<ssize_t> Write(size_t, size_t, UIOBuffer*);
+    ErrorOr<ssize_t> read(size_t, size_t, UIOBuffer*);
+    ErrorOr<ssize_t> write(size_t, size_t, UIOBuffer*);
 };
 
 class Null : public Device {
@@ -32,8 +32,8 @@ public:
         SetDeviceName("UNIX Null Device");
     }
 
-    ErrorOr<ssize_t> Read(size_t, size_t, UIOBuffer*);
-    ErrorOr<ssize_t> Write(size_t, size_t, UIOBuffer*);
+    ErrorOr<ssize_t> read(size_t, size_t, UIOBuffer*);
+    ErrorOr<ssize_t> write(size_t, size_t, UIOBuffer*);
 };
 
 class TTY : public Device {
@@ -108,17 +108,17 @@ void Device::SetDeviceName(const char* name) {
     this->deviceName = name;
 }
 
-ErrorOr<ssize_t> Null::Read(size_t offset, size_t size, UIOBuffer* buffer) {
-    if(buffer->Fill(-1, size)) {
+ErrorOr<ssize_t> Null::read(size_t offset, size_t size, UIOBuffer* buffer) {
+    if(buffer->fill(-1, size)) {
         return EFAULT;
     }
 
     return size;
 }
 
-ErrorOr<ssize_t> Null::Write(size_t offset, size_t size, UIOBuffer* buffer) { return size; }
+ErrorOr<ssize_t> Null::write(size_t offset, size_t size, UIOBuffer* buffer) { return size; }
 
-ErrorOr<ssize_t> URandom::Read(size_t offset, size_t size, UIOBuffer* buffer) {
+ErrorOr<ssize_t> URandom::read(size_t offset, size_t size, UIOBuffer* buffer) {
     unsigned int num = (rand() ^ ((Timer::GetSystemUptime() / 2) * Timer::GetFrequency())) + rand();
 
     size_t ogSize = size;
@@ -134,7 +134,7 @@ ErrorOr<ssize_t> URandom::Read(size_t offset, size_t size, UIOBuffer* buffer) {
             bytes = size;
         }
 
-        if(buffer->Write(data, bytes)) {
+        if(buffer->write(data, bytes)) {
             return EFAULT;
         }
 
@@ -144,7 +144,7 @@ ErrorOr<ssize_t> URandom::Read(size_t offset, size_t size, UIOBuffer* buffer) {
     return ogSize;
 }
 
-ErrorOr<ssize_t> URandom::Write(size_t offset, size_t size, UIOBuffer* buffer) { return size; }
+ErrorOr<ssize_t> URandom::write(size_t offset, size_t size, UIOBuffer* buffer) { return size; }
 
 ErrorOr<File*> TTY::Open(size_t flags){
     /*auto stdout = TRY_OR_ERROR(Process::current()->get_handle_as<File>(1));
@@ -175,7 +175,7 @@ public:
         vol.mountPointDirent = DirectoryEntry(this, name);
     }
 
-    ErrorOr<int> ReadDir(DirectoryEntry* dirPtr, uint32_t index) final {
+    ErrorOr<int> read_dir(DirectoryEntry* dirPtr, uint32_t index) final {
         if (index >= rootDevices->get_length() + 2) {
             return 0;
         }
@@ -197,7 +197,7 @@ public:
         }
     }
 
-    ErrorOr<FsNode*> FindDir(const char* name) final {
+    ErrorOr<FsNode*> find_dir(const char* name) final {
         if (!strcmp(name, ".")) {
             return this;
         } else if (!strcmp(name, "..")) {
@@ -286,19 +286,19 @@ ErrorOr<Device*> ResolveDevice(const char* path) {
 
     Device* currentDev = devfs;
     while (file != NULL) { // Iterate through the directories to find the file
-        FsNode* node = TRY_OR_ERROR(fs::FindDir(currentDev, file));
+        FsNode* node = TRY_OR_ERROR(fs::find_dir(currentDev, file));
         if (!node) {
             Log::Warning("Device %s not found!", file);
             return nullptr;
         }
 
-        if (node->IsSymlink()) { // Check for symlinks
+        if (node->is_symlink()) { // Check for symlinks
             assert(!"Symlinks not supported in DevFS");
 
             return nullptr;
         }
 
-        if (node->IsDirectory()) {
+        if (node->is_directory()) {
             currentDev = reinterpret_cast<Device*>(node);
             file = strtok_r(NULL, "/", &strtokSavePtr);
             continue;
@@ -309,7 +309,7 @@ ErrorOr<Device*> ResolveDevice(const char* path) {
             return nullptr;
         }
 
-        if (node->IsSymlink()) { // Check for symlinks
+        if (node->is_symlink()) { // Check for symlinks
             assert(!"Symlinks not supported in DevFS");
 
             return nullptr;

@@ -28,7 +28,7 @@ MappedRegion* AddressSpace::AddressToRegionReadLock(uintptr_t address) {
         }
 
         if (address >= region.Base() && address < region.End()) {
-            region.lock.AcquireRead();
+            region.lock.acquire_read();
             return &region;
         }
     }
@@ -45,7 +45,7 @@ MappedRegion* AddressSpace::AddressToRegionWriteLock(uintptr_t address) {
         }
 
         if (address >= region.Base() && address < region.End()) {
-            region.lock.AcquireWrite();
+            region.lock.acquire_write();
             return &region;
         }
     }
@@ -84,10 +84,10 @@ int AddressSpace::GetRegionsForRangeWriteLock(uintptr_t base, size_t size, Vecto
         return 1;
     }
 
-    start->lock.AcquireWrite();
+    start->lock.acquire_write();
     if((start->vmObject->GetProtection() & prot) != prot) {
         // Inadequate protection flags
-        start->lock.ReleaseWrite();
+        start->lock.release_write();
         return 2;
     }
 
@@ -107,10 +107,10 @@ int AddressSpace::GetRegionsForRangeWriteLock(uintptr_t base, size_t size, Vecto
         }
 
         if(region->Base() == nextAddress) {
-            region->lock.AcquireWrite();
+            region->lock.acquire_write();
             if((region->vmObject->GetProtection() & prot) != prot) {
                 // Inadequate protection flags
-                region->lock.ReleaseWrite();
+                region->lock.release_write();
                 return 2;
             }
 
@@ -162,7 +162,7 @@ long AddressSpace::UnmapRegion(MappedRegion* region) {
     ScopedSpinLock acquired(m_lock);
     InterruptDisabler disableInterrupts;
 
-    assert(region->lock.IsWriteLocked());
+    assert(region->lock.is_write_locked());
 
     for (auto it = m_regions.begin(); it != m_regions.end(); it++) {
         if (it->Base() == region->Base()) {
@@ -284,7 +284,7 @@ long AddressSpace::UnmapMemory(uintptr_t base, size_t size) {
 retry:
     for (auto it = m_regions.begin(); it != m_regions.end(); it++) {
         MappedRegion& region = *it;
-        region.lock.AcquireWrite();
+        region.lock.acquire_write();
 
         if (!region.vmObject) {
             Memory::MapVirtualMemory4K(0, base, PAGE_COUNT_4K(size), 0, m_pageMap);
@@ -307,7 +307,7 @@ retry:
             }
         }
 
-        region.lock.ReleaseWrite();
+        region.lock.release_write();
     }
 
     return 0;

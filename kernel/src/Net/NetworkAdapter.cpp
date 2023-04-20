@@ -29,7 +29,7 @@ namespace Network {
     NetworkPacket* NetworkAdapter::Dequeue() { 
         ScopedSpinLock lock{queueLock};
         if(queue.get_length()) {
-            packetSemaphore.SetValue(queue.get_length() - 1);
+            packetSemaphore.set_value(queue.get_length() - 1);
             return queue.remove_at(0); 
         } else {
             return nullptr;
@@ -37,7 +37,7 @@ namespace Network {
     }
 
     NetworkPacket* NetworkAdapter::DequeueBlocking() {
-        if(packetSemaphore.Wait()){
+        if(packetSemaphore.wait()){
             return nullptr; // We were interrupted
         }
         
@@ -61,7 +61,7 @@ namespace Network {
         }
     };
 
-    ErrorOr<int> NetworkAdapter::Ioctl(uint64_t cmd, uint64_t arg){
+    ErrorOr<int> NetworkAdapter::ioctl(uint64_t cmd, uint64_t arg){
         Process* currentProcess = Scheduler::GetCurrentProcess();
 
         if(cmd == SIOCADDRT){
@@ -86,7 +86,7 @@ namespace Network {
 
             if(currentProcess->euid != 0){
                 IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
-                    Log::Warning("[Network] NetworkAdapter::Ioctl: Attempted SIOCADDRT as EUID %d!", currentProcess->euid);
+                    Log::Warning("[Network] NetworkAdapter::ioctl: Attempted SIOCADDRT as EUID %d!", currentProcess->euid);
                 });
                 return Error{EPERM}; // We are not root
             }
@@ -94,7 +94,7 @@ namespace Network {
             sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&route->rt_gateway);
             if(addr->sin_family != SocketProtocol::InternetProtocol){
                 IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
-                    Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address!");
+                    Log::Warning("[Network] NetworkAdapter::ioctl: Not an IPv4 address!");
                 });
                 return Error{EPROTONOSUPPORT}; // Not IPv4 address
             }
@@ -132,7 +132,7 @@ namespace Network {
             } case SIOCSIFADDR: {
                 if(currentProcess->euid != 0){
                     IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
-                        Log::Warning("[Network] NetworkAdapter::Ioctl: Attempted SIOCSIFADDR as EUID %d!", currentProcess->euid);
+                        Log::Warning("[Network] NetworkAdapter::ioctl: Attempted SIOCSIFADDR as EUID %d!", currentProcess->euid);
                     });
                     return Error{EPERM}; // We are not root
                 }
@@ -140,7 +140,7 @@ namespace Network {
                 sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&req->ifr_addr);
                 if(addr->sin_family != SocketProtocol::InternetProtocol){
                     IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
-                        Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address!", currentProcess->euid);
+                        Log::Warning("[Network] NetworkAdapter::ioctl: Not an IPv4 address!", currentProcess->euid);
                     });
                     return Error{EPROTONOSUPPORT}; // Not IPv4 address
                 }
@@ -155,7 +155,7 @@ namespace Network {
             } case SIOCSIFNETMASK: {
                 if(currentProcess->euid != 0){
                     IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
-                        Log::Warning("[Network] NetworkAdapter::Ioctl: Attempted SIOCSIFNETMASK as EUID %d!", currentProcess->euid);
+                        Log::Warning("[Network] NetworkAdapter::ioctl: Attempted SIOCSIFNETMASK as EUID %d!", currentProcess->euid);
                     });
                     return Error{EPERM}; // We are not root
                 }
@@ -163,7 +163,7 @@ namespace Network {
                 sockaddr_in* addr = reinterpret_cast<sockaddr_in*>(&req->ifr_netmask);
                 if(addr->sin_family != SocketProtocol::InternetProtocol){
                     IF_DEBUG(debugLevelNetwork >= DebugLevelVerbose, {
-                        Log::Warning("[Network] NetworkAdapter::Ioctl: Not an IPv4 address!", currentProcess->euid);
+                        Log::Warning("[Network] NetworkAdapter::ioctl: Not an IPv4 address!", currentProcess->euid);
                     });
                     return Error{EPROTONOSUPPORT}; // Not IPv4 address
                 }

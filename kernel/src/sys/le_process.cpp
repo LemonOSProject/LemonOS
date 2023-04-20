@@ -18,7 +18,7 @@ SYSCALL long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, 
 
             // Store zero before the address space is forked,
             // the child will know its the child when the returned value is 0
-            if (handle.StoreValue(0)) {
+            if (handle.store(0)) {
                 return EFAULT;
             }
         } else  {
@@ -31,7 +31,7 @@ SYSCALL long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, 
 
             // Store zero before the address space is forked,
             // the child will know its the child when the returned value is LE_PROCESS_IS_CHILD
-            if (handle.StoreValue(LE_HANDLE_PROCESS_SELF)) {
+            if (handle.store(LE_HANDLE_PROCESS_SELF)) {
                 return EFAULT;
             }
         }
@@ -65,13 +65,13 @@ SYSCALL long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, 
         nt->kernelLock = 0;
 
         if (flags & LE_PROCESS_PID) {
-            if(handle.StoreValue(process->pid())) {
+            if(handle.store(process->pid())) {
                 Log::Warning("le_create_process: PID gets leaked on EFAULT");
                 return EFAULT;
             }
         } else {
             le_handle_t pHandle = process->allocate_handle(newProcess, flags & LE_PROCESS_CLOEXEC);
-            if (handle.StoreValue(pHandle)) {
+            if (handle.store(pHandle)) {
                 Log::Warning("le_create_process: Handle gets leaked on EFAULT");
                 return EFAULT;
             }

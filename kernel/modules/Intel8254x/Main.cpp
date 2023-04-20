@@ -122,8 +122,8 @@ void Intel8254x::OnInterrupt() {
                 memcpy(pkt->data, rxDescriptorsVirt[rxTail], pkt->length);
 
                 queue.add_back(pkt);
-                packetSemaphore.Signal();
-                Network::packetQueueSemaphore.Signal();
+                packetSemaphore.signal();
+                Network::packetQueueSemaphore.signal();
             } else {
                 // TODO: Do something that isn't dropping the packet when the cache is empty
             }
@@ -261,8 +261,8 @@ Intel8254x::Intel8254x(const PCIInfo* device)
     }
 
     int irqNum = AllocateVector(PCIVectors::PCIVectorAny);
-    Log::Write(",IRQ: ");
-    Log::Write(irqNum);
+    Log::write(",IRQ: ");
+    Log::write(irqNum);
     IDT::RegisterInterruptHandler(irqNum, reinterpret_cast<isr_t>(&Intel8254x::InterruptHandler), this);
 
     uint8_t macAddr[6];

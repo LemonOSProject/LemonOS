@@ -57,7 +57,7 @@ SYSCALL long le_set_user_tcb(uintptr_t value) {
 
 long le_nanosleep(UserPointer<long> nanos) {
     long us;
-    if(nanos.GetValue(us)) {
+    if(nanos.get(us)) {
         return EFAULT;
     }
 
@@ -76,7 +76,7 @@ long le_nanosleep(UserPointer<long> nanos) {
     if(Thread::current()->has_pending_signals() && targetTime > 0) {
         // Don't worry about EFAULT,
         // just return EINTR
-        nanos.StoreValue(targetTime * 1000);
+        nanos.store(targetTime * 1000);
 
         return EINTR;
     }

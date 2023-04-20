@@ -12,7 +12,7 @@
 
 #include <abi/signal.h>
 
-void ThreadBlocker::Interrupt() {
+void ThreadBlocker::interrupt() {
     interrupted = true;
     shouldBlock = false;
 
@@ -23,7 +23,7 @@ void ThreadBlocker::Interrupt() {
     releaseLock(&lock);
 }
 
-void ThreadBlocker::Unblock() {
+void ThreadBlocker::unblock() {
     shouldBlock = false;
     removed = true;
 
@@ -75,7 +75,7 @@ void Thread::signal(int signal) {
     if (blocker && state == ThreadStateBlocked) {
         releaseLock(&stateLock);
 
-        blocker->Interrupt(); // Stop the thread from blocking
+        blocker->interrupt(); // Stop the thread from blocking
     } else {
         releaseLock(&stateLock);
     }
@@ -314,12 +314,12 @@ bool Thread::block(ThreadBlocker* newBlocker, long& usTimeout) {
 
             asm("sti");
 
-            blocker->Interrupt(); // If the blocker re-calls Thread::Unblock that's ok
+            blocker->interrupt(); // If the blocker re-calls Thread::Unblock that's ok
         }
     }
 
     if (blockTimedOut) {
-        blocker->Interrupt();
+        blocker->interrupt();
         usTimeout = 0;
     }
 

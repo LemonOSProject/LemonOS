@@ -69,7 +69,7 @@ int Socket::Listen(int backlog) {
     return -EOPNOTSUPP; // If Listen has not been implemented assume that the socket is not connection-oriented
 }
 
-ErrorOr<ssize_t> Socket::Read(size_t offset, size_t size, UIOBuffer* buffer) { return Receive(buffer, size, 0); }
+ErrorOr<ssize_t> Socket::read(size_t offset, size_t size, UIOBuffer* buffer) { return Receive(buffer, size, 0); }
 
 ErrorOr<int64_t> Socket::Receive(UIOBuffer* buffer, size_t len, int flags) {
     return ReceiveFrom(buffer, len, flags, nullptr, nullptr);
@@ -82,7 +82,7 @@ ErrorOr<int64_t> Socket::ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, s
     return -1; // We should not return but get the compiler to shut up
 }
 
-ErrorOr<ssize_t> Socket::Write(size_t offset, size_t size, UIOBuffer* buffer) { return Send(buffer, size, 0); }
+ErrorOr<ssize_t> Socket::write(size_t offset, size_t size, UIOBuffer* buffer) { return Send(buffer, size, 0); }
 
 ErrorOr<int64_t> Socket::Send(UIOBuffer* buffer, size_t len, int flags) { return SendTo(buffer, len, flags, nullptr, 0); }
 
@@ -193,7 +193,7 @@ LocalSocket* LocalSocket::CreatePairedSocket(LocalSocket* client) {
 int LocalSocket::ConnectTo(LocalSocket* client) {
     assert(passive);
 
-    if (pendingConnections.Wait()) {
+    if (pendingConnections.wait()) {
         return -EINTR;
     }
 
@@ -210,7 +210,7 @@ int LocalSocket::ConnectTo(LocalSocket* client) {
         Scheduler::Yield();
     }
 
-    pendingConnections.Signal();
+    pendingConnections.signal();
 
     return 0;
 }
@@ -285,7 +285,7 @@ int LocalSocket::Bind(const sockaddr* addr, socklen_t addrlen) {
 
     String name = fs::BaseName(unixAddress->sun_path);
     DirectoryEntry ent(this, name.c_str());
-    if (int e = fs::Link(parent, this, &ent); e) {
+    if (int e = fs::link(parent, this, &ent); e) {
         return e;
     }
 
@@ -318,7 +318,7 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen) {
 
     ScopedSpinLock acquired(m_slock);
     FsNode* node = fs::ResolvePath(reinterpret_cast<const sockaddr_un*>(addr)->sun_path);
-    if (!node->IsSocket()) {
+    if (!node->is_socket()) {
         Log::Info("LocalSocket::Connect: Not a socket");
         return -ENOTSOCK;
     }
@@ -339,7 +339,7 @@ int LocalSocket::Connect(const sockaddr* addr, socklen_t addrlen) {
 
 int LocalSocket::Listen(int backlog) {
     ScopedSpinLock acquired(m_slock);
-    pendingConnections.SetValue(backlog + 1);
+    pendingConnections.set_value(backlog + 1);
     passive = true;
 
     if (inbound) {
@@ -383,7 +383,7 @@ ErrorOr<int64_t> LocalSocket::ReceiveFrom(UIOBuffer* buffer, size_t len, int fla
     if (flags & MSG_PEEK) {
         return inbound->Peek(buffer, len);
     } else {
-        return inbound->Read(buffer, len);
+        return inbound->read(buffer, len);
     }
 }
 
@@ -411,9 +411,9 @@ ErrorOr<int64_t> LocalSocket::SendTo(UIOBuffer* buffer, size_t len, int flags, c
             Scheduler::Yield();
         }
 
-    int64_t written = TRY_OR_ERROR(outbound->Write(buffer, len));
+    int64_t written = TRY_OR_ERROR(outbound->write(buffer, len));
 
-    if (peer && peer->CanRead()) {
+    if (peer && peer->can_read()) {
         /*acquireLock(&peer->m_watcherLock);
         while (peer->m_watching.get_length()) {
             peer->m_watching.remove_at(0)->Signal();
@@ -464,7 +464,7 @@ void LocalSocket::Watch(FilesystemWatcher& watcher, int events) {
         return;
     }
 
-    if (CanRead() | !IsConnected()) { // POLLHUP does not care if it is requested
+    if (can_read() | !IsConnected()) { // POLLHUP does not care if it is requested
         return;
     }
 

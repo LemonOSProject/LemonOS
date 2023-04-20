@@ -116,7 +116,7 @@ namespace Network{
 
 		for(;;){
 			NetworkPacket* p;
-			if(packetQueueSemaphore.Wait()){
+			if(packetQueueSemaphore.wait()){
 				continue; // We got interrupted
 			}
 			

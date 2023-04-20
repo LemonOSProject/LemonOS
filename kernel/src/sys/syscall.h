@@ -50,7 +50,7 @@
 
 #define SC_USER_STORE(ptr, val)                                                                                        \
     ({                                                                                                                 \
-        if (ptr.StoreValue(val))                                                                                       \
+        if (ptr.store(val))                                                                                       \
             return EFAULT;                                                                                             \
     })
 
@@ -64,7 +64,7 @@ typedef int le_handle_t;
 inline Error get_user_string(le_str_t str, String& kernelString, size_t maxLength) {
     // TODO: If a string is placed right before kernel memory get_user_string will fail
     // since the maximum possible length will run into kernel space
-    if(!IsUsermodePointer(str, 0, maxLength)) {
+    if(!is_usermode_pointer(str, 0, maxLength)) {
         return EFAULT;
     }
 

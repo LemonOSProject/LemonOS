@@ -31,7 +31,7 @@ PTYDevice::~PTYDevice() {
     }
 }
 
-ErrorOr<ssize_t> PTYDevice::Read(off_t offset, size_t size, UIOBuffer* buffer) {
+ErrorOr<ssize_t> PTYDevice::read(off_t offset, size_t size, UIOBuffer* buffer) {
     assert(pty);
 
     if (pty && ptyType == PTYType::Slave)
@@ -45,7 +45,7 @@ ErrorOr<ssize_t> PTYDevice::Read(off_t offset, size_t size, UIOBuffer* buffer) {
     return 0;
 }
 
-ErrorOr<ssize_t> PTYDevice::Write(off_t offset, size_t size, UIOBuffer* buffer) {
+ErrorOr<ssize_t> PTYDevice::write(off_t offset, size_t size, UIOBuffer* buffer) {
     assert(pty);
 
     if (pty && ptyType == PTYType::Slave) {
@@ -89,7 +89,7 @@ ErrorOr<ssize_t> PTYDevice::Write(off_t offset, size_t size, UIOBuffer* buffer) 
     return 0;
 }
 
-ErrorOr<int> PTYDevice::Ioctl(uint64_t cmd, uint64_t arg) {
+ErrorOr<int> PTYDevice::ioctl(uint64_t cmd, uint64_t arg) {
     assert(pty);
 
     switch (cmd) {
@@ -136,7 +136,7 @@ void PTYDevice::Unwatch(KernelObjectWatcher* watcher) {
     }
 }
 
-bool PTYDevice::CanRead() {
+bool PTYDevice::can_read() {
     if (ptyType == PTYType::Master) {
         return !!pty->master.bufferPos;
     } else if (ptyType == PTYType::Slave) {
@@ -145,7 +145,7 @@ bool PTYDevice::CanRead() {
         else
             return !!pty->slave.bufferPos;
     } else {
-        assert(!"PTYDevice::CanRead: PTYDevice is designated neither slave nor master");
+        assert(!"PTYDevice::can_read: PTYDevice is designated neither slave nor master");
     }
 }
 
@@ -158,8 +158,8 @@ PTY::PTY(int id) : m_id(id) {
 
     master.ignoreBackspace = true;
     slave.ignoreBackspace = false;
-    master.Flush();
-    slave.Flush();
+    master.flush();
+    slave.flush();
     tios.c_lflag = ECHO | ICANON;
 
     strcpy(slaveDirent.name, to_string(id).c_str());
@@ -175,11 +175,11 @@ PTY::PTY(int id) : m_id(id) {
 
 PTY::~PTY() {
     while (m_watchingSlave.get_length()) {
-        m_watchingSlave.remove_at(0)->Signal(); // Signal all watching
+        m_watchingSlave.remove_at(0)->signal(); // Signal all watching
     }
 
     while (m_watchingMaster.get_length()) {
-        m_watchingMaster.remove_at(0)->Signal(); // Signal all watching
+        m_watchingMaster.remove_at(0)->signal(); // Signal all watching
     }
 }
 
@@ -192,7 +192,7 @@ void PTY::Close() {
     }
 }
 
-ErrorOr<ssize_t> PTY::MasterRead(UIOBuffer* buffer, size_t count) { return master.Read(buffer, count); }
+ErrorOr<ssize_t> PTY::MasterRead(UIOBuffer* buffer, size_t count) { return master.read(buffer, count); }
 
 ErrorOr<ssize_t> PTY::SlaveRead(UIOBuffer* buffer, size_t count) {
     Thread* thread = Thread::current();
@@ -201,7 +201,7 @@ ErrorOr<ssize_t> PTY::SlaveRead(UIOBuffer* buffer, size_t count) {
         KernelObjectWatcher w;
         w.Watch(slaveFile, KOEvent::In);
 
-        if (w.Wait()) {
+        if (w.wait()) {
             return Error{EINTR};
         }
     }
@@ -210,28 +210,28 @@ ErrorOr<ssize_t> PTY::SlaveRead(UIOBuffer* buffer, size_t count) {
         KernelObjectWatcher w;
         w.Watch(slaveFile, KOEvent::In);
 
-        if (w.Wait()) {
+        if (w.wait()) {
             return Error{EINTR};
         }
     }
 
-    return slave.Read(buffer, count);
+    return slave.read(buffer, count);
 }
 
 ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
-    ssize_t ret = TRY_OR_ERROR(slave.Write(buffer, count));
+    ssize_t ret = TRY_OR_ERROR(slave.write(buffer, count));
 
     if (Echo() && ret) {
         for (unsigned i = 0; i < count; i++) {
             char c;
-            if (buffer->Read((uint8_t*)&c, 1, i)) {
+            if (buffer->read((uint8_t*)&c, 1, i)) {
                 return EFAULT;
             }
 
             if (c == '\e') { // Escape
-                master.Write("^[", 2);
+                master.write("^[", 2);
             } else {
-                master.Write(&c, 1);
+                master.write(&c, 1);
             }
         }
     }
@@ -240,13 +240,13 @@ ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
     if (IsCanonical()) {
         if (slave.lines && m_watchingSlave.get_length()) {
             while (m_watchingSlave.get_length()) {
-                m_watchingSlave.remove_at(0)->Signal(); // Signal all watching
+                m_watchingSlave.remove_at(0)->signal(); // Signal all watching
             }
         }
     } else {
         if (slave.bufferPos && m_watchingSlave.get_length()) {
             while (m_watchingSlave.get_length()) {
-                m_watchingSlave.remove_at(0)->Signal(); // Signal all watching
+                m_watchingSlave.remove_at(0)->signal(); // Signal all watching
             }
         }
     }
@@ -255,12 +255,12 @@ ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
 }
 
 ErrorOr<ssize_t> PTY::SlaveWrite(UIOBuffer* buffer, size_t count) {
-    ssize_t written = TRY_OR_ERROR(master.Write(buffer, count));
+    ssize_t written = TRY_OR_ERROR(master.write(buffer, count));
 
     ScopedSpinLock lockWatchers(m_watcherLock);
     if (master.bufferPos && m_watchingMaster.get_length()) {
         while (m_watchingMaster.get_length()) {
-            m_watchingMaster.remove_at(0)->Signal(); // Signal all watching
+            m_watchingMaster.remove_at(0)->signal(); // Signal all watching
         }
     }
 
@@ -269,10 +269,10 @@ ErrorOr<ssize_t> PTY::SlaveWrite(UIOBuffer* buffer, size_t count) {
 
 void PTY::WatchMaster(KernelObjectWatcher* watcher, KOEvent events) {
     if (!HAS_KOEVENT(events, KOEvent::In)) { // We don't really block on writes and nothing else applies except POLLIN
-        watcher->Signal();
+        watcher->signal();
         return;
-    } else if (masterFile->CanRead()) {
-        watcher->Signal();
+    } else if (masterFile->can_read()) {
+        watcher->signal();
         return;
     }
 
@@ -281,10 +281,10 @@ void PTY::WatchMaster(KernelObjectWatcher* watcher, KOEvent events) {
 
 void PTY::WatchSlave(KernelObjectWatcher* watcher, KOEvent events) {
     if (!HAS_KOEVENT(events, KOEvent::In)) { // We don't really block on writes and nothing else applies except POLLIN
-        watcher->Signal();
+        watcher->signal();
         return;
-    } else if (slaveFile->CanRead()) {
-        watcher->Signal();
+    } else if (slaveFile->can_read()) {
+        watcher->signal();
         return;
     }
 

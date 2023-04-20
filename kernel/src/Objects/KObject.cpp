@@ -2,6 +2,6 @@
 
 #include <Objects/Watcher.h>
 
-void KernelObject::Watch(KernelObjectWatcher* watcher, KOEvent) { watcher->Signal(); }
+void KernelObject::Watch(KernelObjectWatcher* watcher, KOEvent) { watcher->signal(); }
 
 void KernelObject::Unwatch(KernelObjectWatcher*) {}

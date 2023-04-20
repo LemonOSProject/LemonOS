@@ -259,7 +259,7 @@ public:
         SetDeviceName("PS/2 Keyboard Device");
     }
 
-    ErrorOr<ssize_t> Read(size_t offset, size_t size, uint8_t* buffer) {
+    ErrorOr<ssize_t> read(size_t offset, size_t size, uint8_t* buffer) {
         if (size > keyCount)
             size = keyCount;
 
@@ -289,7 +289,7 @@ public:
         SetDeviceName("PS/2 Mouse Device");
     }
 
-    ErrorOr<ssize_t> Read(size_t offset, size_t size, uint8_t* buffer) {
+    ErrorOr<ssize_t> read(size_t offset, size_t size, uint8_t* buffer) {
         if (size < sizeof(MousePacket))
             return 0;
 

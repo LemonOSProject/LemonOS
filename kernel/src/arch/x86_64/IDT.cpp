@@ -207,21 +207,21 @@ void HandleFatalInterrupt(int intNum, RegisterContext* regs) {
         Log::Info("Error Code: ");
         Log::Info(regs->err);
         Log::Info("Register Dump: a: ");
-        Log::Write(regs->rax);
-        Log::Write(", b:");
-        Log::Write(regs->rbx);
-        Log::Write(", c:");
-        Log::Write(regs->rcx);
-        Log::Write(", d:");
-        Log::Write(regs->rdx);
-        Log::Write(", S:");
-        Log::Write(regs->rsi);
-        Log::Write(", D:");
-        Log::Write(regs->rdi);
-        Log::Write(", sp:");
-        Log::Write(regs->rsp);
-        Log::Write(", bp:");
-        Log::Write(regs->rbp);
+        Log::write(regs->rax);
+        Log::write(", b:");
+        Log::write(regs->rbx);
+        Log::write(", c:");
+        Log::write(regs->rcx);
+        Log::write(", d:");
+        Log::write(regs->rdx);
+        Log::write(", S:");
+        Log::write(regs->rsi);
+        Log::write(", D:");
+        Log::write(regs->rdi);
+        Log::write(", sp:");
+        Log::write(regs->rsp);
+        Log::write(", bp:");
+        Log::write(regs->rbp);
 
         Log::Info("Stack Trace:");
         PrintStackTrace(regs->rbp);
@@ -250,29 +250,29 @@ void HandleFatalInterrupt(int intNum, RegisterContext* regs) {
         Process* current = Process::current();
 
         Log::Warning("Process %s crashed, PID: ", current->name);
-        Log::Write(current->pid());
-        Log::Write(", RIP: ");
-        Log::Write(regs->rip);
-        Log::Write(", Exception: ");
-        Log::Write(intNum);
-        Log::Write(", Error Code: ");
-        Log::Write(regs->err);
+        Log::write(current->pid());
+        Log::write(", RIP: ");
+        Log::write(regs->rip);
+        Log::write(", Exception: ");
+        Log::write(intNum);
+        Log::write(", Error Code: ");
+        Log::write(regs->err);
         Log::Info("Register Dump: a: ");
-        Log::Write(regs->rax);
-        Log::Write(", b:");
-        Log::Write(regs->rbx);
-        Log::Write(", c:");
-        Log::Write(regs->rcx);
-        Log::Write(", d:");
-        Log::Write(regs->rdx);
-        Log::Write(", S:");
-        Log::Write(regs->rsi);
-        Log::Write(", D:");
-        Log::Write(regs->rdi);
-        Log::Write(", sp:");
-        Log::Write(regs->rsp);
-        Log::Write(", bp:");
-        Log::Write(regs->rbp);
+        Log::write(regs->rax);
+        Log::write(", b:");
+        Log::write(regs->rbx);
+        Log::write(", c:");
+        Log::write(regs->rcx);
+        Log::write(", d:");
+        Log::write(regs->rdx);
+        Log::write(", S:");
+        Log::write(regs->rsi);
+        Log::write(", D:");
+        Log::write(regs->rdi);
+        Log::write(", sp:");
+        Log::write(regs->rsp);
+        Log::write(", bp:");
+        Log::write(regs->rbp);
         Log::Info("Stack trace:");
         UserPrintStackTrace(regs->rbp, current->addressSpace);
         current->die();
@@ -310,7 +310,7 @@ extern "C" void irq_handler(int int_num, RegisterContext* regs) {
         pair.handler(pair.data, regs);
     } else {
         Log::Warning("Unhandled IRQ: ");
-        Log::Write(int_num);
+        Log::write(int_num);
     }
 }
 
@@ -322,6 +322,6 @@ extern "C" void ipi_handler(int int_num, RegisterContext* regs) {
         pair.handler(pair.data, regs);
     } else {
         Log::Warning("Unhandled IPI: ");
-        Log::Write(int_num);
+        Log::write(int_num);
     }
 }

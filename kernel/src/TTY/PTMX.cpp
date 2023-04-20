@@ -12,7 +12,7 @@ PTMultiplexor::PTS::PTS(PTMultiplexor& ptmx)
     pmask = 0755;
 }
 
-ErrorOr<int> PTMultiplexor::PTS::ReadDir(DirectoryEntry* dirent, uint32_t index){
+ErrorOr<int> PTMultiplexor::PTS::read_dir(DirectoryEntry* dirent, uint32_t index){
     ScopedSpinLock lock(m_ptmx.m_ptmxLock);
     if(index >= m_ptmx.m_ptList.get_length()){
         return 0;
@@ -22,7 +22,7 @@ ErrorOr<int> PTMultiplexor::PTS::ReadDir(DirectoryEntry* dirent, uint32_t index)
     return 1;
 }
 
-ErrorOr<FsNode*> PTMultiplexor::PTS::FindDir(const char* name){
+ErrorOr<FsNode*> PTMultiplexor::PTS::find_dir(const char* name){
     ScopedSpinLock lock(m_ptmx.m_ptmxLock);
     for(auto& pty : m_ptmx.m_ptList){
         if(!strcmp(pty->slaveDirent.name, name)){
@@ -33,19 +33,19 @@ ErrorOr<FsNode*> PTMultiplexor::PTS::FindDir(const char* name){
     return nullptr;
 }
 
-Error PTMultiplexor::PTS::Create(DirectoryEntry*, uint32_t){
+Error PTMultiplexor::PTS::create(DirectoryEntry*, uint32_t){
     return Error{EPERM};
 }
 
-Error PTMultiplexor::PTS::CreateDirectory(DirectoryEntry*, uint32_t){
+Error PTMultiplexor::PTS::create_directory(DirectoryEntry*, uint32_t){
     return Error{EPERM};
 }
 
-Error PTMultiplexor::PTS::Link(FsNode*, DirectoryEntry*){
+Error PTMultiplexor::PTS::link(FsNode*, DirectoryEntry*){
     return Error{EPERM};
 }
 
-Error PTMultiplexor::PTS::Unlink(DirectoryEntry*, bool){
+Error PTMultiplexor::PTS::unlink(DirectoryEntry*, bool){
     return Error{EPERM};
 }
 

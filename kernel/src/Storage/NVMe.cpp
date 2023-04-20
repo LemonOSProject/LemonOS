@@ -420,7 +420,7 @@ long Controller::GetNamespaceList() {
 }
 
 NVMeQueue* Controller::AcquireIOQueue() {
-    if (queueAvailability.Wait()) {
+    if (queueAvailability.wait()) {
         return nullptr;
     }
 
@@ -431,6 +431,6 @@ NVMeQueue* Controller::AcquireIOQueue() {
 void Controller::ReleaseIOQueue(NVMeQueue* queue) {
     ioQueues.add_back(queue);
 
-    queueAvailability.Signal();
+    queueAvailability.signal();
 }
 } // namespace NVMe

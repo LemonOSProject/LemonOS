@@ -87,7 +87,7 @@ namespace Network::UDP{
 		header->length = sizeof(UDPHeader) + length;
 		header->checksum = 0;
 
-        if(data->Read(header->data, length)) {
+        if(data->read(header->data, length)) {
             return EFAULT;
         }
 
@@ -216,7 +216,7 @@ namespace Network::UDP{
         }
 
         size_t finalLength = MIN(len, pkt.length);
-        if(buffer->Write(pkt.data, finalLength)) {
+        if(buffer->write(pkt.data, finalLength)) {
             return EFAULT;
         }
 

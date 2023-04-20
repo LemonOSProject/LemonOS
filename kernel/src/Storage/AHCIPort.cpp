@@ -169,12 +169,12 @@ Port::Port(int num, hba_port_t* portStructure, hba_mem_t* hbaMem) {
 
     InitializePartitions();
 
-    portLock.SetValue(1);
-    bufferSemaphore.SetValue(8);
+    portLock.set_value(1);
+    bufferSemaphore.set_value(8);
 }
 
 int Port::AcquireBuffer() {
-    if (bufferSemaphore.Wait()) {
+    if (bufferSemaphore.wait()) {
         return -EINTR;
     }
 
@@ -185,7 +185,7 @@ int Port::AcquireBuffer() {
         }
     }
 
-    bufferSemaphore.Signal();
+    bufferSemaphore.signal();
     return -1;
 }
 
@@ -193,7 +193,7 @@ void Port::ReleaseBuffer(int index) {
     assert(index < 8);
 
     releaseLock(&bufferLocks[index]);
-    bufferSemaphore.Signal();
+    bufferSemaphore.signal();
 }
 
 int Port::ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
@@ -221,7 +221,7 @@ int Port::ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
             return e;                                         // Error Reading Sectors
         }
 
-        if(buffer->Write((uint8_t*)buffers[buf], size)) {
+        if(buffer->write((uint8_t*)buffers[buf], size)) {
             return EFAULT;
         }
 
@@ -243,7 +243,7 @@ int Port::ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
             return e; // Error Reading Sectors
         }
 
-        if(buffer->Write((uint8_t*)buffers[buf], size)) {
+        if(buffer->write((uint8_t*)buffers[buf], size)) {
             return EFAULT;
         }
 
@@ -265,7 +265,7 @@ int Port::ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
             return e; // Error Reading Sectors
         }
 
-        if(buffer->Write((uint8_t*)buffers[buf], size)) {
+        if(buffer->write((uint8_t*)buffers[buf], size)) {
             return EFAULT;
         }
 
@@ -295,7 +295,7 @@ int Port::WriteDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
         if (!size)
             break;
 
-        if(buffer->Read((uint8_t*)buffers[buf], size)) {
+        if(buffer->read((uint8_t*)buffers[buf], size)) {
             return EFAULT;
         }
 
@@ -315,7 +315,7 @@ int Port::WriteDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
 int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) {
     assert(CheckInterrupts());
 
-    if (portLock.Wait()) {
+    if (portLock.wait()) {
         return EINTR;
     }
 
@@ -327,7 +327,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
     if (slot == -1) {
         Log::Warning("[SATA] Could not find command slot!");
 
-        portLock.Signal();
+        portLock.signal();
         return -EIO;
     }
 
@@ -392,7 +392,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
     if (spin <= 0) {
         Log::Warning("[SATA] Port Hung");
 
-        portLock.Signal();
+        portLock.signal();
         return EIO;
     }
 
@@ -411,7 +411,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
             Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
 
             StopCMD(registers);
-            portLock.Signal();
+            portLock.signal();
             return EIO;
         }
     }
@@ -430,7 +430,7 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
     if (spin <= 0) {
         Log::Warning("[SATA] Port Hung");
 
-        portLock.Signal();
+        portLock.signal();
         return -EIO;
     }
 
@@ -440,11 +440,11 @@ int Port::Access(uint64_t lba, uint32_t count, uintptr_t physBuffer, int write) 
     if (registers->is & HBA_PxIS_TFES) {
         Log::Warning("[SATA] Disk Error (SERR: %x)", registers->serr);
 
-        portLock.Signal();
+        portLock.signal();
         return EIO;
     }
 
-    portLock.Signal();
+    portLock.signal();
     return 0;
 }
 

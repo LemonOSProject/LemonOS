@@ -118,15 +118,15 @@ public:
         dirent = DirectoryEntry(this, ".");
     }
 
-    ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t);
-    ErrorOr<FsNode*> FindDir(const char* name);
+    ErrorOr<int> read_dir(DirectoryEntry*, uint32_t);
+    ErrorOr<FsNode*> find_dir(const char* name);
 
-    Error Create(DirectoryEntry* ent, uint32_t mode) {
+    Error create(DirectoryEntry* ent, uint32_t mode) {
         Log::Warning("[RootFS] Attempted to create a file!");
         return Error{EROFS};
     }
 
-    Error CreateDirectory(DirectoryEntry* ent, uint32_t mode) { return Error{EROFS}; }
+    Error create_directory(DirectoryEntry* ent, uint32_t mode) { return Error{EROFS}; }
 
     DirectoryEntry dirent;
 };
@@ -147,7 +147,7 @@ FsNode* FollowLink(FsNode* link, FsNode* workingDir) {
 
     char buffer[PATH_MAX + 1];
 
-    auto bytesRead = link->ReadLink(buffer, PATH_MAX);
+    auto bytesRead = link->read_link(buffer, PATH_MAX);
     if (bytesRead.HasError()) {
         Log::Warning("FollowLink: Readlink error %d", bytesRead.Err());
         return nullptr;
@@ -214,7 +214,7 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
     unsigned i = 0;
     for(; i < components.size() - 1; i++){
         String& component = components[i];
-        auto r = fs::FindDir(currentNode, component.c_str());
+        auto r = fs::find_dir(currentNode, component.c_str());
         if (r.HasError()) {
             Log::Debug(debugLevelFilesystem, DebugLevelVerbose, "%s not found!", component.c_str());
 
@@ -228,7 +228,7 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
         }
 
         size_t amountOfSymlinks = 0;
-        if(node->IsSymlink()) { // Check for symlinks
+        if(node->is_symlink()) { // Check for symlinks
             if (amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT) {
                 IF_DEBUG((debugLevelFilesystem >= DebugLevelNormal),
                          { Log::Warning("ResolvePath: Reached maximum number of symlinks"); });
@@ -244,7 +244,7 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
             }
         }
 
-        if(!(node->IsDirectory())){
+        if(!(node->is_directory())){
             Log::Debug(debugLevelFilesystem, DebugLevelNormal, "Failed to resolve path component: Expected a directory at '%s'!", component.c_str());
             return nullptr;
         }
@@ -256,7 +256,7 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
         return currentNode;
     }
 
-    auto r = fs::FindDir(currentNode, components[i].c_str());
+    auto r = fs::find_dir(currentNode, components[i].c_str());
     if(r.HasError()){
         Log::Debug(debugLevelFilesystem, DebugLevelVerbose, "ResolvePath: Failed to find %s!", components[i].c_str());
         return nullptr;
@@ -264,7 +264,7 @@ FsNode* ResolvePath(const String& path, FsNode* workingDir, bool followSymlinks)
     FsNode* node = r.Value();
 
     size_t amountOfSymlinks = 0;
-    while(followSymlinks && node->IsSymlink()) { // Check for symlinks
+    while(followSymlinks && node->is_symlink()) { // Check for symlinks
         if (amountOfSymlinks++ > MAXIMUM_SYMLINK_AMOUNT) {
             IF_DEBUG((debugLevelFilesystem >= DebugLevelVerbose),
                         { Log::Warning("ResolvePath: Reached maximum number of symlinks"); });
@@ -401,7 +401,7 @@ String BaseName(const String& path) {
     return basename;
 }
 
-ErrorOr<int> Root::ReadDir(DirectoryEntry* dirent, uint32_t index) {
+ErrorOr<int> Root::read_dir(DirectoryEntry* dirent, uint32_t index) {
     if(index == 0){
         *dirent = DirectoryEntry(this, ".");
         return 1;
@@ -418,7 +418,7 @@ ErrorOr<int> Root::ReadDir(DirectoryEntry* dirent, uint32_t index) {
     }
 }
 
-ErrorOr<FsNode*> Root::FindDir(const char* name) {
+ErrorOr<FsNode*> Root::find_dir(const char* name) {
     if (strcmp(name, ".") == 0)
         return this;
     if (strcmp(name, "..") == 0)
@@ -432,34 +432,34 @@ ErrorOr<FsNode*> Root::FindDir(const char* name) {
     return Error{ENOENT};
 }
 
-ErrorOr<ssize_t> Read(FsNode* node, size_t offset, size_t size, void* buffer) {
+ErrorOr<ssize_t> read(FsNode* node, size_t offset, size_t size, void* buffer) {
     assert(node);
 
     UIOBuffer uio(buffer);
-    return node->Read(offset, size, &uio);
+    return node->read(offset, size, &uio);
 }
 
-ErrorOr<ssize_t> Write(FsNode* node, size_t offset, size_t size, void* buffer) {
+ErrorOr<ssize_t> write(FsNode* node, size_t offset, size_t size, void* buffer) {
     assert(node);
 
     UIOBuffer uio(buffer);
-    return node->Write(offset, size, &uio);
+    return node->write(offset, size, &uio);
 }
 
 ErrorOr<File*> Open(FsNode* node, uint32_t flags) { return node->Open(flags); }
 
-Error Link(FsNode* dir, FsNode* link, DirectoryEntry* ent) {
+Error link(FsNode* dir, FsNode* link, DirectoryEntry* ent) {
     assert(dir);
     assert(link);
 
-    return dir->Link(link, ent);
+    return dir->link(link, ent);
 }
 
 Error Unlink(FsNode* dir, DirectoryEntry* ent, bool unlinkDirectories) {
     assert(dir);
     assert(ent);
 
-    return dir->Unlink(ent, unlinkDirectories);
+    return dir->unlink(ent, unlinkDirectories);
 }
 
 void Close(File* fd) {
@@ -474,26 +474,26 @@ void Close(File* fd) {
     fd->inode = nullptr;
 }
 
-ErrorOr<int> ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index) {
+ErrorOr<int> read_dir(FsNode* node, DirectoryEntry* dirent, uint32_t index) {
     assert(node);
 
-    return node->ReadDir(dirent, index);
+    return node->read_dir(dirent, index);
 }
 
-ErrorOr<FsNode*> FindDir(FsNode* node, const char* name) {
+ErrorOr<FsNode*> find_dir(FsNode* node, const char* name) {
     assert(node);
 
-    return node->FindDir(name);
+    return node->find_dir(name);
 }
 
 Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newpath) {
     assert(olddir && newdir);
 
-    if (!olddir->IsDirectory()) {
+    if (!olddir->is_directory()) {
         return Error{ENOTDIR};
     }
 
-    if (!newdir->IsDirectory()) {
+    if (!newdir->is_directory()) {
         return Error{ENOTDIR};
     }
 
@@ -503,7 +503,7 @@ Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* ne
         return Error{ENOENT};
     }
 
-    if (oldnode->IsDirectory()) {
+    if (oldnode->is_directory()) {
         Log::Warning("Filesystem: Rename: We do not support using rename on directories yet!");
         return Error{ENOSYS};
     }
@@ -512,14 +512,14 @@ Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* ne
 
     if (!newpathParent) {
         return Error{ENOENT};
-    } else if (!newpathParent->IsDirectory()) {
+    } else if (!newpathParent->is_directory()) {
         return Error{ENOTDIR}; // Parent of newpath is not a directory
     }
 
     FsNode* newnode = ResolvePath(newpath, newdir);
 
     if (newnode) {
-        if (newnode->IsDirectory()) {
+        if (newnode->is_directory()) {
             return Error{EISDIR}; // If it exists newpath must not be a directory
         }
     }
@@ -530,29 +530,29 @@ Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* ne
     DirectoryEntry newpathDirent;
     strncpy(newpathDirent.name, fs::BaseName(newpath).c_str(), NAME_MAX);
 
-    if (!oldnode->IsSymlink() &&
+    if (!oldnode->is_symlink() &&
         oldnode->volumeID == newpathParent->volumeID) { // Easy shit we can just link and unlink
         FsNode* oldpathParent = fs::ResolveParent(oldpath, olddir);
         assert(oldpathParent); // If this is null something went horribly wrong
 
         if (newnode) {
-            if (auto e = newpathParent->Unlink(&newpathDirent)) {
+            if (auto e = newpathParent->unlink(&newpathDirent)) {
                 return e; // Unlink error
             }
         }
 
-        if (auto e = newpathParent->Link(oldnode, &newpathDirent)) {
+        if (auto e = newpathParent->link(oldnode, &newpathDirent)) {
             return e; // Link error
         }
 
-        if (auto e = oldpathParent->Unlink(&oldpathDirent)) {
+        if (auto e = oldpathParent->unlink(&oldpathDirent)) {
             return e; // Unlink error
         }
-    } else if (!oldnode->IsSymlink()) { // Aight we have to copy it
+    } else if (!oldnode->is_symlink()) { // Aight we have to copy it
         FsNode* oldpathParent = fs::ResolveParent(oldpath, olddir);
         assert(oldpathParent); // If this is null something went horribly wrong
 
-        if (auto e = newpathParent->Create(&newpathDirent, 0)) {
+        if (auto e = newpathParent->create(&newpathDirent, 0)) {
             return e; // Create error
         }
 
@@ -566,7 +566,7 @@ Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* ne
         uint8_t* buffer = (uint8_t*)kmalloc(oldnode->size);
         UIOBuffer uio = UIOBuffer(buffer);
 
-        auto rret = oldnode->Read(0, oldnode->size, &uio);
+        auto rret = oldnode->read(0, oldnode->size, &uio);
         if (rret.HasError()) {
             kfree(buffer);
 
@@ -574,7 +574,7 @@ Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* ne
             return rret.err;
         }
 
-        auto wret = oldnode->Write(0, rret.Value(), &uio);
+        auto wret = oldnode->write(0, rret.Value(), &uio);
         if (wret.HasError()) {
             kfree(buffer);
 
@@ -584,7 +584,7 @@ Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* ne
 
         kfree(buffer);
 
-        if (auto e = oldpathParent->Unlink(&oldpathDirent)) {
+        if (auto e = oldpathParent->unlink(&oldpathDirent)) {
             return e; // Unlink error
         }
     } else {

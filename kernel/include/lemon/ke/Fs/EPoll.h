@@ -20,7 +20,7 @@ public:
         }
     }
 
-    bool IsEPoll() const override {
+    bool is_epoll() const override {
         return true;
     }
 

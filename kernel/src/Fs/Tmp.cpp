@@ -75,11 +75,11 @@ namespace fs::Temp{
 
         type = ft;
 
-        if(IsFile()){
+        if(is_file()){
             bufferLock = ReadWriteLock();
             buffer = nullptr;
             bufferSize = 0;
-        } else if(IsDirectory()){
+        } else if(is_directory()){
             children = List<DirectoryEntry>();
         } else {
             assert(!"TempNode not regular file or directory!");
@@ -87,9 +87,9 @@ namespace fs::Temp{
     }
 
     TempNode::~TempNode(){
-        if(IsDirectory()){ // Check if we are a directory
+        if(is_directory()){ // Check if we are a directory
             for(auto& ent : children){
-                Unlink(&ent, true); // Unlink all files
+                unlink(&ent, true); // Unlink all files
             }
         } else if(buffer){
             delete buffer;
@@ -97,7 +97,7 @@ namespace fs::Temp{
     }
 
     TempNode* TempNode::Find(const char* name){
-        assert(IsDirectory());
+        assert(is_directory());
 
         for(DirectoryEntry& ent : children){
             if(strncmp(ent.name, name, NAME_MAX) == 0){
@@ -108,8 +108,8 @@ namespace fs::Temp{
         return nullptr;
     }
 
-    ErrorOr<ssize_t> TempNode::Read(size_t off, size_t readSize, UIOBuffer* readBuffer){
-        if(IsDirectory()){
+    ErrorOr<ssize_t> TempNode::read(size_t off, size_t readSize, UIOBuffer* readBuffer){
+        if(is_directory()){
             return Error{EISDIR};
         }
 
@@ -121,18 +121,18 @@ namespace fs::Temp{
             readSize = size - off;
         }
 
-        bufferLock.AcquireRead();
-        if(readBuffer->Write(buffer + off, readSize)) {
-            bufferLock.ReleaseRead();
+        bufferLock.acquire_read();
+        if(readBuffer->write(buffer + off, readSize)) {
+            bufferLock.release_read();
             return EFAULT;
         }
-        bufferLock.ReleaseRead();
+        bufferLock.release_read();
 
         return readSize;
     }
 
-    ErrorOr<ssize_t> TempNode::Write(size_t off, size_t writeSize, UIOBuffer* writeBuffer){
-        if(IsDirectory()){
+    ErrorOr<ssize_t> TempNode::write(size_t off, size_t writeSize, UIOBuffer* writeBuffer){
+        if(is_directory()){
             return Error{EISDIR};
         }
 
@@ -140,7 +140,7 @@ namespace fs::Temp{
             return 0;
         }
 
-        bufferLock.AcquireWrite();
+        bufferLock.acquire_write();
         if(!buffer || off + writeSize > size){
             size_t old = size;
             size = off + writeSize;
@@ -152,37 +152,37 @@ namespace fs::Temp{
 
         Log::Debug(debugLevelTmpFS, DebugLevelVerbose, "Writing (offset: %u, size: %u, nsize: %u, bsize: %u)", off, writeSize, size, bufferSize);
 
-        if(writeBuffer->Read(buffer + off, writeSize)) {
-            bufferLock.ReleaseWrite();
+        if(writeBuffer->read(buffer + off, writeSize)) {
+            bufferLock.release_write();
             return EFAULT;
         }
-        bufferLock.ReleaseWrite();
+        bufferLock.release_write();
 
         return writeSize;
     }
 
-    Error TempNode::Truncate(off_t length){
+    Error TempNode::truncate(off_t length){
         if(length < 0){
             return Error{EINVAL}; // No negative length
         }
 
-        if(IsDirectory()){
+        if(is_directory()){
             return Error{EISDIR}; // Cannot truncate directories
         }
 
-        bufferLock.AcquireWrite();
+        bufferLock.acquire_write();
 
         size_t old = size;
         size = length;
         vol->ReallocateNode(this, old);
 
-        bufferLock.ReleaseWrite();
+        bufferLock.release_write();
 
         return ERROR_NONE;
     }
 
-    ErrorOr<int> TempNode::ReadDir(DirectoryEntry* dirent, uint32_t index){
-        if(!IsDirectory()) {
+    ErrorOr<int> TempNode::read_dir(DirectoryEntry* dirent, uint32_t index){
+        if(!is_directory()) {
             return Error{ENOTDIR};
         }
 
@@ -213,7 +213,7 @@ namespace fs::Temp{
         }
     }
 
-    ErrorOr<FsNode*> TempNode::FindDir(const char* name){
+    ErrorOr<FsNode*> TempNode::find_dir(const char* name){
         if(strcmp(name, ".") == 0){
             return this;
         }
@@ -241,8 +241,8 @@ namespace fs::Temp{
         return Error{ENOENT};
     }
 
-    Error TempNode::Create(DirectoryEntry* ent, uint32_t mode){
-        if(!IsDirectory()){
+    Error TempNode::create(DirectoryEntry* ent, uint32_t mode){
+        if(!is_directory()){
             IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
                 Log::Warning("[tmpfs] Create: Node is not a directory!");
             });
@@ -269,10 +269,10 @@ namespace fs::Temp{
         return ERROR_NONE;
     }
 
-    Error TempNode::CreateDirectory(DirectoryEntry* ent, uint32_t mode){
-        if(!IsDirectory()){
+    Error TempNode::create_directory(DirectoryEntry* ent, uint32_t mode){
+        if(!is_directory()){
             IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
-                Log::Warning("[tmpfs] CreateDirectory: Node is not a directory!");
+                Log::Warning("[tmpfs] create_directory: Node is not a directory!");
             });
 
             return Error{ENOTDIR};
@@ -293,8 +293,8 @@ namespace fs::Temp{
         return ERROR_NONE;
     }
         
-    Error TempNode::Link(FsNode* file, DirectoryEntry* ent){
-        if(!IsDirectory()){
+    Error TempNode::link(FsNode* file, DirectoryEntry* ent){
+        if(!is_directory()){
             return Error{ENOTDIR};
         }
 
@@ -306,7 +306,7 @@ namespace fs::Temp{
             return Error{EEXIST};
         }
 
-        if(file->IsDirectory()){
+        if(file->is_directory()){
             IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
                 Log::Warning("[tmpfs] Link: File to hard link is a directory!");
             });
@@ -324,8 +324,8 @@ namespace fs::Temp{
         return ERROR_NONE;
     }
 
-    Error TempNode::Unlink(DirectoryEntry* ent, bool unlinkDirectories){
-        if(!IsDirectory()){
+    Error TempNode::unlink(DirectoryEntry* ent, bool unlinkDirectories){
+        if(!is_directory()){
             IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
                 Log::Warning("[tmpfs] Unlink: Node not a directory!");
             });
@@ -340,7 +340,7 @@ namespace fs::Temp{
             return Error{ENOENT}; // Could not find entry with the name in ent
         }
 
-        if(!unlinkDirectories && node->IsDirectory()){
+        if(!unlinkDirectories && node->is_directory()){
             IF_DEBUG(debugLevelTmpFS >= DebugLevelNormal, {
                 Log::Warning("[tmpfs] Unlink: Entry is a directory!");
             });

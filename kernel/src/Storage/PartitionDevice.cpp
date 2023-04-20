@@ -31,7 +31,7 @@ int PartitionDevice::ReadAbsolute(uint64_t offset, uint32_t count, UIOBuffer* bu
         return e;
     }
 
-    if(buffer->Write(buf + (offset % parentDisk->blocksize), count)) {
+    if(buffer->write(buf + (offset % parentDisk->blocksize), count)) {
         return EFAULT;
     }
 
@@ -55,7 +55,7 @@ int PartitionDevice::WriteBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer)
     return parentDisk->WriteDiskBlock(lba + m_startLBA, count, buffer);
 }
 
-ErrorOr<ssize_t> PartitionDevice::Read(size_t off, size_t size, UIOBuffer* buffer) {
+ErrorOr<ssize_t> PartitionDevice::read(size_t off, size_t size, UIOBuffer* buffer) {
     if (off & (parentDisk->blocksize - 1)) {
         Log::Warning("PartitionDevice::Read: Unaligned offset %d!", off);
         return Error{EINVAL}; // Block aligned reads only}
@@ -70,7 +70,7 @@ ErrorOr<ssize_t> PartitionDevice::Read(size_t off, size_t size, UIOBuffer* buffe
     return size;
 }
 
-ErrorOr<ssize_t> PartitionDevice::Write(size_t off, size_t size, UIOBuffer* buffer) {
+ErrorOr<ssize_t> PartitionDevice::write(size_t off, size_t size, UIOBuffer* buffer) {
     if (off & (parentDisk->blocksize - 1)) {
         Log::Warning("PartitionDevice::Write: Unaligned offset %d!", off);
         return Error{EINVAL}; // Block aligned writes only}

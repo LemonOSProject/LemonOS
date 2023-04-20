@@ -25,7 +25,7 @@ int DiskDevice::ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
 
 int DiskDevice::WriteDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) { return -1; }
 
-ErrorOr<ssize_t> DiskDevice::Read(size_t off, size_t size, UIOBuffer* buffer) {
+ErrorOr<ssize_t> DiskDevice::read(size_t off, size_t size, UIOBuffer* buffer) {
     if (off & (blocksize - 1)) {
         return EINVAL; // Block aligned reads only
     }
@@ -39,6 +39,6 @@ ErrorOr<ssize_t> DiskDevice::Read(size_t off, size_t size, UIOBuffer* buffer) {
     return size;
 }
 
-ErrorOr<ssize_t> DiskDevice::Write(size_t off, size_t size, UIOBuffer* buffer) { return Error{ENOSYS}; }
+ErrorOr<ssize_t> DiskDevice::write(size_t off, size_t size, UIOBuffer* buffer) { return Error{ENOSYS}; }
 
 DiskDevice::~DiskDevice() {}

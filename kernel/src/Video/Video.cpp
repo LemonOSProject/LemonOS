@@ -52,7 +52,7 @@ public:
     FramebufferDevice() : Device("fb0", DeviceType::DeviceTypeUnknown) {
     }
 
-    ErrorOr<MappedRegion*> MMap(uintptr_t base, uintptr_t size, off_t offset, int prot, bool shared,
+    ErrorOr<MappedRegion*> mmap(uintptr_t base, uintptr_t size, off_t offset, int prot, bool shared,
                                 bool fixed) override {
         Process* process = Process::current();
         if (!shared) {
@@ -71,7 +71,7 @@ public:
         return region;
     }
 
-    ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override {
+    ErrorOr<int> ioctl(uint64_t cmd, uint64_t arg) override {
         if (cmd == LeIoctlGetFramebuffferInfo) {
             UserPointer<FramebufferInfo> userInfo(arg);
 
@@ -81,7 +81,7 @@ public:
             info.bpp = 32;
             info.pitch = screenPitch;
 
-            if (userInfo.StoreValue(info)) {
+            if (userInfo.store(info)) {
                 return EFAULT;
             }
 

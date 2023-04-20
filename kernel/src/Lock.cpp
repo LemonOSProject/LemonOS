@@ -5,7 +5,7 @@
 #include <Scheduler.h>
 #include <Timer.h>
 
-bool Semaphore::Wait() {
+bool Semaphore::wait() {
     assert(CheckInterrupts());
 
     acquireLock(&lock);
@@ -24,7 +24,7 @@ bool Semaphore::Wait() {
     return false;
 }
 
-bool Semaphore::WaitTimeout(long& timeout) {
+bool Semaphore::wait_timeout(long& timeout) {
     acquireLock(&lock);
     __sync_fetch_and_sub(&value, 1);
 
@@ -41,7 +41,7 @@ bool Semaphore::WaitTimeout(long& timeout) {
     return false;
 }
 
-void Semaphore::Signal() {
+void Semaphore::signal() {
     acquireLock(&lock);
 
     __sync_fetch_and_add(&value, 1);

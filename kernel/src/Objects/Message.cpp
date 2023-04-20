@@ -12,7 +12,7 @@ MessageEndpoint::MessageEndpoint(uint16_t maxSize){
 
     messageQueueLimit = 0x300000 / maxMessageSize; // No more than 3MB
 
-    queueAvailablilitySemaphore.SetValue(messageQueueLimit);
+    queueAvailablilitySemaphore.set_value(messageQueueLimit);
 
     if(debugLevelMessageEndpoint >= DebugLevelNormal){
         Log::Info("[MessageEndpoint] new endpoint with message size of %u (Queue limit: %u)", maxMessageSize, messageQueueLimit);
@@ -30,7 +30,7 @@ void MessageEndpoint::Destroy(){
     }
 }
 
-int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint8_t* data){
+int64_t MessageEndpoint::read(uint64_t* id, uint16_t* size, uint8_t* data){
     assert(id);
     assert(size);
     assert(data);
@@ -58,7 +58,7 @@ int64_t MessageEndpoint::Read(uint64_t* id, uint16_t* size, uint8_t* data){
 
     releaseLock(&queueLock);
 
-    queueAvailablilitySemaphore.Signal();
+    queueAvailablilitySemaphore.signal();
 
     if(debugLevelMessageEndpoint >= DebugLevelVerbose){
         Log::Info("[MessageEndpoint] Receiving message (ID: %u, Size: %u)", *id, *size);
@@ -88,10 +88,10 @@ int64_t MessageEndpoint::Call(uint64_t id, uint16_t size, uint64_t data, uint64_
 
     releaseLock(&waitingResponseLock);
 
-    Write(id, size, data); // Send message
+    write(id, size, data); // Send message
 
     // TODO: timeout
-    if(s.Wait()){ // Await response
+    if(s.wait()){ // Await response
         if(buffer){
             delete buffer;
         }
@@ -108,7 +108,7 @@ int64_t MessageEndpoint::Call(uint64_t id, uint16_t size, uint64_t data, uint64_
     return 0;
 }
 
-int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
+int64_t MessageEndpoint::write(uint64_t id, uint16_t size, uint64_t data){
     if(!peer){
         return -ENOTCONN;
     }
@@ -130,7 +130,7 @@ int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
 
             *response.size = size;
 
-            it->item1->Signal();
+            it->item1->signal();
 
             if(debugLevelMessageEndpoint >= DebugLevelVerbose){
                 Log::Info("[MessageEndpoint] Sending response (ID: %u, Size: %u) to peer", id, size);
@@ -143,7 +143,7 @@ int64_t MessageEndpoint::Write(uint64_t id, uint16_t size, uint64_t data){
     }
     releaseLock(&peer->waitingResponseLock);
 
-    if(queueAvailablilitySemaphore.Wait()){
+    if(queueAvailablilitySemaphore.wait()){
         return -EINTR;
     }
 

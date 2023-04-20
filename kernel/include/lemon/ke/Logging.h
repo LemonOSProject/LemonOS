@@ -18,8 +18,8 @@ namespace Log{
 
     void WriteF(const char* __restrict format, va_list args);
 
-    void Write(const char* str, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255);
-    void Write(unsigned long long num, bool hex = true, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255);
+    void write(const char* str, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255);
+    void write(unsigned long long num, bool hex = true, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255);
     
     void Print(const char* __restrict fmt, ...);
 
@@ -38,7 +38,7 @@ namespace Log{
     #ifdef KERNEL_DEBUG
     __attribute__((always_inline)) inline static void Debug(const int& var, const int lvl, const char* __restrict fmt, ...){
         if(var >= lvl){
-		    Write("\r\n[INFO]    ");
+		    write("\r\n[INFO]    ");
             va_list args;
             va_start(args, fmt);
             WriteF(fmt, args);

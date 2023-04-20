@@ -18,7 +18,7 @@ CharacterBuffer::~CharacterBuffer() {
     }
 }
 
-ssize_t CharacterBuffer::Write(char* _buffer, size_t size) {
+ssize_t CharacterBuffer::write(char* _buffer, size_t size) {
     if (bufferPos + size > maxBufferSize) {
         size = maxBufferSize - bufferPos;
     }
@@ -61,7 +61,7 @@ ssize_t CharacterBuffer::Write(char* _buffer, size_t size) {
     return written;
 }
 
-ssize_t CharacterBuffer::Read(char* _buffer, size_t count) {
+ssize_t CharacterBuffer::read(char* _buffer, size_t count) {
     ScopedSpinLock lock{this->lock};
     if (count <= 0) {
         return 0;
@@ -91,16 +91,16 @@ ssize_t CharacterBuffer::Read(char* _buffer, size_t count) {
     return i;
 }
 
-ErrorOr<ssize_t> CharacterBuffer::Write(UIOBuffer* buffer, size_t size) {
+ErrorOr<ssize_t> CharacterBuffer::write(UIOBuffer* buffer, size_t size) {
     char _buf[512];
     size_t bytesLeft = size;
 
     while(bytesLeft > 512) {
-        if(buffer->Read((uint8_t*)_buf, 512)) {
+        if(buffer->read((uint8_t*)_buf, 512)) {
             return EFAULT;
         }
 
-        int r = Write(_buf, 512);
+        int r = write(_buf, 512);
         bytesLeft -= r;
         
         // Buffer might be full, not all of our data was written
@@ -109,23 +109,23 @@ ErrorOr<ssize_t> CharacterBuffer::Write(UIOBuffer* buffer, size_t size) {
         }
     }
 
-    if(buffer->Read((uint8_t*)_buf, bytesLeft)) {
+    if(buffer->read((uint8_t*)_buf, bytesLeft)) {
         return EFAULT;
     }
 
-    bytesLeft -= Write(_buf, bytesLeft);
+    bytesLeft -= write(_buf, bytesLeft);
     return size - bytesLeft;
 }
 
-ErrorOr<ssize_t> CharacterBuffer::Read(UIOBuffer* buffer, size_t size) {
+ErrorOr<ssize_t> CharacterBuffer::read(UIOBuffer* buffer, size_t size) {
     char _buf[512];
     size_t bytesLeft = size;
 
     while(bytesLeft > 512) {
-        size_t r = Read(_buf, 512);
+        size_t r = read(_buf, 512);
         bytesLeft -= r;
 
-        if(buffer->Write((uint8_t*)_buf, r)) {
+        if(buffer->write((uint8_t*)_buf, r)) {
             return EFAULT;
         }
 
@@ -135,15 +135,15 @@ ErrorOr<ssize_t> CharacterBuffer::Read(UIOBuffer* buffer, size_t size) {
         }
     }
 
-    int r = Read(_buf, bytesLeft);
-    if(buffer->Write((uint8_t*)_buf, r)) {
+    int r = read(_buf, bytesLeft);
+    if(buffer->write((uint8_t*)_buf, r)) {
         return EFAULT;
     }
 
     return size - (bytesLeft - r);
 }
 
-void CharacterBuffer::Flush() {
+void CharacterBuffer::flush() {
     ScopedSpinLock lock{this->lock};
 
     bufferPos = 0;

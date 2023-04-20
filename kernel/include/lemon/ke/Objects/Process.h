@@ -396,7 +396,7 @@ public:
         }
         releaseLock(&m_processLock);
 
-        bool wasInterrupted = watcher.Wait();
+        bool wasInterrupted = watcher.wait();
 
         child = remove_dead_child();
         if (child.get()) {

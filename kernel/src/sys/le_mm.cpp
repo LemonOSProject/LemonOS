@@ -41,10 +41,10 @@ long sys_mmap(void* address, size_t len, long flags, le_handle_t handle, long of
     if(!anon) {
         auto file = FD_GET(handle);
 
-        MappedRegion* region = SC_TRY_OR_ERROR(file->MMap((uintptr_t)address, len, off, prot, shared, fixed));
+        MappedRegion* region = SC_TRY_OR_ERROR(file->mmap((uintptr_t)address, len, off, prot, shared, fixed));
         assert(region);
 
-        if(returnAddress.StoreValue((void*)region->Base())) {
+        if(returnAddress.store((void*)region->Base())) {
             return EFAULT;
         }
 
@@ -58,7 +58,7 @@ long sys_mmap(void* address, size_t len, long flags, le_handle_t handle, long of
         return EEXIST;
     }
 
-    if(returnAddress.StoreValue((void*)region->Base())) {
+    if(returnAddress.store((void*)region->Base())) {
         return EFAULT;
     }
 

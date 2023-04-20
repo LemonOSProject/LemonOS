@@ -576,7 +576,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
                              addressSpace->get_page_map()); // In case the block was never allocated in the first place
                     asm("cli");
 
-                    faultRegion->lock.ReleaseWrite();
+                    faultRegion->lock.release_write();
                     if ((regs->cs & 0x3)) {
                         releaseLock(&Thread::current()->kernelLock);
                     }
@@ -593,7 +593,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
                     clone->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(),
                                addressSpace->get_page_map()); // In case the block was never allocated in the first place
 
-                    faultRegion->lock.ReleaseWrite();
+                    faultRegion->lock.release_write();
 
                     if ((regs->cs & 0x3)) {
                         releaseLock(&Thread::current()->kernelLock);
@@ -605,7 +605,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
             asm("sti");
             int status = faultRegion->vmObject->Hit(faultRegion->Base(), faultAddress - faultRegion->Base(),
                                                     addressSpace->get_page_map());
-            faultRegion->lock.ReleaseWrite();
+            faultRegion->lock.release_write();
 
             if (!status) {
                 if ((regs->cs & 0x3)) {
@@ -615,7 +615,7 @@ void PageFaultHandler(void*, RegisterContext* regs) {
             }
             asm("cli");
         } else if (faultRegion) {
-            faultRegion->lock.ReleaseWrite();
+            faultRegion->lock.release_write();
         } else if (PageFaultTrap trap; pageFaultTraps->get(regs->rip, trap)) {
             // If we have found a handler, set the IP to the handler
             // and run

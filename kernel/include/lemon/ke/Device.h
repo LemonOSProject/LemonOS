@@ -118,8 +118,8 @@ public:
         return WriteDiskBlock(lba, count, &uio);
     }
 
-    virtual ErrorOr<ssize_t> Read(size_t off, size_t size, UIOBuffer* buffer);
-    virtual ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer);
+    virtual ErrorOr<ssize_t> read(size_t off, size_t size, UIOBuffer* buffer);
+    virtual ErrorOr<ssize_t> write(size_t off, size_t size, UIOBuffer* buffer);
 
     virtual ~DiskDevice();
 
@@ -147,8 +147,8 @@ public:
         return WriteBlock(lba, count, &uio);
     }
 
-    ErrorOr<ssize_t> Read(size_t off, size_t size, UIOBuffer* buffer) override;
-    ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer) override;
+    ErrorOr<ssize_t> read(size_t off, size_t size, UIOBuffer* buffer) override;
+    ErrorOr<ssize_t> write(size_t off, size_t size, UIOBuffer* buffer) override;
 
     virtual ~PartitionDevice();
 

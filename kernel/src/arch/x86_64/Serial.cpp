@@ -23,16 +23,16 @@ void Initialize() {
 
 void Unlock() { releaseLock(&lock); }
 
-void Write(const char c) {
+void write(const char c) {
     while (!(inportb(PORT + 5) & 0x20))
         ; // Make sure we are not transmitting data
 
     outportb(PORT, c);
 }
 
-void Write(const char* s) { Write(s, strlen(s)); }
+void write(const char* s) { write(s, strlen(s)); }
 
-void Write(const char* s, unsigned n) {
+void write(const char* s, unsigned n) {
     if (CheckInterrupts()) {
         acquireLockIntDisable(&lock); // Make the serial output readable
 

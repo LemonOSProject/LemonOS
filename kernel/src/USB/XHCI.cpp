@@ -269,7 +269,7 @@ XHCIController::xhci_command_completion_event_trb_t XHCIController::CommandRing:
         ScopedSpinLock<true> lockRing(lock);
 
         ev = &events[enqueueIndex];
-        ev->completion.SetValue(0);
+        ev->completion.set_value(0);
 
         if (cycleState)
             command->cycleBit = 1;
@@ -281,7 +281,7 @@ XHCIController::xhci_command_completion_event_trb_t XHCIController::CommandRing:
 
     hcd->doorbellRegs[0].doorbell = 0;
 
-    bool wasInterrupted = ev->completion.Wait();
+    bool wasInterrupted = ev->completion.wait();
     assert(!wasInterrupted);
 
     return ev->event;

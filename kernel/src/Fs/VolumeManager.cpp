@@ -32,10 +32,10 @@ Error MountSystemVolume() {
 
     DirectoryEntry ent;
     int i = 0;
-    while (TRY_OR_ERROR(fs::ReadDir(devFS, &ent, i++))) {
+    while (TRY_OR_ERROR(fs::read_dir(devFS, &ent, i++))) {
         FsDriver* drv = nullptr;
         FsNode* device = nullptr;
-        if ((device = TRY_OR_ERROR(fs::FindDir(devFS, ent.name))) && device->IsCharDevice()) {
+        if ((device = TRY_OR_ERROR(fs::find_dir(devFS, ent.name))) && device->is_char_dev()) {
             if ((drv = fs::IdentifyFilesystem(device))) {
                 int ret = Mount(device, drv, "system");
                 if (!ret) {
@@ -48,7 +48,7 @@ Error MountSystemVolume() {
 
 // Identify filesystem and mount device using optional name
 int Mount(FsNode* device, const char* name) {
-    if (!device->IsCharDevice()) {
+    if (!device->is_char_dev()) {
         Log::Error("Fs::VolumeManager::Mount: Not a device!");
         return VolumeErrorNotDevice;
     }
@@ -64,7 +64,7 @@ int Mount(FsNode* device, const char* name) {
 
 // Mount device using driver and optional name
 int Mount(FsNode* device, ::fs::FsDriver* driver, const char* name) {
-    if (!device->IsCharDevice()) {
+    if (!device->is_char_dev()) {
         Log::Error("Fs::VolumeManager::Mount: Not a device!");
         return VolumeErrorNotDevice;
     }

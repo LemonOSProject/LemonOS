@@ -22,9 +22,9 @@ int Parse(DiskDevice* disk) {
 
     if (debugLevelPartitions >= DebugLevelNormal) {
         Log::Info("Found GPT Header Partitions: ");
-        Log::Write(header->partNum);
-        Log::Write(" Entry Size:");
-        Log::Write(header->partEntrySize);
+        Log::write(header->partNum);
+        Log::write(" Entry Size:");
+        Log::write(header->partEntrySize);
     }
 
     uint64_t tableLBA = header->partitionTableLBA;

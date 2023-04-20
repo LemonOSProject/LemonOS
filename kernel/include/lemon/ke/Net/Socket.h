@@ -105,12 +105,12 @@ class Socket : public FsNode {
     virtual ErrorOr<int64_t> ReceiveFrom(UIOBuffer* buffer, size_t len, int flags, sockaddr* src, socklen_t* addrlen,
                                 const void* ancillary = nullptr, size_t ancillaryLen = 0);
     virtual ErrorOr<int64_t> Receive(UIOBuffer* buffer, size_t len, int flags);
-    virtual ErrorOr<ssize_t> Read(size_t offset, size_t size, UIOBuffer* buffer);
+    virtual ErrorOr<ssize_t> read(size_t offset, size_t size, UIOBuffer* buffer);
 
     virtual ErrorOr<int64_t> SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* src, socklen_t addrlen,
                            const void* ancillary = nullptr, size_t ancillaryLen = 0);
     virtual ErrorOr<int64_t> Send(UIOBuffer* buffer, size_t len, int flags);
-    virtual ErrorOr<ssize_t> Write(size_t offset, size_t size, UIOBuffer* buffer);
+    virtual ErrorOr<ssize_t> write(size_t offset, size_t size, UIOBuffer* buffer);
 
     virtual int SetSocketOptions(int level, int opt, const void* optValue, socklen_t optLength);
     virtual int GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength);
@@ -174,7 +174,7 @@ class LocalSocket final : public Socket {
     void Watch(FilesystemWatcher& watcher, int events);
     void Unwatch(FilesystemWatcher& watcher);
 
-    bool CanRead() {
+    bool can_read() {
         if (inbound)
             return !inbound->Empty();
         else
@@ -187,7 +187,7 @@ class IPSocket : public Socket {
     IPSocket(int type, int protocol);
     virtual ~IPSocket();
 
-    ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg);
+    ErrorOr<int> ioctl(uint64_t cmd, uint64_t arg);
 
     Socket* Accept(sockaddr* addr, socklen_t* addrlen, int mode);
     int Bind(const sockaddr* addr, socklen_t addrlen);
@@ -285,7 +285,7 @@ class TCPSocket final : public IPSocket {
     int GetSocketOptions(int level, int opt, void* optValue, socklen_t* optLength);
 
     int IsConnected() { return state == TCPStateEstablished; }
-    bool CanWrite() { return IsConnected(); }
+    bool can_write() { return IsConnected(); }
 
     void Close();
 

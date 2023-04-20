@@ -18,12 +18,12 @@ SYSCALL long sys_read(le_handle_t handle, uint8_t* buf, size_t count, UserPointe
 
     UIOBuffer buffer = UIOBuffer::FromUser(buf);
 
-    auto r = fd->Read(count, &buffer);
+    auto r = fd->read(count, &buffer);
     if (r.HasError()) {
         return r.err.code;
     }
 
-    if (bytesRead.StoreValue(r.Value())) {
+    if (bytesRead.store(r.Value())) {
         return EFAULT;
     }
 
@@ -37,12 +37,12 @@ SYSCALL long sys_write(le_handle_t handle, const uint8_t* buf, size_t count, Use
 
     UIOBuffer buffer = UIOBuffer::FromUser((uint8_t*)buf);
 
-    auto r = fd->Write(count, &buffer);
+    auto r = fd->write(count, &buffer);
     if (r.HasError()) {
         return r.err.code;
     }
 
-    if (bytesWritten.StoreValue(r.Value())) {
+    if (bytesWritten.store(r.Value())) {
         return EFAULT;
     }
 
@@ -134,14 +134,14 @@ SYSCALL long sys_openat(le_handle_t directory, le_str_t _filename, int flags, in
             fd = process->workingDir;
         } else {
             fd = FD_GET(directory);
-            if (!fd->IsDirectory()) {
+            if (!fd->is_directory()) {
                 return ENOTDIR;
             }
         }
 
         assert(fd);
 
-        if (!fd->IsDirectory()) {
+        if (!fd->is_directory()) {
             return ENOTDIR;
         }
 
@@ -167,7 +167,7 @@ open:
         DirectoryEntry dent;
         strcpy(dent.name, basename.c_str());
 
-        if (int e = parent->Create(&dent, mode); e < 0) {
+        if (int e = parent->create(&dent, mode); e < 0) {
             return -e;
         }
         create = false;
@@ -182,18 +182,18 @@ open:
         return EPERM;
     }
 
-    if (!followSymlinks && file->IsSymlink()) {
+    if (!followSymlinks && file->is_symlink()) {
         Log::Warning("sys_open: File is a symlink (O_NOFOLLOW specified)");
         return ELOOP;
     }
 
     // Write access modes are incompatible with directories
-    if (write && file->IsDirectory()) {
+    if (write && file->is_directory()) {
         return EISDIR;
     }
 
     if (expectsDirectory) {
-        if (!file->IsDirectory()) {
+        if (!file->is_directory()) {
             return ENOTDIR;
         }
     }
@@ -202,7 +202,7 @@ open:
     assert(openFile && !openFile->pos);
 
     le_handle_t handle = process->allocate_handle(openFile, closeOnExec);
-    if (out.StoreValue(handle)) {
+    if (out.store(handle)) {
         return EFAULT;
     }
 
@@ -261,7 +261,7 @@ SYSCALL long sys_fstatat(int fd, le_str_t path, int flags, UserPointer<struct st
 SYSCALL long sys_lseek(le_handle_t handle, off_t offset, unsigned int whence, UserPointer<off_t> out) {
     auto file = FD_GET(handle);
 
-    if (file->IsSocket() || file->IsPipe()) {
+    if (file->is_socket() || file->is_pipe()) {
         return ESPIPE;
     }
 
@@ -291,7 +291,7 @@ SYSCALL long sys_lseek(le_handle_t handle, off_t offset, unsigned int whence, Us
     file->pos = offsetResult;
 
     // If the out pointer is null just ignore it
-    if (out.Pointer() && out.StoreValue(offsetResult)) {
+    if (out.ptr() && out.store(offsetResult)) {
         return EFAULT;
     }
 
@@ -313,11 +313,11 @@ SYSCALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long arg, 
         SC_TRY(process->handle_set_cloexec(handle, 0));
         break;
     default:
-        r = SC_TRY_OR_ERROR(fd->Ioctl(cmd, arg));
+        r = SC_TRY_OR_ERROR(fd->ioctl(cmd, arg));
         break;
     }
 
-    if (result.StoreValue(r)) {
+    if (result.store(r)) {
         return EFAULT;
     }
 
@@ -331,8 +331,8 @@ SYSCALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, U
 
     UIOBuffer uio = UIOBuffer::FromUser(buf);
     
-    auto r = SC_TRY_OR_ERROR(fd->Read(pos, count, &uio));
-    if (bytes.StoreValue(r)) {
+    auto r = SC_TRY_OR_ERROR(fd->read(pos, count, &uio));
+    if (bytes.store(r)) {
         return EFAULT;
     }
 
@@ -346,8 +346,8 @@ SYSCALL long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t
 
     UIOBuffer uio = UIOBuffer::FromUser((void*)buf);
 
-    auto r = SC_TRY_OR_ERROR(fd->Write(pos, count, &uio));
-    if (bytes.StoreValue(r)) {
+    auto r = SC_TRY_OR_ERROR(fd->write(pos, count, &uio));
+    if (bytes.store(r)) {
         return EFAULT;
     }
 

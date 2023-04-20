@@ -23,11 +23,11 @@ public:
     virtual void Wait();
 
     ErrorOr<int64_t> ReadRaw(uint8_t* buffer, size_t len);
-    virtual ErrorOr<int64_t> Read(UIOBuffer* buffer, size_t len) = 0;
+    virtual ErrorOr<int64_t> read(UIOBuffer* buffer, size_t len) = 0;
     ErrorOr<int64_t> PeekRaw(uint8_t* buffer, size_t len);
     virtual ErrorOr<int64_t> Peek(UIOBuffer* buffer, size_t len) = 0;
     ErrorOr<int64_t> WriteRaw(const uint8_t* buffer, size_t len);
-    virtual ErrorOr<int64_t> Write(UIOBuffer* buffer, size_t len) = 0;
+    virtual ErrorOr<int64_t> write(UIOBuffer* buffer, size_t len) = 0;
 
     virtual int64_t Pos() { return 0; }
     virtual int64_t Empty();
@@ -48,9 +48,9 @@ public:
 
     void Wait() override;
 
-    ErrorOr<int64_t> Read(UIOBuffer* buffer, size_t len) override;
+    ErrorOr<int64_t> read(UIOBuffer* buffer, size_t len) override;
     ErrorOr<int64_t> Peek(UIOBuffer* buffer, size_t len) override;
-    ErrorOr<int64_t> Write(UIOBuffer* buffer, size_t len) override;
+    ErrorOr<int64_t> write(UIOBuffer* buffer, size_t len) override;
     
     int64_t Pos() override { return bufferPos; }
     int64_t Empty() override;
@@ -61,8 +61,8 @@ class PacketStream final : public Stream {
 public:
     void Wait() override;
 
-    ErrorOr<int64_t> Read(UIOBuffer* buffer, size_t len) override;
+    ErrorOr<int64_t> read(UIOBuffer* buffer, size_t len) override;
     ErrorOr<int64_t> Peek(UIOBuffer* buffer, size_t len) override;
-    ErrorOr<int64_t> Write(UIOBuffer* buffer, size_t len) override;
+    ErrorOr<int64_t> write(UIOBuffer* buffer, size_t len) override;
     int64_t Empty() override;
 };

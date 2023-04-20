@@ -13,12 +13,12 @@ SYSCALL long le_create_thread(UserPointer<le_handle_t> handle, uint64_t flags, v
     auto t = process->create_child_thread(entry, stack);
     
     if(flags & LE_PROCESS_PID) {
-        if(handle.StoreValue(t->tid)) {
+        if(handle.store(t->tid)) {
             return EFAULT;
         }
     } else {
         le_handle_t h = process->allocate_handle(t, true);
-        if(handle.StoreValue(h)) {
+        if(handle.store(h)) {
             return EFAULT;
         }
     }

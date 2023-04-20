@@ -7,32 +7,32 @@
 
 ALWAYS_INLINE File::~File() {}
 
-ErrorOr<ssize_t> File::Read(off_t, size_t, UIOBuffer*) {
+ErrorOr<ssize_t> File::read(off_t, size_t, UIOBuffer*) {
     Log::Warning("Base File::Read");
     return EINVAL;
 }
 
-ErrorOr<ssize_t> File::Write(off_t, size_t, UIOBuffer*) {
+ErrorOr<ssize_t> File::write(off_t, size_t, UIOBuffer*) {
     Log::Warning("Base File::Write");
     return EINVAL;
 }
 
-ErrorOr<ssize_t> File::Read(size_t size, UIOBuffer* buffer) {
-    auto len = TRY_OR_ERROR(Read(pos, size, buffer));
+ErrorOr<ssize_t> File::read(size_t size, UIOBuffer* buffer) {
+    auto len = TRY_OR_ERROR(read(pos, size, buffer));
     
     pos += len;
     return len;
 }
 
-ErrorOr<ssize_t> File::Write(size_t size, UIOBuffer* buffer) {
-    auto len = TRY_OR_ERROR(Write(pos, size, buffer));
+ErrorOr<ssize_t> File::write(size_t size, UIOBuffer* buffer) {
+    auto len = TRY_OR_ERROR(write(pos, size, buffer));
     
     pos += len;
     return len;
 }
 
-ErrorOr<int> File::Ioctl(uint64_t cmd, uint64_t arg) {
-    Log::Warning("Base File::Ioctl");
+ErrorOr<int> File::ioctl(uint64_t cmd, uint64_t arg) {
+    Log::Warning("Base File::ioctl");
 
     // These should have been handled by the syscall handler
     assert(cmd != FIONCLEX);
@@ -45,15 +45,15 @@ ErrorOr<int> File::Ioctl(uint64_t cmd, uint64_t arg) {
 void File::Watch(KernelObjectWatcher*, KOEvent) {}
 void File::Unwatch(KernelObjectWatcher*) {}
 
-ErrorOr<int> File::ReadDir(struct DirectoryEntry*, uint32_t) {
-    if (!IsDirectory()) {
+ErrorOr<int> File::read_dir(struct DirectoryEntry*, uint32_t) {
+    if (!is_directory()) {
         return ENOTDIR;
     }
 
     return ENOSYS;
 }
 
-ErrorOr<class MappedRegion*> File::MMap(uintptr_t base, size_t size, off_t off, int prot, bool shared, bool fixed) {
+ErrorOr<class MappedRegion*> File::mmap(uintptr_t base, size_t size, off_t off, int prot, bool shared, bool fixed) {
     return ENODEV;
 }
 
@@ -72,20 +72,20 @@ NodeFile::~NodeFile() {
     inode->Close();
 }
 
-ErrorOr<ssize_t> NodeFile::Read(off_t off, size_t size, UIOBuffer* buffer) {
-    return inode->Read(off, size, buffer);
+ErrorOr<ssize_t> NodeFile::read(off_t off, size_t size, UIOBuffer* buffer) {
+    return inode->read(off, size, buffer);
 }
 
-ErrorOr<ssize_t> NodeFile::Write(off_t off, size_t size, UIOBuffer* buffer) {
-    return inode->Write(off, size, buffer);
+ErrorOr<ssize_t> NodeFile::write(off_t off, size_t size, UIOBuffer* buffer) {
+    return inode->write(off, size, buffer);
 }
 
-ErrorOr<int> NodeFile::Ioctl(uint64_t cmd, uint64_t arg) {
-    return inode->Ioctl(cmd, arg);
+ErrorOr<int> NodeFile::ioctl(uint64_t cmd, uint64_t arg) {
+    return inode->ioctl(cmd, arg);
 }
 
-ErrorOr<int> NodeFile::ReadDir(struct DirectoryEntry* d, uint32_t index) { return inode->ReadDir(d, index); }
+ErrorOr<int> NodeFile::read_dir(struct DirectoryEntry* d, uint32_t index) { return inode->read_dir(d, index); }
 
-ErrorOr<class MappedRegion*> NodeFile::MMap(uintptr_t base, size_t size, off_t off, int prot, bool shared, bool fixed) {
-    return inode->MMap(base, size, off, prot, shared, fixed);
+ErrorOr<class MappedRegion*> NodeFile::mmap(uintptr_t base, size_t size, off_t off, int prot, bool shared, bool fixed) {
+    return inode->mmap(base, size, off, prot, shared, fixed);
 }

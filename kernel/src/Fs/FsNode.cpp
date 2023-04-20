@@ -7,12 +7,12 @@ FsNode::~FsNode(){
     
 }
 
-ErrorOr<ssize_t> FsNode::Read(size_t, size_t, UIOBuffer*){
+ErrorOr<ssize_t> FsNode::read(size_t, size_t, UIOBuffer*){
     Log::Warning("Base FsNode::Read called!");
     return Error{ENOSYS};
 }
 
-ErrorOr<ssize_t> FsNode::Write(size_t, size_t, UIOBuffer*){
+ErrorOr<ssize_t> FsNode::write(size_t, size_t, UIOBuffer*){
     Log::Warning("Base FsNode::Write called!");
     return Error{ENOSYS};
 }
@@ -29,23 +29,23 @@ void FsNode::Close(){
     handleCount--;
 }
 
-ErrorOr<int> FsNode::ReadDir(DirectoryEntry*, uint32_t){
+ErrorOr<int> FsNode::read_dir(DirectoryEntry*, uint32_t){
     if(type != FileType::Directory){
         return Error{ENOTDIR};
     }
     
-    assert(!"Base FsNode::ReadDir called!");
+    assert(!"Base FsNode::read_dir called!");
     return Error{ENOSYS};
 }
 
-ErrorOr<FsNode*> FsNode::FindDir(const char*){
-    assert(IsDirectory());
+ErrorOr<FsNode*> FsNode::find_dir(const char*){
+    assert(is_directory());
 
-    assert(!"Base FsNode::FindDir called!");
+    assert(!"Base FsNode::find_dir called!");
     return Error{ENOSYS};
 }
 
-Error FsNode::Create(DirectoryEntry*, uint32_t){
+Error FsNode::create(DirectoryEntry*, uint32_t){
     if(type != FileType::Directory){
         return Error{ENOTDIR};
     }
@@ -54,48 +54,48 @@ Error FsNode::Create(DirectoryEntry*, uint32_t){
     return Error{ENOSYS};
 }
 
-Error FsNode::CreateDirectory(DirectoryEntry*, uint32_t){
+Error FsNode::create_directory(DirectoryEntry*, uint32_t){
     if(type != FileType::Directory){
         return Error{ENOTDIR};
     }
 
-    assert("Base FsNode::CreateDirectory called!");
+    assert("Base FsNode::create_directory called!");
     return Error{ENOSYS};
 }
 
-ErrorOr<ssize_t> FsNode::ReadLink(char* pathBuffer, size_t bufSize){
-    if(!IsSymlink()){
+ErrorOr<ssize_t> FsNode::read_link(char* pathBuffer, size_t bufSize){
+    if(!is_symlink()){
         return Error{EINVAL}; // Not a symlink
     }
 
-    assert("Base FsNode::ReadLink called!");
+    assert("Base FsNode::read_link called!");
     return Error{ENOSYS};
 }
 
-Error FsNode::Link(FsNode*, DirectoryEntry*){
+Error FsNode::link(FsNode*, DirectoryEntry*){
     assert(!"Base FsNode::Link called!");
     return Error{ENOSYS};
 }
 
-Error FsNode::Unlink(DirectoryEntry*, bool unlinkDirs){
+Error FsNode::unlink(DirectoryEntry*, bool unlinkDirs){
     assert(!"Base FsNode::Unlink called!");
     return Error{ENOSYS};
 }
 
-Error FsNode::Truncate(off_t length){
-    assert(!"Base FsNode::Truncate called!");
+Error FsNode::truncate(off_t length){
+    assert(!"Base FsNode::truncate called!");
     return Error{ENOSYS};
 }
 
-ErrorOr<int> FsNode::Ioctl(uint64_t cmd, uint64_t arg){
-    Log::Debug(debugLevelFilesystem, DebugLevelNormal, "Base FsNode::Ioctl called! (cmd: %x)", cmd);
+ErrorOr<int> FsNode::ioctl(uint64_t cmd, uint64_t arg){
+    Log::Debug(debugLevelFilesystem, DebugLevelNormal, "Base FsNode::ioctl called! (cmd: %x)", cmd);
     return Error{ENOTTY};
 }
 
-ErrorOr<MappedRegion*> FsNode::MMap(uintptr_t base, uintptr_t size, off_t off, int prot, bool shared, bool fixed) {
+ErrorOr<MappedRegion*> FsNode::mmap(uintptr_t base, uintptr_t size, off_t off, int prot, bool shared, bool fixed) {
     return ENODEV;
 }
 
-void FsNode::Sync(){
+void FsNode::sync(){
     
 }

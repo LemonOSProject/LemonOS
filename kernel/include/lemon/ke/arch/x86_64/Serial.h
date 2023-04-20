@@ -4,7 +4,7 @@ namespace Serial {
 	void Initialize();
 	void Unlock();
 
-	void Write(const char c);
-	void Write(const char* s);
-	void Write(const char* s, unsigned n);
+	void write(const char c);
+	void write(const char* s);
+	void write(const char* s, unsigned n);
 }

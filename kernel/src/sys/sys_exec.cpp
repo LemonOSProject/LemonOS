@@ -18,7 +18,8 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
 
     le_str_t argp;
     do {
-        argv.GetValue(argp);
+        if(argv.get(argp))
+            return EFAULT;
         argv++;
 
         if (argp) {
@@ -27,7 +28,8 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
     } while (argp);
 
     do {
-        envp.GetValue(argp);
+        if(envp.get(argp))
+            return EFAULT;
         envp++;
 
         if (argp) {
@@ -42,14 +44,14 @@ long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_s
     }
 
     FancyRefPtr<File> file = SC_TRY_OR_ERROR(fs::Open(inode, 0));
-    if(file->IsDirectory()) {
+    if(file->is_directory()) {
         return ENOEXEC;
     }
 
     elf64_header_t elfHeader;
 
     UIOBuffer uio{&elfHeader};
-    SC_TRY_OR_ERROR(file->Read(0, sizeof(elf64_header_t), &uio));
+    SC_TRY_OR_ERROR(file->read(0, sizeof(elf64_header_t), &uio));
 
     if(!VerifyELF(&elfHeader)) {
         return ENOEXEC;

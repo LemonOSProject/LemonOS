@@ -44,7 +44,7 @@ Namespace::Namespace(Controller* controller, uint32_t nsID, const NamespaceIdent
 }
 
 int Namespace::AcquireBuffer() {
-    if (bufferAvailability.Wait()) {
+    if (bufferAvailability.wait()) {
         return -EINTR;
     }
 
@@ -61,7 +61,7 @@ void Namespace::ReleaseBuffer(int buffer) {
     assert(buffer >= 0 && buffer < 8);
     releaseLock(&bufferLocks[buffer]);
 
-    bufferAvailability.Signal();
+    bufferAvailability.signal();
 }
 
 int Namespace::ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
@@ -111,7 +111,7 @@ int Namespace::ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
             return -completion.status;
         }
 
-        if(buffer->Write((uint8_t*)buffers[blockBufferIndex], size)) {
+        if(buffer->write((uint8_t*)buffers[blockBufferIndex], size)) {
             ReleaseBuffer(blockBufferIndex);
             controller->ReleaseIOQueue(queue);
             return EFAULT;
@@ -165,7 +165,7 @@ int Namespace::WriteDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer) {
         if (!size)
             break;
 
-        if(buffer->Read((uint8_t*)buffers[blockBufferIndex], size)) {
+        if(buffer->read((uint8_t*)buffers[blockBufferIndex], size)) {
             ReleaseBuffer(blockBufferIndex);
             controller->ReleaseIOQueue(queue);
             return EFAULT;

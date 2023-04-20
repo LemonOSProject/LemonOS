@@ -28,14 +28,14 @@ ATADiskDevice::ATADiskDevice(int port, int drive) {
     switch (GPT::Parse(this)) {
     case 0:
         Log::Error("ATA Disk ");
-        Log::Write(this->port ? "Secondary " : "Primary ");
-        Log::Write(this->drive ? "Slave " : "Master ");
-        Log::Write("has a corrupted or non-existant GPT. MBR disks are NOT supported.");
+        Log::write(this->port ? "Secondary " : "Primary ");
+        Log::write(this->drive ? "Slave " : "Master ");
+        Log::write("has a corrupted or non-existant GPT. MBR disks are NOT supported.");
         break;
     case -1:
         Log::Error("Disk Error while Parsing GPT for ATA Disk ");
-        Log::Write(this->port ? "Secondary " : "Primary ");
-        Log::Write(this->drive ? "Slave " : "Master ");
+        Log::write(this->port ? "Secondary " : "Primary ");
+        Log::write(this->drive ? "Slave " : "Master ");
         break;
     }
 
@@ -69,20 +69,20 @@ int ATADiskDevice::ReadDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffer
         if (!size)
             continue;
 
-        if (driveLock.Wait()) {
+        if (driveLock.wait()) {
             return -EINTR;
         }
 
         if (ATA::Access(this, lba, 1, false)) {
-            driveLock.Signal();
+            driveLock.signal();
             return 1; // Error Reading Sectors
         }
 
-        if(buffer->Write((uint8_t*)prdBuffer, size)) {
+        if(buffer->write((uint8_t*)prdBuffer, size)) {
             return EFAULT;
         }
 
-        driveLock.Signal();
+        driveLock.signal();
 
         buffer += size;
         lba++;
@@ -104,19 +104,19 @@ int ATADiskDevice::WriteDiskBlock(uint64_t lba, uint32_t count, UIOBuffer* buffe
         if (!size)
             continue;
 
-        if (driveLock.Wait()) {
+        if (driveLock.wait()) {
             return EINTR;
         }
 
-        if(buffer->Read((uint8_t*)prdBuffer, size)) {
+        if(buffer->read((uint8_t*)prdBuffer, size)) {
             return EFAULT;
         }
 
         if (ATA::Access(this, lba, 1, true)) {
-            driveLock.Signal();
+            driveLock.signal();
             return 1; // Error Reading Sectors
         }
-        driveLock.Signal();
+        driveLock.signal();
 
         buffer += size;
         lba++;

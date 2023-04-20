@@ -46,7 +46,7 @@ public:
     ///
     /// \return 0 on success, 1 on empty, negative error code on failure
     /////////////////////////////
-    int64_t Read(uint64_t* id, uint16_t* size, uint8_t* data);
+    int64_t read(uint64_t* id, uint16_t* size, uint8_t* data);
     
     /////////////////////////////
     /// \brief Send a message and return the response
@@ -79,7 +79,7 @@ public:
     ///
     /// \return 0 on success, negative error code on failure
     /////////////////////////////
-    int64_t Write(uint64_t id, uint16_t size, uint64_t data);
+    int64_t write(uint64_t id, uint16_t size, uint64_t data);
 
     void Watch(KernelObjectWatcher& watcher, int events) override {
         acquireLock(&waitingLock);

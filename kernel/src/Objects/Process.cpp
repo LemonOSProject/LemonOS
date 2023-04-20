@@ -179,7 +179,7 @@ void Process::kill_all_other_threads() {
                 releaseLock(&thread->stateLock);
                 asm("sti");
 
-                thread->blocker->Interrupt(); // Stop the thread from blocking
+                thread->blocker->interrupt(); // Stop the thread from blocking
 
                 acquireLockIntDisable(&thread->stateLock);
             }
@@ -253,7 +253,7 @@ Process::Process(pid_t pid, const char* _name, const char* _workingDir, Process*
 
     FsNode* wdNode = fs::ResolvePath(workingDirPath);
     assert(wdNode);
-    assert(wdNode->IsDirectory());
+    assert(wdNode->is_directory());
 
     if (auto openFile = wdNode->Open(0); !openFile.HasError()) {
         workingDir = std::move(openFile.Value());
@@ -543,7 +543,7 @@ void Process::Destroy() {
         Watch(&watcher, KOEvent::ProcessTerminated);
 
         m_mainThread->signal(SIGKILL);
-        bool interrupted = watcher.Wait(); // Wait for the process to die
+        bool interrupted = watcher.wait(); // Wait for the process to die
 
         assert(!interrupted);
         assert(m_state == Process_Dead);
@@ -608,7 +608,7 @@ void Process::die() {
                 releaseLock(&thread->stateLock);
                 asm("sti");
 
-                thread->blocker->Interrupt(); // Stop the thread from blocking
+                thread->blocker->interrupt(); // Stop the thread from blocking
 
                 acquireLockIntDisable(&thread->stateLock);
             }
@@ -647,9 +647,9 @@ void Process::die() {
             KernelObjectWatcher w;
             child->Watch(&w, KOEvent::ProcessTerminated);
 
-            bool wasInterrupted = w.Wait(); // Wait for the process to die
+            bool wasInterrupted = w.wait(); // Wait for the process to die
             while (wasInterrupted) {
-                wasInterrupted = w.Wait(); // If the parent tried to interrupt us we are dying anyway
+                wasInterrupted = w.wait(); // If the parent tried to interrupt us we are dying anyway
             }
         }
 
@@ -766,7 +766,7 @@ void Process::die() {
         m_state = Process_Dead;
 
         for (auto* watcher : m_watching) {
-            watcher->Signal();
+            watcher->signal();
         }
         m_watching.clear();
     }
@@ -821,7 +821,7 @@ void Process::Watch(KernelObjectWatcher* watcher, KOEvent events) {
     ScopedSpinLock acq(m_watchingLock);
 
     if (m_state == Process_Dead) {
-        watcher->Signal();
+        watcher->signal();
         return; // Process is already dead
     }
 
@@ -878,7 +878,7 @@ FancyRefPtr<Process> Process::fork() {
         Log::Warning("[%d : %s] User shared data region may have been unmapped.", m_pid, name);
         newProcess->map_user_shared_data();
     } else {
-        newProcess->userSharedDataRegion->lock.ReleaseRead();
+        newProcess->userSharedDataRegion->lock.release_read();
     }
 
     releaseLock(addressSpace->GetLock());

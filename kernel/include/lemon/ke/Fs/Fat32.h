@@ -95,12 +95,12 @@ namespace fs::FAT32{
 
     class Fat32Node : public FsNode {
     public:
-        ErrorOr<ssize_t> Read(size_t, size_t, UIOBuffer*);
-        ErrorOr<ssize_t> Write(size_t, size_t, UIOBuffer*);
+        ErrorOr<ssize_t> read(size_t, size_t, UIOBuffer*);
+        ErrorOr<ssize_t> write(size_t, size_t, UIOBuffer*);
         //fs_fd_t* Open(size_t flags);
         //void Close();
-        ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t);
-        ErrorOr<FsNode*> FindDir(const char* name);
+        ErrorOr<int> read_dir(DirectoryEntry*, uint32_t);
+        ErrorOr<FsNode*> find_dir(const char* name);
 
         Fat32Volume* vol;
     };
@@ -109,12 +109,12 @@ namespace fs::FAT32{
     public:
         Fat32Volume(PartitionDevice* part, char* name);
 
-        ErrorOr<ssize_t> Read(Fat32Node* node, size_t offset, size_t size, UIOBuffer* buffer);
-        ErrorOr<ssize_t> Write(Fat32Node* node, size_t offset, size_t size, UIOBuffer* buffer);
+        ErrorOr<ssize_t> read(Fat32Node* node, size_t offset, size_t size, UIOBuffer* buffer);
+        ErrorOr<ssize_t> write(Fat32Node* node, size_t offset, size_t size, UIOBuffer* buffer);
         void Open(Fat32Node* node, uint32_t flags);
         void Close(Fat32Node* node);
-        ErrorOr<int> ReadDir(Fat32Node* node, DirectoryEntry* dirent, uint32_t index);
-        ErrorOr<FsNode*> FindDir(Fat32Node* node, const char* name);
+        ErrorOr<int> read_dir(Fat32Node* node, DirectoryEntry* dirent, uint32_t index);
+        ErrorOr<FsNode*> find_dir(Fat32Node* node, const char* name);
 
     private:
         uint64_t ClusterToLBA(uint32_t cluster);

@@ -106,7 +106,7 @@ public:
     ///
     /// \return Bytes read or if negative an error code
     /////////////////////////////
-    virtual ErrorOr<ssize_t> Read(size_t off, size_t size, UIOBuffer* buffer); // Read Data
+    virtual ErrorOr<ssize_t> read(size_t off, size_t size, UIOBuffer* buffer); // Read Data
 
     /////////////////////////////
     /// \brief Write data to filesystem node
@@ -118,41 +118,41 @@ public:
     ///
     /// \return Bytes written or if negative an error code
     /////////////////////////////
-    virtual ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer); // Write Data
+    virtual ErrorOr<ssize_t> write(size_t off, size_t size, UIOBuffer* buffer); // Write Data
 
     virtual ErrorOr<class File*> Open(size_t flags); // Open
     virtual void Close();                            // Close
 
-    virtual ErrorOr<int> ReadDir(struct DirectoryEntry*, uint32_t);
-    virtual ErrorOr<FsNode*> FindDir(const char* name); // Find in directory
+    virtual ErrorOr<int> read_dir(struct DirectoryEntry*, uint32_t);
+    virtual ErrorOr<FsNode*> find_dir(const char* name); // Find in directory
 
-    virtual Error Create(DirectoryEntry* ent, uint32_t mode);
-    virtual Error CreateDirectory(DirectoryEntry* ent, uint32_t mode);
+    virtual Error create(DirectoryEntry* ent, uint32_t mode);
+    virtual Error create_directory(DirectoryEntry* ent, uint32_t mode);
 
-    virtual ErrorOr<ssize_t> ReadLink(char* pathBuffer, size_t bufSize);
-    virtual Error Link(FsNode*, DirectoryEntry*);
-    virtual Error Unlink(DirectoryEntry*, bool unlinkDirectories = false);
+    virtual ErrorOr<ssize_t> read_link(char* pathBuffer, size_t bufSize);
+    virtual Error link(FsNode*, DirectoryEntry*);
+    virtual Error unlink(DirectoryEntry*, bool unlinkDirectories = false);
 
-    virtual Error Truncate(off_t length);
+    virtual Error truncate(off_t length);
 
-    virtual ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg); // I/O Control
-    virtual void Sync();                                    // Sync node to device
+    virtual ErrorOr<int> ioctl(uint64_t cmd, uint64_t arg); // I/O Control
+    virtual void sync();                                    // Sync node to device
 
-    virtual ErrorOr<MappedRegion*> MMap(uintptr_t base, size_t size, off_t off, int prot, bool shared, bool fixed);
+    virtual ErrorOr<MappedRegion*> mmap(uintptr_t base, size_t size, off_t off, int prot, bool shared, bool fixed);
 
-    virtual bool CanRead() { return true; }
-    virtual bool CanWrite() { return true; }
+    virtual bool can_read() { return true; }
+    virtual bool can_write() { return true; }
 
-    virtual inline bool IsFile() { return type == FileType::Regular; }
-    virtual inline bool IsDirectory() { return  type == FileType::Directory; }
-    virtual inline bool IsBlockDevice() { return  type == FileType::BlockDevice; }
-    virtual inline bool IsSymlink() { return  type == FileType::SymbolicLink; }
-    virtual inline bool IsCharDevice() { return  type == FileType::CharDevice; }
-    virtual inline bool IsSocket() { return  type == FileType::Socket; }
-    virtual inline bool IsEPoll() const { return false; }
-    virtual inline bool IsPipe() const { return false; }
+    virtual inline bool is_file() { return type == FileType::Regular; }
+    virtual inline bool is_directory() { return  type == FileType::Directory; }
+    virtual inline bool is_block_dev() { return  type == FileType::BlockDevice; }
+    virtual inline bool is_symlink() { return  type == FileType::SymbolicLink; }
+    virtual inline bool is_char_dev() { return  type == FileType::CharDevice; }
+    virtual inline bool is_socket() { return  type == FileType::Socket; }
+    virtual inline bool is_epoll() const { return false; }
+    virtual inline bool is_pipe() const { return false; }
 
-    void UnblockAll();
+    void unblock_all();
 
     lock_t nodeLock = 0;
 };
@@ -315,7 +315,7 @@ String BaseName(const String& path);
 ///
 /// \return Bytes read or if negative an error code
 /////////////////////////////
-ErrorOr<ssize_t> Read(FsNode* node, size_t offset, size_t size, void* buffer);
+ErrorOr<ssize_t> read(FsNode* node, size_t offset, size_t size, void* buffer);
 
 /////////////////////////////
 /// \brief Write data to filesystem node
@@ -329,19 +329,19 @@ ErrorOr<ssize_t> Read(FsNode* node, size_t offset, size_t size, void* buffer);
 ///
 /// \return Bytes written or if negative an error code
 /////////////////////////////
-ErrorOr<ssize_t> Write(FsNode* node, size_t offset, size_t size, void* buffer);
+ErrorOr<ssize_t> write(FsNode* node, size_t offset, size_t size, void* buffer);
 
 ErrorOr<File*> Open(FsNode* node, uint32_t flags = 0);
 void Close(FsNode* node);
 void Close(File* openFile);
-ErrorOr<int> ReadDir(FsNode* node, DirectoryEntry* dirent, uint32_t index);
-ErrorOr<FsNode*> FindDir(FsNode* node, const char* name);
+ErrorOr<int> read_dir(FsNode* node, DirectoryEntry* dirent, uint32_t index);
+ErrorOr<FsNode*> find_dir(FsNode* node, const char* name);
 
-ErrorOr<int> ReadDir(const FancyRefPtr<File>& handle, DirectoryEntry* dirent, uint32_t index);
-ErrorOr<FsNode*> FindDir(const FancyRefPtr<File>& handle, const char* name);
-ErrorOr<int> Ioctl(const FancyRefPtr<File>& handle, uint64_t cmd, uint64_t arg);
+ErrorOr<int> read_dir(const FancyRefPtr<File>& handle, DirectoryEntry* dirent, uint32_t index);
+ErrorOr<FsNode*> find_dir(const FancyRefPtr<File>& handle, const char* name);
+ErrorOr<int> ioctl(const FancyRefPtr<File>& handle, uint64_t cmd, uint64_t arg);
 
-Error Link(FsNode*, FsNode*, DirectoryEntry*);
+Error link(FsNode*, FsNode*, DirectoryEntry*);
 Error Unlink(FsNode*, DirectoryEntry*, bool unlinkDirectories = false);
 
 Error Rename(FsNode* olddir, const char* oldpath, FsNode* newdir, const char* newpath);

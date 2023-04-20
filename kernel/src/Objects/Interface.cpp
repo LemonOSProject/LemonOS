@@ -58,7 +58,7 @@ FancyRefPtr<MessageEndpoint> MessageInterface::Connect(){
 
     acquireLock(&waitingLock);
     while(waiting.get_length() > 0){
-        waiting.remove_at(0)->Signal();
+        waiting.remove_at(0)->signal();
     }
     releaseLock(&waitingLock);
 

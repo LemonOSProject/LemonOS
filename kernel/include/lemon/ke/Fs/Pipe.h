@@ -12,8 +12,8 @@ public:
     UNIXPipe(mode_t mode, FancyRefPtr<DataStream> stream);
     ~UNIXPipe() override;
 
-    ErrorOr<ssize_t> Read(off_t off, size_t size, UIOBuffer* buffer) override;
-    ErrorOr<ssize_t> Write(off_t off, size_t size, UIOBuffer* buffer) override;
+    ErrorOr<ssize_t> read(off_t off, size_t size, UIOBuffer* buffer) override;
+    ErrorOr<ssize_t> write(off_t off, size_t size, UIOBuffer* buffer) override;
 
     void Watch(class FsWatcher* watcher, Fs::FsEvent events) override;
     void Unwatch(class FsWatcher* watcher) override;

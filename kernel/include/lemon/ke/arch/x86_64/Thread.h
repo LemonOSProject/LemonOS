@@ -38,8 +38,8 @@ protected:
 public:
     virtual ~ThreadBlocker() = default;
 
-    virtual void Interrupt(); // A blocker may get interrupted because a thread is getting killed.
-    virtual void Unblock();
+    virtual void interrupt(); // A blocker may get interrupted because a thread is getting killed.
+    virtual void unblock();
 
     inline bool ShouldBlock() { return shouldBlock; }
     inline bool WasInterrupted() { return interrupted; }
@@ -47,7 +47,7 @@ public:
 
 class GenericThreadBlocker : public ThreadBlocker {
 public:
-    inline void Interrupt() {}
+    inline void interrupt() {}
 };
 
 using FutexThreadBlocker = GenericThreadBlocker;

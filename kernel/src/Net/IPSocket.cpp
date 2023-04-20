@@ -14,9 +14,9 @@ IPSocket::~IPSocket(){
 	
 }
 
-ErrorOr<int> IPSocket::Ioctl(uint64_t cmd, uint64_t arg){
+ErrorOr<int> IPSocket::ioctl(uint64_t cmd, uint64_t arg){
 	if(adapter){
-		return adapter->Ioctl(cmd, arg); // Adapter ioctls
+		return adapter->ioctl(cmd, arg); // Adapter ioctls
 	} else {
 		return Error{ENODEV}; // We are not bound to an interface
 	}

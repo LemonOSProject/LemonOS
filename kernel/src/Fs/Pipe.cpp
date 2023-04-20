@@ -7,7 +7,7 @@ UNIXPipe::UNIXPipe(int _end, FancyRefPtr<DataStream> stream)
     : end(static_cast<decltype(end)>(_end)), stream(std::move(stream)){
 }
 
-ErrorOr<ssize_t> UNIXPipe::Read(size_t off, size_t size, UIOBuffer* buffer){
+ErrorOr<ssize_t> UNIXPipe::read(size_t off, size_t size, UIOBuffer* buffer){
     if(end != ReadEnd){
         return Error{ESPIPE};
     }
@@ -24,10 +24,10 @@ ErrorOr<ssize_t> UNIXPipe::Read(size_t off, size_t size, UIOBuffer* buffer){
         size = stream->Pos();
     }
 
-    return stream->Read(buffer, size);
+    return stream->read(buffer, size);
 }
 
-ErrorOr<ssize_t> UNIXPipe::Write(size_t off, size_t size, UIOBuffer* buffer){
+ErrorOr<ssize_t> UNIXPipe::write(size_t off, size_t size, UIOBuffer* buffer){
     if(end != WriteEnd){
         return Error{ESPIPE};
     } else if(widowed || !otherEnd){
@@ -35,7 +35,7 @@ ErrorOr<ssize_t> UNIXPipe::Write(size_t off, size_t size, UIOBuffer* buffer){
         return Error{EPIPE};
     }
 
-    ssize_t ret = TRY_OR_ERROR(stream->Write(buffer, size));
+    ssize_t ret = TRY_OR_ERROR(stream->write(buffer, size));
 
     {
         ScopedSpinLock acq(otherEnd->watchingLock);

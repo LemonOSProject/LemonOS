@@ -220,20 +220,20 @@ public:
     public:
         Ext2Node(Ext2Volume* vol, ext2_inode_t& ino, ino_t inode);
 
-        ErrorOr<ssize_t> Read(size_t, size_t, UIOBuffer*);
-        ErrorOr<ssize_t> Write(size_t, size_t, UIOBuffer*);
-        ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t);
-        ErrorOr<FsNode*> FindDir(const char* name);
-        Error Create(DirectoryEntry*, uint32_t);
-        Error CreateDirectory(DirectoryEntry*, uint32_t);
+        ErrorOr<ssize_t> read(size_t, size_t, UIOBuffer*);
+        ErrorOr<ssize_t> write(size_t, size_t, UIOBuffer*);
+        ErrorOr<int> read_dir(DirectoryEntry*, uint32_t);
+        ErrorOr<FsNode*> find_dir(const char* name);
+        Error create(DirectoryEntry*, uint32_t);
+        Error create_directory(DirectoryEntry*, uint32_t);
 
-        ErrorOr<ssize_t> ReadLink(char* pathBuffer, size_t bufSize);
-        Error Link(FsNode*, DirectoryEntry*);
-        Error Unlink(DirectoryEntry*, bool unlinkDirectories = false);
-        Error Truncate(off_t length);
+        ErrorOr<ssize_t> read_link(char* pathBuffer, size_t bufSize);
+        Error link(FsNode*, DirectoryEntry*);
+        Error unlink(DirectoryEntry*, bool unlinkDirectories = false);
+        Error truncate(off_t length);
 
-        void Close();
-        void Sync();
+        void close();
+        void sync();
     };
 
     class Ext2Volume : public FsVolume {
@@ -327,16 +327,16 @@ public:
     public:
         Ext2Volume(FsNode* device, const char* name);
 
-        ErrorOr<ssize_t> Read(Ext2Node* node, size_t offset, size_t size, UIOBuffer* buffer);
-        ErrorOr<ssize_t> Write(Ext2Node* node, size_t offset, size_t size, UIOBuffer* buffer);
-        ErrorOr<int> ReadDir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index);
-        ErrorOr<FsNode*> FindDir(Ext2Node* node, const char* name);
-        Error Create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
-        Error CreateDirectory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
-        ErrorOr<ssize_t> ReadLink(Ext2Node* node, char* pathBuffer, size_t bufSize);
-        Error Link(Ext2Node* dir, Ext2Node* node, DirectoryEntry* ent);
-        Error Unlink(Ext2Node* dir, DirectoryEntry* ent, bool unlinkDirectories = false);
-        Error Truncate(Ext2Node* node, off_t length);
+        ErrorOr<ssize_t> read(Ext2Node* node, size_t offset, size_t size, UIOBuffer* buffer);
+        ErrorOr<ssize_t> write(Ext2Node* node, size_t offset, size_t size, UIOBuffer* buffer);
+        ErrorOr<int> read_dir(Ext2Node* node, DirectoryEntry* dirent, uint32_t index);
+        ErrorOr<FsNode*> find_dir(Ext2Node* node, const char* name);
+        Error create(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
+        Error create_directory(Ext2Node* node, DirectoryEntry* ent, uint32_t mode);
+        ErrorOr<ssize_t> read_link(Ext2Node* node, char* pathBuffer, size_t bufSize);
+        Error link(Ext2Node* dir, Ext2Node* node, DirectoryEntry* ent);
+        Error unlink(Ext2Node* dir, DirectoryEntry* ent, bool unlinkDirectories = false);
+        Error truncate(Ext2Node* node, off_t length);
 
         void SyncNode(Ext2Node* node);
         void CleanNode(Ext2Node* node);

@@ -27,7 +27,7 @@ Error elf_load_file(const FancyRefPtr<File>& file, ELFData& exe) {
 
     UIOBuffer uio{&header};
 
-    auto bytes = TRY_OR_ERROR(file->Read(0, sizeof(elf64_header_t), &uio));
+    auto bytes = TRY_OR_ERROR(file->read(0, sizeof(elf64_header_t), &uio));
     if (!VerifyELF(&header)) {
         return ENOEXEC;
     }
@@ -51,7 +51,7 @@ Error elf_load_file(const FancyRefPtr<File>& file, ELFData& exe) {
 
         UIOBuffer uio{phdr};
 
-        auto bytes = TRY_OR_ERROR(file->Read(offset, sizeof(ELF64ProgramHeader), &uio));
+        auto bytes = TRY_OR_ERROR(file->read(offset, sizeof(ELF64ProgramHeader), &uio));
         if (bytes != sizeof(ELF64ProgramHeader)) {
             Log::Warning("elf_load_file: short read attempting to read program header");
         }
@@ -61,7 +61,7 @@ Error elf_load_file(const FancyRefPtr<File>& file, ELFData& exe) {
             uint8_t* data = new uint8_t[phdr->fileSize];
             UIOBuffer uio{data};
 
-            auto bytes = file->Read(phdr->offset, phdr->fileSize, &uio);
+            auto bytes = file->read(phdr->offset, phdr->fileSize, &uio);
             if (bytes.HasError()) {
                 Log::Warning("elf_load_file: I/O errors reading elf");
 
@@ -83,14 +83,14 @@ Error elf_load_file(const FancyRefPtr<File>& file, ELFData& exe) {
             }
 
             UIOBuffer uio{exe.linkerPath};
-            TRY_OR_ERROR(file->Read(offset, len, &uio));
+            TRY_OR_ERROR(file->read(offset, len, &uio));
             exe.linkerPath[len] = 0;
         } else if (phdr->type == PT_DYNAMIC) {
             uint8_t* buffer = new uint8_t[phdr->fileSize];
 
             UIOBuffer uio{buffer};
 
-            auto bytes = file->Read(phdr->offset, phdr->fileSize, &uio);
+            auto bytes = file->read(phdr->offset, phdr->fileSize, &uio);
             if (bytes.HasError()) {
                 Log::Warning("elf_load_file: I/O errors reading elf");
                 delete[] buffer;

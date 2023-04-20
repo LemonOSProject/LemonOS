@@ -36,7 +36,7 @@ namespace Network{
         
         NetworkAdapter(AdapterType aType);
 
-        virtual ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg);
+        virtual ErrorOr<int> ioctl(uint64_t cmd, uint64_t arg);
         
         virtual void SendPacket(void* data, size_t len);
 

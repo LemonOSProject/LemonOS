@@ -30,7 +30,7 @@ class LogDevice : public Device {
 public:
     LogDevice(char* name) : Device(name, DeviceTypeKernelLog) { type = FileType::Regular; }
 
-    ErrorOr<ssize_t> Read(size_t offset, size_t size, UIOBuffer* buffer) {
+    ErrorOr<ssize_t> read(size_t offset, size_t size, UIOBuffer* buffer) {
         if (!logBuffer)
             return 0;
         if (offset > logBufferPos)
@@ -39,16 +39,16 @@ public:
         if (size + offset > logBufferPos)
             size = logBufferPos - offset;
 
-        if(buffer->Write((uint8_t*)logBuffer + offset, size)) {
+        if(buffer->write((uint8_t*)logBuffer + offset, size)) {
             return EFAULT;
         }
 
         return size;
     }
 
-    ErrorOr<ssize_t> Write(size_t offset, size_t size, UIOBuffer* buffer) {
+    ErrorOr<ssize_t> write(size_t offset, size_t size, UIOBuffer* buffer) {
         char* data = new char[size];
-        if(buffer->Read((uint8_t*)data, size)) {
+        if(buffer->read((uint8_t*)data, size)) {
             delete[] data;
             return EFAULT;
         }
@@ -59,7 +59,7 @@ public:
         return size;
     }
 
-    ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) {
+    ErrorOr<int> ioctl(uint64_t cmd, uint64_t arg) {
         if (cmd == TIOCGWINSZ)
             return 0; // Pretend to be a terminal
         else
@@ -86,7 +86,7 @@ void EnableBuffer() {
 void DisableBuffer() { logBufferEnabled = false; }
 
 void WriteN(const char* str, size_t n) {
-    Serial::Write(str, n);
+    Serial::write(str, n);
 
     if (console) {
         console->PrintN(str, n, 255, 255, 255);
@@ -123,9 +123,9 @@ void WriteN(const char* str, size_t n) {
     }
 }
 
-void Write(const char* str, uint8_t r, uint8_t g, uint8_t b) { WriteN(str, strlen(str)); }
+void write(const char* str, uint8_t r, uint8_t g, uint8_t b) { WriteN(str, strlen(str)); }
 
-void Write(unsigned long long num, bool hex, uint8_t r, uint8_t g, uint8_t b) {
+void write(unsigned long long num, bool hex, uint8_t r, uint8_t g, uint8_t b) {
     char buf[32];
     if (hex) {
         buf[0] = '0';
@@ -176,7 +176,7 @@ void WriteF(const char* __restrict format, va_list args) {
         case 'Y': {
             format++;
             auto arg = (bool)va_arg(args, unsigned int);
-            Write(arg ? "yes" : "no");
+            write(arg ? "yes" : "no");
             break;
         }
         case 's': {
@@ -199,9 +199,9 @@ void WriteF(const char* __restrict format, va_list args) {
 
             if (arg < 0) {
                 WriteN("-", 1);
-                Write(-arg, false);
+                write(-arg, false);
             } else {
-                Write(arg, false);
+                write(arg, false);
             }
             break;
         }
@@ -214,10 +214,10 @@ void WriteF(const char* __restrict format, va_list args) {
 
             if (isHalf) {
                 auto arg = va_arg(args, unsigned int);
-                Write(arg, hex);
+                write(arg, hex);
             } else {
                 auto arg = va_arg(args, unsigned long long);
-                Write(arg, hex);
+                write(arg, hex);
             }
             break;
         }
@@ -243,7 +243,7 @@ void Print(const char* __restrict fmt, ...) {
 void Warning(const char* __restrict fmt, ...) {
     if (CheckInterrupts())
         acquireLock(&logLock);
-    Write("\r\n[WARN]    ", 255, 255, 0);
+    write("\r\n[WARN]    ", 255, 255, 0);
     va_list args;
     va_start(args, fmt);
     WriteF(fmt, args);
@@ -255,7 +255,7 @@ void Warning(const char* __restrict fmt, ...) {
 void Error(const char* __restrict fmt, ...) {
     if (CheckInterrupts())
         acquireLock(&logLock);
-    Write("\r\n[ERROR]   ", 255, 0, 0);
+    write("\r\n[ERROR]   ", 255, 0, 0);
     va_list args;
     va_start(args, fmt);
     WriteF(fmt, args);
@@ -267,7 +267,7 @@ void Error(const char* __restrict fmt, ...) {
 void Info(const char* __restrict fmt, ...) {
     if (CheckInterrupts())
         acquireLock(&logLock);
-    Write("\r\n[INFO]    ");
+    write("\r\n[INFO]    ");
     va_list args;
     va_start(args, fmt);
     WriteF(fmt, args);
@@ -277,22 +277,22 @@ void Info(const char* __restrict fmt, ...) {
 }
 
 void Warning(const char* str) {
-    Write("\r\n[WARN]    ", 255, 255, 0);
-    Write(str);
+    write("\r\n[WARN]    ", 255, 255, 0);
+    write(str);
 }
 
 void Warning(unsigned long long num) {
-    Write("\r\n[WARN]    ", 255, 255, 0);
+    write("\r\n[WARN]    ", 255, 255, 0);
     // Write(str);
 }
 
 void Error(const char* str) {
-    Write("\r\n[ERROR]   ", 255, 0, 0);
-    Write(str);
+    write("\r\n[ERROR]   ", 255, 0, 0);
+    write(str);
 }
 
 void Error(unsigned long long num, bool hex) {
-    Write("\r\n[ERROR]   ", 255, 0, 0);
+    write("\r\n[ERROR]   ", 255, 0, 0);
     char buf[32];
 
     if (hex) {
@@ -300,19 +300,19 @@ void Error(unsigned long long num, bool hex) {
         buf[1] = 'x';
     }
     itoa(num, (char*)(buf + (hex ? 2 : 0)), hex ? 16 : 10);
-    Write(buf);
+    write(buf);
 }
 
 void Info(const char* str) {
-    Write("\r\n[INFO]    ");
-    Write(str);
+    write("\r\n[INFO]    ");
+    write(str);
 }
 
 void Info(unsigned long long num, bool hex) {
-    Write("\r\n");
-    Write("[");
-    Write("INFO");
-    Write("]    ");
+    write("\r\n");
+    write("[");
+    write("INFO");
+    write("]    ");
 
     char buf[32];
     if (hex) {
@@ -320,7 +320,7 @@ void Info(unsigned long long num, bool hex) {
         buf[1] = 'x';
     }
     itoa(num, (char*)(buf + (hex ? 2 : 0)), hex ? 16 : 10);
-    Write(buf);
+    write(buf);
 }
 
 } // namespace Log

@@ -6,12 +6,12 @@
 
 ErrorOr<int64_t> Stream::ReadRaw(uint8_t* buffer, size_t len) {
     UIOBuffer uio = UIOBuffer(buffer);
-    return Read(&uio, len);
+    return read(&uio, len);
 }
 
 ErrorOr<int64_t> Stream::WriteRaw(const uint8_t* buffer, size_t len) {
     UIOBuffer uio = UIOBuffer((uint8_t*)buffer);
-    return Write(&uio, len);
+    return write(&uio, len);
 }
 
 ErrorOr<int64_t> Stream::PeekRaw(uint8_t* buffer, size_t len) {
@@ -34,7 +34,7 @@ DataStream::DataStream(size_t bufSize) {
 
 DataStream::~DataStream() { kfree(buffer); }
 
-ErrorOr<int64_t> DataStream::Read(UIOBuffer* data, size_t len) {
+ErrorOr<int64_t> DataStream::read(UIOBuffer* data, size_t len) {
     acquireLock(&streamLock);
 
     if (len >= bufferPos)
@@ -45,7 +45,7 @@ ErrorOr<int64_t> DataStream::Read(UIOBuffer* data, size_t len) {
         return 0;
     }
 
-    if(data->Write(buffer, len)) {
+    if(data->write(buffer, len)) {
         return EFAULT;
     }
 
@@ -68,7 +68,7 @@ ErrorOr<int64_t> DataStream::Peek(UIOBuffer* data, size_t len) {
         return 0;
     }
 
-    if(data->Write(buffer, len)) {
+    if(data->write(buffer, len)) {
         return EFAULT;
     }
 
@@ -77,7 +77,7 @@ ErrorOr<int64_t> DataStream::Peek(UIOBuffer* data, size_t len) {
     return len;
 }
 
-ErrorOr<int64_t> DataStream::Write(UIOBuffer* data, size_t len) {
+ErrorOr<int64_t> DataStream::write(UIOBuffer* data, size_t len) {
     acquireLock(&streamLock);
     if (bufferPos + len >= bufferSize) {
         void* oldBuffer = buffer;
@@ -92,7 +92,7 @@ ErrorOr<int64_t> DataStream::Write(UIOBuffer* data, size_t len) {
         kfree(oldBuffer);
     }
 
-    if(data->Read(buffer + bufferPos, len)) {
+    if(data->read(buffer + bufferPos, len)) {
         return EFAULT;
     }
 
@@ -122,7 +122,7 @@ void DataStream::Wait() {
     }
 }
 
-ErrorOr<int64_t> PacketStream::Read(UIOBuffer* buffer, size_t len) {
+ErrorOr<int64_t> PacketStream::read(UIOBuffer* buffer, size_t len) {
     if (packets.get_length() <= 0)
         return 0;
 
@@ -131,7 +131,7 @@ ErrorOr<int64_t> PacketStream::Read(UIOBuffer* buffer, size_t len) {
     if (len > pkt.len)
         len = pkt.len;
 
-    if(buffer->Write(pkt.data, len)) {
+    if(buffer->write(pkt.data, len)) {
         return EFAULT;
     }
 
@@ -149,18 +149,18 @@ ErrorOr<int64_t> PacketStream::Peek(UIOBuffer* buffer, size_t len) {
     if (len > pkt.len)
         len = pkt.len;
 
-    if(buffer->Write(pkt.data, len)) {
+    if(buffer->write(pkt.data, len)) {
         return EFAULT;
     }
 
     return len;
 }
 
-ErrorOr<int64_t> PacketStream::Write(UIOBuffer* buffer, size_t len) {
+ErrorOr<int64_t> PacketStream::write(UIOBuffer* buffer, size_t len) {
     stream_packet_t pkt;
     pkt.len = len;
     pkt.data = reinterpret_cast<uint8_t*>(kmalloc(len));
-    if(buffer->Read(pkt.data, len)) {
+    if(buffer->read(pkt.data, len)) {
         kfree(pkt.data);
         return EFAULT;
     }

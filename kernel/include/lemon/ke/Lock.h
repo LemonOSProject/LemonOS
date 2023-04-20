@@ -23,7 +23,7 @@ protected:
 
         }
 
-        void Interrupt(){
+        void interrupt(){
             interrupted = true;
             shouldBlock = false;
 
@@ -67,18 +67,18 @@ protected:
 public:
     Semaphore(int val) : value(val) {};
 
-    inline void SetValue(int val){
+    inline void set_value(int val){
         value = val;
     }
 
-    inline lock_t GetValue(){
+    inline lock_t get_value(){
         return value;
     }
 
-    [[nodiscard]] bool Wait();
-    [[nodiscard]] bool WaitTimeout(long& timeout);
+    [[nodiscard]] bool wait();
+    [[nodiscard]] bool wait_timeout(long& timeout);
 
-    void Signal();
+    void signal();
 };
 
 class ReadWriteLock {
@@ -94,7 +94,7 @@ public:
 
     ALWAYS_INLINE ReadWriteLock() {}
 
-    ALWAYS_INLINE void AcquireRead(){
+    ALWAYS_INLINE void acquire_read(){
         acquireLock(&lock);
 
         if(__atomic_add_fetch(&activeReaders, 1, __ATOMIC_ACQUIRE) == 1){ // We are the first reader
@@ -104,12 +104,12 @@ public:
         releaseLock(&lock);
     }
 
-    ALWAYS_INLINE void AcquireWrite(){
+    ALWAYS_INLINE void acquire_write(){
         acquireLock(&lock); // Stop more threads from reading
         acquireLock(&fileLock);
     }
 
-    ALWAYS_INLINE bool TryAcquireWrite(){
+    ALWAYS_INLINE bool try_acquire_write(){
         if(!writerAcquiredLock && acquireTestLock(&lock)){ // Stop more threads from reading
             return true;
         }
@@ -123,18 +123,18 @@ public:
         return false;
     }
 
-    ALWAYS_INLINE void ReleaseRead(){
+    ALWAYS_INLINE void release_read(){
         if(__atomic_sub_fetch(&activeReaders, 1, __ATOMIC_RELEASE) == 0){
             releaseLock(&fileLock);
         }
     }
 
-    ALWAYS_INLINE void ReleaseWrite(){
+    ALWAYS_INLINE void release_write(){
         releaseLock(&fileLock);
         releaseLock(&lock);
     }
 
-    ALWAYS_INLINE bool IsWriteLocked() const { return lock && activeReaders == 0; }
+    ALWAYS_INLINE bool is_write_locked() const { return lock && activeReaders == 0; }
 };
 
 using FilesystemLock = ReadWriteLock;

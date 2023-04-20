@@ -134,7 +134,7 @@ namespace Network {
         type = FileType::Directory;
     }
 
-    ErrorOr<int> NetFS::ReadDir(DirectoryEntry* dirent, uint32_t index){
+    ErrorOr<int> NetFS::read_dir(DirectoryEntry* dirent, uint32_t index){
         if(index == 0){
             strcpy(dirent->name, ".");
 
@@ -159,7 +159,7 @@ namespace Network {
         return 1;
     }
 
-    ErrorOr<FsNode*> NetFS::FindDir(const char* name){
+    ErrorOr<FsNode*> NetFS::find_dir(const char* name){
         if(strcmp(name, ".") == 0){
             return this;
         } else if(strcmp(name, "..") == 0){

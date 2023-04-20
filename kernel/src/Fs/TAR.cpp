@@ -33,15 +33,15 @@ inline static FileType TarToFiletype(char type){
 }
 
 namespace fs::tar{
-    ErrorOr<ssize_t> TarNode::Read(size_t offset, size_t size, UIOBuffer* buffer){
+    ErrorOr<ssize_t> TarNode::read(size_t offset, size_t size, UIOBuffer* buffer){
         if(vol){
-            return vol->Read(this, offset, size, buffer);
+            return vol->read(this, offset, size, buffer);
         } else return EIO;
     }
 
-    ErrorOr<ssize_t> TarNode::Write(size_t offset, size_t size, UIOBuffer* buffer){
+    ErrorOr<ssize_t> TarNode::write(size_t offset, size_t size, UIOBuffer* buffer){
         if(vol){
-            return vol->Write(this, offset, size, buffer);
+            return vol->write(this, offset, size, buffer);
         } else return EIO;
     }
 
@@ -50,14 +50,14 @@ namespace fs::tar{
             vol->Close(this);
         }
     }
-    ErrorOr<int> TarNode::ReadDir(DirectoryEntry* dirent, uint32_t index){
+    ErrorOr<int> TarNode::read_dir(DirectoryEntry* dirent, uint32_t index){
         if(vol){
-            return vol->ReadDir(this, dirent, index);
+            return vol->read_dir(this, dirent, index);
         } else return Error{ENOTDIR};
     }
-    ErrorOr<FsNode*> TarNode::FindDir(const char* name){
+    ErrorOr<FsNode*> TarNode::find_dir(const char* name){
         if(vol){
-            return vol->FindDir(this, name);
+            return vol->find_dir(this, name);
         } else return Error{ENOTDIR};
     }
 
@@ -171,10 +171,10 @@ namespace fs::tar{
         volumeNode->entryCount = e;
     }
 
-    ErrorOr<ssize_t> TarVolume::Read(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer){
+    ErrorOr<ssize_t> TarVolume::read(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer){
         TarNode* tarNode = &nodes[node->inode];
 
-        if(node->IsDirectory()){
+        if(node->is_directory()){
             return Error{EISDIR};
         }
 
@@ -183,14 +183,14 @@ namespace fs::tar{
 
 		if(!size) return 0;
 
-        if(buffer->Write((uint8_t*)(((uintptr_t)tarNode->header) + 512 + offset), size)) {
+        if(buffer->write((uint8_t*)(((uintptr_t)tarNode->header) + 512 + offset), size)) {
             return EFAULT;
         }
 		return size;
     }
 
-    ErrorOr<ssize_t> TarVolume::Write(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer){
-        if(node->IsDirectory()){
+    ErrorOr<ssize_t> TarVolume::write(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer){
+        if(node->is_directory()){
             return Error{EISDIR};
         }
 
@@ -205,7 +205,7 @@ namespace fs::tar{
 
     }
 
-    ErrorOr<int> TarVolume::ReadDir(TarNode* node, DirectoryEntry* dirent, uint32_t index){
+    ErrorOr<int> TarVolume::read_dir(TarNode* node, DirectoryEntry* dirent, uint32_t index){
         if(node->type != FileType::Directory) return Error{ENOTDIR};
 
         if(index >= static_cast<unsigned>(node->entryCount + 2)) return 0;
@@ -226,10 +226,10 @@ namespace fs::tar{
         return 1;
     }
 
-    ErrorOr<FsNode*> TarVolume::FindDir(TarNode* node, const char* name){
+    ErrorOr<FsNode*> TarVolume::find_dir(TarNode* node, const char* name){
         TarNode* tarNode = &nodes[node->inode];
         
-        if(!node->IsDirectory()) return Error{ENOTDIR};
+        if(!node->is_directory()) return Error{ENOTDIR};
 
         if(strcmp(".", name) == 0) return node;
         if(strcmp("..", name) == 0){

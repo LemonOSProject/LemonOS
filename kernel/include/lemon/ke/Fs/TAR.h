@@ -65,11 +65,11 @@ public:
     int entryCount;  // For Directories - Amount of child nodes
     ino_t* children; // For Directories - Inodes of children
 
-    ErrorOr<ssize_t> Read(size_t, size_t, UIOBuffer*);
-    ErrorOr<ssize_t> Write(size_t, size_t, UIOBuffer*);
+    ErrorOr<ssize_t> read(size_t, size_t, UIOBuffer*);
+    ErrorOr<ssize_t> write(size_t, size_t, UIOBuffer*);
     void Close();
-    ErrorOr<int> ReadDir(DirectoryEntry*, uint32_t);
-    ErrorOr<FsNode*> FindDir(const char* name);
+    ErrorOr<int> read_dir(DirectoryEntry*, uint32_t);
+    ErrorOr<FsNode*> find_dir(const char* name);
 
     TarVolume* vol;
 };
@@ -90,11 +90,11 @@ public:
 
     TarVolume(uintptr_t base, size_t size, char* name);
 
-    ErrorOr<ssize_t> Read(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer);
-    ErrorOr<ssize_t> Write(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer);
+    ErrorOr<ssize_t> read(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer);
+    ErrorOr<ssize_t> write(TarNode* node, size_t offset, size_t size, UIOBuffer* buffer);
     void Open(TarNode* node, uint32_t flags);
     void Close(TarNode* node);
-    ErrorOr<int> ReadDir(TarNode* node, DirectoryEntry* dirent, uint32_t index);
-    ErrorOr<FsNode*> FindDir(TarNode* node, const char* name);
+    ErrorOr<int> read_dir(TarNode* node, DirectoryEntry* dirent, uint32_t index);
+    ErrorOr<FsNode*> find_dir(TarNode* node, const char* name);
 };
 }; // namespace fs::tar

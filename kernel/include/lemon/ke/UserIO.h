@@ -13,7 +13,7 @@ public:
     // Create a UIOBuffer from a user pointer
     static UIOBuffer FromUser(void* buffer);
 
-    [[nodiscard]] ALWAYS_INLINE int Read(uint8_t* buffer, size_t len) {
+    [[nodiscard]] ALWAYS_INLINE int read(uint8_t* buffer, size_t len) {
         if(m_user) {
             int r = user_memcpy(buffer, m_data + m_offset, len);
             m_offset += len;
@@ -25,7 +25,7 @@ public:
         }
     }
 
-    [[nodiscard]] ALWAYS_INLINE int Read(uint8_t* buffer, size_t len, size_t offset) {
+    [[nodiscard]] ALWAYS_INLINE int read(uint8_t* buffer, size_t len, size_t offset) {
         if(m_user) {
             int r = user_memcpy(buffer, m_data + offset, len);
             return r;
@@ -35,7 +35,7 @@ public:
         }
     }
 
-    [[nodiscard]] ALWAYS_INLINE int Write(uint8_t* buffer, size_t len) {
+    [[nodiscard]] ALWAYS_INLINE int write(uint8_t* buffer, size_t len) {
         if(m_user) {
             int r = user_memcpy(m_data + m_offset, buffer, len);
             m_offset += len;
@@ -47,7 +47,7 @@ public:
         }
     }
 
-    [[nodiscard]] ALWAYS_INLINE int Write(uint8_t* buffer, size_t len, size_t offset) {
+    [[nodiscard]] ALWAYS_INLINE int write(uint8_t* buffer, size_t len, size_t offset) {
         if(m_user) {
             int r = user_memcpy(m_data + offset, buffer, len);
             return r;
@@ -57,7 +57,7 @@ public:
         }
     }
 
-    [[nodiscard]] ALWAYS_INLINE int Fill(int c, size_t len) {
+    [[nodiscard]] ALWAYS_INLINE int fill(int c, size_t len) {
         if(m_user) {
             int r = user_memset(m_data + m_offset, c, len);
             m_offset += len;
@@ -69,8 +69,8 @@ public:
         }
     }
 
-    ALWAYS_INLINE size_t Offset() const { return m_offset; }
-    ALWAYS_INLINE void SetOffset(size_t off) { m_offset = off; }
+    ALWAYS_INLINE size_t offset() const { return m_offset; }
+    ALWAYS_INLINE void set_offset(size_t off) { m_offset = off; }
 
 private:
     ALWAYS_INLINE UIOBuffer(void* buffer, size_t offset, bool user)

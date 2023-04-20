@@ -13,7 +13,7 @@ public:
         type = FileType::CharDevice;
     }
 
-    ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override {
+    ErrorOr<int> ioctl(uint64_t cmd, uint64_t arg) override {
         switch(cmd) {
         default:
             return Error{EINVAL};
@@ -30,7 +30,7 @@ public:
         type = FileType::CharDevice;
     }
 
-    ErrorOr<int> Ioctl(uint64_t cmd, uint64_t arg) override {
+    ErrorOr<int> ioctl(uint64_t cmd, uint64_t arg) override {
         ScopedSpinLock lockOutputs(pcmOutputsLock);
         if(!currentOutput) {
             Log::Warning("no audio output!", size);
@@ -60,7 +60,7 @@ public:
         }
     }
 
-    ErrorOr<ssize_t> Write(size_t off, size_t size, UIOBuffer* buffer) override {
+    ErrorOr<ssize_t> write(size_t off, size_t size, UIOBuffer* buffer) override {
         ScopedSpinLock lockOutputs(pcmOutputsLock);
         if(!currentOutput) {
             // If no output treat as dummy device
@@ -83,7 +83,7 @@ public:
         type = FileType::Directory;
     }
 
-    ErrorOr<int> ReadDir(DirectoryEntry* dirent, uint32_t index) override {
+    ErrorOr<int> read_dir(DirectoryEntry* dirent, uint32_t index) override {
         switch(index) {
         case 0:
             *dirent = DirectoryEntry(this, ".");
@@ -102,13 +102,13 @@ public:
         }
     }
 
-    ErrorOr<FsNode*> FindDir(const char* name) override;
+    ErrorOr<FsNode*> find_dir(const char* name) override;
 
     PCMOutputDevice pcm = PCMOutputDevice();
     MixerDevice mixer = MixerDevice();
 };
 
-ErrorOr<FsNode*> SoundFS::FindDir(const char* name) {
+ErrorOr<FsNode*> SoundFS::find_dir(const char* name) {
     if(strcmp(name, "mixer") == 0) {
         return &mixer;
     }

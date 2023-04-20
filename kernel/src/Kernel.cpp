@@ -77,7 +77,7 @@ void KernelProcess() {
 
     fs::VolumeManager::RegisterVolume(new fs::Temp::TempVolume("tmp")); // Create tmpfs instance
 
-    Log::Write("OK");
+    Log::write("OK");
 
     LoadSymbols();
 
@@ -113,7 +113,7 @@ void KernelProcess() {
     Log::Info("Loading Init Process...");
     FsNode* initNode = fs::ResolvePath("/initrd/init.lef");
 
-    Log::Write("OK");
+    Log::write("OK");
 
     LoadHirakuSymbols();
 

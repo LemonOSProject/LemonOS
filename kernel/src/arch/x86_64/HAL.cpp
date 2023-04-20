@@ -46,7 +46,7 @@ void InitCore() { // ALWAYS call this first
     SMP::InitializeCPU0Context();
     
     Serial::Initialize();
-    Serial::Write("Initializing Lemon...\r\n");
+    Serial::write("Initializing Lemon...\r\n");
 
     // Initialize Paging/Virtual Memory Manager
     Memory::InitializeVirtualMemory();
@@ -83,27 +83,27 @@ void InitExtra() {
     if (!(cpuidInfo.features_ecx & CPUID_ECX_CX16)) {
         KernelPanic("CPU does not support CMPXCHG16, Lemon OS requires x86_64-v2 support!");
     }
-    Log::Write("OK");
+    Log::write("OK");
 
     Log::Info("Initializing ACPI...");
     ACPI::Init();
-    Log::Write("OK");
+    Log::write("OK");
 
     Log::Info("Initializing PCI...");
     PCI::Init();
-    Log::Write("OK");
+    Log::write("OK");
 
     Log::Info("Initializing System Timer...");
     Timer::Initialize(1600);
-    Log::Write("OK");
+    Log::write("OK");
 
     Log::Info("Initializing Local and I/O APIC...");
     APIC::Initialize();
-    Log::Write("OK");
+    Log::write("OK");
 
     Log::Info("Initializing SMP...");
     SMP::Initialize();
-    Log::Write("OK");
+    Log::write("OK");
 
     Memory::LateInitializeVirtualMemory();
 }

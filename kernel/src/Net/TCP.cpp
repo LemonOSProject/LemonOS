@@ -272,7 +272,7 @@ namespace Network {
             if(tcpHeader->rst){
                 state = TCPStateUnknown; // Abort connection
 
-                //UnblockAll();
+                //unblock_all();
             } else if(state == TCPStateSyn){
                 bool ack = tcpHeader->ack;
                 bool syn = tcpHeader->syn;
@@ -294,7 +294,7 @@ namespace Network {
                     if(m_lastAcknowledged == m_sequenceNumber){ // The ACK number must be equal to the sequence number.
                         state = TCPStateEstablished; // Our SYN has been acknowledged with a SYN-ACK
 
-                        //UnblockAll(); // Unblock waiting threads
+                        //unblock_all(); // Unblock waiting threads
                     }
                 }
 
@@ -309,7 +309,7 @@ namespace Network {
 
                     state = TCPStateEstablished; // Our SYN has been acknowledged with a SYN-ACK
 
-                    //UnblockAll(); // Unblock waiting threads
+                    //unblock_all(); // Unblock waiting threads
                 }
             } else if(state == TCPStateEstablished){
                 bool ack = tcpHeader->ack;
@@ -394,7 +394,7 @@ namespace Network {
                 }
 
                 if(doUnblock){
-                    //UnblockAll();
+                    //unblock_all();
                 }
             } else if(state == TCPStateFinWait1){
                 bool ack = tcpHeader->ack;
@@ -780,7 +780,7 @@ namespace Network {
                 }
             }
 
-            return m_inboundData.Read(buffer, len);
+            return m_inboundData.read(buffer, len);
         }
 
         ErrorOr<int64_t> TCPSocket::SendTo(UIOBuffer* buffer, size_t len, int flags, const sockaddr* dest, socklen_t addrlen, const void* ancillary, size_t ancillaryLen){
@@ -812,7 +812,7 @@ namespace Network {
             header.psh = 1;
 
             TCPPacket pack = { .header = header, .sequenceNumber = m_sequenceNumber, .length = shortLength, .data = new uint8_t[len]};
-            if(buffer->Read(pack.data, shortLength)) {
+            if(buffer->read(pack.data, shortLength)) {
                 return EFAULT;
             }
 
