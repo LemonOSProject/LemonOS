@@ -9,12 +9,15 @@
 #include <sys/ioctl.h>
 #include <sys/wait.h>
 #include <sys/poll.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 #include <lemon/core/Keyboard.h>
 #include <lemon/core/Framebuffer.h>
 
 #include <lemon/graphics/Graphics.h>
+
+#include <lemon/abi/framebuffer.h>
 
 #include "colours.h"
 #include "escape.h"
@@ -462,7 +465,30 @@ void OnKey(int key) {
 }
 
 int main(int argc, char** argv) {
-    Lemon::CreateFramebufferSurface(framebufferSurface);
+    int fd = open("/dev/fb0", O_RDWR);
+    if (fd < 0) {
+        perror("open");
+        abort();
+    }
+
+    FramebufferInfo fbInfo;
+    if (ioctl(fd, LeIoctlGetFramebuffferInfo, &fbInfo)) {
+        perror("ioctl");
+        abort();
+    }
+
+    assert(fbInfo.bpp == 32);
+
+    void* p = mmap(nullptr, fbInfo.width * fbInfo.pitch, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (p == MAP_FAILED) {
+        perror("framebuffer mmap");
+        abort();
+    }
+
+    framebufferSurface.buffer = (uint8_t*)p;
+    framebufferSurface.width = fbInfo.width;
+    framebufferSurface.height = fbInfo.height;
+
     renderSurface = framebufferSurface;
     renderSurface.buffer = new uint8_t[framebufferSurface.width * framebufferSurface.height * 4];
 
@@ -524,14 +550,9 @@ int main(int argc, char** argv) {
 				exit(3);
 			}
 
-			if (dup2(ptySlaveFd, STDERR_FILENO) < 0) {
-				perror("dup2");
-				exit(3);
-			}
-
 			close(ptySlaveFd);
 
-			char arg0[] = "/bin/lsh";
+			char arg0[] = "/initrd/lsh";
 			char* const shArgv[] {
 				arg0,
 				nullptr,
