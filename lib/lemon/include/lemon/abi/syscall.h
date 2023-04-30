@@ -16,6 +16,10 @@ enum {
     _sys_sigprocmask = 12,
     _sys_sigaction = 13,
     _sys_kill = 14,
+    _sys_sigreturn = 15,
+    _sys_poll = 16,
+    _sys_chdir = 17,
+    _sys_getcwd = 18,
 
     _le_log = 0x10000,
     _le_boot_timer = 0x10001,

@@ -506,6 +506,10 @@ Error Process::execve(ELFData& exe, const Vector<String>& argv, const Vector<Str
         return ip.Err();
     }
 
+    if(argv.size() > 0) {
+        strncpy(name, argv[0].c_str(), 255);
+    }
+
     r->rip = ip.Value();
 
     assert(!(r->rsp & 0xF));

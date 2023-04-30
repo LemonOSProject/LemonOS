@@ -174,7 +174,6 @@ void Thread::handle_pending_signal(RegisterContext* regs) {
     uint64_t* stack = reinterpret_cast<uint64_t*>((regs->rsp & (~0xfULL)) - 128 - sizeof(RegisterContext));
     *reinterpret_cast<RegisterContext*>(stack) = *regs;
     
-
     *(--stack) = 0; // Pad out the stack
     
     // Save FP regs

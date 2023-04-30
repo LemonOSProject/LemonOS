@@ -1,6 +1,10 @@
 #pragma once
 
-enum class KOEvent {
+#include <Compiler.h>
+
+// Lines up with poll/epoll constants
+enum class KOEvent : int {
+    None = 0,
     In = 1, // Data is available for reading (reading will not block)
     ProcessTerminated = In, // A process object is no longer running
     Out = 2, // Data is avaialble for writing (writing will not block)
@@ -15,3 +19,8 @@ enum class KOEvent {
 };
 
 #define HAS_KOEVENT(events, event) (((int)events) & ((int)event))
+#define KOEVENT_MASK(events, mask) ((KOEvent)HAS_KOEVENT(events, mask))
+
+ALWAYS_INLINE KOEvent operator|(const KOEvent& l, const KOEvent& r) {
+    return (KOEvent)((int)l | (int)r);
+}

@@ -1,14 +1,18 @@
 #include "syscall.h"
 
-#include <Error.h>
 #include <Fs/Filesystem.h>
-#include <Logging.h>
+
 #include <Objects/Process.h>
+
+#include <Error.h>
+#include <Logging.h>
+#include <OnReturn.h>
 
 #include <Types.h>
 
 #include <abi/ioctl.h>
 #include <abi/lseek.h>
+#include <abi/poll.h>
 #include <abi/stat.h>
 
 SYSCALL long sys_read(le_handle_t handle, uint8_t* buf, size_t count, UserPointer<ssize_t> bytesRead) {
@@ -51,7 +55,7 @@ SYSCALL long sys_write(le_handle_t handle, const uint8_t* buf, size_t count, Use
 
 SYSCALL long sys_openat(le_handle_t directory, le_str_t _filename, int flags, int mode, UserPointer<le_handle_t> out) {
     Process* process = Process::current();
-    String filename = get_user_string_or_fault(_filename, PATH_MAX+1);
+    String filename = get_user_string_or_fault(_filename, PATH_MAX + 1);
 
     if (filename.Length() > PATH_MAX) {
         return ENAMETOOLONG;
@@ -83,8 +87,8 @@ SYSCALL long sys_openat(le_handle_t directory, le_str_t _filename, int flags, in
     }
 
     if (doNotSetAsCTTY) {
-        Log::Error("sys_openat: O_NOCTTY not supported");
-        return ENOSYS;
+        Log::Error("sys_openat: TTY is never actually set as controlling TTY");
+        // return ENOSYS;
     }
 
     int knownFlags = O_ACCESS | O_APPEND | O_CREAT | O_DIRECTORY | O_EXCL | O_NOCTTY | O_NOFOLLOW | O_TRUNC |
@@ -174,6 +178,7 @@ open:
 
         goto open; // Try open the file now
     } else if (!file) {
+        SC_LOG_VERBOSE("sys_open: no such file '%s'", filename.c_str());
         return ENOENT;
     }
 
@@ -205,8 +210,6 @@ open:
     if (out.store(handle)) {
         return EFAULT;
     }
-
-    SC_LOG_VERBOSE("opened %s!", filename.c_str());
 
     return 0;
 }
@@ -330,7 +333,7 @@ SYSCALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, U
     FancyRefPtr<File> fd = FD_GET(handle);
 
     UIOBuffer uio = UIOBuffer::FromUser(buf);
-    
+
     auto r = SC_TRY_OR_ERROR(fd->read(pos, count, &uio));
     if (bytes.store(r)) {
         return EFAULT;
@@ -348,6 +351,138 @@ SYSCALL long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t
 
     auto r = SC_TRY_OR_ERROR(fd->write(pos, count, &uio));
     if (bytes.store(r)) {
+        return EFAULT;
+    }
+
+    return 0;
+}
+
+SYSCALL long sys_poll(UserPointer<int> _events, UserBuffer<pollfd> fds, size_t nfds, long timeout, sigset_t sigset) {
+    Process* process = Process::current();
+    Thread* thread = Thread::current();
+
+    // TODO: rlimits, limit the amount of files that can be passed to sys_poll and other syscalls
+
+    uint64_t oldmask = thread->signalMask;
+    if (sigset) {
+        thread->signalMask = sigset;
+    }
+
+    OnReturn signals{
+        [thread, oldmask]() -> void {
+            thread->signalMask = oldmask;
+        }
+    };
+
+    // How many elements in fds have events
+    unsigned events = 0;
+
+    struct sys_poll_fd {
+        FancyRefPtr<KernelObject> o;
+        pollfd fd;
+        unsigned index;
+    };
+
+    List<sys_poll_fd> objects;
+    for (unsigned i = 0; i < nfds; i++) {
+        pollfd fd;
+
+        if (fds.get(i, fd)) {
+            return EFAULT;
+        }
+
+        fd.revents = 0;
+
+        FancyRefPtr<KernelObject> obj = nullptr;
+        if (fd.fd >= 0) {
+            Handle h = process->get_handle(fd.fd);
+
+            // If the handle is invalid, return POLLNVAL
+            if (h.IsValid()) {
+                obj = std::move(h.ko);
+
+                KOEvent e = obj->poll_events((KOEvent)fd.events);
+                if (e != KOEvent::None) {
+                    fd.revents = (short)e;
+                    events++;
+                }
+            } else {
+                fd.revents |= POLLNVAL;
+                events++;
+            }
+        }
+
+        if (obj == nullptr || fd.revents) {
+            if (fds.store(i, fd)) {
+                return EFAULT;
+            }
+        } else {
+            objects.add_back(sys_poll_fd{std::move(obj), fd, i});
+        }
+    }
+
+    if (events) {
+        TRY_STORE_UMODE_VALUE(_events, events);
+        return 0;
+    }
+
+    KernelObjectWatcher w;
+    for (const auto& o : objects) {
+        o.o->Watch(&w, (KOEvent)o.fd.events);
+    }
+
+    long t = timeout;
+    if (w.wait_timeout(t)) {
+        return EINTR;
+    }
+
+    // Poll for events in each file descriptor
+    for (auto& o : objects) {
+        pollfd& fd = o.fd;
+
+        fd.revents = (short)o.o->poll_events((KOEvent)fd.events);
+        if (fd.revents) {
+            events++;
+        }
+
+        if (fds.store(o.index, fd)) {
+            return EFAULT;
+        }
+    }
+
+    TRY_STORE_UMODE_VALUE(_events, events);
+    return 0;
+}
+
+SYSCALL long sys_chdir(le_str_t wd) {
+    Process* process = Process::current();
+
+    // TODO: working directory race condition
+    String path = get_user_string_or_fault(wd, PATH_MAX);
+
+    Log::Error("sys_chdir is a stub!");
+    return ENOSYS;
+}
+
+SYSCALL long sys_getcwd(void* cwd, size_t size) {
+    Process* process = Process::current();
+
+    // TODO: sys_getcwd should fail when:
+    // Permission to read a path component was denied (EACCES)
+    // The working directory has been unlinked (ENOENT)
+
+    if(size == 0) {
+        return EINVAL;
+    }
+
+    // TODO: working directory race condition
+    // chdir and getcwd could get called at the same time by different threads
+    size_t wdLen = strlen(process->workingDirPath);
+    if(wdLen + 1 > size) {
+        return ERANGE;
+    }
+
+    if(user_memcpy(cwd, process->workingDirPath, wdLen + 1)) {
         return EFAULT;
     }
 

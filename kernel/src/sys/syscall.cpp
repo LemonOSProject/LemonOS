@@ -42,22 +42,53 @@ void DumpLastSyscall(Thread*) {
               SC_ARG5(&lastSyscall), t->lastSyscall.result, t->lastSyscall.result);*/
 }
 
-#define SYS_SYSCALLS 15
+#define SYS_SYSCALLS 19
 #define LE_SYSCALLS 10
+
+DFN_SYSCALL(le_log);
+DFN_SYSCALL(le_boot_timer);
+DFN_SYSCALL(le_handle_close);
+DFN_SYSCALL(le_handle_dup);
+DFN_SYSCALL(le_futex_wait);
+DFN_SYSCALL(le_futex_wake);
+DFN_SYSCALL(le_set_user_tcb);
+DFN_SYSCALL(le_create_process);
+DFN_SYSCALL(le_start_process);
+DFN_SYSCALL(le_create_thread);
+DFN_SYSCALL(le_nanosleep);
+
+DFN_SYSCALL(sys_read);
+DFN_SYSCALL(sys_write);
+DFN_SYSCALL(sys_openat);
+DFN_SYSCALL(sys_fstatat);
+DFN_SYSCALL(sys_lseek);
+DFN_SYSCALL(sys_mmap);
+DFN_SYSCALL(sys_mprotect);
+DFN_SYSCALL(sys_munmap);
+DFN_SYSCALL(sys_ioctl);
+DFN_SYSCALL(sys_pread);
+DFN_SYSCALL(sys_pwrite);
+DFN_SYSCALL(sys_execve);
+DFN_SYSCALL(sys_sigprocmask);
+DFN_SYSCALL(sys_sigaction);
+DFN_SYSCALL(sys_kill);
+DFN_SYSCALL(sys_sigreturn);
+DFN_SYSCALL(sys_poll);
+DFN_SYSCALL(sys_chdir);
+DFN_SYSCALL(sys_getcwd);
 
 #define SC(x) ((void*)&x)
 
 void* sysTable[] = {
-    SC(sys_read),     SC(sys_write),  SC(sys_openat), SC(sys_fstatat), SC(sys_lseek),  SC(sys_mmap),
-    SC(sys_mprotect), SC(sys_munmap), SC(sys_ioctl),  SC(sys_pread),   SC(sys_pwrite), SC(sys_execve),
-    SC(sys_sigprocmask), SC(sys_sigaction), SC(sys_kill)
+    SC(sys_read),      SC(sys_write),    SC(sys_openat),      SC(sys_fstatat),   SC(sys_lseek),
+    SC(sys_mmap),      SC(sys_mprotect), SC(sys_munmap),      SC(sys_ioctl),     SC(sys_pread),
+    SC(sys_pwrite),    SC(sys_execve),   SC(sys_sigprocmask), SC(sys_sigaction), SC(sys_kill),
+    SC(sys_sigreturn), SC(sys_poll),     SC(sys_chdir),       SC(sys_getcwd),
 };
 
-void* leTable[] = {
-    SC(le_log),        SC(le_boot_timer), SC(le_handle_close), SC(le_handle_dup),
-    SC(le_futex_wait), SC(le_futex_wake), SC(le_set_user_tcb), SC(le_create_process),
-    SC(le_create_thread), SC(le_nanosleep)
-};
+void* leTable[] = {SC(le_log),           SC(le_boot_timer), SC(le_handle_close), SC(le_handle_dup),
+                   SC(le_futex_wait),    SC(le_futex_wake), SC(le_set_user_tcb), SC(le_create_process),
+                   SC(le_create_thread), SC(le_nanosleep)};
 
 void** subsystems[2] = {sysTable, leTable};
 
@@ -87,12 +118,12 @@ extern "C" void syscall_handler(RegisterContext* r) {
 
     // If the thread is zombified, do NOT take the kernel lock
     // so that the thread can be killed
-    while(th->state == ThreadStateZombie) {
+    while (th->state == ThreadStateZombie) {
         asm("sti");
         Scheduler::Yield();
     }
 
-    while(acquireTestLock(&th->kernelLock)) {
+    while (acquireTestLock(&th->kernelLock)) {
         asm("sti");
         Scheduler::Yield();
 

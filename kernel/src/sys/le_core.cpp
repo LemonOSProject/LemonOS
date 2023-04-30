@@ -31,8 +31,44 @@ SYSCALL long le_handle_close(le_handle_t handle) {
     return process->handle_destroy(handle);
 }
 
-SYSCALL long le_handle_dup(le_handle_t handle, int flags) {
-    return ENOSYS;
+SYSCALL long le_handle_dup(le_handle_t oldHandle, UserPointer<le_handle_t> _newHandle, int flags) {
+    le_handle_t newHandle;
+    if(_newHandle.get(newHandle)) {
+        return EFAULT;
+    }
+
+    if(oldHandle == newHandle) {
+        return EINVAL;
+    }
+
+    if(flags & (~O_CLOEXEC)) {
+        Log::Warning("le_handle_dup: invalid value %x in flags", flags);
+        return EINVAL;
+    }
+
+    Process* process = Process::current();
+
+    Handle h = process->get_handle(oldHandle);
+    if(!h.IsValid()) {
+        return EBADF;
+    }
+
+    if(flags & O_CLOEXEC) {
+        h.closeOnExec = true;
+    }
+
+    if(newHandle >= 0) {
+        // Closing and resuing newHandle needs to be done atomically
+        return process->handle_replace(newHandle, h);
+    } else {
+        le_handle_t id = process->allocate_handle(h.ko, h.closeOnExec);
+        if(_newHandle.store(id)) {
+            process->handle_destroy(id);
+            return EFAULT;
+        }
+
+        return 0; 
+    }
 }
 
 SYSCALL long le_futex_wait(UserPointer<int> futex, int expected, const struct timespec* time) {
@@ -55,7 +91,7 @@ SYSCALL long le_set_user_tcb(uintptr_t value) {
     return 0;
 }
 
-long le_nanosleep(UserPointer<long> nanos) {
+SYSCALL long le_nanosleep(UserPointer<long> nanos) {
     long us;
     if(nanos.get(us)) {
         return EFAULT;
@@ -84,18 +120,18 @@ long le_nanosleep(UserPointer<long> nanos) {
     return 0;
 }
 
-long le_load_module(le_str_t path) {
+SYSCALL long le_load_module(le_str_t path) {
     return ENOSYS;
 }
 
-long le_unload_module(le_str_t name) {
+SYSCALL long le_unload_module(le_str_t name) {
     return ENOSYS;
 }
 
-long le_query_modules() {
+SYSCALL long le_query_modules() {
     return ENOSYS;
 }
 
-long le_query_devices() {
+SYSCALL long le_query_devices() {
     return ENOSYS;
 }

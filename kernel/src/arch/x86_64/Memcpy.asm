@@ -9,6 +9,9 @@ global user_strlen_trap_handler
 global user_memset
 global user_memset_trap
 global user_memset_trap_handler
+global user_store64
+global user_store64_trap
+global user_store64_trap_handler
 
 ; UserMemcpy (dst, src, cnt)
 user_memcpy:
@@ -23,7 +26,18 @@ user_memcpy_trap_handler:
     mov rax, 1
     ret
 
-; user_strlen (string)
+;  user_store64 (dest, value)
+user_store64:
+user_store64_trap:
+    mov [rdi], rsi
+
+    mov rax, 0
+    ret
+user_store64_trap_handler:
+    mov rax, 1
+    ret
+
+; user_strlen (string, maxlen)
 ; RDI - string
 ; RSI - max length
 ; RAX - return value

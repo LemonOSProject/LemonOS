@@ -94,34 +94,5 @@ inline Error get_user_string(le_str_t str, String& kernelString, size_t maxLengt
 
 using SyscallHandler = int64_t (*)(int64_t, int64_t, int64_t, int64_t, int64_t, int64_t);
 
+#define DFN_SYSCALL(x) extern "C" void x()
 #define SYSCALL extern "C"
-
-SYSCALL long le_log(le_str_t umsg);
-SYSCALL long le_boot_timer();
-SYSCALL long le_handle_close(le_handle_t handle);
-SYSCALL long le_handle_dup(le_handle_t handle, int flags);
-SYSCALL long le_futex_wait(UserPointer<int> futex, int expected, const struct timespec* time);
-SYSCALL long le_futex_wake(UserPointer<int> futex);
-SYSCALL long le_set_user_tcb(uintptr_t value);
-SYSCALL long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, le_str_t name);
-SYSCALL long le_start_process(le_handle_t handle);
-SYSCALL long le_create_thread(UserPointer<le_handle_t> handle, uint64_t flags, void* entry, void* stack);
-SYSCALL long le_nanosleep(UserPointer<long> nanos);
-
-SYSCALL long sys_read(le_handle_t handle, uint8_t* buf, size_t count, UserPointer<ssize_t> bytesRead);
-SYSCALL long sys_write(le_handle_t handle, const uint8_t* buf, size_t count, UserPointer<ssize_t> bytesWritten);
-SYSCALL long sys_openat(le_handle_t directory, le_str_t filename, int flags, int mode, UserPointer<le_handle_t> out);
-SYSCALL long sys_fstatat(int fd, le_str_t path, int flags, UserPointer<struct stat> st);
-SYSCALL long sys_lseek(le_handle_t handle, off_t offset, unsigned int whence, UserPointer<off_t> out);
-SYSCALL long sys_mmap(void* address, size_t len, long flags, le_handle_t handle, long off,
-                      UserPointer<void*> returnAddress);
-SYSCALL long sys_mprotect(void* address, size_t len, int prot);
-SYSCALL long sys_munmap(void* address, size_t len);
-SYSCALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long arg, UserPointer<int> result);
-SYSCALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, UserPointer<ssize_t> bytes);
-SYSCALL long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t pos, UserPointer<ssize_t> bytes);
-SYSCALL long sys_execve(le_str_t filepath, UserPointer<le_str_t> argv, UserPointer<le_str_t> envp);
-SYSCALL long sys_sigprocmask(int how, UserPointer<sigset_t> _set, UserPointer<sigset_t> _oldset);
-SYSCALL long sys_sigaction(int sig, UserPointer<struct sigaction> _sigaction,
-                           UserPointer<struct sigaction> _oldaction);
-SYSCALL long sys_kill(pid_t pid, pid_t tid, int signal);

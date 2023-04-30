@@ -6,7 +6,7 @@ typedef void (*__sighandler) (int);
 #include <abi/signal.h>
 
 #define SIGNAL_MAX 34 // Maximum amount of signal handlers
-#define UNMASKABLE_SIGNALS (1 << (SIGKILL - 1)) | (1 << (SIGSTOP - 1))
+#define UNMASKABLE_SIGNALS ((1UL << (SIGKILL - 1)) | (1UL << (SIGSTOP - 1)))
 
 enum class SignalAction : int {
     Die = 0, // Kill the thread
@@ -51,7 +51,7 @@ struct SignalHandler {
         FlagResetHand = SA_RESETHAND, // Restore signal action to default afterwards
         FlagRestart = SA_RESTART, // Make system calls restartable across signals
     };
-    static const int supportedFlags = SA_NODEFER; // Which flags do we support
+    static const int supportedFlags = SA_NODEFER | SA_SIGINFO; // Which flags do we support
     
     HandlerAction action = HandlerAction::Default;
     int flags = 0;

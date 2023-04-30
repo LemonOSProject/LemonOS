@@ -232,7 +232,7 @@ public:
         }
 
         return m_handles[id];
-    }
+}
 
     template <typename T> ALWAYS_INLINE ErrorOr<FancyRefPtr<T>> get_handle_as(le_handle_t id) {
         Handle h = get_handle(id);
@@ -240,7 +240,7 @@ public:
             return Error{EBADF};
         }
 
-        if (h.ko->IsType(T::TypeID())) {
+        if (h.ko->is_type(T::type_id())) {
             return static_pointer_cast<T>(h.ko);
         }
 
@@ -250,18 +250,21 @@ public:
     /////////////////////////////
     /// \brief Replace handle
     /////////////////////////////
-    ALWAYS_INLINE int handle_replace(le_handle_t id, Handle newHandle) {
+    ALWAYS_INLINE Error handle_replace(le_handle_t id, Handle newHandle) {
         if (id < 0) {
             return EBADF;
         }
 
         ScopedSpinLock lockHandles(m_handleLock);
-        assert(id < m_handles.size());
+        if(id >= m_handles.size()) {
+            // TODO: Limit of the number of open handles
+            m_handles.resize(id + 1);
+        }
 
         newHandle.id = id;
         m_handles.at(id) = std::move(newHandle);
 
-        return 0;
+        return ERROR_NONE;
     }
 
     ALWAYS_INLINE Error handle_set_cloexec(le_handle_t id, bool value) {

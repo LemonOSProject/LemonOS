@@ -8,5 +8,5 @@ signalTrampolineStart:
     call rax
     mov rsp, rbp
     mov rax, 105 ; Signal return syscall
-    int 0x69 ; Execute syscall
+    syscall ; Execute syscall
 signalTrampolineEnd:

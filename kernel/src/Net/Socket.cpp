@@ -5,6 +5,8 @@
 #include <Logging.h>
 #include <Scheduler.h>
 
+#include <abi/poll.h>
+
 int Socket::CreateSocket(int domain, int type, int protocol, Socket** sock) {
     if (type & SOCK_NONBLOCK)
         type &= ~SOCK_NONBLOCK;

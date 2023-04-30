@@ -41,6 +41,10 @@ long le_handle_close(le_handle_t handle) {
     return syscall(_le_handle_close, handle);
 }
 
+long le_handle_dup(le_handle_t oldHandle, le_handle_t* newHandle, int flags) {
+    return syscall(_le_handle_dup, oldHandle, newHandle, flags);
+}
+
 long le_create_process(le_handle_t* handle, uint64_t flags, le_str_t name) {
     return syscall(_le_create_process, handle, flags, name);
 }
@@ -106,14 +110,26 @@ long sys_execve(le_str_t filepath, le_str_t const* argv, le_str_t const* envp) {
 }
 
 long sys_sigprocmask(int how, const sigset_t* set, sigset_t* oldset) {
-    return syscall(_sys_sigprocmask, set, oldset);
+    return syscall(_sys_sigprocmask, how, set, oldset);
 }
 
 long sys_sigaction(int sig, const struct sigaction* act, struct sigaction* oldact) {
-    return syscall(_sys_sigaction, act, oldact);
+    return syscall(_sys_sigaction, sig, act, oldact);
 }
 
 long sys_kill(pid_t pid, pid_t tid, int signal) {
     return syscall(_sys_kill, pid, tid, signal);
+}
+
+long sys_poll(int* _events, struct pollfd* fds, size_t nfds, long timeout, sigset_t sigset) {
+    return syscall(_sys_poll, _events, fds, nfds, timeout, sigset);
+}
+
+long sys_chdir(le_str_t wd) {
+    return syscall(_sys_chdir, wd);
+}
+
+long sys_getcwd(void* cwd, size_t size) {
+    return syscall(_sys_getcwd, cwd, size);
 }
 }

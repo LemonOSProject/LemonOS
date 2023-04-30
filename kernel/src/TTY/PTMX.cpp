@@ -64,7 +64,7 @@ ErrorOr<File*> PTMultiplexor::Open(size_t flags){
     ScopedSpinLock lock(m_ptmxLock);
     m_ptList.add_back(pty);
 
-    return pty->Open(flags);
+    return pty->OpenMaster(flags);
 }
 
 void PTMultiplexor::DestroyPTY(PTY* pt){

@@ -23,7 +23,9 @@ cc_t c_cc_default[NCCS]{
     0,    // VTIME
 };
 
-PTYDevice::PTYDevice(PTYType dType) : ptyType(dType) {}
+PTYDevice::PTYDevice(PTYType dType, PTY* pty) : ptyType(dType), pty(pty) {
+    type = FileType::CharDevice;
+}
 
 PTYDevice::~PTYDevice() {
     if (pty) {
@@ -116,6 +118,15 @@ ErrorOr<int> PTYDevice::ioctl(uint64_t cmd, uint64_t arg) {
     return 0;
 }
 
+KOEvent PTYDevice::poll_events(KOEvent mask) {
+    KOEvent events = KOEvent::Out;
+    if(pty->can_read(ptyType)) {
+        events = events | KOEvent::In;
+    }
+
+    return KOEVENT_MASK(events, mask);
+}
+
 void PTYDevice::Watch(KernelObjectWatcher* watcher, KOEvent events) {
     if (ptyType == PTYType::Master) {
         pty->WatchMaster(watcher, events);
@@ -136,25 +147,9 @@ void PTYDevice::Unwatch(KernelObjectWatcher* watcher) {
     }
 }
 
-bool PTYDevice::can_read() {
-    if (ptyType == PTYType::Master) {
-        return !!pty->master.bufferPos;
-    } else if (ptyType == PTYType::Slave) {
-        if (pty->IsCanonical())
-            return !!pty->slave.lines;
-        else
-            return !!pty->slave.bufferPos;
-    } else {
-        assert(!"PTYDevice::can_read: PTYDevice is designated neither slave nor master");
-    }
-}
-
 PTY::PTY(int id) : m_id(id) {
-    slaveFile = new PTYDevice(PTYType::Slave);
-    masterFile = new PTYDevice(PTYType::Master);
-
-    slaveFile->type = FileType::CharDevice;
-    masterFile->type = FileType::CharDevice;
+    slaveFile = new PTYDevice(PTYType::Master, this);
+    masterFile = new PTYDevice(PTYType::Master, this);
 
     master.ignoreBackspace = true;
     slave.ignoreBackspace = false;
@@ -167,7 +162,6 @@ PTY::PTY(int id) : m_id(id) {
     slaveDirent.ino = m_id;
 
     masterFile->pty = this;
-    slaveFile->pty = this;
 
     for (int i = 0; i < NCCS; i++)
         tios.c_cc[i] = c_cc_default[i];
@@ -183,6 +177,33 @@ PTY::~PTY() {
     }
 }
 
+bool PTY::can_read(PTYType ptyType) {
+    if (ptyType == PTYType::Master) {
+        return !!master.bufferPos;
+    } else if (ptyType == PTYType::Slave) {
+        if (IsCanonical())
+            return !!slave.lines;
+        else
+            return !!slave.bufferPos;
+    } else {
+        assert(!"PTY::can_read: PTYDevice is designated neither slave nor master");
+    }
+}
+
+ErrorOr<class File*> PTY::OpenMaster(size_t flags) {
+    ScopedSpinLock l(nodeLock);
+
+    handleCount++;
+    return new PTYDevice(PTYType::Master, this);
+}
+
+ErrorOr<class File*> PTY::Open(size_t flags) {
+    ScopedSpinLock l(nodeLock);
+
+    handleCount++;
+    return new PTYDevice(PTYType::Slave, this);
+}
+
 void PTY::Close() {
     ScopedSpinLock l(nodeLock);
 
@@ -192,7 +213,9 @@ void PTY::Close() {
     }
 }
 
-ErrorOr<ssize_t> PTY::MasterRead(UIOBuffer* buffer, size_t count) { return master.read(buffer, count); }
+ErrorOr<ssize_t> PTY::MasterRead(UIOBuffer* buffer, size_t count) {
+    return master.read(buffer, count);
+}
 
 ErrorOr<ssize_t> PTY::SlaveRead(UIOBuffer* buffer, size_t count) {
     Thread* thread = Thread::current();
@@ -271,7 +294,7 @@ void PTY::WatchMaster(KernelObjectWatcher* watcher, KOEvent events) {
     if (!HAS_KOEVENT(events, KOEvent::In)) { // We don't really block on writes and nothing else applies except POLLIN
         watcher->signal();
         return;
-    } else if (masterFile->can_read()) {
+    } else if (can_read(PTYType::Master)) {
         watcher->signal();
         return;
     }
@@ -283,7 +306,7 @@ void PTY::WatchSlave(KernelObjectWatcher* watcher, KOEvent events) {
     if (!HAS_KOEVENT(events, KOEvent::In)) { // We don't really block on writes and nothing else applies except POLLIN
         watcher->signal();
         return;
-    } else if (slaveFile->can_read()) {
+    } else if (can_read(PTYType::Slave)) {
         watcher->signal();
         return;
     }
@@ -291,6 +314,10 @@ void PTY::WatchSlave(KernelObjectWatcher* watcher, KOEvent events) {
     m_watchingSlave.add_back(watcher);
 }
 
-void PTY::UnwatchMaster(KernelObjectWatcher* watcher) { m_watchingMaster.remove(watcher); }
+void PTY::UnwatchMaster(KernelObjectWatcher* watcher) {
+    m_watchingMaster.remove(watcher);
+}
 
-void PTY::UnwatchSlave(KernelObjectWatcher* watcher) { m_watchingSlave.remove(watcher); }
+void PTY::UnwatchSlave(KernelObjectWatcher* watcher) {
+    m_watchingSlave.remove(watcher);
+}

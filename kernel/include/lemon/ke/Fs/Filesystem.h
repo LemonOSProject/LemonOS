@@ -31,33 +31,10 @@
 #define FS_NODE_CHARDEVICE S_IFCHR
 #define FS_NODE_SOCKET S_IFSOCK
 
-#define POLLIN 0x01
-#define POLLOUT 0x02
-#define POLLPRI 0x04
-#define POLLHUP 0x08
-#define POLLERR 0x10
-#define POLLRDHUP 0x20
-#define POLLNVAL 0x40
-#define POLLWRNORM 0x80
-
-#define POLLIN 0x01
-#define POLLOUT 0x02
-#define POLLPRI 0x04
-#define POLLHUP 0x08
-#define POLLERR 0x10
-#define POLLRDHUP 0x20
-#define POLLNVAL 0x40
-#define POLLWRNORM 0x80
-
 #define MAXIMUM_SYMLINK_AMOUNT 10
 
 class FsNode;
 
-struct pollfd {
-    int fd;
-    short events;
-    short revents;
-};
 typedef struct {
     char fds_bits[128];
 } fd_set_t;

@@ -8,7 +8,7 @@
 HIRAKU_CALL long le_log(le_str_t msg);
 HIRAKU_CALL long le_boot_timer();
 HIRAKU_CALL long le_handle_close(le_handle_t handle);
-HIRAKU_CALL long le_handle_dup(le_handle_t handle, int64_t flags);
+HIRAKU_CALL long le_handle_dup(le_handle_t handle, le_handle_t* newHandle, int flags);
 HIRAKU_CALL long le_futex_wait(int* futex, int expected, const struct timespec* time);
 HIRAKU_CALL long le_futex_wake(int* futex);
 HIRAKU_CALL long le_set_user_tcb(void* tcb);
@@ -33,3 +33,6 @@ HIRAKU_CALL long sys_execve(le_str_t filename, le_str_t const* argv, le_str_t co
 HIRAKU_CALL long sys_sigprocmask(int how, const sigset_t* set, sigset_t* oldset);
 HIRAKU_CALL long sys_sigaction(int sig, const struct sigaction* act, struct sigaction* oldact);
 HIRAKU_CALL long sys_kill(pid_t pid, pid_t tid, int signal);
+HIRAKU_CALL long sys_poll(int* _events, struct pollfd* fds, size_t nfds, long timeout, sigset_t sigset);
+HIRAKU_CALL long sys_chdir(le_str_t wd);
+HIRAKU_CALL long sys_getcwd(void* buffer, size_t size);

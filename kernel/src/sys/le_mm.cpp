@@ -7,7 +7,7 @@
 
 #include <abi-bits/vm-flags.h>
 
-long sys_mmap(void* address, size_t len, long flags, le_handle_t handle, long off, UserPointer<void*> returnAddress) {
+SYSCALL long sys_mmap(void* address, size_t len, long flags, le_handle_t handle, long off, UserPointer<void*> returnAddress) {
     if(!len) {
         // length of zero is not allowed
         return EINVAL;
@@ -65,11 +65,11 @@ long sys_mmap(void* address, size_t len, long flags, le_handle_t handle, long of
     return 0;
 }
 
-long sys_mprotect(void* address, size_t len, int prot) {
+SYSCALL long sys_mprotect(void* address, size_t len, int prot) {
     return ENOSYS;
 }
 
-long sys_munmap(void* address, size_t len) {
+SYSCALL long sys_munmap(void* address, size_t len) {
     Process* process = Process::current();
 
     // address and len must be multiples of page size

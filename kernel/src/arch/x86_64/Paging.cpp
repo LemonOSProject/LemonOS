@@ -160,6 +160,8 @@ void LateInitializeVirtualMemory() {
                                         .handler = user_strlen_trap_handler});
     RegisterPageFaultTrap(PageFaultTrap{.instructionPointer = reinterpret_cast<uintptr_t>(user_memset_trap),
                                         .handler = user_memset_trap_handler});
+    RegisterPageFaultTrap(PageFaultTrap{.instructionPointer = reinterpret_cast<uintptr_t>(user_store64_trap),
+                                        .handler = user_store64_trap_handler});
 }
 
 PageMap* CreatePageMap() {

@@ -41,7 +41,8 @@ SYSCALL long sys_sigprocmask(int how, UserPointer<sigset_t> _set, UserPointer<si
 SYSCALL long sys_sigaction(int sig, UserPointer<struct sigaction> _sigaction,
                            UserPointer<struct sigaction> _oldaction) {
     // Behaviour of some signals such as SIGKILL can't be changed
-    if ((1U << (sig - 1)) & UNMASKABLE_SIGNALS) {
+    if ((1UL << (sig - 1)) & UNMASKABLE_SIGNALS) {
+        Log::Warning("sys_sigaction: signal %d is unmaskable!", sig);
         return EINVAL;
     }
 
@@ -119,5 +120,12 @@ SYSCALL long sys_sigaltstack(UserPointer<const stack_t> stack, UserPointer<stack
 
 SYSCALL long sys_sigsuspend(UserPointer<const sigset_t> sigmask) {
     Log::Warning("sys_sigsuspend is a stub!");
+    return ENOSYS;
+}
+
+SYSCALL long sys_sigreturn() {
+    Thread* th = Thread::current();
+    uint64_t* threadStack = reinterpret_cast<uint64_t*>(th->scRegisters->rsp);
+
     return ENOSYS;
 }

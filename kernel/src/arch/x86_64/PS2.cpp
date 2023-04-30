@@ -259,7 +259,7 @@ public:
         SetDeviceName("PS/2 Keyboard Device");
     }
 
-    ErrorOr<ssize_t> read(size_t offset, size_t size, uint8_t* buffer) {
+    ErrorOr<ssize_t> read(size_t offset, size_t size, UIOBuffer* buffer) override {
         if (size > keyCount)
             size = keyCount;
 
@@ -268,8 +268,11 @@ public:
 
         unsigned short i = 0;
         for (; i < size; i++) {
-            if (!ReadKey(buffer++)) // Insert key and increment
+            uint8_t key;
+            if (!ReadKey(&key)) // Insert key and increment
                 break;
+
+            buffer->write(&key, 1);
         }
 
         return i;

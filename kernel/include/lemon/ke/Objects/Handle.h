@@ -29,6 +29,7 @@ ALWAYS_INLINE Handle MakeHandle(handle_id_t id, KernelObject* ko) {
 }
 
 #define HANDLE_NULL ((Handle){-1, nullptr, false})
+#define HANDLE_ID_INVALID -1
 
 ALWAYS_INLINE bool operator==(const Handle& l, const Handle& r) {
     return (l.id == r.id);

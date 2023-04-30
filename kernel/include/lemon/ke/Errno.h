@@ -2,6 +2,8 @@
 
 #include <Error.h>
 
+#define ERANGE ::Error{3}
+
 #define E2BIG ::Error{1001}
 #define EACCES ::Error{1002}
 #define EADDRINUSE ::Error{1003}

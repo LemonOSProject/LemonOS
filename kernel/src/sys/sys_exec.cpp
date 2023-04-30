@@ -10,7 +10,7 @@
 #include <List.h>
 #include <Logging.h>
 
-long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_str_t> envp) {
+SYSCALL long sys_execve(le_str_t _filepath, UserPointer<le_str_t> argv, UserPointer<le_str_t> envp) {
     String filepath = get_user_string_or_fault(_filepath, PATH_MAX);
 
     Vector<String> args;
