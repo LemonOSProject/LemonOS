@@ -1,5 +1,7 @@
 #include <Thread.h>
 
+#include <MM/UserAccess.h>
+
 #include <CPU.h>
 #include <Debug.h>
 #include <Scheduler.h>
@@ -171,40 +173,57 @@ void Thread::handle_pending_signal(RegisterContext* regs) {
     // Make sure to subtract the 128-byte redzone
     uint64_t* stack = reinterpret_cast<uint64_t*>((regs->rsp & (~0xfULL)) - 128 - sizeof(RegisterContext));
     *reinterpret_cast<RegisterContext*>(stack) = *regs;
+    
 
     *(--stack) = 0; // Pad out the stack
     
     // Save FP regs
     stack -= 512 / sizeof(uint64_t);
-    asm volatile("fxsave64 (%0)" ::"r"((uintptr_t)stack) : "memory");
 
-    *(--stack) = oldSignalMask;
-    // This could probably be placed in a register but it makes our stack nice and aligned
-    *(--stack) = reinterpret_cast<uintptr_t>(handler.userHandler);
+    // fxsave64 needs this to be 16-byte aligned
+    char fpState[4096 + 15];
+    char* fpStateAligned = (char*)(((uintptr_t)fpState + 15) & (~0xfULL));
+
+    asm volatile("fxsave64 (%0)" ::"r"(fpStateAligned) : "memory");
+
+    // TODO: Some way to register a fault handler and access user memory directly in this funciton would be real nice
+    if(user_memcpy(stack, fpStateAligned, 4096)) {
+        parent->die();
+        return;
+    }
+
+    uint64_t sigstack[] = {
+        oldSignalMask,
+        // This could probably be placed in a register but it makes our stack nice and aligned
+        (uint64_t)handler.userHandler,
+    };
+
+    if(user_memcpy(stack, sigstack, sizeof(sigstack))) {
+        parent->die();
+        return;
+    }
+
+    regs->rsp = reinterpret_cast<uintptr_t>(stack); // Set rsp to new stack value
+    if(handler.flags & SignalHandler::FlagSignalInfo){
+        siginfo_t sigInfo = {};
+
+        sigInfo.si_signo = signal;
+
+        // Keep stack alignment
+        regs->rsp -= (sizeof(siginfo_t) + 0xf) & (~0xfULL);
+        *(siginfo_t*)regs->rsp = sigInfo;
+
+        regs->rsi = regs->rsp;
+    }
 
     regs->rip = parent->m_signalTrampoline->Base();   // Set instruction pointer to signal trampoline
     regs->rdi = signal;                             // The first argument of the signal handler is the signal number
-    if(handler.flags & SignalHandler::FlagSignalInfo){
-        /*siginfo_t sigInfo = {
-            .si_signo = signal,
-            .si_code = 0, // TODO: Signal code?? (for SIGCHLD should be CLD_EXITED or signal that caused it to exit)
-            .si_errno = 0,
-            .si_pid = 0, // TODO: Sending process PID in here
-            .si_uid = 0,
-            .si_addr = nullptr, // Fault memory location
-            .si_status = 0, // TODO: Exit value or signal
-            .si_value = {0}, // TODO: Signal value
-        };
-
-        *parent->siginfoPointer = sigInfo;
-
-        regs->rsi = (uintptr_t)parent->siginfoPointer;*/
-    }
-    regs->rsp = reinterpret_cast<uintptr_t>(stack); // Set rsp to new stack value
 
     assert(!(regs->rsp & 0xf)); // Ensure that stack is 16-byte aligned
     Log::Debug(debugLevelScheduler, DebugLevelNormal,
         "Thread::handle_pending_signal: Executing usermode handler for signal %d", signal);
+
+    return;
 }
 
 bool Thread::block(ThreadBlocker* newBlocker) {
