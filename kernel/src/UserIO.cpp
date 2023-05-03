@@ -2,6 +2,6 @@
 
 #include <Error.h>
 
-UIOBuffer UIOBuffer::FromUser(void* buffer) {
+UIOBuffer UIOBuffer::from_user(void* buffer) {
     return UIOBuffer{buffer, 0, true};
 }

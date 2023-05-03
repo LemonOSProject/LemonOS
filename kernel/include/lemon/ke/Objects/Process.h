@@ -460,6 +460,8 @@ public:
     // Handle table
     Vector<Handle> m_handles;
 
+    lock_t futexLock = 0;          // Should be acquired when modifying futex block queue
+
 private:
     Process(pid_t pid, const char* name, const char* workingDir, Process* parent);
 
@@ -474,7 +476,6 @@ private:
     lock_t m_watchingLock = 0;       // Should be acquired when modifying watching processes
     lock_t m_fileDescriptorLock = 0; // Should be acquired when modifying file descriptors
     lock_t m_handleLock = 0;         // Should be acquired when modifying handles
-    lock_t m_futexLock = 0;          // Should be acquired when modifying futex block queue
     pid_t m_pid;                     // Process ID (PID)
 
     bool m_started = false; // Has the process been started?

@@ -19,24 +19,24 @@ CharacterBuffer::~CharacterBuffer() {
 }
 
 ssize_t CharacterBuffer::write(char* _buffer, size_t size) {
-    if (bufferPos + size > maxBufferSize) {
-        size = maxBufferSize - bufferPos;
-    }
-
     if (size == 0) {
         return 0;
     }
 
     ScopedSpinLock lock{this->lock};
-
     if ((bufferPos + size) > bufferSize) {
+        size = bufferSize - bufferPos;
+        if (bufferPos + size > maxBufferSize) {
+            size = maxBufferSize - bufferPos;
+        }
+
         char* oldBuf = m_buffer;
-        m_buffer = (char*)kmalloc(bufferPos + size + 128);
-        memcpy(m_buffer, oldBuf, bufferSize);
+        m_buffer = new char[bufferPos + size + 128];
+        memcpy(m_buffer, oldBuf, bufferPos);
         bufferSize = bufferPos + size + 128;
 
         if(oldBuf) {
-            kfree(oldBuf);
+            delete oldBuf;
         }
     }
 
@@ -89,58 +89,6 @@ ssize_t CharacterBuffer::read(char* _buffer, size_t count) {
     bufferPos -= readPos;
 
     return i;
-}
-
-ErrorOr<ssize_t> CharacterBuffer::write(UIOBuffer* buffer, size_t size) {
-    char _buf[512];
-    size_t bytesLeft = size;
-
-    while(bytesLeft > 512) {
-        if(buffer->read((uint8_t*)_buf, 512)) {
-            return EFAULT;
-        }
-
-        int r = write(_buf, 512);
-        bytesLeft -= r;
-        
-        // Buffer might be full, not all of our data was written
-        if(r < 512) {
-            return size - bytesLeft;
-        }
-    }
-
-    if(buffer->read((uint8_t*)_buf, bytesLeft)) {
-        return EFAULT;
-    }
-
-    bytesLeft -= write(_buf, bytesLeft);
-    return size - bytesLeft;
-}
-
-ErrorOr<ssize_t> CharacterBuffer::read(UIOBuffer* buffer, size_t size) {
-    char _buf[512];
-    size_t bytesLeft = size;
-
-    while(bytesLeft > 512) {
-        size_t r = read(_buf, 512);
-        bytesLeft -= r;
-
-        if(buffer->write((uint8_t*)_buf, r)) {
-            return EFAULT;
-        }
-
-        // Buffer might be empty, bytes read was under count
-        if(r < 512) {
-            return size - bytesLeft;
-        }
-    }
-
-    int r = read(_buf, bytesLeft);
-    if(buffer->write((uint8_t*)_buf, r)) {
-        return EFAULT;
-    }
-
-    return size - (bytesLeft - r);
 }
 
 void CharacterBuffer::flush() {

@@ -11,7 +11,7 @@ public:
         : m_data((uint8_t*)buffer), m_user(false) {}
 
     // Create a UIOBuffer from a user pointer
-    static UIOBuffer FromUser(void* buffer);
+    static UIOBuffer from_user(void* buffer);
 
     [[nodiscard]] ALWAYS_INLINE int read(uint8_t* buffer, size_t len) {
         if(m_user) {

@@ -57,9 +57,9 @@ ErrorOr<ssize_t> PTYDevice::write(off_t offset, size_t size, UIOBuffer* buffer) 
             return written; // Check either for an error or if all bytes were written
         }
 
-        // Buffer must be full so just keep trying
-        buffer += written;
         while (written < size) {
+            buffer->set_offset(written);
+
             size_t ret = TRY_OR_ERROR(pty->SlaveWrite(buffer, size - written));
 
             written += ret;
@@ -74,9 +74,9 @@ ErrorOr<ssize_t> PTYDevice::write(off_t offset, size_t size, UIOBuffer* buffer) 
             return written; // Check either for an error or if all bytes were written
         }
 
-        // Buffer must be full so just keep trying
-        buffer += written;
         while (written < size) {
+            buffer->set_offset(written);
+
             size_t ret = TRY_OR_ERROR(pty->MasterWrite(buffer, size - written));
 
             written += ret;
@@ -148,7 +148,7 @@ void PTYDevice::Unwatch(KernelObjectWatcher* watcher) {
 }
 
 PTY::PTY(int id) : m_id(id) {
-    slaveFile = new PTYDevice(PTYType::Master, this);
+    slaveFile = new PTYDevice(PTYType::Slave, this);
     masterFile = new PTYDevice(PTYType::Master, this);
 
     master.ignoreBackspace = true;
@@ -214,7 +214,29 @@ void PTY::Close() {
 }
 
 ErrorOr<ssize_t> PTY::MasterRead(UIOBuffer* buffer, size_t count) {
-    return master.read(buffer, count);
+    char _buf[512];
+    size_t bytesRead = 0;
+
+    while(bytesRead < count) {
+        ssize_t toRead = count - bytesRead;
+        if(toRead > 512) {
+            toRead = 512;
+        }
+
+        ssize_t r = master.read(_buf, toRead);
+        if(buffer->write((uint8_t*)_buf, r)) {
+            return EFAULT;
+        }
+
+        bytesRead += r;
+
+        // Buffer might be empty, bytes read was under count
+        if(r < toRead) {
+            break;
+        }
+    }
+
+    return bytesRead;
 }
 
 ErrorOr<ssize_t> PTY::SlaveRead(UIOBuffer* buffer, size_t count) {
@@ -237,15 +259,56 @@ ErrorOr<ssize_t> PTY::SlaveRead(UIOBuffer* buffer, size_t count) {
             return Error{EINTR};
         }
     }
+    
+    char _buf[512];
+    size_t bytesRead = 0;
 
-    return slave.read(buffer, count);
+    while(bytesRead < count) {
+        ssize_t toRead = count - bytesRead;
+        if(toRead > 512) {
+            toRead = 512;
+        }
+
+        ssize_t r = slave.read(_buf, toRead);
+        if(buffer->write((uint8_t*)_buf, r)) {
+            return EFAULT;
+        }
+
+        bytesRead += r;
+
+        // Buffer might be empty, bytes read was under count
+        if(r < toRead) {
+            break;
+        }
+    }
+
+    return bytesRead;
 }
 
 ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
-    ssize_t ret = TRY_OR_ERROR(slave.write(buffer, count));
+    char _buf[512];
+    ssize_t written = 0;
+    while(written < count) {
+        if(buffer->read((uint8_t*)_buf, 512, written)) {
+            return EFAULT;
+        }
 
-    if (Echo() && ret) {
-        for (unsigned i = 0; i < count; i++) {
+        ssize_t toWrite = 512;
+        if(toWrite > count - written) {
+            toWrite = count - written;
+        }
+
+        int r = slave.write(_buf, toWrite);
+        written += r;
+        
+        // Buffer might be full, not all of our data was written
+        if(r < toWrite) {
+            break;
+        }
+    }
+
+    if (Echo() && written) {
+        for (unsigned i = 0; i < written; i++) {
             char c;
             if (buffer->read((uint8_t*)&c, 1, i)) {
                 return EFAULT;
@@ -267,6 +330,8 @@ ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
             }
         }
     } else {
+        Log::Info("signaling slave b: %d, w: %d", slave.bufferPos, m_watchingSlave.get_length());
+
         if (slave.bufferPos && m_watchingSlave.get_length()) {
             while (m_watchingSlave.get_length()) {
                 m_watchingSlave.remove_at(0)->signal(); // Signal all watching
@@ -274,11 +339,30 @@ ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
         }
     }
 
-    return ret;
+    return written;
 }
 
 ErrorOr<ssize_t> PTY::SlaveWrite(UIOBuffer* buffer, size_t count) {
-    ssize_t written = TRY_OR_ERROR(master.write(buffer, count));
+    char _buf[512];
+    ssize_t written = 0;
+    while(written < count) {
+        if(buffer->read((uint8_t*)_buf, 512, written)) {
+            return EFAULT;
+        }
+
+        ssize_t toWrite = 512;
+        if(toWrite > count - written) {
+            toWrite = count - written;
+        }
+
+        int r = master.write(_buf, toWrite);
+        written += r;
+        
+        // Buffer might be full, not all of our data was written
+        if(r < toWrite) {
+            break;
+        }
+    }
 
     ScopedSpinLock lockWatchers(m_watcherLock);
     if (master.bufferPos && m_watchingMaster.get_length()) {
@@ -291,6 +375,7 @@ ErrorOr<ssize_t> PTY::SlaveWrite(UIOBuffer* buffer, size_t count) {
 }
 
 void PTY::WatchMaster(KernelObjectWatcher* watcher, KOEvent events) {
+    ScopedSpinLock lock{m_watcherLock};
     if (!HAS_KOEVENT(events, KOEvent::In)) { // We don't really block on writes and nothing else applies except POLLIN
         watcher->signal();
         return;
@@ -303,6 +388,7 @@ void PTY::WatchMaster(KernelObjectWatcher* watcher, KOEvent events) {
 }
 
 void PTY::WatchSlave(KernelObjectWatcher* watcher, KOEvent events) {
+    ScopedSpinLock lock{m_watcherLock};
     if (!HAS_KOEVENT(events, KOEvent::In)) { // We don't really block on writes and nothing else applies except POLLIN
         watcher->signal();
         return;
@@ -315,9 +401,11 @@ void PTY::WatchSlave(KernelObjectWatcher* watcher, KOEvent events) {
 }
 
 void PTY::UnwatchMaster(KernelObjectWatcher* watcher) {
+    ScopedSpinLock lock{m_watcherLock};
     m_watchingMaster.remove(watcher);
 }
 
 void PTY::UnwatchSlave(KernelObjectWatcher* watcher) {
+    ScopedSpinLock lock{m_watcherLock};
     m_watchingSlave.remove(watcher);
 }

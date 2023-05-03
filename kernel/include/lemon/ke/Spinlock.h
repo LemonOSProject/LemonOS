@@ -55,6 +55,16 @@ typedef volatile int lock_t;
 template <bool disableInterrupts = false> class ScopedSpinLock final {
 public:
     ALWAYS_INLINE ScopedSpinLock(lock_t& lock) : m_lock(lock) {
+        acquire();
+    }
+    
+    ALWAYS_INLINE ~ScopedSpinLock() {
+        if(m_acquired) {
+            release();
+        }
+    }
+
+    ALWAYS_INLINE void acquire() {
         if constexpr (disableInterrupts) {
             m_irq = CheckInterrupts();
             if (m_irq) {
@@ -67,11 +77,6 @@ public:
         }
 
         m_acquired = true;
-    }
-    ALWAYS_INLINE ~ScopedSpinLock() {
-        if(m_acquired) {
-            release();
-        }
     }
 
     ALWAYS_INLINE void release() {

@@ -21,8 +21,6 @@ public:
 
     ssize_t write(char* buffer, size_t size);
     ssize_t read(char* buffer, size_t count);
-    ErrorOr<ssize_t> write(UIOBuffer* buffer, size_t size);
-    ErrorOr<ssize_t> read(UIOBuffer* buffer, size_t count);
 
     void flush();
 private:

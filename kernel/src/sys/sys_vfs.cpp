@@ -20,7 +20,7 @@ SYSCALL long sys_read(le_handle_t handle, uint8_t* buf, size_t count, UserPointe
 
     FancyRefPtr<File> fd = FD_GET(handle);
 
-    UIOBuffer buffer = UIOBuffer::FromUser(buf);
+    UIOBuffer buffer = UIOBuffer::from_user(buf);
 
     auto r = fd->read(count, &buffer);
     if (r.HasError()) {
@@ -39,7 +39,7 @@ SYSCALL long sys_write(le_handle_t handle, const uint8_t* buf, size_t count, Use
 
     FancyRefPtr<File> fd = FD_GET(handle);
 
-    UIOBuffer buffer = UIOBuffer::FromUser((uint8_t*)buf);
+    UIOBuffer buffer = UIOBuffer::from_user((uint8_t*)buf);
 
     auto r = fd->write(count, &buffer);
     if (r.HasError()) {
@@ -332,7 +332,7 @@ SYSCALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, U
 
     FancyRefPtr<File> fd = FD_GET(handle);
 
-    UIOBuffer uio = UIOBuffer::FromUser(buf);
+    UIOBuffer uio = UIOBuffer::from_user(buf);
 
     auto r = SC_TRY_OR_ERROR(fd->read(pos, count, &uio));
     if (bytes.store(r)) {
@@ -347,7 +347,7 @@ SYSCALL long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t
 
     FancyRefPtr<File> fd = FD_GET(handle);
 
-    UIOBuffer uio = UIOBuffer::FromUser((void*)buf);
+    UIOBuffer uio = UIOBuffer::from_user((void*)buf);
 
     auto r = SC_TRY_OR_ERROR(fd->write(pos, count, &uio));
     if (bytes.store(r)) {

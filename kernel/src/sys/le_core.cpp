@@ -71,12 +71,78 @@ SYSCALL long le_handle_dup(le_handle_t oldHandle, UserPointer<le_handle_t> _newH
     }
 }
 
-SYSCALL long le_futex_wait(UserPointer<int> futex, int expected, const struct timespec* time) {
-    return 0; //ENOSYS;
+SYSCALL long le_futex_wait(UserPointer<int> futex, int expected, UserPointer<struct timespec*> time) {
+    Process* process = Process::current();
+    Thread* thread = Thread::current();
+
+    if(time.ptr()) {
+        Log::Error("le_futex_wait: timeout is unimplemented!");
+    }
+
+    // TODO: Currently the futex implementation is incapable of sharing futexes
+    // across processes as it relies on the virtual address of the futex
+
+    ScopedSpinLock lock{process->futexLock};
+    int value;
+    if(futex.get(value))
+        return EFAULT;
+
+    List<FutexThreadBlocker*>* queue;
+    uintptr_t key = (uintptr_t)futex.ptr();
+    if(!process->futexWaitQueue.get(key, queue)) {
+        queue = new List<FutexThreadBlocker*>();
+        process->futexWaitQueue.insert(key, queue);
+    }
+
+    // The lock may no longer be held, don't block
+    if(value != expected) {
+        lock.release();
+        return EAGAIN;
+    }
+
+    FutexThreadBlocker b;
+    queue->add_back(&b);
+
+    lock.release();
+
+    Log::Info("blocking on %x!", key);
+
+    bool wasInterrupted = thread->block(&b);
+
+    lock.acquire();
+    queue->remove(&b);
+    lock.release();
+
+    if(wasInterrupted)
+        return EINTR;
+
+    return 0;
 }
 
 SYSCALL long le_futex_wake(UserPointer<int> futex) {
-    return 0; //ENOSYS;
+    Process* process = Process::current();
+    Thread* thread = Thread::current();
+    
+    // Wake all threads waiting on a futex
+    ScopedSpinLock lock{process->futexLock};
+
+    List<FutexThreadBlocker*>* queue;
+    uintptr_t key = (uintptr_t)futex.ptr();
+    if(!process->futexWaitQueue.get(key, queue)) {
+        // No thread has ever waited on the given futex
+        // as there is no wait queue
+        return 0;
+    }
+
+    Log::Info("waking %d threads!", queue->get_length());
+
+    for(auto* b : *queue) {
+        b->unblock();
+    }
+
+    queue->clear();
+
+    return 0;
 }
 
 SYSCALL long le_set_user_tcb(uintptr_t value) {
