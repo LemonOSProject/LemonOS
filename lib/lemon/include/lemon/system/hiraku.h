@@ -36,3 +36,4 @@ HIRAKU_CALL long sys_kill(pid_t pid, pid_t tid, int signal);
 HIRAKU_CALL long sys_poll(int* _events, struct pollfd* fds, size_t nfds, long timeout, sigset_t sigset);
 HIRAKU_CALL long sys_chdir(le_str_t wd);
 HIRAKU_CALL long sys_getcwd(void* buffer, size_t size);
+HIRAKU_CALL long sys_waitpid(pid_t* pid, int* wstatus, int options);

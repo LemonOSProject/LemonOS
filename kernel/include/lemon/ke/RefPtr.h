@@ -124,9 +124,9 @@ public:
 protected:
     ALWAYS_INLINE void Dereference() {
         if (refCount) {
-            __sync_fetch_and_sub(refCount, 1);
+            unsigned v = __sync_sub_and_fetch(refCount, 1);
 
-            if (*refCount <= 0 && obj) {
+            if (v <= 0 && obj) {
                 delete obj;
                 delete refCount;
             }

@@ -538,36 +538,11 @@ Process::~Process() {
     }
 }
 
-void Process::Destroy() {
-    if (m_state != Process_Dead) {
-        assert(this != current());
-
-        // Use SIGKILL as the process will kill itself
-        KernelObjectWatcher watcher;
-        Watch(&watcher, KOEvent::ProcessTerminated);
-
-        m_mainThread->signal(SIGKILL);
-        bool interrupted = watcher.wait(); // Wait for the process to die
-
-        assert(!interrupted);
-        assert(m_state == Process_Dead);
-    }
-
-    // Remove from parent completely
-    if (m_parent) {
-        ScopedSpinLock acq(m_parent->m_processLock);
-        for (auto it = m_parent->m_children.begin(); it != m_parent->m_children.end(); it++) {
-            if (it->get() == this) {
-                m_parent->m_children.remove(it); // Remove ourselves
-                break;
-            }
-        }
-        m_parent = nullptr;
-    }
-}
-
 void Process::die() {
     asm volatile("sti");
+
+    assert(m_state == Process_Running);
+    Log::Debug(debugLevelScheduler, DebugLevelNormal, "Killing Process %s (PID %d)", name, m_pid);
 
     // Check if we are main thread
     Thread* thisThread = Thread::current();
@@ -587,10 +562,7 @@ void Process::die() {
         for (;;)
             Scheduler::Yield();
     }
-
-    assert(m_state == Process_Running);
     m_state = Process_Dying;
-    Log::Debug(debugLevelScheduler, DebugLevelNormal, "Killing Process %s (PID %d)", name, m_pid);
 
     // Ensure the current thread's lock is acquired
     assert(acquireTestLock(&thisThread->kernelLock));

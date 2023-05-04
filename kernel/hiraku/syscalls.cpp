@@ -101,6 +101,10 @@ long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t pos, ss
     return syscall(_sys_pwrite, handle, buf, count, pos, bytes);
 }
 
+long sys_exit(int status) {
+    return syscall(_sys_exit, status);
+}
+
 long sys_getpid() {
     return PEB(pid);
 }
@@ -131,5 +135,9 @@ long sys_chdir(le_str_t wd) {
 
 long sys_getcwd(void* cwd, size_t size) {
     return syscall(_sys_getcwd, cwd, size);
+}
+
+long sys_waitpid(pid_t* pid, int* wstatus, int options) {
+    return syscall(_sys_waitpid, pid, wstatus, options);
 }
 }

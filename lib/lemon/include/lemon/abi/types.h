@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-typedef int handle_t;
-
 typedef int le_handle_t;
 typedef const char* le_str_t;
 

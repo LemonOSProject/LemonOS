@@ -42,7 +42,7 @@ void DumpLastSyscall(Thread*) {
               SC_ARG5(&lastSyscall), t->lastSyscall.result, t->lastSyscall.result);*/
 }
 
-#define SYS_SYSCALLS 19
+#define SYS_SYSCALLS 21
 #define LE_SYSCALLS 10
 
 DFN_SYSCALL(le_log);
@@ -76,15 +76,16 @@ DFN_SYSCALL(sys_sigreturn);
 DFN_SYSCALL(sys_poll);
 DFN_SYSCALL(sys_chdir);
 DFN_SYSCALL(sys_getcwd);
+DFN_SYSCALL(sys_waitpid);
+DFN_SYSCALL(sys_exit);
 
 #define SC(x) ((void*)&x)
 
-void* sysTable[] = {
-    SC(sys_read),      SC(sys_write),    SC(sys_openat),      SC(sys_fstatat),   SC(sys_lseek),
-    SC(sys_mmap),      SC(sys_mprotect), SC(sys_munmap),      SC(sys_ioctl),     SC(sys_pread),
-    SC(sys_pwrite),    SC(sys_execve),   SC(sys_sigprocmask), SC(sys_sigaction), SC(sys_kill),
-    SC(sys_sigreturn), SC(sys_poll),     SC(sys_chdir),       SC(sys_getcwd),
-};
+void* sysTable[] = {SC(sys_read),      SC(sys_write),    SC(sys_openat),      SC(sys_fstatat),   SC(sys_lseek),
+                    SC(sys_mmap),      SC(sys_mprotect), SC(sys_munmap),      SC(sys_ioctl),     SC(sys_pread),
+                    SC(sys_pwrite),    SC(sys_execve),   SC(sys_sigprocmask), SC(sys_sigaction), SC(sys_kill),
+                    SC(sys_sigreturn), SC(sys_poll),     SC(sys_chdir),       SC(sys_getcwd),    SC(sys_waitpid),
+                    SC(sys_exit)};
 
 void* leTable[] = {SC(le_log),           SC(le_boot_timer), SC(le_handle_close), SC(le_handle_dup),
                    SC(le_futex_wait),    SC(le_futex_wake), SC(le_set_user_tcb), SC(le_create_process),

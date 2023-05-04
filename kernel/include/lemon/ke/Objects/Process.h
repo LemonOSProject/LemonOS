@@ -310,20 +310,30 @@ public:
         return m_handles[2];
     };
 
+    Process* parent() const { return m_parent; }
+
     ALWAYS_INLINE void register_child(const FancyRefPtr<Process>& child) {
         ScopedSpinLock lock(m_processLock);
         m_children.add_back(child);
     }
 
-    ALWAYS_INLINE FancyRefPtr<Process> find_child_by_pid(pid_t pid) {
+    ALWAYS_INLINE unsigned num_children() {
         ScopedSpinLock lock(m_processLock);
-        for (auto& child : m_children) {
+        return m_children.get_length();
+    }
+
+    FancyRefPtr<Process> find_child_by_pid(pid_t pid) {
+        FancyRefPtr<Process> r;
+
+        ScopedSpinLock lock(m_processLock);
+        for (const auto& child : m_children) {
             if (child->pid() == pid) {
-                return child;
+                r = child;
+                break;
             }
         }
-
-        return nullptr;
+        
+        return r;
     }
 
     /////////////////////////////
@@ -404,13 +414,13 @@ public:
         child = remove_dead_child();
         if (child.get()) {
             ptr = std::move(child);
-            return 0;
+            return ERROR_NONE;
         } else if (wasInterrupted) {
-            return -EINTR; // We were interrupted
+            return EINTR; // We were interrupted
         }
 
         goto retry; // Keep waiting
-        return 0;
+        return ERROR_NONE;
     }
 
     ALWAYS_INLINE void set_alarm(unsigned int seconds) {
@@ -429,6 +439,18 @@ public:
                 t->signal(SIGALRM);
             },
             m_mainThread.get());
+    }
+
+    ALWAYS_INLINE int exit_status() {
+        int status = exitCode & 0xff;
+
+        // TODO:
+        // WIFEXITED (check if process exited normally)
+        // WIFSIGNALED
+        // WTERMSIG (signal number that caused process to terminate)
+        // WCOREDUMP (maybe??)
+
+        return status;
     }
 
     char name[NAME_MAX + 1];

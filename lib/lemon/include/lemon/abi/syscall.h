@@ -20,6 +20,8 @@ enum {
     _sys_poll = 16,
     _sys_chdir = 17,
     _sys_getcwd = 18,
+    _sys_waitpid = 19,
+    _sys_exit = 20,
 
     _le_log = 0x10000,
     _le_boot_timer = 0x10001,

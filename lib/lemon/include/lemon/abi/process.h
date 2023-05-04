@@ -36,6 +36,6 @@ typedef struct LemonProcessInfo {
 // Cap the maximum length of any one argument passed to sys_execve
 // Prevents the kernel getting caught up trying to find the end of a dodgy string passed by the user
 #define SYS_ARGLEN_MAX (0x100000)
-#define SYS_ARGC_MAX (0x1000) 
+#define SYS_ARGC_MAX (0x1000)
 
 #endif // LEMON_SYS_ABI_PROCESS_H
