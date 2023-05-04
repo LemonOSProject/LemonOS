@@ -55,6 +55,11 @@ void SMPEntry(uint16_t id) {
     asm volatile("lgdt (%%rax)" ::"a"(&cpu->gdtPtr));
     asm volatile("lidt %0" ::"m"(cpu->idtPtr));
 
+    uint64_t cr0;
+    asm volatile("mov %%cr0, %%rax" : "=a"(cr0));
+    cr0 |= CR0_WP;
+    asm volatile("mov %%rax, %%cr0" :: "a"(cr0));
+
     TSS::InitializeTSS(&cpu->tss, cpu->gdt);
     APIC::Local::Enable();
 

@@ -379,18 +379,18 @@ public:
     ///
     /// \return 0 on success, otherwise error code
     /////////////////////////////
-    ALWAYS_INLINE int wait_for_child_to_die(FancyRefPtr<Process>& ptr) {
+    ALWAYS_INLINE Error wait_for_child_to_die(FancyRefPtr<Process>& ptr) {
         auto child = remove_dead_child();
         if (child.get()) {
             ptr = std::move(child);
-            return 0;
+            return ERROR_NONE;
         }
 
     retry:
         acquireLock(&m_processLock);
         if (!m_children.get_length()) {
             releaseLock(&m_processLock);
-            return -ECHILD; // No children to wait for
+            return ECHILD; // No children to wait for
         }
 
         KernelObjectWatcher watcher;
