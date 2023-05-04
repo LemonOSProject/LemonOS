@@ -330,8 +330,6 @@ ErrorOr<ssize_t> PTY::MasterWrite(UIOBuffer* buffer, size_t count) {
             }
         }
     } else {
-        Log::Info("signaling slave b: %d, w: %d", slave.bufferPos, m_watchingSlave.get_length());
-
         if (slave.bufferPos && m_watchingSlave.get_length()) {
             while (m_watchingSlave.get_length()) {
                 m_watchingSlave.remove_at(0)->signal(); // Signal all watching

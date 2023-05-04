@@ -64,8 +64,10 @@ SYSCALL long le_create_process(UserPointer<le_handle_t> handle, uint64_t flags, 
         nt->registers.rax = 0;
         nt->kernelLock = 0;
 
+        assert(newProcess->parent() == process);
+
         if (flags & LE_PROCESS_PID) {
-            if(handle.store(process->pid())) {
+            if(handle.store(newProcess->pid())) {
                 Log::Warning("le_create_process: PID gets leaked on EFAULT");
                 return EFAULT;
             }
