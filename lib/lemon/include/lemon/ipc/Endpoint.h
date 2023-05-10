@@ -74,7 +74,7 @@ public:
     Endpoint(const std::string& path) : Endpoint(path.c_str()) {}
 
     Endpoint(const char* path) {
-        handle_t handle = InterfaceConnect(path);
+        le_handle_t handle = InterfaceConnect(path);
 
         if (handle <= 0) {
             Logger::Error("[LibLemon] {}, error connecting to interface {}\n", handle, path);
@@ -124,7 +124,7 @@ public:
         m_handle = Handle();
     }
 
-    inline operator handle_t() { return m_handle.get(); }
+    inline operator le_handle_t() { return m_handle.get(); }
 
     /////////////////////////////
     /// \brief Get the Kernel Handle to the Endpoint

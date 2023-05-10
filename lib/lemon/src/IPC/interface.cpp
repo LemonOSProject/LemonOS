@@ -23,7 +23,7 @@ const char* const InterfaceException::errorStrings[] = {
 };
 
 Interface::Interface(const Handle& service, const char* name, uint16_t msgSize) : m_serviceHandle(service) {
-    handle_t handle = CreateInterface(service.get(), name, msgSize);
+    le_handle_t handle = CreateInterface(service.get(), name, msgSize);
     m_msgSize = msgSize;
 
     if (handle <= 0) {
@@ -48,7 +48,7 @@ Interface::Interface(const Handle& service, const char* name, uint16_t msgSize) 
 void Interface::RegisterObject(const std::string& name, int id) { m_objects[name] = id; }
 
 long Interface::Poll(Lemon::Handle& client, Message& m) {
-    handle_t newIf;
+    le_handle_t newIf;
     while ((newIf = InterfaceAccept(m_interfaceHandle.get()))) { // Accept any incoming connections
         if (newIf > 0) {
             m_rawEndpoints.push_back(newIf);

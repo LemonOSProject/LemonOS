@@ -15,7 +15,7 @@ protected:
 
 public:
     virtual inline const Handle& GetHandle() = 0;
-    virtual inline void GetAllHandles(std::vector<handle_t>& v) { v.push_back(GetHandle().get()); };
+    virtual inline void GetAllHandles(std::vector<le_handle_t>& v) { v.push_back(GetHandle().get()); };
     void Wait(long timeout = -1);
 
     virtual ~Waitable();
@@ -24,7 +24,7 @@ public:
 class Waiter {
     std::list<Waitable*> waitingOn;
     std::list<Waitable*> waitingOnAll;
-    std::vector<handle_t> handles;
+    std::vector<le_handle_t> handles;
 
 public:
     void RepopulateHandles();

@@ -53,7 +53,7 @@ public:
     void Wait();
 
     inline const Handle& GetHandle() { return m_interfaceHandle; }
-    void GetAllHandles(std::vector<handle_t>& v) {
+    void GetAllHandles(std::vector<le_handle_t>& v) {
         v.insert(v.end(), m_rawEndpoints.begin(), m_rawEndpoints.end());
         v.push_back(m_interfaceHandle.get());
     }
@@ -74,7 +74,7 @@ protected:
     };
 
     std::map<std::string, int> m_objects;
-    std::vector<handle_t> m_rawEndpoints;
+    std::vector<le_handle_t> m_rawEndpoints;
     std::list<Handle> m_endpoints;
     uint16_t m_msgSize;
     uint8_t* m_dataBuffer = nullptr;

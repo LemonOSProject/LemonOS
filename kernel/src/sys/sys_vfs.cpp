@@ -10,6 +10,7 @@
 
 #include <Types.h>
 
+#include <abi/dirent.h>
 #include <abi/ioctl.h>
 #include <abi/lseek.h>
 #include <abi/poll.h>
@@ -217,9 +218,7 @@ open:
 SYSCALL long sys_fstatat(int fd, le_str_t path, int flags, UserPointer<struct stat> out) {
     Process* process = Process::current();
 
-    return ENOSYS;
-
-    /*FancyRefPtr<File> wd;
+    FancyRefPtr<File> wd;
     if (fd == AT_FDCWD) {
         wd = process->workingDir;
     } else {
@@ -227,12 +226,21 @@ SYSCALL long sys_fstatat(int fd, le_str_t path, int flags, UserPointer<struct st
     }
 
     FsNode* node;
+    assert(wd->inode);
+
     if (flags & AT_EMPTY_PATH) {
-        node = wd->node;
+        node = wd->inode;
     } else {
+        if (!path) {
+            return ENOENT;
+        }
+
         bool followSymlinks = !(flags & AT_SYMLINK_NOFOLLOW);
 
-        node = fs::ResolvePath(path, wd->node, followSymlinks);
+        node = fs::ResolvePath(path, wd->inode, followSymlinks);
+        if(!node) {
+            return ENOENT;
+        }
     }
 
     struct stat st;
@@ -240,25 +248,28 @@ SYSCALL long sys_fstatat(int fd, le_str_t path, int flags, UserPointer<struct st
     st.st_dev = node->volumeID;
     st.st_ino = node->inode;
     st.st_nlink = node->nlink;
-    st.st_mode = node->pmask;
+    st.st_mode = node->pmask | ((mode_t)node->type);
     st.st_uid = node->uid;
     st.st_gid = node->gid;
     st.st_rdev = 0;
     st.st_size = node->size;
     // TODO: access time
+    st.st_atim = {0, 0};
     // TODO: modification time
+    st.st_mtim = {0, 0};
     // TODO: creation time
+    st.st_ctim = {0, 0};
 
     // TODO: blksize
     st.st_blksize = 0;
     // TODO: blocks
     st.st_blocks = node->size;
 
-    if (out.StoreValue(st)) {
+    if (out.store(st)) {
         return EFAULT;
     }
 
-    return 0;*/
+    return 0;
 }
 
 SYSCALL long sys_lseek(le_handle_t handle, off_t offset, unsigned int whence, UserPointer<off_t> out) {
@@ -368,11 +379,7 @@ SYSCALL long sys_poll(UserPointer<int> _events, UserBuffer<pollfd> fds, size_t n
         thread->signalMask = sigset;
     }
 
-    OnReturn signals{
-        [thread, oldmask]() -> void {
-            thread->signalMask = oldmask;
-        }
-    };
+    OnReturn signals{[thread, oldmask]() -> void { thread->signalMask = oldmask; }};
 
     // How many elements in fds have events
     unsigned events = 0;
@@ -471,20 +478,71 @@ SYSCALL long sys_getcwd(void* cwd, size_t size) {
     // Permission to read a path component was denied (EACCES)
     // The working directory has been unlinked (ENOENT)
 
-    if(size == 0) {
+    if (size == 0) {
         return EINVAL;
     }
 
     // TODO: working directory race condition
     // chdir and getcwd could get called at the same time by different threads
     size_t wdLen = strlen(process->workingDirPath);
-    if(wdLen + 1 > size) {
+    if (wdLen + 1 > size) {
         return ERANGE;
     }
 
-    if(user_memcpy(cwd, process->workingDirPath, wdLen + 1)) {
+    if (user_memcpy(cwd, process->workingDirPath, wdLen + 1)) {
         return EFAULT;
     }
+
+    return 0;
+}
+
+SYSCALL long sys_readdir(le_handle_t fd, UserBuffer<uint8_t> d, size_t count, UserPointer<size_t> _bytes_read) {
+    auto file = FD_GET(fd);
+    if (!file->is_directory()) {
+        return ENOTDIR;
+    }
+
+    FsNode* inode = file->inode;
+    assert(inode);
+
+    DirectoryEntry ent;
+
+    ssize_t written = 0;
+    ssize_t offsetOfNext = 0;
+    while (written + sizeof(le_dirent) <= count) {
+        int r = SC_TRY_OR_ERROR(inode->read_dir(&ent, file->pos));
+        if (r == 0) {
+            break; // No more entries!
+        }
+
+        // Align offset on 4 bytes
+        size_t offset = offsetOfNext;
+        uint16_t namelen = strlen(ent.name) + 1;
+        uint16_t reclen = offsetof(le_dirent, d_name) + namelen;
+        reclen = (reclen + 0x3) & (~0x3ULL);
+        offsetOfNext += reclen;
+
+        if (offset + reclen > count) {
+            break;
+        }
+
+        // TODO: consider having DirectoryEntry just have le_dirent sitting inside
+        le_dirent userEntry = {
+            .d_ino = ent.ino, .d_off = file->pos, .d_reclen = reclen, .d_type = (uint8_t)(ent.flags & 0xff)};
+
+        if (d.write((uint8_t*)&userEntry, offset, offsetof(le_dirent, d_name))) {
+            return EFAULT;
+        }
+
+        if (d.write((uint8_t*)ent.name, offset + offsetof(le_dirent, d_name), namelen)) {
+            return EFAULT;
+        }
+        file->pos++;
+        written += reclen;
+    }
+
+    if (_bytes_read.store(written))
+        return EFAULT;
 
     return 0;
 }

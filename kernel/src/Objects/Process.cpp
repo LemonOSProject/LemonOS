@@ -344,7 +344,6 @@ ErrorOr<uintptr_t> Process::load_elf(uintptr_t* stackPointer, ELFData& elfInfo, 
             } else if (dynamic.tag == DT_SYMTAB) {
                 symtab = (elf64_symbol_t*)(linkerBaseAddress + dynamic.ptr);
             } else if (dynamic.tag == DT_JMPREL) {
-                Log::Info("PLT at: %x (%x)", linkerBaseAddress + dynamic.ptr, dynamic.ptr);
                 plt = (elf64_rela_t*)(linkerBaseAddress + dynamic.ptr);
             }
         }

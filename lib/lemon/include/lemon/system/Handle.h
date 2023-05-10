@@ -10,10 +10,10 @@ namespace Lemon {
 class Handle final {
   public:
     inline Handle() : m_refCount(0), m_handle(-1) {}
-    explicit inline Handle(handle_t handle) : m_handle(handle) {
+    explicit inline Handle(le_handle_t handle) : m_handle(handle) {
         if (m_handle) {
             m_refCount = new unsigned(1);
-        }
+    }
     }
     inline Handle(const Handle& handle) : m_refCount(handle.m_refCount), m_handle(handle.m_handle) { (*m_refCount)++; }
     inline Handle(Handle&& handle) : m_refCount(handle.m_refCount), m_handle(handle.m_handle) {
@@ -46,8 +46,8 @@ class Handle final {
         return *this;
     }
 
-    inline handle_t get() const { return m_handle; }
-    inline operator handle_t() const { return m_handle; }
+    inline le_handle_t get() const { return m_handle; }
+    inline operator le_handle_t() const { return m_handle; }
 
   private:
     inline void Dereference() {
@@ -62,7 +62,7 @@ class Handle final {
     }
 
     unsigned* m_refCount;
-    handle_t m_handle;
+    le_handle_t m_handle;
 };
 
 inline bool operator==(const Handle& l, const Handle& r){

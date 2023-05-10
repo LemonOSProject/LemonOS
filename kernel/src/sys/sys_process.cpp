@@ -8,8 +8,6 @@
 SYSCALL long sys_waitpid(UserPointer<pid_t> _pid, UserPointer<int> wstatus, int options) {
     Process* process = Process::current();
 
-    Log::Info("waitpid");
-
     pid_t pid;
     if(_pid.get(pid))
         return EFAULT;

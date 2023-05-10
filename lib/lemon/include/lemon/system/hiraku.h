@@ -27,7 +27,6 @@ HIRAKU_CALL long sys_munmap(void* address, size_t len);
 HIRAKU_CALL long sys_ioctl(le_handle_t handle, unsigned int cmd, unsigned long arg, int* result);
 HIRAKU_CALL long sys_pread(le_handle_t handle, void* buf, size_t count, off_t pos, ssize_t* bytes);
 HIRAKU_CALL long sys_pwrite(le_handle_t handle, const void* buf, size_t count, off_t pos, ssize_t* bytes);
-HIRAKU_CALL long sys_exit(int status);
 HIRAKU_CALL long sys_getpid();
 HIRAKU_CALL long sys_execve(le_str_t filename, le_str_t const* argv, le_str_t const* envp);
 HIRAKU_CALL long sys_sigprocmask(int how, const sigset_t* set, sigset_t* oldset);
@@ -37,3 +36,5 @@ HIRAKU_CALL long sys_poll(int* _events, struct pollfd* fds, size_t nfds, long ti
 HIRAKU_CALL long sys_chdir(le_str_t wd);
 HIRAKU_CALL long sys_getcwd(void* buffer, size_t size);
 HIRAKU_CALL long sys_waitpid(pid_t* pid, int* wstatus, int options);
+HIRAKU_CALL long sys_exit(int status);
+HIRAKU_CALL long sys_readdir(le_handle_t fd, void* entries, size_t count, size_t* read);

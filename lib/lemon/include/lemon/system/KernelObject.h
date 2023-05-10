@@ -15,7 +15,7 @@ namespace Lemon {
 ///
 /// \return negative error code on failure
 /////////////////////////////
-inline long WaitForKernelObject(const handle_t& obj, const long timeout) {
+inline long WaitForKernelObject(const le_handle_t& obj, const long timeout) {
     return syscall(SYS_KERNELOBJECT_WAIT_ONE, obj, timeout);
 }
 
@@ -30,7 +30,7 @@ inline long WaitForKernelObject(const handle_t& obj, const long timeout) {
 ///
 /// \return negative error code on failure
 /////////////////////////////
-inline long WaitForKernelObject(const handle_t* const objects, const size_t count, const long timeout) {
+inline long WaitForKernelObject(const le_handle_t* const objects, const size_t count, const long timeout) {
     return syscall(SYS_KERNELOBJECT_WAIT, objects, count, timeout);
 }
 
@@ -43,5 +43,5 @@ inline long WaitForKernelObject(const handle_t* const objects, const size_t coun
 ///
 /// \return negative error code on failure
 /////////////////////////////
-inline long DestroyKObject(const handle_t& obj) { return syscall(SYS_KERNELOBJECT_DESTROY, obj); }
+inline long DestroyKObject(const le_handle_t& obj) { return syscall(SYS_KERNELOBJECT_DESTROY, obj); }
 } // namespace Lemon

@@ -22,6 +22,7 @@ enum {
     _sys_getcwd = 18,
     _sys_waitpid = 19,
     _sys_exit = 20,
+    _sys_readdir = 21,
 
     _le_log = 0x10000,
     _le_boot_timer = 0x10001,

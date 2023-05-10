@@ -100,7 +100,14 @@ public:
     virtual ErrorOr<class File*> Open(size_t flags); // Open
     virtual void Close();                            // Close
 
-    virtual ErrorOr<int> read_dir(struct DirectoryEntry*, uint32_t);
+    /////////////////////////////
+    /// \brief Acquire directory entry at index
+    ///
+    /// \return 1 if an entry at index was found
+    /// 0 if an entry at index doesn't exit
+    /// Error on error
+    /////////////////////////////
+    virtual ErrorOr<int> read_dir(struct DirectoryEntry* ent, uint32_t index);
     virtual ErrorOr<FsNode*> find_dir(const char* name); // Find in directory
 
     virtual Error create(DirectoryEntry* ent, uint32_t mode);
