@@ -5,9 +5,4 @@ unsigned int rand() {
     return ((unsigned int)(rand_next / 65536) % 32768);
 }
 
-int floor(int num) {
-    int x = (int)num;
-    return num < x ? x - 1 : x;
-}
-
 int abs(int num) { return num < 0 ? -num : num; }

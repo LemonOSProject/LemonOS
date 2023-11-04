@@ -231,7 +231,7 @@ void DrawBitmapImage(unsigned int x, unsigned int y, unsigned int w, unsigned in
     data += bmpHeader.offset;
 
     uint8_t bmpBpp = 24;
-    uint32_t rowSize = floor((bmpBpp * w + 31) / 32) * 4;
+    uint32_t rowSize = ((bmpBpp * w + 31) / 32) * 4;
     uint32_t bmpOffset = rowSize * (h - 1);
 
     uint32_t pixelSize = 4;
