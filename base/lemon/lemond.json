@@ -1,6 +1,0 @@
-{
-    "environment" : [
-        "HOME=/system",
-        "PATH=/initrd:/system/bin:/system/lemon"
-    ]
-}

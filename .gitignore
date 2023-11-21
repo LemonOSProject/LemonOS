@@ -1,12 +1,3 @@
 .vscode
-.cache
 build
-Build
-serial.log
-ports/*
-!ports/*.yml
 toolchain/*
-Toolchain/*
-scripts/lic/lic
-*.xbstrap
-.ninja_log

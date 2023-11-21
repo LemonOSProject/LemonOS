@@ -1,5 +1,0 @@
-interface Shell {
-    Open(string url) -> (s32 status)
-    
-    ToggleMenu()
-}

@@ -1,7 +1,0 @@
-#ifndef LEMON_SYS_ABI_IOCTL_H
-#define LEMON_SYS_ABI_IOCTL_H
-
-#define FIONCLEX 0x5450
-#define FIOCLEX 0x5451
-
-#endif // LEMON_SYS_ABI_IOCTL_H

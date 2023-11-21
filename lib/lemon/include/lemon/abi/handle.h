@@ -1,7 +1,0 @@
-#ifndef LEMON_ABI_HANDLE_H
-#define LEMON_ABI_HANDLE_H
-
-#define LE_HANDLE_PROCESS_SELF -1
-#define LE_HANDLE_THREAD_SELF -1
-
-#endif
