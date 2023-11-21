@@ -11,7 +11,7 @@ set(LEMON_ARCH "x86_64")
 
 add_compile_options($<$<C_COMPILER_ID:Clang>:-fcolor-diagnostics>)
 
-include_directories(include)
+include_directories(.)
 
 add_compile_options(-Wall -Wextra -fno-exceptions -fno-rtti)
 add_compile_options(-ffreestanding -nostdlib)
@@ -24,7 +24,7 @@ add_compile_options(--target=x86_64-elf)
 add_link_options(-nostdlib -nodefaultlibs -no-pie -T ${CMAKE_CURRENT_SOURCE_DIR}/hal/x86_64/link.ld)
 add_link_options(-ffreestanding -nostdlib -Wl,--build-id=none)
 
-add_executable(kernel.sys src/main.cpp)
+add_executable(kernel.sys main.cpp)
 
 target_link_options(kernel.sys PRIVATE
     -T ${CMAKE_CURRENT_SOURCE_DIR}/hal/x86_64/link.ld -v
