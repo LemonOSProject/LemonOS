@@ -1,5 +1,3 @@
-project(lemon-kernel ASM C CXX)
-
 cmake_minimum_required(VERSION 3.22)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -12,6 +10,7 @@ set(LEMON_ARCH "x86_64")
 add_compile_options($<$<C_COMPILER_ID:Clang>:-fcolor-diagnostics>)
 
 include_directories(.)
+include_directories(./hal/x86_64)
 
 add_compile_options(-Wall -Wextra -fno-exceptions -fno-rtti)
 add_compile_options(-ffreestanding -nostdlib)
