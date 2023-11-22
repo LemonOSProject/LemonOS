@@ -1,0 +1,6 @@
+[submodule "fmt"]
+	path = lib/fmt
+	url = https://github.com/fmtlib/fmt.git
+[submodule "cxxshim"]
+	path = lib/cxxshim
+	url = https://github.com/managarm/cxxshim.git
