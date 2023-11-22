@@ -1,0 +1,168 @@
+#pragma once
+
+#include <stdint.h>
+#include <limits.h>
+#include <float.h>
+
+namespace std {
+
+template<typename T>
+struct numeric_limits {};
+
+template <>
+struct numeric_limits<bool> {
+    static constexpr bool is_signed = false;
+    static constexpr int digits = 1;
+    static constexpr int digits10 = 0;
+
+    static constexpr bool is_iec559 = false;
+
+    static constexpr bool infinity() noexcept {
+        return 0;
+    }
+};
+
+template <>
+struct numeric_limits<uint8_t> {
+    static constexpr bool is_signed = false;
+    static constexpr int digits = 8;
+    static constexpr int digits10 = 2;
+
+    static constexpr bool is_iec559 = false;
+
+    static constexpr uint8_t infinity() noexcept {
+        return 0;
+    }
+};
+
+template <>
+struct numeric_limits<int8_t> {
+    static constexpr bool is_signed = true;
+    static constexpr int digits = 8 - 1;
+    static constexpr int digits10 = 2;
+
+    static constexpr bool is_iec559 = false;
+
+    static constexpr int8_t infinity() noexcept {
+        return 0;
+    }
+};
+
+template <>
+struct numeric_limits<uint16_t> {
+    static constexpr bool is_signed = false;
+    static constexpr int digits = 16;
+    static constexpr int digits10 = 4;
+
+    static constexpr bool is_iec559 = false;
+
+    static constexpr uint16_t infinity() noexcept {
+        return 0;
+    }
+};
+
+template <>
+struct numeric_limits<int16_t> {
+    static constexpr bool is_signed = true;
+    static constexpr int digits = 16 - 1;
+    static constexpr int digits10 = 4;
+
+    static constexpr bool is_iec559 = false;
+
+    static constexpr int16_t infinity() noexcept {
+        return 0;
+    }
+};
+
+template <>
+struct numeric_limits<uint32_t> {
+    static constexpr bool is_signed = false;
+    static constexpr int digits = 32;
+    static constexpr int digits10 = 9;
+
+    static constexpr bool is_iec559 = false;
+
+    static constexpr uint32_t infinity() noexcept {
+        return 0;
+    }
+};
+
+template <>
+struct numeric_limits<int32_t> {
+    static constexpr bool is_signed = true;
+    static constexpr int digits = 32 - 1;
+    static constexpr int digits10 = 9;
+
+    static constexpr bool is_iec559 = false;
+
+    static constexpr int32_t infinity() noexcept {
+        return 0;
+    }
+};
+
+template <>
+struct numeric_limits<uint64_t> {
+    static constexpr bool is_signed = false;
+    static constexpr int digits = 64;
+    static constexpr int digits10 = 19;
+
+    static constexpr bool is_iec559 = false;
+
+    static constexpr uint64_t infinity() noexcept {
+        return 0;
+    }
+};
+
+template <>
+struct numeric_limits<int64_t> {
+    static constexpr bool is_signed = true;
+    static constexpr int digits = 64 - 1;
+    static constexpr int digits10 = 18;
+
+    static constexpr bool is_iec559 = false;
+
+    static constexpr int64_t infinity() noexcept {
+        return 0;
+    }
+};
+    
+template<>
+struct numeric_limits<float> {
+    static constexpr bool is_signed = true;
+    static constexpr int digits = FLT_MANT_DIG;
+    static constexpr int digits10 = FLT_DIG;
+
+    static constexpr bool is_iec559 = true;
+
+    static constexpr float infinity() noexcept {
+        return __builtin_huge_valf();
+    }
+};
+    
+template<>
+struct numeric_limits<double> {
+    static constexpr bool is_signed = true;
+    static constexpr int digits = DBL_MANT_DIG;
+    static constexpr int digits10 = DBL_DIG;
+
+    static constexpr bool is_iec559 = true;
+
+    static constexpr double infinity() noexcept {
+        return __builtin_huge_val();
+    }
+};
+    
+template<>
+struct numeric_limits<long double> {
+    static constexpr bool is_signed = true;
+    static constexpr int digits = LDBL_MANT_DIG;
+    static constexpr int digits10 = LDBL_DIG;
+
+    static constexpr bool is_iec559 = true;
+
+    static constexpr long double infinity() noexcept {
+        return __builtin_huge_vall();
+    }
+};
+
+}
