@@ -2,6 +2,7 @@
 
 #include <stddef.h>
 
+#include <tuple>
 
 template<typename ...Types>
 struct Tuple {
@@ -11,9 +12,10 @@ struct Tuple {
     template<typename T, typename ...Args>
     struct Impl<T, Args...> {
         constexpr Impl(T value, Args ...args) : value(value), next(args...) {}
+        constexpr Impl() : value(), next() {}
         
         template<size_t index>
-        constexpr const T get() const {
+        constexpr const auto get() const {
             if constexpr (index == 0) {
                 return value;
             } else {
@@ -28,9 +30,10 @@ struct Tuple {
     template<typename T>
     struct Impl<T> {
         constexpr Impl(T value) : value(value) {}
+        constexpr Impl() : value() {}
 
         template<size_t index>
-        constexpr const T get() const {
+        constexpr const auto get() const {
             static_assert(index == 0);
             return value;
         }
@@ -38,7 +41,8 @@ struct Tuple {
         T value;
     };
 
-    constexpr Tuple(Types ...args) : impl(args...) {}
+    constexpr Tuple(Types ...values) : impl(values...) {}
+    constexpr Tuple() : impl() {}
 
     template<size_t index>
     constexpr auto get() const {
