@@ -15,7 +15,7 @@ struct Tuple {
         constexpr Impl() : value(), next() {}
         
         template<size_t index>
-        constexpr const auto get() const {
+        constexpr auto get() const {
             if constexpr (index == 0) {
                 return value;
             } else {
@@ -33,7 +33,7 @@ struct Tuple {
         constexpr Impl() : value() {}
 
         template<size_t index>
-        constexpr const auto get() const {
+        constexpr auto get() const {
             static_assert(index == 0);
             return value;
         }

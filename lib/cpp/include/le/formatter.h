@@ -1,10 +1,12 @@
 #pragma once
 
 #include <string.h>
+#include <stdint.h>
 #include <stddef.h>
 
-#include <utility>
 #include <type_traits>
+#include <limits>
+#include <utility>
 
 #include "tuple.h"
 #include "string_view.h"
@@ -15,9 +17,9 @@ concept Buffer = requires(T t, char c, const char *s, size_t n) {
     { t.write(s, n) };
 };
 
-template<size_t index, typename ...Types>
-struct GetType {
-    using type = decltype(Tuple<Types...>{}.template get<index>());
+template<typename T>
+concept Number = requires(T t) {
+    { std::is_integral_v<T> == true };
 };
 
 template<typename T>
@@ -40,7 +42,9 @@ struct TypeFormatter<ConstexprStringTag> {
 
 template<>
 struct TypeFormatter<char> {
-    constexpr TypeFormatter() = default;
+    constexpr TypeFormatter(StringView<char> specifier) {
+        const_assert(specifier.len() == 0);
+    }
     
     template<Buffer Buffer>
     inline void emit(char c, Buffer &buffer) const {
@@ -50,11 +54,88 @@ struct TypeFormatter<char> {
 
 template<>
 struct TypeFormatter<const char *> {
-    constexpr TypeFormatter() = default;
+    constexpr TypeFormatter(StringView<char> specifier) {
+        const_assert(specifier.len() == 0);
+    }
 
     template<Buffer Buffer>
     inline void emit(const char *s, Buffer &buffer) const {
         buffer.write(s, strlen(s));
+    }
+};
+
+template<Number N>
+struct TypeFormatter<N> {
+    constexpr TypeFormatter(StringView<char> specifier) {
+        if (specifier.len() == 0) {
+            return;
+        }
+
+        const_assert(specifier[0] == ':');
+        for (size_t i = 1; i < specifier.len(); i++) {
+            if (specifier[i] == 'x') {
+                hex = true;
+            }
+        }
+    }
+
+    template<Buffer Buffer>
+    inline void emit(N num, Buffer &buffer) const {
+        if (num == 0) {
+            buffer.write('0');
+            return;
+        }
+
+        if constexpr (std::numeric_limits<N>::is_signed) {
+            if (num < 0) {
+                buffer.write('-');
+                num = -num;
+            }
+        }
+
+        if (hex) {
+            constexpr size_t digits_max = std::numeric_limits<N>::digits / 4 + 1;
+            char buf[digits_max];
+
+            char * s = buf + digits_max;
+            char * const end = s;
+
+            while (num) {
+                char digit = (num & 0xf);
+                *--s = digit + ((digit > 9) ? 'a' - 10 : '0');
+                num /= 16;
+            }
+
+            buffer.write(s, end - s);
+        } else {
+            char buf[std::numeric_limits<N>::digits10 + 1];
+
+            char * s = buf + std::numeric_limits<N>::digits10 + 1;
+            char * const end = s;
+
+            while (num) {
+                *--s = (num % 10) + '0';
+                num /= 10;
+            }
+
+            buffer.write(s, end - s);
+        }
+    }
+
+    bool hex = false;
+};
+
+template<typename T>
+struct TypeFormatter<T*> : TypeFormatter<uintptr_t> {
+    constexpr TypeFormatter(StringView<char> specifier) : TypeFormatter<uintptr_t>(specifier) {
+        hex = true;
+    }
+
+    template<Buffer Buffer>
+    inline void emit(T *ptr, Buffer &buffer) const {
+        buffer.write("0x", 2);
+
+        TypeFormatter<uintptr_t>::emit((uintptr_t)ptr, buffer);
     }
 };
 
@@ -70,6 +151,8 @@ constexpr bool format_has_arg<TypeFormatter<ConstexprStringTag>>() {
 
 template<typename F, typename T>
 struct FormatStringChunk {
+    constexpr FormatStringChunk(F &&formatter, T &&next) : formatter(formatter), next(next) {}
+
     F formatter;
     T next;
 
@@ -89,6 +172,8 @@ struct FormatStringChunk {
 
 template<typename F>
 struct FormatStringEnd {
+    constexpr FormatStringEnd(F formatter) : formatter(formatter) {}
+
     F formatter;
 
     template<typename Buffer, size_t arg_index, typename ArgTuple>
@@ -105,16 +190,18 @@ template<typename String, size_t index, size_t arg_index, typename ArgTuple>
 consteval auto do_format_string();
 
 template<typename String, size_t index, size_t arg_index, typename ArgTuple>
-consteval inline auto do_format_arg() {
+consteval inline auto do_format_arg(StringView<typename String::char_type> specifier) {
     constexpr StringView<typename String::char_type> fmt = String{};
 
     if constexpr (index < fmt.len()) {
         return FormatStringChunk {
-            TypeFormatter<typename std::remove_const<decltype(ArgTuple{}.template get<arg_index>())>::type>{},
+            TypeFormatter<typename std::remove_const<decltype(ArgTuple{}.template get<arg_index>())>::type>(specifier),
             do_format_string<String, index, arg_index + 1, ArgTuple>()
         };
     } else {
-        return FormatStringEnd{ TypeFormatter<typename std::remove_const<decltype(ArgTuple{}.template get<arg_index>())>::type>{} };
+        return FormatStringEnd {
+            TypeFormatter<typename std::remove_const<decltype(ArgTuple{}.template get<arg_index>())>::type>(specifier)
+        };
     }
 }
 
@@ -135,6 +222,24 @@ consteval inline size_t index_of_brace_or_end() {
     }
 }
 
+template<typename String, size_t index>
+consteval inline StringView<typename String::char_type> format_specifier() {
+    constexpr StringView<typename String::char_type> fmt = String{};
+
+    if constexpr (index < fmt.len()) {
+        constexpr size_t end = index_of_brace_or_end<String, index>();
+        static_assert(fmt[end] == '}', "Invalid format: expected closing '}' after '{'");
+
+        if (end - index > 0) {
+            return fmt.substr(index, end - index);
+        } else {
+            return StringView<typename String::char_type>{};
+        }
+    } else {
+        static_assert(index < fmt.len(), "Invalid format: expected closing '}' after '{'");
+    }
+}
+
 template<typename String, size_t index, size_t arg_index, typename ArgTuple>
 consteval inline auto do_format_string() {
     constexpr StringView<typename String::char_type> fmt = String{};
@@ -143,19 +248,18 @@ consteval inline auto do_format_string() {
 
     constexpr size_t end = index_of_brace_or_end<String, index>();
     if constexpr (fmt[end] == '{') {
-        if constexpr (fmt[end + 1] == '}') {
-            // We have text inbetween format specifiers
-            if constexpr (end - index > 0) {
-                return FormatStringChunk {
-                    TypeFormatter<ConstexprStringTag>{ start, end - index },
-                    do_format_arg<String, end + 2, arg_index, ArgTuple>()
-                };
-            } else {
-                // No text inbetween format specifiers
-                return do_format_arg<String, end + 2, arg_index, ArgTuple>();
-            }
+        constexpr auto specifier = format_specifier<String, end + 1>();
+        constexpr size_t next = (end + 1) + specifier.len() + 1;
+
+        // We have text inbetween format specifiers
+        if constexpr (end - index > 0) {
+            return FormatStringChunk {
+                TypeFormatter<ConstexprStringTag>{ start, end - index },
+                do_format_arg<String, next, arg_index, ArgTuple>(specifier)
+            };
         } else {
-            static_assert(false, "Invalid format: expected closing '}' after '{'");
+            // No text inbetween format specifiers
+            return do_format_arg<String, next, arg_index, ArgTuple>(specifier);
         }
     } else {
         return FormatStringEnd{ TypeFormatter<ConstexprStringTag>{ start, end - index } };
@@ -166,14 +270,6 @@ template<typename String, typename ...Args>
 consteval auto make_format_string() {
     return do_format_string<String, 0, 0, Tuple<Args...>>();
 }
-
-struct FormatString {
-    using char_type = char;
-
-    constexpr operator StringView<char>() {
-        return "test {}, {}!";
-    }
-};
 
 template<typename String, typename ...Args>
 void format_n_impl(char *buffer, size_t size, Args&&... args) {
@@ -200,10 +296,18 @@ void format_n_impl(char *buffer, size_t size, Args&&... args) {
 
     formatter.template do_format<StringBuffer, 0, Tuple<Args...>>(b, Tuple<Args...>(std::forward<Args>(args)...));
 
-    buffer[b.size] = 0;
+    buffer[b.index] = 0;
+}
+
+template<typename String>
+void format_n_impl(char *buffer, size_t size) {
+    size_t fmt_len = StringView<typename String::char_type>(String{}).len();
+    memcpy(buffer, StringView<typename String::char_type>(String{}).str(), min(size, fmt_len));
+
+    buffer[min(size, fmt_len)] = 0;
 }
 
 #define format_n(buffer, size, str, ...) { \
     struct _FormatString { using char_type = char; constexpr operator StringView<char>() { return str; } };\
-    format_n_impl<_FormatString>(buffer, size, __VA_ARGS__); \
+    format_n_impl<_FormatString>(buffer, size __VA_OPT__(,) __VA_ARGS__); \
 }

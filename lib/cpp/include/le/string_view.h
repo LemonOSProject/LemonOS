@@ -13,9 +13,14 @@ public:
 
     constexpr StringView(const_pointer str) : m_str{str}, m_len{details_strlen(str)} {}
     constexpr StringView(const_pointer str, size_type len) : m_str{str}, m_len{len} {}
+    constexpr StringView() : m_str(nullptr), m_len(0) {}
 
     constexpr const_reference operator[](size_type i) const {
         return m_str[i];
+    }
+
+    constexpr const char_type *str() const {
+        return m_str;
     }
 
     constexpr size_type len() const {
