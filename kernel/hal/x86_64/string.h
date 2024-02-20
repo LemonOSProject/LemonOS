@@ -13,3 +13,12 @@ inline void *memset(void *dest, int c, size_t size) {
 
     return dest;
 }
+
+inline size_t strlen(const char *str) {
+    const char *end = str;
+    while (*end) {
+        end++;
+    }
+
+    return end - str;
+}

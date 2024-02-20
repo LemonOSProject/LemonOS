@@ -5,9 +5,10 @@ SECTIONS
 
     . += KERNEL_VMA;
 
+    ke_text_segment_start = .;
+
     .text : AT(ADDR(.text) - KERNEL_VMA)
     {
-        _code = .;
         *(.text)
         . = ALIGN(8);
 
@@ -20,31 +21,33 @@ SECTIONS
     
     .rodata : AT(ADDR(.rodata) - KERNEL_VMA)
     {
-        _rodata = .;
-        
         *(.rodata)
 
         . = ALIGN(4096);
     }
 
-   .data : AT(ADDR(.data) - KERNEL_VMA)
-   {
-        _data = .;
-        *(.data)
+    ke_text_segment_end = .;
+    ke_data_segment_start = .;
+
+    .data : AT(ADDR(.data) - KERNEL_VMA)
+    {
+            _data = .;
+            *(.data)
+            . = ALIGN(4096);
+    }
+
+    .bss : AT(ADDR(.bss) - KERNEL_VMA)
+    {
+        _bss = .;
+        *(.bss)
+
+            *(COMMON)
         . = ALIGN(4096);
-   }
+        _bss_end = .;
+    }
 
-   .bss : AT(ADDR(.bss) - KERNEL_VMA)
-   {
-       _bss = .;
-       *(.bss)
-
-        *(COMMON)
-       . = ALIGN(4096);
-       _bss_end = .;
-   }
-
-   _end = .;
+    ke_data_segment_end = .;
+    kernel_end = .;
 
    /DISCARD/ :
    {
