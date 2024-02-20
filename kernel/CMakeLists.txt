@@ -12,6 +12,9 @@ add_compile_options($<$<C_COMPILER_ID:Clang>:-fcolor-diagnostics>)
 include_directories(.)
 include_directories(./hal/x86_64)
 
+include_directories(../lib/cpp/include)
+include_directories(../lib/cxxshim/stage2/include)
+
 add_compile_options(-Wall -Wextra -fno-exceptions -fno-rtti)
 add_compile_options(-ffreestanding -nostdlib)
 add_compile_options(-mno-mmx -mno-sse -mno-sse2)

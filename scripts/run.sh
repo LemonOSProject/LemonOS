@@ -4,10 +4,10 @@ if [ -z $LEMOND ]; then
 	export LEMOND=$(dirname $(readlink -f "$0"))/..
 fi
 
-DISK_IMAGE=$LEMOND/build/lemon.img
+DISK_IMAGE=$LEMOND/build/lemon.iso
 
 qemu(){
-	qemu-system-x86_64 --enable-kvm -cpu host $DISK_IMAGE -no-reboot -no-shutdown -m 1024M -M q35 -smp 4 -serial stdio -netdev user,id=net0 -device e1000,netdev=net0,mac=DE:AD:69:BE:EF:42 -device ac97
+	qemu-system-x86_64 --enable-kvm -cpu host -cdrom $DISK_IMAGE -no-reboot -no-shutdown -m 1024M -M q35 -smp 4 -serial stdio -netdev user,id=net0 -device e1000,netdev=net0,mac=DE:AD:69:BE:EF:42 -device ac97
 }
 
 qemuefi(){
