@@ -8,6 +8,7 @@
 #include "string.h"
 #include "vmem.h"
 #include "panic.h"
+#include "cpu.h"
 
 #include "page_map.h"
 #include "mem_layout.h"
@@ -67,7 +68,7 @@ void limine_init();
 
 extern "C"
 void entry() {
-    limine_init();
+    hal::cpu::boot_init((void*)limine_init);
 
     asm volatile("cli");
     asm volatile("hlt");
