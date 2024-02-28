@@ -27,6 +27,16 @@ void boot_init(void *entry) {
     gdt_ptr.size = sizeof(gdt_entries) - 1;
     gdt_ptr.ptr = (uintptr_t)gdt_entries;
 
+    // Do the following:
+    // 1. Load the GDT
+    // 2. Push the necessary information for an IRETQ
+    // - Data segment
+    // - Stack pointer
+    // - Flags
+    // - Code segment
+    // - Instruction pointer
+    // 3. IRETQ - jump to 'entry'
+
     asm volatile("lgdt (%%rax); \
         push $0x10; \
         push %%rbp; \

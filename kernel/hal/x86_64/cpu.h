@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #define KERNEL_CS 0x8
 #define KERNEL_SS 0x10
 #define USER_CS 0x18
@@ -9,6 +11,13 @@
 #define ARCH_X86_64_TSS_LEN 108
 
 namespace hal::cpu {
+    struct InterruptFrame {
+        uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
+        uint64_t rdi, rsi, rbp, rdx, rcx, rbx, rax;
+        uint64_t err_code;
+        uint64_t rip, cs, rflags, rsp, ss;
+    };
+
     // Initialize the boot CPU
     void boot_init(void *entry);
 

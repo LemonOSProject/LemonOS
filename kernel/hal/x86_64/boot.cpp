@@ -9,6 +9,7 @@
 #include "vmem.h"
 #include "panic.h"
 #include "cpu.h"
+#include "idt.h"
 
 #include "page_map.h"
 #include "mem_layout.h"
@@ -109,6 +110,8 @@ void limine_init() {
         log_fatal("Failed to get kernel address from bootloader!");
         return;
     }
+
+    boot_initialize_idt();
 
     BOOT_ASSERT(kernel_address_request.response->virtual_base == kernel_base);
     kernel_phys_base = kernel_address_request.response->physical_base;
