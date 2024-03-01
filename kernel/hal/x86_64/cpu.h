@@ -23,4 +23,16 @@ namespace hal::cpu {
 
     // Set the TSS segment in the GDT to point to ptr
     void set_tss(void *ptr);
+
+    inline uint64_t cr2() {
+        volatile uint64_t v;
+        asm volatile("mov %%cr2, %%rax" : "=a"(v));
+        return v;
+    }
+
+    inline uint64_t cr3() {
+        volatile uint64_t v;
+        asm volatile("mov %%cr3, %%rax" : "=a"(v));
+        return v;
+    }
 }

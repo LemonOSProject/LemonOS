@@ -68,35 +68,35 @@ int boot_initialize_idt() {
 }
 
 void divide_by_zero(cpu::InterruptFrame *frame) {
-    lemon_panic("Divide by zero");
+    lemon_panic("Divide by zero", frame);
 }
 
 void non_maskable_interrupt(cpu::InterruptFrame *frame) {
-    lemon_panic("Non maskable interrupt");
+    lemon_panic("Non maskable interrupt", frame);
 }
 
 void invalid_opcode(cpu::InterruptFrame *frame) {
-    lemon_panic("Invalid opcode");
+    lemon_panic("Invalid opcode", frame);
 }
 
 void double_fault(cpu::InterruptFrame *frame) {
-    lemon_panic("Double fault");
+    lemon_panic("Double fault", frame);
 }
 
 void general_protection_fault(cpu::InterruptFrame *frame) {
-    lemon_panic("General protection fault");
+    lemon_panic("General protection fault", frame);
 }
 
 void page_fault(cpu::InterruptFrame *frame) {
-    lemon_panic("Page fault");
+    lemon_panic("Page fault", frame);
 }
 
 void fpe(cpu::InterruptFrame *frame) {
-    lemon_panic("Floating point exception");
+    lemon_panic("Floating point exception", frame);
 }
 
 void simd_fpe(cpu::InterruptFrame *frame) {
-    lemon_panic("SIMD exception");
+    lemon_panic("SIMD exception", frame);
 }
 
 }

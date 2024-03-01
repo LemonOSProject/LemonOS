@@ -2,6 +2,8 @@
 
 #include <mm/frame_table.h>
 
+#include <video/video.h>
+
 #include "boot_alloc.h"
 #include "logging.h"
 #include "serial.h"
@@ -92,8 +94,15 @@ void limine_init() {
 
     if (!fb) {
         log_info("No framebuffer found!\r\n");
-    } else for (size_t i = 0; i < fb->width * fb->height; i++) {
-        ((uint32_t*)fb->address)[i] = 0xff558888;
+    } else  {
+        log_info("framebuffer @ {}: {}x{} {}bpp", fb->address, fb->width, fb->height, fb->bpp);
+
+        if (fb->bpp == 32) {
+            video::set_mode(fb->address, fb->width, fb->height);
+            video::fill_rect(0, 0, fb->width, fb->height, 0xff558888);
+        } else {
+            log_info("Only 32-bit color is supported");
+        }
     }
 
     if (!limine_hhdm_request.response) {

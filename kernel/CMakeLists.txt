@@ -32,4 +32,10 @@ target_link_options(kernel.sys PRIVATE
     -T ${CMAKE_CURRENT_SOURCE_DIR}/hal/x86_64/link.ld -v
 )
 
+target_sources(kernel.sys PRIVATE
+    mm/frame_table.cpp
+
+    video/video.cpp
+)
+
 add_subdirectory(hal/x86_64)
