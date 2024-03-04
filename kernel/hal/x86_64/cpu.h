@@ -35,4 +35,8 @@ namespace hal::cpu {
         asm volatile("mov %%cr3, %%rax" : "=a"(v));
         return v;
     }
+
+    inline void flush_tlb(uintptr_t addr) {
+        asm volatile("invlpg %0" :: "m"(addr));
+    }
 }

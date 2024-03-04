@@ -7,6 +7,7 @@ Lemon OS is a UNIX-like 64-bit operating system written in C++.
 ## About Lemon OS (Work-in-progress branch)
 This branch involves a new user-kernel API and a lot of kernel changes, hence a lot doesn't work right now. Big plans!
 
+- Make things such as the UI and system architecture more unique and lemon-y, instead of writing another shitty nix clone
 - Safer syscall API (much less unchecked memory accesses)
 - vDSO to make system calls bc it's cool
 - Repo reorganisation

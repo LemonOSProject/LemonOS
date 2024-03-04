@@ -34,6 +34,7 @@ target_link_options(kernel.sys PRIVATE
 
 target_sources(kernel.sys PRIVATE
     mm/frame_table.cpp
+    mm/region_map.cpp
 
     video/video.cpp
 )
