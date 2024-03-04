@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <mm/frame_table.h>
-#include <util/page_allocator.h>
 
 #include "logging.h"
 #include "vmem.h"

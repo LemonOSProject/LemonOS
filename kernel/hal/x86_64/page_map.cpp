@@ -1,5 +1,3 @@
-#pragma once
-
 #include "page_map.h"
 
 #include "boot_alloc.h"
@@ -19,51 +17,6 @@ PageMap *PageMap::create(PageMap *pm) {
 
     return pm;
 }
-
-/*
-void PageMap::page_range_protect(uintptr_t base, uint64_t prot, uintptr_t num_pages) {
-    ensure_page_table_at(base, num_pages);
-
-    uintptr_t page_dir = (base >> PAGE_BITS_1G) & 511;
-    uintptr_t page_table = (base >> PAGE_BITS_2M) & 511;
-    uintptr_t page_index = (base >> PAGE_BITS_4K) & 511;
-
-    uintptr_t end_addr = base + (num_pages << PAGE_BITS_4K);
-
-    uintptr_t max_page_dir = (max_page_dir >> PAGE_BITS_1G) & 511;
-    uintptr_t max_page_table = 511;
-
-    do {
-        size_t max_page_table, max_page;
-
-        if (page_dir >= max_page_dir) {
-            max_page_table = (end_addr & PAGE_MASK_1G) >> PAGE_BITS_2M;
-        } else {
-            max_page_table = page_table + 511;
-        }
-
-        do {
-            if (max_page_table < 511 && page_table >= max_page_table) {
-                max_page = (end_addr & PAGE_MASK_2M) >> PAGE_BITS_4K;
-            } else {
-                max_page = page_index + 511;
-            }
-
-            while (page_index <= max_page) {
-                Page *pg = &m_page_table_entries[page_dir][page_table][page_index];
-                *pg = (~PAGE_MASK_4K) & (*pg) | prot;
-
-                page_index++;
-            }
-
-            page_table++;
-        } while (page_table <= max_page_table);
-
-        page_dir++;
-    } while (page_dir <= max_page_dir);
-}
-
-*/
 
 void PageMap::ensure_page_table_at(uintptr_t base, size_t num_pages) {
     base = CANONICAL_ADDRESS_MASK(base);
