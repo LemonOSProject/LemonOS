@@ -3,6 +3,7 @@ target_sources(kernel.sys PRIVATE
     boot_alloc.cpp
     cpu.cpp
     idt.cpp
-    serial.cpp
+    page_map.cpp
     panic.cpp
+    serial.cpp
 )

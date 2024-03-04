@@ -27,6 +27,16 @@ void lemon_panic(const char *reason, hal::cpu::InterruptFrame *frame) {
             hal::cpu::cr2(), hal::cpu::cr3());
 
         serial::debug_write_string(format_buffer);
+
+        uint64_t* rbp = (uint64_t*)frame->rbp;
+        uint64_t rip = 0;
+        while(rbp){
+            rip = *(rbp + 1);
+            rbp = (uint64_t*)(*rbp);
+
+            format_n(format_buffer, 128, "{:x}\r\n", rip);
+            serial::debug_write_string(format_buffer);
+        }
     }
 
     asm volatile("cli; hlt;");

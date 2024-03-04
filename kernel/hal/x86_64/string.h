@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 
+extern "C" {
+
 inline void *memcpy(void *dest, const void *src, size_t size) {
     asm ("rep movsb" :: "D"(dest), "S"(src), "c"(size) : "memory");
 
@@ -21,4 +23,6 @@ inline size_t strlen(const char *str) {
     }
 
     return end - str;
+}
+
 }
