@@ -33,9 +33,6 @@ void PageMap::ensure_page_table_at(uintptr_t base, size_t num_pages) {
                                                   (base >> PAGE_BITS_1G) +
                                                       ((num_pages - 1) >> (9 + 9)));
 
-
-    log_info("done allocating");
-
     if (!m_pml4) {
         auto frame = mm::alloc_frame();
         assert(frame);
@@ -113,10 +110,7 @@ void PageMap::page_range_map(uintptr_t base, uintptr_t physical_base, uint64_t p
                              uintptr_t num_pages) {
     assert(!(base & (PAGE_SIZE_4K - 1)));
     assert(!(physical_base & (PAGE_SIZE_4K - 1)));
-
-    log_info("mapping {:x}-{:x} to {:x}-{:x}", base, base + (num_pages << PAGE_BITS_4K),
-             physical_base, physical_base + (num_pages << PAGE_BITS_4K));
-
+    
     ensure_page_table_at(base, num_pages);
 
     uintptr_t page_index = (base >> PAGE_BITS_4K);
