@@ -1,17 +1,23 @@
 #pragma once
 
 #include <new>
+#include <utility>
 
-template<typename T>
-struct LazyConstructed {
+template <typename T> struct LazyConstructed {
     char data[sizeof(T)];
     bool is_initialized = false;
 
-    inline T &operator*() {
+    template <typename... Args> inline void construct(Args &&...args) {
         if (!is_initialized) {
-            new (data) T();
+            new (data) T(std::move(args)...);
 
             is_initialized = true;
+        }
+    }
+
+    inline T &operator*() {
+        if (!is_initialized) {
+            __builtin_unreachable();
         }
 
         return *(T *)data;
@@ -19,11 +25,13 @@ struct LazyConstructed {
 
     inline T *operator->() {
         if (!is_initialized) {
-            new (data) T();
-
-            is_initialized = true;
+            __builtin_unreachable();
         }
 
+        return (T *)data;
+    }
+
+    inline T *ptr() {
         return (T *)data;
     }
 };

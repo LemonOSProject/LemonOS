@@ -4,6 +4,7 @@
 #include "panic.h"
 
 #include <stdint.h>
+#include <vmem.h>
 
 struct IDTEntry {
     uint16_t base_low;
@@ -88,6 +89,30 @@ void general_protection_fault(cpu::InterruptFrame *frame) {
 }
 
 void page_fault(cpu::InterruptFrame *frame) {
+    ArchX86_64PageFaultError err = { (uint32_t)frame->err_code };
+
+    log_error("Page fault");
+
+    if (err.is_present()) {
+        log_error("present");
+    }
+
+    if (err.is_write()) {
+        log_error("write");
+    }
+
+    if (err.is_user()) {
+        log_error("user");
+    }
+
+    if (err.is_reserved()) {
+        log_error("reserved");
+    }
+
+    if (err.is_instruction()) {
+        log_error("instruction");
+    }
+
     lemon_panic("Page fault", frame);
 }
 

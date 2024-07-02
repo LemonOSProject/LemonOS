@@ -7,17 +7,14 @@
 
 #include <video/video.h>
 
+static int panic_count = 0;
+
 void lemon_panic(const char *reason, hal::cpu::InterruptFrame *frame) {
+    panic_count++;
+
     serial::debug_write_string("panic: ");
     serial::debug_write_string(reason);
     serial::debug_write_string("\r\n");
-
-    // Draw an orange border because why not
-    video::fill_rect(0, 0, video::get_screen_width(), video::get_screen_height(), 0);
-    video::fill_rect(0, 0, video::get_screen_width(), 4, 0xffdd8800);
-    video::fill_rect(0, video::get_screen_height() - 4, video::get_screen_width(), 4, 0xffdd8800);
-    video::fill_rect(0, 4, 4, video::get_screen_height() - 8, 0xffdd8800);
-    video::fill_rect(video::get_screen_width() - 4, 4, 4, video::get_screen_height() - 8, 0xffdd8800);
 
     if (frame) {
         char format_buffer[128];
@@ -38,6 +35,18 @@ void lemon_panic(const char *reason, hal::cpu::InterruptFrame *frame) {
             serial::debug_write_string(format_buffer);
         }
     }
+
+    if (panic_count > 1) {
+        serial::debug_write_string("Potential double fault, halting\r\n");
+        asm volatile("cli; hlt;");
+    }
+
+    // Draw an orange border because why not
+    video::fill_rect(0, 0, video::get_screen_width(), video::get_screen_height(), 0);
+    video::fill_rect(0, 0, video::get_screen_width(), 4, 0xffdd8800);
+    video::fill_rect(0, video::get_screen_height() - 4, video::get_screen_width(), 4, 0xffdd8800);
+    video::fill_rect(0, 4, 4, video::get_screen_height() - 8, 0xffdd8800);
+    video::fill_rect(video::get_screen_width() - 4, 4, 4, video::get_screen_height() - 8, 0xffdd8800);
 
     asm volatile("cli; hlt;");
 }

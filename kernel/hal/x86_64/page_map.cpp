@@ -21,17 +21,19 @@ PageMap *PageMap::create(PageMap *pm) {
 void PageMap::ensure_page_table_at(uintptr_t base, size_t num_pages) {
     base = CANONICAL_ADDRESS_MASK(base);
 
+    uint64_t base_page = base >> PAGE_BITS_4K;
+    uint64_t end_page = base_page + num_pages - 1;
+
     ensure_array_for_range<4, PAGES_PER_TABLE, 9>((void **)&m_page_table_entries,
-                                                  base >> PAGE_BITS_4K,
-                                                  (base >> PAGE_BITS_4K) + (num_pages - 1));
+                                                  base_page,
+                                                  end_page);
 
     ensure_array_for_range<3, PAGES_PER_TABLE, 9>((void **)&m_page_dir_entries,
-                                                  base >> PAGE_BITS_2M,
-                                                  (base >> PAGE_BITS_2M) + ((num_pages - 1) >> 9));
+                                                  base_page >> 9,
+                                                  (end_page >> 9));
 
-    ensure_array_for_range<2, PAGES_PER_TABLE, 9>((void **)&m_pdpt_entries, base >> PAGE_BITS_1G,
-                                                  (base >> PAGE_BITS_1G) +
-                                                      ((num_pages - 1) >> (9 + 9)));
+    ensure_array_for_range<2, PAGES_PER_TABLE, 9>((void **)&m_pdpt_entries, base_page >> (9 + 9),
+                                                  (end_page >> (9 + 9)));
 
     if (!m_pml4) {
         auto frame = mm::alloc_frame();
@@ -120,10 +122,18 @@ void PageMap::page_range_map(uintptr_t base, uintptr_t physical_base, uint64_t p
         Page *pg = &m_page_table_entries[(page_index >> 27) & 511][(page_index >> 18) & 511]
                                         [(page_index >> 9) & 511][page_index & 511];
 
+        if (num_pages == 1) {
+            log_info("pg: {:x}, addresses: {:x}", pg, 0xffff000000000000ul | (page_index << PAGE_BITS_4K));
+        }
+
         *pg = physical_base | prot;
 
+        asm volatile("invlpg (%0)" ::"r"(base));
+
         page_index++;
+
         physical_base += PAGE_SIZE_4K;
+        base += PAGE_SIZE_4K;
     }
 }
 

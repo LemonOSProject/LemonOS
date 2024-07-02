@@ -6,4 +6,5 @@ target_sources(kernel.sys PRIVATE
     page_map.cpp
     panic.cpp
     serial.cpp
+    vmem.cpp
 )

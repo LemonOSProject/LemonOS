@@ -33,4 +33,9 @@ if [ "$1" == "iso" ]; then
     exit 0
 fi
 
+if [ "$1" == "run" ]; then
+    $LEMON_BUILDROOT/scripts/run.sh
+    exit 0
+fi
+
 echo "$0 <toolchain>"

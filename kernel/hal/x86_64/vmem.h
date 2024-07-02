@@ -1,5 +1,10 @@
 #pragma once
 
+#include <mm/prot.h>
+
+#include <assert.h>
+#include <stddef.h>
+
 #define PAGES_PER_TABLE 512u
 
 #define PAGE_SIZE_4K (1ull << 12)
@@ -39,5 +44,87 @@ enum {
     ARCH_X86_64_PAGE_SIZE = (1u << 7),
     ARCH_X86_64_PAGE_GLOBAL = (1u << 8),
     // No-execute (NX) bit
-    ARCH_X86_64_PAGE_NX = (1ull << 64),
+    ARCH_X86_64_PAGE_NX = (1ull << 63),
 };
+
+struct ArchX86_64PageFaultError {
+    enum : uint32_t {
+        Present = 1,
+        Write = 2,
+        User = 4,
+        Reserved = 8,
+        Instruction = 16,
+    };
+
+    uint32_t code;
+
+    inline bool is_present() const {
+        return code & Present;
+    }
+
+    inline bool is_write() const {
+        return code & Write;
+    }
+
+    inline bool is_user() const {
+        return code & User;
+    }
+
+    inline bool is_reserved() const {
+        return code & Reserved;
+    }
+
+    inline bool is_instruction() const {
+        return code & Instruction;
+    }
+};
+
+namespace mm {
+
+class AddressSpace;
+
+} // namespace mm
+
+#include "logging.h"
+
+namespace hal {
+
+class PageMap;
+
+extern PageMap *kernel_page_map;
+extern mm::AddressSpace *kernel_address_space;
+
+void vmem_init(uintptr_t highest_usable_physical_address);
+
+inline uint64_t get_page_flags_for_prot(mm::MemoryProtection prot) {
+    assert(prot.read);
+    
+    uint64_t flags = ARCH_X86_64_PAGE_PRESENT;
+
+    if (!prot.execute) {
+        flags |= ARCH_X86_64_PAGE_NX;
+    }
+    
+    if (prot.write) {
+        flags |= ARCH_X86_64_PAGE_WRITE;
+    }
+
+    return flags;
+}
+
+/**
+ * @brief Creates an uncached memory mapping for I/O use
+ * 
+ * @param flags Flags for mapping, defaults to ARCH_X86_64_PAGE_CACHE_DISABLE
+*/
+void *create_io_mapping(uintptr_t base, size_t len, mm::MemoryProtection prot,
+    uint64_t flags);
+
+/**
+ * @brief Unmaps a previously mapped I/O region
+ * 
+ * Will panic if there is no corresponding I/O region at base.
+*/
+void destroy_io_mapping(uintptr_t base, size_t len, mm::MemoryProtection prot);
+
+} // namespace hal

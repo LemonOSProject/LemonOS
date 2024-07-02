@@ -14,4 +14,3 @@ extern void *ke_data_segment_end;
 extern void *kernel_end;
 
 #define ADDRESS_4GB (0x100000000ull)
-#define GET_VMEM_MAPPING(x) ((uintptr_t)(x) + direct_mapping_base)

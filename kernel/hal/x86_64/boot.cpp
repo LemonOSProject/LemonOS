@@ -1,7 +1,7 @@
 #include "limine.h"
 
+#include <mm/address_space.h>
 #include <mm/frame_table.h>
-#include <mm/region_map.h>
 
 #include <video/video.h>
 
@@ -15,14 +15,13 @@
 #include "vmem.h"
 
 #include "mem_layout.h"
-#include "page_map.h"
 
 #define BOOT_ASSERT(x) ((x) || (boot_assert_fail(#x, __FILE__, __LINE__), 0))
 
 LIMINE_BASE_REVISION(1);
 
 uintptr_t kernel_base = 0xffffffff80000000;
-uintptr_t direct_mapping_base = 0;
+uintptr_t direct_mapping_base = 0xffff800000000000;
 uintptr_t kernel_phys_base;
 
 void kernel_main();
@@ -40,13 +39,9 @@ struct limine_hhdm_request limine_hhdm_request = {.id = LIMINE_HHDM_REQUEST, .re
 struct limine_kernel_address_request kernel_address_request = {.id = LIMINE_KERNEL_ADDRESS_REQUEST,
                                                                .revision = 0};
 
-const char *memmap_type_strings[] = {"usable",       "reserved",   "ACPI reclaimable",
-                                     "ACPI NVS",     "bad memory", "bootloader reclaimable",
-                                     "kernel image", "framebuffer"};
-
-Page boot_pml4[PAGES_PER_TABLE] __attribute__((aligned(PAGE_SIZE_4K)));
-Page boot_pdpt[PAGES_PER_TABLE] __attribute__((aligned(PAGE_SIZE_4K)));
-Page boot_page_dir[PAGES_PER_TABLE] __attribute__((aligned(PAGE_SIZE_4K)));
+static const char *memmap_type_strings[] = {"usable",       "reserved",   "ACPI reclaimable",
+                                            "ACPI NVS",     "bad memory", "bootloader reclaimable",
+                                            "kernel image", "framebuffer"};
 
 static void boot_assert_fail(const char *why, const char *file, int line) {
     log_fatal("boot_assert_fail: {} at {}:{}\r\n", why, file, line);
@@ -228,55 +223,12 @@ void limine_init() {
              mm::num_non_paged_frames(), mm::num_free_frames(), entries, usable_pages,
              bootloader_reclaimable_pages);
 
-    mm::RegionMap kernel_region_map{kernel_base};
+    vmem_init(highest_usable_physical_address);
 
-    uintptr_t kernel_data_start = (uintptr_t)&ke_data_segment_start;
-    uintptr_t kernel_data_size =
-        (uintptr_t)&ke_data_segment_end - (uintptr_t)&ke_data_segment_start;
-    uintptr_t kernel_text_start = (uintptr_t)&ke_text_segment_start;
-    uintptr_t kernel_text_size =
-        (uintptr_t)&ke_text_segment_end - (uintptr_t)&ke_text_segment_start;
-
-    mm::MemoryRegion kernel_data = {
-        .base = kernel_data_start, .size = kernel_data_size, .prot = mm::MemoryProtection::rw()};
-
-    mm::MemoryRegion kernel_text = {
-        .base = kernel_text_start, .size = kernel_text_size, .prot = mm::MemoryProtection::rx()};
-
-    mm::MemoryRegion direct_mapping = {.base = direct_mapping_base,
-                                       .size = highest_usable_physical_address,
-                                       .prot = mm::MemoryProtection::rw()};
-
-    if (kernel_region_map.insert_region(&kernel_text)) {
-        lemon_panic("Failed to initialize kernel memory map");
-    }
-
-    if (kernel_region_map.insert_region(&kernel_data)) {
-        lemon_panic("Failed to initialize kernel memory map");
-    }
-
-    if (kernel_region_map.insert_region(&direct_mapping)) {
-        lemon_panic("Failed to initialize kernel memory map");
-    }
-
-    PageMap kernel_page_map;
-    kernel_page_map.page_range_map(
-        kernel_data.base, kernel_data.base - kernel_base + kernel_phys_base,
-        ARCH_X86_64_PAGE_WRITE | ARCH_X86_64_PAGE_PRESENT, kernel_data.size >> PAGE_BITS_4K);
-
-    kernel_page_map.page_range_map(kernel_text.base,
-                                   kernel_text.base - kernel_base + kernel_phys_base,
-                                   ARCH_X86_64_PAGE_PRESENT, kernel_text.size >> PAGE_BITS_4K);
-
-    kernel_page_map.page_range_map(direct_mapping.base, 0,
-                                   ARCH_X86_64_PAGE_WRITE | ARCH_X86_64_PAGE_PRESENT,
-                                   direct_mapping.size >> PAGE_BITS_4K);
-
-    log_info("switching to own page tables!");
-    asm volatile("mov %%rax, %%cr3" ::"a"(kernel_page_map.get_pml4()));
-
-    log_info("{} MB / {} MB RAM", mm::num_non_paged_frames() * 4 / 1024,
+    log_info("{} / {} MB RAM", mm::num_non_paged_frames() * 4 / 1024,
              (mm::num_free_frames() + mm::num_non_paged_frames()) * 4 / 1024);
+
+    cpu::local_apic_init();
 
     kernel_main();
 }

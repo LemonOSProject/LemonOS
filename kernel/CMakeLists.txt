@@ -35,10 +35,12 @@ target_link_options(kernel.sys PRIVATE
 target_sources(kernel.sys PRIVATE
     mm/kmalloc.cpp
     mm/frame_table.cpp
-    mm/region_map.cpp
+    mm/address_space.cpp
 
     tests/tests.cpp
     tests/kmalloc.cpp
+
+    util/runtime.cpp
 
     video/video.cpp
 )
