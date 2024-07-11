@@ -198,9 +198,11 @@ tools:
         pkgs_required:
           - mlibc-headers
         compile:
-          - args: ['ninja', 'clang']
+          - args: ['ninja', 'clang', 'builtins']
         install:
-          - args: ['ninja', 'install-clang', 'install-clang-resource-headers']
+          - args: ['ninja', 'install-clang', 'install-clang-resource-headers', 'install-builtins']
+          - args: ['mkdir', '-p', '@SYSROOT_DIR@/system/lib/']
+          - args: ['sh', '-c', 'cp -r "@PREFIX@"/lib/clang/*/lib/x86_64-unknown-lemon/* "@SYSROOT_DIR@/system/lib/."']
       - name: everything-else
         pkgs_required:
           - mlibc
@@ -320,6 +322,7 @@ tools:
         - args: ['./autogen.sh']
           environ:
             NOCONFIGURE: 'yes'
+    containerless: true
     configure:
       - args:
         - '@THIS_SOURCE_DIR@/configure'
@@ -805,6 +808,7 @@ tasks:
       - '@SOURCE_ROOT@/Scripts/buildinitrd.sh'
 
   - name: build-disk
+    containerless: true
     tools_required:
       - host-limine
     tasks_required:

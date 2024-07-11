@@ -20,11 +20,7 @@ else
 fi
 
 cleanup(){
-	sudo umount /mnt/Lemon
-
-	if [ -z $1 ]; then
-		sudo losetup -d ${LOOPBACK_DEVICE}
-	fi
+	sudo umount -dvf /mnt/Lemon
 }
 
 trap 'cleanup' 1
@@ -35,8 +31,4 @@ sudo sh -c "mount $DEVICE /mnt/Lemon; chown -R $USER /mnt/Lemon"
 cp -rau "$LEMOND/Build/sysroot/system/." /mnt/Lemon
 
 echo "Unmounting /mnt/Lemon..."
-sudo sh -c "umount /mnt/Lemon;rmdir /mnt/Lemon"
-
-if [ -z $1 ]; then
-	sudo losetup -d ${LOOPBACK_DEVICE}
-fi
+cleanup

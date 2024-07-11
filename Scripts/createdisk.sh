@@ -9,7 +9,7 @@ export LEMONDIR=$(pwd)
 
 mkdir -p Disks
 
-dd if=/dev/zero of=Disks/Lemon.img bs=512 count=6291456
+dd if=/dev/zero of=Disks/Lemon.img bs=512 count=2097152
 sfdisk Disks/Lemon.img < Scripts/partitions.sfdisk
 
 echo "Formatting disk!"
