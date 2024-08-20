@@ -69,7 +69,7 @@ void vmem_init(uintptr_t highest_usable_physical_address) {
                                    ARCH_X86_64_PAGE_WRITE | ARCH_X86_64_PAGE_PRESENT,
                                    direct_mapping_region.size >> PAGE_BITS_4K);
 
-    log_info("switching to own page tables!");
+    log_info("switching to own page tables at {:x}!", kernel_page_map->get_pml4());
     asm volatile("mov %%rax, %%cr3" ::"a"(kernel_page_map->get_pml4()));
 
     // Print the address map
@@ -79,6 +79,7 @@ void vmem_init(uintptr_t highest_usable_physical_address) {
         log_info("    {:x} - {:x} ({} KB) - {:x}", region->base, region->end(),
                  region->size / 1024, region->prot.prot);
     }
+    log_info("done.");
 }
 
 void *create_io_mapping(uintptr_t base, size_t len, const mm::MemoryProtection prot, uint64_t flags) {
@@ -86,6 +87,13 @@ void *create_io_mapping(uintptr_t base, size_t len, const mm::MemoryProtection p
     if (!region) {
         return nullptr;
     }
+
+    // Calculate padding
+    uintptr_t padding = base & (PAGE_SIZE_4K - 1);
+    uintptr_t aligned_base = base - padding;
+
+    // Round up len to PAGE_SIZE
+    len = (len + padding + PAGE_SIZE_4K - 1) & ~(PAGE_SIZE_4K - 1);
 
     // By default create I/O mappings as UC
     if (flags == 0) {
@@ -101,14 +109,13 @@ void *create_io_mapping(uintptr_t base, size_t len, const mm::MemoryProtection p
     }
 
     uint64_t page_flags = get_page_flags_for_prot(prot) | region->arch_flags;
-    log_info("page flags: {:x}, prot: {:x}, arch_flags: {:x}", page_flags, get_page_flags_for_prot(prot), flags);
 
-    kernel_page_map->page_range_map(region->base, base, page_flags, NUM_PAGES_4K(len));
+    kernel_page_map->page_range_map(region->base, aligned_base, page_flags, NUM_PAGES_4K(len));
 
-    return (void *)region->base;
+    return (void *)(region->base + padding);
 }
 
-void destroy_io_mapping(uintptr_t base, size_t len, mm::MemoryProtection prot) {
+void destroy_io_mapping(void *base) {
 
 }
 

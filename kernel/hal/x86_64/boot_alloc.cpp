@@ -3,7 +3,7 @@
 #include <logging.h>
 #include <stdint.h>
 
-#define BOOT_MEMORY_POOL_SIZE 0x20000
+#define BOOT_MEMORY_POOL_SIZE 0x10000
 
 // Static 128KB memory for boot time allocations
 static uint8_t boot_memory_pool[BOOT_MEMORY_POOL_SIZE] __attribute__((aligned(4096)));

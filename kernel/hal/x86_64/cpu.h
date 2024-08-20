@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "acpi/tables.h"
+
 #define KERNEL_CS 0x8
 #define KERNEL_SS 0x10
 #define USER_CS 0x18
@@ -15,6 +17,8 @@
 namespace hal::cpu {
 
 struct CPU {
+    uint32_t id;
+
     void *local_apic_mapping;
 };
 
@@ -36,6 +40,8 @@ void local_apic_eoi();
 void set_tss(void *ptr);
 
 void disable_8259_pic();
+
+void register_apic(acpi_madt_t *apic);
 
 inline uint64_t cr2() {
     volatile uint64_t v;

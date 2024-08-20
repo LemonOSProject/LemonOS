@@ -1,6 +1,10 @@
 #include "cpu.h"
 
+#include <le/list.h>
+
 #include <stdint.h>
+
+#include "acpi/madt.h"
 
 #include "io_ports.h"
 #include "logging.h"
@@ -70,6 +74,7 @@ struct {
 } __attribute__((packed)) gdt_ptr;
 
 CPU cpu0;
+List<CPU *> *cpus_to_initialize;
 
 inline uint32_t *apic_reg(uintptr_t register_offset) {
     return (uint32_t*)((uintptr_t)cpu0.local_apic_mapping + register_offset);
@@ -107,6 +112,62 @@ void boot_init(void *entry) {
         push %0; \
         iretq; \
         " :: "m"(entry), "a"(&gdt_ptr) : "memory");
+}
+
+void register_lapic(acpi::MADTEntry *entry) {
+    log_info("Local APIC, id: {}, apic_id: {}, flags: {:x}", entry->lapic.apic_id, entry->lapic.apic_id, entry->lapic.flags);
+    if (entry->lapic.apic_id == 0) {
+        // Ignore the BSP
+        return;
+    }
+
+    cpus_to_initialize = new List<CPU *>();
+
+    if (entry->lapic.flags & acpi::MADT_LAPIC_ENABLED) {
+        // APIC can be enabled!
+        auto *cpu = new CPU();
+        cpu->id = entry->lapic.apic_id;
+
+        cpus_to_initialize->push_back(cpu);
+    }
+}
+
+void register_apic(acpi_madt_t *apic) {
+    log_info("Scanning MADT, address: {:x}, flags: {:x}", apic->local_controller_addr, apic->flags);
+
+    uint8_t *madt_entries = apic->madt_entries;
+    while (madt_entries < ((uint8_t *)apic) + apic->header.length) {
+        acpi::MADTEntry *entry = (acpi::MADTEntry *)madt_entries;
+
+        switch (entry->entry_type) {
+        case acpi::MADT_LAPIC:
+            register_lapic(entry);
+            break;
+        case acpi::MADT_IOAPIC:
+            log_info("IO APIC, id: {}, address: {:x}, gsi_base: {:x}", entry->ioapic.id, entry->ioapic.address, entry->ioapic.gsi_base);
+            break;
+        case acpi::MADT_ISO:
+            log_info("ISO, bus: {}, source: {}, gsi: {:x}, flags: {:x}", entry->iso.bus, entry->iso.source, entry->iso.gsi, entry->iso.flags);
+            break;
+        case acpi::MADT_NMI_SOURCE:
+            log_info("NMI Source, source: {}, flags: {:x}, gsi: {}", entry->nmi_source.source, entry->nmi_source.flags, entry->nmi_source.gsi);
+            break;
+        case acpi::MADT_NMI:
+            log_info("NMI, processor: {}, flags: {:x}, lint: {}", entry->nmi.processor, entry->nmi.flags, entry->nmi.lint);
+            break;
+        case acpi::MADT_LAPIC_ADDR_OVERRIDE:
+            log_info("Local APIC Address Override, address: {:x}", entry->lapic_addr_override.address);
+            break;
+        case acpi::MADT_X2APIC:
+            log_info("x2APIC, id: {}, flags: {:x}, acpi_id: {}", entry->x2apic.x2apic_id, entry->x2apic.flags, entry->x2apic.acpi_id);
+            break;
+        default:
+            log_fatal("Unknown MADT entry type: {}", entry->entry_type);
+            break;
+        }
+
+        madt_entries += entry->length;
+    }
 }
 
 void local_apic_init() {

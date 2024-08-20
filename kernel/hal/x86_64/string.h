@@ -25,4 +25,27 @@ inline size_t strlen(const char *str) {
     return end - str;
 }
 
+inline int strcmp(const char *str1, const char *str2) {
+    while (*str1 && *str2 && *str1 == *str2) {
+        str1++;
+        str2++;
+    }
+
+    return (*str1) - (*str2);
+}
+
+inline int strncmp(const char *str1, const char *str2, size_t n) {
+    while (n && *str1 && *str2 && *str1 == *str2) {
+        str1++;
+        str2++;
+        n--;
+    }
+
+    if (!n) {
+        return 0;
+    }
+
+    return (*str1) - (*str2);
+}
+
 }

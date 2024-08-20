@@ -5,6 +5,7 @@
 
 #include <video/video.h>
 
+#include "acpi/acpi.h"
 #include "boot_alloc.h"
 #include "cpu.h"
 #include "idt.h"
@@ -29,15 +30,21 @@ void kernel_main();
 namespace hal::boot {
 
 struct limine_framebuffer_request framebuffer_request = {.id = LIMINE_FRAMEBUFFER_REQUEST,
-                                                         .revision = 0};
+                                                         .revision = 0,
+                                                         .response = {}
+                                                        };
 
-struct limine_memmap_request memory_map_request = {.id = LIMINE_MEMMAP_REQUEST, .revision = 0};
+struct limine_memmap_request memory_map_request = {.id = LIMINE_MEMMAP_REQUEST, .revision = 0,
+    .response = {}};
 
 // Asks the bootloader to map the first 4GB into high virtual memory
-struct limine_hhdm_request limine_hhdm_request = {.id = LIMINE_HHDM_REQUEST, .revision = 1};
+struct limine_hhdm_request limine_hhdm_request = {.id = LIMINE_HHDM_REQUEST, .revision = 1,
+    .response = {}};
 
 struct limine_kernel_address_request kernel_address_request = {.id = LIMINE_KERNEL_ADDRESS_REQUEST,
                                                                .revision = 0};
+
+struct limine_rsdp_request rsdp_request = {.id = LIMINE_RSDP_REQUEST, .revision = 0, .response = {}};
 
 static const char *memmap_type_strings[] = {"usable",       "reserved",   "ACPI reclaimable",
                                             "ACPI NVS",     "bad memory", "bootloader reclaimable",
@@ -229,6 +236,16 @@ void limine_init() {
              (mm::num_free_frames() + mm::num_non_paged_frames()) * 4 / 1024);
 
     cpu::local_apic_init();
+
+    if(rsdp_request.response) {
+        acpi::rsdp_address = rsdp_request.response->address;
+
+        if (acpi::scan_tables()) {
+            log_fatal("Failed to scan ACPI tables");
+        }
+    } else {
+        log_error("acpi: Failed to get RSDP from bootloader!");
+    }
 
     kernel_main();
 }

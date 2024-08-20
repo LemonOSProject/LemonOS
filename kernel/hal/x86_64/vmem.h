@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <stddef.h>
 
+#include "mem_layout.h"
+
 #define PAGES_PER_TABLE 512u
 
 #define PAGE_SIZE_4K (1ull << 12)
@@ -112,19 +114,23 @@ inline uint64_t get_page_flags_for_prot(mm::MemoryProtection prot) {
     return flags;
 }
 
+inline uintptr_t get_direct_mapping(uintptr_t physical_address) {
+    return physical_address + direct_mapping_base;
+}
+
 /**
  * @brief Creates an uncached memory mapping for I/O use
  * 
  * @param flags Flags for mapping, defaults to ARCH_X86_64_PAGE_CACHE_DISABLE
 */
 void *create_io_mapping(uintptr_t base, size_t len, mm::MemoryProtection prot,
-    uint64_t flags);
+    uint64_t flags = ARCH_X86_64_PAGE_CACHE_DISABLE);
 
 /**
  * @brief Unmaps a previously mapped I/O region
  * 
  * Will panic if there is no corresponding I/O region at base.
 */
-void destroy_io_mapping(uintptr_t base, size_t len, mm::MemoryProtection prot);
+void destroy_io_mapping(void *base);
 
 } // namespace hal
