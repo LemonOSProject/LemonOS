@@ -19,6 +19,9 @@ add_compile_options(-Wall -Wextra -fno-exceptions -fno-rtti)
 add_compile_options(-ffreestanding -nostdlib)
 add_compile_options(-mno-mmx -mno-sse -mno-sse2)
 add_compile_options(-mcmodel=large -mno-red-zone -fno-pic -fno-pie)
+add_compile_options(-mlarge-data-threshold=131072)
+
+add_link_options(-mcmodel=large)
 
 add_compile_options(-O0 -g)
 add_compile_options(--target=x86_64-elf)

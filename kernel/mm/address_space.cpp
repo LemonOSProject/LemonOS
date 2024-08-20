@@ -20,7 +20,6 @@ int AddressSpace::insert_region(MemoryRegion *region) {
     while (it->get_next()) {
         // We have found a gap, insert our region
         if (it->base >= region->end()) {
-
             // If this region is the head, we need to update the head!
             auto *new_head = it->insert_before(region);;
             if (m_regions == it) {
@@ -44,6 +43,7 @@ int AddressSpace::insert_region(MemoryRegion *region) {
 
 int AddressSpace::allocate_range_for_region(MemoryRegion *region, size_t size, MemoryProtection prot) {
     assert(!(size & (PAGE_SIZE_4K - 1)));
+    assert(size > 0);
 
     if (!m_regions) {
         // If there are no regions initialize a new list
@@ -62,10 +62,10 @@ int AddressSpace::allocate_range_for_region(MemoryRegion *region, size_t size, M
     while (it->get_next()) {
         // We have found a gap, insert our region
         if (it->base - last_region_end >= size) {
-
             // If this region is the head, we need to update the head!
+            auto *new_head = it->insert_before(region);
             if (m_regions == it) {
-                m_regions = it->insert_before(region);
+                m_regions = new_head;
             }
 
             region->base = last_region_end;
@@ -78,6 +78,8 @@ int AddressSpace::allocate_range_for_region(MemoryRegion *region, size_t size, M
         last_region_end = it->end();
         it = it->get_next();
     }
+
+    last_region_end = it->end();
 
     assert(last_region_end > 0);
     // Make sure we do not overflow and have enough space to fit another region at the end

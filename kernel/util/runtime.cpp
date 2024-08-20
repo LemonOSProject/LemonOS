@@ -6,6 +6,14 @@ void *operator new(size_t sz) {
     return mm::kmalloc(sz);
 }
 
+void *operator new[](size_t sz) {
+    return mm::kmalloc(sz);
+}
+
 void operator delete(void *ptr) {
+    mm::kfree(ptr);
+}
+
+void operator delete[](void *ptr) {
     mm::kfree(ptr);
 }

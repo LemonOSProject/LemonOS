@@ -49,9 +49,12 @@ SECTIONS
     ke_data_segment_end = .;
     kernel_end = .;
 
-   /DISCARD/ :
-   {
+    /DISCARD/ :
+    {
         *(.comment)
         *(.note.gnu.build-id)
-   }
+        *(.ldata)
+        *(.lrodata)
+        *(.lbss)
+    }
 }

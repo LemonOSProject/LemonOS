@@ -173,10 +173,18 @@ struct SlabAllocator {
 LazyConstructed<SlabAllocator> slab_allocator;
 
 void *kmalloc(size_t sz) {
+    if (!slab_allocator.is_initialized) {
+        slab_allocator.construct();
+    }
+
     return slab_allocator->alloc(sz);
 }
 
 void kfree(void *p) {
+    if (!slab_allocator.is_initialized) {
+        slab_allocator.construct();
+    }
+    
     return slab_allocator->free(p);
 }
 
