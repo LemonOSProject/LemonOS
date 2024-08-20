@@ -132,7 +132,7 @@ struct TypeFormatter<T*> : TypeFormatter<uintptr_t> {
     }
 
     template<Buffer Buffer>
-    inline void emit(T *ptr, Buffer &buffer) const {
+    inline void emit(const T *ptr, Buffer &buffer) const {
         buffer.write("0x", 2);
 
         TypeFormatter<uintptr_t>::emit((uintptr_t)ptr, buffer);
@@ -272,7 +272,7 @@ consteval auto make_format_string() {
 }
 
 template<typename String, typename ...Args>
-void format_n_impl(char *buffer, size_t size, Args&&... args) {
+void format_n_impl(char *buffer, size_t size, Args... args) {
     constexpr auto formatter = make_format_string<String, Args...>();
 
     struct StringBuffer {
@@ -294,7 +294,7 @@ void format_n_impl(char *buffer, size_t size, Args&&... args) {
         char *buffer;
     } b {0, size - 1, buffer};
 
-    formatter.template do_format<StringBuffer, 0, Tuple<Args...>>(b, Tuple<Args...>(std::forward<Args>(args)...));
+    formatter.template do_format<StringBuffer, 0, Tuple<Args...>>(b, Tuple<Args...>(std::move(args)...));
 
     buffer[b.index] = 0;
 }

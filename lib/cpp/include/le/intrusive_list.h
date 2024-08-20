@@ -58,6 +58,10 @@ template <typename T, typename Tag = void> struct IntrusiveListNode {
         val->prev = prev;
         val->next = this;
 
+        if (prev) {
+            prev->next = val;
+        }
+
         prev = val;
 
         return val;

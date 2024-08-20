@@ -1,5 +1,7 @@
 #pragma once
 
+#include <assert.h>
+
 #include <new>
 #include <utility>
 
@@ -17,6 +19,7 @@ template <typename T> struct LazyConstructed {
 
     inline T &operator*() {
         if (!is_initialized) {
+            assert(is_initialized);
             __builtin_unreachable();
         }
 
@@ -25,6 +28,7 @@ template <typename T> struct LazyConstructed {
 
     inline T *operator->() {
         if (!is_initialized) {
+            assert(is_initialized);
             __builtin_unreachable();
         }
 
