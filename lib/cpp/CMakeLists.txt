@@ -10,9 +10,11 @@ include_directories(include)
 add_executable(formatter_test tests/formatter.cpp)
 add_executable(list_test tests/list.cpp)
 add_executable(tuple_test tests/tuple.cpp)
+add_executable(pq_test tests/pq.cpp)
 
 enable_testing()
 
 add_test(NAME formatter_test COMMAND $<TARGET_FILE:formatter_test>)
 add_test(NAME list_test COMMAND $<TARGET_FILE:list_test>)
 add_test(NAME tuple_test COMMAND $<TARGET_FILE:tuple_test>)
+add_test(NAME pq_test COMMAND $<TARGET_FILE:pq_test>)
