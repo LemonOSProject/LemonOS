@@ -41,7 +41,11 @@ void set_tss(void *ptr);
 
 void disable_8259_pic();
 
+// Process the MADT
 void register_apic(acpi_madt_t *apic);
+
+// Allocate a GSI (global system interrupt) from the APICs
+uint32_t io_apic_allocate_gsi();
 
 inline uint64_t cr2() {
     volatile uint64_t v;

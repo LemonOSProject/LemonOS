@@ -9,6 +9,7 @@
 #include "io_ports.h"
 #include "logging.h"
 #include "mem_layout.h"
+#include "irq.h"
 #include "vmem.h"
 
 #define NUM_GDT_ENTRIES 7
@@ -17,7 +18,21 @@
 
 // Set the spurious interrupt vector register to enable the APIC
 #define APIC_SIVR_DEFAULT (0xff) 
+#define APIC_SIVR_APIC_ENABLE (1 << 8)
 #define APIC_EOI_VALUE (0)
+
+#define IO_APIC_RED_TABLE_ENT(x) (0x10 + 2 * x)
+#define IO_APIC_RED_MASK (1 << 16)
+#define IO_APIC_REG_SEL 0
+#define IO_APIC_IO_WIN 0x4
+
+namespace hal {
+
+void unhandled_irq(cpu::InterruptFrame *frame) {
+    log_error("Unhandled interrupt");
+}
+
+}
 
 namespace hal::cpu {
 
@@ -30,6 +45,38 @@ enum class APICRegister {
     TaskPriorityRegister = 0x80,
     EndOfInterrupt = 0xb0,
     SpuriousInterruptVectorRegister = 0xf0,
+};
+
+enum {
+    IO_APIC_REG_ID = 0x0, // ID Register
+    IO_APIC_REG_VER = 0x1, // Version Register
+    IO_APIC_REG_ARB_ID = 0x2, // I/O APIC Arbitration ID
+    IO_APIC_REG_RED_TBL = 0x10 // I/O APIC Redirection Table Start
+};
+
+struct IOAPIC {
+    void *mapping;
+    uintptr_t address;
+
+    // First interrupt this apic handles
+    uint32_t interrupt_base;
+    // Last interrupt this apic handles
+    uint32_t interrupt_end;
+
+    void write32(uint32_t reg, uint32_t value) {
+        *((uint32_t *)mapping + IO_APIC_REG_SEL) = reg;
+        *((uint32_t *)mapping + IO_APIC_IO_WIN) = value;
+    }
+
+    uint32_t read32(uint32_t reg) {
+        *((uint32_t *)mapping + IO_APIC_REG_SEL) = reg;
+        return *(((uint32_t *)mapping) + IO_APIC_IO_WIN);
+    }
+
+    void redirect(uint32_t source, uint8_t vector, uint32_t delivery) {
+        write32(IO_APIC_RED_TABLE_ENT(source), delivery | vector);
+        write32(IO_APIC_RED_TABLE_ENT(source) + 0x1, 0);
+    }
 };
 
 enum class APICMode {
@@ -75,6 +122,8 @@ struct {
 
 CPU cpu0;
 List<CPU *> *cpus_to_initialize;
+List<IOAPIC *> *io_apics;
+List<GSI *> *global_irqs;
 
 inline uint32_t *apic_reg(uintptr_t register_offset) {
     return (uint32_t*)((uintptr_t)cpu0.local_apic_mapping + register_offset);
@@ -116,12 +165,11 @@ void boot_init(void *entry) {
 
 void register_lapic(acpi::MADTEntry *entry) {
     log_info("Local APIC, id: {}, apic_id: {}, flags: {:x}", entry->lapic.apic_id, entry->lapic.apic_id, entry->lapic.flags);
+    
     if (entry->lapic.apic_id == 0) {
         // Ignore the BSP
         return;
     }
-
-    cpus_to_initialize = new List<CPU *>();
 
     if (entry->lapic.flags & acpi::MADT_LAPIC_ENABLED) {
         // APIC can be enabled!
@@ -132,8 +180,54 @@ void register_lapic(acpi::MADTEntry *entry) {
     }
 }
 
+void register_io_apic(acpi::MADTEntry *entry) {
+    void *io_apic_mapping = create_io_mapping(entry->ioapic.address, PAGE_SIZE_4K,
+        mm::MemoryProtection::rw());
+
+    assert(io_apic_mapping);
+
+    auto io_apic = new IOAPIC;
+    assert(io_apic);
+
+    *io_apic = {
+        .mapping = io_apic_mapping,
+        .address = entry->ioapic.address,
+        .interrupt_base = entry->ioapic.gsi_base,
+        .interrupt_end = 0,
+    }; 
+
+    uint32_t interrupt_count = (io_apic->read32(IO_APIC_REG_VER) >> 16) & 0xff;
+    io_apic->interrupt_end = interrupt_count;
+
+    log_info("IO APIC, id: {}, address: {:x}, interrupt range: {:x} - {:x}", entry->ioapic.id,
+        entry->ioapic.address, io_apic->interrupt_base, io_apic->interrupt_end);
+
+    // Mask all GSIs
+    for (auto i = io_apic->interrupt_base; i <= io_apic->interrupt_end; i++) {
+        auto *gsi = new GSI {
+            .gsi = i,
+            .vector = 0,
+            .is_iso = false,
+            .legacy_irq = 0,
+            .io_apic = io_apic,
+        };
+
+        global_irqs->push_back(gsi);
+
+        io_apic->redirect(i, 0, IO_APIC_RED_MASK);
+    }
+
+    io_apics->push_back(io_apic);
+}
+
 void register_apic(acpi_madt_t *apic) {
+    cpus_to_initialize = new List<CPU *>();
+    io_apics = new List<IOAPIC *>();
+    global_irqs = new List<GSI *>();
+
     log_info("Scanning MADT, address: {:x}, flags: {:x}", apic->local_controller_addr, apic->flags);
+
+    List<acpi::MADTEntry *> isos;
 
     uint8_t *madt_entries = apic->madt_entries;
     while (madt_entries < ((uint8_t *)apic) + apic->header.length) {
@@ -144,10 +238,10 @@ void register_apic(acpi_madt_t *apic) {
             register_lapic(entry);
             break;
         case acpi::MADT_IOAPIC:
-            log_info("IO APIC, id: {}, address: {:x}, gsi_base: {:x}", entry->ioapic.id, entry->ioapic.address, entry->ioapic.gsi_base);
+            register_io_apic(entry);
             break;
         case acpi::MADT_ISO:
-            log_info("ISO, bus: {}, source: {}, gsi: {:x}, flags: {:x}", entry->iso.bus, entry->iso.source, entry->iso.gsi, entry->iso.flags);
+            isos.push_back(entry);
             break;
         case acpi::MADT_NMI_SOURCE:
             log_info("NMI Source, source: {}, flags: {:x}, gsi: {}", entry->nmi_source.source, entry->nmi_source.flags, entry->nmi_source.gsi);
@@ -168,6 +262,25 @@ void register_apic(acpi_madt_t *apic) {
 
         madt_entries += entry->length;
     }
+
+    // Process interrupt source overrides
+    for (auto *entry : isos) {
+        bool found = false;
+        for (auto *irq : *global_irqs) {
+            if (irq->gsi == entry->iso.gsi) {
+                irq->is_iso = true;
+                irq->legacy_irq = entry->iso.source;
+
+                log_info("ISO mapping legacy IRQ {:x} -> GSI {:x}", entry->iso.source, entry->iso.gsi, entry->iso.gsi);
+
+                found = true;
+            }
+        }
+
+        if (!found) {
+            log_error("GSI {:x} for ISO mapping {:x} -> {:x} not found", entry->iso.gsi, entry->iso.source, entry->iso.gsi);
+        }
+    }
 }
 
 void local_apic_init() {
@@ -183,7 +296,8 @@ void local_apic_init() {
     cpu0.local_apic_mapping = apic_mapping;
 
     // Enable the local APIC
-    apic_write(APICRegister::SpuriousInterruptVectorRegister, APIC_SIVR_DEFAULT);
+    auto sivr = apic_read(APICRegister::SpuriousInterruptVectorRegister);
+    apic_write(APICRegister::SpuriousInterruptVectorRegister, sivr | APIC_SIVR_DEFAULT | APIC_SIVR_APIC_ENABLE);
 }
 
 void local_apic_eoi() {
@@ -209,6 +323,22 @@ void disable_8259_pic() {
     // Mask all interrupts
     io::out8(PIC1_IO_PORT + 1, 0xff);
     io::out8(PIC2_IO_PORT + 1, 0xff);
+}
+
+void GSI::redirect(uint8_t vector) {
+    if (io_apic) {
+        io_apic->redirect(gsi, vector, 0);
+    }
+}
+
+GSI *get_gsi(uint32_t gsi) {
+    for (auto *irq : *global_irqs) {
+        if (irq->gsi == gsi) {
+            return irq;
+        }
+    }
+
+    return nullptr;
 }
 
 }
