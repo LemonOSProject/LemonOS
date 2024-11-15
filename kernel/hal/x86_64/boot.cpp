@@ -77,6 +77,10 @@ void limine_init() {
     }
 
     limine_framebuffer *fb = nullptr;
+    void *fb_addr;
+    uint32_t fb_width;
+    uint32_t fb_height;
+
     if (framebuffer_request.response && framebuffer_request.response->framebuffer_count >= 1) {
         fb = framebuffer_request.response->framebuffers[0];
     }
@@ -85,6 +89,10 @@ void limine_init() {
         log_info("No framebuffer found!\r\n");
     } else {
         log_info("framebuffer @ {}: {}x{} {}bpp", fb->address, fb->width, fb->height, fb->bpp);
+
+        fb_addr = fb->address;
+        fb_width = fb->width;
+        fb_height = fb->height;
 
         if (fb->bpp == 32) {
             video::set_mode(fb->address, fb->width, fb->height);
@@ -231,6 +239,17 @@ void limine_init() {
              bootloader_reclaimable_pages);
 
     vmem_init(highest_usable_physical_address);
+
+    // Remap the framebuffer
+    if (fb) {
+        uint64_t physical_addr = (uint64_t)fb_addr - direct_mapping_base;
+        uint64_t fb_size = fb_width * fb_height * 4;
+
+        // TODO: map as WC (write combining)
+        fb_addr = create_io_mapping(physical_addr, ROUND_TO_PAGE_4K(fb_size), mm::MemoryProtection::rw());
+
+        video::set_mode(fb_addr, fb_width, fb_height);
+    }
 
     log_info("{} / {} MB RAM", mm::num_non_paged_frames() * 4 / 1024,
              (mm::num_free_frames() + mm::num_non_paged_frames()) * 4 / 1024);
