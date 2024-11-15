@@ -91,7 +91,7 @@ public:
         clear();
 
         for (const auto &i : l) {
-            add_back(i);
+            push_back(i);
         }
 
         return *this;
@@ -123,7 +123,7 @@ public:
         m_num = 0;
     }
 
-    T &add_back(T obj) {
+    T &push_back(T obj) {
         ListNode<T>* node = allocate_node();
         assert(node);
 
@@ -144,7 +144,7 @@ public:
         return node->obj;
     }
 
-    T& add_front(T obj) {
+    T& push_front(T obj) {
         ListNode<T>* node = allocate_node();
 
         new (&node->obj) T(std::move(obj));

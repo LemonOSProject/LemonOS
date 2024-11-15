@@ -3,8 +3,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include <le/intrusive_list.h>
-
 namespace mm {
 
 /**

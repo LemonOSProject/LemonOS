@@ -32,6 +32,7 @@
 #define CANONICAL_ADDRESS_MASK(x) ((x) & (~0xffff000000000000ull))
 
 #define NUM_PAGES_4K(x) ((x + PAGE_SIZE_4K - 1) >> PAGE_BITS_4K)
+#define ROUND_TO_PAGE_4K(x) (((x) + PAGE_MASK_4K) & ~PAGE_MASK_4K)
 
 #define PAGE_FRAME(page) ((page) & (~0x3fffull))
 

@@ -5,9 +5,9 @@
 int main() {
     List<int> list;
 
-    list.add_back(1);
-    list.add_back(2);
-    list.add_back(3);
+    list.push_back(1);
+    list.push_back(2);
+    list.push_back(3);
 
     int i = 1;
     for (const auto &item : list) {
