@@ -25,6 +25,10 @@ union MemoryProtection {
         return {{true, false, false}};
     }
 
+    static inline consteval MemoryProtection wo() {
+        return {{false, true, false}};
+    }
+
     static inline consteval MemoryProtection none() {
         return {{false, false, false}};
     }

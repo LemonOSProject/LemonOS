@@ -3,10 +3,12 @@
 #include <mm/address_space.h>
 #include <mm/frame_table.h>
 
+#include <thread/timer.h>
 #include <video/video.h>
 
 #include "acpi/acpi.h"
 #include "boot_alloc.h"
+#include "clock.h"
 #include "cpu.h"
 #include "idt.h"
 #include "logging.h"
@@ -26,6 +28,12 @@ uintptr_t direct_mapping_base = 0xffff800000000000;
 uintptr_t kernel_phys_base;
 
 void kernel_main();
+
+namespace hal {
+
+TimerQueue *global_timer_queue;
+
+}
 
 namespace hal::boot {
 
@@ -266,6 +274,17 @@ void limine_init() {
         log_error("acpi: Failed to get RSDP from bootloader!");
     }
 
+    auto *clk = get_best_clock_device();
+    if (!clk) {
+        lemon_panic("No suitable clock device found.");
+    }
+
+    auto time_since_boot = clk->ns_since_boot();
+    log_info("Time since boot: {}.{}ms", time_since_boot / 1000000, time_since_boot % 1000000 / 1000);
+
+    global_timer_queue = new TimerQueue(clk);
+
+    asm volatile("sti");
     kernel_main();
 }
 

@@ -16,6 +16,8 @@
 
 namespace hal::cpu {
 
+static constexpr auto RFLAGS_INT_ENABLE = 0x0200ull;
+
 struct CPU {
     uint32_t id;
 
@@ -59,8 +61,44 @@ inline uint64_t cr3() {
     return v;
 }
 
+inline uint64_t interrupt_flag() {
+    volatile uint64_t flags;
+    asm volatile("pushfq;"
+        "pop %0;" : "=rm"(flags)::"memory", "cc");
+    
+    return flags & RFLAGS_INT_ENABLE;
+}
+
 inline void flush_tlb(uintptr_t addr) {
     asm volatile("invlpg %0" :: "m"(addr));
 }
+
+struct InterruptDisabler {
+    InterruptDisabler() {
+        disable();
+    }
+
+    InterruptDisabler(bool should_disable_ints) {
+        if (should_disable_ints)
+            disable();
+    }
+
+    ~InterruptDisabler() {
+        enable();
+    }
+
+    void disable() {
+        ints_were_enabled = interrupt_flag();
+        asm volatile("cli");
+    }
+
+    void enable() {
+        if (ints_were_enabled) {
+            asm volatile("sti");
+        }
+    }
+
+    bool ints_were_enabled = false;
+};
 
 } // namespace hal::cpu

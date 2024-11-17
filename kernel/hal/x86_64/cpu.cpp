@@ -6,6 +6,7 @@
 
 #include "acpi/madt.h"
 
+#include "idt.h"
 #include "io_ports.h"
 #include "logging.h"
 #include "mem_layout.h"
@@ -45,6 +46,9 @@ enum class APICRegister {
     TaskPriorityRegister = 0x80,
     EndOfInterrupt = 0xb0,
     SpuriousInterruptVectorRegister = 0xf0,
+    Timer = 0x320,
+    LINT0 = 0x350,
+    LINT1 = 0x360,
 };
 
 enum {
@@ -206,7 +210,7 @@ void register_io_apic(acpi::MADTEntry *entry) {
     for (auto i = io_apic->interrupt_base; i <= io_apic->interrupt_end; i++) {
         auto *gsi = new GSI {
             .gsi = i,
-            .vector = 0,
+            .vector = 0xff,
             .is_iso = false,
             .legacy_irq = 0,
             .io_apic = io_apic,
@@ -298,6 +302,18 @@ void local_apic_init() {
     // Enable the local APIC
     auto sivr = apic_read(APICRegister::SpuriousInterruptVectorRegister);
     apic_write(APICRegister::SpuriousInterruptVectorRegister, sivr | APIC_SIVR_DEFAULT | APIC_SIVR_APIC_ENABLE);
+
+    // Set timer, LINT0, LINT1 to vector ff
+    apic_write(APICRegister::Timer, 0xff);
+    apic_write(APICRegister::LINT0, 0xff);
+    apic_write(APICRegister::LINT1, 0xff);
+
+    install_irq_handler(0xff, {
+        nullptr,
+        [](void *, InterruptFrame *) {
+            local_apic_eoi();
+        }
+    });
 }
 
 void local_apic_eoi() {

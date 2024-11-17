@@ -1,7 +1,7 @@
 #include "hpet.h"
 
+#include "clock.h"
 #include "vmem.h"
-
 #include "irq.h"
 
 #include <assert.h>
@@ -10,11 +10,51 @@
 namespace hal {
 
 HPETRegisters *hpet_registers;
-void *hpet_irq_handler;
+class HPETTimerDevice *clock_device;
 
-void hpet_handler(cpu::InterruptFrame *) {
-    log_info("timer irq");
+uint64_t counter_clk_period;
+
+void hpet_irq(void *data, cpu::InterruptFrame *frame);
+
+inline uint64_t hpet_ticks_to_ns(uint64_t ticks) {
+    return ticks * counter_clk_period / 1000'000;
 }
+
+inline uint64_t hpet_ns_to_ticks(uint64_t ns) {
+    return (ns * 1000'000 + counter_clk_period - 1) / hpet_registers->counter_clk_period();
+}
+
+class HPETTimerDevice : public ClockDevice {
+public:
+    void start_timer(uint64_t ns) override {
+        cpu::InterruptDisabler disable_ints;
+
+        auto *timer0 = hpet_registers->timer_n(0);
+
+        auto deadline = hpet_ns_to_ticks(ns);
+
+        timer0->set_int_enabled(1);
+        timer0->comparator = deadline;
+
+        timer_is_running = true;
+    }
+
+    void stop_timer() override {
+        cpu::InterruptDisabler disable_ints;
+
+        timer_is_running = false;
+    }
+
+    uint64_t ns_since_boot() override {
+        return hpet_ticks_to_ns(hpet_registers->main_counter);
+    }
+
+    const char* name() const override {
+        return "hpet_timer0";
+    }
+
+    bool timer_is_running = false;
+};
 
 void init_hpet(HPETTable *hpet_table) {
     log_info("hpet: Found HPET table at {:x}", hpet_table);
@@ -29,6 +69,8 @@ void init_hpet(HPETTable *hpet_table) {
     log_info("hpet: HPET legacy replacement: {}", hpet_registers->cap_legacy_replacement());
     log_info("hpet: HPET count size: {}", hpet_registers->cap_count_size());
     log_info("hpet: HPET num timers: {}", hpet_registers->cap_num_timers());
+    log_info("hpet: HPET period: {}.{} ns", hpet_registers->counter_clk_period() / 1000'000,
+        hpet_registers->counter_clk_period() % 1000'000);
     log_info("hpet: HPET number of comparators: {}", hpet_table->comparator_count);
     log_info("hpet: HPET counter size: {}", hpet_table->counter_size);
     log_info("hpet: HPET min tick: {}", hpet_table->min_tick);
@@ -40,6 +82,8 @@ void init_hpet(HPETTable *hpet_table) {
     log_info("hpet: HPET main counter: {:x}", &hpet_registers->main_counter);
 
     log_info("hpet: frequency {}KHz", 1000000000000 / hpet_registers->counter_clk_period());
+
+    counter_clk_period = hpet_registers->counter_clk_period();
 
     hpet_registers->set_enable(0);
 
@@ -67,6 +111,13 @@ void init_hpet(HPETTable *hpet_table) {
     auto valid_routes = timer0->cap_int_route();
     cpu::GSI *timer0_gsi = nullptr;
 
+    if (!hpet_registers->cap_legacy_replacement()) {
+        log_fatal("hpet: HPET does not support legacy replacement");
+        return;
+    }
+
+    hpet_registers->set_legacy_replacement(1);
+
     for (int i = 0; i < 8; i++, valid_routes >>= 1) {
         if (!(valid_routes & 1)) {
             continue;
@@ -82,12 +133,7 @@ void init_hpet(HPETTable *hpet_table) {
                 timer0_gsi = gsi;
                 break;
             }
-
-            continue;
         }
-
-        timer0_gsi = gsi;
-        break;
     }
 
     if (!timer0_gsi) {
@@ -101,6 +147,8 @@ void init_hpet(HPETTable *hpet_table) {
     auto hpet_test_handler = [&](cpu::InterruptFrame*) {
         log_info("hpet interrupt!");
         hpet_can_recieve_interrupts = true;
+
+        cpu::local_apic_eoi();
     };
 
     auto timer0_vector = cpu::TIMER_IRQ_VECTOR;
@@ -116,11 +164,10 @@ void init_hpet(HPETTable *hpet_table) {
     timer0_gsi->redirect(timer0_vector);
 
     hpet_registers->main_counter = 0;
-    hpet_registers->set_legacy_replacement(0);
     hpet_registers->set_enable(1);
 
-    auto one_ms = (1000000000000000 / 1000) / hpet_registers->counter_clk_period();
-    auto deadline = hpet_registers->counter_value() + one_ms * 2;
+    auto one_ms = hpet_ns_to_ticks(1'000'000);
+    auto deadline = hpet_registers->counter_value() + one_ms * 4;
 
     timer0->comparator = deadline;
 
@@ -131,10 +178,28 @@ void init_hpet(HPETTable *hpet_table) {
         asm("pause");
     }
 
-    asm("cli");
+    timer0->set_int_enabled(0);
 
     if (!hpet_can_recieve_interrupts) {
         lemon_panic("hpet not firing interrupts");
+    }
+
+    clock_device = new HPETTimerDevice;
+    add_clock_device(clock_device);
+
+    install_irq_handler(cpu::TIMER_IRQ_VECTOR, Callback<cpu::InterruptFrame*>{
+        .fn = &hpet_irq,
+        .data = clock_device
+    });
+}
+
+void hpet_irq(void *data, cpu::InterruptFrame *frame) {
+    auto &cb = clock_device->timer_callback;
+
+    cpu::local_apic_eoi();
+
+    if (cb) {
+        cb.call();
     }
 }
 

@@ -20,11 +20,15 @@ public:
         delete (uint8_t *)m_data;
     }
 
+    bool empty() const {
+        return m_size == 0;
+    }
+
     T &peek() {
         return m_data->v;
     }
 
-    PriorityType &peek_priority() const {
+    PriorityType peek_priority() const {
         return m_data->p;
     }
 

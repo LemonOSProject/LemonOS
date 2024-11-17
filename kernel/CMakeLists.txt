@@ -36,12 +36,17 @@ target_link_options(kernel.sys PRIVATE
 )
 
 target_sources(kernel.sys PRIVATE
+    clock.cpp
+
     mm/kmalloc.cpp
     mm/frame_table.cpp
     mm/address_space.cpp
 
     tests/tests.cpp
+    tests/timer.cpp
     tests/kmalloc.cpp
+
+    thread/timer.cpp
 
     util/runtime.cpp
 
