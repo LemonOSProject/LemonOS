@@ -1,5 +1,8 @@
 #include "serial.h"
 
+#include <le/lazy_constructed.h>
+#include <thread/lock.h>
+
 #include "io_ports.h"
 
 #define SERIAL_COM1 0x3F8
@@ -16,7 +19,11 @@ enum Register {
     Scratch = 7
 };
 
+LazyConstructed<thread::TicketLock> serial_lock;
+
 void init() {
+    serial_lock.construct();
+
     io::out8(SERIAL_COM1 + Register::Data, 0);
 
     // Set baud rate divisor
@@ -42,9 +49,16 @@ void debug_write_char(char c) {
     io::out8(SERIAL_COM1 + Register::Data, c);
 }
 
-void debug_write_string(const char *str) {
+void debug_write_string(const char *str, bool end_line) {
+    thread::LockGuard guard{*serial_lock};
+
     while (*str) {
         debug_write_char(*(str++));
+    }
+
+    if (end_line) {
+        debug_write_char('\r');
+        debug_write_char('\n');
     }
 }
 
