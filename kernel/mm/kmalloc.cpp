@@ -161,9 +161,9 @@ struct SlabAllocator {
         return nullptr;
     }
 
-    // Max bucket size 256,
+    // Max bucket size 512,
     // Min bucket size 8 for alignment purposes
-    static constexpr size_t num_buckets = 6;
+    static constexpr size_t num_buckets = 7;
     static constexpr size_t min_bucket_size = 8;
 
     Slab *buckets[num_buckets];

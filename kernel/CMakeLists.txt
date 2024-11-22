@@ -46,7 +46,9 @@ target_sources(kernel.sys PRIVATE
     tests/timer.cpp
     tests/kmalloc.cpp
 
+    thread/sched.cpp
     thread/timer.cpp
+    thread/thread.cpp
 
     util/runtime.cpp
 

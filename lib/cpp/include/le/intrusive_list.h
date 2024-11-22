@@ -22,6 +22,11 @@ template <typename T, typename Tag = void> struct IntrusiveListNode {
 
         if (prev) {
             prev->next = next;
+
+            while (prev->prev) {
+                prev = prev->prev;
+            }
+
             new_head = prev;
         }
 

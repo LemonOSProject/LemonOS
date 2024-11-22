@@ -4,4 +4,5 @@ namespace hal::cpu {
     struct InterruptFrame;
 }
 
-void lemon_panic(const char *reason, hal::cpu::InterruptFrame *frame = nullptr);
+void lemon_panic(const char *reason, hal::cpu::InterruptFrame *frame);
+void lemon_panic(const char *reason);

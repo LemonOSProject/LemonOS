@@ -32,6 +32,8 @@ constexpr int MIN_IRQ_VECTOR = 0x20;
 // IRQs 0-15 are for ISA (legacy) IRQs
 constexpr int MIN_FREE_IRQ_VECTOR = 0x30;
 
+constexpr int SCHEDULE_IRQ = 0xfe;
+
 int boot_initialize_idt();
 void install_irq_handler(uint8_t vector, Callback<cpu::InterruptFrame *> cb);
 

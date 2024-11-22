@@ -178,6 +178,8 @@ void init_hpet(HPETTable *hpet_table) {
         asm("pause");
     }
 
+    asm("cli");
+
     timer0->set_int_enabled(0);
 
     if (!hpet_can_recieve_interrupts) {

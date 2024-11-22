@@ -3,6 +3,7 @@
 #include <mm/address_space.h>
 #include <mm/frame_table.h>
 
+#include <thread/sched.h>
 #include <thread/timer.h>
 #include <video/video.h>
 
@@ -15,6 +16,7 @@
 #include "panic.h"
 #include "serial.h"
 #include "string.h"
+#include "thread.h"
 #include "vmem.h"
 
 #include "mem_layout.h"
@@ -284,8 +286,17 @@ void limine_init() {
 
     global_timer_queue = new TimerQueue(clk);
 
-    asm volatile("sti");
-    kernel_main();
+    log_info("IF={:x}", cpu::interrupt_flag());
+
+    sched_init();
+
+    // 64KB stack
+    auto *tcb = thread::create_kernel_thread("kernel_main", kernel_main, 0x10000, 0);
+    assert(tcb);
+
+    asm volatile("cli; int %0" :: "i"(SCHEDULE_IRQ));
+
+    lemon_panic("Failed to start main thread");
 }
 
 } // namespace hal::boot

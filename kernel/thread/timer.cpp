@@ -5,7 +5,7 @@
 
 TimerQueue::TimerQueue(ClockDevice *clk) : m_clk(clk) {
     m_timer_cb = [this]() {
-        auto current_time = m_clk->ns_since_boot();
+        auto current_time = (int64_t)m_clk->ns_since_boot();
 
         thread::LockGuard guard{ m_lock };
         while (!m_timers.empty() && m_timers.peek_priority() <= current_time) {

@@ -9,6 +9,14 @@
 
 static int panic_count = 0;
 
+void lemon_panic(const char *reason) {
+    hal::cpu::InterruptFrame fake_frame;
+    fake_frame.rsp = hal::cpu::rsp();
+    fake_frame.rbp = hal::cpu::rbp();
+
+    lemon_panic(reason, &fake_frame);
+}
+
 void lemon_panic(const char *reason, hal::cpu::InterruptFrame *frame) {
     panic_count++;
 

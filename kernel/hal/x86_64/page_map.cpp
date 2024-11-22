@@ -122,10 +122,6 @@ void PageMap::page_range_map(uintptr_t base, uintptr_t physical_base, uint64_t p
         Page *pg = &m_page_table_entries[(page_index >> 27) & 511][(page_index >> 18) & 511]
                                         [(page_index >> 9) & 511][page_index & 511];
 
-        if (num_pages == 1) {
-            log_info("pg: {:x}, addresses: {:x}", pg, 0xffff000000000000ul | (page_index << PAGE_BITS_4K));
-        }
-
         *pg = physical_base | prot;
 
         asm volatile("invlpg (%0)" ::"r"(base));

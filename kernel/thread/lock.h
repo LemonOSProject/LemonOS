@@ -19,14 +19,21 @@ public:
         // Safe to disable interrupts here,
         // as if another thread on the same CPU has the lock,
         // it cannot be interrupted as it has also disabled IRQs
-        m_disable_ints.disable();
-        while (m_current != our_ticket)
+        hal::cpu::InterruptDisabler disable_ints;
+
+        int n = 500000;
+        while (m_current != our_ticket && --n > 0)
             asm volatile("pause");
+
+        m_disable_ints = std::move(disable_ints);
+
+        assert(n > 0);
     }
 
     void unlock() {
+        hal::cpu::InterruptDisabler disable_ints = std::move(m_disable_ints);
         __atomic_fetch_add(&m_current, 1, __ATOMIC_ACQ_REL);
-        m_disable_ints.enable();
+        disable_ints.enable();
     }
 
 private:

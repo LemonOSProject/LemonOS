@@ -46,6 +46,7 @@ enum class APICRegister {
     TaskPriorityRegister = 0x80,
     EndOfInterrupt = 0xb0,
     SpuriousInterruptVectorRegister = 0xf0,
+    InterruptCommandRegister = 0x300,
     Timer = 0x320,
     LINT0 = 0x350,
     LINT1 = 0x360,
@@ -143,6 +144,12 @@ static uint32_t apic_read(APICRegister reg) {
 
 void boot_init(void *entry) {
     disable_8259_pic();
+
+    cpu0.id = 0;
+    cpu0.current_thread = nullptr;
+    cpu0.self = &cpu0;
+
+    set_gs((uint64_t)&cpu0);
 
     gdt_ptr.size = sizeof(gdt_entries) - 1;
     gdt_ptr.ptr = (uintptr_t)gdt_entries;
@@ -318,6 +325,24 @@ void local_apic_init() {
 
 void local_apic_eoi() {
     apic_write(APICRegister::EndOfInterrupt, APIC_EOI_VALUE);
+}
+
+void send_local_irq(uint8_t vector, uint32_t destination) {
+    InterruptCommandRegister icr = {
+        .vector = vector,
+        .delivery_mode = 0,
+        .destination_mode = 0,
+        .level_assert = 0,
+        .trigger_mode = 0,
+        .destination_shorthand = 0,
+        .destination_field = destination,
+    };
+
+    apic_write(APICRegister::TaskPriorityRegister, 0);
+    apic_write(APICRegister::EndOfInterrupt, 0);
+
+    *apic_reg(0x300) = icr.low;
+    *apic_reg(0x310) = icr.high;
 }
 
 void set_tss(void *ptr) {
