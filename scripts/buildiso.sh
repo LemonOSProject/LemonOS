@@ -4,12 +4,15 @@ set -e
 
 mkdir -p "$LEMON_BUILDROOT/build/iso_root"
 
+"$LEMON_BUILDROOT/scripts/buildinitrd.sh"
+
 cd $LEMON_BUILDROOT/build
 
 cp -vu $LIMINE_BIN_DIR/{limine-bios.sys,limine-bios-cd.bin,limine-uefi-cd.bin} iso_root
 
 cp -rvu ../base/* iso_root
 cp -vu kernel/kernel.sys iso_root
+cp -vu $LEMON_BUILDROOT/build/initrd.tar iso_root
 
 mkdir -p iso_root/EFI/BOOT
 cp -vu $LIMINE_BIN_DIR/BOOTX64.EFI iso_root/EFI/BOOT

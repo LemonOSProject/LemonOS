@@ -48,4 +48,19 @@ inline int strncmp(const char *str1, const char *str2, size_t n) {
     return (*str1) - (*str2);
 }
 
+inline const char *strstr(const char *haystack, const char *needle) {
+    size_t i = 0;
+
+    while (haystack[i] && needle[i]) {
+        if (haystack[i] == needle[i]) {
+            i++;
+        } else {
+            haystack++;
+            i = 0;
+        }
+    }
+
+    return (needle[i] == 0) ? haystack : nullptr;
+}
+
 }

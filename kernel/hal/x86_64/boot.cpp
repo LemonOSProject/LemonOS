@@ -1,3 +1,4 @@
+#include "boot.h"
 #include "limine.h"
 
 #include <mm/address_space.h>
@@ -54,11 +55,16 @@ struct limine_hhdm_request limine_hhdm_request = {.id = LIMINE_HHDM_REQUEST, .re
 struct limine_kernel_address_request kernel_address_request = {.id = LIMINE_KERNEL_ADDRESS_REQUEST,
                                                                .revision = 0};
 
+struct limine_module_request module_request = {.id = LIMINE_MODULE_REQUEST, .revision = 0};
+
 struct limine_rsdp_request rsdp_request = {.id = LIMINE_RSDP_REQUEST, .revision = 0, .response = {}};
 
 static const char *memmap_type_strings[] = {"usable",       "reserved",   "ACPI reclaimable",
                                             "ACPI NVS",     "bad memory", "bootloader reclaimable",
                                             "kernel image", "framebuffer"};
+
+BootModule *boot_modules;
+size_t num_boot_modules;
 
 static void boot_assert_fail(const char *why, const char *file, int line) {
     log_fatal("boot_assert_fail: {} at {}:{}\r\n", why, file, line);
@@ -124,6 +130,11 @@ void limine_init() {
 
     if (!kernel_address_request.response) {
         log_fatal("Failed to get kernel address from bootloader!");
+        return;
+    }
+
+    if (!module_request.response) {
+        log_fatal("Failed to get modules from bootloader, was initrd.tar loaded?");
         return;
     }
 
@@ -250,6 +261,20 @@ void limine_init() {
 
     vmem_init(highest_usable_physical_address);
 
+    auto *limine_modules = module_request.response->modules;
+    num_boot_modules = module_request.response->module_count;
+    boot_modules = new BootModule[num_boot_modules];
+    assert(boot_modules);
+
+    for (size_t i = 0; i < module_request.response->module_count; i++) {
+        boot_modules[i] = {
+            .base = limine_modules[i]->address,
+            .size = limine_modules[i]->size,
+            .path = limine_modules[i]->path,
+            .cmd_line = limine_modules[i]->cmdline
+        };
+    }
+
     // Remap the framebuffer
     if (fb) {
         uint64_t physical_addr = (uint64_t)fb_addr - direct_mapping_base;
@@ -297,6 +322,12 @@ void limine_init() {
     asm volatile("cli; int %0" :: "i"(SCHEDULE_IRQ));
 
     lemon_panic("Failed to start main thread");
+}
+
+void enumerate_boot_modules(Fn<BootModule *> callback) {
+    for (size_t i = 0; i < num_boot_modules; i++) {
+        callback.call(boot_modules + i);
+    }
 }
 
 } // namespace hal::boot

@@ -37,6 +37,7 @@ target_link_options(kernel.sys PRIVATE
 
 target_sources(kernel.sys PRIVATE
     clock.cpp
+    tar.cpp
 
     mm/kmalloc.cpp
     mm/frame_table.cpp
